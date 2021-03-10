@@ -1,0 +1,9 @@
+[package]
+name = "aero"
+version = "0.1.0"
+authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+bootloader = "0.9.12"
+
