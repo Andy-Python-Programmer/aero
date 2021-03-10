@@ -1,20 +1,23 @@
+//! # Aero
+//! Aero is a new **modern**, **unix based** operating system. It is being developed for educational purposes.
+//!
+//! **Notes**: \
+//! - Unix: https://en.wikipedia.org/wiki/Unix
+
+#![feature(custom_test_frameworks)] // Enable custom test framework.
+#![test_runner(crate::tests::test_runner)] // Attach our custom tests runner.
 #![no_std] // Don't link the Rust standard library.
 #![no_main] // Disable all Rust-level entry points.
 
+mod panic;
+mod tests;
 mod vga;
-
-use core::panic::PanicInfo;
 
 use vga::{
     buffer::Buffer,
     color::{Color, ColorCode},
     rendy::Rendy,
 };
-
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
