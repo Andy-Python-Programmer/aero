@@ -17,10 +17,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
-    - uses: actions-rs/components-nightly@v1
       with:
         toolchain: nightly
-        component: rust-src
+    - name: Install `rust-src` Rustup Component
+      run: rustup component add rust-src
     - name: Install bootimage
       run: cargo install bootimage
     - name: Run build
