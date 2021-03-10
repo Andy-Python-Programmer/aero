@@ -20,7 +20,7 @@ jobs:
       with:
         toolchain: nightly
     - name: Install `rust-src` Rustup Component
-      run: rustup component add rust-src
+      run: rustup component add rust-src llvm-tools-preview
     - name: Install bootimage
       run: cargo install bootimage
     - name: Run build
