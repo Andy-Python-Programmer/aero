@@ -18,10 +18,12 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
       with:
+        profile: minimal
         toolchain: nightly
+
     - name: Install `rust-src` Rustup Component
       run: rustup component add rust-src llvm-tools-preview
     - name: Install bootimage
       run: cargo install bootimage
     - name: Run build
-      run: cargo bootimage
+      run: cargo build
