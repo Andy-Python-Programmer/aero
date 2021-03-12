@@ -28,7 +28,7 @@ pub extern "C" fn _start() -> ! {
         &mut *(0xb8000 as *mut Buffer)
     });
 
-    rendy.string("Hello World! KANWallll!!!");
+    rendy.string("Hello World!");
 
     loop {}
 }
