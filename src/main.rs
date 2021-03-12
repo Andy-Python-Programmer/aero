@@ -1,8 +1,11 @@
 //! # Aero
-//! Aero is a new **modern**, **unix based** operating system. It is being developed for educational purposes.
+//! Aero is a new modern, unix based operating system. It is being developed for educational purposes.
+//!
+//! ## Code organization and architecture
+//! The code is divided into different *modules*, each representing a *subsystem* of the kernel.
 //!
 //! **Notes**: \
-//! - Unix: https://en.wikipedia.org/wiki/Unix
+//! - Unix: <https://en.wikipedia.org/wiki/Unix>
 
 #![feature(custom_test_frameworks)] // Enable custom test framework.
 #![test_runner(crate::tests::test_runner)] // Attach our custom tests runner.
@@ -25,7 +28,7 @@ pub extern "C" fn _start() -> ! {
         &mut *(0xb8000 as *mut Buffer)
     });
 
-    rendy.string("Hello World!");
+    rendy.string("Hello World! KANWallll!!!");
 
     loop {}
 }
