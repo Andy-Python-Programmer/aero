@@ -10,8 +10,11 @@
 #![feature(custom_test_frameworks)] // Enable custom test framework.
 #![test_runner(crate::tests::test_runner)] // Attach our custom tests runner.
 #![no_std] // Don't link the Rust standard library.
-#![no_main] // Disable all Rust-level entry points.
+#![no_main] // Disable the rust entry point.
 
+use bootloader::{entry_point, BootInfo};
+
+mod gdt;
 mod panic;
 mod tests;
 mod vga;
@@ -32,9 +35,12 @@ mod log {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+entry_point!(kernel_main);
+
+fn kernel_main(_: &'static BootInfo) -> ! {
+    gdt::init();
     log::info("Loaded GDT");
+
     log::info("Loaded IDT");
     log::info("Loaded PIT");
     log::info("Loaded PS/2 driver");

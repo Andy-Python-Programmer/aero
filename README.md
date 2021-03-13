@@ -10,6 +10,7 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 
 ## Roadmap March - April 2021
 
+- [ ] Global Descriptor Table - *In progress...*
 - [ ] Basic command line shell
 - [ ] Able to use the file system.
 - [ ] Aero's own bootloader.
