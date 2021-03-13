@@ -1,3 +1,5 @@
+use volatile::Volatile;
+
 use super::color::ColorCode;
 
 pub(crate) const BUFFER_HEIGHT: usize = 25;
@@ -12,5 +14,5 @@ pub(crate) struct ScreenChar {
 
 #[repr(transparent)]
 pub struct Buffer {
-    pub(crate) chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
+    pub(crate) chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }

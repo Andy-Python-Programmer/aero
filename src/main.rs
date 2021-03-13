@@ -16,19 +16,33 @@ mod panic;
 mod tests;
 mod vga;
 
-use vga::{
-    buffer::Buffer,
-    color::{Color, ColorCode},
-    rendy::Rendy,
-};
+mod log {
+    use vga::color::*;
+
+    use crate::vga::rendy::RENDERER;
+    use crate::*;
+
+    pub fn info(message: &str) {
+        RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Black);
+        print!("[ ");
+        RENDERER.lock().color_code = ColorCode::new(Color::LightGreen, Color::Black);
+        print!("OK");
+        RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Black);
+        println!(" ]        - {}", message);
+    }
+}
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let mut rendy = Rendy::new(0, ColorCode::new(Color::Yellow, Color::Blue), unsafe {
-        &mut *(0xb8000 as *mut Buffer)
-    });
+    log::info("Loaded GDT");
+    log::info("Loaded IDT");
+    log::info("Loaded PIT");
+    log::info("Loaded PS/2 driver");
+    log::info("Loaded paging");
 
-    rendy.string("Hello World!");
+    log::info("Initialized kernel");
+
+    println!("\nHello World!");
 
     loop {}
 }
