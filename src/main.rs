@@ -7,7 +7,7 @@
 //! **Notes**: \
 //! - Unix: <https://en.wikipedia.org/wiki/Unix>
 
-#![feature(custom_test_frameworks)] // Enable custom test framework.
+#![feature(custom_test_frameworks, global_asm)] // Enable custom test framework and global assembly.
 #![test_runner(crate::tests::test_runner)] // Attach our custom tests runner.
 #![no_std] // Don't link the Rust standard library.
 #![no_main] // Disable the rust entry point.
