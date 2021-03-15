@@ -42,6 +42,7 @@ fn kernel_main(_: &'static BootInfo) -> ! {
     log::info("Loaded GDT");
 
     log::info("Loaded IDT");
+
     log::info("Loaded PIT");
     log::info("Loaded PS/2 driver");
     log::info("Loaded paging");

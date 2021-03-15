@@ -9,6 +9,8 @@ use lazy_static::lazy_static;
 
 // TODO: https://github.com/rust-lang/rust/issues/83107
 
+global_asm!(include_str!("load_gdt.asm"));
+
 /// The GDT Descriptor containing the size of offset of the table.
 #[repr(C, packed)]
 struct GDTDescriptor {
@@ -95,7 +97,7 @@ pub fn init() {
             (&GLOBAL_DESCRIPTOR_TABLE as *const _) as u64,
         );
 
-        load_gdt(&gdt_descriptor as *const _)
+        LoadGDT(&gdt_descriptor as *const _)
     }
 }
 
@@ -111,7 +113,7 @@ lazy_static! {
     };
 }
 
-/// Load the GDT using inline assembly.
-unsafe fn load_gdt(gdt_descriptor: *const GDTDescriptor) {
-    asm!(include_str!("./load_gdt.asm"), in(reg) gdt_descriptor, options(nostack));
+extern "C" {
+    /// Load the GDT using inline assembly.
+    fn LoadGDT(gdt_descriptor: *const GDTDescriptor);
 }
