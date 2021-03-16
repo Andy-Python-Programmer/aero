@@ -25,7 +25,7 @@ struct GDTDescriptor {
 impl GDTDescriptor {
     /// Create a new GDT descriptor.
     #[inline]
-    pub fn new(size: u16, offset: u64) -> Self {
+    pub const fn new(size: u16, offset: u64) -> Self {
         Self { size, offset }
     }
 }
@@ -53,7 +53,7 @@ struct GDTEntry {
 impl GDTEntry {
     /// Create a new GDT entry.
     #[inline]
-    fn new(
+    const fn new(
         limit_low: u16,
         base_low: u16,
         base_middle: u8,
@@ -94,7 +94,7 @@ pub fn init() {
     unsafe {
         let gdt_descriptor = GDTDescriptor::new(
             (size_of::<GDT>() - 1) as u16,
-            (&GLOBAL_DESCRIPTOR_TABLE as *const _) as u64,
+            (&(*GLOBAL_DESCRIPTOR_TABLE) as *const _) as u64,
         );
 
         LoadGDT(&gdt_descriptor as *const _)
