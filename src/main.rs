@@ -58,7 +58,6 @@ fn kernel_main(_: &'static BootInfo) -> ! {
     pit::init();
     log::info("Loaded PIT");
 
-    log::info("Loaded PS/2 driver");
     log::info("Loaded paging");
 
     log::info("Initialized kernel");
