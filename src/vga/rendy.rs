@@ -42,10 +42,12 @@ impl Rendy {
                 let col = self.column_position;
 
                 let color_code = self.color_code;
+
                 self.buffer.chars[row][col].write(ScreenChar {
                     character: byte,
                     color_code,
                 });
+
                 self.column_position += 1;
             }
         }
@@ -58,6 +60,7 @@ impl Rendy {
                 self.buffer.chars[row - 1][col].write(character);
             }
         }
+
         self.clear_row(BUFFER_HEIGHT - 1);
         self.column_position = 0;
     }
@@ -67,9 +70,14 @@ impl Rendy {
             character: b' ',
             color_code: self.color_code,
         };
+
         for col in 0..BUFFER_WIDTH {
             self.buffer.chars[row][col].write(blank);
         }
+    }
+
+    pub fn clear_current(&mut self) {
+        unimplemented!();
     }
 }
 

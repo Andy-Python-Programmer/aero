@@ -21,9 +21,9 @@
 
 use bootloader::{entry_point, BootInfo};
 
+mod drivers;
 mod gdt;
 mod interrupts;
-
 mod panic;
 mod tests;
 mod utils;
@@ -64,7 +64,8 @@ fn kernel_main(_: &'static BootInfo) -> ! {
 
     log::info("Initialized kernel");
 
-    println!("\nHello World!");
+    println!("\nHello World!\n");
+    print!("$ ");
 
     loop {}
 }

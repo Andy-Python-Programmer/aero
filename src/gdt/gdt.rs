@@ -7,8 +7,6 @@ use core::intrinsics::size_of;
 
 use lazy_static::lazy_static;
 
-// TODO: https://github.com/rust-lang/rust/issues/83107
-
 global_asm!(include_str!("load_gdt.asm"));
 
 /// The GDT Descriptor containing the size of offset of the table.
