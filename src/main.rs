@@ -25,6 +25,7 @@ mod drivers;
 mod gdt;
 mod interrupts;
 mod panic;
+mod pit;
 mod tests;
 mod utils;
 mod vga;
@@ -54,11 +55,9 @@ fn kernel_main(_: &'static BootInfo) -> ! {
     interrupts::init();
     log::info("Loaded IDT");
 
-    // unsafe {
-    //     *(0xdeadbeef as *mut u64) = 42;
-    // };
-
+    pit::init();
     log::info("Loaded PIT");
+
     log::info("Loaded PS/2 driver");
     log::info("Loaded paging");
 

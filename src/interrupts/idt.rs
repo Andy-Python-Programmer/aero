@@ -126,7 +126,7 @@ pub fn init() {
         load_idt(&idt_descriptor as *const _);
         load_pic();
 
-        io::outb(PIC1_DATA, 0b11111101);
+        io::outb(PIC1_DATA, 0b11111000);
         io::outb(PIC2_DATA, 0b11111111);
 
         enable_interrupts();
