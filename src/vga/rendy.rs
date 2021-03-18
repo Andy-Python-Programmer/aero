@@ -76,6 +76,21 @@ impl Rendy {
         }
     }
 
+    pub fn clear_screen(&mut self) {
+        let blank = ScreenChar {
+            character: b' ',
+            color_code: self.color_code,
+        };
+
+        for row in 1..BUFFER_HEIGHT {
+            for col in 0..BUFFER_WIDTH {
+                self.buffer.chars[row][col].write(blank);
+            }
+        }
+
+        self.column_position = 0;
+    }
+
     pub fn clear_current(&mut self) {
         unimplemented!();
     }
