@@ -14,10 +14,9 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 
 - [x] Global Descriptor Table
 - [ ] Interrupt Descriptor Table - *In progress...*
-
-- [ ] Basic command line shell
-- [ ] Able to use the file system.
-- [ ] Aero's own bootloader.
+- [ ] Programmable Interval Timer
+- [ ] PS/2 Driver
+- [ ] Paging
 
 ## Building Aero
 
