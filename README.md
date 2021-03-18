@@ -13,8 +13,8 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 ## Roadmap March - April 2021
 
 - [x] Global Descriptor Table
-- [ ] Interrupt Descriptor Table - *In progress...*
-- [ ] Programmable Interval Timer
+- [x] Interrupt Descriptor Table - *In progress...*
+- [x] Programmable Interval Timer
 - [ ] PS/2 Driver
 - [ ] Paging
 
