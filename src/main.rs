@@ -4,8 +4,7 @@
 //! ## Code organization and architecture
 //! The code is divided into different *modules*, each representing a *subsystem* of the kernel.
 //!
-//! **Notes**: \
-//! - Unix: <https://en.wikipedia.org/wiki/Unix>
+//! **Notes**: <https://en.wikipedia.org/wiki/Unix>
 
 #![feature(
     custom_test_frameworks,
@@ -65,5 +64,9 @@ fn kernel_main(_: &'static BootInfo) -> ! {
     println!("\nHello World!\n");
     print!("$ ");
 
-    loop {}
+    unsafe {
+        loop {
+            asm!("hlt");
+        }
+    }
 }
