@@ -1,7 +1,6 @@
-//! This file contains the source for the IDT (Interrupt Descriptor Table).
 //! The IDT is similar to the Global Descriptor Table in structure.
 //!
-//! **Notes**: https://wiki.osdev.org/Interrupt_Descriptor_Table
+//! **Notes**: <https://wiki.osdev.org/Interrupt_Descriptor_Table>
 
 /// Declare an IDT of 256 entries.
 /// Although not all entries are used, the rest exists as if any undefined IDT entry is hit,
@@ -27,7 +26,7 @@ static mut IDT: [IDTEntry; IDT_ENTRIES] = [IDTEntry::null(); IDT_ENTRIES];
 use bitflags::bitflags;
 use core::mem::size_of;
 
-use crate::utils::io::{self, outb};
+use crate::utils::io;
 
 bitflags! {
     pub struct IDTFlags: u8 {
@@ -49,6 +48,7 @@ struct IDTDescriptor {
 }
 
 impl IDTDescriptor {
+    /// Create a new IDT descriptor.
     #[inline]
     const fn new(size: u16, offset: u64) -> Self {
         Self { size, offset }
@@ -68,6 +68,7 @@ struct IDTEntry {
 }
 
 impl IDTEntry {
+    /// Create a new IDT entry with all values defaulted to 0, ie `null`.
     const fn null() -> Self {
         Self {
             offset_low: 0,
@@ -80,10 +81,12 @@ impl IDTEntry {
         }
     }
 
+    /// Set the IDT entry flags.
     fn set_flags(&mut self, flags: IDTFlags) {
         self.type_attr = flags.bits;
     }
 
+    /// Set the IDT entry offset.
     fn set_offset(&mut self, selector: u16, base: usize) {
         self.selector = selector;
         self.offset_low = base as u16;
@@ -91,6 +94,7 @@ impl IDTEntry {
         self.offset_hi = (base >> 32) as u32;
     }
 
+    /// Set the handler function of the IDT entry.
     pub(crate) fn set_function(&mut self, handler: IDTInterruptHandlerFn) {
         self.set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
         self.set_offset(8, handler as usize);
@@ -113,6 +117,7 @@ pub fn init() {
         // IDT[9] is reserved.
 
         IDT[10].set_function(super::exceptions::invalid_tss);
+        IDT[14].set_function(super::exceptions::page_fault);
 
         // Set up the IRQs.
         IDT[32].set_function(super::irq::pit);
@@ -147,7 +152,7 @@ pub unsafe fn enable_interrupts() {
 
 #[inline]
 pub(crate) unsafe fn end_pic1() {
-    outb(PIC1_COMMAND, PIC_EOI);
+    io::outb(PIC1_COMMAND, PIC_EOI);
 }
 
 // pub(crate) unsafe fn end_pic2() {
@@ -164,28 +169,28 @@ unsafe fn load_pic() {
     a2 = io::inb(PIC2_DATA);
     io::wait();
 
-    outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
+    io::outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
     io::wait();
-    outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
-    io::wait();
-
-    outb(PIC1_DATA, 0x20);
-    io::wait();
-    outb(PIC2_DATA, 0x28);
+    io::outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
     io::wait();
 
-    outb(PIC1_DATA, 4);
+    io::outb(PIC1_DATA, 0x20);
     io::wait();
-    outb(PIC2_DATA, 2);
-    io::wait();
-
-    outb(PIC1_DATA, ICW4_8086);
-    io::wait();
-    outb(PIC2_DATA, ICW4_8086);
+    io::outb(PIC2_DATA, 0x28);
     io::wait();
 
-    outb(PIC1_DATA, a1);
+    io::outb(PIC1_DATA, 4);
     io::wait();
-    outb(PIC2_DATA, a2);
+    io::outb(PIC2_DATA, 2);
+    io::wait();
+
+    io::outb(PIC1_DATA, ICW4_8086);
+    io::wait();
+    io::outb(PIC2_DATA, ICW4_8086);
+    io::wait();
+
+    io::outb(PIC1_DATA, a1);
+    io::wait();
+    io::outb(PIC2_DATA, a2);
     io::wait();
 }

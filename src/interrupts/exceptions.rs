@@ -37,3 +37,7 @@ pub(crate) extern "x86-interrupt" fn double_fault() {
 pub(crate) extern "x86-interrupt" fn invalid_tss() {
     panic!("Invalid TSS")
 }
+
+pub(crate) extern "x86-interrupt" fn page_fault() {
+    panic!("Page Fault")
+}

@@ -1,7 +1,6 @@
-//! This file contains the source for the GDT (Global Descriptor Table).
 //! The GDT contains entries telling the CPU about memory segments.
 //!
-//! **Notes**: https://wiki.osdev.org/Global_Descriptor_Table
+//! **Notes**: <https://wiki.osdev.org/Global_Descriptor_Table>
 
 use core::intrinsics::size_of;
 
@@ -28,23 +27,17 @@ impl GDTDescriptor {
     }
 }
 
-/// A GDT entry.
 #[repr(C)]
 struct GDTEntry {
-    /// Limit low.
     limit_low: u16,
-    /// Base low.
     base_low: u16,
-    /// Base middle.
     base_middle: u8,
-    /// The access byte.
     access_byte: u8,
     /// The limit high and the flags.
     ///
     /// **Note**: Four bits of the variable is the limit and rest four bits of the
     /// variable are the flags.
     limit_hi_flags: u8,
-    /// Base high.
     base_hi: u8,
 }
 
