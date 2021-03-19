@@ -29,13 +29,8 @@ jobs:
       run: cargo build
     - name: Build Docs
       run: cargo doc
-    - name: Deploy Docs
-      run: cd target/x86_64-aero_os/doc/aero/
-    - run: git init
-    - run: git config --global user.email andypythonappdeveloper@gmail.com
-    - run: git config --global user.name Andy-Python-Programmer
-    - run: git remote add origin https://${{secrets.AERO_DOCS}}@github.com/Andy-Python-Programmer/aero.git
-    - run: git checkout -b gh-pages
-    - run: git add --all
-    - run: git commit -m "Nightly - Aero Docs"
-    - run: git push origin gh-pages -f
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./target/x86_64-aero_os/doc/aero
