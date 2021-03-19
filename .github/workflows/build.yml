@@ -31,11 +31,11 @@ jobs:
       run: cargo doc
     - name: Deploy Docs
       run: cd target/x86_64-aero_os/doc/aero/
-      run: git init
-      run: git config --global user.email andypythonappdeveloper@gmail.com
-      run: git config --global user.name Andy-Python-Programmer
-      run: git remote add origin https://${{secrets.AERO_DOCS}}@github.com/Andy-Python-Programmer/aero.git
-      run: git checkout -b gh-pages
-      run: git add --all
-      run: git commit -m "Nightly - Aero Docs"
-      run: git push origin gh-pages -f
+    - run: git init
+    - run: git config --global user.email andypythonappdeveloper@gmail.com
+    - run: git config --global user.name Andy-Python-Programmer
+    - run: git remote add origin https://${{secrets.AERO_DOCS}}@github.com/Andy-Python-Programmer/aero.git
+    - run: git checkout -b gh-pages
+    - run: git add --all
+    - run: git commit -m "Nightly - Aero Docs"
+    - run: git push origin gh-pages -f
