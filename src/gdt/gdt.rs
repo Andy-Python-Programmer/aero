@@ -6,7 +6,7 @@ use core::intrinsics::size_of;
 
 use lazy_static::lazy_static;
 
-global_asm!(include_str!("load_gdt.asm"));
+global_asm!(include_str!("load_gdt.s"));
 
 /// The GDT Descriptor containing the size of offset of the table.
 #[repr(C, packed)]

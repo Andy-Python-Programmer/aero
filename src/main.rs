@@ -24,7 +24,7 @@ extern crate alloc;
 use bootloader::{entry_point, BootInfo};
 use drivers::mouse;
 use interrupts::{enable_interrupts, PIC1_DATA, PIC2_DATA};
-use memory::alloc::AeroSystemAllocator;
+use memory::{alloc::AeroSystemAllocator, paging};
 use utils::io;
 
 mod drivers;
@@ -58,7 +58,7 @@ mod log {
 
 entry_point!(kernel_main);
 
-fn kernel_main(_: &'static BootInfo) -> ! {
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
     unsafe {
         gdt::init();
         log::info("Loaded GDT");
@@ -77,6 +77,7 @@ fn kernel_main(_: &'static BootInfo) -> ! {
 
         enable_interrupts();
 
+        paging::init();
         log::info("Loaded paging");
 
         memory::alloc::init_heap();
