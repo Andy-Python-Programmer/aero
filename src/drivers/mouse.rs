@@ -2,9 +2,9 @@ use crate::utils::io;
 
 const MOUSE_WAIT_TIMEOUT: usize = 100000;
 
-const PS2_LEFT_BUTTON: u8 = 0b00000001;
-const PS2_MIDDLE_BUTTON: u8 = 0b00000100;
-const PS2_RIGHT_BUTTON: u8 = 0b00000010;
+// const PS2_LEFT_BUTTON: u8 = 0b00000001;
+// const PS2_MIDDLE_BUTTON: u8 = 0b00000100;
+// const PS2_RIGHT_BUTTON: u8 = 0b00000010;
 
 const PS2_X_SIGN: u8 = 0b00010000;
 const PS2_Y_SIGN: u8 = 0b00100000;
@@ -141,8 +141,6 @@ pub unsafe fn process_mouse_packet() {
         if MOUSE_POSITION.y < 0 {
             MOUSE_POSITION.y = 0
         }
-
-        crate::println!("{:?}", MOUSE_POSITION);
     }
 }
 

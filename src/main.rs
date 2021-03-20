@@ -12,25 +12,33 @@
     asm,
     global_asm,
     llvm_asm,
-    abi_x86_interrupt
+    abi_x86_interrupt,
+    alloc_error_handler
 )]
 #![test_runner(crate::tests::test_runner)] // Attach our custom tests runner.
 #![no_std] // Don't link the Rust standard library.
 #![no_main] // Disable the rust entry point.
 
+extern crate alloc;
+
 use bootloader::{entry_point, BootInfo};
 use drivers::mouse;
 use interrupts::{enable_interrupts, PIC1_DATA, PIC2_DATA};
+use memory::alloc::AeroSystemAllocator;
 use utils::io;
 
 mod drivers;
 mod gdt;
 mod interrupts;
+mod memory;
 mod panic;
 mod pit;
 mod tests;
 mod utils;
 mod vga;
+
+#[global_allocator]
+static AERO_SYSTEM_ALLOCATOR: AeroSystemAllocator = AeroSystemAllocator;
 
 mod log {
     use vga::color::*;
@@ -70,6 +78,9 @@ fn kernel_main(_: &'static BootInfo) -> ! {
         enable_interrupts();
 
         log::info("Loaded paging");
+
+        memory::alloc::init_heap();
+        log::info("Loaded Heap");
 
         log::info("Initialized kernel");
 
