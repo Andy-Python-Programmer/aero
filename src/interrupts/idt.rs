@@ -122,6 +122,7 @@ pub fn init() {
         // Set up the IRQs.
         IDT[32].set_function(super::irq::pit);
         IDT[33].set_function(super::irq::keyboard);
+        IDT[44].set_function(super::irq::mouse);
 
         let idt_descriptor = IDTDescriptor::new(
             ((IDT.len() * size_of::<IDTEntry>()) - 1) as u16,
@@ -130,11 +131,6 @@ pub fn init() {
 
         load_idt(&idt_descriptor as *const _);
         load_pic();
-
-        io::outb(PIC1_DATA, 0b11111000);
-        io::outb(PIC2_DATA, 0b11111111);
-
-        enable_interrupts();
     }
 }
 
@@ -151,14 +147,15 @@ pub unsafe fn enable_interrupts() {
 }
 
 #[inline]
-pub(crate) unsafe fn end_pic1() {
+pub unsafe fn end_pic1() {
     io::outb(PIC1_COMMAND, PIC_EOI);
 }
 
-// pub(crate) unsafe fn end_pic2() {
-//     outb(PIC2_COMMAND, PIC_EOI);
-//     outb(PIC1_COMMAND, PIC_EOI);
-// }
+#[inline]
+pub unsafe fn end_pic2() {
+    io::outb(PIC2_COMMAND, PIC_EOI);
+    io::outb(PIC1_COMMAND, PIC_EOI);
+}
 
 unsafe fn load_pic() {
     let (a1, a2);

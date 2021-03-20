@@ -19,6 +19,9 @@
 #![no_main] // Disable the rust entry point.
 
 use bootloader::{entry_point, BootInfo};
+use drivers::mouse;
+use interrupts::{enable_interrupts, PIC1_DATA, PIC2_DATA};
+use utils::io;
 
 mod drivers;
 mod gdt;
@@ -48,25 +51,33 @@ mod log {
 entry_point!(kernel_main);
 
 fn kernel_main(_: &'static BootInfo) -> ! {
-    gdt::init();
-    log::info("Loaded GDT");
-
-    interrupts::init();
-    log::info("Loaded IDT");
-
-    pit::init();
-    log::info("Loaded PIT");
-
-    log::info("Loaded paging");
-
-    log::info("Initialized kernel");
-
-    println!("\nHello World!\n");
-    print!("$ ");
-
     unsafe {
+        gdt::init();
+        log::info("Loaded GDT");
+
+        interrupts::init();
+        log::info("Loaded IDT");
+
+        pit::init();
+        log::info("Loaded PIT");
+
+        drivers::mouse::init();
+        log::info("Loaded PS/2 driver");
+
+        io::outb(PIC1_DATA, 0b11111000);
+        io::outb(PIC2_DATA, 0b11101111);
+
+        enable_interrupts();
+
+        log::info("Loaded paging");
+
+        log::info("Initialized kernel");
+
+        println!("\nHello World!\n");
+        print!("$ ");
+
         loop {
-            asm!("hlt");
+            mouse::process_mouse_packet();
         }
     }
 }
