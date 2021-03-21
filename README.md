@@ -15,7 +15,7 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 - [x] Global Descriptor Table
 - [x] Interrupt Descriptor Table
 - [x] Programmable Interval Timer
-- [ ] Paging
+- [x] Paging
 
 ## Building Aero
 
