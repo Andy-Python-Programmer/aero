@@ -13,7 +13,8 @@
     global_asm,
     llvm_asm,
     abi_x86_interrupt,
-    alloc_error_handler
+    alloc_error_handler,
+    const_mut_refs
 )]
 #![test_runner(crate::tests::test_runner)] // Attach our custom tests runner.
 #![no_std] // Don't link the Rust standard library.
@@ -25,7 +26,7 @@ use bootloader::{entry_point, BootInfo};
 use drivers::mouse;
 use interrupts::{enable_interrupts, PIC1_DATA, PIC2_DATA};
 use memory::{alloc::AeroSystemAllocator, paging};
-use utils::io;
+use utils::{io, memory::Locked};
 
 mod drivers;
 mod gdt;
@@ -37,8 +38,10 @@ mod tests;
 mod utils;
 mod vga;
 
+use alloc::boxed::Box;
+
 #[global_allocator]
-static AERO_SYSTEM_ALLOCATOR: AeroSystemAllocator = AeroSystemAllocator;
+static AERO_SYSTEM_ALLOCATOR: Locked<AeroSystemAllocator> = Locked::new(AeroSystemAllocator::new());
 
 mod log {
     use vga::color::*;
@@ -77,16 +80,19 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         enable_interrupts();
 
-        let offset_table = paging::init(&boot_info);
+        let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
         log::info("Loaded paging");
 
-        memory::alloc::init_heap();
+        memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
+            .expect("Failed to initialize the heap.");
         log::info("Loaded Heap");
 
         log::info("Initialized kernel");
 
         println!("\nHello World!\n");
         print!("$ ");
+
+        // let heap_test = Box::new(41);
 
         loop {
             mouse::process_mouse_packet();
