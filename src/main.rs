@@ -77,7 +77,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         enable_interrupts();
 
-        paging::init();
+        let offset_table = paging::init(&boot_info);
         log::info("Loaded paging");
 
         memory::alloc::init_heap();
