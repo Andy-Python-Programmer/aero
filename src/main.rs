@@ -14,7 +14,8 @@
     llvm_asm,
     abi_x86_interrupt,
     alloc_error_handler,
-    const_mut_refs
+    const_mut_refs,
+    lang_items
 )]
 #![test_runner(crate::tests::test_runner)] // Attach our custom tests runner.
 #![no_std] // Don't link the Rust standard library.
@@ -95,7 +96,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         // let heap_test = Box::new(41);
 
         loop {
-            mouse::process_mouse_packet();
+            interrupts::halt();
         }
     }
 }

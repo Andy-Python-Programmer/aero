@@ -146,6 +146,13 @@ pub unsafe fn enable_interrupts() {
     asm!("sti");
 }
 
+/// Halt the CPU. Will resume when interrupt is recieved if interrupts are
+/// enabled.
+#[inline(always)]
+pub unsafe fn halt() {
+    asm!("hlt", options(nomem, nostack));
+}
+
 #[inline]
 pub unsafe fn end_pic1() {
     io::outb(PIC1_COMMAND, PIC_EOI);
