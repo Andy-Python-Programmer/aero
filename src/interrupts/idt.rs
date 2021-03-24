@@ -134,13 +134,16 @@ pub fn init() {
     }
 }
 
-/// Load the IDT using inline assembly.
 #[inline]
 unsafe fn load_idt(idt_descriptor: *const IDTDescriptor) {
     asm!("lidt [{}]", in(reg) idt_descriptor, options(nostack));
 }
 
-/// Enable interrupts.
+#[inline]
+pub unsafe fn disable_interrupts() {
+    asm!("cli");
+}
+
 #[inline]
 pub unsafe fn enable_interrupts() {
     asm!("sti");

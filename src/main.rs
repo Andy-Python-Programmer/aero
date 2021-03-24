@@ -24,8 +24,7 @@
 extern crate alloc;
 
 use bootloader::{entry_point, BootInfo};
-use drivers::mouse;
-use interrupts::{enable_interrupts, PIC1_DATA, PIC2_DATA};
+use interrupts::{PIC1_DATA, PIC2_DATA};
 use memory::{alloc::AeroSystemAllocator, paging};
 use utils::{io, memory::Locked};
 
@@ -39,10 +38,17 @@ mod tests;
 mod utils;
 mod vga;
 
-use alloc::boxed::Box;
-
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: Locked<AeroSystemAllocator> = Locked::new(AeroSystemAllocator::new());
+
+const ASCII_INTRO: &'static str = r"
+_______ _______ ______ _______    _______ ______ 
+(_______|_______|_____ (_______)  (_______) _____)
+ _______ _____   _____) )     _    _     ( (____  
+|  ___  |  ___) |  __  / |   | |  | |   | \____ \ 
+| |   | | |_____| |  \ \ |___| |  | |___| |____) )
+|_|   |_|_______)_|   |_\_____/    \_____(______/ 
+";
 
 mod log {
     use vga::color::*;
@@ -64,6 +70,8 @@ entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     unsafe {
+        interrupts::disable_interrupts();
+
         gdt::init();
         log::info("Loaded GDT");
 
@@ -79,7 +87,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         io::outb(PIC1_DATA, 0b11111000);
         io::outb(PIC2_DATA, 0b11101111);
 
-        enable_interrupts();
+        interrupts::enable_interrupts();
 
         let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
         log::info("Loaded paging");
@@ -90,10 +98,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         log::info("Initialized kernel");
 
-        println!("\nHello World!\n");
+        println!("{}", ASCII_INTRO);
         print!("$ ");
-
-        // let heap_test = Box::new(41);
 
         loop {
             interrupts::halt();

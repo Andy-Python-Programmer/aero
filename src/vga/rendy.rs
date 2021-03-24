@@ -17,7 +17,7 @@ lazy_static! {
 pub struct Rendy {
     column_position: usize,
     pub color_code: ColorCode,
-    buffer: &'static mut Buffer,
+    pub buffer: &'static mut Buffer,
 }
 
 impl Rendy {

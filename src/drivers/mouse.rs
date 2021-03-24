@@ -1,33 +1,153 @@
+use crate::println;
 use crate::utils::io;
+
+use bitflags::bitflags;
+use lazy_static::lazy_static;
+use spin::Mutex;
 
 const MOUSE_WAIT_TIMEOUT: usize = 100000;
 
-// const PS2_LEFT_BUTTON: u8 = 0b00000001;
-// const PS2_MIDDLE_BUTTON: u8 = 0b00000100;
-// const PS2_RIGHT_BUTTON: u8 = 0b00000010;
-
-const PS2_X_SIGN: u8 = 0b00010000;
-const PS2_Y_SIGN: u8 = 0b00100000;
-
-const PS2_X_OVERFLOW: u8 = 0b01000000;
-const PS2_Y_OVERFLOW: u8 = 0b10000000;
-
-static mut MOUSE_CYCLE: u8 = 0;
-static mut MOUSE_PACKET: [u8; 4] = [0; 4];
-static mut MOUSE_PACKET_READY: bool = false;
-static mut MOUSE_POSITION: MousePoition = MousePoition::new();
-
-#[derive(Debug)]
-struct MousePoition {
-    x: i64,
-    y: i64,
+lazy_static! {
+    pub static ref MOUSE: Mutex<Mouse> = Mutex::new(Mouse::new());
 }
 
-impl MousePoition {
-    /// Create a new mouse position.
-    const fn new() -> Self {
-        Self { x: 0, y: 0 }
+bitflags! {
+    /// Represents the flags currently set for the mouse.
+    #[derive(Default)]
+    pub struct MouseFlags: u8 {
+        const LEFT_BUTTON = 0b00000001;
+        const RIGHT_BUTTON = 0b00000010;
+        const MIDDLE_BUTTON = 0b00000100;
+        /// Whether or not the packet is valid or not.
+        const ALWAYS_ONE = 0b00001000;
+        /// Whether or not the x delta is negative.
+        const X_SIGN = 0b00010000;
+        /// Whether or not the y delta is negative.
+        const Y_SIGN = 0b00100000;
+        /// Whether or not the x delta overflowed.
+        const X_OVERFLOW = 0b01000000;
+        /// Whether or not the y delta overflowed.
+        const Y_OVERFLOW = 0b10000000;
     }
+}
+
+#[derive(Debug)]
+struct MouseState {
+    x: i16,
+    y: i16,
+    flags: MouseFlags,
+}
+
+impl MouseState {
+    /// Create a new mouse state
+    #[inline]
+    const fn new() -> Self {
+        Self {
+            x: 0,
+            y: 0,
+            flags: MouseFlags::empty(),
+        }
+    }
+
+    #[inline]
+    const fn is_left_button_pressed(&self) -> bool {
+        self.flags.contains(MouseFlags::LEFT_BUTTON)
+    }
+
+    #[inline]
+    const fn is_right_button_pressed(&self) -> bool {
+        self.flags.contains(MouseFlags::RIGHT_BUTTON)
+    }
+
+    #[inline]
+    const fn is_middle_button_pressed(&self) -> bool {
+        self.flags.contains(MouseFlags::MIDDLE_BUTTON)
+    }
+}
+
+pub struct Mouse {
+    cycle: u8,
+    state: MouseState,
+}
+
+impl Mouse {
+    #[inline]
+    const fn new() -> Self {
+        Self {
+            cycle: 0,
+            state: MouseState::new(),
+        }
+    }
+
+    fn process_mouse_packet(&mut self, packet: u8) {
+        match self.cycle {
+            0 => {
+                let flags = MouseFlags::from_bits_truncate(packet);
+
+                // Check if its a valid mouse packet
+                if !flags.contains(MouseFlags::ALWAYS_ONE) {
+                    return;
+                }
+
+                self.state.flags = flags;
+            }
+
+            1 => {
+                if !self.state.flags.contains(MouseFlags::X_OVERFLOW) {
+                    self.state.x = if self.state.flags.contains(MouseFlags::X_SIGN) {
+                        sign_extend(packet)
+                    } else {
+                        packet as i16
+                    };
+                }
+            }
+
+            2 => {
+                if !self.state.flags.contains(MouseFlags::Y_OVERFLOW) {
+                    self.state.y = if self.state.flags.contains(MouseFlags::Y_SIGN) {
+                        sign_extend(packet)
+                    } else {
+                        packet as i16
+                    };
+                }
+
+                self.process_collected_packet();
+            }
+
+            _ => unreachable!(),
+        }
+
+        self.cycle = (self.cycle + 1) % 3;
+    }
+
+    fn process_collected_packet(&self) {
+        if self.state.is_left_button_pressed() {
+            println!("Left mouse button pressed")
+        }
+
+        if self.state.is_middle_button_pressed() {
+            println!("Middle mouse button pressed")
+        }
+
+        if self.state.is_right_button_pressed() {
+            println!("Right mouse button pressed")
+        }
+
+        self.draw_mouse_pointer();
+    }
+
+    fn draw_mouse_pointer(&self) {}
+}
+
+#[inline]
+fn sign_extend(packet: u8) -> i16 {
+    ((packet as u16) | 0xFF00) as i16
+}
+
+/// Handle the mouse interrupt.
+#[inline]
+pub unsafe fn handle(data: u8) {
+    MOUSE.lock().process_mouse_packet(data)
 }
 
 unsafe fn mouse_wait() {
@@ -51,97 +171,6 @@ unsafe fn mouse_write(value: u8) {
     mouse_wait();
 
     io::outb(0x60, value);
-}
-
-/// Handle the mouse interrupt.
-pub unsafe fn handle(data: u8) {
-    if !MOUSE_PACKET_READY {
-        match MOUSE_CYCLE {
-            0 => {
-                if data & 0b00001000 != 0 {
-                    MOUSE_PACKET[0] = data;
-                    MOUSE_CYCLE += 1;
-                }
-            }
-
-            1 => {
-                MOUSE_PACKET[1] = data;
-                MOUSE_CYCLE += 1;
-            }
-
-            2 => {
-                MOUSE_PACKET[2] = data;
-
-                MOUSE_PACKET_READY = true;
-                MOUSE_CYCLE = 0;
-            }
-
-            _ => unreachable!(),
-        }
-    }
-}
-
-/// Process the mouse packet generated by mouse interrupts.
-pub unsafe fn process_mouse_packet() {
-    if MOUSE_PACKET_READY {
-        MOUSE_PACKET_READY = false;
-
-        let (mut x_negative, mut y_negative) = (false, false);
-        let (mut x_overflow, mut y_overflow) = (false, false);
-
-        if MOUSE_PACKET[0] & PS2_X_SIGN == 1 {
-            x_negative = true;
-        }
-
-        if MOUSE_PACKET[0] & PS2_Y_SIGN == 1 {
-            y_negative = true;
-        }
-
-        if MOUSE_PACKET[0] & PS2_X_OVERFLOW == 1 {
-            x_overflow = true;
-        }
-
-        if MOUSE_PACKET[0] & PS2_Y_OVERFLOW == 1 {
-            y_overflow = true;
-        }
-
-        if !x_negative {
-            MOUSE_POSITION.x += MOUSE_PACKET[1] as i64;
-
-            if x_overflow {
-                MOUSE_POSITION.x += 255;
-            }
-        } else {
-            MOUSE_POSITION.x -= MOUSE_PACKET[1] as i64;
-
-            if x_overflow {
-                MOUSE_POSITION.x -= 255;
-            }
-        }
-
-        if !y_negative {
-            MOUSE_POSITION.y -= MOUSE_PACKET[2] as i64;
-
-            if y_overflow {
-                MOUSE_POSITION.y -= 255;
-            }
-        } else {
-            MOUSE_POSITION.y += MOUSE_PACKET[2] as i64;
-
-            if y_overflow {
-                MOUSE_POSITION.y += 255;
-            }
-        }
-
-        // Check if our mouse position does not overflow the frame buffer width and height.
-        if MOUSE_POSITION.x < 0 {
-            MOUSE_POSITION.x = 0
-        }
-
-        if MOUSE_POSITION.y < 0 {
-            MOUSE_POSITION.y = 0
-        }
-    }
 }
 
 /// Initialise the PS/2 Mouse.
