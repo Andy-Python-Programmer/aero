@@ -31,4 +31,4 @@ To build and run aero:
 ```
 
 ## Contributing
-Contributions are absolutely, positively welcome and encouraged!
+Contributions are absolutely, positively welcome and encouraged! Check out [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guidelines for aero.
