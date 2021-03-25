@@ -16,6 +16,10 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 - [x] Interrupt Descriptor Table
 - [x] Programmable Interval Timer
 - [x] Paging
+- [x] Mouse Interrupts
+- [x] Keyboard Interrupts
+- [ ] ACPI Tables - *Work in progress*
+- [ ] SATA Drive Read/Write
 
 ## Building Aero
 
