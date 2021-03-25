@@ -33,6 +33,7 @@ mod arch;
 mod drivers;
 mod panic;
 mod pit;
+mod syscall;
 mod tests;
 mod utils;
 mod vga;
