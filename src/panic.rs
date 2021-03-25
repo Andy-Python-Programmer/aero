@@ -1,10 +1,11 @@
 use core::panic::PanicInfo;
 
+use crate::arch::interrupts;
+use crate::println;
 use crate::vga::{
     color::{Color, ColorCode},
     rendy::RENDERER,
 };
-use crate::{interrupts, println};
 
 #[panic_handler]
 pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {

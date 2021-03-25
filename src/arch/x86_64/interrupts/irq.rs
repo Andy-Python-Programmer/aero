@@ -1,5 +1,5 @@
+use crate::arch::interrupts::{end_pic1, end_pic2};
 use crate::drivers::{keyboard, mouse};
-use crate::interrupts::{end_pic1, end_pic2};
 use crate::pit::PIT;
 use crate::utils::io;
 

@@ -23,16 +23,14 @@
 
 extern crate alloc;
 
+use arch::interrupts::{PIC1_DATA, PIC2_DATA};
+use arch::memory::{alloc::AeroSystemAllocator, paging};
 use bootloader::{entry_point, BootInfo};
-use interrupts::{PIC1_DATA, PIC2_DATA};
-use memory::{alloc::AeroSystemAllocator, paging};
 use utils::{io, memory::Locked};
 
 mod acpi;
+mod arch;
 mod drivers;
-mod gdt;
-mod interrupts;
-mod memory;
 mod panic;
 mod pit;
 mod tests;
@@ -71,15 +69,15 @@ entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     unsafe {
-        interrupts::disable_interrupts();
+        arch::interrupts::disable_interrupts();
 
-        gdt::init();
+        arch::gdt::init();
         log::info("Loaded GDT");
 
         acpi::init();
         log::info("Loaded ACPI");
 
-        interrupts::init();
+        arch::interrupts::init();
         log::info("Loaded IDT");
 
         pit::init();
@@ -91,12 +89,12 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         io::outb(PIC1_DATA, 0b11111000);
         io::outb(PIC2_DATA, 0b11101111);
 
-        interrupts::enable_interrupts();
+        arch::interrupts::enable_interrupts();
 
         let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
         log::info("Loaded paging");
 
-        memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
+        arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
             .expect("Failed to initialize the heap.");
         log::info("Loaded heap");
 
@@ -106,7 +104,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         print!("$ ");
 
         loop {
-            interrupts::halt();
+            arch::interrupts::halt();
         }
     }
 }
