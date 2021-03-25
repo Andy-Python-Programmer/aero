@@ -17,9 +17,9 @@
     const_mut_refs,
     lang_items
 )]
-#![test_runner(crate::tests::test_runner)] // Attach our custom tests runner.
-#![no_std] // Don't link the Rust standard library.
-#![no_main] // Disable the rust entry point.
+#![test_runner(crate::tests::test_runner)]
+#![no_std]
+#![no_main]
 
 extern crate alloc;
 
@@ -28,6 +28,7 @@ use interrupts::{PIC1_DATA, PIC2_DATA};
 use memory::{alloc::AeroSystemAllocator, paging};
 use utils::{io, memory::Locked};
 
+mod acpi;
 mod drivers;
 mod gdt;
 mod interrupts;
@@ -75,6 +76,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         gdt::init();
         log::info("Loaded GDT");
 
+        acpi::init();
+        log::info("Loaded ACPI");
+
         interrupts::init();
         log::info("Loaded IDT");
 
@@ -94,7 +98,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
             .expect("Failed to initialize the heap.");
-        log::info("Loaded Heap");
+        log::info("Loaded heap");
 
         log::info("Initialized kernel");
 
