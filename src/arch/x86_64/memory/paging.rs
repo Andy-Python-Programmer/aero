@@ -62,7 +62,7 @@ unsafe fn init_offset_page_table(physical_memory_offset: VirtAddr) -> OffsetPage
 }
 
 /// Get a mutable reference to the active level 4 page table.
-unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut PageTable {
+pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut PageTable {
     let (level_4_table_frame, _) = Cr3::read();
 
     let physical = level_4_table_frame.start_address();

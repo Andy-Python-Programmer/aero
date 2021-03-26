@@ -75,9 +75,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         arch::gdt::init();
         log::info("Loaded GDT");
 
-        acpi::init();
-        log::info("Loaded ACPI");
-
         arch::interrupts::init();
         log::info("Loaded IDT");
 
@@ -94,6 +91,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
         log::info("Loaded paging");
+
+        acpi::init(&mut offset_table, &mut frame_allocator);
+        log::info("Loaded ACPI");
 
         arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
             .expect("Failed to initialize the heap.");
