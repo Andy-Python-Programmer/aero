@@ -17,3 +17,10 @@ features = ["map_physical_memory"]
 [dependencies.lazy_static]
 version = "1.4"
 features = ["spin_no_std"]
+
+[profile.dev]
+opt-level = 3
+lto = true
+
+[profile.release]
+lto = true

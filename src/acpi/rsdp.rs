@@ -1,5 +1,3 @@
-use core::mem;
-
 /// The RSDP (Root System Description Pointer)'s signature.
 ///
 /// **Note**: The trailing space is required.
@@ -8,21 +6,21 @@ const RSDP_SIGNATURE: &[u8] = b"RSD PTR ";
 #[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct RSDP {
-    signature: [u8; 8],
-    checksum: u8,
-    oemid: [u8; 6],
-    revision: u8,
-    rsdt_address: u32,
-    length: u32,
-    xsdt_address: u64,
-    extended_checksum: u8,
-    reserved: [u8; 3],
+    pub signature: [u8; 8],
+    pub checksum: u8,
+    pub oemid: [u8; 6],
+    pub revision: u8,
+    pub rsdt_address: u32,
+    pub length: u32,
+    pub xsdt_address: u64,
+    pub extended_checksum: u8,
+    pub reserved: [u8; 3],
 }
 
 impl RSDP {
     pub fn lookup(start_addr: usize, end_addr: usize) -> Option<Self> {
-        for i in 0..(end_addr + 1 - start_addr) / mem::size_of::<RSDP>() {
-            let rsdp = unsafe { &*(start_addr as *const RSDP).offset(i as isize) };
+        for i in 0..(end_addr + 1 - start_addr) / 16 {
+            let rsdp = unsafe { &*((start_addr + i * 16) as *const RSDP) };
 
             if &rsdp.signature == RSDP_SIGNATURE {
                 return Some(*rsdp);
