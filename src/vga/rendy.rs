@@ -114,6 +114,27 @@ macro_rules! println {
     ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
+#[macro_export]
+macro_rules! dbg {
+    () => {
+        $crate::println!("[{}:{}]", $crate::file!(), $crate::line!());
+    };
+    ($val:expr $(,)?) => {
+        // Use of `match` here is intentional because it affects the lifetimes
+        // of temporaries - https://stackoverflow.com/a/48732525/1063961
+        match $val {
+            tmp => {
+                $crate::println!("[{}:{}] {} = {:#?}",
+                    core::file!(), core::line!(), core::stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::dbg!($val)),+,)
+    };
+}
+
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     RENDERER.lock().write_fmt(args).unwrap();
