@@ -15,18 +15,31 @@ use x86_64::{
 const LOOKUP_START_ADDRESS: usize = 0xE0000;
 const LOOKUP_END_ADDRESS: usize = 0xFFFFF;
 
-use self::{rsdp::RSDP, sdt::SDT};
+use self::{fadt::FADT, hpet::HPET, rsdp::RSDP, sdt::SDT};
 
+pub mod fadt;
+pub mod hpet;
 pub mod mcfg;
 pub mod rsdp;
 pub mod sdt;
 
-unsafe fn look_up_tables(
+#[repr(packed)]
+#[derive(Clone, Copy, Debug)]
+pub struct GenericAddressStructure {
+    pub address_space: u8,
+    pub bit_width: u8,
+    pub bit_offset: u8,
+    pub access_size: u8,
+    pub address: u64,
+}
+
+unsafe fn look_up_table(
+    signature: &str,
     sdt: &'static SDT,
     is_legacy: bool,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     offset_table: &mut OffsetPageTable,
-) {
+) -> Option<&'static SDT> {
     let entries;
 
     if is_legacy {
@@ -39,8 +52,12 @@ unsafe fn look_up_tables(
         let item_address = *((sdt.data_address() as *const u32).add(i));
         let item = SDT::from_address(item_address as u64, frame_allocator, offset_table);
 
-        crate::dbg!(item.get_signature());
+        if item.get_signature() == signature {
+            return Some(item);
+        }
     }
+
+    None
 }
 
 /// Initialize ACPI tables.
@@ -75,17 +92,31 @@ pub fn init(
             let sdt_address = rsdp.get_sdt_address() as u64;
             let sdt = SDT::from_address(sdt_address, frame_allocator, offset_table);
 
-            let is_leagcy;
+            let is_legacy;
 
             if sdt.get_signature() == "XSDT" {
-                is_leagcy = false;
+                is_legacy = false;
             } else if sdt.get_signature() == "RSDT" {
-                is_leagcy = true;
+                is_legacy = true;
             } else {
                 panic!("Invalid RSDP signature.")
             }
 
-            look_up_tables(sdt, is_leagcy, frame_allocator, offset_table);
+            FADT::new(look_up_table(
+                fadt::SIGNATURE,
+                sdt,
+                is_legacy,
+                frame_allocator,
+                offset_table,
+            ));
+
+            HPET::new(look_up_table(
+                hpet::SIGNATURE,
+                sdt,
+                is_legacy,
+                frame_allocator,
+                offset_table,
+            ));
         } else {
             panic!("Unable to find the RSDP")
         }
