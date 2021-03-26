@@ -1,7 +1,7 @@
 //! The PIT (Programmable Interval Timer) chip basically consists of an oscillator, a prescaler and 3 independent frequency dividers
 //! and it is used to create time intervals and calculate *estimate* time since epoch.
 //!
-//! **Notes**: <https://wiki.osdev.org/Global_Descriptor_Table>
+//! **Notes**: <https://wiki.osdev.org/Programmable_Interval_Timer>
 
 use core::time::Duration;
 

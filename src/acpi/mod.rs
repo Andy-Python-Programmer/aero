@@ -1,3 +1,8 @@
+//! The ACPI (Advanced Configuration and Power Interface) tables help to gather the
+//! CPU, interrupt, and timer informations.
+//!
+//! **Notes**: <https://wiki.osdev.org/ACPI>
+
 use x86_64::{
     structures::paging::{
         FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags, PhysFrame, Size4KiB,
@@ -14,7 +19,7 @@ pub mod mcfg;
 pub mod rsdp;
 pub mod sdt;
 
-/// Initialize ACPI tables to gather the CPU, interrupt, and timer information.
+/// Initialize ACPI tables.
 pub fn init(
     offset_table: &mut OffsetPageTable,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,

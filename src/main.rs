@@ -11,7 +11,6 @@
     core_intrinsics,
     asm,
     global_asm,
-    llvm_asm,
     abi_x86_interrupt,
     alloc_error_handler,
     const_mut_refs,
