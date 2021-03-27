@@ -19,6 +19,7 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 - [x] Mouse Interrupts
 - [x] Keyboard Interrupts
 - [x] ACPI Tables
+- [x] Syscalls Handler
 - [ ] SATA Drive Read/Write
 
 ## Building Aero

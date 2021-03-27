@@ -10,6 +10,11 @@ volatile = "0.2"
 bitflags = "1.2"
 x86_64 = "0.13.3"
 
+[dependencies.goblin]
+version = "0.3.4"
+default-features = false
+features = ["elf32", "elf64"]
+
 [dependencies.bootloader]
 version = "0.9.16"
 features = ["map_physical_memory"]

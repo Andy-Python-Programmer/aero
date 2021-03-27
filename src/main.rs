@@ -30,6 +30,7 @@ use utils::{io, memory::Locked};
 mod acpi;
 mod arch;
 mod drivers;
+mod elf;
 mod panic;
 mod pit;
 mod syscall;

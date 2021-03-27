@@ -124,6 +124,9 @@ pub fn init() {
         IDT[33].set_function(super::irq::keyboard);
         IDT[44].set_function(super::irq::mouse);
 
+        IDT[0x80].set_function(crate::syscall::syscall);
+        IDT[0x80].set_flags(IDTFlags::PRESENT | IDTFlags::RING_3 | IDTFlags::INTERRUPT);
+
         let idt_descriptor = IDTDescriptor::new(
             ((IDT.len() * size_of::<IDTEntry>()) - 1) as u16,
             (&IDT as *const _) as u64,
