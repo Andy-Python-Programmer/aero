@@ -4,7 +4,7 @@
 
 use core::ptr;
 
-use super::{sdt::SDT, GenericAddressStructure};
+use super::sdt::SDT;
 
 pub const SIGNATURE: &str = "FACP";
 
@@ -56,23 +56,6 @@ pub struct FADT {
     reserved2: u8,
 
     pub flags: u32,
-    pub reset_register: GenericAddressStructure,
-
-    pub reset_value: u8,
-    reserved3: [u8; 3],
-
-    // 64 bit pointers - Available on ACPI 2.0+
-    pub x_firmware_control: u64,
-    pub x_dsdt: u64,
-
-    pub x_p_m1a_event_block: GenericAddressStructure,
-    pub x_p_m1b_event_block: GenericAddressStructure,
-    pub x_p_m1a_control_block: GenericAddressStructure,
-    pub x_p_m1b_control_block: GenericAddressStructure,
-    pub x_p_m2_control_block: GenericAddressStructure,
-    pub x_p_m_timer_block: GenericAddressStructure,
-    pub x_g_p_e0_block: GenericAddressStructure,
-    pub x_g_p_e1_block: GenericAddressStructure,
 }
 
 impl FADT {

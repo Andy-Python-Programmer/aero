@@ -33,6 +33,24 @@ pub struct GenericAddressStructure {
     pub address: u64,
 }
 
+impl GenericAddressStructure {
+    pub unsafe fn init(
+        &self,
+        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+        offset_table: &mut OffsetPageTable,
+    ) {
+        let page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(self.address));
+        let frame = PhysFrame::containing_address(PhysAddr::new(self.address));
+
+        let _ = offset_table.map_to(
+            page,
+            frame,
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
+            frame_allocator,
+        );
+    }
+}
+
 unsafe fn look_up_table(
     signature: &str,
     sdt: &'static SDT,
@@ -110,13 +128,17 @@ pub fn init(
                 offset_table,
             ));
 
-            HPET::new(look_up_table(
-                hpet::SIGNATURE,
-                sdt,
-                is_legacy,
+            HPET::new(
+                look_up_table(
+                    hpet::SIGNATURE,
+                    sdt,
+                    is_legacy,
+                    frame_allocator,
+                    offset_table,
+                ),
                 frame_allocator,
                 offset_table,
-            ));
+            );
         } else {
             panic!("Unable to find the RSDP")
         }
