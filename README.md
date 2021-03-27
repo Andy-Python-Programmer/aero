@@ -18,7 +18,7 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 - [x] Paging
 - [x] Mouse Interrupts
 - [x] Keyboard Interrupts
-- [ ] ACPI Tables - *Work in progress*
+- [x] ACPI Tables
 - [ ] SATA Drive Read/Write
 
 ## Building Aero
@@ -31,7 +31,7 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 To build and run aero:
 
 ```sh
-    $ cargo run
+$ cargo run
 ```
 
 ## Contributing
