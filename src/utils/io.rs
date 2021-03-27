@@ -27,7 +27,35 @@ pub unsafe fn inb(port: u16) -> u8 {
     ret
 }
 
-/// This function is called after every `outb` instruction as on older machines
+/// Wrapper function to the `outl` assembly instruction used to do the
+/// low level port output.
+#[inline]
+pub unsafe fn outl(port: u16, value: u32) {
+    asm!(
+        "outl %eax, %dx",
+        in("eax") value,
+        in("dx") port,
+        options(att_syntax),
+    );
+}
+
+/// Wrapper function to the `inl` assembly instruction used to do the
+/// low level port input.
+#[inline]
+pub unsafe fn inl(port: u16) -> u32 {
+    let ret: u32;
+
+    asm!(
+        "inl %dx, %eax",
+        out("eax") ret,
+        in("dx") port,
+        options(att_syntax),
+    );
+
+    ret
+}
+
+/// This function is called after every `outb` and `outl` instruction as on older machines
 /// its necessary to give the PIC some time to react to commands as they might not
 /// be processed quickly.
 #[inline]

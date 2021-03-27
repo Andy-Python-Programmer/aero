@@ -25,6 +25,7 @@ extern crate alloc;
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 use arch::memory::{alloc::AeroSystemAllocator, paging};
 use bootloader::{entry_point, BootInfo};
+use drivers::pci::PCI;
 use utils::{io, memory::Locked};
 
 mod acpi;
@@ -103,6 +104,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         println!("{}", ASCII_INTRO);
         print!("$ ");
+
+        PCI::new();
 
         loop {
             arch::interrupts::halt();
