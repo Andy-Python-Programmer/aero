@@ -1,10 +1,28 @@
-use crate::println;
+#![allow(dead_code)]
+use crate::drivers::ahci::AHCI;
 use crate::utils::io;
 
 use bit_field::BitField;
 
 pub const PCI_CONFIG_ADDRESS_PORT: u16 = 0xCF8;
 pub const PCI_CONFIG_DATA_PORT: u16 = 0xCFC;
+
+#[derive(Clone, Copy, Debug)]
+pub enum Bar {
+    Memory32 {
+        address: u32,
+        size: u32,
+        prefetchable: bool,
+    },
+
+    Memory64 {
+        address: u64,
+        size: u64,
+        prefetchable: bool,
+    },
+
+    IO(u32),
+}
 
 #[derive(Debug, PartialEq)]
 pub enum DeviceType {
@@ -371,10 +389,29 @@ impl PCIHeader {
         io::inl(PCI_CONFIG_DATA_PORT)
     }
 
+    unsafe fn write(&self, offset: u32, value: u32) {
+        let bus = self.bus() as u32;
+        let device = self.device() as u32;
+        let func = self.function() as u32;
+        let offset = offset as u32;
+
+        let address =
+            ((bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000) as u32;
+
+        io::outl(PCI_CONFIG_ADDRESS_PORT, address);
+        io::outl(PCI_CONFIG_DATA_PORT, value);
+    }
+
     pub unsafe fn get_vendor_id(&self) -> u32 {
         let id = self.read(0x00);
 
         id.get_bits(0..16)
+    }
+
+    pub unsafe fn get_interface_id(&self) -> u32 {
+        let id = self.read(0x08);
+
+        id.get_bits(8..16)
     }
 
     pub unsafe fn get_vendor(&self) -> Vendor {
@@ -385,6 +422,57 @@ impl PCIHeader {
         let id = self.read(0x08);
 
         DeviceType::new(id.get_bits(24..32), id.get_bits(16..24))
+    }
+
+    pub unsafe fn get_bar(&self, bar: u8) -> Option<Bar> {
+        let offset = 0x10 + (bar as u16) * 4;
+        let bar = self.read(offset.into());
+
+        if bar.get_bit(0) == false {
+            let prefetchable = bar.get_bit(3);
+            let address = bar.get_bits(4..32) << 4;
+
+            self.write(offset.into(), 0xFFFFFFFF);
+
+            let mut readback = self.read(offset.into());
+
+            self.write(offset.into(), address);
+
+            if readback == 0x0 {
+                return None;
+            }
+
+            readback.set_bits(0..4, 0);
+
+            let size = 1 << readback.trailing_zeros();
+
+            match bar.get_bits(1..3) {
+                0b00 => Some(Bar::Memory32 {
+                    address,
+                    size,
+                    prefetchable,
+                }),
+
+                0b10 => {
+                    let address = {
+                        let mut address = address as u64;
+
+                        address.set_bits(32..64, self.read((offset + 4).into()) as u64);
+                        address
+                    };
+
+                    Some(Bar::Memory64 {
+                        address,
+                        size: size as u64,
+                        prefetchable,
+                    })
+                }
+
+                _ => None,
+            }
+        } else {
+            Some(Bar::IO(bar.get_bits(2..32)))
+        }
     }
 }
 
@@ -404,12 +492,19 @@ pub fn init() {
                         continue;
                     }
 
-                    println!(
-                        "PCI Device: (bus={}, device={:?}, vendor={:?})",
-                        bus,
-                        device.get_device(),
-                        device.get_vendor()
-                    )
+                    match device.get_device() {
+                        DeviceType::SataController => match device.get_interface_id() {
+                            0x01 => {
+                                /*
+                                 * AHCI 1.0 Device
+                                 */
+
+                                AHCI::new(device);
+                            }
+                            _ => (),
+                        },
+                        _ => (),
+                    }
                 }
             }
         }
