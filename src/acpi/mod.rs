@@ -15,6 +15,8 @@ use x86_64::{
 const LOOKUP_START_ADDRESS: usize = 0xE0000;
 const LOOKUP_END_ADDRESS: usize = 0xFFFFF;
 
+use crate::arch::memory::paging::GlobalAllocator;
+
 use self::{fadt::FADT, hpet::HPET, rsdp::RSDP, sdt::SDT};
 
 pub mod fadt;
@@ -79,10 +81,7 @@ unsafe fn look_up_table(
 }
 
 /// Initialize ACPI tables.
-pub fn init(
-    offset_table: &mut OffsetPageTable,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) {
+pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllocator) {
     unsafe {
         let start_frame: PhysFrame<Size4KiB> =
             PhysFrame::containing_address(PhysAddr::new(LOOKUP_START_ADDRESS as u64));

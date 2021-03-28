@@ -10,7 +10,7 @@ use crate::vga::{
 #[panic_handler]
 pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Blue);
-    RENDERER.lock().clear_screen();
+    // RENDERER.lock().clear_screen();
 
     println!(":(\n\n\n\n{}", info);
 

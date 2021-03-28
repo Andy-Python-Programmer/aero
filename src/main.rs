@@ -84,9 +84,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         drivers::mouse::init();
         log::info("Loaded PS/2 driver");
 
-        drivers::pci::init();
-        log::info("Loaded PCI driver");
-
         io::outb(PIC1_DATA, 0b11111000);
         io::outb(PIC2_DATA, 0b11101111);
 
@@ -97,6 +94,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         acpi::init(&mut offset_table, &mut frame_allocator);
         log::info("Loaded ACPI");
+
+        drivers::pci::init(&mut offset_table, &mut frame_allocator);
+        log::info("Loaded PCI driver");
 
         arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
             .expect("Failed to initialize the heap.");

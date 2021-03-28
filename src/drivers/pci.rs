@@ -1,8 +1,9 @@
 #![allow(dead_code)]
-use crate::drivers::ahci::AHCI;
 use crate::utils::io;
+use crate::{arch::memory::paging::GlobalAllocator, drivers::ahci::AHCI};
 
 use bit_field::BitField;
+use x86_64::structures::paging::OffsetPageTable;
 
 pub const PCI_CONFIG_ADDRESS_PORT: u16 = 0xCF8;
 pub const PCI_CONFIG_DATA_PORT: u16 = 0xCFC;
@@ -477,7 +478,7 @@ impl PCIHeader {
 }
 
 /// Lookup and initialize all PCI devices.
-pub fn init() {
+pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllocator) {
     // Go through each possible bus, device, function ID and check if we have a driver for it.
     // If a driver for the PCI device is found then initialize it.
 
@@ -499,7 +500,7 @@ pub fn init() {
                                  * AHCI 1.0 Device
                                  */
 
-                                AHCI::new(device);
+                                AHCI::new(offset_table, frame_allocator, device);
                             }
                             _ => (),
                         },

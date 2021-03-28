@@ -10,6 +10,8 @@ use x86_64::{
 
 use crate::utils::memory::Locked;
 
+use super::paging::GlobalAllocator;
+
 pub const HEAP_START: usize = 0x444444440000;
 pub const HEAP_SIZE: usize = 100 * 1024;
 
@@ -57,7 +59,7 @@ fn get_page_range() -> PageRangeInclusive {
 /// Initialize the heap.
 pub fn init_heap(
     offset_table: &mut OffsetPageTable,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    frame_allocator: &mut GlobalAllocator,
 ) -> Result<(), MapToError<Size4KiB>> {
     let page_range = get_page_range();
 

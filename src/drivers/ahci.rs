@@ -1,5 +1,8 @@
+use core::mem::MaybeUninit;
+
+use crate::{arch::memory::paging::GlobalAllocator, paging::memory_map_device};
 use x86_64::{
-    structures::paging::{PhysFrame, Size4KiB},
+    structures::paging::{OffsetPageTable, PhysFrame, Size4KiB},
     PhysAddr,
 };
 
@@ -23,7 +26,7 @@ pub enum AHCIPortType {
     SATAPI,
 }
 
-#[derive(Debug)]
+#[repr(C, packed)]
 struct HBAMemory {
     host_capability: u32,
     global_host_control: u32,
@@ -38,10 +41,27 @@ struct HBAMemory {
     bios_handoff_ctrl_sts: u32,
     rsv0: [u8; 0x74],
     vendor: [u8; 0x60],
-    ports: [HBAPort; 1],
+    ports: [MaybeUninit<HBAPort>; 32],
 }
 
-#[derive(Debug)]
+impl HBAMemory {
+    /// Get a HBA port at `idx`.
+    pub fn get_port(&self, idx: u32) -> &HBAPort {
+        assert!(idx < 32, "There are only 32 ports!");
+
+        let bit = self.ports_implemented >> idx;
+
+        if bit & 1 == 1 {
+            let ptr = self.ports[idx as usize].as_ptr();
+
+            unsafe { &*ptr }
+        } else {
+            panic!()
+        }
+    }
+}
+
+#[repr(C, packed)]
 struct HBAPort {
     command_list_base: u32,
     command_list_base_upper: u32,
@@ -66,10 +86,15 @@ struct HBAPort {
 
 pub struct AHCI {
     header: PCIHeader,
+    memory: &'static mut HBAMemory,
 }
 
 impl AHCI {
-    pub unsafe fn new(header: PCIHeader) -> Self {
+    pub unsafe fn new(
+        offset_table: &mut OffsetPageTable,
+        frame_allocator: &mut GlobalAllocator,
+        header: PCIHeader,
+    ) -> Self {
         log::info("Loaded AHCI driver");
 
         let abar = header.get_bar(5).unwrap();
@@ -85,20 +110,33 @@ impl AHCI {
         let end =
             PhysFrame::containing_address(PhysAddr::new((abar_address + abar_size - 1) as u64));
 
-        for frame in PhysFrame::range_inclusive(start, end) {}
+        for frame in PhysFrame::range_inclusive(start, end) {
+            memory_map_device(offset_table, frame_allocator, frame)
+                .expect("Failed to memory map the SATA device");
+        }
 
-        let this = Self { header };
+        let memory = &mut *(abar_address as *mut HBAMemory);
+        let this = Self { header, memory };
 
         this.probe_ports();
 
         this
     }
 
-    fn probe_ports(&self) {}
+    unsafe fn probe_ports(&self) {
+        for i in 0..32 {
+            if (self.memory.ports_implemented & (1 << i)) == 1 {
+                let port = self.memory.get_port(i);
+                let port_type = self.get_port_type(port);
 
-    fn get_port_type(&self, port: HBAPort) -> AHCIPortType {
-        let ipm = (port.sata_status >> 8) & 0b111;
-        let device_detection = port.sata_status & 0b111;
+                crate::println!("Found! {:?}{}", port_type, port.signature);
+            }
+        }
+    }
+
+    fn get_port_type(&self, port: &HBAPort) -> AHCIPortType {
+        let ipm = (port.sata_status >> 8) & 0x0F;
+        let device_detection = port.sata_status & 0x0F;
 
         if device_detection != HBA_PORT_DEV_PRESENT {
             return AHCIPortType::None;
