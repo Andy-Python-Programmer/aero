@@ -9,6 +9,7 @@ spin = "0.9"
 volatile = "0.2"
 bitflags = "1.2"
 x86_64 = "0.13.3"
+bit_field = "0.10.1"
 
 [dependencies.goblin]
 version = "0.3.4"

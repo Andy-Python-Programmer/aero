@@ -25,7 +25,6 @@ extern crate alloc;
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 use arch::memory::{alloc::AeroSystemAllocator, paging};
 use bootloader::{entry_point, BootInfo};
-use drivers::pci::PCI;
 use utils::{io, memory::Locked};
 
 mod acpi;
@@ -85,6 +84,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         drivers::mouse::init();
         log::info("Loaded PS/2 driver");
 
+        drivers::pci::init();
+        log::info("Loaded PCI driver");
+
         io::outb(PIC1_DATA, 0b11111000);
         io::outb(PIC2_DATA, 0b11101111);
 
@@ -103,9 +105,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         log::info("Initialized kernel");
 
         println!("{}", ASCII_INTRO);
-        print!("$ ");
 
-        PCI::new();
+        print!("$ ");
 
         loop {
             arch::interrupts::halt();

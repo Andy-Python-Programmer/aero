@@ -6,6 +6,7 @@ version = 3
 name = "aero"
 version = "0.1.0"
 dependencies = [
+ "bit_field 0.10.1",
  "bitflags",
  "bootloader",
  "goblin",
@@ -20,6 +21,12 @@ name = "bit_field"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed8765909f9009617974ab6b7d332625b320b33c326b1e9321382ef1999b5d56"
+
+[[package]]
+name = "bit_field"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcb6dd1c2376d2e096796e234a70e17e94cc2d5d54ff8ce42b28cef1d0d359a4"
 
 [[package]]
 name = "bitflags"
@@ -106,6 +113,6 @@ version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d9164ba09d4a6744b87c540d02556722080bd7689e92b6ff008b803b1460647"
 dependencies = [
- "bit_field",
+ "bit_field 0.9.0",
  "bitflags",
 ]

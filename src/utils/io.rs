@@ -18,10 +18,9 @@ pub unsafe fn inb(port: u16) -> u8 {
     let ret: u8;
 
     asm!(
-        "inb %dx, %al",
+        "in al, dx",
         in("dx") port,
         out("al") ret,
-        options(att_syntax)
     );
 
     ret
@@ -32,10 +31,9 @@ pub unsafe fn inb(port: u16) -> u8 {
 #[inline]
 pub unsafe fn outl(port: u16, value: u32) {
     asm!(
-        "outl %eax, %dx",
-        in("eax") value,
+        "out dx, eax",
         in("dx") port,
-        options(att_syntax),
+        in("eax") value,
     );
 }
 
@@ -46,10 +44,9 @@ pub unsafe fn inl(port: u16) -> u32 {
     let ret: u32;
 
     asm!(
-        "inl %dx, %eax",
-        out("eax") ret,
+        "in eax, dx",
         in("dx") port,
-        options(att_syntax),
+        out("eax") ret,
     );
 
     ret
