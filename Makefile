@@ -16,3 +16,7 @@ run:
 
 clean:
 	cargo clean
+
+init:
+	touch hdd.img
+	

@@ -365,15 +365,15 @@ impl PCIHeader {
         Self(result)
     }
 
-    fn bus(&self) -> u8 {
+    pub fn bus(&self) -> u8 {
         self.0.get_bits(8..16) as u8
     }
 
-    fn device(&self) -> u8 {
+    pub fn device(&self) -> u8 {
         self.0.get_bits(3..8) as u8
     }
 
-    fn function(&self) -> u8 {
+    pub fn function(&self) -> u8 {
         self.0.get_bits(0..3) as u8
     }
 

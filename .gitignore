@@ -1,2 +1,3 @@
 /target
-/log.log
+/qemu.log
+*.img

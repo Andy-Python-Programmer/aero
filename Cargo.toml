@@ -30,3 +30,17 @@ lto = true
 
 [profile.release]
 lto = true
+
+[package.metadata.bootimage]
+run-args = [
+    "-d",
+    "int,guest_errors",
+    "-D",
+    "qemu.log",
+    "-drive",
+    "id=disk,file=hdd.img,format=raw,if=none",
+    "-device", 
+    "ahci,id=ahci",
+    "-device",
+    "ide-hd,drive=disk,bus=ahci.0",
+]

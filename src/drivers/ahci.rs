@@ -9,6 +9,41 @@ use x86_64::{
 use super::pci::{Bar, PCIHeader};
 use crate::log;
 
+use bitflags::bitflags;
+
+bitflags! {
+    #[repr(C)]
+    pub struct HBACapabilities: u32 {
+        const SXS_SUPPORT = 1 << 5;
+        const EMS_SUPPORT = 1 << 6;
+        const CCC_SUPPORT = 1 << 7;
+        const PS_CAPABLE = 1 << 13;
+        const SS_CAPABLE = 1 << 14;
+        const PIO_MULTI_DRQ_SUPPORT = 1 << 15;
+        const FBSS_SUPPORT = 1 << 16;
+        const PM_SUPPORT = 1 << 17;
+        const AHCI_ONLY = 1 << 18;
+        const CLO_SUPPORT = 1 << 24;
+        const AL_SUPPORT = 1 << 25;
+        const ALP_SUPPORT = 1 << 26;
+        const SS_SUPPORT = 1 << 27;
+        const MPS_SUPPORT = 1 << 28;
+        const SNTF_SUPPORT = 1 << 29;
+        const NCQ_SUPPORT = 1 << 30;
+        const SUPPORTS_64_ADDRESSES = 1 << 31;
+    }
+}
+
+bitflags! {
+    #[repr(C)]
+    pub struct GlobalHBAControl: u32 {
+        const HBA_RESET = 1;
+        const INT_ENABLE = 1 << 1;
+        const MRSM = 1 << 2;
+        const AHCI_ENABLE = 1 << 31;
+    }
+}
+
 const SATA_SIG_ATAPI: u32 = 0xEB140101;
 const SATA_SIG_ATA: u32 = 0x00000101;
 const SATA_SIG_SEMB: u32 = 0xC33C0101;
@@ -28,8 +63,8 @@ pub enum AHCIPortType {
 
 #[repr(C, packed)]
 struct HBAMemory {
-    host_capability: u32,
-    global_host_control: u32,
+    host_capability: HBACapabilities,
+    global_host_control: GlobalHBAControl,
     interrupt_status: u32,
     ports_implemented: u32,
     version: u32,
@@ -58,17 +93,6 @@ impl HBAMemory {
         } else {
             panic!()
         }
-    }
-
-    pub fn port_count(&self) -> u32 {
-        self.ports_implemented.count_ones()
-    }
-
-    pub fn port_slice(&self) -> &[HBAPort] {
-        let count = self.port_count() as usize;
-        let slice = &self.ports[..count];
-
-        unsafe { MaybeUninit::slice_assume_init_ref(slice) }
     }
 }
 
@@ -140,7 +164,7 @@ impl AHCI {
                 let port = self.memory.get_port(i);
                 let port_type = self.get_port_type(port);
 
-                crate::println!("Found! {:?}{}", port_type, port.signature);
+                crate::println!("Found! {:?}", port_type);
             }
         }
     }
