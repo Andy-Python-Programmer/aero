@@ -39,8 +39,8 @@ struct HBAMemory {
     enclosure_management_control: u32,
     host_capabilities_extended: u32,
     bios_handoff_ctrl_sts: u32,
-    rsv0: [u8; 0x74],
-    vendor: [u8; 0x60],
+    rsv0: [u8; 116],
+    vendor: [u8; 96],
     ports: [MaybeUninit<HBAPort>; 32],
 }
 
@@ -58,6 +58,17 @@ impl HBAMemory {
         } else {
             panic!()
         }
+    }
+
+    pub fn port_count(&self) -> u32 {
+        self.ports_implemented.count_ones()
+    }
+
+    pub fn port_slice(&self) -> &[HBAPort] {
+        let count = self.port_count() as usize;
+        let slice = &self.ports[..count];
+
+        unsafe { MaybeUninit::slice_assume_init_ref(slice) }
     }
 }
 

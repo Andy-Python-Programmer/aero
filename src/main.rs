@@ -14,7 +14,8 @@
     abi_x86_interrupt,
     alloc_error_handler,
     const_mut_refs,
-    lang_items
+    lang_items,
+    maybe_uninit_slice
 )]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]

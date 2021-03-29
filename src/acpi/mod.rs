@@ -44,12 +44,15 @@ impl GenericAddressStructure {
         let page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(self.address));
         let frame = PhysFrame::containing_address(PhysAddr::new(self.address));
 
-        let _ = offset_table.map_to(
-            page,
-            frame,
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
-            frame_allocator,
-        );
+        offset_table
+            .map_to(
+                page,
+                frame,
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
+                frame_allocator,
+            )
+            .unwrap()
+            .flush();
     }
 }
 
@@ -93,13 +96,14 @@ pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllo
                 Page::containing_address(VirtAddr::new(frame.start_address().as_u64()));
 
             if offset_table.translate_page(page).is_err() {
-                let _ = offset_table
+                offset_table
                     .identity_map(
                         frame,
                         PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
                         frame_allocator,
                     )
-                    .unwrap();
+                    .unwrap()
+                    .flush();
             }
         }
 

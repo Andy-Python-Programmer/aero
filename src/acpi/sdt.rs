@@ -32,14 +32,16 @@ impl SDT {
 
         if offset_table.translate_page(page).is_err() {
             let frame = PhysFrame::containing_address(PhysAddr::new(page.start_address().as_u64()));
-            let _ = offset_table
+
+            offset_table
                 .map_to(
                     page,
                     frame,
                     PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
                     frame_allocator,
                 )
-                .unwrap();
+                .unwrap()
+                .flush();
         }
 
         let sdt = &*(address as *const Self);
@@ -51,14 +53,15 @@ impl SDT {
             if offset_table.translate_page(page).is_err() {
                 let frame =
                     PhysFrame::containing_address(PhysAddr::new(page.start_address().as_u64()));
-                let _ = offset_table
+                offset_table
                     .map_to(
                         page,
                         frame,
                         PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
                         frame_allocator,
                     )
-                    .unwrap();
+                    .unwrap()
+                    .flush();
             }
         }
 
