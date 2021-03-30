@@ -24,9 +24,9 @@
 extern crate alloc;
 
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
-use arch::memory::{alloc::AeroSystemAllocator, paging};
+use arch::memory::paging;
 use bootloader::{entry_point, BootInfo};
-use utils::{io, memory::Locked};
+use utils::io;
 
 mod acpi;
 mod arch;
@@ -39,8 +39,10 @@ mod tests;
 mod utils;
 mod vga;
 
+use linked_list_allocator::LockedHeap;
+
 #[global_allocator]
-static AERO_SYSTEM_ALLOCATOR: Locked<AeroSystemAllocator> = Locked::new(AeroSystemAllocator::new());
+static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 const ASCII_INTRO: &'static str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -93,15 +95,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
         log::info("Loaded paging");
 
+        arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
+            .expect("Failed to initialize the heap.");
+        log::info("Loaded heap");
+
         acpi::init(&mut offset_table, &mut frame_allocator);
         log::info("Loaded ACPI");
 
         drivers::pci::init(&mut offset_table, &mut frame_allocator);
         log::info("Loaded PCI driver");
-
-        arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
-            .expect("Failed to initialize the heap.");
-        log::info("Loaded heap");
 
         log::info("Initialized kernel");
 

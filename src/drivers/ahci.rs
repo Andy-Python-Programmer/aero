@@ -52,6 +52,11 @@ const SATA_SIG_PM: u32 = 0x96690101;
 const HBA_PORT_DEV_PRESENT: u32 = 0x3;
 const HBA_PORT_IPM_ACTIVE: u32 = 0x1;
 
+const HBA_PX_CMD_CR: u32 = 0x8000;
+const HBA_PX_CMD_FRE: u32 = 0x0010;
+const HBA_PX_CMD_ST: u32 = 0x0001;
+const HBA_PX_CMD_FR: u32 = 0x4000;
+
 #[derive(Debug, PartialEq)]
 pub enum AHCIPortType {
     None,
@@ -81,15 +86,15 @@ struct HBAMemory {
 
 impl HBAMemory {
     /// Get a HBA port at `idx`.
-    pub fn get_port(&self, idx: u32) -> &HBAPort {
+    pub fn get_port(&mut self, idx: u32) -> &'static mut HBAPort {
         assert!(idx < 32, "There are only 32 ports!");
 
         let bit = self.ports_implemented >> idx;
 
         if bit & 1 == 1 {
-            let ptr = self.ports[idx as usize].as_ptr();
+            let ptr = self.ports[idx as usize].as_mut_ptr();
 
-            unsafe { &*ptr }
+            unsafe { &mut *ptr }
         } else {
             panic!()
         }
@@ -119,8 +124,113 @@ struct HBAPort {
     vendor: [u32; 4],
 }
 
+impl HBAPort {
+    fn get_port_type(&self) -> AHCIPortType {
+        let ipm = (self.sata_status >> 8) & 0x0F;
+        let device_detection = self.sata_status & 0x0F;
+
+        if device_detection != HBA_PORT_DEV_PRESENT {
+            return AHCIPortType::None;
+        } else if ipm != HBA_PORT_IPM_ACTIVE {
+            return AHCIPortType::None;
+        }
+
+        match self.signature {
+            SATA_SIG_ATAPI => AHCIPortType::SATAPI,
+            SATA_SIG_ATA => AHCIPortType::SATA,
+            SATA_SIG_PM => AHCIPortType::PM,
+            SATA_SIG_SEMB => AHCIPortType::SEMB,
+
+            _ => AHCIPortType::None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+pub struct HBACommandHeader {
+    command_fis_length: u8,
+    atapi: u8,
+    write: u8,
+    prefetchable: u8,
+
+    reset: u8,
+    bist: u8,
+    clear_busy: u8,
+    rsv0: u8,
+    port_multiplier: u8,
+
+    prdt_length: u16,
+    prdb_count: u32,
+    command_table_base_address: u32,
+    command_table_base_address_upper: u32,
+    reserved: [u32; 4],
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C, align(128))]
+struct HBACommandVector {
+    commands: [HBACommandHeader; 32],
+}
+
+pub struct Port {
+    hba_port: &'static mut HBAPort,
+    port_type: AHCIPortType,
+    id: u32,
+}
+
+impl Port {
+    #[inline]
+    fn new(hba_port: &'static mut HBAPort, port_type: AHCIPortType, id: u32) -> Self {
+        Self {
+            hba_port,
+            port_type,
+            id,
+        }
+    }
+
+    unsafe fn configure(
+        &mut self,
+        offset_table: &mut OffsetPageTable,
+        frame_allocator: &mut GlobalAllocator,
+    ) {
+        self.stop_command();
+
+        self.start_command();
+    }
+
+    /// Stop the command engine.
+    fn stop_command(&mut self) {
+        self.hba_port.cmd_sts &= !HBA_PX_CMD_ST;
+        self.hba_port.cmd_sts &= !HBA_PX_CMD_FRE;
+
+        loop {
+            if self.hba_port.cmd_sts & HBA_PX_CMD_FR == 1 {
+                continue;
+            }
+
+            if self.hba_port.cmd_sts & HBA_PX_CMD_CR == 1 {
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    /// Start the command engine.
+    fn start_command(&mut self) {
+        while self.hba_port.cmd_sts & HBA_PX_CMD_CR == 1 {
+            unsafe {
+                asm!("pause");
+            }
+        }
+
+        self.hba_port.cmd_sts |= HBA_PX_CMD_FRE;
+        self.hba_port.cmd_sts |= HBA_PX_CMD_ST;
+    }
+}
+
 pub struct AHCI {
-    header: PCIHeader,
     memory: &'static mut HBAMemory,
 }
 
@@ -151,41 +261,30 @@ impl AHCI {
         }
 
         let memory = &mut *(abar_address as *mut HBAMemory);
-        let this = Self { header, memory };
 
-        this.probe_ports();
+        let mut this = Self { memory };
+
+        this.probe_ports(offset_table, frame_allocator);
 
         this
     }
 
-    unsafe fn probe_ports(&self) {
+    unsafe fn probe_ports(
+        &mut self,
+        offset_table: &mut OffsetPageTable,
+        frame_allocator: &mut GlobalAllocator,
+    ) {
         for i in 0..32 {
             if (self.memory.ports_implemented & (1 << i)) == 1 {
-                let port = self.memory.get_port(i);
-                let port_type = self.get_port_type(port);
+                let hba_port = self.memory.get_port(i);
+                let hba_port_type = hba_port.get_port_type();
 
-                crate::println!("Found! {:?}", port_type);
+                if hba_port_type == AHCIPortType::SATA || hba_port_type == AHCIPortType::SATAPI {
+                    let mut port = Port::new(hba_port, hba_port_type, i);
+
+                    port.configure(offset_table, frame_allocator);
+                }
             }
-        }
-    }
-
-    fn get_port_type(&self, port: &HBAPort) -> AHCIPortType {
-        let ipm = (port.sata_status >> 8) & 0x0F;
-        let device_detection = port.sata_status & 0x0F;
-
-        if device_detection != HBA_PORT_DEV_PRESENT {
-            return AHCIPortType::None;
-        } else if ipm != HBA_PORT_IPM_ACTIVE {
-            return AHCIPortType::None;
-        }
-
-        match port.signature {
-            SATA_SIG_ATAPI => AHCIPortType::SATAPI,
-            SATA_SIG_ATA => AHCIPortType::SATA,
-            SATA_SIG_PM => AHCIPortType::PM,
-            SATA_SIG_SEMB => AHCIPortType::SEMB,
-
-            _ => AHCIPortType::None,
         }
     }
 }
