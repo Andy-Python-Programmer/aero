@@ -21,7 +21,7 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 - [x] ACPI Tables
 - [x] Syscalls Handler
 - [x] PCI Driver
-- [ ] SATA Drive Read/Write - *In progress...*
+- [x] SATA Drive Detect
 
 ## Building Aero
 
