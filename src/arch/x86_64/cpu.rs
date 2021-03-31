@@ -1,4 +1,3 @@
-#[derive(Debug)]
 pub struct CPUState {
     pub ax: usize,
     pub bx: usize,

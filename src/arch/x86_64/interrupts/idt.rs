@@ -41,17 +41,6 @@ bitflags! {
     }
 }
 
-bitflags! {
-    #[repr(C)]
-    pub struct PageFaultErrorCode: u64 {
-        const PROTECTION_VIOLATION = 1;
-        const CAUSED_BY_WRITE = 1 << 1;
-        const USER_MODE = 1 << 2;
-        const MALFORMED_TABLE = 1 << 3;
-        const INSTRUCTION_FETCH = 1 << 4;
-    }
-}
-
 #[repr(C, packed)]
 struct IDTDescriptor {
     size: u16,
@@ -128,9 +117,7 @@ pub fn init() {
         // IDT[9] is reserved.
 
         IDT[10].set_function(super::exceptions::invalid_tss);
-
-        IDT[14].set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
-        IDT[14].set_offset(8, super::exceptions::page_fault as usize);
+        IDT[14].set_function(super::exceptions::page_fault);
 
         // Set up the IRQs.
         IDT[32].set_function(super::irq::pit);
