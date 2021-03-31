@@ -270,6 +270,29 @@ pub unsafe fn memory_map_device(
     })
 }
 
+pub unsafe fn memory_map(
+    offset_table: &mut OffsetPageTable,
+    frame_allocator: &mut GlobalAllocator,
+    frame: PhysFrame,
+    flags: PageTableFlags,
+    offset: u64,
+) -> Result<UnmapGuard, MapToError<Size4KiB>> {
+    let frame =
+        PhysFrame::from_start_address(PhysAddr::new(frame.start_address().as_u64() + offset))
+            .ok()
+            .ok_or(MapToError::FrameAllocationFailed)?;
+    let page = Page::containing_address(VirtAddr::new(frame.start_address().as_u64()));
+
+    offset_table
+        .identity_map(frame, flags, frame_allocator)?
+        .flush();
+
+    Ok(UnmapGuard {
+        page,
+        unmap_frame: !frame_allocator.frame_in_use(frame),
+    })
+}
+
 fn frame_idx_to_parts(idx: u64) -> (usize, u32) {
     let int = idx as usize / 32;
     let bit = idx as u32 % 32;

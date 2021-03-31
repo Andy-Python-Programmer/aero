@@ -1,8 +1,14 @@
-use core::mem::MaybeUninit;
+use crate::arch::memory::{self, paging};
+use core::{
+    alloc::Layout,
+    mem::{self, MaybeUninit},
+};
 
 use crate::{arch::memory::paging::GlobalAllocator, paging::memory_map_device};
 use x86_64::{
-    structures::paging::{OffsetPageTable, PhysFrame, Size4KiB},
+    structures::paging::{
+        FrameAllocator, Mapper, OffsetPageTable, PageTableFlags, PhysFrame, Size4KiB,
+    },
     PhysAddr,
 };
 
@@ -167,12 +173,6 @@ pub struct HBACommandHeader {
     reserved: [u32; 4],
 }
 
-#[derive(Debug, Clone, Copy)]
-#[repr(C, align(128))]
-struct HBACommandVector {
-    commands: [HBACommandHeader; 32],
-}
-
 pub struct Port {
     hba_port: &'static mut HBAPort,
     port_type: AHCIPortType,
@@ -195,6 +195,30 @@ impl Port {
         frame_allocator: &mut GlobalAllocator,
     ) {
         self.stop_command();
+
+        let base = frame_allocator.allocate_frame().unwrap();
+
+        for o in (0..0x2000).step_by(0x1000) {
+            paging::memory_map(
+                offset_table,
+                frame_allocator,
+                base,
+                PageTableFlags::WRITABLE | PageTableFlags::NO_CACHE | PageTableFlags::WRITE_THROUGH,
+                o,
+            )
+            .unwrap();
+        }
+
+        for i in 0..32 {
+            let address =
+                self.hba_port.command_list_base as usize + mem::size_of::<HBACommandHeader>() * i;
+
+            let header = &mut *(address as *mut HBACommandHeader);
+
+            // 8 prdt entries per command table.
+            header.prdt_length = 8;
+            header.command_table_base_address_upper = 0;
+        }
 
         self.start_command();
     }

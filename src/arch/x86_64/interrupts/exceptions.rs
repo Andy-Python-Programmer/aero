@@ -1,3 +1,8 @@
+use x86_64::structures::idt::InterruptStackFrame;
+
+use super::PageFaultErrorCode;
+use crate::arch::cpu::CPUState;
+
 pub(crate) extern "x86-interrupt" fn divide_by_zero() {
     panic!("Division by zero")
 }
@@ -38,6 +43,14 @@ pub(crate) extern "x86-interrupt" fn invalid_tss() {
     panic!("Invalid TSS")
 }
 
-pub(crate) extern "x86-interrupt" fn page_fault() {
-    panic!("Page Fault")
+pub(crate) extern "x86-interrupt" fn page_fault(
+    stack_frame: &mut InterruptStackFrame,
+    error_code: PageFaultErrorCode,
+) {
+    let cpu = CPUState::new();
+
+    panic!(
+        "Page Fault {:?}\n\n{:#x?}{:#x?}",
+        error_code, cpu, stack_frame
+    )
 }
