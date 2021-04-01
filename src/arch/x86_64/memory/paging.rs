@@ -5,8 +5,8 @@ use bootloader::{
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, OffsetPageTable, Page, PageTable,
-        PageTableFlags, PhysFrame, Size4KiB,
+        mapper::MapToError, FrameAllocator, FrameDeallocator, Mapper, OffsetPageTable, Page,
+        PageTable, PageTableFlags, PhysFrame, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -28,6 +28,7 @@ pub struct GlobalAllocator {
 }
 
 impl GlobalAllocator {
+    /// Create a new global frame allocator from the memory map provided by the bootloader.
     pub unsafe fn init(memory_map: &'static MemoryMap) -> Self {
         Self {
             memory_map,
@@ -35,7 +36,7 @@ impl GlobalAllocator {
         }
     }
 
-    /// Get the `MemoryRegionType` of a frame
+    /// Get the [MemoryRegionType] of a frame
     pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryRegionType> {
         self.memory_map
             .into_iter()
@@ -59,6 +60,7 @@ impl GlobalAllocator {
 }
 
 unsafe impl FrameAllocator<Size4KiB> for GlobalAllocator {
+    #[track_caller]
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let frame = self.usable_frames().nth(self.next);
         self.next += 1;
@@ -66,6 +68,9 @@ unsafe impl FrameAllocator<Size4KiB> for GlobalAllocator {
         frame
     }
 }
+
+unsafe impl Sync for GlobalAllocator {}
+unsafe impl Send for GlobalAllocator {}
 
 /// Initialize paging.
 pub fn init(boot_info: &'static BootInfo) -> (OffsetPageTable, GlobalAllocator) {

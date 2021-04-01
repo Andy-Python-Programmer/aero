@@ -31,11 +31,12 @@ use utils::io;
 mod acpi;
 mod arch;
 mod drivers;
-mod elf;
 mod panic;
 mod pit;
+mod process;
 mod syscall;
 mod tests;
+mod userland;
 mod utils;
 mod vga;
 
@@ -108,6 +109,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         log::info("Initialized kernel");
 
         println!("{}", ASCII_INTRO);
+
+        userland::init();
 
         print!("$ ");
 
