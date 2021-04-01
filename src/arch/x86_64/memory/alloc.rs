@@ -2,8 +2,7 @@ use core::alloc;
 
 use x86_64::{
     structures::paging::{
-        mapper::MapToError, page::PageRangeInclusive, FrameAllocator, Mapper, OffsetPageTable,
-        Page, PageTableFlags, Size4KiB,
+        mapper::MapToError, FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags, Size4KiB,
     },
     VirtAddr,
 };
@@ -22,15 +21,6 @@ fn alloc_error_handler(layout: alloc::Layout) -> ! {
         layout.size(),
         layout.align()
     )
-}
-
-fn get_page_range() -> PageRangeInclusive {
-    let heap_start = VirtAddr::new(HEAP_START as u64);
-    let heap_end = heap_start + HEAP_SIZE - 1u64;
-    let heap_start_page = Page::containing_address(heap_start);
-    let heap_end_page = Page::containing_address(heap_end);
-
-    Page::range_inclusive(heap_start_page, heap_end_page)
 }
 
 /// Initialize the heap.

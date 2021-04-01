@@ -10,9 +10,16 @@ use crate::vga::{
 #[panic_handler]
 pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Blue);
-    // RENDERER.lock().clear_screen();
+    RENDERER.lock().clear_screen();
 
-    println!(":(\n\n\n\n{}", info);
+    let deafult_panic = &format_args!("");
+    let panic_message = info.message().unwrap_or(deafult_panic);
+
+    println!(
+        "Kernel Panicked -> {}\n\n{}",
+        info.location().unwrap(),
+        panic_message,
+    );
 
     loop {}
 }

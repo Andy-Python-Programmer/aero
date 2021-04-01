@@ -117,7 +117,9 @@ pub fn init() {
         // IDT[9] is reserved.
 
         IDT[10].set_function(super::exceptions::invalid_tss);
-        IDT[14].set_function(super::exceptions::page_fault);
+
+        IDT[14].set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
+        IDT[14].set_offset(8, super::exceptions::page_fault as usize);
 
         // Set up the IRQs.
         IDT[32].set_function(super::irq::pit);

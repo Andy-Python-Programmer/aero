@@ -15,7 +15,7 @@
     alloc_error_handler,
     const_mut_refs,
     lang_items,
-    maybe_uninit_slice
+    panic_info_message
 )]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]
