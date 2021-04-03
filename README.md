@@ -10,18 +10,9 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 ## Screenshots
 <img src="misc/os.png">
 
-## Roadmap March - April 2021
+## Roadmap
 
-- [x] Global Descriptor Table
-- [x] Interrupt Descriptor Table
-- [x] Programmable Interval Timer
-- [x] Paging
-- [x] Mouse Interrupts
-- [x] Keyboard Interrupts
-- [x] ACPI Tables
-- [x] Syscalls Handler
-- [x] PCI Driver
-- [x] SATA Drive Detect
+Check out [ROADMAP.md](ROADMAP.md) for this month's roadmap.
 
 ## Building Aero
 
