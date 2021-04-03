@@ -6,8 +6,6 @@
 
 # Load the GDT and set all of the segments.
 LoadGDT:
-    # Use the `lgdt` Load GDT instruction to set the new GDT.
-    # The rdi register contains the first argument of the function.
     lgdt [rdi]
 
     mov ax, 0x10

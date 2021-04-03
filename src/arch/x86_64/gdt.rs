@@ -4,11 +4,14 @@
 
 use core::intrinsics::size_of;
 
-use lazy_static::lazy_static;
+use super::tss::TSSEntry;
 
 global_asm!(include_str!("load_gdt.s"));
 
-/// The GDT Descriptor containing the size of offset of the table.
+const GDT_ENTRIES: usize = 6;
+
+static mut GDT: [GDTEntry; GDT_ENTRIES] = [GDTEntry::null(); GDT_ENTRIES];
+
 #[repr(C, packed)]
 struct GDTDescriptor {
     /// The size of the table subtracted by 1.
@@ -27,8 +30,9 @@ impl GDTDescriptor {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
-struct GDTEntry {
+pub struct GDTEntry {
     limit_low: u16,
     base_low: u16,
     base_middle: u8,
@@ -44,7 +48,7 @@ struct GDTEntry {
 impl GDTEntry {
     /// Create a new GDT entry.
     #[inline]
-    const fn new(
+    pub const fn new(
         limit_low: u16,
         base_low: u16,
         base_middle: u8,
@@ -61,50 +65,34 @@ impl GDTEntry {
             base_hi,
         }
     }
-}
 
-/// The GDT.
-#[repr(C, align(0x1000))]
-struct GDT {
-    /// The kernel null segment: `0x00`.
-    kernel_null: GDTEntry,
-    /// The kernel code segment: `0x08`.
-    kernel_code: GDTEntry,
-    /// The kernel data segment: `0x10`.
-    kernel_data: GDTEntry,
-    /// The user null segment.
-    user_null: GDTEntry,
-    /// The user code segment.
-    user_code: GDTEntry,
-    /// The user data segment.
-    user_data: GDTEntry,
+    #[inline]
+    const fn null() -> Self {
+        Self::new(0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+    }
 }
 
 /// Initialize the GDT.
 pub fn init() {
     unsafe {
+        let (tss, tss_gdt) = TSSEntry::new();
+
+        GDT[0] = GDTEntry::new(0, 0, 0, 0x00, 0x00, 0);
+        GDT[1] = GDTEntry::new(0, 0, 0, 0x9a, 0xa0, 0);
+        GDT[2] = GDTEntry::new(0, 0, 0, 0x92, 0xa0, 0);
+        GDT[3] = GDTEntry::new(0, 0, 0, 0xfa, 0xa0, 0);
+        GDT[4] = GDTEntry::new(0, 0, 0, 0xf2, 0xa0, 0);
+        GDT[5] = tss_gdt;
+
         let gdt_descriptor = GDTDescriptor::new(
-            (size_of::<GDT>() - 1) as u16,
-            (&(*GLOBAL_DESCRIPTOR_TABLE) as *const _) as u64,
+            (size_of::<[GDTEntry; GDT_ENTRIES]>() - 1) as u16,
+            (&GDT as *const _) as u64,
         );
 
-        LoadGDT(&gdt_descriptor as *const _)
+        LoadGDT(&gdt_descriptor as *const _);
     }
 }
 
-lazy_static! {
-    /// The GDT (Global Descriptor Table).
-    static ref GLOBAL_DESCRIPTOR_TABLE: GDT = GDT {
-        kernel_null: GDTEntry::new(0, 0, 0, 0x00, 0x00, 0),
-        kernel_code: GDTEntry::new(0, 0, 0, 0x9a, 0xa0, 0),
-        kernel_data: GDTEntry::new(0, 0, 0, 0x92, 0xa0, 0),
-        user_null: GDTEntry::new(0, 0, 0, 0x00, 0x00, 0),
-        user_code: GDTEntry::new(0, 0, 0, 0x9a, 0xa0, 0),
-        user_data: GDTEntry::new(0, 0, 0, 0x92, 0xa0, 0)
-    };
-}
-
 extern "C" {
-    /// Load the GDT using inline assembly.
     fn LoadGDT(gdt_descriptor: *const GDTDescriptor);
 }
