@@ -17,10 +17,11 @@ const LOOKUP_END_ADDRESS: usize = 0xFFFFF;
 
 use crate::arch::memory::paging::GlobalAllocator;
 
-use self::{fadt::FADT, hpet::HPET, rsdp::RSDP, sdt::SDT};
+use self::{fadt::FADT, hpet::HPET, madt::MADT, rsdp::RSDP, sdt::SDT};
 
 pub mod fadt;
 pub mod hpet;
+pub mod madt;
 pub mod mcfg;
 pub mod rsdp;
 pub mod sdt;
@@ -134,6 +135,18 @@ pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllo
             HPET::new(
                 look_up_table(
                     hpet::SIGNATURE,
+                    sdt,
+                    is_legacy,
+                    frame_allocator,
+                    offset_table,
+                ),
+                frame_allocator,
+                offset_table,
+            );
+
+            MADT::new(
+                look_up_table(
+                    madt::SIGNATURE,
                     sdt,
                     is_legacy,
                     frame_allocator,
