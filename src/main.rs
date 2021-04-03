@@ -33,7 +33,6 @@ mod arch;
 mod drivers;
 mod panic;
 mod pit;
-mod process;
 mod syscall;
 mod tests;
 mod userland;

@@ -8,9 +8,9 @@ pub enum ELFError {
     InvalidArchitecture,
 }
 
-struct ELF<'a> {
-    data: &'a [u8],
-    header: &'a header::Header,
+pub struct ELF<'a> {
+    pub data: &'a [u8],
+    pub header: &'a header::Header,
 }
 
 impl<'a> ELF<'a> {
