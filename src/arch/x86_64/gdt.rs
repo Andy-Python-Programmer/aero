@@ -90,6 +90,8 @@ pub fn init() {
         );
 
         LoadGDT(&gdt_descriptor as *const _);
+
+        tss.load();
     }
 }
 

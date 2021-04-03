@@ -31,6 +31,7 @@ use utils::io;
 mod acpi;
 mod arch;
 mod drivers;
+mod logger;
 mod panic;
 mod pit;
 mod syscall;
@@ -53,39 +54,25 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
-mod log {
-    use vga::color::*;
-
-    use crate::vga::rendy::RENDERER;
-    use crate::*;
-
-    pub fn info(message: &str) {
-        RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Black);
-        print!("[ ");
-        RENDERER.lock().color_code = ColorCode::new(Color::LightGreen, Color::Black);
-        print!("OK");
-        RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Black);
-        println!(" ]        - {}", message);
-    }
-}
-
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     unsafe {
+        logger::init();
+
         arch::interrupts::disable_interrupts();
 
         arch::gdt::init();
-        log::info("Loaded GDT");
+        log::info!("Loaded GDT");
 
         arch::interrupts::init();
-        log::info("Loaded IDT");
+        log::info!("Loaded IDT");
 
         pit::init();
-        log::info("Loaded PIT");
+        log::info!("Loaded PIT");
 
         drivers::mouse::init();
-        log::info("Loaded PS/2 driver");
+        log::info!("Loaded PS/2 driver");
 
         io::outb(PIC1_DATA, 0b11111000);
         io::outb(PIC2_DATA, 0b11101111);
@@ -93,19 +80,19 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         arch::interrupts::enable_interrupts();
 
         let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
-        log::info("Loaded paging");
+        log::info!("Loaded paging");
 
         arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
             .expect("Failed to initialize the heap.");
-        log::info("Loaded heap");
+        log::info!("Loaded heap");
 
         acpi::init(&mut offset_table, &mut frame_allocator);
-        log::info("Loaded ACPI");
+        log::info!("Loaded ACPI");
 
         drivers::pci::init(&mut offset_table, &mut frame_allocator);
-        log::info("Loaded PCI driver");
+        log::info!("Loaded PCI driver");
 
-        log::info("Initialized kernel");
+        log::info!("Initialized kernel");
 
         println!("{}", ASCII_INTRO);
 

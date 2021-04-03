@@ -86,4 +86,8 @@ impl TSSEntry {
             GDTEntry::new(0, 0, base as u8, limit as u8, 0xE9, 0x00),
         )
     }
+
+    pub unsafe fn load(&self) {
+        // TODO: Flush TSS.
+    }
 }

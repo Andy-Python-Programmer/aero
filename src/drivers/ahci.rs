@@ -7,7 +7,7 @@ use x86_64::{
 };
 
 use super::pci::{Bar, PCIHeader};
-use crate::log;
+use crate::logger;
 
 use bitflags::bitflags;
 
@@ -240,7 +240,7 @@ impl AHCI {
         frame_allocator: &mut GlobalAllocator,
         header: PCIHeader,
     ) -> Self {
-        log::info("Loaded AHCI driver");
+        log::info!("Loaded AHCI driver");
 
         let abar = header.get_bar(5).unwrap();
 

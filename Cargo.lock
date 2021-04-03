@@ -12,6 +12,7 @@ dependencies = [
  "goblin",
  "lazy_static",
  "linked_list_allocator",
+ "log",
  "spin 0.9.0",
  "static_assertions",
  "volatile",
@@ -41,6 +42,12 @@ name = "bootloader"
 version = "0.9.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cb1dc91ba8f16c89133c569bc2516833a632a654d61d228b16ae8d2bad5ed8a"
+
+[[package]]
+name = "cfg-if"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "goblin"
@@ -86,6 +93,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd96ffd135b2fd7b973ac026d28085defbe8983df057ced3eb4f2130b0831312"
 dependencies = [
  "scopeguard",
+]
+
+[[package]]
+name = "log"
+version = "0.4.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]

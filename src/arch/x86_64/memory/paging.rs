@@ -5,8 +5,8 @@ use bootloader::{
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
-        mapper::MapToError, FrameAllocator, FrameDeallocator, Mapper, OffsetPageTable, Page,
-        PageTable, PageTableFlags, PhysFrame, Size4KiB,
+        mapper::MapToError, FrameAllocator, Mapper, OffsetPageTable, Page, PageTable,
+        PageTableFlags, PhysFrame, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
