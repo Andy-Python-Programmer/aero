@@ -1,4 +1,4 @@
-use core::{mem, ptr};
+use core::{intrinsics, mem, ptr};
 
 use x86_64::{
     structures::paging::{
@@ -10,10 +10,10 @@ use x86_64::{
 
 use super::sdt::SDT;
 
-pub static mut MADT: Option<MADT> = None;
-
 pub const SIGNATURE: &str = "APIC";
 pub const TRAMPOLINE: u64 = 0x8000;
+
+static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
 
 #[derive(Clone, Copy, Debug)]
 pub struct MADT {
@@ -34,8 +34,6 @@ impl MADT {
             unsafe {
                 let madt = ptr::read((sdt as *const SDT) as *const Self);
 
-                MADT = Some(madt);
-
                 let trampoline_frame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
                 let trampoline_page: Page<Size4KiB> =
                     Page::containing_address(VirtAddr::new(TRAMPOLINE));
@@ -52,11 +50,14 @@ impl MADT {
                         _ => panic!("{:?}", err),
                     },
                 }
+
+                for i in 0..TRAMPOLINE_BIN.len() {
+                    intrinsics::atomic_store((TRAMPOLINE as *mut u8).add(i), TRAMPOLINE_BIN[i]);
+                }
             }
         }
     }
 
-    #[allow(unused)]
     pub fn iter(&self) -> MADTIterator {
         MADTIterator {
             sdt: self.sdt,
@@ -112,6 +113,7 @@ pub struct MADTIterator {
 
 impl Iterator for MADTIterator {
     type Item = MADTEntry;
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.i + 1 < self.sdt.data_len() {
             let entry_type = unsafe { *(self.sdt.data_address() as *const u8).add(self.i) };

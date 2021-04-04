@@ -47,3 +47,7 @@ run-args = [
     "-device",
     "ide-hd,drive=disk,bus=ahci.0",
 ]
+
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"] }
+nasm-rs = { version = "0.2", features = ["parallel"] }
