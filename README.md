@@ -6,7 +6,7 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 
 ![workflow](https://github.com/Andy-Python-Programmer/aero/actions/workflows/build.yml/badge.svg)
 [![lines_of_code](https://tokei.rs/b1/github/Andy-Python-Programmer/aero)](https://github.com/Andy-Python-Programmer/aero)
-![discord](https://img.shields.io/discord/828564770063122432)
+[![discord](https://img.shields.io/discord/828564770063122432)](https://discord.gg/8gwhTTZwt8)
 
 ## Screenshots
 <img src="misc/os.png">
@@ -19,7 +19,8 @@ Check out [ROADMAP.md](ROADMAP.md) for this month's roadmap.
 
 ### Prerequisites
 - The nightly [rust compiler](https://www.rust-lang.org/).
-- Any release of [qemu](https://www.qemu.org/) (using the latest release is recommended).
+- [qemu](https://www.qemu.org/)
+- [nasm](https://nasm.us)
 
 ### Build
 To build and run aero:
