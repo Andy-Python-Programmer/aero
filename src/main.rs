@@ -34,9 +34,9 @@ mod arch;
 mod drivers;
 mod logger;
 mod panic;
-mod pit;
 mod syscall;
 mod tests;
+mod time;
 mod userland;
 mod utils;
 mod vga;
@@ -69,7 +69,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         arch::interrupts::init();
         log::info!("Loaded IDT");
 
-        pit::init();
+        time::init();
         log::info!("Loaded PIT");
 
         drivers::mouse::init();

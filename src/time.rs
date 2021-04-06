@@ -5,40 +5,54 @@
 
 use core::time::Duration;
 
+use crate::utils::io;
+
+pub const PIT_DIVISOR: u64 = 1193180;
+pub const PIT_BASE_FREQUENCY: u64 = 1193182;
+
 pub struct PITDescriptor {
-    /// CPU ticks since epoch.
     ticks_since_epoch: u64,
+    divisor: u64,
 }
 
 impl PITDescriptor {
-    /// Create a new PIT descriptor.
     #[inline]
     const fn new() -> Self {
         Self {
             ticks_since_epoch: 0,
+            divisor: 65535,
         }
     }
 
-    // TODO: Calculate the most accurate time.
     pub fn sleep(&mut self, duration: Duration) {
         let start_time = self.ticks_since_epoch;
         let seconds = duration.as_secs();
 
         unsafe {
             while self.ticks_since_epoch < start_time + seconds {
-                asm!("hlt");
+                asm!("pause");
             }
         }
     }
 
     /// Increments ticks since epoch. This function is called on the PIT chip interrupt.
+    #[inline]
     pub fn tick(&mut self) {
-        self.ticks_since_epoch += 1;
+        self.ticks_since_epoch += 1 / self.get_frequency();
     }
 
-    /// Get the CPU ticks since epoch.
-    pub fn get_ticks_since_epoch(&self) -> u64 {
-        self.ticks_since_epoch
+    #[inline]
+    pub fn get_frequency(&self) -> u64 {
+        PIT_BASE_FREQUENCY / self.divisor
+    }
+
+    #[inline]
+    pub unsafe fn set_divisor(&mut self, divisor: u64) {
+        io::outb(0x40, (divisor & 0x00ff) as u8);
+        io::wait();
+
+        io::outb(0x40, ((divisor & 0xff00) >> 8) as u8);
+        io::wait();
     }
 }
 
@@ -46,4 +60,14 @@ impl PITDescriptor {
 pub static mut PIT: PITDescriptor = PITDescriptor::new();
 
 /// Initialise the PIT chip.
-pub fn init() {}
+pub fn init() {
+    unsafe {
+        // At boot the PIT frequency divider is set to 0 which
+        // results in around 54.926 ms between ticks.
+        //
+        // We change the divider to 1193180 which will have around 1.00 ms
+        // between ticks to improve time accuracy.
+
+        PIT.set_divisor(PIT_DIVISOR);
+    }
+}

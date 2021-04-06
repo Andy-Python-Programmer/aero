@@ -1,10 +1,12 @@
-use crate::arch::interrupts::{end_pic1, end_pic2};
 use crate::drivers::{keyboard, mouse};
-use crate::pit::PIT;
 use crate::utils::io;
+use crate::{
+    arch::interrupts::{end_pic1, end_pic2},
+    time,
+};
 
 pub(crate) unsafe extern "x86-interrupt" fn pit() {
-    PIT.tick();
+    time::PIT.tick();
 
     end_pic1();
 }
