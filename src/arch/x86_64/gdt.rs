@@ -6,8 +6,6 @@ use core::intrinsics::size_of;
 
 use super::tss::TSSEntry;
 
-global_asm!(include_str!("load_gdt.s"));
-
 const GDT_ENTRIES: usize = 6;
 
 static mut GDT: [GDTEntry; GDT_ENTRIES] = [GDTEntry::null(); GDT_ENTRIES];
@@ -89,12 +87,12 @@ pub fn init() {
             (&GDT as *const _) as u64,
         );
 
-        LoadGDT(&gdt_descriptor as *const _);
+        load_gdt(&gdt_descriptor as *const _);
 
         tss.load();
     }
 }
 
 extern "C" {
-    fn LoadGDT(gdt_descriptor: *const GDTDescriptor);
+    fn load_gdt(gdt_descriptor: *const GDTDescriptor);
 }
