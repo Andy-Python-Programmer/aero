@@ -10,7 +10,7 @@
     custom_test_frameworks,
     core_intrinsics,
     asm,
-    global_asm,
+    naked_functions,
     abi_x86_interrupt,
     alloc_error_handler,
     const_mut_refs,
@@ -58,9 +58,9 @@ _______ _______ ______ _______    _______ ______
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    unsafe {
-        logger::init();
+    logger::init();
 
+    unsafe {
         arch::interrupts::disable_interrupts();
 
         arch::gdt::init();
