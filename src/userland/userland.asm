@@ -4,16 +4,16 @@
 [bits 64]
 
 jump_userland:
-	mov ax, 0x1b
+    mov ax, 0x1b
     mov dx, 0x23
     mov rsp, 0x00
 
-	mov ds, ax
-	mov es, ax 
-	mov fs, ax 
-	mov gs, ax
+    mov ds, ax
+    mov es, ax 
+    mov fs, ax 
+    mov gs, ax
  
-	mov rsi, rsp
+    mov rsi, rsp
 
     push rax
     push rsi
@@ -21,6 +21,6 @@ jump_userland:
     push rdx
     push rdi
 
-	iretq
+    iretq
 
 global jump_userland
