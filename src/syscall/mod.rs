@@ -15,8 +15,10 @@ pub mod time;
 pub use fs::*;
 pub use time::*;
 
+use x86_64::structures::idt::InterruptStackFrame;
+
 use crate::arch::cpu::CPUState;
-use crate::println;
+use crate::{interrupt, println};
 
 pub enum SyscallError {
     /// Operation not permitted.
@@ -31,7 +33,7 @@ pub enum SyscallError {
 
 pub type SyscallResult<T> = Result<T, SyscallError>;
 
-pub unsafe extern "x86-interrupt" fn syscall() {
+interrupt!(syscall, unsafe {
     let cpu_state = CPUState::new();
 
     match cpu_state.ax {
@@ -41,4 +43,4 @@ pub unsafe extern "x86-interrupt" fn syscall() {
         3 => unimplemented!(),
         _ => println!("Invalid syscall"),
     }
-}
+});

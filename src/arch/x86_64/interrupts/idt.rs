@@ -19,12 +19,14 @@ pub(crate) const ICW1_INIT: u8 = 0x10;
 pub(crate) const ICW1_ICW4: u8 = 0x01;
 pub(crate) const ICW4_8086: u8 = 0x01;
 
-pub(crate) type IDTInterruptHandlerFn = unsafe extern "x86-interrupt" fn();
+pub(crate) type IDTInterruptHandlerFn =
+    unsafe extern "x86-interrupt" fn(&'static mut InterruptStackFrame);
 
 static mut IDT: [IDTEntry; IDT_ENTRIES] = [IDTEntry::null(); IDT_ENTRIES];
 
 use bitflags::bitflags;
 use core::mem::size_of;
+use x86_64::structures::idt::InterruptStackFrame;
 
 use crate::utils::io;
 
@@ -117,9 +119,22 @@ pub fn init() {
         // IDT[9] is reserved.
 
         IDT[10].set_function(super::exceptions::invalid_tss);
+        IDT[11].set_function(super::exceptions::segment_not_present);
+        IDT[12].set_function(super::exceptions::stack_segment);
+        IDT[13].set_function(super::exceptions::protection);
 
         IDT[14].set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
         IDT[14].set_offset(8, super::exceptions::page_fault as usize);
+
+        // IDT[15] is reserved.
+        IDT[16].set_function(super::exceptions::fpu_fault);
+        IDT[17].set_function(super::exceptions::alignment_check);
+        IDT[18].set_function(super::exceptions::machine_check);
+        IDT[19].set_function(super::exceptions::simd);
+        IDT[20].set_function(super::exceptions::virtualization);
+
+        // IDT[21..29] are reserved.
+        IDT[30].set_function(super::exceptions::security);
 
         // Set up the IRQs.
         IDT[32].set_function(super::irq::pit);
@@ -144,12 +159,12 @@ unsafe fn load_idt(idt_descriptor: *const IDTDescriptor) {
     asm!("lidt [{}]", in(reg) idt_descriptor, options(nostack));
 }
 
-#[inline]
+#[inline(always)]
 pub unsafe fn disable_interrupts() {
     asm!("cli");
 }
 
-#[inline]
+#[inline(always)]
 pub unsafe fn enable_interrupts() {
     asm!("sti");
 }
@@ -205,4 +220,21 @@ unsafe fn load_pic() {
     io::wait();
     io::outb(PIC2_DATA, a2);
     io::wait();
+}
+
+#[macro_export]
+macro_rules! interrupt {
+    ($name:ident, $code:block) => {
+        #[allow(unused)]
+        pub extern "x86-interrupt" fn $name(stack_frame: &'static mut InterruptStackFrame) {
+            $code
+        }
+    };
+
+    ($name:ident, unsafe $code:block) => {
+        #[allow(unused)]
+        pub unsafe extern "x86-interrupt" fn $name(stack_frame: &'static mut InterruptStackFrame) {
+            $code
+        }
+    };
 }
