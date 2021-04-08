@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use crate::utils::io;
 use crate::{arch::memory::paging::GlobalAllocator, drivers::ahci::AHCI};
 
@@ -365,14 +364,17 @@ impl PCIHeader {
         Self(result)
     }
 
+    #[inline]
     pub fn bus(&self) -> u8 {
         self.0.get_bits(8..16) as u8
     }
 
+    #[inline]
     pub fn device(&self) -> u8 {
         self.0.get_bits(3..8) as u8
     }
 
+    #[inline]
     pub fn function(&self) -> u8 {
         self.0.get_bits(0..3) as u8
     }
@@ -415,14 +417,20 @@ impl PCIHeader {
         id.get_bits(8..16)
     }
 
-    pub unsafe fn get_vendor(&self) -> Vendor {
-        Vendor::new(self.get_vendor_id())
+    #[inline]
+    pub fn get_vendor(&self) -> Vendor {
+        Vendor::new(unsafe { self.get_vendor_id() })
     }
 
     pub unsafe fn get_device(&self) -> DeviceType {
         let id = self.read(0x08);
 
         DeviceType::new(id.get_bits(24..32), id.get_bits(16..24))
+    }
+
+    #[inline]
+    pub fn has_multiple_functions(&self) -> bool {
+        unsafe { self.read(0x0c) }.get_bit(23)
     }
 
     pub unsafe fn get_bar(&self, bar: u8) -> Option<Bar> {
@@ -479,12 +487,19 @@ impl PCIHeader {
 
 /// Lookup and initialize all PCI devices.
 pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllocator) {
-    // Go through each possible bus, device, function ID and check if we have a driver for it.
-    // If a driver for the PCI device is found then initialize it.
+    // Use the brute force method to go through each possible bus,
+    // device, function ID and check if we have a driver for it. If a driver
+    // for the PCI device is found then initialize it.
 
     for bus in 0..255 {
         for device in 0..32 {
-            for function in 0..8 {
+            let function_count = if PCIHeader::new(bus, device, 0x00).has_multiple_functions() {
+                8
+            } else {
+                1
+            };
+
+            for function in 0..function_count {
                 let device = PCIHeader::new(bus, device, function);
 
                 unsafe {
@@ -492,6 +507,12 @@ pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllo
                         // Device does not exist.
                         continue;
                     }
+
+                    log::info!(
+                        "PCI device (device={:?}, vendor={:?})",
+                        device.get_device(),
+                        device.get_vendor()
+                    );
 
                     match device.get_device() {
                         DeviceType::SataController => match device.get_interface_id() {
