@@ -19,8 +19,7 @@ pub(crate) const ICW1_INIT: u8 = 0x10;
 pub(crate) const ICW1_ICW4: u8 = 0x01;
 pub(crate) const ICW4_8086: u8 = 0x01;
 
-pub(crate) type IDTInterruptHandlerFn =
-    unsafe extern "x86-interrupt" fn(&'static mut InterruptStackFrame);
+pub(crate) type IDTInterruptHandlerFn = unsafe extern "x86-interrupt" fn(InterruptStackFrame);
 
 static mut IDT: [IDTEntry; IDT_ENTRIES] = [IDTEntry::null(); IDT_ENTRIES];
 
@@ -226,14 +225,14 @@ unsafe fn load_pic() {
 macro_rules! interrupt {
     ($name:ident, $code:block) => {
         #[allow(unused)]
-        pub extern "x86-interrupt" fn $name(stack_frame: &'static mut InterruptStackFrame) {
+        pub extern "x86-interrupt" fn $name(stack_frame: InterruptStackFrame) {
             $code
         }
     };
 
     ($name:ident, unsafe $code:block) => {
         #[allow(unused)]
-        pub unsafe extern "x86-interrupt" fn $name(stack_frame: &'static mut InterruptStackFrame) {
+        pub unsafe extern "x86-interrupt" fn $name(stack_frame: InterruptStackFrame) {
             $code
         }
     };

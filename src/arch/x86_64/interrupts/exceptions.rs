@@ -26,13 +26,13 @@ interrupt!(virtualization, { panic!("Virtualization fault") });
 interrupt!(security, { panic!("Security exception") });
 
 pub extern "x86-interrupt" fn page_fault(
-    stack_frame: &'static mut InterruptStackFrame,
+    stack_frame: InterruptStackFrame,
     error_code: PageFaultErrorCode,
 ) {
     let accessed_address = Cr2::read();
 
     panic!(
-        "EXCEPTION: Page Fault\n\nAccessed Address: {:?}\nError Code: {:?}\n\n{:?}",
+        "EXCEPTION: Page Fault\n\nAccessed Address: {:?}\nError Code: {:?}\n\n{:#?}",
         accessed_address, error_code, stack_frame
     )
 }
