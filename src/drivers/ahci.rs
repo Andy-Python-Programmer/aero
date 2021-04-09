@@ -2,12 +2,13 @@ use core::mem::MaybeUninit;
 
 use crate::{arch::memory::paging::GlobalAllocator, paging::memory_map_device};
 use x86_64::{
-    structures::paging::{OffsetPageTable, PhysFrame, Size4KiB},
-    PhysAddr,
+    structures::paging::{
+        FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags, PhysFrame, Size4KiB,
+    },
+    PhysAddr, VirtAddr,
 };
 
 use super::pci::{Bar, PCIHeader};
-use crate::logger;
 
 use bitflags::bitflags;
 
@@ -195,6 +196,73 @@ impl Port {
         frame_allocator: &mut GlobalAllocator,
     ) {
         self.stop_command();
+
+        let mapped_clb = frame_allocator.allocate_frame().unwrap();
+
+        offset_table
+            .map_to(
+                Page::containing_address(VirtAddr::new(mapped_clb.start_address().as_u64())),
+                mapped_clb,
+                PageTableFlags::NO_CACHE
+                    | PageTableFlags::WRITE_THROUGH
+                    | PageTableFlags::PRESENT
+                    | PageTableFlags::WRITABLE,
+                frame_allocator,
+            )
+            .unwrap()
+            .flush();
+
+        self.hba_port.command_list_base = mapped_clb.start_address().as_u64() as u32;
+        self.hba_port.command_list_base_upper = (mapped_clb.start_address().as_u64() >> 32) as u32;
+
+        let mapped_fis = frame_allocator.allocate_frame().unwrap();
+
+        offset_table
+            .map_to(
+                Page::containing_address(VirtAddr::new(mapped_fis.start_address().as_u64())),
+                mapped_fis,
+                PageTableFlags::NO_CACHE
+                    | PageTableFlags::WRITE_THROUGH
+                    | PageTableFlags::PRESENT
+                    | PageTableFlags::WRITABLE,
+                frame_allocator,
+            )
+            .unwrap()
+            .flush();
+
+        self.hba_port.fis_base_address = mapped_clb.start_address().as_u64() as u32;
+        self.hba_port.fis_base_address = (mapped_clb.start_address().as_u64() >> 32) as u32;
+
+        let hba_command_header = (self.hba_port.command_list_base as u64
+            + ((self.hba_port.command_list_base_upper as u64) << 32))
+            as *mut HBACommandHeader;
+
+        for i in 0..32 {
+            let command_header = &mut *hba_command_header.offset(i);
+
+            // 8 prdt entries per command table.
+            command_header.prdt_length = 8;
+
+            let command_table = frame_allocator.allocate_frame().unwrap();
+
+            offset_table
+                .map_to(
+                    Page::containing_address(VirtAddr::new(command_table.start_address().as_u64())),
+                    command_table,
+                    PageTableFlags::NO_CACHE
+                        | PageTableFlags::WRITE_THROUGH
+                        | PageTableFlags::PRESENT
+                        | PageTableFlags::WRITABLE,
+                    frame_allocator,
+                )
+                .unwrap()
+                .flush();
+
+            let address = command_table.start_address().as_u64() + ((i as u64) << 8);
+
+            command_header.command_table_base_address = address as u32;
+            command_header.command_table_base_address_upper = (address >> 32) as u32;
+        }
 
         self.start_command();
     }
