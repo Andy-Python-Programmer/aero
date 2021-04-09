@@ -2,15 +2,8 @@
 build-std = ["core", "compiler_builtins", "alloc"]
 build-std-features = ["compiler-builtins-mem"]
 
-[target.'cfg(target_os = "none")']
-runner = "bootimage runner"
-
-[package.metadata.bootimage]
-run-command = ["qemu-system-x86_64", "-drive", "format=raw,file={}"]
-build-command = ["build"]
-
 [build]
-target = "x86_64-aero_os.json"
+target = "x86_64-none-uefi"
 
 [profile.dev]
 panic = "abort" # Disable stack unwinding on panic
