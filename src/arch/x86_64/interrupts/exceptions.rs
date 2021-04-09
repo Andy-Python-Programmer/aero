@@ -5,25 +5,31 @@ use x86_64::{
 
 use crate::interrupt;
 
-interrupt!(divide_by_zero, { panic!("Division by zero") });
-interrupt!(debug, { panic!("Debug") });
-interrupt!(non_maskable, { panic!("Non Maskable") });
-interrupt!(breakpoint, { panic!("Breakpoint") });
-interrupt!(overflow, { panic!("Stack Overflow") });
-interrupt!(bound_range, { panic!("Out of Bounds") });
-interrupt!(invalid_opcode, { panic!("Invalid Opcode") });
-interrupt!(device_not_available, { panic!("Device not Avaliable") });
-interrupt!(double_fault, { panic!("Double Fault") });
-interrupt!(invalid_tss, { panic!("Invalid TSS") });
-interrupt!(segment_not_present, { panic!("Segment not Present") });
-interrupt!(stack_segment, { panic!("Stack Segment Fault") });
-interrupt!(protection, { panic!("Protection Fault") });
-interrupt!(fpu_fault, { panic!("FPU floating point fault") });
-interrupt!(alignment_check, { panic!("Alignment check fault") });
-interrupt!(machine_check, { panic!("Machine check fault") });
-interrupt!(simd, { panic!("SIMD floating point fault") });
-interrupt!(virtualization, { panic!("Virtualization fault") });
-interrupt!(security, { panic!("Security exception") });
+macro_rules! interrupt_exception {
+    ($name:ident, $error:expr) => {
+        interrupt!($name, { panic!($error) });
+    };
+}
+
+interrupt_exception!(divide_by_zero, "Division by zero");
+interrupt_exception!(debug, "Debug");
+interrupt_exception!(non_maskable, "Non Maskable");
+interrupt_exception!(breakpoint, "Breakpoint");
+interrupt_exception!(overflow, "Stack Overflow");
+interrupt_exception!(bound_range, "Out of Bounds");
+interrupt_exception!(invalid_opcode, "Invalid Opcode");
+interrupt_exception!(device_not_available, "Device not Avaliable");
+interrupt_exception!(double_fault, "Double Fault");
+interrupt_exception!(invalid_tss, "Invalid TSS");
+interrupt_exception!(segment_not_present, "Segment not Present");
+interrupt_exception!(stack_segment, "Stack Segment Fault");
+interrupt_exception!(protection, "Protection Fault");
+interrupt_exception!(fpu_fault, "FPU floating point fault");
+interrupt_exception!(alignment_check, "Alignment check fault");
+interrupt_exception!(machine_check, "Machine check fault");
+interrupt_exception!(simd, "SIMD floating point fault");
+interrupt_exception!(virtualization, "Virtualization fault");
+interrupt_exception!(security, "Security exception");
 
 pub extern "x86-interrupt" fn page_fault(
     stack_frame: InterruptStackFrame,
