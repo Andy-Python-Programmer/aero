@@ -22,88 +22,95 @@
 #![no_std]
 #![no_main]
 
-extern crate alloc;
+use aero_boot::BootInfo;
 
-use arch::interrupts::{PIC1_DATA, PIC2_DATA};
-use arch::memory::paging;
-use bootloader::{entry_point, BootInfo};
-use utils::io;
+// extern crate alloc;
 
-mod acpi;
-mod arch;
-mod drivers;
-mod logger;
+// use arch::interrupts::{PIC1_DATA, PIC2_DATA};
+// use arch::memory::paging;
+// use bootloader::{entry_point, BootInfo};
+// use utils::io;
+
+// mod acpi;
+// mod arch;
+// mod drivers;
+// mod logger;
 mod panic;
-mod syscall;
+// mod syscall;
 mod tests;
-mod time;
-mod userland;
-mod utils;
-mod vga;
+// mod time;
+// mod userland;
+// mod utils;
+// mod vga;
 
-use linked_list_allocator::LockedHeap;
+// use linked_list_allocator::LockedHeap;
 
-#[global_allocator]
-static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
+// #[global_allocator]
+// static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-const ASCII_INTRO: &'static str = r"
-_______ _______ ______ _______    _______ ______ 
-(_______|_______|_____ (_______)  (_______) _____)
- _______ _____   _____) )     _    _     ( (____  
-|  ___  |  ___) |  __  / |   | |  | |   | \____ \ 
-| |   | | |_____| |  \ \ |___| |  | |___| |____) )
-|_|   |_|_______)_|   |_\_____/    \_____(______/ 
-";
+// const ASCII_INTRO: &'static str = r"
+// _______ _______ ______ _______    _______ ______
+// (_______|_______|_____ (_______)  (_______) _____)
+//  _______ _____   _____) )     _    _     ( (____
+// |  ___  |  ___) |  __  / |   | |  | |   | \____ \
+// | |   | | |_____| |  \ \ |___| |  | |___| |____) )
+// |_|   |_|_______)_|   |_\_____/    \_____(______/
+// ";
 
-entry_point!(kernel_main);
+// entry_point!(kernel_main);
 
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    logger::init();
-
-    unsafe {
-        arch::interrupts::disable_interrupts();
-
-        arch::gdt::init();
-        log::info!("Loaded GDT");
-
-        arch::interrupts::init();
-        log::info!("Loaded IDT");
-
-        time::init();
-        log::info!("Loaded PIT");
-
-        drivers::mouse::init();
-        log::info!("Loaded PS/2 driver");
-
-        io::outb(PIC1_DATA, 0b11111000);
-        io::outb(PIC2_DATA, 0b11101111);
-
-        arch::interrupts::enable_interrupts();
-
-        let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
-        log::info!("Loaded paging");
-        *(0xdeafbeaf as *mut u32) = 42;
-
-        arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
-            .expect("Failed to initialize the heap.");
-        log::info!("Loaded heap");
-
-        acpi::init(&mut offset_table, &mut frame_allocator);
-        log::info!("Loaded ACPI");
-
-        drivers::pci::init(&mut offset_table, &mut frame_allocator);
-        log::info!("Loaded PCI driver");
-
-        log::info!("Initialized kernel");
-
-        println!("{}", ASCII_INTRO);
-
-        userland::init();
-
-        print!("$ ");
-
-        loop {
-            arch::interrupts::halt();
-        }
-    }
+#[export_name = "_start"]
+extern "C" fn kernel_main(boot_info: BootInfo) -> i32 {
+    return 10101;
 }
+
+// fn kernel_main(boot_info: &'static BootInfo) -> ! {
+//     logger::init();
+
+//     unsafe {
+//         arch::interrupts::disable_interrupts();
+
+//         arch::gdt::init();
+//         log::info!("Loaded GDT");
+
+//         arch::interrupts::init();
+//         log::info!("Loaded IDT");
+
+//         time::init();
+//         log::info!("Loaded PIT");
+
+//         drivers::mouse::init();
+//         log::info!("Loaded PS/2 driver");
+
+//         io::outb(PIC1_DATA, 0b11111000);
+//         io::outb(PIC2_DATA, 0b11101111);
+
+//         arch::interrupts::enable_interrupts();
+
+//         let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
+//         log::info!("Loaded paging");
+//         *(0xdeafbeaf as *mut u32) = 42;
+
+//         arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
+//             .expect("Failed to initialize the heap.");
+//         log::info!("Loaded heap");
+
+//         acpi::init(&mut offset_table, &mut frame_allocator);
+//         log::info!("Loaded ACPI");
+
+//         drivers::pci::init(&mut offset_table, &mut frame_allocator);
+//         log::info!("Loaded PCI driver");
+
+//         log::info!("Initialized kernel");
+
+//         println!("{}", ASCII_INTRO);
+
+//         userland::init();
+
+//         print!("$ ");
+
+//         loop {
+//             arch::interrupts::halt();
+//         }
+//     }
+// }

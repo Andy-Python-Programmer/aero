@@ -1,11 +1,19 @@
 #![no_std]
 #![no_main]
 #![feature(asm, abi_efiapi, custom_test_frameworks)]
-#![test_runner(crate::test_runner)]
+#![test_runner(aero_boot::test_runner)]
 
 extern crate rlibc;
 
-use aero_boot::FrameBufferInfo;
+use core::mem;
+
+use aero_boot::{BootInfo, FrameBufferInfo};
+
+use x86_64::{
+    structures::paging::{PageSize, Size4KiB},
+    PhysAddr, VirtAddr,
+};
+
 use uefi::{
     prelude::*,
     proto::{
@@ -15,9 +23,19 @@ use uefi::{
             fs::SimpleFileSystem,
         },
     },
+    table::boot::AllocateType,
 };
+
 use uefi::{proto::media::file::FileType, table::boot::MemoryType};
-use xmas_elf::{header, ElfFile};
+use xmas_elf::{
+    header,
+    program::{self, Type},
+    ElfFile,
+};
+
+struct KernelInfo {
+    entry_point: VirtAddr,
+}
 
 fn initialize_gop(system_table: &SystemTable<Boot>) -> FrameBufferInfo {
     log::info!("Initializing GOP");
@@ -127,22 +145,54 @@ pub fn load_file(
     Ok(buffer)
 }
 
-fn load_kernel(image: Handle, system_table: &SystemTable<Boot>) {
+fn load_kernel(image: Handle, system_table: &SystemTable<Boot>) -> KernelInfo {
     log::info!("Loading kernel");
 
     let kernel_bin = load_file(image, system_table.boot_services(), "\\efi\\kernel\\aero")
         .expect("Failed to load the kernel");
+    let kernel_offset = PhysAddr::new(kernel_bin[0] as *const u8 as u64);
+
+    assert!(kernel_offset.is_aligned(Size4KiB::SIZE));
 
     let kernel_elf = ElfFile::new(&kernel_bin).expect("Found corrupt kernel ELF file");
-
     header::sanity_check(&kernel_elf).expect("Failed the sanity check for the kernel");
+
     log::info!(
-        "Jumping to kernel entry point at: {:#06x}",
+        "Found kernel entry point at: {:#06x}",
         kernel_elf.header.pt2.entry_point()
-    )
+    );
+
+    for header in kernel_elf.program_iter() {
+        program::sanity_check(header, &kernel_elf).expect("Failed header sanity check");
+
+        match header.get_type().expect("Unable to get the header type") {
+            Type::Load => {
+                // let pages = align_up(header.mem_size(), Size4KiB::SIZE) / Size4KiB::SIZE;
+
+                // system_table
+                //     .boot_services()
+                //     .allocate_pages(
+                //         AllocateType::AnyPages,
+                //         MemoryType::custom(0x80000000),
+                //         pages as usize,
+                //     )
+                //     .expect_success("Failed to allocate pages for the kernel");
+            }
+            _ => (),
+        }
+    }
+
+    KernelInfo {
+        entry_point: VirtAddr::new(kernel_elf.header.pt2.entry_point()),
+    }
 }
 
-fn switch_to_kernel() -> ! {
+fn switch_to_kernel(kernel_info: KernelInfo, boot_info: BootInfo) -> ! {
+    let kernel_main: extern "C" fn(BootInfo) -> i32 =
+        unsafe { mem::transmute(kernel_info.entry_point.as_u64()) };
+
+    log::info!("{}", kernel_main(boot_info));
+
     loop {}
 }
 
@@ -156,8 +206,8 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         .reset(false)
         .expect_success("Failed to reset output buffer");
 
-    initialize_gop(&system_table);
-    load_kernel(image, &system_table);
+    let frame_buffer_info = initialize_gop(&system_table);
+    let kernel_main_address = load_kernel(image, &system_table);
 
     log::info!("Exiting boot services");
 
@@ -169,16 +219,21 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
 
     let mmap_buffer = unsafe { core::slice::from_raw_parts_mut(buffer_ptr, buffer_size) };
 
-    system_table
+    let (_, _) = system_table
         .exit_boot_services(image, mmap_buffer)
         .expect_success("Failed to exit boot services.");
 
-    switch_to_kernel();
+    let boot_info = BootInfo { frame_buffer_info };
+
+    switch_to_kernel(kernel_main_address, boot_info);
 }
 
-#[cfg(test)]
-pub(crate) fn test_runner(tests: &[&dyn Fn()]) {
-    for test in tests {
-        test();
+pub fn align_up(address: u64, align: u64) -> u64 {
+    let align_mask = align - 1;
+
+    if address & align_mask == 0 {
+        address // Address is already aligned.
+    } else {
+        (address | align_mask) + 1
     }
 }

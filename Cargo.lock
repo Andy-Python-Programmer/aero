@@ -6,6 +6,7 @@ version = 3
 name = "aero"
 version = "0.1.0"
 dependencies = [
+ "aero_boot",
  "bit_field 0.10.1",
  "bitflags",
  "bootloader",

@@ -14,6 +14,9 @@ linked_list_allocator = "0.8.11"
 static_assertions = "1.1"
 log = "0.4.14"
 
+[dependencies.aero_boot]
+path = "./aero_boot/"
+
 [dependencies.goblin]
 version = "0.3.4"
 default-features = false
