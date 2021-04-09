@@ -82,6 +82,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
         log::info!("Loaded paging");
+        *(0xdeafbeaf as *mut u32) = 42;
 
         arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
             .expect("Failed to initialize the heap.");

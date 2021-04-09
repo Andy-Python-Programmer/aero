@@ -2,9 +2,7 @@
 //!
 //! **Notes**: <https://wiki.osdev.org/Interrupt_Descriptor_Table>
 
-/// Declare an IDT of 256 entries.
-/// Although not all entries are used, the rest exists as if any undefined IDT entry is hit,
-/// it will cause an "Unhandled Interrupt" exception.
+/// The count of the IDT entries.
 pub(crate) const IDT_ENTRIES: usize = 256;
 
 pub(crate) const PIC1_COMMAND: u16 = 0x20;
@@ -25,7 +23,7 @@ static mut IDT: [IDTEntry; IDT_ENTRIES] = [IDTEntry::null(); IDT_ENTRIES];
 
 use bitflags::bitflags;
 use core::mem::size_of;
-use x86_64::structures::idt::InterruptStackFrame;
+use x86_64::VirtAddr;
 
 use crate::utils::io;
 
@@ -40,6 +38,16 @@ bitflags! {
         const INTERRUPT = 0xE;
         const TRAP = 0xF;
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct InterruptStackFrame {
+    pub instruction_pointer: VirtAddr,
+    pub code_segment: u64,
+    pub cpu_flags: u64,
+    pub stack_pointer: VirtAddr,
+    pub stack_segment: u64,
 }
 
 #[repr(C, packed)]

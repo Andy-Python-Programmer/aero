@@ -5,7 +5,8 @@ use crate::{
     arch::interrupts::{end_pic1, end_pic2},
     time,
 };
-use x86_64::structures::idt::InterruptStackFrame;
+
+use super::InterruptStackFrame;
 
 interrupt!(pit, unsafe {
     time::PIT.tick();

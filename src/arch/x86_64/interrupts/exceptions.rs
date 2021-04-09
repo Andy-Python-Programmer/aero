@@ -1,8 +1,6 @@
-use x86_64::{
-    registers::control::Cr2,
-    structures::idt::{InterruptStackFrame, PageFaultErrorCode},
-};
+use x86_64::{registers::control::Cr2, structures::idt::PageFaultErrorCode};
 
+use super::InterruptStackFrame;
 use crate::interrupt;
 
 macro_rules! interrupt_exception {

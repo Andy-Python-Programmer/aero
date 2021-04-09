@@ -15,9 +15,8 @@ pub mod time;
 pub use fs::*;
 pub use time::*;
 
-use x86_64::structures::idt::InterruptStackFrame;
-
 use crate::arch::cpu::CPUState;
+use crate::arch::interrupts::InterruptStackFrame;
 use crate::{interrupt, println};
 
 pub enum SyscallError {
