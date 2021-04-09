@@ -1,3 +1,4 @@
 /target
 /qemu.log
 *.img
+build
