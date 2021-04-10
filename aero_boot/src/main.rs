@@ -33,6 +33,8 @@ use xmas_elf::{
     ElfFile,
 };
 
+pub const KERNEL_ELF_PATH: &str = r"\efi\kernel\aero";
+
 struct KernelInfo {
     entry_point: VirtAddr,
 }
@@ -148,11 +150,8 @@ pub fn load_file(
 fn load_kernel(image: Handle, system_table: &SystemTable<Boot>) -> KernelInfo {
     log::info!("Loading kernel");
 
-    let kernel_bin = load_file(image, system_table.boot_services(), "\\efi\\kernel\\aero")
+    let kernel_bin = load_file(image, system_table.boot_services(), KERNEL_ELF_PATH)
         .expect("Failed to load the kernel");
-    let kernel_offset = PhysAddr::new(kernel_bin[0] as *const u8 as u64);
-
-    assert!(kernel_offset.is_aligned(Size4KiB::SIZE));
 
     let kernel_elf = ElfFile::new(&kernel_bin).expect("Found corrupt kernel ELF file");
     header::sanity_check(&kernel_elf).expect("Failed the sanity check for the kernel");

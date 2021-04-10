@@ -4,6 +4,8 @@ build-std-features = ["compiler-builtins-mem"]
 
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"
+rustflags = ["-C", "link-args=-T linker.ld"]
+
 
 [package.metadata.bootimage]
 run-command = ["qemu-system-x86_64", "-drive", "format=raw,file={}"]
