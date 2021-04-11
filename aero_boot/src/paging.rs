@@ -11,6 +11,7 @@ use x86_64::{
     structures::paging::*,
     PhysAddr, VirtAddr,
 };
+use xmas_elf::program::ProgramHeader;
 
 pub struct BootFrameAllocator<'a>(&'a BootServices);
 
@@ -31,6 +32,50 @@ unsafe impl<'a> FrameAllocator<Size4KiB> for BootFrameAllocator<'a> {
         let frame = PhysFrame::containing_address(address);
 
         Some(frame)
+    }
+}
+
+pub struct Level4Entries {
+    entries: [bool; 512], // TODO: Use a bitmap class.
+}
+
+impl Level4Entries {
+    pub fn new<'header>(segments: impl Iterator<Item = ProgramHeader<'header>>) -> Self {
+        let mut this = Self {
+            entries: [false; 512],
+        };
+
+        this.entries[0] = true;
+
+        for segment in segments {
+            let start_page: Page = Page::containing_address(VirtAddr::new(segment.virtual_addr()));
+            let end_page: Page = Page::containing_address(VirtAddr::new(
+                segment.virtual_addr() + segment.mem_size(),
+            ));
+
+            for p4_index in u64::from(start_page.p4_index())..=u64::from(end_page.p4_index()) {
+                this.entries[p4_index as usize] = true;
+            }
+        }
+
+        this
+    }
+
+    pub fn get_free_entry(&mut self) -> PageTableIndex {
+        let (index, entry) = self
+            .entries
+            .iter_mut()
+            .enumerate()
+            .find(|(_, &mut entry)| entry == false)
+            .unwrap();
+
+        *entry = true;
+        PageTableIndex::new(index as u16)
+    }
+
+    pub fn get_free_address(&mut self) -> VirtAddr {
+        Page::from_page_table_indices_1gib(self.get_free_entry(), PageTableIndex::new(0))
+            .start_address()
     }
 }
 

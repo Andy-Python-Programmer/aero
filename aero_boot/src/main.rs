@@ -9,8 +9,8 @@ use core::mem;
 
 use aero_boot::{BootInfo, FrameBufferInfo};
 
-use paging::BootFrameAllocator;
-use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
+use paging::{BootFrameAllocator, Level4Entries, PageTables};
+use x86_64::{registers, structures::paging::*, PhysAddr, VirtAddr};
 
 use uefi::{
     prelude::*,
@@ -36,6 +36,7 @@ mod paging;
 
 struct KernelInfo {
     entry_point: VirtAddr,
+    stack_top: VirtAddr,
 }
 
 fn initialize_gop(system_table: &SystemTable<Boot>) -> FrameBufferInfo {
@@ -237,20 +238,70 @@ fn load_kernel(
     }
 
     // Create stack for the kernel.
+    let mut used_entries = Level4Entries::new(kernel_elf.program_iter());
+
+    let stack_start_address = used_entries.get_free_address();
+    let stack_end_address = stack_start_address + 20 * Size4KiB::SIZE;
+
+    let stack_start: Page = Page::containing_address(stack_start_address);
+    let stack_end: Page = Page::containing_address(stack_end_address - 1u64);
+
+    for page in Page::range_inclusive(stack_start, stack_end) {
+        let frame = frame_allocator.allocate_frame().unwrap();
+
+        unsafe {
+            kernel_page_table
+                .map_to(
+                    page,
+                    frame,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    frame_allocator,
+                )
+                .unwrap()
+                .flush();
+        }
+    }
+
+    log::info!("Mapping physical memory");
 
     KernelInfo {
         entry_point: VirtAddr::new(kernel_elf.header.pt2.entry_point()),
+        stack_top: stack_end.start_address(),
     }
 }
 
-fn switch_to_kernel(kernel_info: KernelInfo, boot_info: BootInfo) -> ! {
+fn switch_to_kernel(
+    kernel_info: KernelInfo,
+    boot_info: BootInfo,
+    frame_allocator: &mut BootFrameAllocator,
+    page_tables: &mut PageTables,
+) -> ! {
     paging::enable_no_execute();
     paging::enable_protection();
 
-    let kernel_main: extern "C" fn(BootInfo) -> i32 =
-        unsafe { mem::transmute(kernel_info.entry_point.as_u64()) };
+    let current_address = PhysAddr::new(registers::read_rip().as_u64());
+    let current_frame: PhysFrame = PhysFrame::containing_address(current_address);
 
-    log::info!("{}", kernel_main(boot_info));
+    for frame in PhysFrame::range_inclusive(current_frame, current_frame + 1) {
+        unsafe {
+            page_tables
+                .kernel_page_table
+                .identity_map(frame, PageTableFlags::PRESENT, frame_allocator)
+                .unwrap()
+                .flush();
+        }
+    }
+
+    // unsafe {
+    // let kernel_level_4_start = page_tables.kernel_level_4_frame.start_address().as_u64();
+    // let stack_top = kernel_info.stack_top.as_u64();
+    // let entry_point = kernel_info.entry_point.as_u64();
+
+    // asm!("mov cr3, {}", in(reg) kernel_level_4_start);
+    // asm!("mov rsp, {}", in(reg) stack_top);
+    // asm!("push 0");
+    // asm!("jmp {}", in(reg) entry_point, in("rdi") &boot_info as *const _ as usize);
+    // }
 
     loop {}
 }
@@ -268,13 +319,13 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
     // Set up the boot frame allocator used at boot stage.
     // Note: Boot frame allocator is dropped after exiting boot services.
     let mut boot_frame_allocator = BootFrameAllocator::new(system_table.boot_services());
-    let mut page_table = paging::init(&mut boot_frame_allocator);
+    let mut page_tables = paging::init(&mut boot_frame_allocator);
 
     let frame_buffer_info = initialize_gop(&system_table);
     let kernel_main_address = load_kernel(
         &system_table,
         &mut boot_frame_allocator,
-        &mut page_table.kernel_page_table,
+        &mut page_tables.kernel_page_table,
     );
 
     log::info!("Exiting boot services");
@@ -287,7 +338,7 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
 
     // let mmap_buffer = unsafe { core::slice::from_raw_parts_mut(buffer_ptr, buffer_size) };
 
-    drop(boot_frame_allocator);
+    // drop(boot_frame_allocator);
 
     // let (_, _) = system_table
     //     .exit_boot_services(image, mmap_buffer)
@@ -295,7 +346,12 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
 
     let boot_info = BootInfo { frame_buffer_info };
 
-    switch_to_kernel(kernel_main_address, boot_info);
+    switch_to_kernel(
+        kernel_main_address,
+        boot_info,
+        &mut boot_frame_allocator,
+        &mut page_tables,
+    );
 }
 
 pub fn align_up(address: u64, align: u64) -> u64 {
