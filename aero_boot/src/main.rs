@@ -27,7 +27,10 @@ use xmas_elf::{
     ElfFile,
 };
 
-pub const KERNEL_ELF_PATH: &str = r"\efi\kernel\aero";
+const KERNEL_ELF_PATH: &str = r"\efi\kernel\aero";
+const SIZE_4_KIB_ZERO_ARRAY: Size4KiBPageArray = [0; Size4KiB::SIZE as usize / 8];
+
+type Size4KiBPageArray = [u64; Size4KiB::SIZE as usize / 8];
 
 mod paging;
 
@@ -143,13 +146,71 @@ fn map_segment(
     }
 
     // Handle the `.bss` sectiton.
-    if segment.mem_size() > segment.file_size() {}
+    if segment.mem_size() > segment.file_size() {
+        let zero_start = virtual_start + segment.file_size();
+        let zero_end = virtual_start + segment.mem_size();
+
+        if zero_start.as_u64() & 0xfff != 0 {
+            let orignal_frame: PhysFrame =
+                PhysFrame::containing_address(physical_address + segment.file_size() - 1u64);
+
+            let new_frame = frame_allocator.allocate_frame().unwrap();
+
+            let new_frame_ptr = new_frame.start_address().as_u64() as *mut Size4KiBPageArray;
+            unsafe { new_frame_ptr.write(SIZE_4_KIB_ZERO_ARRAY) };
+
+            drop(new_frame_ptr);
+
+            // Copy the data from the orignal frame to the new frame.
+
+            let orig_bytes_ptr = orignal_frame.start_address().as_u64() as *mut u8;
+            let new_bytes_ptr = new_frame.start_address().as_u64() as *mut u8;
+
+            for offset in 0..((zero_start.as_u64() & 0xfff) as isize) {
+                unsafe {
+                    let orig_byte = orig_bytes_ptr.offset(offset).read();
+                    new_bytes_ptr.offset(offset).write(orig_byte);
+                }
+            }
+
+            let last_page = Page::containing_address(virtual_start + segment.file_size() - 1u64);
+
+            unsafe {
+                page_table.unmap(last_page).unwrap().1.ignore();
+                page_table
+                    .map_to(last_page, new_frame, page_table_flags, frame_allocator)
+                    .unwrap()
+                    .ignore();
+            }
+        }
+
+        let start_page: Page =
+            Page::containing_address(VirtAddr::new(align_up(zero_start.as_u64(), Size4KiB::SIZE)));
+        let end_page = Page::containing_address(zero_end);
+
+        // Map additional frames for the `.bss` section.
+        for page in Page::range_inclusive(start_page, end_page) {
+            let frame = frame_allocator.allocate_frame().unwrap();
+
+            let frame_ptr = frame.start_address().as_u64() as *mut Size4KiBPageArray;
+            unsafe { frame_ptr.write(SIZE_4_KIB_ZERO_ARRAY) };
+
+            drop(frame_ptr);
+
+            unsafe {
+                page_table
+                    .map_to(page, frame, page_table_flags, frame_allocator)
+                    .unwrap()
+                    .ignore();
+            }
+        }
+    }
 }
 
 fn load_kernel(
     system_table: &SystemTable<Boot>,
     frame_allocator: &mut BootFrameAllocator,
-    page_table: &mut OffsetPageTable,
+    kernel_page_table: &mut OffsetPageTable,
 ) -> KernelInfo {
     log::info!("Loading kernel");
 
@@ -170,10 +231,12 @@ fn load_kernel(
         program::sanity_check(header, &kernel_elf).expect("Failed header sanity check");
 
         match header.get_type().expect("Unable to get the header type") {
-            Type::Load => map_segment(&header, kernel_offset, frame_allocator, page_table),
+            Type::Load => map_segment(&header, kernel_offset, frame_allocator, kernel_page_table),
             _ => (),
         }
     }
+
+    // Create stack for the kernel.
 
     KernelInfo {
         entry_point: VirtAddr::new(kernel_elf.header.pt2.entry_point()),
