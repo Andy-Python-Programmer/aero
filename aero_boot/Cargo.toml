@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 log = { version = "0.4.14", default-features = false }
-uefi = "0.8.0"
+uefi = { version = "0.8.0", features = ["alloc"] }
 xmas-elf = "0.7.0"
 rlibc = "1"
 uefi-services = "0.5.0"

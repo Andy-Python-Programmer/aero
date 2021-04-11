@@ -1,4 +1,4 @@
-cargo build --package aero_boot --target x86_64-unknown-uefi -Z build-std=core,compiler_builtins,alloc -Z build-std-features=compiler-builtins-mem
+cargo build --package aero_boot --target x86_64-unknown-uefi -Z build-std=core,alloc -Z build-std-features=compiler-builtins-mem
 cargo build
 mkdir build\efi\boot\
 mkdir build\efi\kernel\

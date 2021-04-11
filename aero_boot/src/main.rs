@@ -9,31 +9,27 @@ use core::mem;
 
 use aero_boot::{BootInfo, FrameBufferInfo};
 
-use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
-    PhysAddr, VirtAddr,
-};
+use paging::BootFrameAllocator;
+use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
 
 use uefi::{
     prelude::*,
     proto::{
         console::gop::GraphicsOutput,
-        media::{
-            file::{File, FileAttribute, FileMode},
-            fs::SimpleFileSystem,
-        },
+        media::{file::*, fs::SimpleFileSystem},
     },
-    table::boot::AllocateType,
+    table::boot::*,
 };
 
-use uefi::{proto::media::file::FileType, table::boot::MemoryType};
 use xmas_elf::{
     header,
-    program::{self, Type},
+    program::{self, ProgramHeader, Type},
     ElfFile,
 };
 
 pub const KERNEL_ELF_PATH: &str = r"\efi\kernel\aero";
+
+mod paging;
 
 struct KernelInfo {
     entry_point: VirtAddr,
@@ -59,101 +55,110 @@ fn initialize_gop(system_table: &SystemTable<Boot>) -> FrameBufferInfo {
     }
 }
 
-pub fn load_file(
-    handle: Handle,
-    boot_services: &BootServices,
-    path: &str,
-) -> Result<&'static mut [u8], Status> {
-    let loaded_image = unsafe {
-        match boot_services.handle_protocol::<uefi::proto::loaded_image::LoadedImage>(handle) {
-            Ok(val) => val.unwrap().get().as_ref().unwrap(),
-            Err(_) => return Err(Status::LOAD_ERROR),
-        }
-    };
+fn load_file(boot_services: &BootServices, path: &str) -> &'static [u8] {
+    let mut info_buffer = [0u8; 0x100];
 
     let file_system = unsafe {
-        match boot_services.handle_protocol::<SimpleFileSystem>(loaded_image.device()) {
-            Ok(val) => val.unwrap().get().as_mut().unwrap(),
-            Err(_) => return Err(Status::LOAD_ERROR),
-        }
+        &mut *boot_services
+            .locate_protocol::<SimpleFileSystem>()
+            .expect_success("Failed to locate file system")
+            .get()
     };
 
-    let mut root = match file_system.open_volume() {
-        Ok(val) => val.unwrap(),
-        Err(err) => return Err(err.status()),
-    };
+    let mut root = file_system
+        .open_volume()
+        .expect_success("Failed to open volumes");
 
-    let path_pool = match boot_services.allocate_pool(MemoryType::LOADER_DATA, path.len()) {
-        Ok(val) => val.unwrap(),
-        Err(err) => return Err(err.status()),
-    };
+    let volume_label = file_system
+        .open_volume()
+        .expect_success("Failed to open volume")
+        .get_info::<FileSystemVolumeLabel>(&mut info_buffer)
+        .expect_success("Failed to open volumes")
+        .volume_label();
 
-    for (index, c) in path.chars().enumerate() {
-        unsafe {
-            path_pool.add(index).write(c as u8);
-        }
-    }
+    log::info!("Volume label: {}", volume_label);
 
-    let path = unsafe {
-        core::str::from_utf8_unchecked(core::slice::from_raw_parts(path_pool, path.len()))
-    };
-
-    let handle = match root
-        .handle()
+    let file_handle = root
         .open(path, FileMode::Read, FileAttribute::empty())
-    {
-        Ok(handle) => handle.unwrap(),
-        Err(err) => {
-            boot_services.free_pool(path_pool).unwrap().unwrap();
-            return Err(err.status());
-        }
-    };
+        .expect_success("Failed to open file");
 
-    boot_services.free_pool(path_pool).unwrap().unwrap();
+    let mut file_handle = unsafe { RegularFile::new(file_handle) };
 
-    let mut file = match handle.into_type().unwrap().unwrap() {
-        FileType::Regular(file) => file,
-        FileType::Dir(_) => return Err(Status::ACCESS_DENIED),
-    };
+    log::info!("Loading {} into memory", path);
 
-    match file.set_position(u64::MAX) {
-        Ok(_) => (),
-        Err(err) => return Err(err.status()),
-    };
+    let info = file_handle
+        .get_info::<FileInfo>(&mut info_buffer)
+        .expect_success("Failed to get file info");
 
-    let file_size = match file.get_position() {
-        Ok(val) => val.unwrap() as usize,
-        Err(err) => return Err(err.status()),
-    };
+    let pages = info.file_size() as usize / 0x1000 + 1;
+    let mem_start = boot_services
+        .allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, pages)
+        .expect_success("Failed to allocate pages");
 
-    match file.set_position(0) {
-        Ok(_) => (),
-        Err(err) => return Err(err.status()),
-    };
+    let buffer = unsafe { core::slice::from_raw_parts_mut(mem_start as *mut u8, pages * 0x1000) };
+    let length = file_handle
+        .read(buffer)
+        .expect_success("Failed to read file");
 
-    let pool = match boot_services.allocate_pool(MemoryType::LOADER_DATA, file_size) {
-        Ok(val) => val.unwrap(),
-        Err(err) => return Err(err.status()),
-    };
-
-    let buffer = unsafe { core::slice::from_raw_parts_mut(pool, file_size) };
-
-    if let Err(err) = file.read(buffer) {
-        boot_services.free_pool(pool).unwrap().unwrap();
-
-        return Err(err.status());
-    }
-
-    Ok(buffer)
+    buffer[..length].as_ref()
 }
 
-fn load_kernel(image: Handle, system_table: &SystemTable<Boot>) -> KernelInfo {
+fn map_segment(
+    segment: &ProgramHeader,
+    kernel_offset: PhysAddr,
+    frame_allocator: &mut BootFrameAllocator,
+    page_table: &mut OffsetPageTable,
+) {
+    let physical_address = kernel_offset + segment.offset();
+    let start_frame: PhysFrame = PhysFrame::containing_address(physical_address);
+    let end_frame: PhysFrame =
+        PhysFrame::containing_address(physical_address + segment.file_size() - 1u64);
+
+    let virtual_start = VirtAddr::new(segment.virtual_addr());
+    let start_page: Page = Page::containing_address(virtual_start);
+
+    let flags = segment.flags();
+    let mut page_table_flags = PageTableFlags::PRESENT;
+
+    if !flags.is_execute() {
+        page_table_flags |= PageTableFlags::NO_EXECUTE
+    }
+
+    if flags.is_write() {
+        page_table_flags |= PageTableFlags::WRITABLE
+    }
+
+    for frame in PhysFrame::range_inclusive(start_frame, end_frame) {
+        let offset = frame - start_frame;
+        let page = start_page + offset;
+
+        unsafe {
+            // We operate on an inactive page table, so there's no need to flush anything.
+
+            page_table
+                .map_to(page, frame, page_table_flags, frame_allocator)
+                .unwrap()
+                .ignore();
+        }
+    }
+
+    // Handle the `.bss` sectiton.
+    if segment.mem_size() > segment.file_size() {}
+}
+
+fn load_kernel(
+    system_table: &SystemTable<Boot>,
+    frame_allocator: &mut BootFrameAllocator,
+    page_table: &mut OffsetPageTable,
+) -> KernelInfo {
     log::info!("Loading kernel");
 
-    let kernel_bin = load_file(image, system_table.boot_services(), KERNEL_ELF_PATH)
-        .expect("Failed to load the kernel");
-
+    let kernel_bin = load_file(system_table.boot_services(), KERNEL_ELF_PATH);
     let kernel_elf = ElfFile::new(&kernel_bin).expect("Found corrupt kernel ELF file");
+    let kernel_offset = PhysAddr::new(&kernel_bin[0] as *const u8 as u64);
+
+    assert!(kernel_offset.is_aligned(Size4KiB::SIZE));
+
     header::sanity_check(&kernel_elf).expect("Failed the sanity check for the kernel");
 
     log::info!(
@@ -165,18 +170,7 @@ fn load_kernel(image: Handle, system_table: &SystemTable<Boot>) -> KernelInfo {
         program::sanity_check(header, &kernel_elf).expect("Failed header sanity check");
 
         match header.get_type().expect("Unable to get the header type") {
-            Type::Load => {
-                // let pages = align_up(header.mem_size(), Size4KiB::SIZE) / Size4KiB::SIZE;
-
-                // system_table
-                //     .boot_services()
-                //     .allocate_pages(
-                //         AllocateType::AnyPages,
-                //         MemoryType::custom(0x80000000),
-                //         pages as usize,
-                //     )
-                //     .expect_success("Failed to allocate pages for the kernel");
-            }
+            Type::Load => map_segment(&header, kernel_offset, frame_allocator, page_table),
             _ => (),
         }
     }
@@ -187,6 +181,9 @@ fn load_kernel(image: Handle, system_table: &SystemTable<Boot>) -> KernelInfo {
 }
 
 fn switch_to_kernel(kernel_info: KernelInfo, boot_info: BootInfo) -> ! {
+    paging::enable_no_execute();
+    paging::enable_protection();
+
     let kernel_main: extern "C" fn(BootInfo) -> i32 =
         unsafe { mem::transmute(kernel_info.entry_point.as_u64()) };
 
@@ -205,22 +202,33 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         .reset(false)
         .expect_success("Failed to reset output buffer");
 
+    // Set up the boot frame allocator used at boot stage.
+    // Note: Boot frame allocator is dropped after exiting boot services.
+    let mut boot_frame_allocator = BootFrameAllocator::new(system_table.boot_services());
+    let mut page_table = paging::init(&mut boot_frame_allocator);
+
     let frame_buffer_info = initialize_gop(&system_table);
-    let kernel_main_address = load_kernel(image, &system_table);
+    let kernel_main_address = load_kernel(
+        &system_table,
+        &mut boot_frame_allocator,
+        &mut page_table.kernel_page_table,
+    );
 
     log::info!("Exiting boot services");
 
-    let buffer_size = system_table.boot_services().memory_map_size() * 2;
-    let buffer_ptr = system_table
-        .boot_services()
-        .allocate_pool(MemoryType::LOADER_DATA, buffer_size)
-        .expect_success("Failed to allocate pool");
+    // let buffer_size = system_table.boot_services().memory_map_size() * 2;
+    // let buffer_ptr = system_table
+    //     .boot_services()
+    //     .allocate_pool(MemoryType::LOADER_DATA, buffer_size)
+    //     .expect_success("Failed to allocate pool");
 
-    let mmap_buffer = unsafe { core::slice::from_raw_parts_mut(buffer_ptr, buffer_size) };
+    // let mmap_buffer = unsafe { core::slice::from_raw_parts_mut(buffer_ptr, buffer_size) };
 
-    let (_, _) = system_table
-        .exit_boot_services(image, mmap_buffer)
-        .expect_success("Failed to exit boot services.");
+    drop(boot_frame_allocator);
+
+    // let (_, _) = system_table
+    //     .exit_boot_services(image, mmap_buffer)
+    //     .expect_success("Failed to exit boot services.");
 
     let boot_info = BootInfo { frame_buffer_info };
 
