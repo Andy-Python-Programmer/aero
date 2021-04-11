@@ -1,7 +1,4 @@
-use uefi::{
-    prelude::*,
-    table::boot::{AllocateType, MemoryType},
-};
+use uefi::table::boot::{MemoryDescriptor, MemoryType};
 
 use x86_64::{
     registers::{
@@ -11,27 +8,90 @@ use x86_64::{
     structures::paging::*,
     PhysAddr, VirtAddr,
 };
+
 use xmas_elf::program::ProgramHeader;
 
-pub struct BootFrameAllocator<'a>(&'a BootServices);
+pub struct BootFrameAllocator<I> {
+    original: I,
+    memory_map: I,
+    current_descriptor: Option<MemoryDescriptor>,
+    next_frame: PhysFrame,
+}
 
-impl<'a> BootFrameAllocator<'a> {
-    pub fn new(boot_services: &'a BootServices) -> Self {
-        Self(boot_services)
+impl<I> BootFrameAllocator<I>
+where
+    I: ExactSizeIterator<Item = MemoryDescriptor> + Clone,
+{
+    pub fn new(memory_map: I) -> Self {
+        let start_frame = PhysFrame::containing_address(PhysAddr::new(0x1000));
+
+        Self {
+            original: memory_map.clone(),
+            memory_map,
+            current_descriptor: None,
+            next_frame: start_frame,
+        }
+    }
+
+    fn allocate_frame_from_descriptor(
+        &mut self,
+        descriptor: MemoryDescriptor,
+    ) -> Option<PhysFrame> {
+        let start_address = PhysAddr::new(descriptor.phys_start);
+        let start_frame = PhysFrame::containing_address(start_address);
+
+        let end_addr = start_address + (descriptor.page_count * Size4KiB::SIZE);
+        let end_frame = PhysFrame::containing_address(end_addr - 1u64);
+
+        if self.next_frame < start_frame {
+            self.next_frame = start_frame;
+        }
+
+        if self.next_frame < end_frame {
+            let frame = self.next_frame;
+            self.next_frame += 1;
+
+            Some(frame)
+        } else {
+            None
+        }
+    }
+
+    pub fn max_physical_address(&self) -> PhysAddr {
+        self.original
+            .clone()
+            .map(|r| PhysAddr::new(r.phys_start) + (r.page_count * Size4KiB::SIZE))
+            .max()
+            .unwrap()
     }
 }
 
-unsafe impl<'a> FrameAllocator<Size4KiB> for BootFrameAllocator<'a> {
+unsafe impl<I> FrameAllocator<Size4KiB> for BootFrameAllocator<I>
+where
+    I: ExactSizeIterator<Item = MemoryDescriptor> + Clone,
+{
     fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
-        let address = self
-            .0
-            .allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, 1)
-            .expect_success("Failed to allocate physical frame");
+        if let Some(current_descriptor) = self.current_descriptor {
+            match self.allocate_frame_from_descriptor(current_descriptor) {
+                Some(frame) => return Some(frame),
+                None => {
+                    self.current_descriptor = None;
+                }
+            }
+        }
 
-        let address = PhysAddr::new(address);
-        let frame = PhysFrame::containing_address(address);
+        while let Some(descriptor) = self.memory_map.next() {
+            if descriptor.ty != MemoryType::CONVENTIONAL {
+                continue;
+            }
 
-        Some(frame)
+            if let Some(frame) = self.allocate_frame_from_descriptor(descriptor) {
+                self.current_descriptor = Some(descriptor);
+                return Some(frame);
+            }
+        }
+
+        None
     }
 }
 
@@ -85,7 +145,7 @@ pub struct PageTables {
     pub kernel_level_4_frame: PhysFrame,
 }
 
-pub fn init(frame_allocator: &mut BootFrameAllocator) -> PageTables {
+pub fn init(frame_allocator: &mut impl FrameAllocator<Size4KiB>) -> PageTables {
     let physical_offset = VirtAddr::new(0x00);
 
     let old_table = {

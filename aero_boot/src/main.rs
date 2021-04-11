@@ -110,7 +110,7 @@ fn load_file(boot_services: &BootServices, path: &str) -> &'static [u8] {
 fn map_segment(
     segment: &ProgramHeader,
     kernel_offset: PhysAddr,
-    frame_allocator: &mut BootFrameAllocator,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     page_table: &mut OffsetPageTable,
 ) {
     let physical_address = kernel_offset + segment.offset();
@@ -208,14 +208,16 @@ fn map_segment(
     }
 }
 
-fn load_kernel(
-    system_table: &SystemTable<Boot>,
-    frame_allocator: &mut BootFrameAllocator,
+fn load_kernel<I>(
+    kernel_bin: &[u8],
+    frame_allocator: &mut BootFrameAllocator<I>,
     kernel_page_table: &mut OffsetPageTable,
-) -> KernelInfo {
+) -> KernelInfo
+where
+    I: ExactSizeIterator<Item = MemoryDescriptor> + Clone,
+{
     log::info!("Loading kernel");
 
-    let kernel_bin = load_file(system_table.boot_services(), KERNEL_ELF_PATH);
     let kernel_elf = ElfFile::new(&kernel_bin).expect("Found corrupt kernel ELF file");
     let kernel_offset = PhysAddr::new(&kernel_bin[0] as *const u8 as u64);
 
@@ -264,6 +266,30 @@ fn load_kernel(
 
     log::info!("Mapping physical memory");
 
+    let physical_memory_offset = used_entries.get_free_address();
+
+    let start_frame = PhysFrame::containing_address(PhysAddr::new(0));
+    let max_physical = frame_allocator.max_physical_address();
+
+    let end_frame: PhysFrame<Size2MiB> = PhysFrame::containing_address(max_physical - 1u64);
+
+    for frame in PhysFrame::range_inclusive(start_frame, end_frame) {
+        let page =
+            Page::containing_address(physical_memory_offset + frame.start_address().as_u64());
+
+        unsafe {
+            kernel_page_table
+                .map_to(
+                    page,
+                    frame,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    frame_allocator,
+                )
+                .unwrap()
+                .ignore();
+        }
+    }
+
     KernelInfo {
         entry_point: VirtAddr::new(kernel_elf.header.pt2.entry_point()),
         stack_top: stack_end.start_address(),
@@ -273,7 +299,7 @@ fn load_kernel(
 fn switch_to_kernel(
     kernel_info: KernelInfo,
     boot_info: BootInfo,
-    frame_allocator: &mut BootFrameAllocator,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     page_tables: &mut PageTables,
 ) -> ! {
     paging::enable_no_execute();
@@ -293,14 +319,14 @@ fn switch_to_kernel(
     }
 
     // unsafe {
-    // let kernel_level_4_start = page_tables.kernel_level_4_frame.start_address().as_u64();
-    // let stack_top = kernel_info.stack_top.as_u64();
-    // let entry_point = kernel_info.entry_point.as_u64();
+    //     let kernel_level_4_start = page_tables.kernel_level_4_frame.start_address().as_u64();
+    //     let stack_top = kernel_info.stack_top.as_u64();
+    //     let entry_point = kernel_info.entry_point.as_u64();
 
-    // asm!("mov cr3, {}", in(reg) kernel_level_4_start);
-    // asm!("mov rsp, {}", in(reg) stack_top);
-    // asm!("push 0");
-    // asm!("jmp {}", in(reg) entry_point, in("rdi") &boot_info as *const _ as usize);
+    //     asm!("mov cr3, {}", in(reg) kernel_level_4_start);
+    //     asm!("mov rsp, {}", in(reg) stack_top);
+    //     asm!("push 0");
+    //     asm!("jmp {}", in(reg) entry_point, in("rdi") &boot_info as *const _ as usize);
     // }
 
     loop {}
@@ -316,33 +342,32 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         .reset(false)
         .expect_success("Failed to reset output buffer");
 
-    // Set up the boot frame allocator used at boot stage.
-    // Note: Boot frame allocator is dropped after exiting boot services.
-    let mut boot_frame_allocator = BootFrameAllocator::new(system_table.boot_services());
-    let mut page_tables = paging::init(&mut boot_frame_allocator);
-
     let frame_buffer_info = initialize_gop(&system_table);
-    let kernel_main_address = load_kernel(
-        &system_table,
-        &mut boot_frame_allocator,
-        &mut page_tables.kernel_page_table,
-    );
+    let kernel_bin = load_file(system_table.boot_services(), KERNEL_ELF_PATH);
 
     log::info!("Exiting boot services");
 
-    // let buffer_size = system_table.boot_services().memory_map_size() * 2;
-    // let buffer_ptr = system_table
-    //     .boot_services()
-    //     .allocate_pool(MemoryType::LOADER_DATA, buffer_size)
-    //     .expect_success("Failed to allocate pool");
+    let buffer_size = system_table.boot_services().memory_map_size() * 2;
+    let buffer_ptr = system_table
+        .boot_services()
+        .allocate_pool(MemoryType::LOADER_DATA, buffer_size)
+        .expect_success("Failed to allocate pool");
 
-    // let mmap_buffer = unsafe { core::slice::from_raw_parts_mut(buffer_ptr, buffer_size) };
+    let mmap_buffer = unsafe { core::slice::from_raw_parts_mut(buffer_ptr, buffer_size) };
 
-    // drop(boot_frame_allocator);
+    let (_, mmap) = system_table
+        .exit_boot_services(image, mmap_buffer)
+        .expect_success("Failed to exit boot services.");
 
-    // let (_, _) = system_table
-    //     .exit_boot_services(image, mmap_buffer)
-    //     .expect_success("Failed to exit boot services.");
+    // Set up the boot frame allocator after exiting the boot services.
+    let mut boot_frame_allocator = BootFrameAllocator::new(mmap.copied());
+    let mut page_tables = paging::init(&mut boot_frame_allocator);
+
+    let kernel_main_address = load_kernel(
+        kernel_bin,
+        &mut boot_frame_allocator,
+        &mut page_tables.kernel_page_table,
+    );
 
     let boot_info = BootInfo { frame_buffer_info };
 
