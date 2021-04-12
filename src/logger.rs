@@ -1,5 +1,5 @@
 use crate::vga::color::*;
-use crate::vga::rendy::RENDERER;
+// use crate::vga::rendy::RENDERER;
 
 use crate::{print, println};
 use log::{Level, LevelFilter, Metadata, Record};
@@ -14,14 +14,14 @@ impl log::Log for AeroLogger {
     }
 
     fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Black);
-            print!("[ ");
-            RENDERER.lock().color_code = ColorCode::new(Color::LightGreen, Color::Black);
-            print!("OK");
-            RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Black);
-            println!(" ]        - {}", record.args());
-        }
+        // if self.enabled(record.metadata()) {
+        //     RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Black);
+        //     print!("[ ");
+        //     RENDERER.lock().color_code = ColorCode::new(Color::LightGreen, Color::Black);
+        //     print!("OK");
+        //     RENDERER.lock().color_code = ColorCode::new(Color::White, Color::Black);
+        //     println!(" ]        - {}", record.args());
+        // }
     }
 
     fn flush(&self) {}

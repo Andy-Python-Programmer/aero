@@ -34,33 +34,37 @@ use aero_boot::BootInfo;
 // mod acpi;
 // mod arch;
 // mod drivers;
-// mod logger;
+mod logger;
 mod panic;
 // mod syscall;
 mod tests;
-// mod time;
+mod time;
 // mod userland;
-// mod utils;
-// mod vga;
+mod utils;
+mod vga;
 
 // use linked_list_allocator::LockedHeap;
 
 // #[global_allocator]
 // static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-// const ASCII_INTRO: &'static str = r"
-// _______ _______ ______ _______    _______ ______
-// (_______|_______|_____ (_______)  (_______) _____)
-//  _______ _____   _____) )     _    _     ( (____
-// |  ___  |  ___) |  __  / |   | |  | |   | \____ \
-// | |   | | |_____| |  \ \ |___| |  | |___| |____) )
-// |_|   |_|_______)_|   |_\_____/    \_____(______/
-// ";
-
-// entry_point!(kernel_main);
+const ASCII_INTRO: &'static str = r"
+_______ _______ ______ _______    _______ ______
+(_______|_______|_____ (_______)  (_______) _____)
+ _______ _____   _____) )     _    _     ( (____
+|  ___  |  ___) |  __  / |   | |  | |   | \____ \
+| |   | | |_____| |  \ \ |___| |  | |___| |____) )
+|_|   |_|_______)_|   |_\_____/    \_____(______/
+";
 
 #[export_name = "_start"]
-extern "C" fn kernel_main(boot_info: &'static BootInfo) -> ! {
+extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    vga::rendy::init(boot_info);
+
+    logger::init();
+
+    println!("{}", ASCII_INTRO);
+
     loop {}
 }
 

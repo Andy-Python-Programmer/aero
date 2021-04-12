@@ -2,14 +2,26 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct FrameBufferInfo {
     pub horizontal_resolution: usize,
     pub vertical_resolution: usize,
     pub stride: usize,
+    pub size: usize,
+    pub pixel_format: PixelFormat,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(C)]
+pub enum PixelFormat {
+    RGB,
+    BGR,
+    BitMask,
+    BltOnly,
+}
+
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct MemoryRegion {
     pub start: u64,
@@ -30,6 +42,7 @@ pub enum MemoryRegionType {
 #[repr(C)]
 pub struct BootInfo {
     pub frame_buffer_info: FrameBufferInfo,
+    pub frame_buffer: &'static mut [u8],
 }
 
 pub fn test_runner(tests: &[&dyn Fn()]) {

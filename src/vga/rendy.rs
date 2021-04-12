@@ -1,104 +1,43 @@
 use core::fmt::{self, Write};
 
-use super::{
-    buffer::{Buffer, ScreenChar, BUFFER_HEIGHT, BUFFER_WIDTH},
-    color::{Color, ColorCode},
-};
+use aero_boot::{BootInfo, FrameBufferInfo, PixelFormat};
+use spin::{Mutex, Once};
 
-use lazy_static::lazy_static;
+static RENDY: Once<Mutex<Rendy>> = Once::new();
 
-lazy_static! {
-    pub static ref RENDERER: spin::Mutex<Rendy> = spin::Mutex::new(Rendy {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
 pub struct Rendy {
-    column_position: usize,
-    pub color_code: ColorCode,
-    pub buffer: &'static mut Buffer,
+    frame_buffer: &'static mut [u8],
+    info: FrameBufferInfo,
 }
 
 impl Rendy {
-    pub fn string(&mut self, s: &str) {
-        for byte in s.bytes() {
-            match byte {
-                0x20..=0x7e | b'\n' => self.byte(byte),
-                _ => self.byte(0xfe),
-            }
+    pub fn write_string(&mut self, string: &str) {
+        let y = 50;
+
+        for x in 0..self.info.horizontal_resolution / 2 {
+            self.put_pixel(x, y, 255);
         }
     }
 
-    pub fn byte(&mut self, byte: u8) {
-        match byte {
-            b'\n' => self.new_line(),
-            byte => {
-                if self.column_position >= BUFFER_WIDTH {
-                    self.new_line();
-                }
+    pub fn put_pixel(&mut self, x: usize, y: usize, intensity: u8) {
+        let pixel_offset = y * self.info.stride + x;
 
-                let row = BUFFER_HEIGHT - 1;
-                let col = self.column_position;
-
-                let color_code = self.color_code;
-
-                self.buffer.chars[row][col].write(ScreenChar {
-                    character: byte,
-                    color_code,
-                });
-
-                self.column_position += 1;
-            }
-        }
-    }
-
-    fn new_line(&mut self) {
-        for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                let character = self.buffer.chars[row][col].read();
-                self.buffer.chars[row - 1][col].write(character);
-            }
-        }
-
-        self.clear_row(BUFFER_HEIGHT - 1);
-        self.column_position = 0;
-    }
-
-    fn clear_row(&mut self, row: usize) {
-        let blank = ScreenChar {
-            character: b' ',
-            color_code: self.color_code,
+        let color = match self.info.pixel_format {
+            PixelFormat::RGB => [intensity, intensity, intensity / 2, 0],
+            PixelFormat::BGR => [intensity / 2, intensity, intensity, 0],
+            _ => [if intensity > 200 { 0xf } else { 0 }, 0, 0, 0],
         };
 
-        for col in 0..BUFFER_WIDTH {
-            self.buffer.chars[row][col].write(blank);
-        }
-    }
+        let byte_offset = pixel_offset * 4;
 
-    pub fn clear_screen(&mut self) {
-        let blank = ScreenChar {
-            character: b' ',
-            color_code: self.color_code,
-        };
-
-        for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                self.buffer.chars[row][col].write(blank);
-            }
-        }
-
-        self.column_position = 0;
-    }
-
-    pub fn clear_current(&mut self) {
-        unimplemented!();
+        self.frame_buffer[byte_offset..(byte_offset + 4)].copy_from_slice(&color[..4]);
     }
 }
 
 impl fmt::Write for Rendy {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.string(s);
+    fn write_str(&mut self, string: &str) -> fmt::Result {
+        self.write_string(string);
+
         Ok(())
     }
 }
@@ -137,5 +76,14 @@ macro_rules! dbg {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    RENDERER.lock().write_fmt(args).unwrap();
+    RENDY.get().unwrap().lock().write_fmt(args).unwrap();
+}
+
+pub fn init(boot_info: &'static mut BootInfo) {
+    let frame_buffer = &mut boot_info.frame_buffer;
+    let info = boot_info.frame_buffer_info;
+
+    let rendy = Mutex::new(Rendy { frame_buffer, info });
+
+    RENDY.call_once(|| rendy);
 }

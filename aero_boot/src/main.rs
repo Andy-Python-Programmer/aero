@@ -7,7 +7,7 @@ extern crate rlibc;
 
 use core::mem;
 
-use aero_boot::{BootInfo, FrameBufferInfo, MemoryRegion};
+use aero_boot::{BootInfo, FrameBufferInfo, MemoryRegion, PixelFormat};
 
 use mem::MaybeUninit;
 use paging::{BootFrameAllocator, Level4Entries, PageTables};
@@ -16,7 +16,7 @@ use x86_64::{align_up, registers, structures::paging::*, PhysAddr, VirtAddr};
 use uefi::{
     prelude::*,
     proto::{
-        console::gop::GraphicsOutput,
+        console::gop::{self, GraphicsOutput},
         media::{file::*, fs::SimpleFileSystem},
     },
     table::boot::*,
@@ -40,7 +40,7 @@ struct KernelInfo {
     stack_top: VirtAddr,
 }
 
-fn initialize_gop(system_table: &SystemTable<Boot>) -> FrameBufferInfo {
+fn initialize_gop(system_table: &SystemTable<Boot>) -> (FrameBufferInfo, &'static mut [u8]) {
     log::info!("Initializing GOP");
 
     let gop = system_table
@@ -51,13 +51,30 @@ fn initialize_gop(system_table: &SystemTable<Boot>) -> FrameBufferInfo {
     let gop = unsafe { &mut *gop.get() };
 
     let mode_info = gop.current_mode_info();
+    let mut framebuffer = gop.frame_buffer();
+
     let (width, height) = mode_info.resolution();
 
-    FrameBufferInfo {
-        horizontal_resolution: width,
-        vertical_resolution: height,
-        stride: mode_info.stride(),
-    }
+    let pixel_format = match mode_info.pixel_format() {
+        gop::PixelFormat::Rgb => PixelFormat::RGB,
+        gop::PixelFormat::Bgr => PixelFormat::RGB,
+        gop::PixelFormat::Bitmask => PixelFormat::BitMask,
+        gop::PixelFormat::BltOnly => PixelFormat::BltOnly,
+    };
+
+    let slice =
+        unsafe { core::slice::from_raw_parts_mut(framebuffer.as_mut_ptr(), framebuffer.size()) };
+
+    (
+        FrameBufferInfo {
+            horizontal_resolution: width,
+            vertical_resolution: height,
+            stride: mode_info.stride(),
+            size: framebuffer.size(),
+            pixel_format,
+        },
+        slice,
+    )
 }
 
 fn load_file(boot_services: &BootServices, path: &str) -> &'static [u8] {
@@ -411,7 +428,7 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         .reset(false)
         .expect_success("Failed to reset output buffer");
 
-    let frame_buffer_info = initialize_gop(&system_table);
+    let (frame_buffer_info, frame_buffer) = initialize_gop(&system_table);
     let kernel_bin = load_file(system_table.boot_services(), KERNEL_ELF_PATH);
 
     log::info!("Exiting boot services");
@@ -438,7 +455,11 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         &mut page_tables.kernel_page_table,
     );
 
-    let boot_info = BootInfo { frame_buffer_info };
+    let boot_info = BootInfo {
+        frame_buffer_info,
+        frame_buffer,
+    };
+
     let boot_info = create_boot_info(
         &mut used_entries,
         &mut boot_frame_allocator,
@@ -446,6 +467,7 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         boot_info,
     );
 
+    // Jump to the kernel entry and set up the new page tables.
     switch_to_kernel(
         kernel_info,
         boot_info,
