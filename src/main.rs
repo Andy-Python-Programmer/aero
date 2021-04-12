@@ -60,8 +60,8 @@ mod tests;
 // entry_point!(kernel_main);
 
 #[export_name = "_start"]
-extern "C" fn kernel_main(boot_info: BootInfo) -> i32 {
-    return 10101;
+extern "C" fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    loop {}
 }
 
 // fn kernel_main(boot_info: &'static BootInfo) -> ! {

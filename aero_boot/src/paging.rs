@@ -57,6 +57,10 @@ where
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.original.len()
+    }
+
     pub fn max_physical_address(&self) -> PhysAddr {
         self.original
             .clone()

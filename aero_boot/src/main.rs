@@ -1,16 +1,17 @@
 #![no_std]
 #![no_main]
-#![feature(asm, abi_efiapi, custom_test_frameworks)]
+#![feature(asm, abi_efiapi, custom_test_frameworks, maybe_uninit_extra)]
 #![test_runner(aero_boot::test_runner)]
 
 extern crate rlibc;
 
 use core::mem;
 
-use aero_boot::{BootInfo, FrameBufferInfo};
+use aero_boot::{BootInfo, FrameBufferInfo, MemoryRegion};
 
+use mem::MaybeUninit;
 use paging::{BootFrameAllocator, Level4Entries, PageTables};
-use x86_64::{registers, structures::paging::*, PhysAddr, VirtAddr};
+use x86_64::{align_up, registers, structures::paging::*, PhysAddr, VirtAddr};
 
 use uefi::{
     prelude::*,
@@ -27,7 +28,7 @@ use xmas_elf::{
     ElfFile,
 };
 
-const KERNEL_ELF_PATH: &str = r"\efi\kernel\aero";
+const KERNEL_ELF_PATH: &str = r"\efi\kernel\aero.elf";
 const SIZE_4_KIB_ZERO_ARRAY: Size4KiBPageArray = [0; Size4KiB::SIZE as usize / 8];
 
 type Size4KiBPageArray = [u64; Size4KiB::SIZE as usize / 8];
@@ -208,11 +209,76 @@ fn map_segment(
     }
 }
 
+fn create_boot_info<I>(
+    used_entries: &mut Level4Entries,
+    frame_allocator: &mut BootFrameAllocator<I>,
+    page_tables: &mut PageTables,
+    boot_info: BootInfo,
+) -> &'static mut BootInfo
+where
+    I: ExactSizeIterator<Item = MemoryDescriptor> + Clone,
+{
+    log::info!("Creating boot info");
+
+    let boot_info_start = used_entries.get_free_address();
+    let boot_info_end = boot_info_start + mem::size_of::<BootInfo>();
+
+    let mmap_regions_start = boot_info_end.align_up(mem::align_of::<MemoryRegion>() as u64);
+    let mmap_regions_end =
+        mmap_regions_start + (frame_allocator.len() + 1) * mem::size_of::<MemoryRegion>();
+
+    let start_page = Page::containing_address(boot_info_start);
+    let end_page = Page::containing_address(mmap_regions_end - 1u64);
+
+    for page in Page::range_inclusive(start_page, end_page) {
+        let frame = frame_allocator.allocate_frame().unwrap();
+
+        unsafe {
+            page_tables
+                .kernel_page_table
+                .map_to(
+                    page,
+                    frame,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    frame_allocator,
+                )
+                .unwrap()
+                .flush();
+
+            page_tables
+                .boot_page_table
+                .map_to(
+                    page,
+                    frame,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    frame_allocator,
+                )
+                .unwrap()
+                .flush();
+        }
+    }
+
+    unsafe {
+        let boot_info_uninit: &'static mut MaybeUninit<BootInfo> =
+            &mut *boot_info_start.as_mut_ptr();
+
+        let memory_regions: &'static mut [MaybeUninit<MemoryRegion>] =
+            core::slice::from_raw_parts_mut(
+                mmap_regions_start.as_mut_ptr(),
+                frame_allocator.len() + 1,
+            );
+
+        let boot_info = boot_info_uninit.write(boot_info);
+
+        boot_info
+    }
+}
+
 fn load_kernel<I>(
     kernel_bin: &[u8],
     frame_allocator: &mut BootFrameAllocator<I>,
     kernel_page_table: &mut OffsetPageTable,
-) -> KernelInfo
+) -> (KernelInfo, Level4Entries)
 where
     I: ExactSizeIterator<Item = MemoryDescriptor> + Clone,
 {
@@ -290,15 +356,18 @@ where
         }
     }
 
-    KernelInfo {
-        entry_point: VirtAddr::new(kernel_elf.header.pt2.entry_point()),
-        stack_top: stack_end.start_address(),
-    }
+    (
+        KernelInfo {
+            entry_point: VirtAddr::new(kernel_elf.header.pt2.entry_point()),
+            stack_top: stack_end.start_address(),
+        },
+        used_entries,
+    )
 }
 
 fn switch_to_kernel(
     kernel_info: KernelInfo,
-    boot_info: BootInfo,
+    boot_info: &'static mut BootInfo,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     page_tables: &mut PageTables,
 ) -> ! {
@@ -318,18 +387,18 @@ fn switch_to_kernel(
         }
     }
 
-    // unsafe {
-    //     let kernel_level_4_start = page_tables.kernel_level_4_frame.start_address().as_u64();
-    //     let stack_top = kernel_info.stack_top.as_u64();
-    //     let entry_point = kernel_info.entry_point.as_u64();
+    unsafe {
+        let kernel_level_4_start = page_tables.kernel_level_4_frame.start_address().as_u64();
+        let stack_top = kernel_info.stack_top.as_u64();
+        let entry_point = kernel_info.entry_point.as_u64();
 
-    //     asm!("mov cr3, {}", in(reg) kernel_level_4_start);
-    //     asm!("mov rsp, {}", in(reg) stack_top);
-    //     asm!("push 0");
-    //     asm!("jmp {}", in(reg) entry_point, in("rdi") &boot_info as *const _ as usize);
-    // }
+        asm!("mov cr3, {}", in(reg) kernel_level_4_start);
+        asm!("mov rsp, {}", in(reg) stack_top);
+        asm!("push 0");
+        asm!("jmp {}", in(reg) entry_point, in("rdi") &boot_info as *const _ as usize);
+    }
 
-    loop {}
+    unreachable!()
 }
 
 #[entry]
@@ -363,28 +432,24 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
     let mut boot_frame_allocator = BootFrameAllocator::new(mmap.copied());
     let mut page_tables = paging::init(&mut boot_frame_allocator);
 
-    let kernel_main_address = load_kernel(
+    let (kernel_info, mut used_entries) = load_kernel(
         kernel_bin,
         &mut boot_frame_allocator,
         &mut page_tables.kernel_page_table,
     );
 
     let boot_info = BootInfo { frame_buffer_info };
+    let boot_info = create_boot_info(
+        &mut used_entries,
+        &mut boot_frame_allocator,
+        &mut page_tables,
+        boot_info,
+    );
 
     switch_to_kernel(
-        kernel_main_address,
+        kernel_info,
         boot_info,
         &mut boot_frame_allocator,
         &mut page_tables,
     );
-}
-
-pub fn align_up(address: u64, align: u64) -> u64 {
-    let align_mask = align - 1;
-
-    if address & align_mask == 0 {
-        address // Address is already aligned.
-    } else {
-        (address | align_mask) + 1
-    }
 }
