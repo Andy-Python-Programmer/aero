@@ -58,7 +58,7 @@ impl MADT {
                     intrinsics::atomic_store((TRAMPOLINE as *mut u8).add(i), TRAMPOLINE_BIN[i]);
                 }
 
-                // for entry in madt.iter() {}
+                for entry in madt.iter() {}
             }
         }
     }

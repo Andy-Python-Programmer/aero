@@ -158,6 +158,7 @@ pub fn _print(args: fmt::Arguments) {
 }
 
 pub fn set_color_code(color_code: ColorCode) {}
+pub fn clear_screen() {}
 
 pub fn init(framebuffer: &'static mut FrameBuffer) {
     let mut rendy = Rendy::new(framebuffer);
