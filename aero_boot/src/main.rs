@@ -15,6 +15,10 @@ const CARGO_HOME: &str = env!("CARGO_HOME");
 /// The qemu executable.
 const QEMU: &str = "qemu-system-x86_64";
 
+const BUNDLED_DIR: &str = "bundled";
+
+mod uefi;
+
 fn build_kernel() -> ExitStatus {
     println!("INFO: Building kernel");
 
@@ -115,7 +119,8 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
         .expect(&format!("Failed to run {:#?}", qemu_run_cmd))
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env::set_current_dir("src").unwrap();
 
     let mut argv = env::args().collect::<Vec<_>>()[1..].to_vec();
@@ -127,6 +132,8 @@ fn main() {
     }
 
     env::set_current_dir("..").unwrap();
+
+    uefi::download_ovmf_prebuilt().await.unwrap();
 
     if argv.contains(&String::from("--run")) {
         // TODO: A better solution.

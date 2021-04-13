@@ -29,7 +29,7 @@ jobs:
     - name: Build Docs
       run: cd src/ && cargo doc
     - name: Create index.html redirect
-      run: echo "<meta http-equiv='refresh' content='0; URL=https://andy-python-programmer.github.io/aero/aero/index.html' />" > ./target/x86_64-aero_os/doc/index.html
+      run: pwd && cd src/ && echo "<meta http-equiv='refresh' content='0; URL=https://andy-python-programmer.github.io/aero/aero/index.html' />" > ./target/x86_64-aero_os/doc/index.html
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:

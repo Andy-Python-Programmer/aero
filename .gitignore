@@ -3,3 +3,4 @@ target
 *.img
 build
 Cargo.lock
+bundled

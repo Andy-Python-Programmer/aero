@@ -34,6 +34,3 @@ Contributions are absolutely, positively welcome and encouraged! Check out [CONT
 
 ## License
 The source code in this project is licensed under the Apache License 2.
-
-Here are some exceptions:
-- The bundled/ovmf directory is licensed under BSD license

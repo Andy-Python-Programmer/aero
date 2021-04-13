@@ -19,4 +19,3 @@ clean:
 
 init:
 	touch hdd.img
-	
