@@ -1,4 +1,5 @@
 use bootloader_locator::locate_bootloader;
+use structopt::StructOpt;
 
 use std::env;
 use std::path::Path;
@@ -119,11 +120,34 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
         .expect(&format!("Failed to run {:#?}", qemu_run_cmd))
 }
 
+#[derive(StructOpt, Debug)]
+struct AeroBuild {
+    #[structopt(short, long)]
+    run: bool,
+
+    /// Passing this flag will update all of the OVMF files required
+    /// for UEFI.
+    #[structopt(short, long)]
+    update: bool,
+
+    /// Extra command line arguments passed to qemu.
+    #[structopt(last = true)]
+    qemu_args: Vec<String>,
+}
+
 #[tokio::main]
 async fn main() {
-    env::set_current_dir("src").unwrap();
+    let aero_build = AeroBuild::from_args();
 
-    let mut argv = env::args().collect::<Vec<_>>()[1..].to_vec();
+    if aero_build.update {
+        uefi::update_ovmf()
+            .await
+            .expect("Failed to update OVMF files");
+
+        return;
+    }
+
+    env::set_current_dir("src").unwrap();
 
     if !build_kernel().success() {
         panic!("Failed to build the kernel");
@@ -135,12 +159,8 @@ async fn main() {
 
     uefi::download_ovmf_prebuilt().await.unwrap();
 
-    if argv.contains(&String::from("--run")) {
-        // TODO: A better solution.
-        let run_index = argv.iter().position(|x| *x == "--run").unwrap();
-        argv.remove(run_index);
-
-        if !run_qemu(argv).success() {
+    if aero_build.run {
+        if !run_qemu(aero_build.qemu_args).success() {
             panic!("Failed to run qemu");
         }
     }

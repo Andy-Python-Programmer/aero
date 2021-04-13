@@ -1,9 +1,7 @@
-use std::{
-    error::Error,
-    fs::{self, File},
-    io::Write,
-    path::Path,
-};
+use std::error::Error;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::Path;
 
 use crate::BUNDLED_DIR;
 
@@ -26,6 +24,8 @@ pub async fn update_ovmf() -> Result<(), Box<dyn Error>> {
     fs::create_dir_all(&ovmf_out_dir)?;
 
     for ovmf_file in OVMF_FILES.iter() {
+        println!("INFO: Downloading {}", ovmf_file);
+
         let response = reqwest::get(format!("{}{}", PREBUILT_OVMF_URL, ovmf_file)).await?;
         let bytes = response.bytes().await?;
 
