@@ -1,36 +1,34 @@
 use core::fmt::{self, Write};
 
-use aero_boot::{BootInfo, FrameBufferInfo, PixelFormat};
+use aero_boot::{BootInfo, FrameBuffer, FrameBufferInfo, PixelFormat};
 use spin::{Mutex, Once};
 
-static RENDY: Once<Mutex<Rendy>> = Once::new();
+pub static RENDY: Once<Mutex<Rendy>> = Once::new();
 
 pub struct Rendy {
-    frame_buffer: &'static mut [u8],
+    frame_buffer: &'static mut FrameBuffer,
     info: FrameBufferInfo,
 }
 
 impl Rendy {
+    #[inline]
+    fn new(frame_buffer: &'static mut FrameBuffer, info: FrameBufferInfo) -> Self {
+        Self { frame_buffer, info }
+    }
+
     pub fn write_string(&mut self, string: &str) {
         let y = 50;
 
-        for x in 0..self.info.horizontal_resolution / 2 {
-            self.put_pixel(x, y, 255);
+        for x in 0..self.info.vertical_resolution / 2 * 4 {
+            self.put_pixel(x, y, 255, 255, 255);
         }
     }
 
-    pub fn put_pixel(&mut self, x: usize, y: usize, intensity: u8) {
-        let pixel_offset = y * self.info.stride + x;
-
-        let color = match self.info.pixel_format {
-            PixelFormat::RGB => [intensity, intensity, intensity / 2, 0],
-            PixelFormat::BGR => [intensity / 2, intensity, intensity, 0],
-            _ => [if intensity > 200 { 0xf } else { 0 }, 0, 0, 0],
-        };
-
-        let byte_offset = pixel_offset * 4;
-
-        self.frame_buffer[byte_offset..(byte_offset + 4)].copy_from_slice(&color[..4]);
+    pub fn put_pixel(&mut self, x: usize, y: usize, r: u8, g: u8, b: u8) {
+        unsafe {
+            self.frame_buffer
+                .write_value(((y * self.info.stride) + x) * 4, i32::MAX);
+        }
     }
 }
 
@@ -79,11 +77,13 @@ pub fn _print(args: fmt::Arguments) {
     RENDY.get().unwrap().lock().write_fmt(args).unwrap();
 }
 
-pub fn init(boot_info: &'static mut BootInfo) {
-    let frame_buffer = &mut boot_info.frame_buffer;
-    let info = boot_info.frame_buffer_info;
+pub fn clear_screen() {}
 
-    let rendy = Mutex::new(Rendy { frame_buffer, info });
+pub fn init(boot_info: &'static mut BootInfo) {
+    let rendy = Mutex::new(Rendy::new(
+        &mut boot_info.frame_buffer,
+        boot_info.frame_buffer_info,
+    ));
 
     RENDY.call_once(|| rendy);
 }

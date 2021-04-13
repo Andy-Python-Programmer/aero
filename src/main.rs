@@ -43,10 +43,12 @@ mod time;
 mod utils;
 mod vga;
 
-// use linked_list_allocator::LockedHeap;
+use linked_list_allocator::LockedHeap;
 
-// #[global_allocator]
-// static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
+use vga::rendy;
+
+#[global_allocator]
+static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 const ASCII_INTRO: &'static str = r"
 _______ _______ ______ _______    _______ ______
@@ -59,11 +61,9 @@ _______ _______ ______ _______    _______ ______
 
 #[export_name = "_start"]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    vga::rendy::init(boot_info);
+    rendy::init(boot_info);
 
-    logger::init();
-
-    println!("{}", ASCII_INTRO);
+    println!("Ok");
 
     loop {}
 }

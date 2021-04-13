@@ -7,7 +7,7 @@ extern crate rlibc;
 
 use core::mem;
 
-use aero_boot::{BootInfo, FrameBufferInfo, MemoryRegion, PixelFormat};
+use aero_boot::{BootInfo, FrameBuffer, FrameBufferInfo, MemoryRegion, PixelFormat};
 
 use mem::MaybeUninit;
 use paging::{BootFrameAllocator, Level4Entries, PageTables};
@@ -40,7 +40,7 @@ struct KernelInfo {
     stack_top: VirtAddr,
 }
 
-fn initialize_gop(system_table: &SystemTable<Boot>) -> (FrameBufferInfo, &'static mut [u8]) {
+fn initialize_gop(system_table: &SystemTable<Boot>) -> FrameBufferInfo {
     log::info!("Initializing GOP");
 
     let gop = system_table
@@ -62,19 +62,50 @@ fn initialize_gop(system_table: &SystemTable<Boot>) -> (FrameBufferInfo, &'stati
         gop::PixelFormat::BltOnly => PixelFormat::BltOnly,
     };
 
-    let slice =
-        unsafe { core::slice::from_raw_parts_mut(framebuffer.as_mut_ptr(), framebuffer.size()) };
+    FrameBufferInfo {
+        horizontal_resolution: width,
+        vertical_resolution: height,
+        stride: mode_info.stride(),
+        size: framebuffer.size(),
+        address: PhysAddr::new(framebuffer.as_mut_ptr() as u64),
+        pixel_format,
+    }
+}
 
-    (
-        FrameBufferInfo {
-            horizontal_resolution: width,
-            vertical_resolution: height,
-            stride: mode_info.stride(),
-            size: framebuffer.size(),
-            pixel_format,
-        },
-        slice,
-    )
+fn map_frame_buffer<I>(
+    frame_buffer: &FrameBufferInfo,
+    page_tables: &mut PageTables,
+    frame_allocator: &mut BootFrameAllocator<I>,
+    used_entries: &mut Level4Entries,
+) -> VirtAddr
+where
+    I: ExactSizeIterator<Item = MemoryDescriptor> + Clone,
+{
+    let framebuffer_start_frame: PhysFrame = PhysFrame::containing_address(frame_buffer.address);
+    let framebuffer_end_frame =
+        PhysFrame::containing_address(frame_buffer.address + frame_buffer.size - 1u64);
+    let start_page = Page::containing_address(used_entries.get_free_address());
+
+    for (i, frame) in
+        PhysFrame::range_inclusive(framebuffer_start_frame, framebuffer_end_frame).enumerate()
+    {
+        let page = start_page + i as u64;
+
+        unsafe {
+            page_tables
+                .kernel_page_table
+                .map_to(
+                    page,
+                    frame,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    frame_allocator,
+                )
+                .unwrap()
+                .flush();
+        }
+    }
+
+    start_page.start_address()
 }
 
 fn load_file(boot_services: &BootServices, path: &str) -> &'static [u8] {
@@ -428,7 +459,7 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         .reset(false)
         .expect_success("Failed to reset output buffer");
 
-    let (frame_buffer_info, frame_buffer) = initialize_gop(&system_table);
+    let frame_buffer_info = initialize_gop(&system_table);
     let kernel_bin = load_file(system_table.boot_services(), KERNEL_ELF_PATH);
 
     log::info!("Exiting boot services");
@@ -455,9 +486,16 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         &mut page_tables.kernel_page_table,
     );
 
+    let frame_buffer = map_frame_buffer(
+        &frame_buffer_info,
+        &mut page_tables,
+        &mut boot_frame_allocator,
+        &mut used_entries,
+    );
+
     let boot_info = BootInfo {
         frame_buffer_info,
-        frame_buffer,
+        frame_buffer: FrameBuffer::new(frame_buffer, frame_buffer_info.size),
     };
 
     let boot_info = create_boot_info(
