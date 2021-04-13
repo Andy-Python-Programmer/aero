@@ -31,3 +31,9 @@ $ cargo run
 
 ## Contributing
 Contributions are absolutely, positively welcome and encouraged! Check out [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guidelines for aero.
+
+## License
+The source code in this project is licensed under the Apache License 2.
+
+Here are some exceptions:
+- The bundled/ovmf directory is licensed under BSD license
