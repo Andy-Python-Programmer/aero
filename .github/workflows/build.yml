@@ -27,11 +27,11 @@ jobs:
     - name: Run build
       run: cargo boot
     - name: Build Docs
-      run: cd src/aero_kernel/ && cargo doc && cd ..
+      run: cd src/ && cargo doc
     - name: Create index.html redirect
-      run: echo "<meta http-equiv='refresh' content='0; URL=https://andy-python-programmer.github.io/aero/aero/index.html' />" > ./src/aero_kernel/target/x86_64-aero_os/doc/index.html
+      run: echo "<meta http-equiv='refresh' content='0; URL=https://andy-python-programmer.github.io/aero/aero/index.html' />" > ./target/x86_64-aero_os/doc/index.html
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./src/aero_kernel/target/x86_64-aero_os/doc
+        publish_dir: ./target/x86_64-aero_os/doc
