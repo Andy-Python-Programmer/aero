@@ -1,5 +1,5 @@
 [package]
-name = "aero"
+name = "aero_kernel"
 version = "0.1.0"
 authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
@@ -20,39 +20,13 @@ default-features = false
 features = ["elf32", "elf64"]
 
 [dependencies.bootloader]
-version = "0.9.16"
-features = ["map_physical_memory"]
+version = "0.10.1"
+features = []
 
 [dependencies.lazy_static]
 version = "1.4"
 features = ["spin_no_std"]
 
-[profile.dev]
-opt-level = 3
-lto = true
-
-[profile.release]
-lto = true
-
-[package.metadata.bootimage]
-run-args = [
-    "-d",
-    "int,guest_errors",
-    "-D",
-    "qemu.log",
-    "-drive",
-    "id=disk,file=hdd.img,format=raw,if=none",
-    "-device", 
-    "ahci,id=ahci",
-    "-device",
-    "ide-hd,drive=disk,bus=ahci.0",
-]
-
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
 nasm-rs = { version = "0.2", features = ["parallel"] }
-
-[workspace]
-members = [
-    "aero_boot"
-]

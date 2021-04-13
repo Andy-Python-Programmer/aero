@@ -1,4 +1,5 @@
-/target
+target
 /qemu.log
 *.img
 build
+Cargo.lock

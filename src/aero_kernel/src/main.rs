@@ -57,7 +57,7 @@ _______ _______ ______ _______    _______ ______
 
 entry_point!(kernel_main);
 
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     logger::init();
 
     unsafe {
@@ -80,7 +80,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
         arch::interrupts::enable_interrupts();
 
-        let (mut offset_table, mut frame_allocator) = paging::init(&boot_info);
+        let (mut offset_table, mut frame_allocator) = paging::init(boot_info);
         log::info!("Loaded paging");
         *(0xdeafbeaf as *mut u32) = 42;
 

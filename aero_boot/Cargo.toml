@@ -5,9 +5,4 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-log = { version = "0.4.14", default-features = false }
-uefi = "0.8.0"
-xmas-elf = "0.7.0"
-rlibc = "1"
-uefi-services = "0.5.0"
-x86_64 = "0.13.5"
+bootloader-locator = "0.0.4"

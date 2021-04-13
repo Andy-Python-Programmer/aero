@@ -1,19 +1,2 @@
-[unstable]
-build-std = ["core", "compiler_builtins", "alloc"]
-build-std-features = ["compiler-builtins-mem"]
-
-[target.'cfg(target_os = "none")']
-runner = "bootimage runner"
-
-[package.metadata.bootimage]
-run-command = ["qemu-system-x86_64", "-drive", "format=raw,file={}"]
-build-command = ["build"]
-
-[build]
-target = "x86_64-aero_os.json"
-
-[profile.dev]
-panic = "abort" # Disable stack unwinding on panic
-
-[profile.release]
-panic = "abort" # Disable stack unwinding on panic
+[alias]
+boot = "run --manifest-path ./aero_boot/Cargo.toml --"

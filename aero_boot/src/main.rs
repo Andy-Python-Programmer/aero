@@ -1,184 +1,139 @@
-#![no_std]
-#![no_main]
-#![feature(asm, abi_efiapi, custom_test_frameworks)]
-#![test_runner(crate::test_runner)]
+use bootloader_locator::locate_bootloader;
 
-extern crate rlibc;
+use std::env;
+use std::path::Path;
+use std::process::{Command, ExitStatus};
 
-use aero_boot::FrameBufferInfo;
-use uefi::{
-    prelude::*,
-    proto::{
-        console::gop::GraphicsOutput,
-        media::{
-            file::{File, FileAttribute, FileMode},
-            fs::SimpleFileSystem,
-        },
-    },
-};
-use uefi::{proto::media::file::FileType, table::boot::MemoryType};
-use xmas_elf::{header, ElfFile};
+/// The cargo executable. This constant uses the `CARGO` environment variable to
+/// also support non-standard cargo versions.
+const CARGO: &str = env!("CARGO");
 
-fn initialize_gop(system_table: &SystemTable<Boot>) -> FrameBufferInfo {
-    log::info!("Initializing GOP");
+/// The cargo home path. This constant uses the `CARGO_HOME` environment variable to
+/// find the bootloader builder if its installed.
+const CARGO_HOME: &str = env!("CARGO_HOME");
 
-    let gop = system_table
-        .boot_services()
-        .locate_protocol::<GraphicsOutput>()
-        .expect_success("Failed to locate GOP");
+/// The qemu executable.
+const QEMU: &str = "qemu-system-x86_64";
 
-    let gop = unsafe { &mut *gop.get() };
+fn build_kernel() -> ExitStatus {
+    println!("INFO: Building kernel");
 
-    let mode_info = gop.current_mode_info();
-    let (width, height) = mode_info.resolution();
+    let mut kernel_build_command = Command::new(CARGO);
 
-    FrameBufferInfo {
-        horizontal_resolution: width,
-        vertical_resolution: height,
-        stride: mode_info.stride(),
-    }
+    kernel_build_command.arg("build");
+    kernel_build_command.arg("--package").arg("aero_kernel");
+
+    kernel_build_command
+        .status()
+        .expect(&format!("Failed to run {:#?}", kernel_build_command))
 }
 
-pub fn load_file(
-    handle: Handle,
-    boot_services: &BootServices,
-    path: &str,
-) -> Result<&'static mut [u8], Status> {
-    let loaded_image = unsafe {
-        match boot_services.handle_protocol::<uefi::proto::loaded_image::LoadedImage>(handle) {
-            Ok(val) => val.unwrap().get().as_ref().unwrap(),
-            Err(_) => return Err(Status::LOAD_ERROR),
-        }
-    };
+fn install_bootloader_builder() -> ExitStatus {
+    println!("INFO: Installing bootloader builder");
 
-    let file_system = unsafe {
-        match boot_services.handle_protocol::<SimpleFileSystem>(loaded_image.device()) {
-            Ok(val) => val.unwrap().get().as_mut().unwrap(),
-            Err(_) => return Err(Status::LOAD_ERROR),
-        }
-    };
+    let mut install_boot_command = Command::new(CARGO);
 
-    let mut root = match file_system.open_volume() {
-        Ok(val) => val.unwrap(),
-        Err(err) => return Err(err.status()),
-    };
+    install_boot_command.arg("install").arg("bootloader");
+    install_boot_command.arg("--features").arg("builder");
 
-    let path_pool = match boot_services.allocate_pool(MemoryType::LOADER_DATA, path.len()) {
-        Ok(val) => val.unwrap(),
-        Err(err) => return Err(err.status()),
-    };
+    install_boot_command
+        .status()
+        .expect(&format!("Failed to run {:#?}", install_boot_command))
+}
 
-    for (index, c) in path.chars().enumerate() {
-        unsafe {
-            path_pool.add(index).write(c as u8);
+fn build_bootloader() -> ExitStatus {
+    println!("INFO: Building bootloader");
+
+    env::set_current_dir("aero_kernel").unwrap();
+
+    let bootloader_manifest = locate_bootloader("bootloader").unwrap();
+
+    env::set_current_dir("..").unwrap();
+
+    let kernel_binary = Path::new("target/x86_64-aero_os/debug/aero")
+        .canonicalize()
+        .unwrap();
+
+    let kernel_manifest = Path::new("aero_kernel")
+        .join("Cargo.toml")
+        .canonicalize()
+        .unwrap();
+    let target_dir = Path::new("target");
+    let out_dir = kernel_binary.parent().unwrap();
+
+    let bootloader_builder = Path::new(CARGO_HOME)
+        .join("bin")
+        .join(format!("builder{}", env::consts::EXE_SUFFIX));
+
+    if !bootloader_builder.exists() {
+        if !install_bootloader_builder().success() {
+            panic!("Failed to install bootloader builder.")
         }
     }
 
-    let path = unsafe {
-        core::str::from_utf8_unchecked(core::slice::from_raw_parts(path_pool, path.len()))
-    };
+    let mut build_bootloader_cmd = Command::new(bootloader_builder);
 
-    let handle = match root
-        .handle()
-        .open(path, FileMode::Read, FileAttribute::empty())
-    {
-        Ok(handle) => handle.unwrap(),
-        Err(err) => {
-            boot_services.free_pool(path_pool).unwrap().unwrap();
-            return Err(err.status());
-        }
-    };
+    build_bootloader_cmd
+        .arg("--kernel-manifest")
+        .arg(&kernel_manifest);
+    build_bootloader_cmd
+        .arg("--kernel-binary")
+        .arg(&kernel_binary);
 
-    boot_services.free_pool(path_pool).unwrap().unwrap();
+    build_bootloader_cmd.arg("--target-dir").arg(&target_dir);
+    build_bootloader_cmd.arg("--out-dir").arg(&out_dir);
 
-    let mut file = match handle.into_type().unwrap().unwrap() {
-        FileType::Regular(file) => file,
-        FileType::Dir(_) => return Err(Status::ACCESS_DENIED),
-    };
+    let bootloader_dir = bootloader_manifest.parent().unwrap();
+    build_bootloader_cmd.current_dir(bootloader_dir);
 
-    match file.set_position(u64::MAX) {
-        Ok(_) => (),
-        Err(err) => return Err(err.status()),
-    };
+    build_bootloader_cmd
+        .status()
+        .expect(&format!("Failed to run {:#?}", build_bootloader_cmd))
+}
 
-    let file_size = match file.get_position() {
-        Ok(val) => val.unwrap() as usize,
-        Err(err) => return Err(err.status()),
-    };
+fn run_qemu(argv: Vec<String>) -> ExitStatus {
+    let mut qemu_run_cmd = Command::new(QEMU);
 
-    match file.set_position(0) {
-        Ok(_) => (),
-        Err(err) => return Err(err.status()),
-    };
+    qemu_run_cmd.args(argv);
 
-    let pool = match boot_services.allocate_pool(MemoryType::LOADER_DATA, file_size) {
-        Ok(val) => val.unwrap(),
-        Err(err) => return Err(err.status()),
-    };
+    // Set up OVMF.
+    // qemu_run_cmd
+    //     .arg("-drive")
+    //     .arg("if=pflash,format=raw,file=bundled/ovmf/OVMF_CODE.fd");
+    // qemu_run_cmd
+    //     .arg("-drive")
+    //     .arg("if=pflash,format=raw,file=bundled/ovmf/OVMF_VARS.fd");
 
-    let buffer = unsafe { core::slice::from_raw_parts_mut(pool, file_size) };
+    // qemu_run_cmd.arg("-machine").arg("q35");
+    qemu_run_cmd
+        .arg("-drive")
+        .arg("format=raw,file=src/target/x86_64-aero_os/debug/boot-bios-aero.img");
 
-    if let Err(err) = file.read(buffer) {
-        boot_services.free_pool(pool).unwrap().unwrap();
+    qemu_run_cmd
+        .status()
+        .expect(&format!("Failed to run {:#?}", qemu_run_cmd))
+}
 
-        return Err(err.status());
+fn main() {
+    env::set_current_dir("src").unwrap();
+
+    let mut argv = env::args().collect::<Vec<_>>()[1..].to_vec();
+
+    if !build_kernel().success() {
+        panic!("Failed to build the kernel");
+    } else if !build_bootloader().success() {
+        panic!("Failed to build the bootloader");
     }
 
-    Ok(buffer)
-}
+    env::set_current_dir("..").unwrap();
 
-fn load_kernel(image: Handle, system_table: &SystemTable<Boot>) {
-    log::info!("Loading kernel");
+    if argv.contains(&String::from("--run")) {
+        // TODO: A better solution.
+        let run_index = argv.iter().position(|x| *x == "--run").unwrap();
+        argv.remove(run_index);
 
-    let kernel_bin = load_file(image, system_table.boot_services(), "\\efi\\kernel\\aero")
-        .expect("Failed to load the kernel");
-
-    let kernel_elf = ElfFile::new(&kernel_bin).expect("Found corrupt kernel ELF file");
-
-    header::sanity_check(&kernel_elf).expect("Failed the sanity check for the kernel");
-    log::info!(
-        "Jumping to kernel entry point at: {:#06x}",
-        kernel_elf.header.pt2.entry_point()
-    )
-}
-
-fn switch_to_kernel() -> ! {
-    loop {}
-}
-
-#[entry]
-fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
-    uefi_services::init(&system_table).expect_success("Failed to initialize utils");
-
-    // Reset console before doing anything else.
-    system_table
-        .stdout()
-        .reset(false)
-        .expect_success("Failed to reset output buffer");
-
-    initialize_gop(&system_table);
-    load_kernel(image, &system_table);
-
-    log::info!("Exiting boot services");
-
-    let buffer_size = system_table.boot_services().memory_map_size() * 2;
-    let buffer_ptr = system_table
-        .boot_services()
-        .allocate_pool(MemoryType::LOADER_DATA, buffer_size)
-        .expect_success("Failed to allocate pool");
-
-    let mmap_buffer = unsafe { core::slice::from_raw_parts_mut(buffer_ptr, buffer_size) };
-
-    system_table
-        .exit_boot_services(image, mmap_buffer)
-        .expect_success("Failed to exit boot services.");
-
-    switch_to_kernel();
-}
-
-#[cfg(test)]
-pub(crate) fn test_runner(tests: &[&dyn Fn()]) {
-    for test in tests {
-        test();
+        if !run_qemu(argv).success() {
+            panic!("Failed to run qemu");
+        }
     }
 }

@@ -1,7 +1,4 @@
-use bootloader::{
-    bootinfo::{MemoryMap, MemoryRegionType},
-    BootInfo,
-};
+use bootloader::{boot_info::*, BootInfo};
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
@@ -23,36 +20,36 @@ impl UnmapGuard {
 }
 
 pub struct GlobalAllocator {
-    memory_map: &'static MemoryMap,
+    memory_map: &'static MemoryRegions,
     next: usize,
 }
 
 impl GlobalAllocator {
     /// Create a new global frame allocator from the memory map provided by the bootloader.
-    pub unsafe fn init(memory_map: &'static MemoryMap) -> Self {
+    pub unsafe fn init(memory_map: &'static MemoryRegions) -> Self {
         Self {
             memory_map,
             next: 0,
         }
     }
 
-    /// Get the [MemoryRegionType] of a frame
-    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryRegionType> {
+    /// Get the [MemoryRegionKind] of a frame
+    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryRegionKind> {
         self.memory_map
             .into_iter()
             .find(|v| {
                 let addr = frame.start_address().as_u64();
 
-                v.range.start_addr() >= addr && addr < v.range.end_addr()
+                v.start >= addr && addr < v.end
             })
-            .map(|v| v.region_type)
+            .map(|v| v.kind)
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         let regions = self.memory_map.iter();
-        let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
-        let addr_ranges = usable_regions.map(|r| r.range.start_addr()..r.range.end_addr());
+        let usable_regions = regions.filter(|r| r.kind == MemoryRegionKind::Usable);
+        let addr_ranges = usable_regions.map(|r| r.start..r.end);
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
 
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
@@ -74,13 +71,14 @@ unsafe impl Send for GlobalAllocator {}
 
 /// Initialize paging.
 pub fn init(boot_info: &'static BootInfo) -> (OffsetPageTable, GlobalAllocator) {
-    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let physical_memory_offset =
+        VirtAddr::new(boot_info.physical_memory_offset.into_option().unwrap());
 
     unsafe {
         let active_level_4 = active_level_4_table(physical_memory_offset);
 
         let offset_table = OffsetPageTable::new(active_level_4, physical_memory_offset);
-        let frame_allocator = GlobalAllocator::init(&boot_info.memory_map);
+        let frame_allocator = GlobalAllocator::init(&boot_info.memory_regions);
 
         (offset_table, frame_allocator)
     }
@@ -109,8 +107,9 @@ pub unsafe fn memory_map_device(
         .ok_or(MapToError::FrameAllocationFailed)?;
 
     let extra_flags = match frame_type {
-        MemoryRegionType::Reserved | MemoryRegionType::FrameZero => PageTableFlags::WRITABLE,
-        MemoryRegionType::KernelStack => PageTableFlags::empty(),
+        MemoryRegionKind::UnknownBios(_) | MemoryRegionKind::UnknownUefi(_) => {
+            PageTableFlags::WRITABLE
+        }
         _ => panic!(
             "Tried to memory map a device on a {:?} frame {:#X}",
             frame_type,
