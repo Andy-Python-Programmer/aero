@@ -70,15 +70,15 @@ unsafe impl Sync for GlobalAllocator {}
 unsafe impl Send for GlobalAllocator {}
 
 /// Initialize paging.
-pub fn init(boot_info: &'static BootInfo) -> (OffsetPageTable, GlobalAllocator) {
-    let physical_memory_offset =
-        VirtAddr::new(boot_info.physical_memory_offset.into_option().unwrap());
-
+pub fn init(
+    physical_memory_offset: VirtAddr,
+    memory_regions: &'static MemoryRegions,
+) -> (OffsetPageTable<'static>, GlobalAllocator) {
     unsafe {
         let active_level_4 = active_level_4_table(physical_memory_offset);
 
         let offset_table = OffsetPageTable::new(active_level_4, physical_memory_offset);
-        let frame_allocator = GlobalAllocator::init(&boot_info.memory_regions);
+        let frame_allocator = GlobalAllocator::init(memory_regions);
 
         (offset_table, frame_allocator)
     }

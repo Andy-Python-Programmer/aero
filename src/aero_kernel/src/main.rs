@@ -26,8 +26,9 @@ extern crate alloc;
 
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 use arch::memory::paging;
-use bootloader::{entry_point, BootInfo};
+
 use utils::io;
+use vga::rendy;
 
 mod acpi;
 mod arch;
@@ -41,7 +42,9 @@ mod userland;
 mod utils;
 mod vga;
 
+use bootloader::{entry_point, BootInfo};
 use linked_list_allocator::LockedHeap;
+use x86_64::VirtAddr;
 
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
@@ -58,6 +61,16 @@ _______ _______ ______ _______    _______ ______
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    let physical_memory_offset =
+        VirtAddr::new(boot_info.physical_memory_offset.into_option().unwrap());
+
+    let memory_regions = &boot_info.memory_regions;
+    let framebuffer = boot_info
+        .framebuffer
+        .as_mut()
+        .expect("Could not find framebuffer");
+
+    rendy::init(framebuffer);
     logger::init();
 
     unsafe {
@@ -80,9 +93,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
         arch::interrupts::enable_interrupts();
 
-        let (mut offset_table, mut frame_allocator) = paging::init(boot_info);
+        let (mut offset_table, mut frame_allocator) =
+            paging::init(physical_memory_offset, memory_regions);
         log::info!("Loaded paging");
-        *(0xdeafbeaf as *mut u32) = 42;
 
         arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
             .expect("Failed to initialize the heap.");

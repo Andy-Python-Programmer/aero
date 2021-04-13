@@ -50,7 +50,7 @@ fn build_bootloader() -> ExitStatus {
 
     env::set_current_dir("..").unwrap();
 
-    let kernel_binary = Path::new("target/x86_64-aero_os/debug/aero")
+    let kernel_binary = Path::new("target/x86_64-aero_os/debug/aero_kernel")
         .canonicalize()
         .unwrap();
 
@@ -58,6 +58,7 @@ fn build_bootloader() -> ExitStatus {
         .join("Cargo.toml")
         .canonicalize()
         .unwrap();
+
     let target_dir = Path::new("target");
     let out_dir = kernel_binary.parent().unwrap();
 
@@ -107,7 +108,7 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
     // qemu_run_cmd.arg("-machine").arg("q35");
     qemu_run_cmd
         .arg("-drive")
-        .arg("format=raw,file=src/target/x86_64-aero_os/debug/boot-bios-aero.img");
+        .arg("format=raw,file=src/target/x86_64-aero_os/debug/boot-bios-aero_kernel.img");
 
     qemu_run_cmd
         .status()

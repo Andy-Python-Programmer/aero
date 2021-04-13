@@ -1,104 +1,121 @@
 use core::fmt::{self, Write};
 
-use super::{
-    buffer::{Buffer, ScreenChar, BUFFER_HEIGHT, BUFFER_WIDTH},
-    color::{Color, ColorCode},
-};
+use super::color::ColorCode;
 
-use lazy_static::lazy_static;
+use bootloader::boot_info::{FrameBuffer, FrameBufferInfo, PixelFormat};
 
-lazy_static! {
-    pub static ref RENDERER: spin::Mutex<Rendy> = spin::Mutex::new(Rendy {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
-pub struct Rendy {
-    column_position: usize,
-    pub color_code: ColorCode,
-    pub buffer: &'static mut Buffer,
+use font8x8::UnicodeFonts;
+
+use spin::{mutex::Mutex, Once};
+
+static RENDY: Once<Mutex<Rendy>> = Once::new();
+
+pub struct Rendy<'buffer> {
+    buffer: &'buffer mut FrameBuffer,
+    info: FrameBufferInfo,
+    x_pos: usize,
+    y_pos: usize,
 }
 
-impl Rendy {
-    pub fn string(&mut self, s: &str) {
-        for byte in s.bytes() {
-            match byte {
-                0x20..=0x7e | b'\n' => self.byte(byte),
-                _ => self.byte(0xfe),
-            }
+impl<'buffer> Rendy<'buffer> {
+    #[inline]
+    fn new(buffer: &'buffer mut FrameBuffer) -> Self {
+        let info = buffer.info();
+
+        Self {
+            buffer,
+            info,
+            x_pos: 0,
+            y_pos: 0,
         }
     }
 
-    pub fn byte(&mut self, byte: u8) {
-        match byte {
-            b'\n' => self.new_line(),
-            byte => {
-                if self.column_position >= BUFFER_WIDTH {
+    #[inline]
+    fn write_string(&mut self, string: &str) {
+        for char in string.chars() {
+            self.write_character(char)
+        }
+    }
+
+    #[inline]
+    fn width(&self) -> usize {
+        self.info.horizontal_resolution
+    }
+
+    #[inline]
+    fn height(&self) -> usize {
+        self.info.vertical_resolution
+    }
+
+    fn write_character(&mut self, char: char) {
+        match char {
+            '\n' => self.new_line(),
+            '\r' => self.carriage_return(),
+            _ => {
+                let char = font8x8::BASIC_FONTS.get(char).unwrap();
+
+                if self.x_pos >= self.width() {
                     self.new_line();
                 }
 
-                let row = BUFFER_HEIGHT - 1;
-                let col = self.column_position;
+                if self.y_pos >= (self.height() - 8) {
+                    self.clear_screen()
+                }
 
-                let color_code = self.color_code;
-
-                self.buffer.chars[row][col].write(ScreenChar {
-                    character: byte,
-                    color_code,
-                });
-
-                self.column_position += 1;
+                self.put_bytes(&char);
             }
         }
     }
 
     fn new_line(&mut self) {
-        for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                let character = self.buffer.chars[row][col].read();
-                self.buffer.chars[row - 1][col].write(character);
+        self.y_pos += 8;
+
+        self.carriage_return()
+    }
+
+    #[inline]
+    fn carriage_return(&mut self) {
+        self.x_pos = 0;
+    }
+
+    fn put_bytes(&mut self, char: &[u8]) {
+        for (y, byte) in char.iter().enumerate() {
+            for (x, bit) in (0..8).enumerate() {
+                let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
+
+                self.put_pixel(self.x_pos + x, self.y_pos + y, alpha);
             }
         }
 
-        self.clear_row(BUFFER_HEIGHT - 1);
-        self.column_position = 0;
+        self.x_pos += 8;
     }
 
-    fn clear_row(&mut self, row: usize) {
-        let blank = ScreenChar {
-            character: b' ',
-            color_code: self.color_code,
+    fn put_pixel(&mut self, x: usize, y: usize, intensity: u8) {
+        let pixel_offset = y * self.info.stride + x;
+
+        let color = match self.info.pixel_format {
+            PixelFormat::RGB => [intensity, intensity, intensity, 0],
+            PixelFormat::BGR => [intensity / 2, intensity, intensity, 0],
+            _ => unimplemented!(),
         };
 
-        for col in 0..BUFFER_WIDTH {
-            self.buffer.chars[row][col].write(blank);
-        }
+        let bytes_per_pixel = self.info.bytes_per_pixel;
+        let byte_offset = pixel_offset * bytes_per_pixel;
+
+        self.buffer.buffer_mut()[byte_offset..(byte_offset + bytes_per_pixel)]
+            .copy_from_slice(&color[..bytes_per_pixel]);
     }
 
-    pub fn clear_screen(&mut self) {
-        let blank = ScreenChar {
-            character: b' ',
-            color_code: self.color_code,
-        };
-
-        for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                self.buffer.chars[row][col].write(blank);
-            }
-        }
-
-        self.column_position = 0;
-    }
-
-    pub fn clear_current(&mut self) {
-        unimplemented!();
+    #[inline]
+    fn clear_screen(&mut self) {
+        self.buffer.buffer_mut().fill(0);
     }
 }
 
-impl fmt::Write for Rendy {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.string(s);
+impl<'buffer> fmt::Write for Rendy<'buffer> {
+    fn write_str(&mut self, string: &str) -> fmt::Result {
+        self.write_string(string);
+
         Ok(())
     }
 }
@@ -137,5 +154,15 @@ macro_rules! dbg {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    RENDERER.lock().write_fmt(args).unwrap();
+    RENDY.get().unwrap().lock().write_fmt(args).unwrap();
+}
+
+pub fn set_color_code(color_code: ColorCode) {}
+
+pub fn init(framebuffer: &'static mut FrameBuffer) {
+    let mut rendy = Rendy::new(framebuffer);
+
+    rendy.clear_screen();
+
+    RENDY.call_once(|| Mutex::new(rendy));
 }

@@ -1,4 +1,4 @@
-use crate::{print, println, vga::rendy::RENDERER};
+use crate::{print, println};
 
 const LEFT_SHIFT_PRESSED: u8 = 0x2A;
 const LEFT_SHIFT_RELEASED: u8 = LEFT_SHIFT_PRESSED + 0x80;
@@ -63,7 +63,6 @@ pub unsafe fn handle(scancode: u8) {
         }
 
         BACKSPACE_PRESSED => {
-            RENDERER.lock().clear_current();
             return;
         }
 
