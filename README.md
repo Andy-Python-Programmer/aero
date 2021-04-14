@@ -1,6 +1,6 @@
 # Areo
 
-**Aero** is a new modern, unix based operating system written in Rust and is being developed for educational purposes. Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and the Zircon Kernel.
+**Aero** is a new modern, experimental, unix based operating system written in Rust. Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and the Zircon Kernel.
 
 Please make sure you use the **latest nightly** of rustc before building Aero.
 
