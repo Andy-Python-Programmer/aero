@@ -1,0 +1,11 @@
+[package]
+name = "aero_boot"
+version = "0.1.0"
+authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+log = "0.4.14"
+spin = "0.9.0"
+uefi = "0.8.0"
+x86_64 = "0.14.0"
