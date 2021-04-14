@@ -5,7 +5,7 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-bootloader-locator = "0.0.4"
+json = "0.12.4"
 reqwest = "0.11.3"
 structopt = "0.3.21"
 tokio = { version = "1.5.0", features = ["macros", "rt", "rt-multi-thread"] }
