@@ -9,3 +9,5 @@ log = "0.4.14"
 spin = "0.9.0"
 uefi = "0.8.0"
 x86_64 = "0.14.0"
+rlibc = "1"
+font8x8 = { version = "0.3.1", default-features = false, features = ["unicode"] }

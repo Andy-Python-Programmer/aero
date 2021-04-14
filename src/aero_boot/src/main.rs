@@ -3,13 +3,19 @@
 #![feature(asm, abi_efiapi, custom_test_frameworks, maybe_uninit_extra)]
 #![test_runner(aero_boot::test_runner)]
 
+extern crate rlibc;
+
+use core::fmt::Write;
 use core::mem;
 use core::slice;
 
 use aero_boot::FrameBufferInfo;
 
 use load::SystemInfo;
+use logger::{LockedLogger, Logger};
+
 use paging::BootFrameAllocator;
+
 use uefi::{
     prelude::*,
     proto::console::gop::{GraphicsOutput, PixelFormat},
@@ -20,10 +26,11 @@ use uefi::{
 use x86_64::PhysAddr;
 
 mod load;
+mod logger;
 mod paging;
 mod unwind;
 
-fn init_logger(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo) {
+fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo) {
     let gop = system_table
         .boot_services()
         .locate_protocol::<GraphicsOutput>()
@@ -51,13 +58,20 @@ fn init_logger(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo) 
         stride: mode_info.stride(),
     };
 
+    let global_logger = LockedLogger::new(Logger::new(slice, info));
+    let locked_logger = logger::LOGGER.call_once(|| global_logger);
+
+    log::set_logger(locked_logger).expect("Failed to set the global logger");
+    log::set_max_level(log::LevelFilter::Info); // Log everything.
+
     (PhysAddr::new(framebuffer.as_mut_ptr() as u64), info)
 }
 
 #[entry]
 fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
-    let (framebuffer_address, framebuffer_info) = init_logger(&system_table);
+    writeln!(system_table.stdout(), "UEFI boot...").expect("Failed to write to stdout");
 
+    let (framebuffer_address, framebuffer_info) = init_display(&system_table);
     log::info!("Using framebuffer at: {:#x}", framebuffer_address);
 
     let mmap_storage = {
@@ -78,7 +92,8 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         .exit_boot_services(image, mmap_storage)
         .expect_success("Failed to exit boot services");
 
-    let frame_allocator = BootFrameAllocator::new(memory_map.copied());
+    let mut frame_allocator = BootFrameAllocator::new(memory_map.copied());
+    let page_tables = paging::init(&mut frame_allocator);
 
     let mut config_entries = system_table.config_table().iter();
 

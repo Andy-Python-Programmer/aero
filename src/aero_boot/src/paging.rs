@@ -103,3 +103,5 @@ where
         None
     }
 }
+
+pub fn init(frame_allocator: &mut impl FrameAllocator<Size4KiB>) {}
