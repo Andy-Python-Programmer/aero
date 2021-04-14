@@ -88,7 +88,7 @@ where
             }
         }
 
-        // find next suitable descriptor
+        // Find next suitable descriptor
         while let Some(descriptor) = self.memory_map.next() {
             if descriptor.region_type() != MemoryRegionType::Usable {
                 continue;
