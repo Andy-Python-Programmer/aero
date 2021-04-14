@@ -8,14 +8,19 @@ use core::slice;
 
 use aero_boot::FrameBufferInfo;
 
+use load::SystemInfo;
+use paging::BootFrameAllocator;
 use uefi::{
     prelude::*,
     proto::console::gop::{GraphicsOutput, PixelFormat},
     table::boot::{MemoryDescriptor, MemoryType},
+    table::cfg,
 };
 
 use x86_64::PhysAddr;
 
+mod load;
+mod paging;
 mod unwind;
 
 fn init_logger(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo) {
@@ -58,10 +63,12 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
     let mmap_storage = {
         let max_mmap_size =
             system_table.boot_services().memory_map_size() + 8 * mem::size_of::<MemoryDescriptor>();
+
         let ptr = system_table
             .boot_services()
             .allocate_pool(MemoryType::LOADER_DATA, max_mmap_size)?
             .log();
+
         unsafe { slice::from_raw_parts_mut(ptr, max_mmap_size) }
     };
 
@@ -70,6 +77,22 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
     let (system_table, memory_map) = system_table
         .exit_boot_services(image, mmap_storage)
         .expect_success("Failed to exit boot services");
+
+    let frame_allocator = BootFrameAllocator::new(memory_map.copied());
+
+    let mut config_entries = system_table.config_table().iter();
+
+    let rsdp_address = config_entries
+        .find(|entry| matches!(entry.guid, cfg::ACPI_GUID | cfg::ACPI2_GUID))
+        .map(|entry| PhysAddr::new(entry.address as u64));
+
+    let system_info = SystemInfo {
+        framebuffer_address,
+        framebuffer_info,
+        rsdp_address,
+    };
+
+    load::load_and_switch_to_kernel(system_info);
 
     loop {}
 }
