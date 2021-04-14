@@ -20,7 +20,7 @@ mod bootloader;
 mod uefi;
 mod utils;
 
-fn build_kernel() -> ExitStatus {
+fn build_kernel() {
     println!("INFO: Building kernel");
 
     let mut kernel_build_command = Command::new(CARGO);
@@ -30,9 +30,13 @@ fn build_kernel() -> ExitStatus {
     kernel_build_command.arg("build");
     kernel_build_command.arg("--package").arg("aero_kernel");
 
-    kernel_build_command
+    if !kernel_build_command
         .status()
         .expect(&format!("Failed to run {:#?}", kernel_build_command))
+        .success()
+    {
+        panic!("Failed to build the kernel")
+    }
 }
 
 fn run_qemu(argv: Vec<String>) -> ExitStatus {
@@ -58,44 +62,53 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
         .expect(&format!("Failed to run {:#?}", qemu_run_cmd))
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, StructOpt)]
+enum AeroBuildCommand {
+    /// Build and run Aero in qemu.
+    Run {
+        /// Extra command line arguments passed to qemu.
+        #[structopt(last = true)]
+        qemu_args: Vec<String>,
+    },
+    Build,
+    /// Update all of the OVMF files required for UEFI.
+    Update,
+}
+
+#[derive(Debug, StructOpt)]
 struct AeroBuild {
-    #[structopt(short, long)]
-    run: bool,
-
-    /// Passing this flag will update all of the OVMF files required
-    /// for UEFI.
-    #[structopt(short, long)]
-    update: bool,
-
-    /// Extra command line arguments passed to qemu.
-    #[structopt(last = true)]
-    qemu_args: Vec<String>,
+    #[structopt(subcommand)]
+    command: Option<AeroBuildCommand>,
 }
 
 #[tokio::main]
 async fn main() {
     let aero_build = AeroBuild::from_args();
 
-    if aero_build.update {
-        uefi::update_ovmf()
-            .await
-            .expect("Failed to update OVMF files");
+    match aero_build.command {
+        Some(command) => match command {
+            AeroBuildCommand::Run { qemu_args } => {
+                uefi::download_ovmf_prebuilt().await.unwrap();
 
-        return;
-    }
+                build_kernel();
+                bootloader::build_bootloader();
 
-    if !build_kernel().success() {
-        panic!("Failed to build the kernel");
-    } else if !bootloader::build_bootloader().success() {
-        panic!("Failed to build the bootloader");
-    }
+                if !run_qemu(qemu_args).success() {
+                    panic!("Failed to run qemu");
+                }
+            }
 
-    uefi::download_ovmf_prebuilt().await.unwrap();
+            AeroBuildCommand::Build => {
+                uefi::download_ovmf_prebuilt().await.unwrap();
 
-    if aero_build.run {
-        if !run_qemu(aero_build.qemu_args).success() {
-            panic!("Failed to run qemu");
-        }
+                build_kernel();
+                bootloader::build_bootloader();
+            }
+
+            AeroBuildCommand::Update => uefi::update_ovmf()
+                .await
+                .expect("Failed tp update OVMF files"),
+        },
+        None => {}
     }
 }

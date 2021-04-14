@@ -5,7 +5,7 @@ use std::process::{Command, ExitStatus};
 use crate::utils::locate_dependency_manifest;
 use crate::{CARGO, CARGO_HOME};
 
-pub fn build_bootloader() -> ExitStatus {
+pub fn build_bootloader() {
     println!("INFO: Building bootloader");
 
     let kernel_path = Path::new("src").join("aero_kernel");
@@ -45,9 +45,13 @@ pub fn build_bootloader() -> ExitStatus {
     let bootloader_dir = bootloader_manifest.parent().unwrap();
     build_bootloader_cmd.current_dir(bootloader_dir);
 
-    build_bootloader_cmd
+    if !build_bootloader_cmd
         .status()
         .expect(&format!("Failed to run {:#?}", build_bootloader_cmd))
+        .success()
+    {
+        panic!("Failed to build the bootloader")
+    }
 }
 
 fn install_bootloader_builder() -> ExitStatus {
