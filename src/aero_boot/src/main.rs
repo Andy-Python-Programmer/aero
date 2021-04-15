@@ -30,6 +30,8 @@ mod logger;
 mod paging;
 mod unwind;
 
+pub const KERNEL_ELF_PATH: &str = r"\efi\kernel\aero.elf";
+
 fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo) {
     let gop = system_table
         .boot_services()
@@ -74,6 +76,8 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
     let (framebuffer_address, framebuffer_info) = init_display(&system_table);
     log::info!("Using framebuffer at: {:#x}", framebuffer_address);
 
+    let kernel_bytes = load::load_file(system_table.boot_services(), KERNEL_ELF_PATH);
+
     let mmap_storage = {
         let max_mmap_size =
             system_table.boot_services().memory_map_size() + 8 * mem::size_of::<MemoryDescriptor>();
@@ -93,7 +97,7 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         .expect_success("Failed to exit boot services");
 
     let mut frame_allocator = BootFrameAllocator::new(memory_map.copied());
-    let page_tables = paging::init(&mut frame_allocator);
+    let mut page_tables = paging::init(&mut frame_allocator);
 
     let mut config_entries = system_table.config_table().iter();
 
@@ -107,7 +111,12 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         rsdp_address,
     };
 
-    load::load_and_switch_to_kernel(system_info);
+    load::load_and_switch_to_kernel(
+        &mut frame_allocator,
+        &mut page_tables,
+        kernel_bytes,
+        system_info,
+    );
 
     loop {}
 }

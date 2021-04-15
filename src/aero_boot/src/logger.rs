@@ -6,7 +6,7 @@ use aero_boot::{FrameBufferInfo, PixelFormat};
 use font8x8::UnicodeFonts;
 use spin::{Mutex, Once};
 
-/// The global logger instance protected by a mutex.
+/// The global boot logger instance protected by a mutex.
 pub static LOGGER: Once<LockedLogger> = Once::new();
 
 pub struct LockedLogger(Mutex<Logger>);
@@ -18,6 +18,8 @@ impl LockedLogger {
     }
 }
 
+/// The global boot logger. We need a custom logger here instead of using the UEFI services
+/// prebuilt logger as it can only log until we are in boot services.
 pub struct Logger {
     framebuffer: &'static mut [u8],
     info: FrameBufferInfo,
@@ -26,17 +28,16 @@ pub struct Logger {
 }
 
 impl Logger {
-    /// Create a new logger from the given framebuffer.
+    /// Create a new logger from the given framebuffer and frambuffer info.
     pub fn new(framebuffer: &'static mut [u8], info: FrameBufferInfo) -> Self {
-        let mut this = Self {
+        let this = Self {
             framebuffer,
             info,
             x_pos: 0,
-            y_pos: 0,
+            y_pos: 2,
         };
 
-        this.clear_screen();
-        this.y_pos = 2;
+        this.framebuffer.fill(0);
 
         this
     }

@@ -50,6 +50,13 @@ pub enum MemoryRegionType {
     UnknownBios(u32),
 }
 
+#[derive(Debug)]
+#[repr(C)]
+#[non_exhaustive]
+pub struct BootInfo {
+    rsdp_address: u64,
+}
+
 pub fn test_runner(tests: &[&dyn Fn()]) {
     for test in tests {
         test();
