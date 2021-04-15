@@ -11,7 +11,7 @@ use spin::{mutex::Mutex, Once};
 static RENDY: Once<Mutex<Rendy>> = Once::new();
 
 pub struct Rendy<'buffer> {
-    buffer: &'buffer mut FrameBuffer,
+    buffer: &'buffer mut [u8],
     info: FrameBufferInfo,
     x_pos: usize,
     y_pos: usize,
@@ -24,7 +24,7 @@ impl<'buffer> Rendy<'buffer> {
         let info = buffer.info();
 
         Self {
-            buffer,
+            buffer: buffer.buffer_mut(),
             info,
             x_pos: 0,
             y_pos: 0,
@@ -69,7 +69,7 @@ impl<'buffer> Rendy<'buffer> {
     }
 
     fn new_line(&mut self) {
-        self.y_pos += 8;
+        self.y_pos += 16;
 
         self.carriage_return()
     }
@@ -108,7 +108,7 @@ impl<'buffer> Rendy<'buffer> {
         let bytes_per_pixel = self.info.bytes_per_pixel;
         let byte_offset = pixel_offset * bytes_per_pixel;
 
-        self.buffer.buffer_mut()[byte_offset..(byte_offset + bytes_per_pixel)]
+        self.buffer[byte_offset..(byte_offset + bytes_per_pixel)]
             .copy_from_slice(&color[..bytes_per_pixel]);
     }
 
@@ -121,7 +121,7 @@ impl<'buffer> Rendy<'buffer> {
         self.x_pos = 0;
         self.y_pos = 0;
 
-        self.buffer.buffer_mut().fill(0);
+        self.buffer.fill(0);
     }
 }
 
