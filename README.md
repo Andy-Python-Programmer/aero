@@ -29,6 +29,9 @@ To build and run aero:
 $ cargo run
 ```
 
+## Chainloading
+Chainloading is a technique that allows one bootloader to call another bootloader as if the system had just booted up. Aero's bootloader has support for chainloading. Check out the Aero Chainloading docs to get more information about how to use this feature.
+
 ## Contributing
 Contributions are absolutely, positively welcome and encouraged! Check out [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guidelines for aero.
 

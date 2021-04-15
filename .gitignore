@@ -4,3 +4,4 @@ target
 build
 Cargo.lock
 bundled
+*.iso
