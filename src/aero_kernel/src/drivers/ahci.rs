@@ -1,4 +1,4 @@
-use core::mem::MaybeUninit;
+use core::mem::{self, MaybeUninit};
 
 use crate::{arch::memory::paging::GlobalAllocator, paging::memory_map_device};
 use x86_64::{
@@ -57,6 +57,13 @@ const HBA_PX_CMD_CR: u32 = 0x8000;
 const HBA_PX_CMD_FRE: u32 = 0x0010;
 const HBA_PX_CMD_ST: u32 = 0x0001;
 const HBA_PX_CMD_FR: u32 = 0x4000;
+
+const ATA_DEV_BUSY: u32 = 0x80;
+const ATA_DEV_DRQ: u32 = 0x08;
+const ATA_CMD_READ_DMA_EX: u32 = 0x25;
+
+const FIS_TYPE_REG_H2D: u32 = 0x27;
+const HBA_PXIS_TFES: u32 = 1 << 30;
 
 #[derive(Debug, PartialEq)]
 pub enum AHCIPortType {
@@ -149,7 +156,7 @@ impl HBAPort {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-pub struct HBACommandHeader {
+struct HBACommandHeader {
     command_fis_length: u8,
     atapi: u8,
     write: u8,
@@ -169,9 +176,53 @@ pub struct HBACommandHeader {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+struct FISRegisterH2D {
+    fis_type: u32,
+
+    port_multiplier: u32,
+    rsv0: u32,
+    command_control: u32,
+
+    command: u32,
+    feature_low: u32,
+
+    lba0: u32,
+    lba1: u32,
+    lba2: u32,
+    device_register: u32,
+
+    lba3: u32,
+    lba4: u32,
+    lba5: u32,
+    feature_high: u32,
+
+    count_low: u32,
+    count_high: u32,
+    iso_command_completion: u32,
+    control: u32,
+
+    reserved: [u32; 4],
+}
+
+#[repr(C, packed)]
+struct HBAPRDTEntry {
+    data_base_address: u32,
+    data_base_address_upper: u32,
+    reserved: u32,
+
+    byte_count: u32,
+    reserved_2: u32,
+    interrupt_on_completion: u32,
+}
+
 #[repr(C, align(128))]
-struct HBACommandVector {
-    commands: [HBACommandHeader; 32],
+struct HBACommandTable {
+    command_fis: [u8; 64],
+    atapi_command: [u8; 16],
+    reserved: [u8; 48],
+
+    hba_prdt_entry: [HBAPRDTEntry; 8],
 }
 
 pub struct Port {
@@ -267,6 +318,75 @@ impl Port {
         self.start_command();
     }
 
+    pub fn read(&mut self, sector: u64, sector_count: u32, buffer: &mut [u16]) -> bool {
+        let mut spin = 0; // Spin lock timeout counter.
+
+        while (self.hba_port.task_file_data & (ATA_DEV_BUSY | ATA_DEV_DRQ)) == 1 && spin < 1000000 {
+            spin += 1;
+        }
+
+        if spin == 1000000 {
+            return false;
+        }
+
+        let sector_low = sector as u32;
+        let sector_hi = (sector >> 32) as u32;
+
+        // Clear the pending interrupt bits.
+        self.hba_port.interrupt_status = !0;
+
+        let command_header =
+            unsafe { &mut *(self.hba_port.command_list_base as *mut HBACommandHeader) };
+
+        command_header.command_fis_length =
+            (mem::size_of::<FISRegisterH2D>() / mem::size_of::<u32>()) as u8;
+        command_header.write = 0; // Set write to 0x00 as we are doing a read command.
+        command_header.prdt_length = 1;
+
+        let command_table =
+            (command_header.command_table_base_address as u64) as *mut HBACommandTable;
+
+        let command_table = unsafe { &mut *command_table };
+
+        command_table.hba_prdt_entry[0].data_base_address = buffer.as_mut_ptr() as u32;
+        command_table.hba_prdt_entry[0].data_base_address_upper =
+            ((buffer.as_mut_ptr() as u64) >> 32) as u32;
+        command_table.hba_prdt_entry[0].byte_count = (sector_count << 9) - 1;
+        command_table.hba_prdt_entry[0].interrupt_on_completion = 1; // TODO: Function on completion.
+
+        let command_fis_address = unsafe { *(&command_table.command_fis as *const u8) as usize };
+        let command_fis = unsafe { &mut *(command_fis_address as *mut FISRegisterH2D) };
+
+        command_fis.fis_type = FIS_TYPE_REG_H2D;
+        command_fis.command_control = 1;
+        command_fis.command = ATA_CMD_READ_DMA_EX;
+
+        command_fis.lba0 = sector_low;
+        command_fis.lba1 = sector_low >> 8;
+        command_fis.lba2 = sector_low >> 16;
+
+        command_fis.lba3 = sector_hi;
+        command_fis.lba4 = sector_hi >> 8;
+        command_fis.lba5 = sector_hi >> 16;
+
+        command_fis.device_register = 1 << 6; // LBA mode
+
+        command_fis.count_low = sector_count & 0xFF;
+        command_fis.count_high = (sector_count >> 8) & 0xFF;
+
+        self.hba_port.command_issue = 0x1;
+
+        loop {
+            if self.hba_port.command_list_base == 0 {
+                break;
+            } else if self.hba_port.interrupt_status & HBA_PXIS_TFES == 1 {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /// Stop the command engine.
     fn stop_command(&mut self) {
         self.hba_port.cmd_sts &= !HBA_PX_CMD_ST;
@@ -348,9 +468,12 @@ impl AHCI {
                 let hba_port_type = hba_port.get_port_type();
 
                 if hba_port_type == AHCIPortType::SATA || hba_port_type == AHCIPortType::SATAPI {
+                    // let mut buffer = [0u16; 256];
+
                     let mut port = Port::new(hba_port, hba_port_type, i);
 
                     port.configure(offset_table, frame_allocator);
+                    // port.read(0, 4, &mut buffer);
                 }
             }
         }
