@@ -32,19 +32,26 @@ mod uefi;
 
 /// Build the kernel by using `cargo build` with the cargo config defined
 /// in the `src\.cargo\config.toml` file.
-fn build_kernel() {
+fn build_kernel(target: Option<String>) {
     println!("INFO: Building kernel");
 
-    let mut kernel_build_command = Command::new(CARGO);
+    let mut kernel_build_cmd = Command::new(CARGO);
 
-    kernel_build_command.current_dir("src");
+    kernel_build_cmd.current_dir("src");
 
-    kernel_build_command.arg("build");
-    kernel_build_command.arg("--package").arg("aero_kernel");
+    kernel_build_cmd.arg("build");
+    kernel_build_cmd.arg("--package").arg("aero_kernel");
 
-    if !kernel_build_command
+    // Use the specified target. By default it will build for x86_64-aero_os
+    if let Some(target) = target {
+        kernel_build_cmd
+            .arg("--target")
+            .arg(format!("./.cargo/{}.json", target));
+    }
+
+    if !kernel_build_cmd
         .status()
-        .expect(&format!("Failed to run {:#?}", kernel_build_command))
+        .expect(&format!("Failed to run {:#?}", kernel_build_cmd))
         .success()
     {
         panic!("Failed to build the kernel")
@@ -110,11 +117,15 @@ fn package_files() -> Result<(), Box<dyn Error>> {
 enum AeroBuildCommand {
     /// Build and run Aero in qemu.
     Run {
+        target: Option<String>,
+
         /// Extra command line arguments passed to qemu.
         #[structopt(last = true)]
         qemu_args: Vec<String>,
     },
-    Build,
+    Build {
+        target: Option<String>,
+    },
     /// Update all of the OVMF files required for UEFI.
     Update,
 }
@@ -131,10 +142,10 @@ async fn main() {
 
     match aero_build.command {
         Some(command) => match command {
-            AeroBuildCommand::Run { qemu_args } => {
+            AeroBuildCommand::Run { qemu_args, target } => {
                 uefi::download_ovmf_prebuilt().await.unwrap();
 
-                build_kernel();
+                build_kernel(target);
                 bootloader::build_bootloader();
                 package_files().unwrap();
 
@@ -143,10 +154,10 @@ async fn main() {
                 }
             }
 
-            AeroBuildCommand::Build => {
+            AeroBuildCommand::Build { target } => {
                 uefi::download_ovmf_prebuilt().await.unwrap();
 
-                build_kernel();
+                build_kernel(target);
                 bootloader::build_bootloader();
                 package_files().unwrap();
             }
