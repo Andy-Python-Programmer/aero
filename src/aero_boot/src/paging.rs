@@ -1,4 +1,6 @@
-use aero_boot::MemoryRegionType;
+use core::mem::MaybeUninit;
+
+use aero_boot::{MemoryRegion, MemoryRegionType};
 
 use uefi::table::boot::{MemoryDescriptor, MemoryType};
 use x86_64::VirtAddr;
@@ -95,6 +97,83 @@ where
             .max()
             .unwrap()
     }
+
+    pub fn construct_memory_map(
+        self,
+        regions: &mut [MaybeUninit<MemoryRegion>],
+    ) -> &mut [MemoryRegion] {
+        let mut next_index = 0;
+
+        for descriptor in self.original {
+            let mut start = descriptor.start();
+            let end = start + descriptor.len();
+            let next_free = self.next_frame.start_address();
+            let kind = match descriptor.region_type() {
+                MemoryRegionType::Usable => {
+                    if end <= next_free {
+                        MemoryRegionType::Bootloader
+                    } else if descriptor.start() >= next_free {
+                        MemoryRegionType::Usable
+                    } else {
+                        // part of the region is used -> add it separately
+                        let used_region = MemoryRegion {
+                            start: descriptor.start().as_u64(),
+                            end: next_free.as_u64(),
+                            kind: MemoryRegionType::Bootloader,
+                        };
+                        Self::add_region(used_region, regions, &mut next_index)
+                            .expect("Failed to add memory region");
+
+                        // add unused part normally
+                        start = next_free;
+                        MemoryRegionType::Usable
+                    }
+                }
+                MemoryRegionType::UnknownUefi(other) => {
+                    use uefi::table::boot::MemoryType as M;
+                    match M(other) {
+                        M::LOADER_CODE
+                        | M::LOADER_DATA
+                        | M::BOOT_SERVICES_CODE
+                        | M::BOOT_SERVICES_DATA
+                        | M::RUNTIME_SERVICES_CODE
+                        | M::RUNTIME_SERVICES_DATA => MemoryRegionType::Usable,
+                        other => MemoryRegionType::UnknownUefi(other.0),
+                    }
+                }
+
+                other => other,
+            };
+
+            let region = MemoryRegion {
+                start: start.as_u64(),
+                end: end.as_u64(),
+                kind,
+            };
+
+            Self::add_region(region, regions, &mut next_index).unwrap();
+        }
+
+        let initialized = &mut regions[..next_index];
+        unsafe { MaybeUninit::slice_assume_init_mut(initialized) }
+    }
+
+    fn add_region(
+        region: MemoryRegion,
+        regions: &mut [MaybeUninit<MemoryRegion>],
+        next_index: &mut usize,
+    ) -> Result<(), ()> {
+        unsafe {
+            regions
+                .get_mut(*next_index)
+                .ok_or(())?
+                .as_mut_ptr()
+                .write(region)
+        };
+
+        *next_index += 1;
+        Ok(())
+    }
 }
 
 unsafe impl<I, D> FrameAllocator<Size4KiB> for BootFrameAllocator<I, D>
@@ -125,6 +204,29 @@ where
         }
 
         None
+    }
+}
+
+/// Used for reversing two physical frames for identity mapping the context switch function.
+pub struct ReservedFrames {
+    frames: [Option<PhysFrame>; 2],
+}
+
+impl ReservedFrames {
+    /// Creates a new instance by allocating two physical frames from the given frame allocator.
+    pub fn new(frame_allocator: &mut impl FrameAllocator<Size4KiB>) -> Self {
+        ReservedFrames {
+            frames: [
+                Some(frame_allocator.allocate_frame().unwrap()),
+                Some(frame_allocator.allocate_frame().unwrap()),
+            ],
+        }
+    }
+}
+
+unsafe impl FrameAllocator<Size4KiB> for ReservedFrames {
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
+        self.frames.iter_mut().find_map(|f| f.take())
     }
 }
 

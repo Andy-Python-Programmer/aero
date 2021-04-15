@@ -14,6 +14,7 @@ linked_list_allocator = "0.8.11"
 static_assertions = "1.1"
 log = "0.4.14"
 font8x8 = { version = "0.3.1", default-features = false, features = ["unicode"] }
+aero_boot = { path = "../aero_boot/" }
 
 [dependencies.goblin]
 version = "0.3.4"

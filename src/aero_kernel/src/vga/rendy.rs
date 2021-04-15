@@ -2,7 +2,7 @@ use core::fmt::{self, Write};
 
 use super::color::ColorCode;
 
-use bootloader::boot_info::{FrameBuffer, FrameBufferInfo, PixelFormat};
+use aero_boot::{FrameBuffer, FrameBufferInfo, PixelFormat};
 
 use font8x8::UnicodeFonts;
 

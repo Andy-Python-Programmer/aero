@@ -42,7 +42,7 @@ mod userland;
 mod utils;
 mod vga;
 
-use bootloader::{entry_point, BootInfo};
+use aero_boot::BootInfo;
 use linked_list_allocator::LockedHeap;
 use x86_64::VirtAddr;
 
@@ -58,17 +58,12 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
-entry_point!(kernel_main);
-
-fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    let physical_memory_offset =
-        VirtAddr::new(boot_info.physical_memory_offset.into_option().unwrap());
+#[export_name = "_start"]
+extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
 
     let memory_regions = &boot_info.memory_regions;
-    let framebuffer = boot_info
-        .framebuffer
-        .as_mut()
-        .expect("Could not find framebuffer");
+    let framebuffer = &mut boot_info.framebuffer;
 
     rendy::init(framebuffer);
     logger::init();

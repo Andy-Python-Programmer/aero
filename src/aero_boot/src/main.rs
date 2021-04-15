@@ -1,6 +1,14 @@
+// This crate contains some code borrowed from https://github.com/rust-osdev/bootloader/
+
 #![no_std]
 #![no_main]
-#![feature(asm, abi_efiapi, custom_test_frameworks, maybe_uninit_extra)]
+#![feature(
+    asm,
+    abi_efiapi,
+    custom_test_frameworks,
+    maybe_uninit_extra,
+    maybe_uninit_slice
+)]
 #![test_runner(aero_boot::test_runner)]
 
 extern crate rlibc;
@@ -97,7 +105,7 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         .expect_success("Failed to exit boot services");
 
     let mut frame_allocator = BootFrameAllocator::new(memory_map.copied());
-    let mut page_tables = paging::init(&mut frame_allocator);
+    let page_tables = paging::init(&mut frame_allocator);
 
     let mut config_entries = system_table.config_table().iter();
 
@@ -111,12 +119,5 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
         rsdp_address,
     };
 
-    load::load_and_switch_to_kernel(
-        &mut frame_allocator,
-        &mut page_tables,
-        kernel_bytes,
-        system_info,
-    );
-
-    loop {}
+    load::load_and_switch_to_kernel(frame_allocator, page_tables, kernel_bytes, system_info);
 }

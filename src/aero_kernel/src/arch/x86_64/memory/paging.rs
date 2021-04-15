@@ -1,4 +1,4 @@
-use bootloader::{boot_info::*, BootInfo};
+use aero_boot::*;
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
@@ -33,8 +33,8 @@ impl GlobalAllocator {
         }
     }
 
-    /// Get the [MemoryRegionKind] of a frame
-    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryRegionKind> {
+    /// Get the [MemoryRegionType] of a frame
+    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryRegionType> {
         self.memory_map
             .into_iter()
             .find(|v| {
@@ -48,7 +48,7 @@ impl GlobalAllocator {
     /// Returns an iterator over the usable frames specified in the memory map.
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         let regions = self.memory_map.iter();
-        let usable_regions = regions.filter(|r| r.kind == MemoryRegionKind::Usable);
+        let usable_regions = regions.filter(|r| r.kind == MemoryRegionType::Usable);
         let addr_ranges = usable_regions.map(|r| r.start..r.end);
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
 
@@ -107,7 +107,7 @@ pub unsafe fn memory_map_device(
         .ok_or(MapToError::FrameAllocationFailed)?;
 
     let extra_flags = match frame_type {
-        MemoryRegionKind::UnknownBios(_) | MemoryRegionKind::UnknownUefi(_) => {
+        MemoryRegionType::UnknownBios(_) | MemoryRegionType::UnknownUefi(_) => {
             PageTableFlags::WRITABLE
         }
         _ => panic!(

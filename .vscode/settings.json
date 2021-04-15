@@ -2,6 +2,7 @@
     "rust-analyzer.linkedProjects": [
         "./src/Cargo.toml"
     ],
+    "rust-analyzer.checkOnSave.allTargets": false,
     "rust-analyzer.checkOnSave.extraArgs": [
         "-Zbuild-std=core,alloc"
     ]
