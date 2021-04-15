@@ -21,5 +21,5 @@ Next, we are going run Aero with the ISO file we just created:
 ```shell
 # Note: The chainloader argument takes the generated ISO file as the argument.
 
-$ cargo boot run --chainloader=aero_grub.iso
+$ cargo boot run --chainloader aero_grub.iso
 ```

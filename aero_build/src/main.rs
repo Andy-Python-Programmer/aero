@@ -12,6 +12,7 @@ use std::{
     env,
     fs::{self, File},
     io::Write,
+    path::PathBuf,
 };
 use std::{
     error::Error,
@@ -117,7 +118,11 @@ fn package_files() -> Result<(), Box<dyn Error>> {
 enum AeroBuildCommand {
     /// Build and run Aero in qemu.
     Run {
+        #[structopt(long)]
         target: Option<String>,
+
+        #[structopt(long)]
+        chainloader: Option<String>,
 
         /// Extra command line arguments passed to qemu.
         #[structopt(last = true)]
@@ -142,12 +147,21 @@ async fn main() {
 
     match aero_build.command {
         Some(command) => match command {
-            AeroBuildCommand::Run { qemu_args, target } => {
+            AeroBuildCommand::Run {
+                mut qemu_args,
+                target,
+                chainloader,
+            } => {
                 uefi::download_ovmf_prebuilt().await.unwrap();
 
                 build_kernel(target);
                 bootloader::build_bootloader();
                 package_files().unwrap();
+
+                if let Some(chainloader) = chainloader {
+                    qemu_args.push("-drive".into());
+                    qemu_args.push(format!("format=raw,file={}", chainloader));
+                }
 
                 if !run_qemu(qemu_args).success() {
                     panic!("Failed to run qemu");
