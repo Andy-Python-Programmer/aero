@@ -1,2 +1,2 @@
 [alias]
-boot = "run --manifest-path ./aero_build/Cargo.toml --features bin --"
+boot = "run --manifest-path ./aero_build/Cargo.toml --"

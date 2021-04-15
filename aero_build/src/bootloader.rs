@@ -1,68 +1,26 @@
-use std::env;
-use std::path::Path;
-use std::process::{Command, ExitStatus};
+use std::process::Command;
 
-use crate::utils::locate_dependency_manifest;
-use crate::{CARGO, CARGO_HOME};
+use crate::CARGO;
 
 pub fn build_bootloader() {
     println!("INFO: Building bootloader");
 
-    let kernel_path = Path::new("src").join("aero_kernel");
-    let bootloader_manifest = locate_dependency_manifest(&kernel_path, "bootloader").unwrap();
+    let mut bootloader_build_cmd = Command::new(CARGO);
 
-    let kernel_binary = Path::new("src/target/x86_64-aero_os/debug/aero_kernel")
-        .canonicalize()
-        .unwrap();
+    bootloader_build_cmd.current_dir("src");
 
-    let kernel_manifest = kernel_path.join("Cargo.toml").canonicalize().unwrap();
+    bootloader_build_cmd.arg("build");
+    bootloader_build_cmd.arg("--package").arg("aero_boot");
 
-    let target_dir = Path::new("target");
-    let out_dir = kernel_binary.parent().unwrap();
+    bootloader_build_cmd
+        .arg("--target")
+        .arg("x86_64-unknown-uefi");
 
-    let bootloader_builder = Path::new(CARGO_HOME)
-        .join("bin")
-        .join(format!("builder{}", env::consts::EXE_SUFFIX));
-
-    if !bootloader_builder.exists() {
-        if !install_bootloader_builder().success() {
-            panic!("Failed to install bootloader builder.")
-        }
-    }
-
-    let mut build_bootloader_cmd = Command::new(bootloader_builder);
-
-    build_bootloader_cmd
-        .arg("--kernel-manifest")
-        .arg(&kernel_manifest);
-    build_bootloader_cmd
-        .arg("--kernel-binary")
-        .arg(&kernel_binary);
-
-    build_bootloader_cmd.arg("--target-dir").arg(&target_dir);
-    build_bootloader_cmd.arg("--out-dir").arg(&out_dir);
-
-    let bootloader_dir = bootloader_manifest.parent().unwrap();
-    build_bootloader_cmd.current_dir(bootloader_dir);
-
-    if !build_bootloader_cmd
+    if !bootloader_build_cmd
         .status()
-        .expect(&format!("Failed to run {:#?}", build_bootloader_cmd))
+        .expect(&format!("Failed to run {:#?}", bootloader_build_cmd))
         .success()
     {
-        panic!("Failed to build the bootloader")
+        panic!("Failed to build the kernel")
     }
-}
-
-fn install_bootloader_builder() -> ExitStatus {
-    println!("INFO: Installing bootloader builder");
-
-    let mut install_boot_command = Command::new(CARGO);
-
-    install_boot_command.arg("install").arg("bootloader");
-    install_boot_command.arg("--features").arg("builder");
-
-    install_boot_command
-        .status()
-        .expect(&format!("Failed to run {:#?}", install_boot_command))
 }
