@@ -41,4 +41,6 @@ preview:
 		-bios bundled/ovmf/OVMF-pure-efi.fd \
 		-machine q35 \
 		-drive if=pflash,format=raw,file=bundled/ovmf/OVMF_CODE-pure-efi.fd \
-		-drive if=pflash,format=raw,file=bundled/ovmf/OVMF_VARS-pure-efi.fd
+		-drive if=pflash,format=raw,file=bundled/ovmf/OVMF_VARS-pure-efi.fd \
+		-m 1G
+		

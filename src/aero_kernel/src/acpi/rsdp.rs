@@ -1,8 +1,3 @@
-/// The RSDP (Root System Description Pointer)'s signature.
-///
-/// **Note**: The trailing space is required.
-const RSDP_SIGNATURE: &[u8] = b"RSD PTR ";
-
 #[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct RSDP {
@@ -18,18 +13,6 @@ pub struct RSDP {
 }
 
 impl RSDP {
-    pub fn lookup(start_addr: usize, end_addr: usize) -> Option<Self> {
-        for i in 0..(end_addr + 1 - start_addr) / 16 {
-            let rsdp = unsafe { &*((start_addr + i * 16) as *const RSDP) };
-
-            if &rsdp.signature == RSDP_SIGNATURE {
-                return Some(*rsdp);
-            }
-        }
-
-        None
-    }
-
     /// Get the SDT address.
     ///
     /// Returns the RSDT address if the revision is `0` else it returns the XSDT address.

@@ -44,7 +44,7 @@ mod vga;
 
 use aero_boot::BootInfo;
 use linked_list_allocator::LockedHeap;
-use x86_64::VirtAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
@@ -61,6 +61,7 @@ _______ _______ ______ _______    _______ ______
 #[export_name = "_start"]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let rsdp_address = PhysAddr::new(boot_info.rsdp_address);
 
     let memory_regions = &boot_info.memory_regions;
     let framebuffer = &mut boot_info.framebuffer;
@@ -96,7 +97,12 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
             .expect("Failed to initialize the heap.");
         log::info!("Loaded heap");
 
-        acpi::init(&mut offset_table, &mut frame_allocator);
+        acpi::init(
+            &mut offset_table,
+            &mut frame_allocator,
+            rsdp_address,
+            physical_memory_offset,
+        );
         log::info!("Loaded ACPI");
 
         drivers::pci::init(&mut offset_table, &mut frame_allocator);

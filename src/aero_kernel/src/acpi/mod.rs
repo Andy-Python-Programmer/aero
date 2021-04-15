@@ -12,9 +12,6 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-const LOOKUP_START_ADDRESS: usize = 0xE0000;
-const LOOKUP_END_ADDRESS: usize = 0xFFFFF;
-
 use crate::arch::memory::paging::GlobalAllocator;
 
 use self::{fadt::FADT, hpet::HPET, madt::MADT, rsdp::RSDP, sdt::SDT};
@@ -85,78 +82,58 @@ unsafe fn look_up_table(
 }
 
 /// Initialize ACPI tables.
-pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllocator) {
+pub fn init(
+    offset_table: &mut OffsetPageTable,
+    frame_allocator: &mut GlobalAllocator,
+    rsdp_address: PhysAddr,
+    physical_memory_offset: VirtAddr,
+) {
     unsafe {
-        let start_frame: PhysFrame<Size4KiB> =
-            PhysFrame::containing_address(PhysAddr::new(LOOKUP_START_ADDRESS as u64));
-        let end_frame = PhysFrame::containing_address(PhysAddr::new(LOOKUP_END_ADDRESS as u64));
+        let rsdp = &*((physical_memory_offset + rsdp_address.as_u64()).as_u64() as *const RSDP);
+        let sdt_address = rsdp.get_sdt_address() as u64;
 
-        // Map all of the ACPI table space.
-        for frame in PhysFrame::range_inclusive(start_frame, end_frame) {
-            let page: Page<Size4KiB> =
-                Page::containing_address(VirtAddr::new(frame.start_address().as_u64()));
+        let sdt = SDT::from_address(sdt_address, frame_allocator, offset_table);
 
-            if offset_table.translate_page(page).is_err() {
-                offset_table
-                    .identity_map(
-                        frame,
-                        PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
-                        frame_allocator,
-                    )
-                    .unwrap()
-                    .flush();
-            }
+        let is_legacy;
+
+        if sdt.get_signature() == "XSDT" {
+            is_legacy = false;
+        } else if sdt.get_signature() == "RSDT" {
+            is_legacy = true;
+        } else {
+            panic!("Invalid RSDP signature.")
         }
 
-        let rsdp = RSDP::lookup(LOOKUP_START_ADDRESS, LOOKUP_END_ADDRESS);
+        FADT::new(look_up_table(
+            fadt::SIGNATURE,
+            sdt,
+            is_legacy,
+            frame_allocator,
+            offset_table,
+        ));
 
-        if let Some(rsdp) = rsdp {
-            let sdt_address = rsdp.get_sdt_address() as u64;
-            let sdt = SDT::from_address(sdt_address, frame_allocator, offset_table);
-
-            let is_legacy;
-
-            if sdt.get_signature() == "XSDT" {
-                is_legacy = false;
-            } else if sdt.get_signature() == "RSDT" {
-                is_legacy = true;
-            } else {
-                panic!("Invalid RSDP signature.")
-            }
-
-            FADT::new(look_up_table(
-                fadt::SIGNATURE,
+        HPET::new(
+            look_up_table(
+                hpet::SIGNATURE,
                 sdt,
                 is_legacy,
                 frame_allocator,
                 offset_table,
-            ));
+            ),
+            frame_allocator,
+            offset_table,
+        );
 
-            HPET::new(
-                look_up_table(
-                    hpet::SIGNATURE,
-                    sdt,
-                    is_legacy,
-                    frame_allocator,
-                    offset_table,
-                ),
+        MADT::new(
+            look_up_table(
+                madt::SIGNATURE,
+                sdt,
+                is_legacy,
                 frame_allocator,
                 offset_table,
-            );
-
-            MADT::new(
-                look_up_table(
-                    madt::SIGNATURE,
-                    sdt,
-                    is_legacy,
-                    frame_allocator,
-                    offset_table,
-                ),
-                frame_allocator,
-                offset_table,
-            );
-        } else {
-            panic!("Unable to find the RSDP")
-        }
+            ),
+            frame_allocator,
+            offset_table,
+        );
     }
 }
