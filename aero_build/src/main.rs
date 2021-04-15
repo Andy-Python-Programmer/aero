@@ -12,8 +12,8 @@ use std::{
     env,
     fs::{self, File},
     io::Write,
-    path::PathBuf,
 };
+
 use std::{
     error::Error,
     process::{Command, ExitStatus},
@@ -78,7 +78,10 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
         .arg("-bios")
         .arg("bundled/ovmf/OVMF-pure-efi.fd");
 
-    qemu_run_cmd.arg("-machine").arg("q35");
+    qemu_run_cmd.arg("-machine").arg("type=q35");
+    qemu_run_cmd.arg("-cpu").arg("qemu64");
+    qemu_run_cmd.arg("-smp").arg("2");
+    qemu_run_cmd.arg("-m").arg("512M");
 
     qemu_run_cmd
         .arg("-drive")

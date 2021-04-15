@@ -36,17 +36,16 @@ impl PITDescriptor {
     }
 
     /// Increments ticks since epoch. This function is called on the PIT chip interrupt.
-    #[inline]
+    #[inline(always)]
     pub fn tick(&mut self) {
         self.ticks_since_epoch += 1 / self.get_frequency();
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn get_frequency(&self) -> u64 {
         PIT_BASE_FREQUENCY / self.divisor
     }
 
-    #[inline]
     pub unsafe fn set_divisor(&mut self, divisor: u64) {
         io::outb(0x40, (divisor & 0x00ff) as u8);
         io::wait();

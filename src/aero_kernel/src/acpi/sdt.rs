@@ -2,7 +2,8 @@ use core::mem;
 
 use x86_64::{
     structures::paging::{
-        FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags, PhysFrame, Size4KiB,
+        FrameAllocator, Mapper, OffsetPageTable, Page, PageSize, PageTableFlags, PhysFrame,
+        Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -22,7 +23,7 @@ pub struct SDT {
 }
 
 impl SDT {
-    /// Get SDT from address.
+    /// Get SDT from its address.
     pub unsafe fn from_address(
         address: u64,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
@@ -46,7 +47,9 @@ impl SDT {
 
         let sdt = &*(address as *const Self);
 
-        let start_page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(address + 4096));
+        // Map additional frames for the SDT is needed.
+        let start_page: Page<Size4KiB> =
+            Page::containing_address(VirtAddr::new(address + Size4KiB::SIZE));
         let end_page = Page::containing_address(VirtAddr::new(address + sdt.length as u64));
 
         for page in Page::range_inclusive(start_page, end_page) {

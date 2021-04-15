@@ -174,10 +174,6 @@ pub fn set_color_code(color_code: ColorCode) {
     RENDY.get().unwrap().lock().set_color_code(color_code);
 }
 
-pub fn clear_screen() {
-    RENDY.get().unwrap().lock().clear_screen();
-}
-
 pub fn init(framebuffer: &'static mut FrameBuffer) {
     let mut rendy = Rendy::new(framebuffer);
 

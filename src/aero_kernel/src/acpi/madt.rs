@@ -1,12 +1,6 @@
-use core::{intrinsics, mem, ptr};
+use core::{intrinsics, mem};
 
-use x86_64::{
-    structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags,
-        PhysFrame, Size4KiB,
-    },
-    PhysAddr, VirtAddr,
-};
+use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
 
 use super::sdt::SDT;
 
@@ -14,10 +8,14 @@ pub const SIGNATURE: &str = "APIC";
 pub const TRAMPOLINE: u64 = 0x8000;
 
 static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
+static mut MADT: Option<MADT> = None;
 
 #[derive(Clone, Copy, Debug)]
+#[repr(C, packed)]
 pub struct MADT {
     pub sdt: &'static SDT,
+    pub local_apic_address: u32,
+    pub flags: u32,
 }
 
 impl MADT {
@@ -27,38 +25,43 @@ impl MADT {
         offset_table: &mut OffsetPageTable,
     ) {
         if let Some(sdt) = sdt {
-            // if !sdt.data_len() >= 8 {
-            //     return;
-            // }
+            // Not a valid MADT table without the local apic address and the flags.
+            if sdt.data_len() < 8 {
+                return;
+            }
+
+            let local_apic_address = unsafe { *(sdt.data_address() as *const u32) };
+            let flags = unsafe { *(sdt.data_address() as *const u32).offset(1) };
+
+            let madt = Self {
+                sdt,
+                local_apic_address,
+                flags,
+            };
+
+            unsafe { MADT = Some(madt) };
 
             log::info!("Enabling multicore");
 
             unsafe {
-                let madt = ptr::read((sdt as *const SDT) as *const Self);
-
                 let trampoline_frame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
                 let trampoline_page: Page<Size4KiB> =
                     Page::containing_address(VirtAddr::new(TRAMPOLINE));
 
-                match offset_table.map_to(
-                    trampoline_page,
-                    trampoline_frame,
-                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                    frame_allocator,
-                ) {
-                    Ok(toilet) => toilet.flush(),
-                    Err(err) => match err {
-                        MapToError::PageAlreadyMapped(_) => (),
-                        _ => panic!("{:?}", err),
-                    },
-                }
+                offset_table
+                    .map_to(
+                        trampoline_page,
+                        trampoline_frame,
+                        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                        frame_allocator,
+                    )
+                    .unwrap()
+                    .flush();
 
                 // Atomic store the AP trampoline code to a fixed address in low conventional memory.
                 for i in 0..TRAMPOLINE_BIN.len() {
                     intrinsics::atomic_store((TRAMPOLINE as *mut u8).add(i), TRAMPOLINE_BIN[i]);
                 }
-
-                // for entry in madt.iter() {}
             }
         }
     }
@@ -66,21 +69,20 @@ impl MADT {
     pub fn iter(&self) -> MADTIterator {
         unsafe {
             MADTIterator {
-                ptr: ((self as *const Self) as *const u8).add(mem::size_of::<Self>()),
+                ptr: (self as *const Self as *const u8).add(mem::size_of::<Self>()),
                 i: self.sdt.length as usize - mem::size_of::<Self>(),
             }
         }
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 #[repr(C, packed)]
 pub struct EntryHeader {
     pub entry_type: u8,
     pub length: u8,
 }
 
-#[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct MadtLocalApic {
     pub header: EntryHeader,
@@ -89,7 +91,6 @@ pub struct MadtLocalApic {
     pub flags: u32,
 }
 
-#[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct MadtIoApic {
     pub header: EntryHeader,
@@ -99,7 +100,6 @@ pub struct MadtIoApic {
     pub global_system_interrupt_base: u32,
 }
 
-#[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct MadtIntSrcOverride {
     pub header: EntryHeader,
@@ -109,7 +109,6 @@ pub struct MadtIntSrcOverride {
     pub flags: u16,
 }
 
-#[derive(Debug)]
 pub enum MADTEntry {
     LocalApic(&'static MadtLocalApic),
     IOApic(&'static MadtIoApic),
@@ -129,16 +128,16 @@ impl Iterator for MADTIterator {
     fn next(&mut self) -> Option<Self::Item> {
         while self.i > 0 {
             unsafe {
+                let entry_pointer = self.ptr;
                 let header = *(self.ptr as *const EntryHeader);
-                let ptr = self.ptr;
 
                 self.ptr = self.ptr.offset(header.length.into());
                 self.i -= header.length as usize;
 
                 let item = match header.entry_type {
-                    0 => MADTEntry::LocalApic(&*(ptr as *const MadtLocalApic)),
-                    1 => MADTEntry::IOApic(&*(ptr as *const MadtIoApic)),
-                    2 => MADTEntry::IntSrcOverride(&*(ptr as *const MadtIntSrcOverride)),
+                    0 => MADTEntry::LocalApic(&*(entry_pointer as *const MadtLocalApic)),
+                    1 => MADTEntry::IOApic(&*(entry_pointer as *const MadtIoApic)),
+                    2 => MADTEntry::IntSrcOverride(&*(entry_pointer as *const MadtIntSrcOverride)),
 
                     0x10..=0x7f => continue,
                     0x80..=0xff => continue,
