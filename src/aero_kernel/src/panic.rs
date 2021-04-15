@@ -1,24 +1,23 @@
 use core::panic::PanicInfo;
 
-use crate::println;
-use crate::vga::rendy;
-use crate::{arch::interrupts, vga::color::ColorCode};
+use crate::arch::interrupts;
 
 #[panic_handler]
 pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
-    rendy::set_color_code(ColorCode::new(0xFFFFFF, 0x00));
-    rendy::clear_screen();
-
     let deafult_panic = &format_args!("");
     let panic_message = info.message().unwrap_or(deafult_panic);
 
-    println!(
-        "Kernel Panicked -> {}\n\n{}",
-        info.location().unwrap(),
-        panic_message,
-    );
+    log::error!("Kernel Panicked");
+    log::error!("{}", info.location().unwrap());
+    log::error!("{}", panic_message);
 
-    loop {}
+    unsafe {
+        interrupts::disable_interrupts();
+
+        loop {
+            interrupts::halt();
+        }
+    }
 }
 
 #[lang = "eh_personality"]

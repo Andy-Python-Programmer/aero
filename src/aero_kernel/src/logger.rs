@@ -18,7 +18,15 @@ impl log::Log for AeroLogger {
             rendy::set_color_code(ColorCode::new(0xFFFFFF, 0x00));
             print!("[ ");
 
-            rendy::set_color_code(ColorCode::new(0x50C878, 0x00));
+            match record.level() {
+                Level::Error => rendy::set_color_code(ColorCode::new(0xDFF2800, 0x00)),
+                Level::Warn => rendy::set_color_code(ColorCode::new(0xFFD300, 0x00)),
+                Level::Info => rendy::set_color_code(ColorCode::new(0x50C878, 0x00)),
+                Level::Debug | Level::Trace => {
+                    rendy::set_color_code(ColorCode::new(0x10A5F5, 0x00))
+                }
+            }
+
             print!("{}", record.level());
 
             rendy::set_color_code(ColorCode::new(0xFFFFFF, 0x00));
