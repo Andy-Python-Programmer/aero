@@ -166,6 +166,7 @@ async fn main() {
                 .await
                 .expect("Failed tp update OVMF files"),
         },
+
         None => {}
     }
 }

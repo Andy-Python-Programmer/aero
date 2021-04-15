@@ -3,4 +3,4 @@ build-std = ["core", "compiler_builtins", "alloc"]
 build-std-features = ["compiler-builtins-mem"]
 
 [build]
-target = "x86_64-aero_os.json"
+target = "./.cargo/x86_64-aero_os.json"
