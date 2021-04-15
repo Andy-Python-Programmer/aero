@@ -2,7 +2,7 @@ use core::fmt::{self, Write};
 
 use super::color::ColorCode;
 
-use aero_boot::{FrameBuffer, FrameBufferInfo, PixelFormat};
+use aero_boot::{FrameBuffer, FrameBufferInfo};
 
 use font8x8::UnicodeFonts;
 
@@ -15,6 +15,7 @@ pub struct Rendy<'buffer> {
     info: FrameBufferInfo,
     x_pos: usize,
     y_pos: usize,
+    color: ColorCode,
 }
 
 impl<'buffer> Rendy<'buffer> {
@@ -27,22 +28,22 @@ impl<'buffer> Rendy<'buffer> {
             info,
             x_pos: 0,
             y_pos: 0,
+            color: ColorCode::new(0xFFFFFF, 0x00),
         }
     }
 
-    #[inline]
     fn write_string(&mut self, string: &str) {
         for char in string.chars() {
             self.write_character(char)
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn width(&self) -> usize {
         self.info.horizontal_resolution
     }
 
-    #[inline]
+    #[inline(always)]
     fn height(&self) -> usize {
         self.info.vertical_resolution
     }
@@ -73,7 +74,7 @@ impl<'buffer> Rendy<'buffer> {
         self.carriage_return()
     }
 
-    #[inline]
+    #[inline(always)]
     fn carriage_return(&mut self) {
         self.x_pos = 0;
     }
@@ -81,23 +82,28 @@ impl<'buffer> Rendy<'buffer> {
     fn put_bytes(&mut self, char: &[u8]) {
         for (y, byte) in char.iter().enumerate() {
             for (x, bit) in (0..8).enumerate() {
-                let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
+                let background = if *byte & (1 << bit) == 0 { true } else { false };
 
-                self.put_pixel(self.x_pos + x, self.y_pos + y, alpha);
+                if background {
+                    self.put_pixel(self.x_pos + x, self.y_pos + y, self.color.get_background());
+                } else {
+                    self.put_pixel(self.x_pos + x, self.y_pos + y, self.color.get_foreground());
+                }
             }
         }
 
         self.x_pos += 8;
     }
 
-    fn put_pixel(&mut self, x: usize, y: usize, intensity: u8) {
+    fn put_pixel(&mut self, x: usize, y: usize, color: u32) {
         let pixel_offset = y * self.info.stride + x;
 
-        let color = match self.info.pixel_format {
-            PixelFormat::RGB => [intensity, intensity, intensity, 0],
-            PixelFormat::BGR => [intensity / 2, intensity, intensity, 0],
-            _ => unimplemented!(),
-        };
+        let color = [
+            (color & 255u32) as u8,
+            ((color >> 8u32) & 255) as u8,
+            ((color >> 16u32) & 255) as u8,
+            0,
+        ];
 
         let bytes_per_pixel = self.info.bytes_per_pixel;
         let byte_offset = pixel_offset * bytes_per_pixel;
@@ -106,8 +112,15 @@ impl<'buffer> Rendy<'buffer> {
             .copy_from_slice(&color[..bytes_per_pixel]);
     }
 
-    #[inline]
+    #[inline(always)]
+    fn set_color_code(&mut self, color: ColorCode) {
+        self.color = color;
+    }
+
     fn clear_screen(&mut self) {
+        self.x_pos = 0;
+        self.y_pos = 0;
+
         self.buffer.buffer_mut().fill(0);
     }
 }
@@ -157,8 +170,13 @@ pub fn _print(args: fmt::Arguments) {
     RENDY.get().unwrap().lock().write_fmt(args).unwrap();
 }
 
-pub fn set_color_code(color_code: ColorCode) {}
-pub fn clear_screen() {}
+pub fn set_color_code(color_code: ColorCode) {
+    RENDY.get().unwrap().lock().set_color_code(color_code);
+}
+
+pub fn clear_screen() {
+    RENDY.get().unwrap().lock().clear_screen();
+}
 
 pub fn init(framebuffer: &'static mut FrameBuffer) {
     let mut rendy = Rendy::new(framebuffer);

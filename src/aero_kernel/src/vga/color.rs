@@ -1,31 +1,19 @@
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum Color {
-    Black,
-    Blue,
-    Green,
-    Cyan,
-    Red,
-    Magenta,
-    Brown,
-    LightGray,
-    DarkGray,
-    LightBlue,
-    LightGreen,
-    LightCyan,
-    LightRed,
-    Pink,
-    Yellow,
-    White,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
-pub struct ColorCode(u8);
+pub struct ColorCode(u32, u32);
 
 impl ColorCode {
-    pub fn new(foreground: Color, background: Color) -> ColorCode {
-        ColorCode((background as u8) << 4 | (foreground as u8))
+    #[inline(always)]
+    pub fn new(foreground: u32, background: u32) -> ColorCode {
+        ColorCode(foreground, background)
+    }
+
+    #[inline(always)]
+    pub fn get_foreground(&self) -> u32 {
+        self.0
+    }
+
+    #[inline(always)]
+    pub fn get_background(&self) -> u32 {
+        self.1
     }
 }

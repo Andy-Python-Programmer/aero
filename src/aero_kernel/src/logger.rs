@@ -15,12 +15,13 @@ impl log::Log for AeroLogger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            rendy::set_color_code(ColorCode::new(Color::White, Color::Black));
+            rendy::set_color_code(ColorCode::new(0xFFFFFF, 0x00));
             print!("[ ");
 
-            rendy::set_color_code(ColorCode::new(Color::LightGreen, Color::Black));
-            print!("OK");
-            rendy::set_color_code(ColorCode::new(Color::White, Color::Black));
+            rendy::set_color_code(ColorCode::new(0x50C878, 0x00));
+            print!("{}", record.level());
+
+            rendy::set_color_code(ColorCode::new(0xFFFFFF, 0x00));
             println!(" ]        - {}", record.args());
         }
     }
