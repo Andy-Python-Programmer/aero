@@ -1,5 +1,6 @@
 use core::fmt;
 
+use bit_field::BitField;
 use font8x8::UnicodeFonts;
 
 use super::color::ColorCode;
@@ -18,7 +19,8 @@ pub struct DebugRendy<'buffer> {
 }
 
 impl<'buffer> DebugRendy<'buffer> {
-    /// Create a new debug renderer.
+    /// Create a new debug renderer with the default foreground color set to white and
+    /// background color set to black.
     ///
     /// **Note**: The debug renderer should **not** be used after GUI has started. Use the
     /// respective VGA functions instead.
@@ -50,7 +52,7 @@ impl<'buffer> DebugRendy<'buffer> {
                     self.new_line();
                 }
 
-                if self.y_pos >= (self.height() - 8) {
+                if self.y_pos >= (self.height() - 16) {
                     self.clear_screen()
                 }
 
@@ -59,8 +61,8 @@ impl<'buffer> DebugRendy<'buffer> {
         }
     }
 
-    pub fn put_bytes(&mut self, char: &[u8]) {
-        for (y, byte) in char.iter().enumerate() {
+    pub fn put_bytes(&mut self, bytes: &[u8]) {
+        for (y, byte) in bytes.iter().enumerate() {
             for (x, bit) in (0..8).enumerate() {
                 let background = if *byte & (1 << bit) == 0 { true } else { false };
 
@@ -79,10 +81,10 @@ impl<'buffer> DebugRendy<'buffer> {
         let pixel_offset = y * self.info.stride + x;
 
         let color = [
-            (color & 255u32) as u8,
-            ((color >> 8u32) & 255) as u8,
-            ((color >> 16u32) & 255) as u8,
-            0,
+            (color.get_bits(0..8) & 255) as u8,
+            ((color.get_bits(8..16)) & 255) as u8,
+            ((color.get_bits(16..24)) & 255) as u8,
+            ((color.get_bits(24..32)) & 255) as u8,
         ];
 
         let bytes_per_pixel = self.info.bytes_per_pixel;
