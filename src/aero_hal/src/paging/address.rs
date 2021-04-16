@@ -30,7 +30,7 @@ impl VirtualAddress {
     }
 
     #[inline(always)]
-    pub fn as_usize(&self) -> usize {
+    pub fn as_usize(self) -> usize {
         self.0
     }
 }
@@ -80,9 +80,9 @@ impl fmt::Pointer for VirtualAddress {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
-pub struct PhysicalAddres(usize);
+pub struct PhysicalAddress(usize);
 
-impl PhysicalAddres {
+impl PhysicalAddress {
     cfg_if::cfg_if! {
         if #[cfg(target_arch = "x86_64")] {
             /// Create a new physical address.
@@ -100,7 +100,67 @@ impl PhysicalAddres {
         }
     }
 
-    pub fn as_usize(&self) -> usize {
+    #[inline(always)]
+    pub fn align_down(self, alignment: usize) -> Self {
+        Self(align_down(self.0, alignment))
+    }
+
+    #[inline(always)]
+    pub fn is_aligned(self, alignment: usize) -> bool {
+        self.align_down(alignment) == self
+    }
+
+    #[inline(always)]
+    pub const fn as_usize(self) -> usize {
         self.0
     }
+}
+
+impl fmt::Debug for PhysicalAddress {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("PhysicalAddress")
+            .field(&format_args!("{:#x}", self.0))
+            .finish()
+    }
+}
+
+impl fmt::Binary for PhysicalAddress {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Binary::fmt(&self.0, f)
+    }
+}
+
+impl fmt::LowerHex for PhysicalAddress {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Octal for PhysicalAddress {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Octal::fmt(&self.0, f)
+    }
+}
+
+impl fmt::UpperHex for PhysicalAddress {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Pointer for PhysicalAddress {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Pointer::fmt(&(self.0 as *const ()), f)
+    }
+}
+
+pub fn align_down(address: usize, align: usize) -> usize {
+    assert!(align.is_power_of_two(), "`align` must be a power of two");
+
+    address & !(align - 1)
 }
