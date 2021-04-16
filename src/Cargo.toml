@@ -2,7 +2,9 @@
 members = [
     "aero_kernel",
     "aero_boot",
+
     "aero_gfx",
+    "aero_hal"
 ]
 
 [profile.dev]

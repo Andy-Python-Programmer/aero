@@ -25,7 +25,7 @@
 extern crate alloc;
 
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
-use arch::memory::paging;
+use arch::memory;
 
 use utils::io;
 
@@ -89,7 +89,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         arch::interrupts::enable_interrupts();
 
         let (mut offset_table, mut frame_allocator) =
-            paging::init(physical_memory_offset, memory_regions);
+            memory::paging::init(physical_memory_offset, memory_regions);
         log::info!("Loaded paging");
 
         arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)

@@ -1,6 +1,7 @@
 use core::mem::{self, MaybeUninit};
 
-use crate::{arch::memory::paging::GlobalAllocator, paging::memory_map_device};
+use crate::arch::memory::paging::{memory_map_device, GlobalAllocator};
+
 use x86_64::{
     structures::paging::{
         FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags, PhysFrame, Size4KiB,
