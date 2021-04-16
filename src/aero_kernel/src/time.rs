@@ -9,6 +9,8 @@ use crate::utils::io;
 
 pub const PIT_DIVISOR: u64 = 1193180;
 pub const PIT_BASE_FREQUENCY: u64 = 1193182;
+pub const DEFAULT_PIT_DIVISOR: u64 = 65535;
+
 
 pub struct PITDescriptor {
     ticks_since_epoch: u64,
@@ -20,7 +22,7 @@ impl PITDescriptor {
     const fn new() -> Self {
         Self {
             ticks_since_epoch: 0,
-            divisor: 65535,
+            divisor: DEFAULT_PIT_DIVISOR,
         }
     }
 

@@ -30,7 +30,7 @@ impl<'buffer> DebugRendy<'buffer> {
             info,
             x_pos: 0,
             y_pos: 0,
-            color: ColorCode::new(Color::from_hex(0xFFFFFF), Color::from_hex(0x00)),
+            color: ColorCode::new(Color::WHITE, Color::BLACK),
         }
     }
 
@@ -113,7 +113,10 @@ impl<'buffer> DebugRendy<'buffer> {
 
     #[inline(always)]
     pub fn set_color_code(&mut self, color: ColorCode) {
-        self.color = color;
+        // Do not set the color again if its the same color.
+        if !(color == self.color) {
+            self.color = color;
+        }
     }
 
     #[inline(always)]
