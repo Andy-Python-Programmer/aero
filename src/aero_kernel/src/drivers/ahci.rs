@@ -469,12 +469,12 @@ impl AHCI {
                 let hba_port_type = hba_port.get_port_type();
 
                 if hba_port_type == AHCIPortType::SATA || hba_port_type == AHCIPortType::SATAPI {
-                    // let mut buffer = [0u16; 256];
+                    let mut buffer = [0u16; 256];
 
                     let mut port = Port::new(hba_port, hba_port_type, i);
 
                     port.configure(offset_table, frame_allocator);
-                    // port.read(0, 4, &mut buffer);
+                    port.read(0, 4, &mut buffer);
                 }
             }
         }

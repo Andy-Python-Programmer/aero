@@ -11,6 +11,9 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 ## Screenshots
 <img src="misc/os.png">
 
+## Features
+- Modern UEFI bootloader
+
 ## Roadmap
 
 Check out [ROADMAP.md](ROADMAP.md) for this month's roadmap.

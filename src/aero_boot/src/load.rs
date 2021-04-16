@@ -51,7 +51,7 @@ pub struct Mappings {
 /// Useful for determining a free virtual memory block, e.g. for mapping additional data.
 #[derive(Debug)]
 pub struct Level4Entries {
-    entries: [bool; 512], // TODO: Use bitmap class to speed up process
+    entries: [bool; 512],
 }
 
 impl Level4Entries {
