@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "aero_kernel",
-    "aero_boot"
+    "aero_boot",
+    "aero_gfx",
 ]
 
 [profile.dev]

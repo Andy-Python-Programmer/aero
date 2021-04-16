@@ -28,19 +28,18 @@ use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 use arch::memory::paging;
 
 use utils::io;
-use vga::rendy;
 
 mod acpi;
 mod arch;
 mod drivers;
 mod logger;
+mod rendy;
 mod syscall;
 mod tests;
 mod time;
 mod unwind;
 mod userland;
 mod utils;
-mod vga;
 
 use aero_boot::BootInfo;
 use linked_list_allocator::LockedHeap;

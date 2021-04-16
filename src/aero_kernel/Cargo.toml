@@ -13,24 +13,26 @@ bit_field = "0.10.1"
 linked_list_allocator = "0.8.11"
 static_assertions = "1.1"
 log = "0.4.14"
-font8x8 = { version = "0.3.1", default-features = false, features = ["unicode"] }
-aero_boot = { path = "../aero_boot/" }
+
+[dependencies.font8x8]
+version = "0.3"
+default-features = false
+features = ["unicode"]
 
 [dependencies.goblin]
 version = "0.3.4"
 default-features = false
 features = ["elf32", "elf64"]
 
-[dependencies.bootloader]
-version = "0.10.1"
-features = []
-
 [dependencies.lazy_static]
 version = "1.4"
 features = ["spin_no_std"]
 
-[package.metadata.bootloader]
-map-physical-memory = true
+[dependencies.aero_gfx]
+path = "../aero_gfx/"
+
+[dependencies.aero_boot]
+path = "../aero_boot/"
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }

@@ -17,10 +17,10 @@ use core::fmt::Write;
 use core::mem;
 use core::slice;
 
-use aero_boot::FrameBufferInfo;
+use aero_gfx::{debug::rendy::DebugRendy, FrameBufferInfo};
 
 use load::SystemInfo;
-use logger::{LockedLogger, Logger};
+use logger::LockedLogger;
 
 use paging::BootFrameAllocator;
 
@@ -58,8 +58,8 @@ fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo)
         horizontal_resolution: mode_info.resolution().0,
         vertical_resolution: mode_info.resolution().1,
         pixel_format: match mode_info.pixel_format() {
-            PixelFormat::Rgb => aero_boot::PixelFormat::BGR,
-            PixelFormat::Bgr => aero_boot::PixelFormat::BGR,
+            PixelFormat::Rgb => aero_gfx::PixelFormat::BGR,
+            PixelFormat::Bgr => aero_gfx::PixelFormat::BGR,
             PixelFormat::Bitmask | PixelFormat::BltOnly => {
                 panic!("Bitmask and BltOnly framebuffers are not supported")
             }
@@ -68,7 +68,7 @@ fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo)
         stride: mode_info.stride(),
     };
 
-    let global_logger = LockedLogger::new(Logger::new(slice, info));
+    let global_logger = LockedLogger::new(DebugRendy::new(slice, info));
     let locked_logger = logger::LOGGER.call_once(|| global_logger);
 
     log::set_logger(locked_logger).expect("Failed to set the global logger");

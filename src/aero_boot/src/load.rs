@@ -3,7 +3,8 @@ use core::{
     slice,
 };
 
-use aero_boot::{BootInfo, FrameBuffer, FrameBufferInfo, MemoryRegion};
+use aero_boot::{BootInfo, MemoryRegion};
+use aero_gfx::{FrameBuffer, FrameBufferInfo};
 
 use x86_64::{align_up, registers, structures::paging::*, PhysAddr, VirtAddr};
 
