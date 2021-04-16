@@ -1,9 +1,8 @@
 use core::fmt;
 
-use bit_field::BitField;
 use font8x8::UnicodeFonts;
 
-use super::color::ColorCode;
+use super::color::{Color, ColorCode};
 use crate::FrameBufferInfo;
 
 /// Debug renderer used by the kernel and the bootloader to log messages to the
@@ -31,7 +30,7 @@ impl<'buffer> DebugRendy<'buffer> {
             info,
             x_pos: 0,
             y_pos: 0,
-            color: ColorCode::new(0xFFFFFF, 0x00),
+            color: ColorCode::new(Color::from_hex(0xFFFFFF), Color::from_hex(0x00)),
         }
     }
 
@@ -77,14 +76,14 @@ impl<'buffer> DebugRendy<'buffer> {
         self.x_pos += 8;
     }
 
-    pub fn put_pixel(&mut self, x: usize, y: usize, color: u32) {
+    pub fn put_pixel(&mut self, x: usize, y: usize, color: Color) {
         let pixel_offset = y * self.info.stride + x;
 
         let color = [
-            (color.get_bits(0..8) & 255) as u8,
-            ((color.get_bits(8..16)) & 255) as u8,
-            ((color.get_bits(16..24)) & 255) as u8,
-            ((color.get_bits(24..32)) & 255) as u8,
+            color.get_red_bit(),
+            color.get_green_bit(),
+            color.get_blue_bit(),
+            color.get_alpha_bit(),
         ];
 
         let bytes_per_pixel = self.info.bytes_per_pixel;
@@ -98,7 +97,7 @@ impl<'buffer> DebugRendy<'buffer> {
         self.x_pos = 0;
         self.y_pos = 0;
 
-        self.buffer.fill(self.color.get_background() as u8);
+        self.buffer.fill(self.color.get_background().inner() as u8);
     }
 
     fn new_line(&mut self) {

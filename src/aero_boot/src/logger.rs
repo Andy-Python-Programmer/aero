@@ -1,6 +1,6 @@
 use core::fmt::Write;
 
-use aero_gfx::debug::color::ColorCode;
+use aero_gfx::debug::color::{Color, ColorCode};
 use aero_gfx::debug::rendy::DebugRendy;
 
 use log::{Level, Metadata, Record};
@@ -32,19 +32,31 @@ impl<'buffer> log::Log for LockedLogger<'buffer> {
         if self.enabled(record.metadata()) {
             let this = &mut *self.0.lock();
 
-            this.set_color_code(ColorCode::new(0xFFFFFF, 0x00));
+            this.set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
             write!(this, "[ ").expect("Failed to write to the framebuffer");
 
             match record.level() {
-                Level::Error => this.set_color_code(ColorCode::new(0xDFF2800, 0x00)),
-                Level::Warn => this.set_color_code(ColorCode::new(0xFFD300, 0x00)),
-                Level::Info => this.set_color_code(ColorCode::new(0x50C878, 0x00)),
-                Level::Debug | Level::Trace => this.set_color_code(ColorCode::new(0x10A5F5, 0x00)),
+                Level::Error => {
+                    this.set_color_code(ColorCode::new(Color::from_hex(0xDFF2800), Color::BLACK))
+                }
+
+                Level::Warn => {
+                    this.set_color_code(ColorCode::new(Color::from_hex(0xFFD300), Color::BLACK))
+                }
+
+                Level::Info => {
+                    this.set_color_code(ColorCode::new(Color::from_hex(0x50C878), Color::BLACK))
+                }
+
+                Level::Debug | Level::Trace => {
+                    this.set_color_code(ColorCode::new(Color::from_hex(0x10A5F5), Color::BLACK))
+                }
             }
 
             write!(this, "{}", record.level()).expect("Failed to write to the framebuffer");
 
-            this.set_color_code(ColorCode::new(0xFFFFFF, 0x00));
+            this.set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
+
             writeln!(this, " ]        - {}", record.args())
                 .expect("Failed to write to the framebuffer");
         }
