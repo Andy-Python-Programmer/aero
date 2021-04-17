@@ -40,6 +40,11 @@ impl VirtualAddress {
     }
 
     #[inline(always)]
+    pub fn align_down(self, alignment: u64) -> Self {
+        Self(align_down(self.0, alignment))
+    }
+
+    #[inline(always)]
     pub fn p1_index(&self) -> u16 {
         ((self.0 >> 12) & 0o777) as u16
     }

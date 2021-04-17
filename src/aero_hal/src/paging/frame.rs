@@ -11,6 +11,8 @@ pub struct Frame<S: PageSize = Size4KiB> {
 }
 
 impl<S: PageSize> Frame<S> {
+    pub const SIZE: u64 = S::SIZE;
+
     pub fn from_start_address(address: PhysicalAddress) -> Self {
         assert!(address.is_aligned(S::SIZE));
 
@@ -41,7 +43,7 @@ impl<S: PageSize> fmt::Debug for Frame<S> {
     }
 }
 
-pub trait FrameAllocator {
-    fn allocate_frame(&mut self) -> Option<Frame>;
+pub trait FrameAllocator<S: PageSize> {
+    fn allocate_frame(&mut self) -> Option<Frame<S>>;
     fn deallocate_frame(&mut self);
 }
