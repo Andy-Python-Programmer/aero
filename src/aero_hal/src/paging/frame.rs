@@ -7,7 +7,7 @@ use super::{address::PhysicalAddress, PageSize, Size4KiB};
 #[repr(C)]
 pub struct Frame<S: PageSize = Size4KiB> {
     start_address: PhysicalAddress,
-    __phantom_size: PhantomData<S>,
+    size: PhantomData<S>,
 }
 
 impl<S: PageSize> Frame<S> {
@@ -21,7 +21,7 @@ impl<S: PageSize> Frame<S> {
     pub fn containing_address(address: PhysicalAddress) -> Self {
         Self {
             start_address: address.align_down(S::SIZE),
-            __phantom_size: PhantomData,
+            size: PhantomData,
         }
     }
 
@@ -36,7 +36,7 @@ impl<S: PageSize> fmt::Debug for Frame<S> {
         f.write_fmt(format_args!(
             "Frame[{}]({:#x})",
             S::SIZE,
-            self.start_address().as_usize()
+            self.start_address().as_u64()
         ))
     }
 }

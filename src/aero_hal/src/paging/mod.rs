@@ -3,7 +3,7 @@ pub mod frame;
 
 pub trait PageSize: Copy + Clone + Eq + PartialOrd + Ord {
     /// The page size in bytes.
-    const SIZE: usize;
+    const SIZE: u64;
 }
 
 pub trait NotGiantPageSize: PageSize {}
@@ -14,7 +14,7 @@ macro_rules! impl_size_t {
         pub enum $enum {}
 
         impl PageSize for $enum {
-            const SIZE: usize = $size;
+            const SIZE: u64 = $size;
         }
     };
 }
