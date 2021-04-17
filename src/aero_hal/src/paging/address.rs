@@ -63,6 +63,16 @@ impl VirtualAddress {
     pub fn p4_index(&self) -> u16 {
         ((self.0 >> 12 >> 9 >> 9 >> 9) & 0o777) as u16
     }
+
+    #[inline(always)]
+    pub fn as_ptr<T>(self) -> *const T {
+        self.as_u64() as *const T
+    }
+
+    #[inline(always)]
+    pub fn as_mut_ptr<T>(self) -> *mut T {
+        self.as_ptr::<T>() as *mut T
+    }
 }
 
 impl fmt::Debug for VirtualAddress {

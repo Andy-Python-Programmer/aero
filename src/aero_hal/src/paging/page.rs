@@ -3,7 +3,11 @@ use core::{
     ops::{Index, IndexMut},
 };
 
-use super::{address::VirtualAddress, NotGiantPageSize, PageSize, Size4KiB};
+use super::{
+    address::{PhysicalAddress, VirtualAddress},
+    frame::Frame,
+    NotGiantPageSize, PageSize, Size4KiB,
+};
 
 const PAGE_TABLE_ENTRY_COUNT: usize = 512;
 
@@ -41,12 +45,63 @@ bitflags::bitflags! {
 #[repr(transparent)]
 pub struct PageTableEntry(u64);
 
-impl PageTableEntry {}
+impl PageTableEntry {
+    #[inline(always)]
+    pub fn address(&self) -> PhysicalAddress {
+        PhysicalAddress::new(self.0 & 0x000f_ffff_ffff_f000)
+    }
+
+    #[inline(always)]
+    pub const fn flags(&self) -> PageTableFlags {
+        PageTableFlags::from_bits_truncate(self.0)
+    }
+
+    #[inline]
+    pub fn frame(&self) -> Frame {
+        assert!(self.flags().contains(PageTableFlags::PRESENT));
+        assert!(!self.flags().contains(PageTableFlags::HUGE_PAGE));
+
+        Frame::containing_address(self.address())
+    }
+
+    #[inline(always)]
+    pub const fn is_unused(&self) -> bool {
+        self.0 == 0
+    }
+
+    #[inline(always)]
+    pub fn set_unused(&mut self) {
+        self.0 = 0;
+    }
+
+    #[inline]
+    pub fn set_address(&mut self, address: PhysicalAddress, flags: PageTableFlags) {
+        assert!(address.is_aligned(Size4KiB::SIZE));
+
+        self.0 = (address.as_u64()) | flags.bits();
+    }
+
+    /// Map the entry to the specified physical frame with the specified flags.
+    #[inline]
+    pub fn set_frame(&mut self, frame: Frame, flags: PageTableFlags) {
+        assert!(!flags.contains(PageTableFlags::HUGE_PAGE));
+
+        self.set_address(frame.start_address(), flags)
+    }
+}
 
 #[repr(align(4096))]
 #[repr(C)]
 pub struct PageTable {
     entries: [PageTableEntry; PAGE_TABLE_ENTRY_COUNT],
+}
+
+impl PageTable {
+    pub fn zero(&mut self) {
+        for entry in self.entries.iter_mut() {
+            entry.set_unused();
+        }
+    }
 }
 
 impl Index<usize> for PageTable {
@@ -65,18 +120,18 @@ impl IndexMut<usize> for PageTable {
     }
 }
 
-impl Index<u64> for PageTable {
+impl Index<u16> for PageTable {
     type Output = PageTableEntry;
 
     #[inline]
-    fn index(&self, index: u64) -> &Self::Output {
+    fn index(&self, index: u16) -> &Self::Output {
         &self.entries[index as usize]
     }
 }
 
-impl IndexMut<u64> for PageTable {
+impl IndexMut<u16> for PageTable {
     #[inline]
-    fn index_mut(&mut self, index: u64) -> &mut Self::Output {
+    fn index_mut(&mut self, index: u16) -> &mut Self::Output {
         &mut self.entries[index as usize]
     }
 }
