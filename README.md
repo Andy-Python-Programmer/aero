@@ -29,7 +29,7 @@ Check out [ROADMAP.md](ROADMAP.md) for this month's roadmap.
 To build and run aero:
 
 ```sh
-$ cargo run
+$ cargo boot run
 ```
 
 ## Chainloading
