@@ -30,6 +30,7 @@ use arch::memory;
 use utils::io;
 
 mod acpi;
+mod apic;
 mod arch;
 mod drivers;
 mod logger;
@@ -95,6 +96,9 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
             .expect("Failed to initialize the heap.");
         log::info!("Loaded heap");
+
+        apic::init(physical_memory_offset);
+        log::info!("Loaded local apic");
 
         acpi::init(
             &mut offset_table,

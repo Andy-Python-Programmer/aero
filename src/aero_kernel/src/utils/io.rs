@@ -59,3 +59,13 @@ pub unsafe fn inl(port: u16) -> u32 {
 pub unsafe fn wait() {
     outb(0x80, 0)
 }
+
+/// Read 64 bits msr register.
+#[inline]
+pub unsafe fn rdmsr(msr: u32) -> u64 {
+    let (high, low): (u32, u32);
+
+    asm!("rdmsr", out("eax") low, out("edx") high, in("ecx") msr, options(nomem));
+
+    ((high as u64) << 32) | (low as u64)
+}

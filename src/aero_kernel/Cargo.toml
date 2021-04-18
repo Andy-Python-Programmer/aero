@@ -13,6 +13,7 @@ bit_field = "0.10.1"
 linked_list_allocator = "0.8.11"
 static_assertions = "1.1"
 log = "0.4.14"
+raw-cpuid = "9.0.0"
 
 [dependencies.font8x8]
 version = "0.3"
