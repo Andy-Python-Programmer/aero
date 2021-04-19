@@ -60,6 +60,12 @@ _______ _______ ______ _______    _______ ______
 
 #[export_name = "_start"]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    // Initialize the COM ports before doing anything else.
+    //
+    // This will help printing panics before or when the debug renderer is initialized
+    // if serial output is avaliable.
+    drivers::uart_16550::init();
+
     let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let rsdp_address = PhysAddr::new(boot_info.rsdp_address);
 

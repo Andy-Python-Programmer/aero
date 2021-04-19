@@ -50,6 +50,11 @@ pub fn set_color_code(color_code: ColorCode) {
     DEBUG_RENDY.get().unwrap().lock().set_color_code(color_code);
 }
 
+#[inline(always)]
+pub fn is_initialized() -> bool {
+    DEBUG_RENDY.get().is_some()
+}
+
 pub fn init(framebuffer: &'static mut FrameBuffer) {
     let info = framebuffer.info();
     let buffer = framebuffer.buffer_mut();
