@@ -1,10 +1,17 @@
 ## Roadmap April - May 2021
+- [x] Task State Segment
+- [x] New Aero UEFI bootloader
+- [x] Port the kernel to the new UEFI bootloader
+- [x] Initialize the local APIC
+- [x] Port the VGA driver to use the framebuffer provided by the bootloader instead
+- [x] Enter ring 3
+- [x] ELF file parser
+- [x] Load the kernel as an ELF file
+- [ ] Task Scheduler - *Work in progress*
+- [ ] Exit syscall - *Work in progress*
+- [ ] IO Apic
+- [ ] AHCI read and write using DMA (Direct memory access)
 - [ ] MADT table - Unlock the full potential of the CPU(s)
-- [ ] Syscalls
-    * sys_open
-    * sys_close
-    * sys_exit
-- [ ] Enter ring 3
 
 
 ## Roadmap March - April 2021
