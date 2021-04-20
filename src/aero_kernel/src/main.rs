@@ -49,7 +49,7 @@ use x86_64::{PhysAddr, VirtAddr};
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-const ASCII_INTRO: &'static str = r"
+const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
 (_______|_______|_____ (_______)  (_______) _____)
  _______ _____   _____) )     _    _     ( (____  

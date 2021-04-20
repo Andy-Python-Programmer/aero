@@ -1,6 +1,6 @@
 #[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
-pub struct RSDP {
+pub struct Rsdp {
     pub signature: [u8; 8],
     pub checksum: u8,
     pub oemid: [u8; 6],
@@ -12,7 +12,7 @@ pub struct RSDP {
     pub reserved: [u8; 3],
 }
 
-impl RSDP {
+impl Rsdp {
     /// Get the SDT address.
     ///
     /// Returns the RSDT address if the revision is `0` else it returns the XSDT address.

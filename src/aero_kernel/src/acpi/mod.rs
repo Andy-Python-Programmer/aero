@@ -14,7 +14,7 @@ use x86_64::{
 
 use crate::arch::memory::paging::GlobalAllocator;
 
-use self::{fadt::FADT, hpet::HPET, madt::MADT, rsdp::RSDP, sdt::SDT};
+use self::{fadt::Fadt, hpet::Hpet, madt::Madt, rsdp::Rsdp, sdt::Sdt};
 
 pub mod fadt;
 pub mod hpet;
@@ -56,11 +56,11 @@ impl GenericAddressStructure {
 
 unsafe fn look_up_table(
     signature: &str,
-    sdt: &'static SDT,
+    sdt: &'static Sdt,
     is_legacy: bool,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     offset_table: &mut OffsetPageTable,
-) -> Option<&'static SDT> {
+) -> Option<&'static Sdt> {
     let entries;
 
     if is_legacy {
@@ -71,7 +71,7 @@ unsafe fn look_up_table(
 
     for i in 0..entries {
         let item_address = *((sdt.data_address() as *const u32).add(i));
-        let item = SDT::from_address(item_address as u64, frame_allocator, offset_table);
+        let item = Sdt::from_address(item_address as u64, frame_allocator, offset_table);
 
         if item.get_signature() == signature {
             return Some(item);
@@ -89,10 +89,10 @@ pub fn init(
     physical_memory_offset: VirtAddr,
 ) {
     unsafe {
-        let rsdp = &*((physical_memory_offset + rsdp_address.as_u64()).as_u64() as *const RSDP);
+        let rsdp = &*((physical_memory_offset + rsdp_address.as_u64()).as_u64() as *const Rsdp);
         let sdt_address = rsdp.get_sdt_address() as u64;
 
-        let sdt = SDT::from_address(sdt_address, frame_allocator, offset_table);
+        let sdt = Sdt::from_address(sdt_address, frame_allocator, offset_table);
 
         let is_legacy;
 
@@ -104,7 +104,7 @@ pub fn init(
             panic!("Invalid RSDP signature.")
         }
 
-        FADT::new(look_up_table(
+        Fadt::new(look_up_table(
             fadt::SIGNATURE,
             sdt,
             is_legacy,
@@ -112,7 +112,7 @@ pub fn init(
             offset_table,
         ));
 
-        HPET::new(
+        Hpet::new(
             look_up_table(
                 hpet::SIGNATURE,
                 sdt,
@@ -124,7 +124,7 @@ pub fn init(
             offset_table,
         );
 
-        MADT::new(
+        Madt::new(
             look_up_table(
                 madt::SIGNATURE,
                 sdt,

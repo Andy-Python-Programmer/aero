@@ -4,14 +4,14 @@
 
 use core::ptr;
 
-use super::sdt::SDT;
+use super::sdt::Sdt;
 
 pub const SIGNATURE: &str = "FACP";
 
 #[repr(packed)]
 #[derive(Clone, Copy, Debug)]
-pub struct FADT {
-    pub header: SDT,
+pub struct Fadt {
+    pub header: Sdt,
     pub firmware_ctrl: u32,
     pub dsdt: u32,
 
@@ -58,10 +58,10 @@ pub struct FADT {
     pub flags: u32,
 }
 
-impl FADT {
-    pub fn new(sdt: Option<&'static SDT>) -> Self {
+impl Fadt {
+    pub fn new(sdt: Option<&'static Sdt>) -> Self {
         let sdt = sdt.expect("FADT not found");
 
-        unsafe { ptr::read((sdt as *const SDT) as *const Self) }
+        unsafe { ptr::read((sdt as *const Sdt) as *const Self) }
     }
 }

@@ -63,7 +63,7 @@ impl<'buffer> DebugRendy<'buffer> {
     pub fn put_bytes(&mut self, bytes: &[u8]) {
         for (y, byte) in bytes.iter().enumerate() {
             for (x, bit) in (0..8).enumerate() {
-                let background = if *byte & (1 << bit) == 0 { true } else { false };
+                let background = *byte & (1 << bit) == 0;
 
                 if background {
                     self.put_pixel(self.x_pos + x, self.y_pos + y, self.color.get_background());

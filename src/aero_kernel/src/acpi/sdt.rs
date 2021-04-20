@@ -10,7 +10,7 @@ use x86_64::{
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-pub struct SDT {
+pub struct Sdt {
     pub signature: [u8; 4],
     pub length: u32,
     pub revision: u8,
@@ -22,7 +22,7 @@ pub struct SDT {
     pub creator_revision: u32,
 }
 
-impl SDT {
+impl Sdt {
     /// Get SDT from its address.
     pub unsafe fn from_address(
         address: u64,

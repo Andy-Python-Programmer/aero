@@ -437,7 +437,7 @@ impl PCIHeader {
         let offset = 0x10 + (bar as u16) * 4;
         let bar = self.read(offset.into());
 
-        if bar.get_bit(0) == false {
+        if !bar.get_bit(0) {
             let prefetchable = bar.get_bit(3);
             let address = bar.get_bits(4..32) << 4;
 

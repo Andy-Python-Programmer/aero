@@ -11,13 +11,12 @@ pub const PIT_DIVISOR: u64 = 1193180;
 pub const PIT_BASE_FREQUENCY: u64 = 1193182;
 pub const DEFAULT_PIT_DIVISOR: u64 = 65535;
 
-
-pub struct PITDescriptor {
+pub struct PitDescriptor {
     ticks_since_epoch: u64,
     divisor: u64,
 }
 
-impl PITDescriptor {
+impl PitDescriptor {
     #[inline]
     const fn new() -> Self {
         Self {
@@ -58,7 +57,7 @@ impl PITDescriptor {
 }
 
 /// The PIT (Programmable Interval Timer)
-pub static mut PIT: PITDescriptor = PITDescriptor::new();
+pub static mut PIT: PitDescriptor = PitDescriptor::new();
 
 /// Initialise the PIT chip.
 pub fn init() {

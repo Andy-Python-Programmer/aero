@@ -36,7 +36,7 @@ impl GlobalAllocator {
     /// Get the [MemoryRegionType] of a frame
     pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryRegionType> {
         self.memory_map
-            .into_iter()
+            .iter()
             .find(|v| {
                 let addr = frame.start_address().as_u64();
 

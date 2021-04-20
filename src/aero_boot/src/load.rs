@@ -81,7 +81,7 @@ impl Level4Entries {
             .entries
             .iter_mut()
             .enumerate()
-            .find(|(_, &mut entry)| entry == false)
+            .find(|(_, &mut entry)| !entry)
             .expect("No usable level 4 entries found");
 
         *entry = true;
@@ -192,10 +192,11 @@ fn map_segment(
 
             let new_frame = frame_allocator.allocate_frame().unwrap();
 
-            let new_frame_ptr = new_frame.start_address().as_u64() as *mut Size4KiBPageArray;
-            unsafe { new_frame_ptr.write(SIZE_4_KIB_ZERO_ARRAY) };
+            {
+                let new_frame_ptr = new_frame.start_address().as_u64() as *mut Size4KiBPageArray;
 
-            drop(new_frame_ptr);
+                unsafe { new_frame_ptr.write(SIZE_4_KIB_ZERO_ARRAY) };
+            }
 
             // Copy the data from the orignal frame to the new frame.
 
@@ -228,10 +229,11 @@ fn map_segment(
         for page in Page::range_inclusive(start_page, end_page) {
             let frame = frame_allocator.allocate_frame().unwrap();
 
-            let frame_ptr = frame.start_address().as_u64() as *mut Size4KiBPageArray;
-            unsafe { frame_ptr.write(SIZE_4_KIB_ZERO_ARRAY) };
+            {
+                let frame_ptr = frame.start_address().as_u64() as *mut Size4KiBPageArray;
 
-            drop(frame_ptr);
+                unsafe { frame_ptr.write(SIZE_4_KIB_ZERO_ARRAY) };
+            }
 
             unsafe {
                 page_table
@@ -266,14 +268,15 @@ fn load_kernel(
     for header in kernel_elf.program_iter() {
         program::sanity_check(header, &kernel_elf).expect("Failed header sanity check");
 
-        match header.get_type().expect("Unable to get the header type") {
-            Type::Load => map_segment(
+        let header_type = header.get_type().expect("Unable to get the header type");
+
+        if let Type::Load = header_type {
+            map_segment(
                 &header,
                 kernel_offset,
                 frame_allocator,
                 &mut page_tables.kernel_page_table,
-            ),
-            _ => (),
+            )
         }
     }
 

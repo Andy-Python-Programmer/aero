@@ -19,7 +19,7 @@ pub(crate) const ICW4_8086: u8 = 0x01;
 
 pub(crate) type IDTInterruptHandlerFn = unsafe extern "x86-interrupt" fn(InterruptStackFrame);
 
-static mut IDT: [IDTEntry; IDT_ENTRIES] = [IDTEntry::null(); IDT_ENTRIES];
+static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::null(); IDT_ENTRIES];
 
 use bitflags::bitflags;
 use core::mem::size_of;
@@ -51,12 +51,12 @@ pub struct InterruptStackFrame {
 }
 
 #[repr(C, packed)]
-struct IDTDescriptor {
+struct IdtDescriptor {
     size: u16,
     offset: u64,
 }
 
-impl IDTDescriptor {
+impl IdtDescriptor {
     /// Create a new IDT descriptor.
     #[inline]
     const fn new(size: u16, offset: u64) -> Self {
@@ -66,7 +66,7 @@ impl IDTDescriptor {
 
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
-struct IDTEntry {
+struct IdtEntry {
     offset_low: u16,
     selector: u16,
     ist: u8,
@@ -76,7 +76,7 @@ struct IDTEntry {
     ignore: u32,
 }
 
-impl IDTEntry {
+impl IdtEntry {
     /// Create a new IDT entry with all values defaulted to 0, ie `null`.
     const fn null() -> Self {
         Self {
@@ -153,8 +153,8 @@ pub fn init() {
         IDT[0x80].set_function(crate::syscall::syscall);
         IDT[0x80].set_flags(IDTFlags::PRESENT | IDTFlags::RING_3 | IDTFlags::INTERRUPT);
 
-        let idt_descriptor = IDTDescriptor::new(
-            ((IDT.len() * size_of::<IDTEntry>()) - 1) as u16,
+        let idt_descriptor = IdtDescriptor::new(
+            ((IDT.len() * size_of::<IdtEntry>()) - 1) as u16,
             (&IDT as *const _) as u64,
         );
 
@@ -164,7 +164,7 @@ pub fn init() {
 }
 
 #[inline]
-unsafe fn load_idt(idt_descriptor: *const IDTDescriptor) {
+unsafe fn load_idt(idt_descriptor: *const IdtDescriptor) {
     asm!("lidt [{}]", in(reg) idt_descriptor, options(nostack));
 }
 

@@ -2,14 +2,14 @@ use core::ptr;
 
 use x86_64::structures::paging::{FrameAllocator, OffsetPageTable, Size4KiB};
 
-use super::{sdt::SDT, GenericAddressStructure};
+use super::{sdt::Sdt, GenericAddressStructure};
 
 pub const SIGNATURE: &str = "HPET";
 
 #[repr(packed)]
 #[derive(Clone, Copy, Debug)]
-pub struct HPET {
-    pub header: SDT,
+pub struct Hpet {
+    pub header: Sdt,
     pub hw_rev_id: u8,
     pub comparator_descriptor: u8,
     pub pci_vendor_id: u16,
@@ -19,15 +19,15 @@ pub struct HPET {
     pub oem_attribute: u8,
 }
 
-impl HPET {
+impl Hpet {
     pub fn new(
-        sdt: Option<&'static SDT>,
+        sdt: Option<&'static Sdt>,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         offset_table: &mut OffsetPageTable,
     ) -> Self {
         let sdt = sdt.expect("HPET not found");
 
-        let this = unsafe { ptr::read((sdt as *const SDT) as *const Self) };
+        let this = unsafe { ptr::read((sdt as *const Sdt) as *const Self) };
 
         unsafe {
             this.base_address.init(frame_allocator, offset_table);

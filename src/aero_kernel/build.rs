@@ -18,12 +18,12 @@ fn assemble_trampoline(out_dir: &str) -> Result<(), Box<dyn Error>> {
     let stdout = core::str::from_utf8(&result.stdout)?;
     let stderr = core::str::from_utf8(&result.stderr)?;
 
-    if stdout != "" {
+    if !stdout.is_empty() {
         panic!(
             "NASM build failed. Make sure you have nasm installed. https://nasm.us: {}",
             stdout
         );
-    } else if stderr != "" {
+    } else if !stderr.is_empty() {
         panic!(
             "NASM build failed. Make sure you have nasm installed. https://nasm.us: {}",
             stderr

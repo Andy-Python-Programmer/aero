@@ -2,25 +2,25 @@ use core::{intrinsics, mem};
 
 use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
 
-use super::sdt::SDT;
+use super::sdt::Sdt;
 
 pub const SIGNATURE: &str = "APIC";
 pub const TRAMPOLINE: u64 = 0x8000;
 
 static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
-static mut MADT: Option<MADT> = None;
+static mut MADT: Option<Madt> = None;
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
-pub struct MADT {
-    pub sdt: &'static SDT,
+pub struct Madt {
+    pub sdt: &'static Sdt,
     pub local_apic_address: u32,
     pub flags: u32,
 }
 
-impl MADT {
+impl Madt {
     pub fn new(
-        sdt: Option<&'static SDT>,
+        sdt: Option<&'static Sdt>,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         offset_table: &mut OffsetPageTable,
     ) {
@@ -66,9 +66,9 @@ impl MADT {
         }
     }
 
-    pub fn iter(&self) -> MADTIterator {
+    pub fn iter(&self) -> MadtIterator {
         unsafe {
-            MADTIterator {
+            MadtIterator {
                 ptr: (self as *const Self as *const u8).add(mem::size_of::<Self>()),
                 i: self.sdt.length as usize - mem::size_of::<Self>(),
             }
@@ -109,21 +109,21 @@ pub struct MadtIntSrcOverride {
     pub flags: u16,
 }
 
-pub enum MADTEntry {
+pub enum MadtEntry {
     LocalApic(&'static MadtLocalApic),
-    IOApic(&'static MadtIoApic),
+    IoApic(&'static MadtIoApic),
     IntSrcOverride(&'static MadtIntSrcOverride),
 
     Unknown(u8),
 }
 
-pub struct MADTIterator {
+pub struct MadtIterator {
     ptr: *const u8,
     i: usize,
 }
 
-impl Iterator for MADTIterator {
-    type Item = MADTEntry;
+impl Iterator for MadtIterator {
+    type Item = MadtEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.i > 0 {
@@ -135,14 +135,14 @@ impl Iterator for MADTIterator {
                 self.i -= header.length as usize;
 
                 let item = match header.entry_type {
-                    0 => MADTEntry::LocalApic(&*(entry_pointer as *const MadtLocalApic)),
-                    1 => MADTEntry::IOApic(&*(entry_pointer as *const MadtIoApic)),
-                    2 => MADTEntry::IntSrcOverride(&*(entry_pointer as *const MadtIntSrcOverride)),
+                    0 => MadtEntry::LocalApic(&*(entry_pointer as *const MadtLocalApic)),
+                    1 => MadtEntry::IoApic(&*(entry_pointer as *const MadtIoApic)),
+                    2 => MadtEntry::IntSrcOverride(&*(entry_pointer as *const MadtIntSrcOverride)),
 
                     0x10..=0x7f => continue,
                     0x80..=0xff => continue,
 
-                    _ => MADTEntry::Unknown(header.entry_type),
+                    _ => MadtEntry::Unknown(header.entry_type),
                 };
 
                 return Some(item);

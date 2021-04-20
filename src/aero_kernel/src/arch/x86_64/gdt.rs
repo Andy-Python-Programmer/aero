@@ -6,10 +6,10 @@ use core::mem;
 
 const GDT_ENTRIES: usize = 6;
 
-static mut GDT: [GDTEntry; GDT_ENTRIES] = [GDTEntry::null(); GDT_ENTRIES];
+static mut GDT: [GdtEntry; GDT_ENTRIES] = [GdtEntry::null(); GDT_ENTRIES];
 
 #[repr(C, packed)]
-struct GDTDescriptor {
+struct GdtDescriptor {
     /// The size of the table subtracted by 1.
     /// The size of the table is subtracted by 1 as the maximum value
     /// of `size` is 65535, while the GDT can be up to 65536 bytes.
@@ -18,7 +18,7 @@ struct GDTDescriptor {
     offset: u64,
 }
 
-impl GDTDescriptor {
+impl GdtDescriptor {
     /// Create a new GDT descriptor.
     #[inline]
     pub const fn new(size: u16, offset: u64) -> Self {
@@ -28,7 +28,7 @@ impl GDTDescriptor {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct GDTEntry {
+pub struct GdtEntry {
     limit_low: u16,
     base_low: u16,
     base_middle: u8,
@@ -41,7 +41,7 @@ pub struct GDTEntry {
     base_hi: u8,
 }
 
-impl GDTEntry {
+impl GdtEntry {
     /// Create a new GDT entry.
     #[inline]
     pub const fn new(
@@ -73,7 +73,7 @@ impl GDTEntry {
 /// **Notes**: <https://wiki.osdev.org/Task_State_Segment>
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-pub struct TSSEntry {
+pub struct TssEntry {
     /// The previous TSS - with hardware task switching these form a kind of backward linked list.
     previous_tss: u64,
     /// The stack pointer to load when changing to kernel mode.
@@ -106,9 +106,9 @@ pub struct TSSEntry {
     iomap_base: u16,
 }
 
-impl TSSEntry {
+impl TssEntry {
     #[inline]
-    pub const fn null() -> Self {
+    pub const fn new() -> Self {
         Self {
             previous_tss: 0,
             esp0: 0,
@@ -140,30 +140,28 @@ impl TSSEntry {
         }
     }
 
-    pub fn new() -> GDTEntry {
-        let this = Self::null();
-
-        let base = (&this as *const Self) as usize;
+    pub fn as_gdt_entry(self) -> GdtEntry {
+        let base = (&self as *const Self) as usize;
         let limit = base + mem::size_of::<Self>();
 
-        GDTEntry::new(0, 0, base as u8, limit as u8, 0xE9, 0x00)
+        GdtEntry::new(0, 0, base as u8, limit as u8, 0xE9, 0x00)
     }
 }
 
 /// Initialize the GDT.
 pub fn init() {
     unsafe {
-        let tss = TSSEntry::new();
+        let tss = TssEntry::new().as_gdt_entry();
 
-        GDT[0] = GDTEntry::new(0, 0, 0, 0x00, 0x00, 0);
-        GDT[1] = GDTEntry::new(0, 0, 0, 0x9A, 0xA0, 0);
-        GDT[2] = GDTEntry::new(0, 0, 0, 0x92, 0xA0, 0);
-        GDT[3] = GDTEntry::new(0, 0, 0, 0xFA, 0xA0, 0);
-        GDT[4] = GDTEntry::new(0, 0, 0, 0xF2, 0xA0, 0);
+        GDT[0] = GdtEntry::new(0, 0, 0, 0x00, 0x00, 0);
+        GDT[1] = GdtEntry::new(0, 0, 0, 0x9A, 0xA0, 0);
+        GDT[2] = GdtEntry::new(0, 0, 0, 0x92, 0xA0, 0);
+        GDT[3] = GdtEntry::new(0, 0, 0, 0xFA, 0xA0, 0);
+        GDT[4] = GdtEntry::new(0, 0, 0, 0xF2, 0xA0, 0);
         GDT[5] = tss;
 
-        let gdt_descriptor = GDTDescriptor::new(
-            (mem::size_of::<[GDTEntry; GDT_ENTRIES]>() - 1) as u16,
+        let gdt_descriptor = GdtDescriptor::new(
+            (mem::size_of::<[GdtEntry; GDT_ENTRIES]>() - 1) as u16,
             (&GDT as *const _) as u64,
         );
 
@@ -172,10 +170,10 @@ pub fn init() {
     }
 }
 
-unsafe fn load_tss(gdt_entry: *const GDTEntry) {
+unsafe fn load_tss(gdt_entry: *const GdtEntry) {
     asm!("ltr [rdi]", in("rdi") gdt_entry)
 }
 
 extern "C" {
-    fn load_gdt(gdt_descriptor: *const GDTDescriptor);
+    fn load_gdt(gdt_descriptor: *const GdtDescriptor);
 }
