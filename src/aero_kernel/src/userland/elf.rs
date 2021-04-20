@@ -8,12 +8,12 @@ pub enum ELFError {
     InvalidArchitecture,
 }
 
-pub struct ELF<'a> {
+pub struct Elf<'a> {
     pub data: &'a [u8],
     pub header: &'a header::Header,
 }
 
-impl<'a> ELF<'a> {
+impl<'a> Elf<'a> {
     pub fn new(data: &'a [u8]) -> Result<Self, ELFError> {
         if data.len() < header::SIZEOF_EHDR {
             return Err(ELFError::NotEnoughData);

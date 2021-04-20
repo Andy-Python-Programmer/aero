@@ -1,4 +1,4 @@
-use crate::userland::elf::ELF;
+use crate::userland::elf::Elf;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 pub static PID_COUNTER: PIDCounter = PIDCounter::new();
@@ -30,7 +30,7 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new(binary: &ELF) -> Self {
+    pub fn new(binary: &Elf) -> Self {
         Self {
             pid: PID_COUNTER.next(),
             pc: binary.header.e_entry as usize,

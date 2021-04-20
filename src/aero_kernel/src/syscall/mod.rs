@@ -6,31 +6,17 @@
 //! | 1      | write                   |
 //! | 2      | open                    |
 //! | 3      | close                   |
+//! | 60     | exit                    |
 //!
 //! **Notes**: <https://wiki.osdev.org/System_Calls>
 
 pub mod fs;
+pub mod process;
 pub mod time;
-
-pub use fs::*;
-pub use time::*;
 
 use crate::arch::cpu::CPUState;
 use crate::arch::interrupts::InterruptStackFrame;
 use crate::{interrupt, println};
-
-pub enum SyscallError {
-    /// Operation not permitted.
-    NotPermitted,
-    /// No such file or directory.
-    NoEntry,
-    /// Invalid argument.
-    InvalidValue,
-    /// Syscall not implemented.
-    NoCall,
-}
-
-pub type SyscallResult<T> = Result<T, SyscallError>;
 
 interrupt!(syscall, unsafe {
     let cpu_state = CPUState::new();
@@ -40,6 +26,7 @@ interrupt!(syscall, unsafe {
         1 => unimplemented!(),
         2 => unimplemented!(),
         3 => unimplemented!(),
+        60 => process::exit(),
         _ => println!("Invalid syscall"),
     }
 });

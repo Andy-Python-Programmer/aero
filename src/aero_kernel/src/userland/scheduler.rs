@@ -1,11 +1,9 @@
 use alloc::collections::VecDeque;
-use lazy_static::lazy_static;
+use spin::{Mutex, MutexGuard, Once};
 
 use super::process::Process;
 
-lazy_static! {
-    pub static ref SCHEDULER: Scheduler = Scheduler::new();
-}
+static SCHEDULER: Once<Mutex<Scheduler>> = Once::new();
 
 #[derive(Debug)]
 pub struct Scheduler {
@@ -13,6 +11,7 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
+    /// Create a new scheduler with no active tasks by default.
     #[inline]
     fn new() -> Self {
         Self {
@@ -35,3 +34,19 @@ impl Scheduler {
 }
 
 unsafe impl Send for Scheduler {}
+unsafe impl Sync for Scheduler {}
+
+/// Get a mutable reference to the active scheduler.
+pub fn get_scheduler() -> MutexGuard<'static, Scheduler> {
+    SCHEDULER
+        .get()
+        .expect("Attempted to get the scheduler before it was initialized")
+        .lock()
+}
+
+/// Initialize the scheduler.
+pub fn init() {
+    let scheduler = Scheduler::new();
+
+    SCHEDULER.call_once(move || Mutex::new(scheduler));
+}
