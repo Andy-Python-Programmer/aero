@@ -160,11 +160,11 @@ fn map_segment(
     let mut page_table_flags = PageTableFlags::PRESENT;
 
     if !flags.is_execute() {
-        page_table_flags |= PageTableFlags::NO_EXECUTE
+        page_table_flags |= PageTableFlags::NO_EXECUTE;
     }
 
     if flags.is_write() {
-        page_table_flags |= PageTableFlags::WRITABLE
+        page_table_flags |= PageTableFlags::WRITABLE;
     }
 
     for frame in PhysFrame::range_inclusive(start_frame, end_frame) {

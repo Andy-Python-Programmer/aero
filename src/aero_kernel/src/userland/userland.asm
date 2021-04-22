@@ -24,16 +24,3 @@ jump_userland:
     iretq
 
 global jump_userland
-
-; Example task that uses syscalls to print "Hello World" to
-; the screen. This task is invoked after the kernel has initialized
-; and will be removed after we can load ELF files from the userland/
-; directory.
-mission_hello_world:
-    ; Exit the hello world app :D
-    mov rax, 60
-    mov rdi, 0
-    
-    syscall
-    
-global mission_hello_world

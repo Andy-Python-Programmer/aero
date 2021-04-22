@@ -1,5 +1,12 @@
-use crate::userland::elf::Elf;
 use core::sync::atomic::{AtomicUsize, Ordering};
+
+use x86_64::VirtAddr;
+
+use xmas_elf::{
+    header,
+    program::{self, Type},
+    ElfFile,
+};
 
 pub static PID_COUNTER: PIDCounter = PIDCounter::new();
 
@@ -25,24 +32,30 @@ pub enum ProcessState {
 #[derive(Debug)]
 pub struct Process {
     pub pid: usize,
-    pub pc: usize,
+    pub entry_point: VirtAddr,
     pub state: ProcessState,
 }
 
 impl Process {
-    pub fn new(binary: &Elf) -> Self {
-        Self {
-            pid: PID_COUNTER.next(),
-            pc: binary.header.e_entry as usize,
-            state: ProcessState::Running,
-        }
-    }
+    pub fn new(binary: &ElfFile) -> Self {
+        header::sanity_check(binary).expect("The binary failed the sanity check");
 
-    pub fn from_function(function: unsafe extern "C" fn()) -> Self {
-        Self {
-            pid: PID_COUNTER.next(),
-            pc: function as usize,
-            state: ProcessState::Running,
+        let entry_point = VirtAddr::new(binary.header.pt2.entry_point());
+
+        for header in binary.program_iter() {
+            program::sanity_check(header, binary).expect("Failed header sanity check");
+
+            let header_type = header.get_type().expect("Unable to get the header type");
+
+            if let Type::Load = header_type {}
         }
+
+        let this = Self {
+            pid: PID_COUNTER.next(),
+            entry_point,
+            state: ProcessState::Running,
+        };
+
+        this
     }
 }

@@ -25,11 +25,11 @@
 
 extern crate alloc;
 
-use arch::interrupts::{PIC1_DATA, PIC2_DATA};
-use arch::memory;
+use aero_boot::BootInfo;
 
-use userland::{process::Process, scheduler};
-use utils::io;
+use linked_list_allocator::LockedHeap;
+use x86_64::{PhysAddr, VirtAddr};
+use xmas_elf::ElfFile;
 
 mod acpi;
 mod apic;
@@ -44,12 +44,15 @@ mod unwind;
 mod userland;
 mod utils;
 
-use aero_boot::BootInfo;
-use linked_list_allocator::LockedHeap;
-use x86_64::{PhysAddr, VirtAddr};
+use arch::interrupts::{PIC1_DATA, PIC2_DATA};
+use arch::memory;
+
+use userland::{process::Process, scheduler};
+use utils::io;
 
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
+static MISSION_HELLO_WORLD: &[u8] = include_bytes!("mission.o");
 
 const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -60,8 +63,6 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
-pub static mut LOL: VirtAddr = VirtAddr::zero();
-
 #[export_name = "_start"]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // Initialize the COM ports before doing anything else.
@@ -71,9 +72,6 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     drivers::uart_16550::init();
 
     let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    unsafe {
-        LOL = physical_memory_offset;
-    }
     let rsdp_address = PhysAddr::new(boot_info.rsdp_address);
 
     let memory_regions = &boot_info.memory_regions;
@@ -84,57 +82,63 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     unsafe {
         arch::interrupts::disable_interrupts();
+    }
 
-        arch::gdt::init();
-        log::info!("Loaded GDT");
+    arch::gdt::init();
+    log::info!("Loaded GDT");
 
-        arch::interrupts::init();
-        log::info!("Loaded IDT");
+    arch::interrupts::init();
+    log::info!("Loaded IDT");
 
-        time::init();
-        log::info!("Loaded PIT");
+    time::init();
+    log::info!("Loaded PIT");
 
-        drivers::mouse::init();
-        log::info!("Loaded PS/2 driver");
+    drivers::mouse::init();
+    log::info!("Loaded PS/2 driver");
 
+    unsafe {
         io::outb(PIC1_DATA, 0b11111000);
         io::outb(PIC2_DATA, 0b11101111);
 
         arch::interrupts::enable_interrupts();
+    }
 
-        let (mut offset_table, mut frame_allocator) =
-            memory::paging::init(physical_memory_offset, memory_regions);
-        log::info!("Loaded paging");
+    let (mut offset_table, mut frame_allocator) =
+        memory::paging::init(physical_memory_offset, memory_regions);
+    log::info!("Loaded paging");
 
-        arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
-            .expect("Failed to initialize the heap.");
-        log::info!("Loaded heap");
+    arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
+        .expect("Failed to initialize the heap.");
+    log::info!("Loaded heap");
 
-        apic::init(physical_memory_offset);
-        log::info!("Loaded local apic");
+    apic::init(physical_memory_offset);
+    log::info!("Loaded local apic");
 
-        acpi::init(
-            &mut offset_table,
-            &mut frame_allocator,
-            rsdp_address,
-            physical_memory_offset,
-        );
-        log::info!("Loaded ACPI");
+    acpi::init(
+        &mut offset_table,
+        &mut frame_allocator,
+        rsdp_address,
+        physical_memory_offset,
+    );
+    log::info!("Loaded ACPI");
 
-        drivers::pci::init(&mut offset_table, &mut frame_allocator);
-        log::info!("Loaded PCI driver");
+    drivers::pci::init(&mut offset_table, &mut frame_allocator);
+    log::info!("Loaded PCI driver");
 
-        userland::init();
-        log::info!("Loaded userland");
+    userland::init();
+    log::info!("Loaded userland");
 
-        log::info!("Initialized kernel");
+    log::info!("Initialized kernel");
 
-        println!("{}", ASCII_INTRO);
+    println!("{}", ASCII_INTRO);
 
-        print!("$ ");
+    print!("$ ");
 
-        scheduler::get_scheduler().push(Process::from_function(userland::mission_hello_world));
+    let mission_hello_world_elf = ElfFile::new(MISSION_HELLO_WORLD).expect("Invalid ELF file");
 
+    scheduler::get_scheduler().push(Process::new(&mission_hello_world_elf));
+
+    unsafe {
         loop {
             arch::interrupts::halt();
         }

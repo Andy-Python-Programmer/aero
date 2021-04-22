@@ -1,12 +1,10 @@
 use crate::syscall;
 
-pub mod elf;
 pub mod process;
 pub mod scheduler;
 
 extern "C" {
-    pub fn mission_hello_world();
-    // pub fn jump_userland() -> !;
+    pub fn jump_userland(address: u64) -> !;
 }
 
 /// Initialize userland.
