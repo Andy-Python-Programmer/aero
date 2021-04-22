@@ -28,6 +28,7 @@ extern crate alloc;
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 use arch::memory;
 
+use userland::{process::Process, scheduler};
 use utils::io;
 
 mod acpi;
@@ -59,6 +60,8 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
+pub static mut LOL: VirtAddr = VirtAddr::zero();
+
 #[export_name = "_start"]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // Initialize the COM ports before doing anything else.
@@ -68,6 +71,9 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     drivers::uart_16550::init();
 
     let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    unsafe {
+        LOL = physical_memory_offset;
+    }
     let rsdp_address = PhysAddr::new(boot_info.rsdp_address);
 
     let memory_regions = &boot_info.memory_regions;
@@ -118,13 +124,16 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         drivers::pci::init(&mut offset_table, &mut frame_allocator);
         log::info!("Loaded PCI driver");
 
+        userland::init();
+        log::info!("Loaded userland");
+
         log::info!("Initialized kernel");
 
         println!("{}", ASCII_INTRO);
 
-        userland::init();
-
         print!("$ ");
+
+        scheduler::get_scheduler().push(Process::from_function(userland::mission_hello_world));
 
         loop {
             arch::interrupts::halt();

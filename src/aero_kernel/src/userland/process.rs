@@ -37,4 +37,12 @@ impl Process {
             state: ProcessState::Running,
         }
     }
+
+    pub fn from_function(function: unsafe extern "C" fn()) -> Self {
+        Self {
+            pid: PID_COUNTER.next(),
+            pc: function as usize,
+            state: ProcessState::Running,
+        }
+    }
 }
