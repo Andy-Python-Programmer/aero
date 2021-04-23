@@ -8,17 +8,23 @@ use xmas_elf::{
     ElfFile,
 };
 
-pub static PID_COUNTER: PIDCounter = PIDCounter::new();
+/// The process id counter. Increment after a new process is created.
+static PID_COUNTER: PIDCounter = PIDCounter::new();
 
 #[derive(Debug)]
-pub struct PIDCounter(AtomicUsize);
+#[repr(transparent)]
+struct PIDCounter(AtomicUsize);
 
 impl PIDCounter {
-    pub const fn new() -> Self {
+    /// Create a new process id counter.
+    #[inline(always)]
+    const fn new() -> Self {
         Self(AtomicUsize::new(1))
     }
 
-    pub fn next(&self) -> usize {
+    /// Increment the process id by 1.
+    #[inline(always)]
+    fn next(&self) -> usize {
         self.0.fetch_add(1, Ordering::AcqRel)
     }
 }
@@ -37,7 +43,8 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new(binary: &ElfFile) -> Self {
+    /// Create a new process from an [ElfFile].
+    pub fn from_elf(binary: &ElfFile) -> Self {
         header::sanity_check(binary).expect("The binary failed the sanity check");
 
         let entry_point = VirtAddr::new(binary.header.pt2.entry_point());
@@ -53,6 +60,22 @@ impl Process {
         let this = Self {
             pid: PID_COUNTER.next(),
             entry_point,
+            state: ProcessState::Running,
+        };
+
+        this
+    }
+
+    /// Create a new process from a function.
+    ///
+    /// ## Notes
+    ///
+    /// Make sure the function has the `#[naked]` attribute. It does **not**
+    /// matter if the function's name is mangled.
+    pub fn from_function(function: unsafe extern "C" fn()) -> Self {
+        let this = Self {
+            pid: PID_COUNTER.next(),
+            entry_point: VirtAddr::new((&function as *const _) as u64),
             state: ProcessState::Running,
         };
 

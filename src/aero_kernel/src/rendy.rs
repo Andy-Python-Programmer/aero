@@ -46,6 +46,11 @@ pub fn _print(args: fmt::Arguments) {
     DEBUG_RENDY.get().unwrap().lock().write_fmt(args).unwrap();
 }
 
+#[no_mangle]
+extern "C" fn print(_: *const u8) {
+    DEBUG_RENDY.get().unwrap().lock().write_str("Lol").unwrap();
+}
+
 pub fn set_color_code(color_code: ColorCode) {
     DEBUG_RENDY.get().unwrap().lock().set_color_code(color_code);
 }

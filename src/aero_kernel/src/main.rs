@@ -29,7 +29,6 @@ use aero_boot::BootInfo;
 
 use linked_list_allocator::LockedHeap;
 use x86_64::{PhysAddr, VirtAddr};
-use xmas_elf::ElfFile;
 
 mod acpi;
 mod apic;
@@ -52,7 +51,8 @@ use utils::io;
 
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
-static MISSION_HELLO_WORLD: &[u8] = include_bytes!("mission.o");
+
+static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
 
 const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -63,6 +63,11 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
+#[naked]
+unsafe extern "C" fn mission_hello_world() {
+    asm!("mov rax, 60; mov rdi, 0; syscall", options(noreturn));
+}
+
 #[export_name = "_start"]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // Initialize the COM ports before doing anything else.
@@ -71,18 +76,22 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // if serial output is avaliable.
     drivers::uart_16550::init();
 
+    unsafe {
+        arch::interrupts::disable_interrupts();
+    }
+
     let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let rsdp_address = PhysAddr::new(boot_info.rsdp_address);
 
     let memory_regions = &boot_info.memory_regions;
     let framebuffer = &mut boot_info.framebuffer;
 
+    unsafe {
+        PHYSICAL_MEMORY_OFFSET = physical_memory_offset;
+    }
+
     rendy::init(framebuffer);
     logger::init();
-
-    unsafe {
-        arch::interrupts::disable_interrupts();
-    }
 
     arch::gdt::init();
     log::info!("Loaded GDT");
@@ -134,9 +143,9 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     print!("$ ");
 
-    let mission_hello_world_elf = ElfFile::new(MISSION_HELLO_WORLD).expect("Invalid ELF file");
+    let hello_process = Process::from_function(mission_hello_world);
 
-    scheduler::get_scheduler().push(Process::new(&mission_hello_world_elf));
+    scheduler::get_scheduler().push(hello_process);
 
     unsafe {
         loop {

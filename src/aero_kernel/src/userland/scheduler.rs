@@ -1,6 +1,7 @@
 use alloc::collections::VecDeque;
 use spin::{Mutex, MutexGuard, Once};
 
+use super::jump_userland;
 use super::process::Process;
 
 static SCHEDULER: Once<Mutex<Scheduler>> = Once::new();
@@ -22,6 +23,12 @@ impl Scheduler {
     #[inline]
     pub fn push(&mut self, process: Process) {
         self.processes.push_back(process);
+
+        // let active = self.processes.front().unwrap();
+
+        // unsafe {
+        //     jump_userland((crate::PHYSICAL_MEMORY_OFFSET + active.entry_point.as_u64()).as_u64());
+        // }
     }
 
     #[inline]

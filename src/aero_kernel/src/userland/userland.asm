@@ -4,23 +4,24 @@
 [bits 64]
 
 jump_userland:
-    mov ax, 0x1b
-    mov dx, 0x23
-    mov rsp, 0x00
+    mov ax, (4 * 8) | 3
 
     mov ds, ax
     mov es, ax 
     mov fs, ax 
     mov gs, ax
  
-    mov rsi, rsp
+    mov rax, rsp
 
+    ; Set up the stack frame `iret` expects.
+    push (4 * 8) | 3 ; Data selector
     push rax
-    push rsi
-    push 0x200
-    push rdx
+    
+    pushf ; eflags
+
+    push (3 * 8) | 3 ; Code selector (ring 3 code with bottom 2 bits set for ring 3)
     push rdi
 
-    iretq
+    iret
 
 global jump_userland
