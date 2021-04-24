@@ -8,6 +8,29 @@ const GDT_ENTRIES: usize = 6;
 
 static mut GDT: [GdtEntry; GDT_ENTRIES] = [GdtEntry::NULL; GDT_ENTRIES];
 
+bitflags::bitflags! {
+    /// Specifies which element to load into a segment from
+    /// descriptor tables (i.e., is a index to LDT or GDT table
+    /// with some additional flags).
+    pub struct SegmentSelector: u16 {
+        const RPL_0 = 0b00;
+        const RPL_1 = 0b01;
+        const RPL_2 = 0b10;
+        const RPL_3 = 0b11;
+        const TI_GDT = 0 << 2;
+        const TI_LDT = 1 << 2;
+    }
+}
+
+impl SegmentSelector {
+    #[inline(always)]
+    const fn new(index: u16, rpl: Self) -> Self {
+        Self {
+            bits: index << 3 | rpl.bits,
+        }
+    }
+}
+
 #[repr(C, packed)]
 struct GdtDescriptor {
     /// The size of the table subtracted by 1.
@@ -163,14 +186,63 @@ pub fn init() {
         );
 
         load_gdt(&gdt_descriptor as *const _);
+
+        // Reload the GDT segments.
+        load_cs(SegmentSelector::new(1, SegmentSelector::RPL_0));
+        load_ds(SegmentSelector::new(2, SegmentSelector::RPL_0));
+        load_es(SegmentSelector::new(2, SegmentSelector::RPL_0));
+        load_fs(SegmentSelector::new(2, SegmentSelector::RPL_0));
+        load_gs(SegmentSelector::new(3, SegmentSelector::RPL_0));
+        load_ss(SegmentSelector::new(2, SegmentSelector::RPL_0));
+
         load_tss(&tss as *const _);
     }
 }
 
-unsafe fn load_tss(gdt_entry: *const GdtEntry) {
-    asm!("ltr [rdi]", in("rdi") gdt_entry)
+#[inline(always)]
+unsafe fn load_cs(selector: SegmentSelector) {
+    asm!(
+        "push {selector}",
+        "lea {tmp}, [1f + rip]",
+        "push {tmp}",
+        "retfq",
+        "1:",
+        selector = in(reg) u64::from(selector.bits()),
+        tmp = lateout(reg) _,
+    );
 }
 
-extern "C" {
-    fn load_gdt(gdt_descriptor: *const GdtDescriptor);
+#[inline(always)]
+unsafe fn load_ds(selector: SegmentSelector) {
+    asm!("mov ds, {0:x}", in(reg) selector.bits(), options(nomem, nostack))
+}
+
+#[inline(always)]
+unsafe fn load_es(selector: SegmentSelector) {
+    asm!("mov es, {0:x}", in(reg) selector.bits(), options(nomem, nostack))
+}
+
+#[inline(always)]
+unsafe fn load_fs(selector: SegmentSelector) {
+    asm!("mov fs, {0:x}", in(reg) selector.bits(), options(nomem, nostack))
+}
+
+#[inline(always)]
+unsafe fn load_gs(selector: SegmentSelector) {
+    asm!("mov gs, {0:x}", in(reg) selector.bits(), options(nomem, nostack))
+}
+
+#[inline(always)]
+unsafe fn load_ss(selector: SegmentSelector) {
+    asm!("mov ss, {0:x}", in(reg) selector.bits(), options(nomem, nostack))
+}
+
+#[inline(always)]
+unsafe fn load_gdt(gdt_descriptor: *const GdtDescriptor) {
+    asm!("lgdt [rdi]", in("rdi") gdt_descriptor)
+}
+
+#[inline(always)]
+unsafe fn load_tss(gdt_entry: *const GdtEntry) {
+    asm!("ltr [rdi]", in("rdi") gdt_entry)
 }
