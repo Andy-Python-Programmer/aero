@@ -12,6 +12,8 @@
 
 use core::ops::{Index, IndexMut};
 
+use raw_cpuid::CpuId;
+
 pub mod fs;
 pub mod process;
 pub mod time;
@@ -19,6 +21,8 @@ pub mod time;
 pub use fs::*;
 pub use process::*;
 pub use time::*;
+
+use crate::utils::io;
 
 pub const SYSCALL_TABLE_LENGTH: usize = 313;
 
@@ -74,7 +78,27 @@ unsafe impl Send for SyscallTable {}
 unsafe impl Sync for SyscallTable {}
 
 pub fn init() {
+    let function_info = CpuId::new()
+        .get_extended_function_info()
+        .expect("Failed to retrieve CPU function info");
+
     unsafe {
+        // Initialize the syscall table.
+
         SYSCALL_HANDLER_TABLE[SYS_EXIT].set_function(process::exit as *const _);
+
+        // Enable support for `syscall` and `sysret` instructions if the current
+        // CPU supports them.
+        if function_info.has_syscall_sysret() {
+            let efer = io::rdmsr(io::IA32_EFER);
+
+            io::wrmsr(io::IA32_EFER, efer | 1);
+
+            io::wrmsr(io::IA32_STAR, 0x0013_0008_0000_0000);
+            io::wrmsr(io::IA32_LSTAR, syscall_handler as u64);
+
+            // Clear the trap flag and enable interrupts.
+            io::wrmsr(io::IA32_FMASK, 0x200);
+        }
     }
 }

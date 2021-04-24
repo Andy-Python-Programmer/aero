@@ -1,5 +1,16 @@
 //! Wrapper functions for the hardware IO using respective assembly instructions.
 
+pub const IA32_EFER: u32 = 0xc0000080;
+
+/// System Call Target Address (R/W).
+pub const IA32_STAR: u32 = 0xc0000081;
+
+/// IA-32e Mode System Call Target Address (R/W).
+pub const IA32_LSTAR: u32 = 0xc0000082;
+
+/// System Call Flag Mask (R/W).
+pub const IA32_FMASK: u32 = 0xc0000084;
+
 /// Wrapper function to the `outb` assembly instruction used to do the
 /// low level port output.
 #[inline]
@@ -60,7 +71,17 @@ pub unsafe fn wait() {
     outb(0x80, 0)
 }
 
-/// Read 64 bits msr register.
+/// Wrapper function to the `wrmsr` assembly instruction used
+/// to write 64 bits to msr register.
+pub unsafe fn wrmsr(msr: u32, value: u64) {
+    let low = value as u32;
+    let high = (value >> 32) as u32;
+
+    asm!("wrmsr", in("ecx") msr, in("eax") low, in("edx") high, options(nomem));
+}
+
+/// Wrapper function to the `rdmsr` assembly instruction used
+// to read 64 bits msr register.
 #[inline]
 pub unsafe fn rdmsr(msr: u32) -> u64 {
     let (high, low): (u32, u32);
