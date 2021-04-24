@@ -508,7 +508,7 @@ pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllo
                         continue;
                     }
 
-                    log::info!(
+                    log::debug!(
                         "PCI device (device={:?}, vendor={:?})",
                         device.get_device(),
                         device.get_vendor()

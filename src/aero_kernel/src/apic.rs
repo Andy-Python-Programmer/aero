@@ -82,6 +82,8 @@ pub fn init(physical_memory_offset: VirtAddr) {
         let address_phys = io::rdmsr(IA32_APIC_BASE) as usize & 0xFFFF_0000;
         let address_virt = physical_memory_offset + address_phys;
 
+        log::debug!("Found apic at: {:#x}", address_phys);
+
         let local_apic = LocalApic::new(address_virt);
         LOCAL_APIC.call_once(move || Mutex::new(local_apic));
     }
