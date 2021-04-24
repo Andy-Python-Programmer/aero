@@ -5,7 +5,7 @@ use aero_gfx::FrameBuffer;
 use aero_gfx::debug::color::ColorCode;
 use aero_gfx::debug::rendy::DebugRendy;
 
-use spin::{mutex::Mutex, Once};
+use spin::{mutex::Mutex, MutexGuard, Once};
 
 static DEBUG_RENDY: Once<Mutex<DebugRendy>> = Once::new();
 
@@ -41,23 +41,29 @@ macro_rules! dbg {
     };
 }
 
-#[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
-    DEBUG_RENDY.get().unwrap().lock().write_fmt(args).unwrap();
+/// Get a mutable reference to the debug renderer.
+fn get_debug_rendy() -> MutexGuard<'static, DebugRendy<'static>> {
+    DEBUG_RENDY
+        .get()
+        .expect("Attempted to get the debug renderer before it was initialized")
+        .lock()
 }
 
-#[no_mangle]
-extern "C" fn print(_: *const u8) {
-    DEBUG_RENDY.get().unwrap().lock().write_str("Lol").unwrap();
+/// Return [true] if the debug renderer is initialized.
+#[inline]
+pub fn is_initialized() -> bool {
+    DEBUG_RENDY.get().is_some()
+}
+
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    get_debug_rendy()
+        .write_fmt(args)
+        .expect("Failed to write to the framebuffer");
 }
 
 pub fn set_color_code(color_code: ColorCode) {
-    DEBUG_RENDY.get().unwrap().lock().set_color_code(color_code);
-}
-
-#[inline(always)]
-pub fn is_initialized() -> bool {
-    DEBUG_RENDY.get().is_some()
+    get_debug_rendy().set_color_code(color_code);
 }
 
 pub fn init(framebuffer: &'static mut FrameBuffer) {
