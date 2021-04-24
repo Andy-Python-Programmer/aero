@@ -6,7 +6,7 @@ use core::mem;
 
 const GDT_ENTRIES: usize = 6;
 
-static mut GDT: [GdtEntry; GDT_ENTRIES] = [GdtEntry::null(); GDT_ENTRIES];
+static mut GDT: [GdtEntry; GDT_ENTRIES] = [GdtEntry::NULL; GDT_ENTRIES];
 
 #[repr(C, packed)]
 struct GdtDescriptor {
@@ -42,6 +42,8 @@ pub struct GdtEntry {
 }
 
 impl GdtEntry {
+    const NULL: Self = Self::new(0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+
     /// Create a new GDT entry.
     #[inline]
     pub const fn new(
@@ -60,11 +62,6 @@ impl GdtEntry {
             limit_hi_flags,
             base_hi,
         }
-    }
-
-    #[inline]
-    const fn null() -> Self {
-        Self::new(0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
     }
 }
 

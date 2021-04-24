@@ -36,10 +36,7 @@ static mut SYSCALL_HANDLER_TABLE: SyscallTable = SyscallTable::new();
 struct SyscallEntry(*const usize);
 
 impl SyscallEntry {
-    #[inline(always)]
-    const fn null() -> Self {
-        Self(sys_unimplemented as *const _)
-    }
+    const NULL: Self = Self(sys_unimplemented as *const _);
 
     #[inline(always)]
     pub fn set_function(&mut self, handler: *const usize) {
@@ -53,9 +50,7 @@ struct SyscallTable([SyscallEntry; SYSCALL_TABLE_LENGTH]);
 impl SyscallTable {
     #[inline]
     const fn new() -> Self {
-        const NULL_SYSCALL_ENTRY: SyscallEntry = SyscallEntry::null();
-
-        Self([NULL_SYSCALL_ENTRY; SYSCALL_TABLE_LENGTH])
+        Self([SyscallEntry::NULL; SYSCALL_TABLE_LENGTH])
     }
 }
 

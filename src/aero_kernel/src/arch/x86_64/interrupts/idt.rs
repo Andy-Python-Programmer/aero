@@ -19,7 +19,7 @@ pub(crate) const ICW4_8086: u8 = 0x01;
 
 pub(crate) type IDTInterruptHandlerFn = unsafe extern "x86-interrupt" fn(InterruptStackFrame);
 
-static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::null(); IDT_ENTRIES];
+static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
 
 use bitflags::bitflags;
 use core::mem::size_of;
@@ -77,18 +77,16 @@ struct IdtEntry {
 }
 
 impl IdtEntry {
-    /// Create a new IDT entry with all values defaulted to 0, ie `null`.
-    const fn null() -> Self {
-        Self {
-            offset_low: 0,
-            selector: 0,
-            ist: 0,
-            type_attr: 0,
-            offset_middle: 0,
-            offset_hi: 0,
-            ignore: 0,
-        }
-    }
+    /// IDT entry with all values defaulted to 0, ie `null`.
+    const NULL: Self = Self {
+        offset_low: 0x00,
+        selector: 0x00,
+        ist: 0x00,
+        type_attr: 0x00,
+        offset_middle: 0x00,
+        offset_hi: 0x00,
+        ignore: 0x00,
+    };
 
     /// Set the IDT entry flags.
     fn set_flags(&mut self, flags: IDTFlags) {
