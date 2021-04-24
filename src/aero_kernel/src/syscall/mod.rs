@@ -22,20 +22,23 @@ pub use time::*;
 
 pub const SYSCALL_TABLE_LENGTH: usize = 313;
 
+pub const SYS_EXIT: usize = 60;
+
 extern "C" {
-    pub fn syscall_handler() -> !;
+    pub fn syscall_handler();
+    pub fn sys_unimplemented();
 }
 
 #[no_mangle]
 static mut SYSCALL_HANDLER_TABLE: SyscallTable = SyscallTable::new();
 
-#[repr(C)]
+#[repr(transparent)]
 struct SyscallEntry(*const usize);
 
 impl SyscallEntry {
     #[inline(always)]
     const fn null() -> Self {
-        Self(0x00 as *const _) // TODO: Replace NULL (0x00) with sys_unimplemented
+        Self(sys_unimplemented as *const _)
     }
 
     #[inline(always)]
@@ -72,8 +75,11 @@ impl IndexMut<usize> for SyscallTable {
     }
 }
 
+unsafe impl Send for SyscallTable {}
+unsafe impl Sync for SyscallTable {}
+
 pub fn init() {
     unsafe {
-        SYSCALL_HANDLER_TABLE[60].set_function(process::exit as *const _);
+        SYSCALL_HANDLER_TABLE[SYS_EXIT].set_function(process::exit as *const _);
     }
 }

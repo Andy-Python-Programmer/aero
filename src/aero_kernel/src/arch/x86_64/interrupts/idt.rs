@@ -150,8 +150,8 @@ pub fn init() {
 
         IDT[49].set_function(super::irq::lapic_error);
 
-        IDT[0x80].set_offset(8, crate::syscall::syscall_handler as usize);
         IDT[0x80].set_flags(IDTFlags::PRESENT | IDTFlags::RING_3 | IDTFlags::INTERRUPT);
+        IDT[0x80].set_offset(8, crate::syscall::syscall_handler as usize);
 
         let idt_descriptor = IdtDescriptor::new(
             ((IDT.len() * size_of::<IdtEntry>()) - 1) as u16,

@@ -67,4 +67,8 @@ syscall_handler:
 
     sysretq
 
+sys_unimplemented:
+    ret
+
 global syscall_handler
+global sys_unimplemented
