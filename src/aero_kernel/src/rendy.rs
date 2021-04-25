@@ -66,6 +66,10 @@ pub fn set_color_code(color_code: ColorCode) {
     get_debug_rendy().set_color_code(color_code);
 }
 
+pub fn clear_screen() {
+    get_debug_rendy().clear_screen();
+}
+
 pub fn init(framebuffer: &'static mut FrameBuffer) {
     let info = framebuffer.info();
     let buffer = framebuffer.buffer_mut();

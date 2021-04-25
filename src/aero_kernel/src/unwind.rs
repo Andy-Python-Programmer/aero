@@ -10,6 +10,8 @@ pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     let panic_message = info.message().unwrap_or(deafult_panic);
 
     if rendy::is_initialized() {
+        rendy::clear_screen();
+
         log::error!("Kernel Panicked");
         log::error!("{}", info.location().unwrap());
         log::error!("{}", panic_message);

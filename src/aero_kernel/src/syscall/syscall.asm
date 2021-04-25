@@ -5,6 +5,7 @@
 
 ; Defined in syscall.rs
 extern SYSCALL_HANDLER_TABLE
+extern log_debug
 
 ; Calls the appropriate syscall function indexed by the syscall id in [SYSCALL_HANDLER_TABLE].
 syscall_handler:
