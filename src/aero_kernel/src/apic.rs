@@ -7,9 +7,6 @@ use x86_64::VirtAddr;
 
 use crate::utils::io;
 
-/// APIC Location and Status (R/W).
-const IA32_APIC_BASE: u32 = 0x1b;
-
 static LOCAL_APIC: Once<Mutex<LocalApic>> = Once::new();
 static BSP_APIC_ID: AtomicU64 = AtomicU64::new(0xFFFF_FFFF_FFFF_FFFF);
 
@@ -79,7 +76,7 @@ pub fn get_local_apic() -> MutexGuard<'static, LocalApic> {
 /// Initialize the local apic.
 pub fn init(physical_memory_offset: VirtAddr) {
     unsafe {
-        let address_phys = io::rdmsr(IA32_APIC_BASE) as usize & 0xFFFF_0000;
+        let address_phys = io::rdmsr(io::IA32_APIC_BASE) as usize & 0xFFFF_0000;
         let address_virt = physical_memory_offset + address_phys;
 
         log::debug!("Found apic at: {:#x}", address_phys);

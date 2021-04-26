@@ -11,6 +11,9 @@ pub const IA32_LSTAR: u32 = 0xc0000082;
 /// System Call Flag Mask (R/W).
 pub const IA32_FMASK: u32 = 0xc0000084;
 
+/// APIC Location and Status (R/W).
+pub const IA32_APIC_BASE: u32 = 0x1b;
+
 /// Wrapper function to the `outb` assembly instruction used to do the
 /// low level port output.
 #[inline]
