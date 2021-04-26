@@ -16,6 +16,8 @@ interrupt!(lapic_error, unsafe {
     log::error!("ESR={:#0x}", apic::get_local_apic().get_esr());
 
     apic::get_local_apic().eoi();
+
+    loop {}
 });
 
 interrupt!(pit, unsafe {

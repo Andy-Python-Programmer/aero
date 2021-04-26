@@ -194,7 +194,15 @@ pub unsafe fn end_pic2() {
     io::outb(PIC1_COMMAND, PIC_EOI);
 }
 
-unsafe fn load_pic() {
+pub unsafe fn disable_pic() {
+    io::outb(PIC1_DATA, 0xFF);
+    io::wait();
+
+    io::outb(PIC2_DATA, 0xFF);
+    io::wait();
+}
+
+pub unsafe fn load_pic() {
     let (a1, a2);
 
     a1 = io::inb(PIC1_DATA);

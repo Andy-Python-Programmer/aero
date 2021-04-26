@@ -5,6 +5,7 @@ use core::sync::atomic::{AtomicU64, Ordering};
 use spin::{Mutex, MutexGuard, Once};
 use x86_64::VirtAddr;
 
+use crate::arch::interrupts;
 use crate::utils::io;
 
 static LOCAL_APIC: Once<Mutex<LocalApic>> = Once::new();
@@ -77,9 +78,18 @@ pub fn get_local_apic() -> MutexGuard<'static, LocalApic> {
 pub fn init(physical_memory_offset: VirtAddr) {
     unsafe {
         let address_phys = io::rdmsr(io::IA32_APIC_BASE) as usize & 0xFFFF_0000;
-        let address_virt = physical_memory_offset + address_phys;
+
+        if address_phys == 0x00 {
+            return;
+        }
 
         log::debug!("Found apic at: {:#x}", address_phys);
+
+        // Now disable PIC as local APIC is avaliable.
+        interrupts::disable_pic();
+        log::info!("Disabled PIC");
+
+        let address_virt = physical_memory_offset + address_phys;
 
         let local_apic = LocalApic::new(address_virt);
         LOCAL_APIC.call_once(move || Mutex::new(local_apic));
