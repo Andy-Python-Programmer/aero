@@ -116,6 +116,9 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         memory::paging::init(physical_memory_offset, memory_regions);
     log::info!("Loaded paging");
 
+    arch::gdt::init_local(boot_info.stack_top);
+    log::info!("Loaded local GDT");
+
     arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
         .expect("Failed to initialize the heap.");
     log::info!("Loaded heap");

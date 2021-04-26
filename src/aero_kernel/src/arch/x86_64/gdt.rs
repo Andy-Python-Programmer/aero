@@ -4,9 +4,43 @@
 
 use core::mem;
 
-const GDT_ENTRIES: usize = 7;
+use x86_64::VirtAddr;
 
-static mut GDT: [GdtEntry; GDT_ENTRIES] = [
+const GDT_ENTRY_COUNT: usize = 4;
+const GDT_LOCAL_ENTRY_COUNT: usize = 7;
+
+static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
+    // GDT NULL descriptor.
+    GdtEntry::NULL,
+    // GDT kernel code descriptor.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_0
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::EXECUTABLE
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
+    // GDT kernel data descriptor.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_0
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
+    // GDT kernel TLS (Thread Local Storage) descriptor.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_0
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
+];
+
+#[thread_local]
+static mut LOCAL_GDT: [GdtEntry; GDT_LOCAL_ENTRY_COUNT] = [
     // GDT null descriptor.
     GdtEntry::NULL,
     // GDT kernel code descriptor.
@@ -53,6 +87,9 @@ static mut GDT: [GdtEntry; GDT_ENTRIES] = [
     GdtEntry::NULL,
 ];
 
+#[thread_local]
+static mut TSS: TssEntry = TssEntry::new();
+
 bitflags::bitflags! {
     /// Specifies which element to load into a segment from
     /// descriptor tables (i.e., is a index to LDT or GDT table
@@ -67,7 +104,7 @@ bitflags::bitflags! {
     }
 }
 
-struct GdtAccessFlags {}
+struct GdtAccessFlags;
 
 impl GdtAccessFlags {
     const NULL: u8 = 0;
@@ -178,24 +215,41 @@ impl TssEntry {
 /// Initialize the GDT.
 pub fn init() {
     unsafe {
-        TssEntry::new();
-
         let gdt_descriptor = GdtDescriptor::new(
-            (mem::size_of::<[GdtEntry; GDT_ENTRIES]>() - 1) as u16,
+            (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,
             (&GDT as *const _) as u64,
         );
 
         load_gdt(&gdt_descriptor as *const _);
 
-        // Reload the GDT segments.
+        // Load the GDT segments.
         load_cs(SegmentSelector::new(1, SegmentSelector::RPL_0));
         load_ds(SegmentSelector::new(2, SegmentSelector::RPL_0));
         load_es(SegmentSelector::new(2, SegmentSelector::RPL_0));
         load_fs(SegmentSelector::new(2, SegmentSelector::RPL_0));
         load_gs(SegmentSelector::new(3, SegmentSelector::RPL_0));
         load_ss(SegmentSelector::new(2, SegmentSelector::RPL_0));
-        load_tss(SegmentSelector::new(8, SegmentSelector::RPL_0));
     }
+}
+
+/// Initialize the local GDT.
+pub fn init_local(stack_top: VirtAddr) {
+    // unsafe {
+    // let gdt_descriptor = GdtDescriptor::new(
+    //     (mem::size_of::<[GdtEntry; GDT_LOCAL_ENTRY_COUNT]>() - 1) as u16,
+    //     (&LOCAL_GDT as *const _) as u64,
+    // );
+
+    // load_gdt(&gdt_descriptor as *const _);
+
+    // // Reload the GDT segments.
+    // load_cs(SegmentSelector::new(1, SegmentSelector::RPL_0));
+    // load_ds(SegmentSelector::new(2, SegmentSelector::RPL_0));
+    // load_es(SegmentSelector::new(2, SegmentSelector::RPL_0));
+    // load_ss(SegmentSelector::new(2, SegmentSelector::RPL_0));
+
+    // load_tss(SegmentSelector::new(8, SegmentSelector::RPL_0));
+    // }
 }
 
 #[inline(always)]

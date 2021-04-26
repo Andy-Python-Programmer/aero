@@ -463,6 +463,7 @@ where
             physical_memory_offset: mappings.physical_memory_offset.as_u64(),
             framebuffer,
             memory_regions: memory_regions.into(),
+            stack_top: mappings.stack_end.start_address(),
         }),
         reserved_frames,
     )

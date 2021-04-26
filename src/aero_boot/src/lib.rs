@@ -5,6 +5,7 @@
 use core::{ops, slice};
 
 use aero_gfx::FrameBuffer;
+use x86_64::VirtAddr;
 
 /// Represents the different types of memory.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -28,6 +29,7 @@ pub struct BootInfo {
     pub physical_memory_offset: u64,
     pub framebuffer: FrameBuffer,
     pub memory_regions: MemoryRegions,
+    pub stack_top: VirtAddr,
 }
 
 #[derive(Debug)]
