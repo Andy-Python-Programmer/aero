@@ -23,6 +23,86 @@ pub mod mcfg;
 pub mod rsdp;
 pub mod sdt;
 
+enum AcpiHeader {
+    Rsdt(&'static Sdt),
+    Xsdt(&'static Sdt),
+}
+
+impl AcpiHeader {
+    fn as_sdt(&self) -> &'static Sdt {
+        match self {
+            AcpiHeader::Rsdt(rsdt) => rsdt,
+            AcpiHeader::Xsdt(xsdt) => xsdt,
+        }
+    }
+
+    /// The data address of this header's data.
+    fn data_address(&self) -> usize {
+        self.as_sdt().data_address()
+    }
+}
+
+pub struct AcpiTable {
+    header: AcpiHeader,
+    entry_count: usize,
+}
+
+impl AcpiTable {
+    /// Create a new ACPI table from the RSDP address.
+    fn new(
+        offset_table: &mut OffsetPageTable,
+        frame_allocator: &mut GlobalAllocator,
+        rsdp_address: VirtAddr,
+    ) -> Self {
+        // SAFTEY: Safe to cast the RSDP address to the RSDP struct as the
+        // address is verified by the bootloader.
+        let rsdp = unsafe { &*(rsdp_address.as_u64() as *const Rsdp) };
+        let sdt_address = rsdp.get_sdt_address() as u64;
+
+        // SAFTEY: Already would have caused UB if the RSDP address was
+        // anyhow invalid.
+        let sdt = unsafe { Sdt::from_address(sdt_address, frame_allocator, offset_table) };
+
+        let sdt_signature = sdt.get_signature();
+        let sdt_data_len = sdt.data_len();
+
+        let (header, entry_count) = match sdt_signature {
+            sdt::RSDT_SIGNATURE => (AcpiHeader::Rsdt(sdt), sdt_data_len / mem::size_of::<u32>()),
+            sdt::XSDT_SIGNATURE => (AcpiHeader::Xsdt(sdt), sdt_data_len / mem::size_of::<u64>()),
+
+            _ => panic!("Invalid ACPI header signature: {}", sdt_signature),
+        };
+
+        Self {
+            header,
+            entry_count,
+        }
+    }
+
+    /// Lookup ACPI table entry with the provided signature.
+    fn lookup_entry(
+        &self,
+        offset_table: &mut OffsetPageTable,
+        frame_allocator: &mut GlobalAllocator,
+        signature: &str,
+    ) -> Option<&'static Sdt> {
+        let header_data_address = self.header.data_address() as *const u32;
+
+        for i in 0..self.entry_count {
+            // SAFTEY: Item address is valid as we are looping under the entry count and
+            // the data address.
+            let item_address = unsafe { *(header_data_address.add(i)) } as u64;
+            let item = unsafe { Sdt::from_address(item_address, frame_allocator, offset_table) };
+
+            if item.get_signature() == signature {
+                return Some(item);
+            }
+        }
+
+        None
+    }
+}
+
 #[repr(packed)]
 #[derive(Clone, Copy, Debug)]
 pub struct GenericAddressStructure {
@@ -54,86 +134,26 @@ impl GenericAddressStructure {
     }
 }
 
-unsafe fn look_up_table(
-    signature: &str,
-    sdt: &'static Sdt,
-    is_legacy: bool,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    offset_table: &mut OffsetPageTable,
-) -> Option<&'static Sdt> {
-    let entries;
-
-    if is_legacy {
-        entries = sdt.data_len() / mem::size_of::<u32>()
-    } else {
-        entries = sdt.data_len() / mem::size_of::<u64>()
-    }
-
-    for i in 0..entries {
-        let item_address = *((sdt.data_address() as *const u32).add(i));
-        let item = Sdt::from_address(item_address as u64, frame_allocator, offset_table);
-
-        if item.get_signature() == signature {
-            return Some(item);
-        }
-    }
-
-    None
-}
-
-/// Initialize ACPI tables.
+/// Initialize the ACPI tables.
 pub fn init(
     offset_table: &mut OffsetPageTable,
     frame_allocator: &mut GlobalAllocator,
     rsdp_address: PhysAddr,
     physical_memory_offset: VirtAddr,
 ) {
-    unsafe {
-        let rsdp = &*((physical_memory_offset + rsdp_address.as_u64()).as_u64() as *const Rsdp);
-        let sdt_address = rsdp.get_sdt_address() as u64;
+    let rsdp_address = physical_memory_offset + rsdp_address.as_u64();
+    let acpi_table = AcpiTable::new(offset_table, frame_allocator, rsdp_address);
 
-        let sdt = Sdt::from_address(sdt_address, frame_allocator, offset_table);
+    Fadt::new(acpi_table.lookup_entry(offset_table, frame_allocator, fadt::SIGNATURE));
+    Hpet::new(
+        acpi_table.lookup_entry(offset_table, frame_allocator, hpet::SIGNATURE),
+        frame_allocator,
+        offset_table,
+    );
 
-        let is_legacy;
-
-        if sdt.get_signature() == "XSDT" {
-            is_legacy = false;
-        } else if sdt.get_signature() == "RSDT" {
-            is_legacy = true;
-        } else {
-            panic!("Invalid RSDP signature.")
-        }
-
-        Fadt::new(look_up_table(
-            fadt::SIGNATURE,
-            sdt,
-            is_legacy,
-            frame_allocator,
-            offset_table,
-        ));
-
-        Hpet::new(
-            look_up_table(
-                hpet::SIGNATURE,
-                sdt,
-                is_legacy,
-                frame_allocator,
-                offset_table,
-            ),
-            frame_allocator,
-            offset_table,
-        );
-
-        Madt::new(
-            look_up_table(
-                madt::SIGNATURE,
-                sdt,
-                is_legacy,
-                frame_allocator,
-                offset_table,
-            ),
-            frame_allocator,
-            offset_table,
-        );
-    }
+    Madt::new(
+        acpi_table.lookup_entry(offset_table, frame_allocator, madt::SIGNATURE),
+        frame_allocator,
+        offset_table,
+    );
 }

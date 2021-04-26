@@ -8,10 +8,8 @@ pub const SIGNATURE: &str = "APIC";
 pub const TRAMPOLINE: u64 = 0x8000;
 
 static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
-static mut MADT: Option<Madt> = None;
 
 #[derive(Clone, Copy, Debug)]
-#[repr(C, packed)]
 pub struct Madt {
     pub sdt: &'static Sdt,
     pub local_apic_address: u32,
@@ -30,16 +28,7 @@ impl Madt {
                 return;
             }
 
-            let local_apic_address = unsafe { *(sdt.data_address() as *const u32) };
-            let flags = unsafe { *(sdt.data_address() as *const u32).offset(1) };
-
-            let madt = Self {
-                sdt,
-                local_apic_address,
-                flags,
-            };
-
-            unsafe { MADT = Some(madt) };
+            let this = unsafe { sdt.as_ptr::<Self>() };
 
             log::info!("Enabling multicore");
 

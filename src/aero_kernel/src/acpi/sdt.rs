@@ -8,6 +8,9 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
+pub(super) const XSDT_SIGNATURE: &str = "XSDT";
+pub(super) const RSDT_SIGNATURE: &str = "RSDT";
+
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct Sdt {
@@ -91,5 +94,10 @@ impl Sdt {
     /// Get the SDT's signature.
     pub fn get_signature(&self) -> &str {
         core::str::from_utf8(&self.signature).expect("Invalid UTF8 in SDT's signature")
+    }
+
+    #[inline(always)]
+    pub(super) unsafe fn as_ptr<T>(&self) -> &'static T {
+        &*(self as *const _ as *const T)
     }
 }
