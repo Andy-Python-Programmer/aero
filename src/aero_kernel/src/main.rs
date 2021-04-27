@@ -112,8 +112,11 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         arch::interrupts::enable_interrupts();
     }
 
-    apic::init(physical_memory_offset);
-    log::info!("Loaded local apic");
+    let apic_type = apic::init(physical_memory_offset);
+    log::info!(
+        "Loaded local apic (x2apic={})",
+        apic_type.supports_x2_apic()
+    );
 
     let (mut offset_table, mut frame_allocator) =
         memory::paging::init(physical_memory_offset, memory_regions);
