@@ -57,13 +57,7 @@ pub struct LocalApic {
 
 impl LocalApic {
     fn new(address: VirtAddr, apic_type: ApicType) -> Self {
-        let this = Self { address, apic_type };
-
-        unsafe {
-            let apic_id = this.bsp_id();
-        }
-
-        this
+        Self { address, apic_type }
     }
 
     /// Initialize the application processor.
