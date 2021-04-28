@@ -14,7 +14,7 @@ use x86_64::{
 
 use crate::arch::memory::paging::GlobalAllocator;
 
-use self::{fadt::Fadt, hpet::Hpet, madt::Madt, rsdp::Rsdp, sdt::Sdt};
+use self::{fadt::Fadt, hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
 
 pub mod fadt;
 pub mod hpet;
@@ -143,6 +143,13 @@ pub fn init(
 ) {
     let rsdp_address = physical_memory_offset + rsdp_address.as_u64();
     let acpi_table = AcpiTable::new(offset_table, frame_allocator, rsdp_address);
+
+    if let Some(header) = acpi_table.lookup_entry(offset_table, frame_allocator, mcfg::SIGNATURE) {
+        unsafe {
+            let mcfg: &'static Mcfg = header.as_ptr();
+            mcfg.init();
+        }
+    }
 
     Fadt::new(acpi_table.lookup_entry(offset_table, frame_allocator, fadt::SIGNATURE));
     Hpet::new(

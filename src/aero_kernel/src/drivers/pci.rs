@@ -1,4 +1,9 @@
-use crate::utils::io;
+use core::mem;
+
+use crate::{
+    acpi::mcfg::{self, DeviceConfig, Mcfg},
+    utils::io,
+};
 use crate::{arch::memory::paging::GlobalAllocator, drivers::ahci::AHCI};
 
 use bit_field::BitField;
@@ -487,10 +492,27 @@ impl PCIHeader {
 
 /// Lookup and initialize all PCI devices.
 pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllocator) {
+    // Check if the MCFG table is avaliable.
+    if mcfg::is_avaliable() {
+        let mcfg_table = mcfg::get_mcfg_table();
+        let entry_count = mcfg_table.entry_count();
+
+        // Since the MCFG table is avaliable now, we will use the device
+        // config provided by it to retrieve the bus start and bus end
+        // variables to speed up the search process.
+        for i in 0..entry_count {
+            let mcfg_addr = unsafe { *(mcfg_table as *const _ as *const usize) };
+            let offset = mem::size_of::<Mcfg>() + (mem::size_of::<DeviceConfig>() * i);
+
+            let device_config = unsafe { &*((mcfg_addr + offset) as *const DeviceConfig) };
+
+            for _ in device_config.start_bus..device_config.end_bus {}
+        }
+    }
+
     // Use the brute force method to go through each possible bus,
     // device, function ID and check if we have a driver for it. If a driver
     // for the PCI device is found then initialize it.
-
     for bus in 0..255 {
         for device in 0..32 {
             let function_count = if PCIHeader::new(bus, device, 0x00).has_multiple_functions() {
