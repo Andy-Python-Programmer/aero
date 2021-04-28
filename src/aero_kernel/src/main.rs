@@ -17,7 +17,8 @@
     lang_items,
     panic_info_message,
     thread_local,
-    const_fn_fn_ptr_basics
+    const_fn_fn_ptr_basics,
+    decl_macro
 )]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]

@@ -1,56 +1,65 @@
-use core::{intrinsics, mem};
+use core::mem;
 
+use spin::Once;
 use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
 
 use super::sdt::Sdt;
+use crate::apic;
 
 pub const SIGNATURE: &str = "APIC";
 pub const TRAMPOLINE: u64 = 0x8000;
 
+static MADT: Once<&'static Madt> = Once::new();
 static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
 
 #[derive(Clone, Copy, Debug)]
 pub struct Madt {
-    pub sdt: &'static Sdt,
+    pub header: Sdt,
     pub local_apic_address: u32,
     pub flags: u32,
 }
 
 impl Madt {
-    pub fn new(
-        sdt: Option<&'static Sdt>,
+    pub(super) fn init(
+        &'static self,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         offset_table: &mut OffsetPageTable,
     ) {
-        if let Some(sdt) = sdt {
-            // Not a valid MADT table without the local apic address and the flags.
-            if sdt.data_len() < 8 {
-                return;
-            }
+        MADT.call_once(move || self);
 
-            let this = unsafe { sdt.as_ptr::<Self>() };
+        log::info!("Enabling multicore");
 
-            log::info!("Enabling multicore");
+        let trampoline_frame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
+        let trampoline_page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(TRAMPOLINE));
 
-            unsafe {
-                let trampoline_frame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
-                let trampoline_page: Page<Size4KiB> =
-                    Page::containing_address(VirtAddr::new(TRAMPOLINE));
+        unsafe {
+            offset_table
+                .map_to(
+                    trampoline_page,
+                    trampoline_frame,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    frame_allocator,
+                )
+                .unwrap()
+                .flush();
+        }
 
-                offset_table
-                    .map_to(
-                        trampoline_page,
-                        trampoline_frame,
-                        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                        frame_allocator,
-                    )
-                    .unwrap()
-                    .flush();
+        // Atomic store the AP trampoline code to a fixed address in low conventional memory.
+        // for i in 0..TRAMPOLINE_BIN.len() {
+        //     intrinsics::atomic_store((TRAMPOLINE as *mut u8).add(i), TRAMPOLINE_BIN[i]);
+        // }
 
-                // Atomic store the AP trampoline code to a fixed address in low conventional memory.
-                for i in 0..TRAMPOLINE_BIN.len() {
-                    intrinsics::atomic_store((TRAMPOLINE as *mut u8).add(i), TRAMPOLINE_BIN[i]);
+        for stuff in self.iter() {
+            match stuff {
+                MadtEntry::LocalApic(local_apic) => {
+                    if local_apic.apic_id == apic::get_bsp_id() as u8 {
+                        // We do not want to start the BSP that is already running
+                        // this code :D
+                        continue;
+                    }
                 }
+                MadtEntry::IoApic(_) => {}
+                MadtEntry::IntSrcOverride(_) => {}
             }
         }
     }
@@ -58,8 +67,8 @@ impl Madt {
     pub fn iter(&self) -> MadtIterator {
         unsafe {
             MadtIterator {
-                ptr: (self as *const Self as *const u8).add(mem::size_of::<Self>()),
-                i: self.sdt.length as usize - mem::size_of::<Self>(),
+                current: (self as *const Self as *const u8).add(mem::size_of::<Self>()),
+                limit: (self as *const _ as *const u8).offset(self.header.length as isize),
             }
         }
     }
@@ -67,14 +76,14 @@ impl Madt {
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-pub struct EntryHeader {
+pub struct MadtEntryHeader {
     pub entry_type: u8,
     pub length: u8,
 }
 
 #[repr(C, packed)]
 pub struct MadtLocalApic {
-    pub header: EntryHeader,
+    pub header: MadtEntryHeader,
     pub processor_id: u8,
     pub apic_id: u8,
     pub flags: u32,
@@ -82,7 +91,7 @@ pub struct MadtLocalApic {
 
 #[repr(C, packed)]
 pub struct MadtIoApic {
-    pub header: EntryHeader,
+    pub header: MadtEntryHeader,
     pub io_apic_id: u8,
     reserved: u8,
     pub io_apic_address: u32,
@@ -91,7 +100,7 @@ pub struct MadtIoApic {
 
 #[repr(C, packed)]
 pub struct MadtIntSrcOverride {
-    pub header: EntryHeader,
+    pub header: MadtEntryHeader,
     pub bus: u8,
     pub irq: u8,
     pub global_system_interrupt: u32,
@@ -102,26 +111,23 @@ pub enum MadtEntry {
     LocalApic(&'static MadtLocalApic),
     IoApic(&'static MadtIoApic),
     IntSrcOverride(&'static MadtIntSrcOverride),
-
-    Unknown(u8),
 }
 
 pub struct MadtIterator {
-    ptr: *const u8,
-    i: usize,
+    current: *const u8,
+    limit: *const u8,
 }
 
 impl Iterator for MadtIterator {
     type Item = MadtEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.i > 0 {
+        while self.current < self.limit {
             unsafe {
-                let entry_pointer = self.ptr;
-                let header = *(self.ptr as *const EntryHeader);
+                let entry_pointer = self.current;
+                let header = *(self.current as *const MadtEntryHeader);
 
-                self.ptr = self.ptr.offset(header.length.into());
-                self.i -= header.length as usize;
+                self.current = self.current.offset(header.length as isize);
 
                 let item = match header.entry_type {
                     0 => MadtEntry::LocalApic(&*(entry_pointer as *const MadtLocalApic)),
@@ -131,7 +137,11 @@ impl Iterator for MadtIterator {
                     0x10..=0x7f => continue,
                     0x80..=0xff => continue,
 
-                    _ => MadtEntry::Unknown(header.entry_type),
+                    _ => {
+                        log::warn!("Unknown MADT entry with id {}", header.entry_type);
+
+                        return None;
+                    }
                 };
 
                 return Some(item);

@@ -144,6 +144,10 @@ pub fn init(
     let rsdp_address = physical_memory_offset + rsdp_address.as_u64();
     let acpi_table = AcpiTable::new(offset_table, frame_allocator, rsdp_address);
 
+    macro init_table($sig:path => $ty:ty) {
+        <$ty>::new(acpi_table.lookup_entry(offset_table, frame_allocator, $sig));
+    }
+
     if let Some(header) = acpi_table.lookup_entry(offset_table, frame_allocator, mcfg::SIGNATURE) {
         unsafe {
             let mcfg: &'static Mcfg = header.as_ptr();
@@ -151,15 +155,25 @@ pub fn init(
         }
     }
 
-    Fadt::new(acpi_table.lookup_entry(offset_table, frame_allocator, fadt::SIGNATURE));
+    if let Some(header) = acpi_table.lookup_entry(offset_table, frame_allocator, madt::SIGNATURE) {
+        unsafe {
+            // Not a valid MADT table without the local apic address and the flags.
+            if header.data_len() < 8 {
+                log::warn!(
+                    "Assertion Failed: header.data_len() < 8 => {}",
+                    header.data_len()
+                );
+            } else {
+                let madt: &'static Madt = header.as_ptr();
+                madt.init(frame_allocator, offset_table);
+            }
+        }
+    }
+
+    init_table!(fadt::SIGNATURE => Fadt);
+
     Hpet::new(
         acpi_table.lookup_entry(offset_table, frame_allocator, hpet::SIGNATURE),
-        frame_allocator,
-        offset_table,
-    );
-
-    Madt::new(
-        acpi_table.lookup_entry(offset_table, frame_allocator, madt::SIGNATURE),
         frame_allocator,
         offset_table,
     );

@@ -110,6 +110,11 @@ pub fn get_local_apic() -> MutexGuard<'static, LocalApic> {
         .lock()
 }
 
+/// Get the local BSP's id.
+pub fn get_bsp_id() -> u64 {
+    BSP_APIC_ID.load(Ordering::SeqCst)
+}
+
 /// Initialize the local apic.
 pub fn init(physical_memory_offset: VirtAddr) -> ApicType {
     let feature_info = CpuId::new()
