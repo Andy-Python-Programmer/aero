@@ -136,18 +136,25 @@ pub fn get_local_apic() -> MutexGuard<'static, LocalApic> {
 }
 
 /// Get the local BSP's id.
+#[inline(always)]
 pub fn get_bsp_id() -> u64 {
     BSP_APIC_ID.load(Ordering::SeqCst)
 }
 
-/// Return the number of active CPUs
+/// Return the number of active CPUs.
+#[inline(always)]
 pub fn get_cpu_count() -> usize {
     CPU_COUNT.load(Ordering::Relaxed)
 }
 
 /// Returns true if the AP is ready.
+#[inline(always)]
 pub fn ap_ready() -> bool {
     AP_READY.load(Ordering::SeqCst)
+}
+
+pub fn mark_ap_ready() {
+    AP_READY.store(true, Ordering::SeqCst);
 }
 
 /// Initialize the local apic.

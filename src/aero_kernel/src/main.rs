@@ -171,6 +171,14 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
     log::info!("Starting CPU with id: {}", cpu_id);
 
+    arch::gdt::init();
+    log::info!("(cpu={}) Loaded GDT", cpu_id);
+
+    arch::interrupts::init();
+    log::info!("(cpu={}) Loaded IDT", cpu_id);
+
+    apic::mark_ap_ready();
+
     unsafe {
         loop {
             asm!("cli; hlt");
