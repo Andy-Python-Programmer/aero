@@ -64,8 +64,6 @@ impl Madt {
     ) {
         MADT.call_once(move || self);
 
-        log::info!("Enabling multicore");
-
         let trampoline_frame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
         let trampoline_page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(TRAMPOLINE));
 
@@ -80,6 +78,8 @@ impl Madt {
                 .unwrap()
                 .flush();
         }
+
+        log::debug!("Storing AP trampoline in {:#x}", TRAMPOLINE);
 
         // Atomic store the AP trampoline code to a fixed address in low conventional memory.
         unsafe {
