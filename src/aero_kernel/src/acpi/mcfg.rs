@@ -26,7 +26,7 @@ pub struct Mcfg {
 
 impl Mcfg {
     pub(super) unsafe fn init(&'static self) {
-        MCFG.call_once(|| self);
+        MCFG.call_once(move || self);
     }
 
     pub fn entry_count(&self) -> usize {

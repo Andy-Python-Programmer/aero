@@ -166,3 +166,14 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         }
     }
 }
+
+#[no_mangle]
+extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
+    log::info!("Starting CPU with id: {}", cpu_id);
+
+    unsafe {
+        loop {
+            asm!("cli; hlt");
+        }
+    }
+}
