@@ -6,18 +6,16 @@ cfg_if::cfg_if! {
     }
 }
 
+use fs_extra::dir::{self, CopyOptions};
 use structopt::StructOpt;
 
-use std::{
-    env,
-    fs::{self, File},
-    io::Write,
-};
+use std::{env, fs::File, io::Write};
 
-use std::{
-    error::Error,
-    process::{Command, ExitStatus},
-};
+use std::fs;
+
+use std::error::Error;
+use std::path::Path;
+use std::process::{Command, ExitStatus};
 
 /// The cargo executable. This constant uses the `CARGO` environment variable to
 /// also support non-standard cargo versions.
@@ -92,6 +90,50 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
         .expect(&format!("Failed to run {:#?}", qemu_run_cmd))
 }
 
+/// Build Aero's main webiste including its docs.
+fn build_web() -> Result<(), Box<dyn Error>> {
+    let mut docs_build_cmd = Command::new(CARGO);
+
+    docs_build_cmd.current_dir("src");
+    docs_build_cmd.arg("doc");
+
+    // Generate the docs.
+    if !docs_build_cmd
+        .status()
+        .expect(&format!("Failed to run {:#?}", docs_build_cmd))
+        .success()
+    {
+        panic!("Failed to build docs")
+    }
+
+    let cargo_output_dir = Path::new("src")
+        .join("target")
+        .join("x86_64-aero_os")
+        .join("doc");
+
+    let build_dir = Path::new("web").join("build");
+
+    // Create the docs build directory.
+    fs::create_dir_all(&build_dir)?;
+
+    let mut cp_options = CopyOptions::new();
+    cp_options.overwrite = true;
+
+    // First move each file from the web/* directory to web/build/*
+    for entry in fs::read_dir("web")? {
+        let item = entry?;
+
+        if item.file_type()?.is_file() {
+            fs::copy(item.path(), build_dir.join(item.file_name()))?;
+        }
+    }
+
+    // Now move all of the generated doc files by cargo to web/build/.
+    dir::copy(cargo_output_dir, &build_dir, &cp_options)?;
+
+    Ok(())
+}
+
 /// Packages all of the files by creating the build directory and copying
 /// the `aero.elf` and the `aero_boot.efi` files to the build directory and
 /// creating the `startup.nsh` file.
@@ -136,6 +178,7 @@ enum AeroBuildCommand {
     },
     /// Update all of the OVMF files required for UEFI.
     Update,
+    Web,
 }
 
 #[derive(Debug, StructOpt)]
@@ -182,6 +225,8 @@ async fn main() {
             AeroBuildCommand::Update => uefi::update_ovmf()
                 .await
                 .expect("Failed tp update OVMF files"),
+
+            AeroBuildCommand::Web => build_web().unwrap(),
         },
 
         None => {}
