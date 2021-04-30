@@ -144,6 +144,8 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     userland::init();
     log::info!("Loaded userland");
 
+    apic::mark_bsp_ready(true);
+
     log::info!("Initialized kernel");
 
     println!("{}", ASCII_INTRO);
@@ -177,7 +179,7 @@ extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
     arch::interrupts::init();
     log::info!("(cpu={}) Loaded IDT", cpu_id);
 
-    apic::mark_ap_ready();
+    apic::mark_ap_ready(true);
 
     unsafe {
         loop {

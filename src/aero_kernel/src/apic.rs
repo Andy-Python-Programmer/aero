@@ -11,8 +11,11 @@ use crate::utils::io;
 
 const APIC_SPURIOUS_VECTOR: u32 = 0xFF;
 
-/// Task Priority Register (TPR). Read/write. Bits 31:8 are reserved.
-const XAPIC_TPR: u32 = 0x080;
+/// LVT Error register. Read/write.
+const XAPIC_LVT_ERROR: u32 = 0x370;
+
+/// Error Status Register (ESR). Read/write.
+const XAPIC_ESR: u32 = 0x280;
 
 /// Spurious Interrupt Vector Register (SVR). Read/write.
 const XAPIC_SVR: u32 = 0x0F0;
@@ -21,10 +24,10 @@ const XAPIC_SVR: u32 = 0x0F0;
 const XAPIC_EOI: u32 = 0x0B0;
 
 /// Interrupt Command Register (ICR). Read/write.
-pub const XAPIC_ICR0: u32 = 0x300;
+const XAPIC_ICR0: u32 = 0x300;
 
 /// Interrupt Command Register (ICR). Read/write.
-pub const XAPIC_ICR1: u32 = 0x310;
+const XAPIC_ICR1: u32 = 0x310;
 
 static LOCAL_APIC: Once<Mutex<LocalApic>> = Once::new();
 static BSP_APIC_ID: AtomicU64 = AtomicU64::new(0xFFFF_FFFF_FFFF_FFFF);
@@ -32,7 +35,8 @@ static BSP_APIC_ID: AtomicU64 = AtomicU64::new(0xFFFF_FFFF_FFFF_FFFF);
 /// The count of all the active CPUs.
 pub static CPU_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-pub static AP_READY: AtomicBool = AtomicBool::new(false);
+static AP_READY: AtomicBool = AtomicBool::new(false);
+static BSP_READY: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone, Copy)]
 pub enum ApicType {
@@ -78,11 +82,11 @@ impl LocalApic {
 
     /// Initialize the application processor.
     unsafe fn init_cpu(&mut self) {
-        // Clear task priority to enable interrupts.
-        self.write(XAPIC_TPR, 0x00);
-
         // Enable local APIC; set spurious interrupt vector.
         self.write(XAPIC_SVR, 0x100 | APIC_SPURIOUS_VECTOR);
+
+        // Set up LVT (Local Vector Table) error.
+        self.write(XAPIC_LVT_ERROR, 49);
     }
 
     #[inline(always)]
@@ -92,9 +96,9 @@ impl LocalApic {
 
     /// Get the error code of the lapic by reading the error status register.
     pub unsafe fn get_esr(&mut self) -> u32 {
-        self.write(0x280, 0);
+        self.write(XAPIC_ESR, 0x00);
 
-        self.read(0x280)
+        self.read(XAPIC_ESR)
     }
 
     #[inline(always)]
@@ -116,14 +120,12 @@ impl LocalApic {
         intrinsics::volatile_load((self.address + register as usize).as_u64() as *const u32)
     }
 
-    #[inline]
+    #[inline(always)]
     unsafe fn write(&mut self, register: u32, value: u32) {
         intrinsics::volatile_store(
             (self.address + register as usize).as_u64() as *mut u32,
             value,
         );
-
-        self.read(0x20); // Wait for the write to finish.
     }
 }
 
@@ -153,8 +155,12 @@ pub fn ap_ready() -> bool {
     AP_READY.load(Ordering::SeqCst)
 }
 
-pub fn mark_ap_ready() {
-    AP_READY.store(true, Ordering::SeqCst);
+pub fn mark_ap_ready(value: bool) {
+    AP_READY.store(value, Ordering::SeqCst);
+}
+
+pub fn mark_bsp_ready(value: bool) {
+    BSP_READY.store(value, Ordering::SeqCst);
 }
 
 /// Initialize the local apic.

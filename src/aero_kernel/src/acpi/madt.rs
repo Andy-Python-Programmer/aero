@@ -8,10 +8,7 @@ use spin::Once;
 use x86_64::{registers::control::Cr3, structures::paging::*, PhysAddr, VirtAddr};
 
 use super::sdt::Sdt;
-use crate::{
-    apic::{self, AP_READY},
-    kernel_ap_startup, AERO_SYSTEM_ALLOCATOR,
-};
+use crate::{apic, kernel_ap_startup, AERO_SYSTEM_ALLOCATOR};
 
 use crate::apic::CPU_COUNT;
 
@@ -121,7 +118,7 @@ impl Madt {
                         intrinsics::atomic_store(trampoline.ap_code, kernel_ap_startup as u64)
                     }
 
-                    AP_READY.store(false, Ordering::SeqCst);
+                    apic::mark_ap_ready(false);
 
                     let mut local_apic_init = apic::get_local_apic();
 
