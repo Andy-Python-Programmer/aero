@@ -111,7 +111,8 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
 
     let rsdp_address = config_entries
         .find(|entry| matches!(entry.guid, cfg::ACPI_GUID | cfg::ACPI2_GUID))
-        .map(|entry| PhysAddr::new(entry.address as u64));
+        .map(|entry| PhysAddr::new(entry.address as u64))
+        .expect("Aero requires ACPI compatible system");
 
     let system_info = SystemInfo {
         framebuffer_address,

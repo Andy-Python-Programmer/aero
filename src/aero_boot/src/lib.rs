@@ -5,7 +5,7 @@
 use core::{ops, slice};
 
 use aero_gfx::FrameBuffer;
-use x86_64::VirtAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 /// Represents the different types of memory.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -25,8 +25,8 @@ pub enum MemoryRegionType {
 #[derive(Debug)]
 #[repr(C)]
 pub struct BootInfo {
-    pub rsdp_address: u64,
-    pub physical_memory_offset: u64,
+    pub rsdp_address: PhysAddr,
+    pub physical_memory_offset: VirtAddr,
     pub framebuffer: FrameBuffer,
     pub memory_regions: MemoryRegions,
     pub stack_top: VirtAddr,

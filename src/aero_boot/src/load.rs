@@ -34,7 +34,7 @@ pub struct SystemInfo {
     /// Information about the framebuffer, including layout and pixel format.
     pub framebuffer_info: FrameBufferInfo,
     /// Address of the _Root System Description Pointer_ structure of the ACPI standard.
-    pub rsdp_address: Option<PhysAddr>,
+    pub rsdp_address: PhysAddr,
 }
 
 /// Contains the addresses of all memory mappings set up by [`set_up_mappings`].
@@ -459,8 +459,8 @@ where
 
     (
         boot_info.write(BootInfo {
-            rsdp_address: system_info.rsdp_address.unwrap().as_u64(),
-            physical_memory_offset: mappings.physical_memory_offset.as_u64(),
+            rsdp_address: system_info.rsdp_address,
+            physical_memory_offset: mappings.physical_memory_offset,
             framebuffer,
             memory_regions: memory_regions.into(),
             stack_top: mappings.stack_end.start_address(),

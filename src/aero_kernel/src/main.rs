@@ -29,7 +29,7 @@ extern crate alloc;
 use aero_boot::BootInfo;
 
 use linked_list_allocator::LockedHeap;
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::VirtAddr;
 
 mod acpi;
 mod apic;
@@ -83,14 +83,11 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         interrupts::disable_interrupts();
     }
 
-    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let rsdp_address = PhysAddr::new(boot_info.rsdp_address);
-
     let memory_regions = &boot_info.memory_regions;
     let framebuffer = &mut boot_info.framebuffer;
 
     unsafe {
-        PHYSICAL_MEMORY_OFFSET = physical_memory_offset;
+        PHYSICAL_MEMORY_OFFSET = boot_info.physical_memory_offset;
     }
 
     rendy::init(framebuffer);
@@ -115,14 +112,14 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         interrupts::enable_interrupts();
     }
 
-    let apic_type = apic::init(physical_memory_offset);
+    let apic_type = apic::init(boot_info.physical_memory_offset);
     log::info!(
         "Loaded local apic (x2apic={})",
         apic_type.supports_x2_apic()
     );
 
     let (mut offset_table, mut frame_allocator) =
-        memory::paging::init(physical_memory_offset, memory_regions);
+        memory::paging::init(boot_info.physical_memory_offset, memory_regions);
     log::info!("Loaded paging");
 
     arch::gdt::init_local(boot_info.stack_top);
@@ -135,8 +132,8 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     acpi::init(
         &mut offset_table,
         &mut frame_allocator,
-        rsdp_address,
-        physical_memory_offset,
+        boot_info.rsdp_address,
+        boot_info.physical_memory_offset,
     );
     log::info!("Loaded ACPI");
 
