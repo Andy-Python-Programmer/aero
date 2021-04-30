@@ -51,6 +51,10 @@ pub fn get_scheduler() -> MutexGuard<'static, Scheduler> {
         .lock()
 }
 
+pub fn reschedule() -> bool {
+    true
+}
+
 /// Initialize the scheduler.
 pub fn init() {
     let scheduler = Scheduler::new();

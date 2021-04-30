@@ -5,7 +5,7 @@
 
 use core::time::Duration;
 
-use crate::utils::io;
+use crate::{arch::interrupts, utils::io};
 
 pub const PIT_DIVISOR: u64 = 1193180;
 pub const PIT_BASE_FREQUENCY: u64 = 1193182;
@@ -29,10 +29,8 @@ impl PitDescriptor {
         let start_time = self.ticks_since_epoch;
         let seconds = duration.as_secs();
 
-        unsafe {
-            while self.ticks_since_epoch < start_time + seconds {
-                asm!("pause");
-            }
+        while self.ticks_since_epoch < start_time + seconds {
+            interrupts::pause();
         }
     }
 

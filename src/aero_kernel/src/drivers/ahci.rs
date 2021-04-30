@@ -1,6 +1,9 @@
 use core::mem::{self, MaybeUninit};
 
-use crate::arch::memory::paging::{memory_map_device, GlobalAllocator};
+use crate::arch::{
+    interrupts,
+    memory::paging::{memory_map_device, GlobalAllocator},
+};
 
 use x86_64::{
     structures::paging::{
@@ -409,9 +412,7 @@ impl Port {
     /// Start the command engine.
     fn start_command(&mut self) {
         while self.hba_port.cmd_sts & HBA_PX_CMD_CR == 1 {
-            unsafe {
-                asm!("pause");
-            }
+            interrupts::pause();
         }
 
         self.hba_port.cmd_sts |= HBA_PX_CMD_FRE;

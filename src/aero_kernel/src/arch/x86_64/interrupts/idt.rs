@@ -166,23 +166,6 @@ unsafe fn load_idt(idt_descriptor: *const IdtDescriptor) {
     asm!("lidt [{}]", in(reg) idt_descriptor, options(nostack));
 }
 
-#[inline(always)]
-pub unsafe fn disable_interrupts() {
-    asm!("cli");
-}
-
-#[inline(always)]
-pub unsafe fn enable_interrupts() {
-    asm!("sti");
-}
-
-/// Halt the CPU. Will resume when interrupt is recieved if interrupts are
-/// enabled.
-#[inline(always)]
-pub unsafe fn halt() {
-    asm!("hlt", options(nomem, nostack));
-}
-
 #[inline]
 pub unsafe fn end_pic1() {
     io::outb(PIC1_COMMAND, PIC_EOI);

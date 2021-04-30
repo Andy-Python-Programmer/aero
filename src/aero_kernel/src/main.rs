@@ -44,6 +44,8 @@ mod unwind;
 mod userland;
 mod utils;
 
+use arch::interrupts;
+
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 use arch::memory;
 
@@ -78,7 +80,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     drivers::uart_16550::init();
 
     unsafe {
-        arch::interrupts::disable_interrupts();
+        interrupts::disable_interrupts();
     }
 
     let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
@@ -97,7 +99,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     arch::gdt::init();
     log::info!("Loaded GDT");
 
-    arch::interrupts::init();
+    interrupts::init();
     log::info!("Loaded IDT");
 
     time::init();
@@ -110,7 +112,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         io::outb(PIC1_DATA, 0b11111000);
         io::outb(PIC2_DATA, 0b11101111);
 
-        arch::interrupts::enable_interrupts();
+        interrupts::enable_interrupts();
     }
 
     let apic_type = apic::init(physical_memory_offset);
@@ -164,7 +166,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         // println!("ret: {}", ret);
 
         loop {
-            arch::interrupts::halt();
+            interrupts::halt();
         }
     }
 }
@@ -176,18 +178,24 @@ extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
     arch::gdt::init();
     log::info!("(cpu={}) Loaded GDT", cpu_id);
 
-    arch::interrupts::init();
+    interrupts::init();
     log::info!("(cpu={}) Loaded IDT", cpu_id);
 
     apic::mark_ap_ready(true);
 
     while !apic::is_bsp_ready() {
-        unsafe { asm!("pause") }
+        interrupts::pause();
     }
 
     unsafe {
         loop {
-            asm!("cli; hlt");
+            interrupts::disable_interrupts();
+
+            if scheduler::reschedule() {
+                interrupts::enable_interrupts();
+            } else {
+                interrupts::enable_interrupts_and_halt();
+            }
         }
     }
 }

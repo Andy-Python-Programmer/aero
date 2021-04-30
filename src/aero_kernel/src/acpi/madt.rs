@@ -8,7 +8,7 @@ use spin::Once;
 use x86_64::{registers::control::Cr3, structures::paging::*, PhysAddr, VirtAddr};
 
 use super::sdt::Sdt;
-use crate::{apic, kernel_ap_startup, AERO_SYSTEM_ALLOCATOR};
+use crate::{apic, arch::interrupts, kernel_ap_startup, AERO_SYSTEM_ALLOCATOR};
 
 use crate::apic::CPU_COUNT;
 
@@ -142,13 +142,13 @@ impl Madt {
                     // unsafe {
                     //     // Wait for the AP to be ready.
                     //     while intrinsics::atomic_load(trampoline.ap_ready) == 0 {
-                    //         asm!("pause");
+                    //         interrupts::pause();
                     //     }
+                    // }
 
-                    //     // Wait for the trampoline to be ready.
-                    //     while !apic::ap_ready() {
-                    //         asm!("pause");
-                    //     }
+                    // // Wait for the trampoline to be ready.
+                    // while !apic::ap_ready() {
+                    //     interrupts::pause();
                     // }
 
                     log::info!("Loaded multicore");
