@@ -159,6 +159,10 @@ pub fn mark_ap_ready(value: bool) {
     AP_READY.store(value, Ordering::SeqCst);
 }
 
+pub fn is_bsp_ready() -> bool {
+    BSP_READY.load(Ordering::SeqCst)
+}
+
 pub fn mark_bsp_ready(value: bool) {
     BSP_READY.store(value, Ordering::SeqCst);
 }

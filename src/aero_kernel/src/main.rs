@@ -181,6 +181,10 @@ extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
 
     apic::mark_ap_ready(true);
 
+    while !apic::is_bsp_ready() {
+        unsafe { asm!("pause") }
+    }
+
     unsafe {
         loop {
             asm!("cli; hlt");
