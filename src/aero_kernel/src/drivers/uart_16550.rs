@@ -1,4 +1,4 @@
-use core::fmt;
+use core::fmt::{self, Write};
 
 use spin::{Mutex, MutexGuard, Once};
 
@@ -68,30 +68,27 @@ impl SerialPort {
         }
     }
 
+    fn wait_for_line_status(&self, line_status: LineStatus) {
+        while !self.line_status().contains(line_status) {
+            core::hint::spin_loop()
+        }
+    }
+
     pub fn send_byte(&mut self, byte: u8) {
         unsafe {
             match byte {
                 8 | 0x7F => {
-                    while !self.line_status().contains(LineStatus::OUTPUT_EMPTY) {
-                        core::hint::spin_loop()
-                    }
+                    self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
                     io::outb(self.0, 8);
 
-                    while !self.line_status().contains(LineStatus::OUTPUT_EMPTY) {
-                        core::hint::spin_loop()
-                    }
+                    self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
                     io::outb(self.0, b' ');
 
-                    while !self.line_status().contains(LineStatus::OUTPUT_EMPTY) {
-                        core::hint::spin_loop()
-                    }
+                    self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
                     io::outb(self.0, 8);
                 }
                 _ => {
-                    while !self.line_status().contains(LineStatus::OUTPUT_EMPTY) {
-                        core::hint::spin_loop()
-                    }
-
+                    self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
                     io::outb(self.0, byte)
                 }
             }
@@ -123,4 +120,20 @@ pub fn init() {
 
         COM_1.call_once(move || Mutex::new(com_1));
     }
+}
+
+pub macro serial_print($($arg:tt)*) {
+    crate::drivers::uart_16550::_serial_print(format_args!($($arg)*));
+}
+
+pub macro serial_println {
+    () => ($crate::drivers::uart_16550::serial_print!("\n")),
+    ($($arg:tt)*) => ($crate::drivers::uart_16550::serial_print!("{}\n", format_args!($($arg)*)))
+}
+
+#[doc(hidden)]
+pub fn _serial_print(args: fmt::Arguments) {
+    get_com_1()
+        .write_fmt(args)
+        .expect("Failed to write to the COM1 port");
 }
