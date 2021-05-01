@@ -1,14 +1,14 @@
-use core::{
-    alloc::{GlobalAlloc, Layout},
-    intrinsics, mem,
-    sync::atomic::Ordering,
-};
+use core::{intrinsics, mem, sync::atomic::Ordering};
 
 use spin::Once;
 use x86_64::{registers::control::Cr3, structures::paging::*, PhysAddr, VirtAddr};
 
 use super::sdt::Sdt;
-use crate::{apic, arch::interrupts, kernel_ap_startup, AERO_SYSTEM_ALLOCATOR};
+use crate::{
+    apic,
+    arch::{interrupts, memory::alloc::malloc_align},
+    kernel_ap_startup,
+};
 
 use crate::apic::CPU_COUNT;
 
@@ -17,34 +17,6 @@ pub const TRAMPOLINE: u64 = 0x8000;
 
 static MADT: Once<&'static Madt> = Once::new();
 static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
-
-#[repr(C, packed)]
-pub struct Trampoline {
-    ap_ready: *mut u64,
-    ap_cpu_id: *mut u64,
-    ap_page_table: *mut u64,
-    ap_stack_ptr: *mut u64,
-    ap_code: *mut u64,
-}
-
-impl Trampoline {
-    #[inline]
-    fn new() -> Self {
-        let ap_ready = (TRAMPOLINE + 8) as *mut u64;
-        let ap_cpu_id = unsafe { ap_ready.offset(1) };
-        let ap_page_table = unsafe { ap_ready.offset(2) };
-        let ap_stack_ptr = unsafe { ap_ready.offset(3) };
-        let ap_code = unsafe { ap_ready.offset(4) };
-
-        Self {
-            ap_ready,
-            ap_cpu_id,
-            ap_page_table,
-            ap_stack_ptr,
-            ap_code,
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug)]
 pub struct Madt {
@@ -102,46 +74,61 @@ impl Madt {
                     // Increase the CPU count.
                     CPU_COUNT.fetch_add(1, Ordering::SeqCst);
 
-                    // Create the trampoline structure.
-                    let trampoline = Trampoline::new();
+                    let ap_ready = (TRAMPOLINE + 8) as *mut u64;
+                    let ap_cpu_id = unsafe { ap_ready.offset(1) };
+                    let ap_page_table = unsafe { ap_ready.offset(2) };
+                    let ap_stack_start = unsafe { ap_ready.offset(3) };
+                    let ap_stack_end = unsafe { ap_ready.offset(4) };
+                    let ap_code = unsafe { ap_ready.offset(5) };
+
+                    let page_table = Cr3::read().0.start_address().as_u64();
+
+                    let stack = unsafe { malloc_align(4096 * 16, 4096) };
+                    let stack_end = unsafe { stack.offset(4096 * 16) } as u64;
 
                     unsafe {
-                        let page_table = Cr3::read().0.start_address().as_u64();
-                        let stack = AERO_SYSTEM_ALLOCATOR
-                            .alloc(Layout::from_size_align_unchecked(4096 * 16, 4096))
-                            .offset(4096 * 16) as u64;
-
-                        intrinsics::atomic_store(trampoline.ap_ready, 0x00);
-                        intrinsics::atomic_store(trampoline.ap_cpu_id, local_apic.apic_id as u64);
-                        intrinsics::atomic_store(trampoline.ap_page_table, page_table);
-                        intrinsics::atomic_store(trampoline.ap_stack_ptr, stack);
-                        intrinsics::atomic_store(trampoline.ap_code, kernel_ap_startup as u64)
+                        intrinsics::atomic_store(ap_ready, 0x00);
+                        intrinsics::atomic_store(ap_cpu_id, local_apic.apic_id as u64);
+                        intrinsics::atomic_store(ap_page_table, page_table);
+                        intrinsics::atomic_store(ap_stack_start, stack as u64);
+                        intrinsics::atomic_store(ap_stack_end, stack_end);
+                        intrinsics::atomic_store(ap_code, kernel_ap_startup as u64)
                     }
 
                     apic::mark_ap_ready(false);
 
-                    let mut local_apic_init = apic::get_local_apic();
+                    let mut bsp = apic::get_local_apic();
 
-                    // Send init IPI to the local apic.
+                    // Send init IPI to the bsp.
                     unsafe {
                         let mut icr = 0x4500;
-                        icr |= (local_apic.apic_id as u64) << 56;
 
-                        local_apic_init.set_icr(icr);
+                        match bsp.apic_type() {
+                            apic::ApicType::Xapic => icr |= (local_apic.apic_id as u64) << 56,
+                            apic::ApicType::X2apic => icr |= (local_apic.apic_id as u64) << 32,
+                            apic::ApicType::None => unreachable!(),
+                        }
+
+                        bsp.set_icr(icr);
                     }
 
+                    // // Send start IPI to the bsp.
                     // unsafe {
                     //     let ap_segment = (TRAMPOLINE >> 12) & 0xFF;
                     //     let mut icr = 0x4600 | ap_segment as u64;
 
-                    //     icr |= (local_apic.apic_id as u64) << 56;
+                    //     match bsp.apic_type() {
+                    //         apic::ApicType::Xapic => icr |= (local_apic.apic_id as u64) << 56,
+                    //         apic::ApicType::X2apic => icr |= (local_apic.apic_id as u64) << 32,
+                    //         apic::ApicType::None => unreachable!(),
+                    //     }
 
-                    //     local_apic_init.set_icr(icr);
+                    //     bsp.set_icr(icr);
                     // }
 
                     // unsafe {
                     //     // Wait for the AP to be ready.
-                    //     while intrinsics::atomic_load(trampoline.ap_ready) == 0 {
+                    //     while intrinsics::atomic_load(ap_ready) == 0 {
                     //         interrupts::pause();
                     //     }
                     // }

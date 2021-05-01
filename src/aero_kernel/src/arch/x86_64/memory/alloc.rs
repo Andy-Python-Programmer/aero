@@ -1,4 +1,4 @@
-use core::alloc;
+use core::alloc::{self, GlobalAlloc, Layout};
 
 use x86_64::{
     structures::paging::{
@@ -54,4 +54,18 @@ pub fn init_heap(
     }
 
     Ok(())
+}
+
+#[inline(always)]
+#[no_mangle]
+pub unsafe extern "C" fn malloc(size: usize) -> *mut u8 {
+    malloc_align(size, 8)
+}
+
+#[inline]
+#[no_mangle]
+pub unsafe extern "C" fn malloc_align(size: usize, align: usize) -> *mut u8 {
+    let layout = Layout::from_size_align(size, align).expect("Invalid malloc layout");
+
+    AERO_SYSTEM_ALLOCATOR.alloc(layout)
 }

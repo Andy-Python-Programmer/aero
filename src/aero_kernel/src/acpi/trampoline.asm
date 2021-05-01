@@ -10,12 +10,12 @@ trampoline:
     jmp short protected_ap
     times 8 - ($ - trampoline) nop
 
-    .ready: dq 0x00
-    .cpu_id: dq 0x00
-    .page_table: dq 0x00
-    .stack_start: dq 0x00
-    .stack_end: dq 0x00
-    .code: dq 0x00
+    .ready: dq 0
+    .cpu_id: dq 0
+    .page_table: dq 0
+    .stack_start: dq 0
+    .stack_end: dq 0
+    .code: dq 0
 
 protected_ap:
     cli
@@ -46,24 +46,29 @@ protected_ap:
     ; Load protected mode GDT.
     lgdt [gdtr]
 
+    mov eax, trampoline.page_table
+    mov cr3, eax
+
     mov ecx, 0xC0000080
     rdmsr
-    or eax, 1 << 11 | 1 << 8
+    or eax, 0x100
     wrmsr
 
     ; Enable paging and protection.
-    mov ebx, cr0
-
+    ;
     ; 31: Paging
-    ; 16: write protect kernel
+    ; 16: Write protect
     ; 0: Protected Mode
-    or ebx, 1 << 31 | 1 << 16 | 1
-    mov cr0, ebx
+    mov eax, cr0
+
+    or eax, 1 << 31
+    or eax, 1 << 16
+    or eax, 1
+
+    mov cr0, eax
 
     ; Enable long mode and load CS with 64 bit segment.
     jmp gdt.kernel_code:long_mode_ap
-
-global protected_ap
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;; BITS 64 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

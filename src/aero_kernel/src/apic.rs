@@ -106,6 +106,11 @@ impl LocalApic {
         self.write(XAPIC_EOI, 0x00)
     }
 
+    #[inline(always)]
+    pub fn apic_type(&self) -> ApicType {
+        self.apic_type
+    }
+
     pub unsafe fn set_icr(&mut self, value: u64) {
         while self.read(XAPIC_ICR0) & 1 << 12 == 1 << 12 {}
 
@@ -155,14 +160,17 @@ pub fn ap_ready() -> bool {
     AP_READY.load(Ordering::SeqCst)
 }
 
+#[inline(always)]
 pub fn mark_ap_ready(value: bool) {
     AP_READY.store(value, Ordering::SeqCst);
 }
 
+#[inline(always)]
 pub fn is_bsp_ready() -> bool {
     BSP_READY.load(Ordering::SeqCst)
 }
 
+#[inline(always)]
 pub fn mark_bsp_ready(value: bool) {
     BSP_READY.store(value, Ordering::SeqCst);
 }
