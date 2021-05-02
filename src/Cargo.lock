@@ -63,10 +63,9 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "nasm-rs",
+ "paste",
  "raw-cpuid",
  "spin 0.9.0",
- "static_assertions",
- "volatile 0.2.7",
  "x86_64",
  "xmas-elf",
 ]
@@ -696,6 +695,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "paste"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1034,12 +1039,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "static_assertions"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1307,12 +1306,6 @@ checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 
 [[package]]
 name = "volatile"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6b06ad3ed06fef1713569d547cdbdb439eafed76341820fb0e0344f29a41945"
-
-[[package]]
-name = "volatile"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4c2dbd44eb8b53973357e6e207e370f0c1059990df850aca1eca8947cf464f0"
@@ -1450,7 +1443,7 @@ checksum = "c48c878623ca5318ce0d3fde56541e05c973e1683cfc19d5384db516999569dc"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",
- "volatile 0.4.4",
+ "volatile",
 ]
 
 [[package]]

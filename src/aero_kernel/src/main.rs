@@ -18,7 +18,8 @@
     panic_info_message,
     thread_local,
     const_fn_fn_ptr_basics,
-    decl_macro
+    decl_macro,
+    global_asm
 )]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]
@@ -142,6 +143,10 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     userland::init();
     log::info!("Loaded userland");
+
+    unsafe {
+        *(0xdeadbeaf as *mut _) = 10;
+    }
 
     apic::mark_bsp_ready(true);
 

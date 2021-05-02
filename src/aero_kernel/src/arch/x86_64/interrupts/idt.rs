@@ -106,40 +106,95 @@ impl IdtEntry {
         self.set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
         self.set_offset(8, handler as usize);
     }
+
+    pub(crate) fn set_function_(&mut self, handler: unsafe extern "C" fn()) {
+        self.set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
+        self.set_offset(8, handler as usize);
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+pub struct ScratchRegisters {
+    pub r11: usize,
+    pub r10: usize,
+    pub r9: usize,
+    pub r8: usize,
+    pub rsi: usize,
+    pub rdi: usize,
+    pub rdx: usize,
+    pub rcx: usize,
+    pub rax: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+pub struct PreservedRegisters {
+    pub r15: usize,
+    pub r14: usize,
+    pub r13: usize,
+    pub r12: usize,
+    pub rbp: usize,
+    pub rbx: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+pub struct IretRegisters {
+    pub rip: usize,
+    pub cs: usize,
+    pub rflags: usize,
+    pub rsp: usize,
+    pub ss: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+pub struct InterruptStack {
+    pub preserved: PreservedRegisters,
+    pub scratch: ScratchRegisters,
+    pub iret: IretRegisters,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+pub struct InterruptErrorStack {
+    pub code: usize,
+    pub stack: InterruptStack,
 }
 
 /// Initialize the IDT.
 pub fn init() {
     unsafe {
-        IDT[0].set_function(super::exceptions::divide_by_zero);
-        IDT[1].set_function(super::exceptions::debug);
-        IDT[2].set_function(super::exceptions::non_maskable);
-        IDT[3].set_function(super::exceptions::breakpoint);
-        IDT[4].set_function(super::exceptions::overflow);
-        IDT[5].set_function(super::exceptions::bound_range);
-        IDT[6].set_function(super::exceptions::invalid_opcode);
-        IDT[7].set_function(super::exceptions::device_not_available);
-        IDT[8].set_function(super::exceptions::double_fault);
+        IDT[0].set_function_(super::exceptions::divide_by_zero);
+        IDT[1].set_function_(super::exceptions::debug);
+        IDT[2].set_function_(super::exceptions::non_maskable);
+        IDT[3].set_function_(super::exceptions::breakpoint);
+        IDT[4].set_function_(super::exceptions::overflow);
+        IDT[5].set_function_(super::exceptions::bound_range);
+        IDT[6].set_function_(super::exceptions::invalid_opcode);
+        IDT[7].set_function_(super::exceptions::device_not_available);
+        IDT[8].set_function_(super::exceptions::double_fault);
 
         // IDT[9] is reserved.
 
-        IDT[10].set_function(super::exceptions::invalid_tss);
-        IDT[11].set_function(super::exceptions::segment_not_present);
-        IDT[12].set_function(super::exceptions::stack_segment);
-        IDT[13].set_function(super::exceptions::protection);
+        IDT[10].set_function_(super::exceptions::invalid_tss);
+        IDT[11].set_function_(super::exceptions::segment_not_present);
+        IDT[12].set_function_(super::exceptions::stack_segment);
+        IDT[13].set_function_(super::exceptions::protection);
 
         IDT[14].set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
         IDT[14].set_offset(8, super::exceptions::page_fault as usize);
 
         // IDT[15] is reserved.
-        IDT[16].set_function(super::exceptions::fpu_fault);
-        IDT[17].set_function(super::exceptions::alignment_check);
-        IDT[18].set_function(super::exceptions::machine_check);
-        IDT[19].set_function(super::exceptions::simd);
-        IDT[20].set_function(super::exceptions::virtualization);
+        IDT[16].set_function_(super::exceptions::fpu_fault);
+        IDT[17].set_function_(super::exceptions::alignment_check);
+        IDT[18].set_function_(super::exceptions::machine_check);
+        IDT[19].set_function_(super::exceptions::simd);
+        IDT[20].set_function_(super::exceptions::virtualization);
 
         // IDT[21..29] are reserved.
-        IDT[30].set_function(super::exceptions::security);
+        IDT[30].set_function_(super::exceptions::security);
 
         // Set up the IRQs.
         IDT[32].set_function(super::irq::pit);
