@@ -4,7 +4,7 @@ mod irq;
 
 pub use idt::*;
 
-pub macro interrupt_error_stack(fn $name:ident($stack:ident: InterruptErrorStack) $code:block) {
+pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptErrorStack) $code:block) {
     paste::item! {
         #[no_mangle]
         unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptErrorStack) {
@@ -44,7 +44,7 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: InterruptErrorStack
 }
 
 pub macro interrupt {
-    (pub unsafe fn $name:ident($stack:ident: InterruptStack) $code:block) => {
+    (pub unsafe fn $name:ident($stack:ident: &mut InterruptStack) $code:block) => {
         paste::item! {
             #[no_mangle]
             unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptStack) {

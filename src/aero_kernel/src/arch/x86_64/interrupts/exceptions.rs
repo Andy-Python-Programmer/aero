@@ -3,7 +3,7 @@ use x86_64::registers::control::Cr2;
 
 macro interrupt_exception(fn $name:ident() => $message:expr) {
     super::interrupt_error_stack!(
-        fn $name(stack: InterruptErrorStack) {
+        fn $name(stack: &mut InterruptErrorStack) {
             panic!($message)
         }
     );
@@ -30,7 +30,7 @@ interrupt_exception!(fn virtualization() => "Virtualization fault");
 interrupt_exception!(fn security() => "Security exception");
 
 interrupt_error_stack!(
-    fn page_fault(stack: InterruptErrorStack) {
+    fn page_fault(stack: &mut InterruptErrorStack) {
         let accessed_address = Cr2::read();
 
         panic!(
