@@ -5,7 +5,7 @@ use x86_64::{registers::control::Cr3, structures::paging::*, PhysAddr, VirtAddr}
 
 use super::sdt::Sdt;
 use crate::{
-    apic,
+    apic::{self, IoApicHeader},
     arch::{interrupts, memory::alloc::malloc_align},
     kernel_ap_startup,
 };
@@ -141,7 +141,8 @@ impl Madt {
                     log::info!("Loaded multicore");
                 }
 
-                MadtEntry::IoApic(_) => {}
+                MadtEntry::IoApic(io_apic) => apic::init_io_apic(io_apic),
+
                 MadtEntry::IntSrcOverride(_) => {}
             }
         }
@@ -159,31 +160,22 @@ impl Madt {
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-struct MadtEntryHeader {
+pub struct EntryHeader {
     entry_type: u8,
     length: u8,
 }
 
 #[repr(C, packed)]
 struct MadtLocalApic {
-    header: MadtEntryHeader,
+    header: EntryHeader,
     processor_id: u8,
     apic_id: u8,
     flags: u32,
 }
 
 #[repr(C, packed)]
-struct MadtIoApic {
-    header: MadtEntryHeader,
-    io_apic_id: u8,
-    reserved: u8,
-    io_apic_address: u32,
-    global_system_interrupt_base: u32,
-}
-
-#[repr(C, packed)]
 struct MadtIntSrcOverride {
-    header: MadtEntryHeader,
+    header: EntryHeader,
     bus: u8,
     irq: u8,
     global_system_interrupt: u32,
@@ -192,7 +184,7 @@ struct MadtIntSrcOverride {
 
 enum MadtEntry {
     LocalApic(&'static MadtLocalApic),
-    IoApic(&'static MadtIoApic),
+    IoApic(&'static IoApicHeader),
     IntSrcOverride(&'static MadtIntSrcOverride),
 }
 
@@ -208,13 +200,13 @@ impl Iterator for MadtIterator {
         while self.current < self.limit {
             unsafe {
                 let entry_pointer = self.current;
-                let header = *(self.current as *const MadtEntryHeader);
+                let header = *(self.current as *const EntryHeader);
 
                 self.current = self.current.offset(header.length as isize);
 
                 let item = match header.entry_type {
                     0 => MadtEntry::LocalApic(&*(entry_pointer as *const MadtLocalApic)),
-                    1 => MadtEntry::IoApic(&*(entry_pointer as *const MadtIoApic)),
+                    1 => MadtEntry::IoApic(&*(entry_pointer as *const IoApicHeader)),
                     2 => MadtEntry::IntSrcOverride(&*(entry_pointer as *const MadtIntSrcOverride)),
 
                     0x10..=0x7f => continue,

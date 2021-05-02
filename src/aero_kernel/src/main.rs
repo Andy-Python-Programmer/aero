@@ -115,7 +115,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         interrupts::enable_interrupts();
     }
 
-    let apic_type = apic::init(boot_info.physical_memory_offset);
+    let apic_type = apic::init();
     log::info!(
         "Loaded local apic (x2apic={})",
         apic_type.supports_x2_apic()

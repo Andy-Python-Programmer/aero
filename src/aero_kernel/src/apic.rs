@@ -1,13 +1,12 @@
 use core::intrinsics;
-
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::{Mutex, MutexGuard, Once};
-use x86_64::VirtAddr;
+use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
 
-use crate::arch::interrupts;
-use crate::utils::io;
+use crate::{acpi::madt, arch::interrupts};
+use crate::{utils::io, PHYSICAL_MEMORY_OFFSET};
 
 const APIC_SPURIOUS_VECTOR: u32 = 0xFF;
 
@@ -134,6 +133,26 @@ impl LocalApic {
     }
 }
 
+#[repr(transparent)]
+pub struct IoApic(VirtAddr);
+
+impl IoApic {
+    fn new(address_virt: VirtAddr) -> Self {
+        Self(address_virt)
+    }
+
+    unsafe fn init(&mut self) {}
+}
+
+#[repr(C, packed)]
+pub struct IoApicHeader {
+    header: madt::EntryHeader,
+    io_apic_id: u8,
+    reserved: u8,
+    io_apic_address: u32,
+    global_system_interrupt_base: u32,
+}
+
 /// Get a mutable reference to the local apic.
 pub fn get_local_apic() -> MutexGuard<'static, LocalApic> {
     LOCAL_APIC
@@ -175,8 +194,20 @@ pub fn mark_bsp_ready(value: bool) {
     BSP_READY.store(value, Ordering::SeqCst);
 }
 
+/// Initialize the IO apic. This function is called in the init function
+/// of the [madt::Madt] acpi table.
+pub fn init_io_apic(io_apic: &'static IoApicHeader) {
+    let io_virtual = unsafe { PHYSICAL_MEMORY_OFFSET } + io_apic.io_apic_address as usize;
+
+    let mut io_apic = IoApic::new(io_virtual);
+
+    unsafe {
+        io_apic.init();
+    }
+}
+
 /// Initialize the local apic.
-pub fn init(physical_memory_offset: VirtAddr) -> ApicType {
+pub fn init() -> ApicType {
     let feature_info = CpuId::new()
         .get_feature_info()
         .expect("Failed to get CPU feature info");
@@ -192,7 +223,7 @@ pub fn init(physical_memory_offset: VirtAddr) -> ApicType {
 
     log::debug!("Found apic at: {:#x}", address_phys);
 
-    let address_virt = physical_memory_offset + address_phys;
+    let address_virt = unsafe { PHYSICAL_MEMORY_OFFSET } + address_phys;
 
     let mut local_apic = LocalApic::new(address_virt, apic_type);
 
