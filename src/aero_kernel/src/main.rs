@@ -11,7 +11,6 @@
     core_intrinsics,
     asm,
     naked_functions,
-    abi_x86_interrupt,
     alloc_error_handler,
     const_mut_refs,
     lang_items,
@@ -143,10 +142,6 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     userland::init();
     log::info!("Loaded userland");
-
-    unsafe {
-        *(0xdeadbeaf as *mut _) = 10;
-    }
 
     apic::mark_bsp_ready(true);
 

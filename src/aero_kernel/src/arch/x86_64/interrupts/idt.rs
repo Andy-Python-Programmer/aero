@@ -17,7 +17,7 @@ pub(crate) const ICW1_INIT: u8 = 0x10;
 pub(crate) const ICW1_ICW4: u8 = 0x01;
 pub(crate) const ICW4_8086: u8 = 0x01;
 
-pub(crate) type IDTInterruptHandlerFn = unsafe extern "x86-interrupt" fn(InterruptStackFrame);
+pub(crate) type InterruptHandlerFn = unsafe extern "C" fn();
 
 static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
 
@@ -102,12 +102,7 @@ impl IdtEntry {
     }
 
     /// Set the handler function of the IDT entry.
-    pub(crate) fn set_function(&mut self, handler: IDTInterruptHandlerFn) {
-        self.set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
-        self.set_offset(8, handler as usize);
-    }
-
-    pub(crate) fn set_function_(&mut self, handler: unsafe extern "C" fn()) {
+    pub(crate) fn set_function(&mut self, handler: InterruptHandlerFn) {
         self.set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
         self.set_offset(8, handler as usize);
     }
@@ -166,35 +161,35 @@ pub struct InterruptErrorStack {
 /// Initialize the IDT.
 pub fn init() {
     unsafe {
-        IDT[0].set_function_(super::exceptions::divide_by_zero);
-        IDT[1].set_function_(super::exceptions::debug);
-        IDT[2].set_function_(super::exceptions::non_maskable);
-        IDT[3].set_function_(super::exceptions::breakpoint);
-        IDT[4].set_function_(super::exceptions::overflow);
-        IDT[5].set_function_(super::exceptions::bound_range);
-        IDT[6].set_function_(super::exceptions::invalid_opcode);
-        IDT[7].set_function_(super::exceptions::device_not_available);
-        IDT[8].set_function_(super::exceptions::double_fault);
+        IDT[0].set_function(super::exceptions::divide_by_zero);
+        IDT[1].set_function(super::exceptions::debug);
+        IDT[2].set_function(super::exceptions::non_maskable);
+        IDT[3].set_function(super::exceptions::breakpoint);
+        IDT[4].set_function(super::exceptions::overflow);
+        IDT[5].set_function(super::exceptions::bound_range);
+        IDT[6].set_function(super::exceptions::invalid_opcode);
+        IDT[7].set_function(super::exceptions::device_not_available);
+        IDT[8].set_function(super::exceptions::double_fault);
 
         // IDT[9] is reserved.
 
-        IDT[10].set_function_(super::exceptions::invalid_tss);
-        IDT[11].set_function_(super::exceptions::segment_not_present);
-        IDT[12].set_function_(super::exceptions::stack_segment);
-        IDT[13].set_function_(super::exceptions::protection);
+        IDT[10].set_function(super::exceptions::invalid_tss);
+        IDT[11].set_function(super::exceptions::segment_not_present);
+        IDT[12].set_function(super::exceptions::stack_segment);
+        IDT[13].set_function(super::exceptions::protection);
 
         IDT[14].set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
         IDT[14].set_offset(8, super::exceptions::page_fault as usize);
 
         // IDT[15] is reserved.
-        IDT[16].set_function_(super::exceptions::fpu_fault);
-        IDT[17].set_function_(super::exceptions::alignment_check);
-        IDT[18].set_function_(super::exceptions::machine_check);
-        IDT[19].set_function_(super::exceptions::simd);
-        IDT[20].set_function_(super::exceptions::virtualization);
+        IDT[16].set_function(super::exceptions::fpu_fault);
+        IDT[17].set_function(super::exceptions::alignment_check);
+        IDT[18].set_function(super::exceptions::machine_check);
+        IDT[19].set_function(super::exceptions::simd);
+        IDT[20].set_function(super::exceptions::virtualization);
 
         // IDT[21..29] are reserved.
-        IDT[30].set_function_(super::exceptions::security);
+        IDT[30].set_function(super::exceptions::security);
 
         // Set up the IRQs.
         IDT[32].set_function(super::irq::pit);
@@ -273,21 +268,4 @@ pub unsafe fn load_pic() {
     io::wait();
     io::outb(PIC2_DATA, a2);
     io::wait();
-}
-
-#[macro_export]
-macro_rules! interrupt {
-    ($name:ident, $code:block) => {
-        #[allow(unused)]
-        pub extern "x86-interrupt" fn $name(stack_frame: InterruptStackFrame) {
-            $code
-        }
-    };
-
-    ($name:ident, unsafe $code:block) => {
-        #[allow(unused)]
-        pub unsafe extern "x86-interrupt" fn $name(stack_frame: InterruptStackFrame) {
-            $code
-        }
-    };
 }

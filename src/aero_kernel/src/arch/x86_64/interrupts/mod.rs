@@ -17,7 +17,7 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: InterruptErrorStack
             inner(&mut *stack);
         }
 
-        $crate::utils::intel_fn!(pub fn $name() {
+        $crate::utils::intel_fn!(pub fn $name() { // TODO: Use naked functions after asm!() supports using macros.
             // Move rax into code's place and put code in last instead to be
             // compatible with interrupt stack.
             "xchg [rsp], rax\n",
@@ -44,9 +44,22 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: InterruptErrorStack
 }
 
 pub macro interrupt {
-    (pub fn $name:ident() $code:block) => {
+    (pub unsafe fn $name:ident($stack:ident: InterruptStack) $code:block) => {
         paste::item! {
-            $crate::utils::intel_fn!(pub fn $name() {
+            #[no_mangle]
+            unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptStack) {
+                #[inline(always)]
+                #[allow(unused)] // Unused variable ($stack).
+                unsafe fn inner(stack: &mut $crate::arch::interrupts::InterruptStack) {
+                    $code
+                }
+
+                inner(&mut *stack);
+            }
+
+            $crate::utils::intel_fn!(pub fn $name() { // TODO: Use naked functions after asm!() supports using macros.
+                "push rax\n",
+
                 $crate::utils::push_scratch!(),
                 $crate::utils::push_preserved!(),
 
@@ -55,12 +68,10 @@ pub macro interrupt {
 
                 $crate::utils::pop_preserved!(),
                 $crate::utils::pop_scratch!(),
+
+                "iretq\n",
             });
         }
-    },
-
-    (pub unsafe fn $name:ident() $code:block) => {
-
     },
 }
 
