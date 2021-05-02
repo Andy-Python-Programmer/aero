@@ -9,36 +9,35 @@ use spin::{mutex::Mutex, MutexGuard, Once};
 
 static DEBUG_RENDY: Once<Mutex<DebugRendy>> = Once::new();
 
-#[macro_export]
-macro_rules! print {
-    ($($arg:tt)*) => ($crate::rendy::_print(format_args!($($arg)*)));
+pub macro print {
+    ($($arg:tt)*) => ($crate::rendy::_print(format_args!($($arg)*))),
 }
 
-#[macro_export]
-macro_rules! println {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+pub macro println {
+    () => ($crate::rendy::print!("\n")),
+    ($($arg:tt)*) => ($crate::rendy::print!("{}\n", format_args!($($arg)*))),
 }
 
-#[macro_export]
-macro_rules! dbg {
+pub macro dbg {
     () => {
-        $crate::println!("[{}:{}]", $crate::file!(), $crate::line!());
-    };
+        $crate::rendy::println!("[{}:{}]", $crate::file!(), $crate::line!());
+    },
+
     ($val:expr $(,)?) => {
         // Use of `match` here is intentional because it affects the lifetimes
         // of temporaries - https://stackoverflow.com/a/48732525/1063961
         match $val {
             tmp => {
-                $crate::println!("[{}:{}] {} = {:#?}",
+                $crate::rendy::println!("[{}:{}] {} = {:#?}",
                     core::file!(), core::line!(), core::stringify!($val), &tmp);
                 tmp
             }
         }
-    };
+    },
+
     ($($val:expr),+ $(,)?) => {
-        ($($crate::dbg!($val)),+,)
-    };
+        ($($crate::rendy::dbg!($val)),+,)
+    },
 }
 
 /// Get a mutable reference to the debug renderer.

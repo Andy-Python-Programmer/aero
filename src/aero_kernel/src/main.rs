@@ -43,6 +43,9 @@ mod time;
 mod unwind;
 mod userland;
 mod utils;
+mod prelude {
+    pub use crate::rendy::{print, println};
+}
 
 use arch::interrupts;
 
@@ -147,9 +150,8 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     log::info!("Initialized kernel");
 
-    println!("{}", ASCII_INTRO);
-
-    print!("$ ");
+    prelude::println!("{}", ASCII_INTRO);
+    prelude::print!("$ ");
 
     let hello_process = Process::from_function(mission_hello_world);
 

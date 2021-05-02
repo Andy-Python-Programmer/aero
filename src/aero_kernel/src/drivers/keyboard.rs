@@ -1,4 +1,4 @@
-use crate::{print, println};
+use crate::prelude::*;
 
 const LEFT_SHIFT_PRESSED: u8 = 0x2A;
 const LEFT_SHIFT_RELEASED: u8 = LEFT_SHIFT_PRESSED + 0x80;

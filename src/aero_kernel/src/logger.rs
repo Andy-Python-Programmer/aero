@@ -1,9 +1,8 @@
+use crate::prelude::*;
 use crate::rendy;
 
-use crate::{print, println};
-use log::{Level, LevelFilter, Metadata, Record};
-
 use aero_gfx::debug::color::{Color, ColorCode};
+use log::{Level, LevelFilter, Metadata, Record};
 
 static LOGGER: AeroLogger = AeroLogger;
 
