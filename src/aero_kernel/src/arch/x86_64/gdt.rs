@@ -4,43 +4,31 @@
 
 use core::mem;
 
-use x86_64::VirtAddr;
+bitflags::bitflags! {
+    /// Specifies which element to load into a segment from
+    /// descriptor tables (i.e., is a index to LDT or GDT table
+    /// with some additional flags).
+    struct SegmentSelector: u16 {
+        const RPL_0 = 0b00;
+        const RPL_1 = 0b01;
+        const RPL_2 = 0b10;
+        const RPL_3 = 0b11;
+        const TI_GDT = 0 << 2;
+        const TI_LDT = 1 << 2;
+    }
+}
 
-const GDT_ENTRY_COUNT: usize = 4;
-const GDT_LOCAL_ENTRY_COUNT: usize = 7;
+bitflags::bitflags! {
+    struct GdtEntryFlags: u8 {
+        const NULL = 0;
+        const PROTECTED_MODE = 1 << 6;
+        const LONG_MODE = 1 << 5;
+    }
+}
+
+const GDT_ENTRY_COUNT: usize = 10;
 
 static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
-    // GDT NULL descriptor.
-    GdtEntry::NULL,
-    // GDT kernel code descriptor.
-    GdtEntry::new(
-        GdtAccessFlags::PRESENT
-            | GdtAccessFlags::RING_0
-            | GdtAccessFlags::SYSTEM
-            | GdtAccessFlags::EXECUTABLE
-            | GdtAccessFlags::PRIVILEGE,
-        GdtEntryFlags::LONG_MODE,
-    ),
-    // GDT kernel data descriptor.
-    GdtEntry::new(
-        GdtAccessFlags::PRESENT
-            | GdtAccessFlags::RING_0
-            | GdtAccessFlags::SYSTEM
-            | GdtAccessFlags::PRIVILEGE,
-        GdtEntryFlags::LONG_MODE,
-    ),
-    // GDT kernel TLS (Thread Local Storage) descriptor.
-    GdtEntry::new(
-        GdtAccessFlags::PRESENT
-            | GdtAccessFlags::RING_0
-            | GdtAccessFlags::SYSTEM
-            | GdtAccessFlags::PRIVILEGE,
-        GdtEntryFlags::LONG_MODE,
-    ),
-];
-
-#[thread_local]
-static mut LOCAL_GDT: [GdtEntry; GDT_LOCAL_ENTRY_COUNT] = [
     // GDT null descriptor.
     GdtEntry::NULL,
     // GDT kernel code descriptor.
@@ -60,6 +48,23 @@ static mut LOCAL_GDT: [GdtEntry; GDT_LOCAL_ENTRY_COUNT] = [
             | GdtAccessFlags::PRIVILEGE,
         GdtEntryFlags::LONG_MODE,
     ),
+    // GDT kernel TLS descriptor.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_0
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
+    // GDT dummy user code descriptor. Required for SYSEXIT.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_0
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::EXECUTABLE
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::PROTECTED_MODE,
+    ),
     // GDT user data descriptor.
     GdtEntry::new(
         GdtAccessFlags::PRESENT
@@ -77,6 +82,14 @@ static mut LOCAL_GDT: [GdtEntry; GDT_LOCAL_ENTRY_COUNT] = [
             | GdtAccessFlags::PRIVILEGE,
         GdtEntryFlags::LONG_MODE,
     ),
+    // GDT user TLS descriptor.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_3
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
     // GDT TSS descriptor.
     GdtEntry::new(
         GdtAccessFlags::PRESENT | GdtAccessFlags::RING_3 | GdtAccessFlags::TSS_AVAIL,
@@ -87,22 +100,7 @@ static mut LOCAL_GDT: [GdtEntry; GDT_LOCAL_ENTRY_COUNT] = [
     GdtEntry::NULL,
 ];
 
-#[thread_local]
-static mut TSS: TssEntry = TssEntry::new();
-
-bitflags::bitflags! {
-    /// Specifies which element to load into a segment from
-    /// descriptor tables (i.e., is a index to LDT or GDT table
-    /// with some additional flags).
-    struct SegmentSelector: u16 {
-        const RPL_0 = 0b00;
-        const RPL_1 = 0b01;
-        const RPL_2 = 0b10;
-        const RPL_3 = 0b11;
-        const TI_GDT = 0 << 2;
-        const TI_LDT = 1 << 2;
-    }
-}
+static mut TSS: Tss = Tss::new();
 
 struct GdtAccessFlags;
 
@@ -117,12 +115,14 @@ impl GdtAccessFlags {
     const TSS_AVAIL: u8 = 9;
 }
 
-bitflags::bitflags! {
-    struct GdtEntryFlags: u8 {
-        const NULL = 0;
-        const PROTECTED_MODE = 1 << 6;
-        const LONG_MODE = 1 << 5;
-    }
+struct GdtEntryType;
+
+impl GdtEntryType {
+    const KERNEL_CODE: u16 = 1;
+    const KERNEL_DATA: u16 = 2;
+    const KERNEL_TLS: u16 = 3;
+    const TSS: u16 = 8;
+    const TSS_HI: u16 = 9;
 }
 
 impl SegmentSelector {
@@ -180,6 +180,23 @@ impl GdtEntry {
             base_hi: 0x00,
         }
     }
+
+    fn set_offset(&mut self, offset: u32) {
+        self.base_low = offset as u16;
+        self.base_middle = (offset >> 16) as u8;
+        self.base_hi = (offset >> 24) as u8;
+    }
+
+    fn set_limit(&mut self, limit: u32) {
+        self.limit_low = limit as u16;
+        self.limit_hi_flags = self.limit_hi_flags & 0xF0 | ((limit >> 16) as u8) & 0x0F;
+    }
+
+    fn set_raw<T>(&mut self, value: T) {
+        unsafe {
+            (self as *mut _ as *mut T).write(value);
+        }
+    }
 }
 
 /// The Task State Segment (TSS) is a special data structure for x86 processors which holds information about a task.
@@ -187,7 +204,7 @@ impl GdtEntry {
 /// **Notes**: <https://wiki.osdev.org/Task_State_Segment>
 #[derive(Debug, Clone, Copy)]
 #[repr(C, align(16))]
-struct TssEntry {
+struct Tss {
     reserved: u32,
     rsp: [u64; 3],
     reserved2: u64,
@@ -197,7 +214,7 @@ struct TssEntry {
     iomap_base: u16,
 }
 
-impl TssEntry {
+impl Tss {
     #[inline]
     const fn new() -> Self {
         Self {
@@ -221,35 +238,54 @@ pub fn init() {
         );
 
         load_gdt(&gdt_descriptor as *const _);
-
-        // Load the GDT segments.
-        load_cs(SegmentSelector::new(1, SegmentSelector::RPL_0));
-        load_ds(SegmentSelector::new(2, SegmentSelector::RPL_0));
-        load_es(SegmentSelector::new(2, SegmentSelector::RPL_0));
-        load_fs(SegmentSelector::new(2, SegmentSelector::RPL_0));
-        load_gs(SegmentSelector::new(3, SegmentSelector::RPL_0));
-        load_ss(SegmentSelector::new(2, SegmentSelector::RPL_0));
     }
-}
 
-/// Initialize the local GDT.
-pub fn init_local(stack_top: VirtAddr) {
-    // unsafe {
-    // let gdt_descriptor = GdtDescriptor::new(
-    //     (mem::size_of::<[GdtEntry; GDT_LOCAL_ENTRY_COUNT]>() - 1) as u16,
-    //     (&LOCAL_GDT as *const _) as u64,
-    // );
+    let tss_ptr = unsafe { &TSS as *const _ };
 
-    // load_gdt(&gdt_descriptor as *const _);
+    unsafe {
+        GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
+        GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
+        GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
+    }
 
-    // // Reload the GDT segments.
-    // load_cs(SegmentSelector::new(1, SegmentSelector::RPL_0));
-    // load_ds(SegmentSelector::new(2, SegmentSelector::RPL_0));
-    // load_es(SegmentSelector::new(2, SegmentSelector::RPL_0));
-    // load_ss(SegmentSelector::new(2, SegmentSelector::RPL_0));
+    unsafe {
+        // Load the GDT segments.
+        load_cs(SegmentSelector::new(
+            GdtEntryType::KERNEL_CODE,
+            SegmentSelector::RPL_0,
+        ));
 
-    // load_tss(SegmentSelector::new(8, SegmentSelector::RPL_0));
-    // }
+        load_ds(SegmentSelector::new(
+            GdtEntryType::KERNEL_DATA,
+            SegmentSelector::RPL_0,
+        ));
+
+        load_es(SegmentSelector::new(
+            GdtEntryType::KERNEL_DATA,
+            SegmentSelector::RPL_0,
+        ));
+
+        load_fs(SegmentSelector::new(
+            GdtEntryType::KERNEL_DATA,
+            SegmentSelector::RPL_0,
+        ));
+
+        load_gs(SegmentSelector::new(
+            GdtEntryType::KERNEL_TLS,
+            SegmentSelector::RPL_0,
+        ));
+
+        load_ss(SegmentSelector::new(
+            GdtEntryType::KERNEL_DATA,
+            SegmentSelector::RPL_0,
+        ));
+
+        // Load the Task State Segment.
+        load_tss(SegmentSelector::new(
+            GdtEntryType::TSS,
+            SegmentSelector::RPL_0,
+        ));
+    }
 }
 
 #[inline(always)]

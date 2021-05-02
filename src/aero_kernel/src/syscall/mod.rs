@@ -98,7 +98,7 @@ pub fn init() {
             io::wrmsr(io::IA32_LSTAR, syscall_handler as u64);
 
             // Clear the trap flag and enable interrupts.
-            io::wrmsr(io::IA32_FMASK, 0x200);
+            io::wrmsr(io::IA32_FMASK, 0x300);
         }
     }
 }

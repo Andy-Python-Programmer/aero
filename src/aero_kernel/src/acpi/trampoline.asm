@@ -46,9 +46,6 @@ protected_ap:
     ; Load protected mode GDT.
     lgdt [gdtr]
 
-    mov eax, trampoline.page_table
-    mov cr3, eax
-
     mov ecx, 0xC0000080
     rdmsr
     or eax, 0x100
