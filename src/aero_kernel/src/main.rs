@@ -40,6 +40,7 @@ mod rendy;
 mod syscall;
 mod tests;
 mod time;
+mod tls;
 mod unwind;
 mod userland;
 mod utils;
@@ -125,6 +126,9 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let (mut offset_table, mut frame_allocator) =
         memory::paging::init(boot_info.physical_memory_offset, memory_regions);
     log::info!("Loaded paging");
+
+    tls::init();
+    log::info!("Loaded TLS");
 
     arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
         .expect("Failed to initialize the heap.");

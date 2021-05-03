@@ -83,7 +83,7 @@ impl Madt {
 
                     let page_table = Cr3::read().0.start_address().as_u64();
 
-                    let stack = unsafe { malloc_align(4096 * 16, 4096) };
+                    let stack = malloc_align(4096 * 16, 4096);
                     let stack_end = unsafe { stack.offset(4096 * 16) } as u64;
 
                     unsafe {

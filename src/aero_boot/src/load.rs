@@ -399,7 +399,7 @@ where
     I: ExactSizeIterator<Item = D> + Clone,
     D: BootMemoryRegion,
 {
-    // allocate and map space for the boot info
+    // Allocate and map space for the boot info.
     let (boot_info, memory_regions) = {
         let boot_info_addr = mappings.used_entries.get_free_address();
         let boot_info_end = boot_info_addr + mem::size_of::<BootInfo>();
@@ -417,7 +417,8 @@ where
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
             let frame = frame_allocator
                 .allocate_frame()
-                .expect("frame allocation for boot info failed");
+                .expect("Frame allocation for boot info failed");
+
             unsafe {
                 page_tables
                     .kernel_page_table

@@ -47,5 +47,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     assemble_trampoline(&out_dir)?;
 
+    println!("cargo:rerun-if-changed=.cargo/kernel.ld");
+
     Ok(())
 }
