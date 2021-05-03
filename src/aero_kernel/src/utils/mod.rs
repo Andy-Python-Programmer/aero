@@ -79,7 +79,7 @@ pub macro intel_asm($($code:expr,)+) {
 }
 
 pub macro intel_fn {
-    (fn $name:ident() { $($body:expr,)+ }) => {
+    (pub __asm__ volatile fn $name:ident() { $($body:expr,)+ }) => {
         crate::utils::intel_asm!(
             ".global ", stringify!($name), "\n",
             ".type ", stringify!($name), ", @function\n",
@@ -91,18 +91,21 @@ pub macro intel_fn {
         );
 
         extern "C" {
-            fn $name();
+            pub fn $name();
         }
     },
 
-
-    (pub fn $name:ident() { $($body:expr,)+ }) => {
+    (pub __asm__ volatile fn $name:ident() { $($body:expr,)+ } $(__label__ volatile $label_name:expr => { $($label_body:expr,)+ })+) => {
         crate::utils::intel_asm!(
             ".global ", stringify!($name), "\n",
             ".type ", stringify!($name), ", @function\n",
             ".section .text.", stringify!($name), ", \"ax\", @progbits\n",
             stringify!($name), ":\n",
             $($body),+,
+            $(
+                stringify!($label_name), ":\n",
+                $($label_body),+,
+            )*
             ".size ", stringify!($name), ", . - ", stringify!($name), "\n",
             ".text\n",
         );

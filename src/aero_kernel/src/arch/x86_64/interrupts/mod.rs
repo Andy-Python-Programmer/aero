@@ -17,13 +17,13 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
             inner(&mut *stack);
         }
 
-        $crate::utils::intel_fn!(pub fn $name() { // TODO: Use naked functions after asm!() supports using macros.
+        $crate::prelude::intel_fn!(pub __asm__ volatile fn $name() { // TODO: Use naked functions after asm!() supports using macros.
             // Move rax into code's place and put code in last instead to be
             // compatible with interrupt stack.
             "xchg [rsp], rax\n",
 
-            $crate::utils::push_scratch!(),
-            $crate::utils::push_preserved!(),
+            $crate::prelude::push_scratch!(),
+            $crate::prelude::push_preserved!(),
 
             // Push the error code.
             "push rax\n",
@@ -35,8 +35,8 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
             // Pop the error code.
             "add rsp, 8\n",
 
-            $crate::utils::pop_preserved!(),
-            $crate::utils::pop_scratch!(),
+            $crate::prelude::pop_preserved!(),
+            $crate::prelude::pop_scratch!(),
 
             "iretq\n",
         });
@@ -50,24 +50,24 @@ pub macro interrupt {
             unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptStack) {
                 #[inline(always)]
                 #[allow(unused)] // Unused variable ($stack).
-                unsafe fn inner(stack: &mut $crate::arch::interrupts::InterruptStack) {
+                unsafe fn inner($stack: &mut $crate::arch::interrupts::InterruptStack) {
                     $code
                 }
 
                 inner(&mut *stack);
             }
 
-            $crate::utils::intel_fn!(pub fn $name() { // TODO: Use naked functions after asm!() supports using macros.
+            $crate::utils::intel_fn!(pub __asm__ volatile fn $name() { // TODO: Use naked functions after asm!() supports using macros.
                 "push rax\n",
 
-                $crate::utils::push_scratch!(),
-                $crate::utils::push_preserved!(),
+                $crate::prelude::push_scratch!(),
+                $crate::prelude::push_preserved!(),
 
                 "mov rdi, rsp\n",
                 "call __interrupt_", stringify!($name), "\n",
 
-                $crate::utils::pop_preserved!(),
-                $crate::utils::pop_scratch!(),
+                $crate::prelude::pop_preserved!(),
+                $crate::prelude::pop_scratch!(),
 
                 "iretq\n",
             });

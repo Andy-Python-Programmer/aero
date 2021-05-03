@@ -45,6 +45,7 @@ mod userland;
 mod utils;
 mod prelude {
     pub use crate::rendy::{print, println};
+    pub use crate::utils::*;
 }
 
 use arch::interrupts;
@@ -155,11 +156,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     scheduler::get_scheduler().push(hello_process);
 
     unsafe {
-        // let ret: u64;
-
-        // asm!("syscall", lateout("rax") ret, in("rax") 60, in("rdi") 1, lateout("rcx") _, lateout("r11") _);
-
-        // println!("ret: {}", ret);
+        asm!("int 0x80", in("rax") 60, in("rdi") 1);
 
         loop {
             interrupts::halt();

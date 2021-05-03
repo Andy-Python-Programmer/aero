@@ -115,14 +115,15 @@ impl GdtAccessFlags {
     const TSS_AVAIL: u8 = 9;
 }
 
-struct GdtEntryType;
+pub struct GdtEntryType;
 
 impl GdtEntryType {
-    const KERNEL_CODE: u16 = 1;
-    const KERNEL_DATA: u16 = 2;
-    const KERNEL_TLS: u16 = 3;
-    const TSS: u16 = 8;
-    const TSS_HI: u16 = 9;
+    pub const KERNEL_CODE: u16 = 1;
+    pub const KERNEL_DATA: u16 = 2;
+    pub const KERNEL_TLS: u16 = 3;
+    pub const USER_CODE32_UNUSED: u16 = 4;
+    pub const TSS: u16 = 8;
+    pub const TSS_HI: u16 = 9;
 }
 
 impl SegmentSelector {
@@ -154,7 +155,7 @@ impl GdtDescriptor {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct GdtEntry {
+struct GdtEntry {
     limit_low: u16,
     base_low: u16,
     base_middle: u8,
