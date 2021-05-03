@@ -12,13 +12,12 @@
     asm,
     naked_functions,
     alloc_error_handler,
-    const_mut_refs,
     lang_items,
     panic_info_message,
     thread_local,
-    const_fn_fn_ptr_basics,
     decl_macro,
-    global_asm
+    global_asm,
+    extern_types
 )]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]

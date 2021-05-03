@@ -1,4 +1,5 @@
 pub mod io;
+pub mod linker;
 
 /// Push scratch registers.
 pub macro push_scratch() {
