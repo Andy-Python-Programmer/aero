@@ -11,6 +11,7 @@
 //! **Notes**: <https://wiki.osdev.org/System_Calls>
 
 use raw_cpuid::CpuId;
+use spin::Once;
 
 pub mod fs;
 pub mod process;
@@ -51,6 +52,13 @@ unsafe extern "C" fn __impl_syscall_handler(stack: *mut InterruptStack) {
 
 interrupt!(
     pub unsafe fn syscall_interrupt_handler(stack: &mut InterruptStack) {
+        if supports_syscall_sysret() {
+            // If the current CPU suppots syscall instruction then print
+            // a warning as in this case use of deperecated `int 0x80`
+            // interrupt.
+            log::warn!("Use of deperecated `int 0x80` interrupt");
+        }
+
         __inner_syscall(stack)
     }
 );
@@ -108,15 +116,25 @@ intel_fn!(
     }
 );
 
-pub fn init() {
-    let function_info = CpuId::new()
-        .get_extended_function_info()
-        .expect("Failed to retrieve CPU function info");
+/// Returns true if the current CPU supports the `syscall` and
+/// the `sysret` instruction.
+pub fn supports_syscall_sysret() -> bool {
+    static CACHE: Once<bool> = Once::new(); // This will cache the result.
 
+    *CACHE.call_once(|| {
+        let function_info = CpuId::new()
+            .get_extended_function_info()
+            .expect("Failed to retrieve CPU function info");
+
+        function_info.has_syscall_sysret()
+    })
+}
+
+pub fn init() {
     unsafe {
         // Enable support for `syscall` and `sysret` instructions if the current
         // CPU supports them.
-        if function_info.has_syscall_sysret() {
+        if supports_syscall_sysret() {
             let syscall_base = GdtEntryType::KERNEL_CODE << 3;
             let sysret_base = (GdtEntryType::USER_CODE32_UNUSED << 3) | 3;
 
