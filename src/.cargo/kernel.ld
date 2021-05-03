@@ -3,6 +3,9 @@ OUTPUT_FORMAT(elf64-x86-64)
 
 SECTIONS {
     . = 1M;
+    
+    . += SIZEOF_HEADERS;
+    . = ALIGN(4096);
 
     __kernel_start = .;
 
