@@ -98,8 +98,8 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     rendy::init(framebuffer);
     logger::init();
 
-    arch::gdt::init();
-    log::info!("Loaded GDT");
+    arch::gdt::init_boot();
+    log::info!("Loaded bootstrap GDT");
 
     interrupts::init();
     log::info!("Loaded IDT");
@@ -133,6 +133,9 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     tls::init();
     log::info!("Loaded TLS");
+
+    arch::gdt::init();
+    log::info!("Loaded GDT");
 
     acpi::init(
         &mut offset_table,

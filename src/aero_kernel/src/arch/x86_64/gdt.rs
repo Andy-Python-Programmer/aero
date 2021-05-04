@@ -29,7 +29,39 @@ bitflags::bitflags! {
 }
 
 const GDT_ENTRY_COUNT: usize = 10;
+const TEMP_GDT_ENTRY_COUNT: usize = 4;
 
+static mut TEMP_GDT: [GdtEntry; TEMP_GDT_ENTRY_COUNT] = [
+    // GDT null descriptor.
+    GdtEntry::NULL,
+    // GDT kernel code descriptor.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_0
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::EXECUTABLE
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
+    // GDT kernel data descriptor.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_0
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
+    // GDT kernel TLS descriptor.
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_0
+            | GdtAccessFlags::SYSTEM
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
+];
+
+#[thread_local]
 static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
     // GDT null descriptor.
     GdtEntry::NULL,
@@ -102,6 +134,7 @@ static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
     GdtEntry::NULL,
 ];
 
+#[thread_local]
 pub static mut PROCESSOR_CONTROL_REGION: ProcessorControlRegion = ProcessorControlRegion::new();
 
 struct GdtAccessFlags;
@@ -251,28 +284,19 @@ impl ProcessorControlRegion {
     }
 }
 
-/// Initialize the GDT.
-pub fn init() {
+/// Initialize the temporary GDT.
+pub fn init_boot() {
     unsafe {
         let gdt_descriptor = GdtDescriptor::new(
-            (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,
-            (&GDT as *const _) as u64,
+            (mem::size_of::<[GdtEntry; TEMP_GDT_ENTRY_COUNT]>() - 1) as u16,
+            (&TEMP_GDT as *const _) as u64,
         );
 
         load_gdt(&gdt_descriptor as *const _);
     }
 
-    let pcr = unsafe { &mut PROCESSOR_CONTROL_REGION };
-    let tss_ptr = &pcr.tss as *const _;
-
+    // Load the GDT segments.
     unsafe {
-        GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
-        GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
-        GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
-    }
-
-    unsafe {
-        // Load the GDT segments.
         load_cs(SegmentSelector::new(
             GdtEntryType::KERNEL_CODE,
             SegmentSelector::RPL_0,
@@ -295,6 +319,50 @@ pub fn init() {
 
         load_gs(SegmentSelector::new(
             GdtEntryType::KERNEL_TLS,
+            SegmentSelector::RPL_0,
+        ));
+
+        load_ss(SegmentSelector::new(
+            GdtEntryType::KERNEL_DATA,
+            SegmentSelector::RPL_0,
+        ));
+    }
+}
+
+/// Initialize the GDT.
+pub fn init() {
+    unsafe {
+        let gdt_descriptor = GdtDescriptor::new(
+            (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,
+            (&GDT as *const _) as u64,
+        );
+
+        load_gdt(&gdt_descriptor as *const _);
+    }
+
+    let pcr = unsafe { &mut PROCESSOR_CONTROL_REGION };
+    let tss_ptr = &pcr.tss as *const _;
+
+    unsafe {
+        GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
+        GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
+        GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
+    }
+
+    unsafe {
+        // Reload the GDT segments.
+        load_cs(SegmentSelector::new(
+            GdtEntryType::KERNEL_CODE,
+            SegmentSelector::RPL_0,
+        ));
+
+        load_ds(SegmentSelector::new(
+            GdtEntryType::KERNEL_DATA,
+            SegmentSelector::RPL_0,
+        ));
+
+        load_es(SegmentSelector::new(
+            GdtEntryType::KERNEL_DATA,
             SegmentSelector::RPL_0,
         ));
 

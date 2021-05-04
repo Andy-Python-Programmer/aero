@@ -5,7 +5,7 @@ use alloc::boxed::Box;
 use crate::utils::io;
 use crate::utils::linker::LinkerSymbol;
 
-/// Initialize support for thread local.
+/// Initialize support for the `#[thread_local]` attribute.
 pub fn init() {
     extern "C" {
         /// The starting byte of the thread data segment.
