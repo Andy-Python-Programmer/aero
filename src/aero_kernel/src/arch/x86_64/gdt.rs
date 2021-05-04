@@ -4,6 +4,8 @@
 
 use core::mem;
 
+use crate::utils::io;
+
 bitflags::bitflags! {
     /// Specifies which element to load into a segment from
     /// descriptor tables (i.e., is a index to LDT or GDT table
@@ -100,7 +102,7 @@ static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
     GdtEntry::NULL,
 ];
 
-static mut TSS: Tss = Tss::new();
+pub static mut PROCESSOR_CONTROL_REGION: ProcessorControlRegion = ProcessorControlRegion::new();
 
 struct GdtAccessFlags;
 
@@ -203,8 +205,7 @@ impl GdtEntry {
 /// The Task State Segment (TSS) is a special data structure for x86 processors which holds information about a task.
 ///
 /// **Notes**: <https://wiki.osdev.org/Task_State_Segment>
-#[derive(Debug, Clone, Copy)]
-#[repr(C, align(16))]
+#[repr(C, packed)]
 struct Tss {
     reserved: u32,
     rsp: [u64; 3],
@@ -230,6 +231,26 @@ impl Tss {
     }
 }
 
+#[repr(C, align(16))]
+pub struct TssAligned(Tss);
+
+#[repr(C, align(16))]
+pub struct ProcessorControlRegion {
+    pub tcb_end: usize,
+    pub user_rsp: usize,
+    pub tss: TssAligned,
+}
+
+impl ProcessorControlRegion {
+    const fn new() -> Self {
+        Self {
+            tcb_end: 0x00,
+            user_rsp: 0x00,
+            tss: TssAligned(Tss::new()),
+        }
+    }
+}
+
 /// Initialize the GDT.
 pub fn init() {
     unsafe {
@@ -241,7 +262,8 @@ pub fn init() {
         load_gdt(&gdt_descriptor as *const _);
     }
 
-    let tss_ptr = unsafe { &TSS as *const _ };
+    let pcr = unsafe { &mut PROCESSOR_CONTROL_REGION };
+    let tss_ptr = &pcr.tss as *const _;
 
     unsafe {
         GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
@@ -286,6 +308,9 @@ pub fn init() {
             GdtEntryType::TSS,
             SegmentSelector::RPL_0,
         ));
+
+        io::wrmsr(io::IA32_GS_BASE, pcr as *mut _ as u64);
+        io::wrmsr(io::IA32_KERNEL_GSBASE, 0x00);
     }
 }
 
