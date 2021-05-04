@@ -3,7 +3,7 @@ OUTPUT_FORMAT(elf64-x86-64)
 
 SECTIONS {
     . = 1M;
-    
+
     . += SIZEOF_HEADERS;
     . = ALIGN(4096);
 
@@ -32,10 +32,15 @@ SECTIONS {
     }
 
     .tdata : {
-       __tdata_start = .;
-        KEEP(*(.tdata*))
-        KEEP(*(.tbss*))
-        __tdata_end = ALIGN(8);
+        __tdata_start = .;
+        *(.tdata*)
+        . = ALIGN(4096);
+        __tdata_end = .;
+        __tbss_start = .;
+        *(.tbss*)
+        . += 8;
+        . = ALIGN(4096);
+        __tbss_end = .;
     }
 
     .bss : {

@@ -1,20 +1,52 @@
-use crate::arch::memory::alloc::malloc_align;
+use core::ptr;
+
+use alloc::boxed::Box;
+
+use crate::utils::io;
 use crate::utils::linker::LinkerSymbol;
 
 /// Initialize support for thread local.
 pub fn init() {
     extern "C" {
         /// The starting byte of the thread data segment.
-        static mut __tdata_start: LinkerSymbol;
+        static __tdata_start: LinkerSymbol;
         /// The ending byte of the thread data segment.
-        static mut __tdata_end: LinkerSymbol;
+        static __tdata_end: LinkerSymbol;
+        /// The starting byte of the thread BSS segment.
+        static __tbss_start: LinkerSymbol;
+        /// The ending byte of the thread BSS segment.
+        static __tbss_end: LinkerSymbol;
     }
 
-    let size = unsafe { __tdata_end.as_usize() - __tdata_start.as_usize() };
-    let tls = malloc_align(size + 8, 8);
+    // SAFTEY: These linker symbols are **guaranteed** to be present.
+    let total_size = unsafe { __tbss_end.as_usize() - __tdata_start.as_usize() };
+    let tdata_size = unsafe { __tdata_end.as_usize() - __tdata_start.as_usize() };
+
+    // Here we add 8 to the total size to store the TCB pointer.
+    let total_tls_size = total_size + 8;
+    let mut tls_raw_ptr = Box::<[u8]>::new_uninit_slice(total_tls_size);
 
     unsafe {
-        let tdata_start_ptr: *const u8 = __tdata_start.as_ptr();
-        tdata_start_ptr.copy_to(tls, size);
+        ptr::copy(
+            __tdata_start.as_ptr(),
+            tls_raw_ptr.as_mut_ptr() as *mut u8,
+            tdata_size,
+        );
+
+        ptr::write_bytes(
+            ((tls_raw_ptr.as_mut_ptr() as usize) + tdata_size) as *mut u8,
+            0,
+            total_tls_size - tdata_size,
+        );
+    }
+
+    let tls_ptr = unsafe { Box::into_raw(tls_raw_ptr.assume_init()) };
+    let fs_ptr = ((tls_ptr as *const u8 as u64) + (total_size as u64)) as *mut u64;
+
+    unsafe {
+        io::wrmsr(io::IA32_FS_BASE, fs_ptr as u64);
+
+        // The SystemV abi expects fs[:0x00] to be the address of fs.
+        *fs_ptr = fs_ptr as u64;
     }
 }

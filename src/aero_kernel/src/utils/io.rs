@@ -2,6 +2,8 @@
 
 pub const IA32_EFER: u32 = 0xc0000080;
 
+pub const IA32_FS_BASE: u32 = 0xC0000100;
+
 /// System Call Target Address (R/W).
 pub const IA32_STAR: u32 = 0xc0000081;
 
