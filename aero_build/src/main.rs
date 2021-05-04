@@ -25,6 +25,7 @@ const CARGO: &str = env!("CARGO");
 const QEMU: &str = "qemu-system-x86_64";
 
 const BUNDLED_DIR: &str = "bundled";
+const BUILD_DIR: &str = "build";
 
 mod bootloader;
 mod uefi;
@@ -199,6 +200,7 @@ async fn main() {
                 chainloader,
             } => {
                 uefi::download_ovmf_prebuilt().await.unwrap();
+                uefi::download_limine_prebuilt().await.unwrap();
 
                 build_kernel(target);
                 bootloader::build_bootloader();
@@ -216,6 +218,7 @@ async fn main() {
 
             AeroBuildCommand::Build { target } => {
                 uefi::download_ovmf_prebuilt().await.unwrap();
+                uefi::download_limine_prebuilt().await.unwrap();
 
                 build_kernel(target);
                 bootloader::build_bootloader();
