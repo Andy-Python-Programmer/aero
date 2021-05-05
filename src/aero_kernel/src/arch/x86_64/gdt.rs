@@ -30,6 +30,7 @@ bitflags::bitflags! {
 
 const GDT_ENTRY_COUNT: usize = 10;
 const TEMP_GDT_ENTRY_COUNT: usize = 4;
+const USER_TCB_OFFSET: usize = 0xB0000000;
 
 static mut TEMP_GDT: [GdtEntry; TEMP_GDT_ENTRY_COUNT] = [
     // GDT null descriptor.
@@ -137,6 +138,12 @@ static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
 #[thread_local]
 pub static mut PROCESSOR_CONTROL_REGION: ProcessorControlRegion = ProcessorControlRegion::new();
 
+#[thread_local]
+static INIT_STACK: [u8; 256] = [0; 256];
+
+#[thread_local]
+static FAULT_STACK: [u8; 256] = [0; 256];
+
 struct GdtAccessFlags;
 
 impl GdtAccessFlags {
@@ -157,6 +164,7 @@ impl GdtEntryType {
     pub const KERNEL_DATA: u16 = 2;
     pub const KERNEL_TLS: u16 = 3;
     pub const USER_CODE32_UNUSED: u16 = 4;
+    pub const USER_TLS: u16 = 7;
     pub const TSS: u16 = 8;
     pub const TSS_HI: u16 = 9;
 }
@@ -269,7 +277,7 @@ pub struct TssAligned(Tss);
 
 #[repr(C, align(16))]
 pub struct ProcessorControlRegion {
-    pub tcb_end: usize,
+    pub fs_offset: usize,
     pub user_rsp: usize,
     pub tss: TssAligned,
 }
@@ -277,7 +285,7 @@ pub struct ProcessorControlRegion {
 impl ProcessorControlRegion {
     const fn new() -> Self {
         Self {
-            tcb_end: 0x00,
+            fs_offset: 0x00,
             user_rsp: 0x00,
             tss: TssAligned(Tss::new()),
         }
@@ -332,24 +340,37 @@ pub fn init_boot() {
 /// Initialize the GDT.
 pub fn init() {
     unsafe {
+        let pcr = &mut PROCESSOR_CONTROL_REGION;
+        let tss_ptr = &pcr.tss.0 as *const _;
+
+        GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
+        GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
+        GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
+
+        let init_stack_addr = INIT_STACK.as_ptr() as usize + INIT_STACK.len();
+        let fault_stack_addr = FAULT_STACK.as_ptr() as usize + FAULT_STACK.len();
+
+        PROCESSOR_CONTROL_REGION.tss.0.rsp[0] = init_stack_addr as u64;
+        PROCESSOR_CONTROL_REGION.tss.0.ist[0] = fault_stack_addr as u64;
+
         let gdt_descriptor = GdtDescriptor::new(
             (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,
             (&GDT as *const _) as u64,
         );
 
         load_gdt(&gdt_descriptor as *const _);
-    }
 
-    let pcr = unsafe { &mut PROCESSOR_CONTROL_REGION };
-    let tss_ptr = &pcr.tss as *const _;
+        io::wrmsr(io::IA32_GS_BASE, pcr as *mut _ as u64);
+        io::wrmsr(io::IA32_KERNEL_GSBASE, 0x00);
 
-    unsafe {
-        GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
-        GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
-        GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
-    }
+        // Now set the user space TLS (Thread Local Storage).
+        GDT[GdtEntryType::USER_TLS as usize].set_offset((USER_TCB_OFFSET * 0x1000) as u32);
 
-    unsafe {
+        load_fs(SegmentSelector::new(
+            GdtEntryType::USER_TLS,
+            SegmentSelector::RPL_3,
+        ));
+
         // Reload the GDT segments.
         load_cs(SegmentSelector::new(
             GdtEntryType::KERNEL_CODE,
@@ -376,9 +397,6 @@ pub fn init() {
             GdtEntryType::TSS,
             SegmentSelector::RPL_0,
         ));
-
-        io::wrmsr(io::IA32_GS_BASE, pcr as *mut _ as u64);
-        io::wrmsr(io::IA32_KERNEL_GSBASE, 0x00);
     }
 }
 

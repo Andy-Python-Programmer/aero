@@ -2,8 +2,8 @@ use core::ptr;
 
 use alloc::boxed::Box;
 
-use crate::utils::io;
 use crate::utils::linker::LinkerSymbol;
+use crate::{arch::gdt::PROCESSOR_CONTROL_REGION, utils::io};
 
 /// Initialize support for the `#[thread_local]` attribute.
 pub fn init() {
@@ -41,12 +41,25 @@ pub fn init() {
     }
 
     let tls_ptr = unsafe { Box::into_raw(tls_raw_ptr.assume_init()) };
+
     let fs_ptr = ((tls_ptr as *const u8 as u64) + (total_size as u64)) as *mut u64;
+    let fs_offset = fs_ptr as u64;
 
+    // Set the FS base segment to the fs_offset enabling thread locals and
+    // set fs[:0x00] to the fs offset as SystemV abi expects the pointer equal
+    // to its offset.
+    //
+    // SAFTEY: The fs pointer and fs offset are guaranteed to be correct.
     unsafe {
-        io::wrmsr(io::IA32_FS_BASE, fs_ptr as u64);
+        io::wrmsr(io::IA32_FS_BASE, fs_offset);
+        io::wrmsr(io::IA32_GS_BASE, fs_offset);
 
-        // The SystemV abi expects fs[:0x00] to be the address of fs.
-        *fs_ptr = fs_ptr as u64;
+        *fs_ptr = fs_offset;
+    }
+
+    // SAFTEY: Safe to access PROCESSOR_CONTROL_REGION as thread local variables
+    // at this point are accessible.
+    unsafe {
+        PROCESSOR_CONTROL_REGION.fs_offset = fs_offset as usize;
     }
 }
