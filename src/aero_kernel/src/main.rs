@@ -163,7 +163,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     scheduler::get_scheduler().push(hello_process);
 
     unsafe {
-        asm!("syscall", in("rax") 60, in("rdi") 1);
+        asm!("int 0x80", in("rax") 60, in("rdi") 1);
 
         loop {
             interrupts::halt();
