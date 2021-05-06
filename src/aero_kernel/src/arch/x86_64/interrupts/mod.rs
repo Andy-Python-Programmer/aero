@@ -17,13 +17,16 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
             inner(&mut *stack);
         }
 
-        $crate::prelude::intel_fn!(pub __asm__ volatile fn $name() { // TODO: Use naked functions after asm!() supports using macros.
+        $crate::prelude::intel_fn!(pub __asm__ volatile fn $name() {
+            $crate::prelude::swapgs_iff_ring3_fast_errorcode!(),
+
             // Move rax into code's place and put code in last instead to be
             // compatible with interrupt stack.
             "xchg [rsp], rax\n",
 
             $crate::prelude::push_scratch!(),
             $crate::prelude::push_preserved!(),
+            $crate::prelude::push_fs!(),
 
             // Push the error code.
             "push rax\n",
@@ -35,44 +38,47 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
             // Pop the error code.
             "add rsp, 8\n",
 
+            $crate::prelude::pop_fs!(),
             $crate::prelude::pop_preserved!(),
             $crate::prelude::pop_scratch!(),
+
+            $crate::prelude::swapgs_iff_ring3_fast_errorcode!(),
 
             "iretq\n",
         });
     }
 }
 
-pub macro interrupt {
-    (pub unsafe fn $name:ident($stack:ident: &mut InterruptStack) $code:block) => {
-        paste::item! {
-            #[no_mangle]
-            unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptStack) {
-                #[inline(always)]
-                #[allow(unused)] // Unused variable ($stack).
-                unsafe fn inner($stack: &mut $crate::arch::interrupts::InterruptStack) {
-                    $code
-                }
-
-                inner(&mut *stack);
+pub macro interrupt(pub unsafe fn $name:ident($stack:ident: &mut InterruptStack) $code:block) {
+    paste::item! {
+        #[no_mangle]
+        unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptStack) {
+            #[inline(always)]
+            #[allow(unused)] // Unused variable ($stack).
+            unsafe fn inner($stack: &mut $crate::arch::interrupts::InterruptStack) {
+                $code
             }
 
-            $crate::utils::intel_fn!(pub __asm__ volatile fn $name() { // TODO: Use naked functions after asm!() supports using macros.
-                "push rax\n",
-
-                $crate::prelude::push_scratch!(),
-                $crate::prelude::push_preserved!(),
-
-                "mov rdi, rsp\n",
-                "call __interrupt_", stringify!($name), "\n",
-
-                $crate::prelude::pop_preserved!(),
-                $crate::prelude::pop_scratch!(),
-
-                "iretq\n",
-            });
+            inner(&mut *stack);
         }
-    },
+
+        $crate::utils::intel_fn!(pub __asm__ volatile fn $name() {
+            "push rax\n",
+
+            $crate::prelude::push_scratch!(),
+            $crate::prelude::push_preserved!(),
+            $crate::prelude::push_fs!(),
+
+            "mov rdi, rsp\n",
+            "call __interrupt_", stringify!($name), "\n",
+
+            $crate::prelude::pop_fs!(),
+            $crate::prelude::pop_preserved!(),
+            $crate::prelude::pop_scratch!(),
+
+            "iretq\n",
+        });
+    }
 }
 
 /// Wrapper function to the `hlt` assembly instruction used to halt

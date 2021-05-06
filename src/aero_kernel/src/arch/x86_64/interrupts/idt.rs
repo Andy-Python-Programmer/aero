@@ -146,6 +146,7 @@ pub struct IretRegisters {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct InterruptStack {
+    pub fs: usize,
     pub preserved: PreservedRegisters,
     pub scratch: ScratchRegisters,
     pub iret: IretRegisters,

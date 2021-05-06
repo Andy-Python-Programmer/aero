@@ -69,6 +69,44 @@ pub macro pop_scratch() {
     "
 }
 
+pub macro push_fs() {
+    "
+    /* 
+    * Push FS segment.
+    */
+    
+    push fs
+
+    mov rcx, 0x18
+    mov fs, cx
+    "
+}
+
+pub macro pop_fs() {
+    "
+    /* 
+    * Pop FS segment.
+    */
+
+    pop fs
+    "
+}
+
+pub macro swapgs_iff_ring3_fast_errorcode() {
+    "
+    /*
+    * `swapgs` if ring 3.
+    */
+
+    test QWORD PTR [rsp + 16], 0x3
+
+    jz 1f
+    swapgs
+
+    1:
+    "
+}
+
 pub macro intel_asm($($code:expr,)+) {
     global_asm!(
         concat!(
