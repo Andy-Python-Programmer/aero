@@ -246,14 +246,21 @@ impl GdtEntry {
 /// The Task State Segment (TSS) is a special data structure for x86 processors which holds information about a task.
 ///
 /// **Notes**: <https://wiki.osdev.org/Task_State_Segment>
+#[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-struct Tss {
+pub struct Tss {
     reserved: u32,
+
+    /// The full 64-bit canonical forms of the stack pointers (RSP) for privilege levels 0-2.
     rsp: [u64; 3],
     reserved2: u64,
+
+    /// The full 64-bit canonical forms of the interrupt stack table (IST) pointers.
     ist: [u64; 7],
     reserved3: u64,
     reserved4: u16,
+
+    /// The 16-bit offset to the I/O permission bit map from the 64-bit TSS base.
     iomap_base: u16,
 }
 
@@ -272,14 +279,11 @@ impl Tss {
     }
 }
 
-#[repr(C, align(16))]
-pub struct TssAligned(Tss);
-
-#[repr(C, align(16))]
+#[repr(C, packed)]
 pub struct ProcessorControlRegion {
     pub fs_offset: usize,
     pub user_rsp: usize,
-    pub tss: TssAligned,
+    pub tss: Tss,
 }
 
 impl ProcessorControlRegion {
@@ -287,7 +291,7 @@ impl ProcessorControlRegion {
         Self {
             fs_offset: 0x00,
             user_rsp: 0x00,
-            tss: TssAligned(Tss::new()),
+            tss: Tss::new(),
         }
     }
 }
@@ -341,7 +345,7 @@ pub fn init_boot() {
 pub fn init() {
     unsafe {
         let pcr = &mut PROCESSOR_CONTROL_REGION;
-        let tss_ptr = &pcr.tss.0 as *const _;
+        let tss_ptr = &pcr.tss as *const _;
 
         GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
         GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
@@ -350,8 +354,8 @@ pub fn init() {
         let init_stack_addr = INIT_STACK.as_ptr() as usize + INIT_STACK.len();
         let fault_stack_addr = FAULT_STACK.as_ptr() as usize + FAULT_STACK.len();
 
-        PROCESSOR_CONTROL_REGION.tss.0.rsp[0] = init_stack_addr as u64;
-        PROCESSOR_CONTROL_REGION.tss.0.ist[0] = fault_stack_addr as u64;
+        PROCESSOR_CONTROL_REGION.tss.rsp[0] = init_stack_addr as u64;
+        PROCESSOR_CONTROL_REGION.tss.ist[0] = fault_stack_addr as u64;
 
         let gdt_descriptor = GdtDescriptor::new(
             (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,

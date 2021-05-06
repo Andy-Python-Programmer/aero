@@ -24,6 +24,8 @@ pub fn init() {
 
     // Here we add 8 to the total size to store the TCB pointer.
     let total_tls_size = total_size + 8;
+
+    // Puts the TLS into kernel's heap and prevents it from being dropped.
     let mut tls_raw_ptr = Box::<[u8]>::new_uninit_slice(total_tls_size);
 
     unsafe {
