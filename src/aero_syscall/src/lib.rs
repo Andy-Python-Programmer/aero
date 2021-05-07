@@ -14,5 +14,5 @@ pub mod prelude {
 /// Exits the current process with the provided status.
 #[inline(always)]
 pub fn sys_exit(status: usize) -> usize {
-    unsafe { syscall1(60, status) }
+    unsafe { syscall1(prelude::SYS_EXIT, status) }
 }
