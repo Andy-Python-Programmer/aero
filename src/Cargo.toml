@@ -4,7 +4,8 @@ members = [
     "aero_boot",
 
     "aero_gfx",
-    "aero_hal"
+    "aero_hal",
+    "aero_syscall"
 ]
 
 [profile.dev]

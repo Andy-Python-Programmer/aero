@@ -10,8 +10,7 @@
 //!
 //! **Notes**: <https://wiki.osdev.org/System_Calls>
 
-use raw_cpuid::CpuId;
-use spin::Once;
+use aero_syscall::prelude::*;
 
 pub mod fs;
 pub mod process;
@@ -21,13 +20,11 @@ pub use fs::*;
 pub use process::*;
 pub use time::*;
 
-use crate::{arch::interrupts::InterruptStack, utils::io};
-use crate::{
-    arch::{gdt::GdtEntryType, interrupts::interrupt},
-    prelude::*,
-};
+use crate::arch::gdt::GdtEntryType;
+use crate::arch::interrupts::{interrupt, InterruptStack};
 
-pub const SYS_EXIT: usize = 60;
+use crate::prelude::*;
+use crate::utils::io;
 
 fn __inner_syscall(stack: &mut InterruptStack) {
     let scratch = &stack.scratch;
@@ -115,20 +112,6 @@ intel_fn!(
         "iretq\n",
     }
 );
-
-/// Returns true if the current CPU supports the `syscall` and
-/// the `sysret` instruction.
-pub fn supports_syscall_sysret() -> bool {
-    static CACHE: Once<bool> = Once::new(); // This will cache the result.
-
-    *CACHE.call_once(|| {
-        let function_info = CpuId::new()
-            .get_extended_function_info()
-            .expect("Failed to retrieve CPU function info");
-
-        function_info.has_syscall_sysret()
-    })
-}
 
 pub fn init() {
     unsafe {

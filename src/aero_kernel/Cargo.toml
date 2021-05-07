@@ -24,11 +24,18 @@ features = ["unicode"]
 version = "1.4"
 features = ["spin_no_std"]
 
+#####################################
+
+[dependencies.aero_syscall]
+path = "../aero_syscall/"
+
 [dependencies.aero_gfx]
 path = "../aero_gfx/"
 
 [dependencies.aero_boot]
 path = "../aero_boot/"
+
+#####################################
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }

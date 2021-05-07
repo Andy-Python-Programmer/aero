@@ -55,6 +55,7 @@ dependencies = [
  "aero_boot",
  "aero_build",
  "aero_gfx",
+ "aero_syscall",
  "bit_field 0.10.1",
  "bitflags",
  "cc",
@@ -68,6 +69,14 @@ dependencies = [
  "spin 0.9.0",
  "x86_64",
  "xmas-elf",
+]
+
+[[package]]
+name = "aero_syscall"
+version = "0.1.0"
+dependencies = [
+ "raw-cpuid",
+ "spin 0.9.0",
 ]
 
 [[package]]
