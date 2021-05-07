@@ -3,7 +3,7 @@ use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::{Mutex, MutexGuard, Once};
-use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
+use x86_64::VirtAddr;
 
 use crate::{acpi::madt, arch::interrupts};
 use crate::{utils::io, PHYSICAL_MEMORY_OFFSET};
