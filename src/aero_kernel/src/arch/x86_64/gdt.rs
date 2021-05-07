@@ -28,11 +28,11 @@ bitflags::bitflags! {
     }
 }
 
+const BOOT_GDT_ENTRY_COUNT: usize = 4;
 const GDT_ENTRY_COUNT: usize = 10;
-const TEMP_GDT_ENTRY_COUNT: usize = 4;
 const USER_TCB_OFFSET: usize = 0xB0000000;
 
-static mut TEMP_GDT: [GdtEntry; TEMP_GDT_ENTRY_COUNT] = [
+static mut BOOT_GDT: [GdtEntry; BOOT_GDT_ENTRY_COUNT] = [
     // GDT null descriptor.
     GdtEntry::NULL,
     // GDT kernel code descriptor.
@@ -296,12 +296,14 @@ impl ProcessorControlRegion {
     }
 }
 
-/// Initialize the temporary GDT.
+/// Initialize the bootstrap GDT which is required to initialize TLS (Thread Local Storage)
+/// support so, after the kernel heap we will map the TLS section and initialize the *actual* GDT
+/// and then each CPU will have it's own GDT but we only will have to define it once as a `#[thread_local]`.
 pub fn init_boot() {
     unsafe {
         let gdt_descriptor = GdtDescriptor::new(
-            (mem::size_of::<[GdtEntry; TEMP_GDT_ENTRY_COUNT]>() - 1) as u16,
-            (&TEMP_GDT as *const _) as u64,
+            (mem::size_of::<[GdtEntry; BOOT_GDT_ENTRY_COUNT]>() - 1) as u16,
+            (&BOOT_GDT as *const _) as u64,
         );
 
         load_gdt(&gdt_descriptor as *const _);
@@ -341,7 +343,7 @@ pub fn init_boot() {
     }
 }
 
-/// Initialize the GDT.
+/// Initialize the *actual* GDT stored in TLS.
 pub fn init() {
     unsafe {
         let pcr = &mut PROCESSOR_CONTROL_REGION;
