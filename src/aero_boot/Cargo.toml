@@ -5,13 +5,13 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-log = "0.4.14"
-spin = "0.9.0"
-uefi = "0.8.0"
-x86_64 = "0.14.0"
+log = "0.4"
+spin = "0.9"
+uefi = "0.8"
+x86_64 = "0.14.1"
 rlibc = "1"
-font8x8 = { version = "0.3.1", default-features = false, features = ["unicode"] }
-xmas-elf = "0.7.0"
+font8x8 = { version = "0.3", default-features = false, features = ["unicode"] }
+xmas-elf = "0.7"
 
 [dependencies.aero_gfx]
 path = "../aero_gfx/"

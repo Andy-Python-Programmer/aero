@@ -1,4 +1,4 @@
 #![no_std]
-#![feature(asm)]
+#![feature(asm, const_fn_trait_bound)]
 
 pub mod paging;
