@@ -6,6 +6,8 @@ use core::mem;
 
 use crate::utils::io;
 
+use super::memory::pti::{PTI_CPU_STACK, PTI_STACK_SIZE};
+
 bitflags::bitflags! {
     /// Specifies which element to load into a segment from
     /// descriptor tables (i.e., is a index to LDT or GDT table
@@ -137,9 +139,6 @@ static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
 
 #[thread_local]
 pub static mut PROCESSOR_CONTROL_REGION: ProcessorControlRegion = ProcessorControlRegion::new();
-
-#[thread_local]
-static INIT_STACK: [u8; 256] = [0; 256];
 
 #[thread_local]
 static FAULT_STACK: [u8; 256] = [0; 256];
@@ -353,7 +352,7 @@ pub fn init() {
         GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
         GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
 
-        let init_stack_addr = INIT_STACK.as_ptr() as usize + INIT_STACK.len();
+        let init_stack_addr = PTI_CPU_STACK.as_ptr() as usize + PTI_STACK_SIZE;
         let fault_stack_addr = FAULT_STACK.as_ptr() as usize + FAULT_STACK.len();
 
         PROCESSOR_CONTROL_REGION.tss.rsp[0] = init_stack_addr as u64;
