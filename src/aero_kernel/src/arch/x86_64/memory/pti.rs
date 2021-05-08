@@ -20,17 +20,7 @@ pub static mut PTI_CONTEXT_STACK_ADDRESS: usize = 0;
 unsafe fn switch_pti_stack(old: usize, new: usize) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn map_pti() {
-    switch_pti_stack(
-        PTI_CPU_STACK.as_ptr() as usize + PTI_CPU_STACK.len(),
-        PTI_CONTEXT_STACK_ADDRESS,
-    );
-}
+pub unsafe extern "C" fn map_pti() {}
 
 #[no_mangle]
-pub unsafe extern "C" fn unmap_pti() {
-    switch_pti_stack(
-        PTI_CONTEXT_STACK_ADDRESS,
-        PTI_CPU_STACK.as_ptr() as usize + PTI_CPU_STACK.len(),
-    );
-}
+pub unsafe extern "C" fn unmap_pti() {}

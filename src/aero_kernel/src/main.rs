@@ -57,6 +57,8 @@ use arch::memory;
 use userland::{process::Process, scheduler};
 use utils::io;
 
+use crate::arch::memory::pti::PTI_CONTEXT_STACK_ADDRESS;
+
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
@@ -78,20 +80,25 @@ unsafe extern "C" fn mission_hello_world() {
 
 #[export_name = "_start"]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    // Initialize the COM ports before doing anything else.
-    //
-    // This will help printing panics before or when the debug renderer is initialized
-    // if serial output is avaliable.
-    drivers::uart_16550::init();
-
+    /*
+     * First of all make sure interrupts are disabled.
+     */
     unsafe {
         interrupts::disable_interrupts();
     }
+
+    /* Initialize the COM ports before doing anything else.
+     *
+     * This will help printing panics before or when the debug renderer is initialized
+     * if serial output is avaliable.
+     */
+    drivers::uart_16550::init();
 
     let memory_regions = &boot_info.memory_regions;
     let framebuffer = &mut boot_info.framebuffer;
 
     unsafe {
+        PTI_CONTEXT_STACK_ADDRESS = boot_info.stack_top.as_u64() as usize;
         PHYSICAL_MEMORY_OFFSET = boot_info.physical_memory_offset;
     }
 
@@ -109,13 +116,6 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     drivers::mouse::init();
     log::info!("Loaded PS/2 driver");
-
-    unsafe {
-        io::outb(PIC1_DATA, 0b11111000);
-        io::outb(PIC2_DATA, 0b11101111);
-
-        interrupts::enable_interrupts();
-    }
 
     let apic_type = apic::init();
     log::info!(
@@ -136,6 +136,17 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     arch::gdt::init();
     log::info!("Loaded GDT");
+
+    /*
+     * NOTE: We need to enable interrupts after we have initialized TLS and GDT
+     * as the PTI context switch functions depend on thread local globals.
+     */
+    unsafe {
+        io::outb(PIC1_DATA, 0b11111000);
+        io::outb(PIC2_DATA, 0b11101111);
+
+        interrupts::enable_interrupts();
+    }
 
     acpi::init(
         &mut offset_table,

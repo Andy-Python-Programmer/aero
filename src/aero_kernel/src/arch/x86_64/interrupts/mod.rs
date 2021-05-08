@@ -31,9 +31,13 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
             // Push the error code.
             "push rax\n",
 
+            "call map_pti\n",
+
             // Call the inner interrupt handler implementation.
             "mov rdi, rsp\n",
             "call __interrupt_", stringify!($name), "\n",
+
+            "call unmap_pti\n",
 
             // Pop the error code.
             "add rsp, 8\n",
@@ -69,8 +73,12 @@ pub macro interrupt(pub unsafe fn $name:ident($stack:ident: &mut InterruptStack)
             $crate::prelude::push_preserved!(),
             $crate::prelude::push_fs!(),
 
+            "call map_pti\n",
+
             "mov rdi, rsp\n",
             "call __interrupt_", stringify!($name), "\n",
+
+            "call unmap_pti\n",
 
             $crate::prelude::pop_fs!(),
             $crate::prelude::pop_preserved!(),
