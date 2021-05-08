@@ -77,12 +77,12 @@ interrupt!(
 
 intel_fn!(
     /**
-    * 64-bit `syscall` instruction handler.
-    *
-    * The `syscall` instruction should only be used for 64-bit system calls. The
-    * `syscall` instruction saves RIP to RAX, clears rflags.RF, saves rflags
-    * to R11 and then loads new SS, CS and RIP from previously programmed MSRs.
-    */
+     * 64-bit `syscall` instruction handler.
+     *
+     * The `syscall` instruction should only be used for 64-bit system calls. The
+     * `syscall` instruction saves RIP to RAX, clears rflags.RF, saves rflags
+     * to R11 and then loads new SS, CS and RIP from previously programmed MSRs.
+     */
     pub __asm__ volatile fn syscall_handler() {
         "swapgs\n", // Set gs segment to TSS.
 
@@ -108,15 +108,15 @@ intel_fn!(
         crate::prelude::pop_scratch!(),
 
         /*
-        * In Intel CPUs, `sysretq` with non-canonical RCX or RIP will cause
-        * a general protection fault in kernel space. This lets the user take over
-        * the kernel, since userland controls RSP.
-        *
-        * So set the ZF iff forbidden bits 63:47 (i.e. the bits that must be sign extended) of the
-        * pushed RCX are set. Then do a conditional jump to slow `sysretq` if ZF was set then the
-        * address had an invalid higher half. This prevents execution **possibly** of attacker controlled
-        * code.
-        */
+         * In Intel CPUs, `sysretq` with non-canonical RCX or RIP will cause
+         * a general protection fault in kernel space. This lets the user take over
+         * the kernel, since userland controls RSP.
+         *
+         * So set the ZF iff forbidden bits 63:47 (i.e. the bits that must be sign extended) of the
+         * pushed RCX are set. Then do a conditional jump to slow `sysretq` if ZF was set then the
+         * address had an invalid higher half. This prevents execution **possibly** of attacker controlled
+         * code.
+         */
         "test DWORD PTR [rsp + 4], 0xFFFF8000\n",
         "jnz 1f\n",
 

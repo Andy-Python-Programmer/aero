@@ -7,6 +7,7 @@ pub use idt::*;
 pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptErrorStack) $code:block) {
     paste::item! {
         #[no_mangle]
+        #[doc(hidden)]
         unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptErrorStack) {
             #[inline(always)]
             #[allow(unused)] // Unused variable ($stack).
@@ -56,6 +57,7 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
 pub macro interrupt(pub unsafe fn $name:ident($stack:ident: &mut InterruptStack) $code:block) {
     paste::item! {
         #[no_mangle]
+        #[doc(hidden)]
         unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptStack) {
             #[inline(always)]
             #[allow(unused)] // Unused variable ($stack).
