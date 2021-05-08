@@ -20,13 +20,13 @@ pub use fs::*;
 pub use process::*;
 pub use time::*;
 
-use crate::arch::gdt::GdtEntryType;
 use crate::arch::interrupts::{interrupt, InterruptStack};
+use crate::arch::{gdt::GdtEntryType, interrupts};
 
 use crate::prelude::*;
 use crate::utils::io;
 
-fn __inner_syscall(stack: &mut InterruptStack) {
+fn __inner_syscall(stack: &mut InterruptStack) -> usize {
     let scratch = &stack.scratch;
 
     let a = scratch.rax;
@@ -37,14 +37,28 @@ fn __inner_syscall(stack: &mut InterruptStack) {
     let f = scratch.r8;
 
     match a {
-        SYS_EXIT => process::exit(b),
-        _ => log::error!("Invalid syscall: {:#x}", a),
+        SYS_EXIT => {}
+        _ => unsafe { interrupts::enable_interrupts() },
     }
+
+    let result = match a {
+        SYS_EXIT => process::exit(b),
+        _ => {
+            log::error!("Invalid syscall: {:#x}", a);
+
+            Err(AeroSyscallError::Unknown)
+        }
+    };
+
+    aero_syscall::syscall_result_as_usize(result)
 }
 
 #[no_mangle]
 unsafe extern "C" fn __impl_syscall_handler(stack: *mut InterruptStack) {
-    __inner_syscall(&mut *stack)
+    let stack = &mut *stack;
+    let result = __inner_syscall(stack);
+
+    (*stack).scratch.rax = result;
 }
 
 interrupt!(
@@ -56,7 +70,8 @@ interrupt!(
             log::warn!("Use of deperecated `int 0x80` interrupt");
         }
 
-        __inner_syscall(stack)
+        let result = __inner_syscall(stack);
+        (*stack).scratch.rax = result;
     }
 );
 

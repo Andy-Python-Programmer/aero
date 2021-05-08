@@ -50,14 +50,14 @@ mod prelude {
 }
 
 use arch::interrupts;
-
-use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 use arch::memory;
 
-use userland::{process::Process, scheduler};
 use utils::io;
 
-use crate::arch::memory::pti::PTI_CONTEXT_STACK_ADDRESS;
+use arch::interrupts::{PIC1_DATA, PIC2_DATA};
+use arch::memory::pti::PTI_CONTEXT_STACK_ADDRESS;
+
+use userland::{process::Process, scheduler};
 
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
@@ -94,15 +94,12 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
      */
     drivers::uart_16550::init();
 
-    let memory_regions = &boot_info.memory_regions;
-    let framebuffer = &mut boot_info.framebuffer;
-
     unsafe {
         PTI_CONTEXT_STACK_ADDRESS = boot_info.stack_top.as_u64() as usize;
         PHYSICAL_MEMORY_OFFSET = boot_info.physical_memory_offset;
     }
 
-    rendy::init(framebuffer);
+    rendy::init(&mut boot_info.framebuffer);
     logger::init();
 
     arch::gdt::init_boot();
@@ -124,7 +121,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     );
 
     let (mut offset_table, mut frame_allocator) =
-        memory::paging::init(boot_info.physical_memory_offset, memory_regions);
+        memory::paging::init(boot_info.physical_memory_offset, &boot_info.memory_regions);
     log::info!("Loaded paging");
 
     arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
