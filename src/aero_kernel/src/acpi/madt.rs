@@ -33,9 +33,16 @@ impl Madt {
     ) {
         MADT.call_once(move || self);
 
-        let trampoline_frame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
-        let trampoline_page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(TRAMPOLINE));
+        let trampoline_frame: PhysFrame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
+        let trampoline_page: Page = Page::containing_address(VirtAddr::new(TRAMPOLINE));
 
+        /*
+         * Identity map the trampoline frame and make it writable.
+         *
+         * NOTE: Rather then using the identity_map function in the mapper
+         * struct we are using the map_to function as we will be unmapping the
+         * frame when we are done and that should save one call.
+         */
         unsafe {
             offset_table
                 .map_to(
@@ -50,7 +57,10 @@ impl Madt {
 
         log::debug!("Storing AP trampoline in {:#x}", TRAMPOLINE);
 
-        // Atomic store the AP trampoline code to a fixed address in low conventional memory.
+        /*
+         * Atomic store the AP trampoline code to a fixed address in low conventional
+         * memory.
+         */
         unsafe {
             for i in 0..TRAMPOLINE_BIN.len() {
                 intrinsics::atomic_store((TRAMPOLINE as *mut u8).add(i), TRAMPOLINE_BIN[i]);
@@ -61,8 +71,10 @@ impl Madt {
             match entry {
                 MadtEntry::LocalApic(local_apic) => {
                     if local_apic.apic_id == apic::get_bsp_id() as u8 {
-                        // We do not want to start the BSP that is already running
-                        // this code :D
+                        /*
+                         * We do not want to start the BSP that is already running
+                         * this code :D
+                         */
                         continue;
                     }
 
@@ -146,6 +158,13 @@ impl Madt {
                 MadtEntry::IntSrcOverride(_) => {}
             }
         }
+
+        /*
+         * Now that we have initialized are APs. Its now safe to unmap the
+         * AP trampoline and the trampoline region is marked as usable again.
+         */
+        let (_, toilet) = offset_table.unmap(trampoline_page).unwrap();
+        toilet.flush();
     }
 
     fn iter(&self) -> MadtIterator {
