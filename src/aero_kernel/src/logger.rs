@@ -82,8 +82,3 @@ pub fn init() {
         .map(|()| log::set_max_level(LevelFilter::Trace))
         .unwrap();
 }
-
-#[no_mangle]
-extern "C" fn log_debug(_: *const u8) {
-    log::debug!("(asm)")
-}
