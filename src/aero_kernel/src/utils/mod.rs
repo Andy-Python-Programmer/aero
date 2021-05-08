@@ -134,7 +134,7 @@ pub macro intel_fn {
         }
     },
 
-    (pub __asm__ volatile fn $name:ident() { $($body:expr,)+ } $(__label__ volatile $label_name:expr => { $($label_body:expr,)+ })+) => {
+    ($(#[$outer:meta])* pub __asm__ volatile fn $name:ident() { $($body:expr,)+ } $(__label__ volatile $label_name:expr => { $($label_body:expr,)+ })+) => {
         crate::utils::intel_asm!(
             ".global ", stringify!($name), "\n",
             ".type ", stringify!($name), ", @function\n",
@@ -150,6 +150,7 @@ pub macro intel_fn {
         );
 
         extern "C" {
+            $(#[$outer])*
             pub fn $name();
         }
     }
