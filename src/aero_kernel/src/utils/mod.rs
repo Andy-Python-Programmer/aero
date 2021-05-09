@@ -120,9 +120,12 @@ pub macro intel_asm($($code:expr,)+) {
 
 pub macro intel_fn {
     (
+        $(#![$total:meta])*
+
         $(#[$outer:meta])* $fn_vis:vis extern "asm" fn $name:ident() { $($body:expr,)+ }
         $(pub extern "asm" $label_name:expr => { $($label_body:expr,)+ })*
     ) => {
+        $(#[$total])*
         crate::utils::intel_asm!(
             ".global ", stringify!($name), "\n",
             ".type ", stringify!($name), ", @function\n",
@@ -137,6 +140,7 @@ pub macro intel_fn {
             ".text\n",
         );
 
+        $(#[$total])*
         extern "C" {
             $(#[$outer])*
             $fn_vis fn $name();

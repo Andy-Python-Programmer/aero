@@ -76,6 +76,8 @@ interrupt!(
 );
 
 intel_fn!(
+    #![cfg(target_pointer_width = "64")]
+
     /**
      * 64-bit `syscall` instruction handler.
      *
@@ -142,8 +144,11 @@ intel_fn!(
 
 pub fn init() {
     unsafe {
-        // Enable support for `syscall` and `sysret` instructions if the current
-        // CPU supports them.
+        /*
+         * Enable support for `syscall` and `sysret` instructions if the current
+         * CPU supports them and the target pointer width is 64.
+         */
+        #[cfg(target_pointer_width = "64")]
         if supports_syscall_sysret() {
             let syscall_base = GdtEntryType::KERNEL_CODE << 3;
             let sysret_base = (GdtEntryType::USER_CODE32_UNUSED << 3) | 3;

@@ -59,6 +59,7 @@ dependencies = [
  "bit_field 0.10.1",
  "bitflags",
  "cc",
+ "cfg-if",
  "font8x8",
  "lazy_static",
  "linked_list_allocator",
