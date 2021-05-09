@@ -12,7 +12,6 @@ macro interrupt_exception(fn $name:ident() => $message:expr) {
 interrupt_exception!(fn divide_by_zero() => "Division by zero");
 interrupt_exception!(fn debug() => "Debug");
 interrupt_exception!(fn non_maskable() => "Non Maskable");
-interrupt_exception!(fn breakpoint() => "Breakpoint");
 interrupt_exception!(fn overflow() => "Stack Overflow");
 interrupt_exception!(fn bound_range() => "Out of Bounds");
 interrupt_exception!(fn invalid_opcode() => "Invalid Opcode");
@@ -28,6 +27,19 @@ interrupt_exception!(fn machine_check() => "Machine check fault");
 interrupt_exception!(fn simd() => "SIMD floating point fault");
 interrupt_exception!(fn virtualization() => "Virtualization fault");
 interrupt_exception!(fn security() => "Security exception");
+
+interrupt_error_stack!(
+    fn breakpoint(stack: &mut InterruptErrorStack) {
+        /*
+         * We will need to prevent RIP from going out of sync with
+         * instructions.
+         *
+         * So we will set the RIP to RIP - 1, pointing to the int3 
+         * instruction.
+         */
+        (*stack).stack.iret.rip -= 1;
+    }
+);
 
 interrupt_error_stack!(
     fn page_fault(stack: &mut InterruptErrorStack) {
