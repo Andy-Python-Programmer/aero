@@ -18,39 +18,41 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
             inner(&mut *stack);
         }
 
-        $crate::prelude::intel_fn!(pub __asm__ volatile fn $name() {
-            $crate::prelude::swapgs_iff_ring3_fast_errorcode!(),
+        $crate::prelude::intel_fn!(
+            pub extern "asm" fn $name() {
+                $crate::prelude::swapgs_iff_ring3_fast_errorcode!(),
 
-            // Move rax into code's place and put code in last instead to be
-            // compatible with interrupt stack.
-            "xchg [rsp], rax\n",
+                // Move rax into code's place and put code in last instead to be
+                // compatible with interrupt stack.
+                "xchg [rsp], rax\n",
 
-            $crate::prelude::push_scratch!(),
-            $crate::prelude::push_preserved!(),
-            $crate::prelude::push_fs!(),
+                $crate::prelude::push_scratch!(),
+                $crate::prelude::push_preserved!(),
+                $crate::prelude::push_fs!(),
 
-            // Push the error code.
-            "push rax\n",
+                // Push the error code.
+                "push rax\n",
 
-            "call map_pti\n",
+                "call map_pti\n",
 
-            // Call the inner interrupt handler implementation.
-            "mov rdi, rsp\n",
-            "call __interrupt_", stringify!($name), "\n",
+                // Call the inner interrupt handler implementation.
+                "mov rdi, rsp\n",
+                "call __interrupt_", stringify!($name), "\n",
 
-            "call unmap_pti\n",
+                "call unmap_pti\n",
 
-            // Pop the error code.
-            "add rsp, 8\n",
+                // Pop the error code.
+                "add rsp, 8\n",
 
-            $crate::prelude::pop_fs!(),
-            $crate::prelude::pop_preserved!(),
-            $crate::prelude::pop_scratch!(),
+                $crate::prelude::pop_fs!(),
+                $crate::prelude::pop_preserved!(),
+                $crate::prelude::pop_scratch!(),
 
-            $crate::prelude::swapgs_iff_ring3_fast_errorcode!(),
+                $crate::prelude::swapgs_iff_ring3_fast_errorcode!(),
 
-            "iretq\n",
-        });
+                "iretq\n",
+            }
+        );
     }
 }
 
@@ -68,26 +70,28 @@ pub macro interrupt(pub unsafe fn $name:ident($stack:ident: &mut InterruptStack)
             inner(&mut *stack);
         }
 
-        $crate::utils::intel_fn!(pub __asm__ volatile fn $name() {
-            "push rax\n",
+        $crate::utils::intel_fn!(
+            pub extern "asm" fn $name() {
+                "push rax\n",
 
-            $crate::prelude::push_scratch!(),
-            $crate::prelude::push_preserved!(),
-            $crate::prelude::push_fs!(),
+                $crate::prelude::push_scratch!(),
+                $crate::prelude::push_preserved!(),
+                $crate::prelude::push_fs!(),
 
-            "call map_pti\n",
+                "call map_pti\n",
 
-            "mov rdi, rsp\n",
-            "call __interrupt_", stringify!($name), "\n",
+                "mov rdi, rsp\n",
+                "call __interrupt_", stringify!($name), "\n",
 
-            "call unmap_pti\n",
+                "call unmap_pti\n",
 
-            $crate::prelude::pop_fs!(),
-            $crate::prelude::pop_preserved!(),
-            $crate::prelude::pop_scratch!(),
+                $crate::prelude::pop_fs!(),
+                $crate::prelude::pop_preserved!(),
+                $crate::prelude::pop_scratch!(),
 
-            "iretq\n",
-        });
+                "iretq\n",
+            }
+        );
     }
 }
 

@@ -83,7 +83,7 @@ intel_fn!(
      * `syscall` instruction saves RIP to RAX, clears rflags.RF, saves rflags
      * to R11 and then loads new SS, CS and RIP from previously programmed MSRs.
      */
-    pub __asm__ volatile fn syscall_handler() {
+    pub extern "asm" fn syscall_handler() {
         "swapgs\n", // Set gs segment to TSS.
 
         "mov gs:[0x08], rsp\n", // Save userspace stack pointer.
@@ -132,7 +132,7 @@ intel_fn!(
         "sysretq\n", // Return back into userspace.
     }
 
-    __label__ volatile 1 => {
+    pub extern "asm" 1 => {
         "xor rcx, rcx\n",
         "xor r11, r11\n",
         "swapgs\n",
