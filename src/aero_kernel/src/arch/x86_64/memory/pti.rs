@@ -4,7 +4,6 @@
 //!
 //! ## Notes
 //! * <https://en.wikipedia.org/wiki/Kernel_page-table_isolation>
-//!
 
 pub const PTI_STACK_SIZE: usize = 256;
 

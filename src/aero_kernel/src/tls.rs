@@ -1,3 +1,11 @@
+//! Thread Local Storage (TLS) are per-thread global variables. On 64-bit each CPU core's
+//! `gs` GDT segment points to the thread local memory area where the thread local static's
+//! live. TLS statics are simply accessed through an offset from `gs`.
+//!
+//! ## Notes
+//! * <https://wiki.osdev.org/Thread_Local_Storage>
+//! * <https://doc.rust-lang.org/std/thread/struct.LocalKey.html>
+
 use core::alloc::Layout;
 use core::mem;
 use core::ptr;
@@ -75,11 +83,12 @@ pub fn init() {
     let tcb_ptr = ((tls_raw_ptr as u64) + (total_size as u64)) as *mut u64;
     let tcb_offset = tcb_ptr as usize;
 
-    // Set the FS base segment to the tcb_offset to enable thread locals and
-    // set fs[:0x00] to the tcb offset as SystemV abi expects the pointer equal
-    // to its offset.
-    //
-    // SAFTEY: The fs pointer and tcb offset are guaranteed to be correct.
+    /* Set the FS base segment to the tcb_offset to enable thread locals and
+     * set fs[:0x00] to the tcb offset as SystemV abi expects the pointer equal
+     * to its offset.
+     *
+     * SAFTEY: The fs pointer and tcb offset are guaranteed to be correct.
+     */
     unsafe {
         io::wrmsr(io::IA32_FS_BASE, tcb_offset as u64);
 
