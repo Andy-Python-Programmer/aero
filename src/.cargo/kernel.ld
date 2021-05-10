@@ -2,28 +2,30 @@ ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)
 
 SECTIONS {
-    . = 1M;
-
-    . += SIZEOF_HEADERS;
-    . = ALIGN(4096);
+    /* 
+     * We want the kernel be placed in the higher half, 2MiB above 0 
+     * in physical memory. 
+     */
+    KERNEL_VMA = 0xFFFFFFFF80000000;
+    . = 0x100000;
 
     __kernel_start = .;
 
-    .text : {
+    .text : AT(ADDR(.text) - KERNEL_VMA) {
         __text_start = .;
         *(.text*)
         . = ALIGN(4096);
         __text_end = .;
     }
 
-    .rodata : {
+    .rodata : AT(ADDR(.rodata) - KERNEL_VMA) {
         __rodata_start = .;
         *(.rodata*)
         . = ALIGN(4096);
         __rodata_end = .;
     }
 
-    .data : {
+    .data : AT(ADDR(.data) - KERNEL_VMA) {
         __data_start = .;
         *(.data*)
         *(.got*)
@@ -31,7 +33,7 @@ SECTIONS {
         __data_end = .;
     }
 
-    .tdata : {
+    .tdata : AT(ADDR(.tdata) - KERNEL_VMA) {
         __tdata_start = .;
         *(.tdata*)
         . = ALIGN(4096);
@@ -43,14 +45,15 @@ SECTIONS {
         __tbss_end = .;
     }
 
-    .bss : {
+    .bss : AT(ADDR(.bss) - KERNEL_VMA) {
         __bss_start = .;
         *(.bss*)
         . = ALIGN(4096);
         __bss_end = .;
     }
     
-    . = ALIGN(0x1000);
+    . = ALIGN(4096);
+    
     __kernel_end = .;
 
     /DISCARD/ : {
