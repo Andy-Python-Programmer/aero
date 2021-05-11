@@ -21,6 +21,6 @@ pub fn build_bootloader() {
         .expect(&format!("Failed to run {:#?}", bootloader_build_cmd))
         .success()
     {
-        panic!("Failed to build the kernel")
+        panic!("Failed to build the bootloader")
     }
 }

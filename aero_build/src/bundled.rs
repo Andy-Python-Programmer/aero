@@ -1,17 +1,21 @@
-use std::error::Error;
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::Path;
+use std::fs;
+use std::io;
 
-use crate::{BUILD_DIR, BUNDLED_DIR};
+use std::error::Error;
+use std::fs::File;
+use std::io::{Seek, Write};
+use std::path::Path;
+use std::process::Command;
+
+use std::convert::TryFrom;
+
+use crate::{AeroBootloader, BUNDLED_DIR};
 
 const PREBUILT_OVMF_URL: &str =
     "https://github.com/rust-osdev/ovmf-prebuilt/releases/latest/download/";
 
-const PREBUILT_LIMINE_URL: &str =
-    "https://github.com/limine-bootloader/limine/releases/latest/download/";
-
-const LIMINE_FILES: [&str; 1] = ["BOOTX64.EFI"];
+const LIMINE_GITHUB_URL: &str = "https://github.com/limine-bootloader/limine";
+const LIMINE_RELEASE_BRANCH: &str = "latest-binary";
 
 const OVMF_FILES: [&str; 3] = [
     "OVMF-pure-efi.fd",
@@ -63,18 +67,23 @@ pub async fn download_ovmf_prebuilt() -> Result<(), Box<dyn Error>> {
 ///
 /// **Note**: The existing prebuilt files will be overwritten.
 pub async fn update_limine() -> Result<(), Box<dyn Error>> {
-    let build_dir = Path::new(BUILD_DIR).join("efi").join("boot");
+    let limine_out_dir = Path::new(BUNDLED_DIR).join("limine");
 
-    fs::create_dir_all(&build_dir)?;
+    fs::create_dir_all(&limine_out_dir)?;
 
-    for lemon in LIMINE_FILES.iter() {
-        println!("INFO: Downloading {}", lemon);
+    let mut limine_clone_cmd = Command::new("git");
 
-        let response = reqwest::get(format!("{}{}", PREBUILT_LIMINE_URL, lemon)).await?;
-        let bytes = response.bytes().await?;
+    limine_clone_cmd.arg("clone").arg(LIMINE_GITHUB_URL);
+    limine_clone_cmd.arg("-b").arg(LIMINE_RELEASE_BRANCH);
 
-        let mut output = File::create(build_dir.join(lemon))?;
-        output.write_all(bytes.as_ref())?;
+    limine_clone_cmd.arg("bundled/limine");
+
+    if !limine_clone_cmd
+        .status()
+        .expect(&format!("Failed to run {:#?}", limine_clone_cmd))
+        .success()
+    {
+        panic!("Failed to clone the latest prebuilt limine files")
     }
 
     Ok(())
@@ -85,15 +94,134 @@ pub async fn update_limine() -> Result<(), Box<dyn Error>> {
 ///
 /// **Note**: To update the limine prebuilt files run `cargo boot update`.
 pub async fn download_limine_prebuilt() -> Result<(), Box<dyn Error>> {
-    let build_dir = Path::new(BUILD_DIR).join("efi").join("boot");
+    let build_dir = Path::new(BUNDLED_DIR).join("limine");
 
-    for lemon in LIMINE_FILES.iter() {
-        if !build_dir.join(lemon).exists() {
-            update_limine().await?;
+    if !build_dir.exists() {
+        update_limine().await?;
 
-            return Ok(());
-        }
+        return Ok(());
     }
+
+    Ok(())
+}
+
+fn create_fat_filesystem(fat_path: &Path, efi_file: &Path, kernel_file: &Path) {
+    // Retrieve size of `.efi` file and round it up.
+    let efi_size = fs::metadata(&efi_file).unwrap().len();
+    let kernel_size = fs::metadata(&kernel_file).unwrap().len();
+
+    let mb = 1024 * 1024; // Size of a megabyte and round it to next megabyte.
+    let efi_size_rounded = ((efi_size - 1) / mb + 1) * mb;
+    let kernel_size_rounded = ((kernel_size - 1) / mb + 1) * mb;
+
+    // Create new filesystem image file at the given path and set its length.
+    let fat_file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&fat_path)
+        .unwrap();
+
+    fat_file
+        .set_len(efi_size_rounded + kernel_size_rounded)
+        .unwrap();
+
+    // Create new FAT file system and open it.
+    let format_options = fatfs::FormatVolumeOptions::new();
+    fatfs::format_volume(&fat_file, format_options).unwrap();
+
+    let filesystem = fatfs::FileSystem::new(&fat_file, fatfs::FsOptions::new()).unwrap();
+
+    // Copy EFI file to FAT filesystem.
+    let root_dir = filesystem.root_dir();
+
+    root_dir.create_dir("EFI").unwrap();
+    root_dir.create_dir("EFI/BOOT").unwrap();
+    root_dir.create_dir("EFI/KERNEL").unwrap();
+
+    let mut bootx64 = root_dir.create_file("EFI/BOOT/BOOTX64.EFI").unwrap();
+    bootx64.truncate().unwrap();
+
+    let mut kernel = root_dir.create_file("EFI/KERNEL/aero_kernel.elf").unwrap();
+    kernel.truncate().unwrap();
+
+    io::copy(&mut fs::File::open(&efi_file).unwrap(), &mut bootx64).unwrap();
+    io::copy(&mut fs::File::open(&kernel_file).unwrap(), &mut kernel).unwrap();
+}
+
+fn create_gpt_disk(disk_path: &Path, fat_image: &Path) {
+    // Create new file.
+    let mut disk = fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .read(true)
+        .write(true)
+        .open(&disk_path)
+        .unwrap();
+
+    // Set file size.
+    let partition_size: u64 = fs::metadata(&fat_image).unwrap().len();
+    let disk_size = partition_size + 1024 * 64; // For GPT headers.
+    disk.set_len(disk_size).unwrap();
+
+    /*
+     * Create a protective MBR at LBA0 so that disk is not considered
+     * unformatted on BIOS systems
+     */
+    let mbr = gpt::mbr::ProtectiveMBR::with_lb_size(
+        u32::try_from((disk_size / 512) - 1).unwrap_or(0xFF_FF_FF_FF),
+    );
+
+    mbr.overwrite_lba0(&mut disk).unwrap();
+
+    // Create new GPT structure.
+    let block_size = gpt::disk::LogicalBlockSize::Lb512;
+    let mut gpt = gpt::GptConfig::new()
+        .writable(true)
+        .initialized(false)
+        .logical_block_size(block_size)
+        .create_from_device(Box::new(&mut disk), None)
+        .unwrap();
+    gpt.update_partitions(Default::default()).unwrap();
+
+    // Add new EFI system partition and get its byte offset in the file.
+    let partition_id = gpt
+        .add_partition("boot", partition_size, gpt::partition_types::EFI, 0)
+        .unwrap();
+
+    let partition = gpt.partitions().get(&partition_id).unwrap();
+    let start_offset = partition.bytes_start(block_size).unwrap();
+
+    // Close the GPT structure and flush out the changes.
+    gpt.write().unwrap();
+
+    // Place the FAT filesystem in the newly created partition.
+    disk.seek(io::SeekFrom::Start(start_offset)).unwrap();
+
+    io::copy(&mut File::open(&fat_image).unwrap(), &mut disk).unwrap();
+}
+
+/// Packages all of the files by creating the build directory and copying
+/// the `aero.elf` and the `BOOTX64.EFI` files to the build directory and creating
+/// fat file from the build directory.
+pub fn package_files(bootloader: AeroBootloader) -> Result<(), Box<dyn Error>> {
+    let efi_file = match bootloader {
+        AeroBootloader::AeroBoot => Path::new("src/target/x86_64-unknown-uefi/debug/aero_boot.efi"),
+        AeroBootloader::Limine => Path::new("bundled/limine/BOOTX64.EFI"),
+
+        AeroBootloader::Tomato => Path::new(""),
+        AeroBootloader::Multiboot2 => Path::new(""),
+    };
+
+    let kernel_file = Path::new("src/target/x86_64-aero_os/debug/aero_kernel");
+    let out_path = Path::new("build");
+
+    let fat_path = out_path.join("aero.fat");
+    let img_path = out_path.join("aero.img");
+
+    create_fat_filesystem(&fat_path, &efi_file, &kernel_file);
+    create_gpt_disk(&img_path, &fat_path);
 
     Ok(())
 }

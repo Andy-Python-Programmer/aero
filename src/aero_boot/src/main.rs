@@ -38,7 +38,7 @@ mod logger;
 mod paging;
 mod unwind;
 
-pub const KERNEL_ELF_PATH: &str = r"\efi\kernel\aero.elf";
+pub const KERNEL_ELF_PATH: &str = r"\EFI\KERNEL\aero_kernel.elf";
 
 fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo) {
     let gop = system_table

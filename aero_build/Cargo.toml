@@ -5,12 +5,14 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-json = { version = "0.12.4" }
+json = "0.12.4"
 reqwest = { version = "0.11.3", features = ["rustls-tls"], default-features = false }
-structopt = { version = "0.3.21" }
+structopt = "0.3.21"
 tokio = { version = "1.5.0", features = ["macros", "rt", "rt-multi-thread"] }
-fs_extra = { version = "1.2.0" }
+fs_extra = "1.2.0"
+fatfs = "0.3.5"
+gpt = "2.0.0"
 
-target-lexicon = { version = "0.12.0" }
+target-lexicon = "0.12.0"
 cc = { version = "1.0", features = ["parallel"] }
 nasm-rs = { version = "0.2", features = ["parallel"] }

@@ -7,8 +7,6 @@ use std::env;
 use std::fs;
 
 use std::error::Error;
-use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
 
@@ -17,7 +15,6 @@ use std::process::{Command, ExitStatus};
 const CARGO: &str = env!("CARGO");
 
 const BUNDLED_DIR: &str = "bundled";
-const BUILD_DIR: &str = "build";
 
 mod bootloader;
 mod bundled;
@@ -88,7 +85,7 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
 
     qemu_run_cmd
         .arg("-drive")
-        .arg("format=raw,file=fat:rw:build/"); // Mounts the build directory as a FAT partition
+        .arg("format=raw,file=build/aero.img");
 
     qemu_run_cmd
         .status()
@@ -139,33 +136,8 @@ fn build_web() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Packages all of the files by creating the build directory and copying
-/// the `aero.elf` and the `aero_boot.efi` files to the build directory and
-/// creating the `startup.nsh` file.
-fn package_files() -> Result<(), Box<dyn Error>> {
-    // Create the build directory.
-    fs::create_dir_all("build/efi/boot")?;
-    fs::create_dir_all("build/efi/kernel")?;
-
-    fs::copy(
-        "src/target/x86_64-aero_os/debug/aero_kernel",
-        "build/efi/kernel/aero.elf",
-    )?;
-
-    fs::copy(
-        "src/target/x86_64-unknown-uefi/debug/aero_boot.efi",
-        "build/efi/boot/aero_boot.efi",
-    )?;
-
-    // Create the `startup.nsh` file.
-    let mut startup_nsh = File::create("build/startup.nsh")?;
-    startup_nsh.write_all(br"\efi\boot\aero_boot.EFI")?;
-
-    Ok(())
-}
-
-#[derive(Debug)]
-enum AeroBootloader {
+#[derive(Debug, Clone, Copy)]
+pub enum AeroBootloader {
     AeroBoot,
     Limine,
     Tomato,
@@ -253,7 +225,7 @@ async fn main() {
                 }
 
                 build_kernel(target, bootloader);
-                package_files().unwrap();
+                bundled::package_files(bootloader).unwrap();
 
                 if let Some(chainloader) = chainloader {
                     qemu_args.push("-drive".into());
@@ -278,7 +250,7 @@ async fn main() {
                 }
 
                 build_kernel(target, bootloader);
-                package_files().unwrap();
+                bundled::package_files(bootloader).unwrap();
             }
 
             AeroBuildCommand::Update { bootloader } => {
