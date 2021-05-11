@@ -122,7 +122,7 @@ pub macro intel_fn {
     (
         $(#![$total:meta])*
 
-        $(#[$outer:meta])* $fn_vis:vis extern "asm" fn $name:ident() { $($body:expr,)+ }
+        $(#[$outer:meta])* $fn_vis:vis extern "asm" fn $name:ident($($arg_name:ident : $arg_type:ty),*) { $($body:expr,)+ }
         $(pub extern "asm" $label_name:expr => { $($label_body:expr,)+ })*
     ) => {
         $(#[$total])*
@@ -143,7 +143,7 @@ pub macro intel_fn {
         $(#[$total])*
         extern "C" {
             $(#[$outer])*
-            $fn_vis fn $name();
+            $fn_vis fn $name($($arg_name : $arg_type),*);
         }
     }
 }
