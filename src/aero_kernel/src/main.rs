@@ -34,6 +34,7 @@ use x86_64::VirtAddr;
 mod acpi;
 mod apic;
 mod arch;
+mod boot;
 mod drivers;
 mod logger;
 mod rendy;
@@ -78,7 +79,15 @@ unsafe extern "C" fn mission_hello_world() {
     asm!("mov rax, 60; mov rdi, 0; syscall", options(noreturn));
 }
 
-#[export_name = "_start"]
+#[cfg_attr(
+    not(any(
+        feature = "stivale2",
+        feature = "stivale",
+        feature = "multiboot2",
+        feature = "multiboot"
+    )),
+    export_name = "_start"
+)]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     /*
      * First of all make sure interrupts are disabled.

@@ -37,16 +37,12 @@ fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
     match bootloader {
         AeroBootloader::AeroBoot => {}
 
-        AeroBootloader::Limine => {
-            kernel_build_cmd.args(&["--feature", "limine"]);
-        }
-
-        AeroBootloader::Tomato => {
-            kernel_build_cmd.args(&["--feature", "tomato"]);
+        AeroBootloader::Limine | AeroBootloader::Tomato => {
+            kernel_build_cmd.args(&["--features", "stivale2"]);
         }
 
         AeroBootloader::Multiboot2 => {
-            kernel_build_cmd.args(&["--feature", "multiboot2"]);
+            kernel_build_cmd.args(&["--features", "multiboot2"]);
         }
     }
 
@@ -201,6 +197,8 @@ enum AeroBuildCommand {
 
         #[structopt(long)]
         chainloader: Option<String>,
+
+        #[structopt(long)]
         bootloader: Option<String>,
 
         /// Extra command line arguments passed to qemu.
@@ -209,12 +207,16 @@ enum AeroBuildCommand {
     },
 
     Build {
+        #[structopt(long)]
         bootloader: Option<String>,
+
+        #[structopt(long)]
         target: Option<String>,
     },
 
     /// Update all of the OVMF files required for UEFI and bootloader prebuilts.
     Update {
+        #[structopt(long)]
         bootloader: Option<String>,
     },
 
