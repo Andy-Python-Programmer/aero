@@ -1,19 +1,14 @@
-cfg_if::cfg_if! {
-    if #[cfg(not(feature = "bin"))] {
-        std::compile_error! {
-            "The crate `aero_build` can only be compiled as a binary with the `bin` feature enabled."
-        }
-    }
-}
+use fs_extra::dir;
+use fs_extra::dir::CopyOptions;
 
-use fs_extra::dir::{self, CopyOptions};
 use structopt::StructOpt;
 
-use std::{env, fs::File, io::Write};
-
+use std::env;
 use std::fs;
 
 use std::error::Error;
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
 
@@ -21,18 +16,15 @@ use std::process::{Command, ExitStatus};
 /// also support non-standard cargo versions.
 const CARGO: &str = env!("CARGO");
 
-/// The qemu executable.
-const QEMU: &str = "qemu-system-x86_64";
-
 const BUNDLED_DIR: &str = "bundled";
 const BUILD_DIR: &str = "build";
 
 mod bootloader;
-mod uefi;
+mod bundled;
 
 /// Build the kernel by using `cargo build` with the cargo config defined
 /// in the `src\.cargo\config.toml` file.
-fn build_kernel(target: Option<String>) {
+fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
     println!("INFO: Building kernel");
 
     let mut kernel_build_cmd = Command::new(CARGO);
@@ -41,6 +33,22 @@ fn build_kernel(target: Option<String>) {
 
     kernel_build_cmd.arg("build");
     kernel_build_cmd.arg("--package").arg("aero_kernel");
+
+    match bootloader {
+        AeroBootloader::AeroBoot => {}
+
+        AeroBootloader::Limine => {
+            kernel_build_cmd.args(&["--feature", "limine"]);
+        }
+
+        AeroBootloader::Tomato => {
+            kernel_build_cmd.args(&["--feature", "tomato"]);
+        }
+
+        AeroBootloader::Multiboot2 => {
+            kernel_build_cmd.args(&["--feature", "multiboot2"]);
+        }
+    }
 
     // Use the specified target. By default it will build for x86_64-aero_os
     if let Some(target) = target {
@@ -62,7 +70,7 @@ fn build_kernel(target: Option<String>) {
 /// mount the build directory as a FAT partition instead of creating a seperate
 /// `.fat` file. Check out [AeroBuild] for configuration settings about this.
 fn run_qemu(argv: Vec<String>) -> ExitStatus {
-    let mut qemu_run_cmd = Command::new(QEMU);
+    let mut qemu_run_cmd = Command::new("qemu-system-x86_64");
 
     qemu_run_cmd.args(argv);
 
@@ -160,6 +168,30 @@ fn package_files() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[derive(Debug)]
+enum AeroBootloader {
+    AeroBoot,
+    Limine,
+    Tomato,
+    Multiboot2,
+}
+
+impl From<Option<String>> for AeroBootloader {
+    fn from(boot: Option<String>) -> Self {
+        if let Some(boot) = boot {
+            match boot.as_ref() {
+                "aero" => Self::AeroBoot,
+                "limine" => Self::Limine,
+                "tomato" => Self::Tomato,
+                "multiboot2" => Self::Multiboot2,
+                _ => panic!("Invalid or unsupported bootloader {}", boot),
+            }
+        } else {
+            Self::AeroBoot
+        }
+    }
+}
+
 #[derive(Debug, StructOpt)]
 enum AeroBuildCommand {
     /// Build and run Aero in qemu.
@@ -169,16 +201,23 @@ enum AeroBuildCommand {
 
         #[structopt(long)]
         chainloader: Option<String>,
+        bootloader: Option<String>,
 
         /// Extra command line arguments passed to qemu.
         #[structopt(last = true)]
         qemu_args: Vec<String>,
     },
+
     Build {
+        bootloader: Option<String>,
         target: Option<String>,
     },
-    /// Update all of the OVMF files required for UEFI.
-    Update,
+
+    /// Update all of the OVMF files required for UEFI and bootloader prebuilts.
+    Update {
+        bootloader: Option<String>,
+    },
+
     Web,
 }
 
@@ -197,13 +236,21 @@ async fn main() {
             AeroBuildCommand::Run {
                 mut qemu_args,
                 target,
+                bootloader,
                 chainloader,
             } => {
-                uefi::download_ovmf_prebuilt().await.unwrap();
-                uefi::download_limine_prebuilt().await.unwrap();
+                let bootloader = AeroBootloader::from(bootloader);
 
-                build_kernel(target);
-                bootloader::build_bootloader();
+                bundled::download_ovmf_prebuilt().await.unwrap();
+
+                match bootloader {
+                    AeroBootloader::AeroBoot => bootloader::build_bootloader(),
+                    AeroBootloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
+                    AeroBootloader::Tomato => {}
+                    AeroBootloader::Multiboot2 => {}
+                }
+
+                build_kernel(target, bootloader);
                 package_files().unwrap();
 
                 if let Some(chainloader) = chainloader {
@@ -216,18 +263,35 @@ async fn main() {
                 }
             }
 
-            AeroBuildCommand::Build { target } => {
-                uefi::download_ovmf_prebuilt().await.unwrap();
-                uefi::download_limine_prebuilt().await.unwrap();
+            AeroBuildCommand::Build { bootloader, target } => {
+                let bootloader = AeroBootloader::from(bootloader);
 
-                build_kernel(target);
-                bootloader::build_bootloader();
+                bundled::download_ovmf_prebuilt().await.unwrap();
+
+                match bootloader {
+                    AeroBootloader::AeroBoot => bootloader::build_bootloader(),
+                    AeroBootloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
+                    AeroBootloader::Tomato => {}
+                    AeroBootloader::Multiboot2 => {}
+                }
+
+                build_kernel(target, bootloader);
                 package_files().unwrap();
             }
 
-            AeroBuildCommand::Update => uefi::update_ovmf()
-                .await
-                .expect("Failed tp update OVMF files"),
+            AeroBuildCommand::Update { bootloader } => {
+                let bootloader = AeroBootloader::from(bootloader);
+
+                bundled::update_ovmf()
+                    .await
+                    .expect("Failed tp update OVMF files");
+
+                if let AeroBootloader::Limine = bootloader {
+                    bundled::update_limine()
+                        .await
+                        .expect("Failed to update limine prebuilt files");
+                }
+            }
 
             AeroBuildCommand::Web => build_web().unwrap(),
         },

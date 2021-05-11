@@ -21,7 +21,6 @@ name = "aero_build"
 version = "0.1.0"
 dependencies = [
  "cc",
- "cfg-if",
  "fs_extra",
  "json",
  "nasm-rs",

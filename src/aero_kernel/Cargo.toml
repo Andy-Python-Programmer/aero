@@ -41,4 +41,4 @@ path = "../aero_boot/"
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
 nasm-rs = { version = "0.2", features = ["parallel"] }
-aero_build = { path = "../../aero_build/", features = ["lib"] }
+aero_build = { path = "../../aero_build/" }

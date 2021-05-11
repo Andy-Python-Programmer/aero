@@ -1,17 +1,12 @@
-cfg_if::cfg_if! {
-    if #[cfg(feature = "lib")] {
-        use std::error::Error;
-        use std::ffi::OsStr;
-        use std::fs;
-        use std::path::{Path, PathBuf};
+use std::error::Error;
+use std::ffi::OsStr;
+use std::fs;
+use std::path::{Path, PathBuf};
 
-        pub use target_lexicon;
+pub use target_lexicon;
 
-        use target_lexicon::Triple;
-    }
-}
+use target_lexicon::Triple;
 
-#[cfg(feature = "lib")]
 #[macro_export]
 macro_rules! target_triple {
     ($triple:expr) => {
@@ -19,7 +14,6 @@ macro_rules! target_triple {
     };
 }
 
-#[cfg(feature = "lib")]
 pub fn assemble_assembly_source_files(
     directory: PathBuf,
     target_triple: &Triple,
