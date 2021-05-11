@@ -145,7 +145,7 @@ fn create_fat_filesystem(
     fat_file.set_len(fat_len).unwrap();
 
     // Create new FAT file system and open it.
-    let format_options = fatfs::FormatVolumeOptions::new();
+    let format_options = fatfs::FormatVolumeOptions::new().fat_type(fatfs::FatType::Fat32);
     fatfs::format_volume(&fat_file, format_options).unwrap();
 
     let filesystem = fatfs::FileSystem::new(&fat_file, fatfs::FsOptions::new()).unwrap();
