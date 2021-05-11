@@ -105,13 +105,13 @@ pub async fn download_limine_prebuilt() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn get_fat_filesystem_len(paths: &[&Path]) -> u64 {
+fn get_fat_filesystem_len(fat: Vec<&Path>) -> u64 {
     let mb = 1024 * 1024; // Size of a megabyte and round it to next megabyte.
     let mut size = 0x00;
 
-    for path in paths {
+    for file in fat {
         // Retrieve size of `path` file and round it up.
-        let file_size = fs::metadata(path).unwrap().len();
+        let file_size = fs::metadata(file).unwrap().len();
         let file_size_rounded = ((file_size - 1) / mb + 1) * mb;
 
         size += file_size_rounded;
@@ -126,12 +126,14 @@ fn create_fat_filesystem(
     kernel_file: &Path,
     bootloader: AeroBootloader,
 ) {
-    let fat_len = get_fat_filesystem_len(&[
-        efi_file,
-        kernel_file,
-        &Path::new("bundled/limine/limine.sys"),
-        &Path::new("src/.cargo/limine.cfg"),
-    ]);
+    let mut fat = vec![efi_file, kernel_file];
+
+    if let AeroBootloader::Limine = bootloader {
+        fat.push(&Path::new("bundled/limine/limine.sys"));
+        fat.push(&Path::new("src/.cargo/limine.cfg"));
+    }
+
+    let fat_len = get_fat_filesystem_len(fat);
 
     // Create new filesystem image file at the given path and set its length.
     let fat_file = fs::OpenOptions::new()
