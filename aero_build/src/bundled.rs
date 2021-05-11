@@ -105,14 +105,33 @@ pub async fn download_limine_prebuilt() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn create_fat_filesystem(fat_path: &Path, efi_file: &Path, kernel_file: &Path) {
-    // Retrieve size of `.efi` file and round it up.
-    let efi_size = fs::metadata(&efi_file).unwrap().len();
-    let kernel_size = fs::metadata(&kernel_file).unwrap().len();
-
+fn get_fat_filesystem_len(paths: &[&Path]) -> u64 {
     let mb = 1024 * 1024; // Size of a megabyte and round it to next megabyte.
-    let efi_size_rounded = ((efi_size - 1) / mb + 1) * mb;
-    let kernel_size_rounded = ((kernel_size - 1) / mb + 1) * mb;
+    let mut size = 0x00;
+
+    for path in paths {
+        // Retrieve size of `path` file and round it up.
+        let file_size = fs::metadata(path).unwrap().len();
+        let file_size_rounded = ((file_size - 1) / mb + 1) * mb;
+
+        size += file_size_rounded;
+    }
+
+    size
+}
+
+fn create_fat_filesystem(
+    fat_path: &Path,
+    efi_file: &Path,
+    kernel_file: &Path,
+    bootloader: AeroBootloader,
+) {
+    let fat_len = get_fat_filesystem_len(&[
+        efi_file,
+        kernel_file,
+        &Path::new("bundled/limine/limine.sys"),
+        &Path::new("src/.cargo/limine.cfg"),
+    ]);
 
     // Create new filesystem image file at the given path and set its length.
     let fat_file = fs::OpenOptions::new()
@@ -123,9 +142,7 @@ fn create_fat_filesystem(fat_path: &Path, efi_file: &Path, kernel_file: &Path) {
         .open(&fat_path)
         .unwrap();
 
-    fat_file
-        .set_len(efi_size_rounded + kernel_size_rounded)
-        .unwrap();
+    fat_file.set_len(fat_len).unwrap();
 
     // Create new FAT file system and open it.
     let format_options = fatfs::FormatVolumeOptions::new();
@@ -145,6 +162,26 @@ fn create_fat_filesystem(fat_path: &Path, efi_file: &Path, kernel_file: &Path) {
 
     let mut kernel = root_dir.create_file("EFI/KERNEL/aero_kernel.elf").unwrap();
     kernel.truncate().unwrap();
+
+    if let AeroBootloader::Limine = bootloader {
+        let mut limine_sys = root_dir.create_file("limine.sys").unwrap();
+        limine_sys.truncate().unwrap();
+
+        let mut limine_cfg = root_dir.create_file("limine.cfg").unwrap();
+        limine_cfg.truncate().unwrap();
+
+        io::copy(
+            &mut fs::File::open("bundled/limine/limine.sys").unwrap(),
+            &mut limine_sys,
+        )
+        .unwrap();
+
+        io::copy(
+            &mut fs::File::open("src/.cargo/limine.cfg").unwrap(),
+            &mut limine_cfg,
+        )
+        .unwrap();
+    }
 
     io::copy(&mut fs::File::open(&efi_file).unwrap(), &mut bootx64).unwrap();
     io::copy(&mut fs::File::open(&kernel_file).unwrap(), &mut kernel).unwrap();
@@ -220,8 +257,25 @@ pub fn package_files(bootloader: AeroBootloader) -> Result<(), Box<dyn Error>> {
     let fat_path = out_path.join("aero.fat");
     let img_path = out_path.join("aero.img");
 
-    create_fat_filesystem(&fat_path, &efi_file, &kernel_file);
+    fs::create_dir_all("build")?;
+
+    create_fat_filesystem(&fat_path, &efi_file, &kernel_file, bootloader);
     create_gpt_disk(&img_path, &fat_path);
+
+    if let AeroBootloader::Limine = bootloader {
+        let mut limine_install_cmd = Command::new("wsl");
+
+        limine_install_cmd.arg("bundled/limine/limine-install-linux-x86_64");
+        limine_install_cmd.arg("build/aero.img");
+
+        if !limine_install_cmd
+            .status()
+            .expect(&format!("Failed to run {:#?}", limine_install_cmd))
+            .success()
+        {
+            panic!("Failed to install limine")
+        }
+    }
 
     Ok(())
 }
