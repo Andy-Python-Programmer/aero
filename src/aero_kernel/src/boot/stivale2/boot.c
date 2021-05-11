@@ -33,7 +33,7 @@ static struct stivale2_header_tag_framebuffer framebuffer_hdr_tag = {
     },
     .framebuffer_width = 0,
     .framebuffer_height = 0,
-    .framebuffer_bpp = 0,
+    .framebuffer_bpp = 4,
 };
 
 /// The stivale2 specification expects us to define a "header structure".
@@ -92,6 +92,18 @@ void loop()
     }
 }
 
+struct stivale2_struct_tag_framebuffer *stivale2_get_framebuffer_tag(struct stivale2_struct *stivale2_struct)
+{
+    struct stivale2_struct_tag_framebuffer *framebuffer_tag;
+
+    framebuffer_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
+
+    if (framebuffer_tag == NULL)
+        return NULL;
+
+    return framebuffer_tag;
+}
+
 extern void __stivale_boot();
 
 /// Entry point function for our kernel.
@@ -112,7 +124,7 @@ void _start(struct stivale2_struct *stivale2_struct)
 
     terminal_write("[boot] stivale 2\n", 17);
 
-    __stivale_boot();
+    __stivale_boot(stivale2_struct);
 
     // There is nothing that we can really do in this situation. So
     // we loop for ever!
