@@ -33,11 +33,8 @@ fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
     kernel_build_cmd.arg("build");
     kernel_build_cmd.arg("--package").arg("aero_kernel");
 
-    match bootloader {
-        AeroBootloader::AeroBoot => {}
-        AeroBootloader::Limine => {
-            kernel_build_cmd.args(&["--features", "stivale2"]);
-        }
+    if let AeroBootloader::Limine = bootloader {
+        kernel_build_cmd.args(&["--features", "stivale2"]);
     }
 
     // Use the specified target. By default it will build for x86_64-aero_os
@@ -45,6 +42,20 @@ fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
         kernel_build_cmd
             .arg("--target")
             .arg(format!("./.cargo/{}.json", target));
+    } else {
+        match bootloader {
+            AeroBootloader::AeroBoot => {
+                kernel_build_cmd
+                    .arg("--target")
+                    .arg("./.cargo/x86_64-aero_os.json");
+            }
+
+            AeroBootloader::Limine => {
+                kernel_build_cmd
+                    .arg("--target")
+                    .arg("./aero_kernel/src/boot/stivale2/x86_64-aero_os.json");
+            }
+        }
     }
 
     if !kernel_build_cmd

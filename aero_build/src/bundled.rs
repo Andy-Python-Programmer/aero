@@ -168,7 +168,7 @@ fn create_fat_filesystem(
     }
 
     create_fat_file!(bootx64 => "EFI/BOOT/BOOTX64.EFI");
-    create_fat_file!(kernel => "EFI/KERNEL/aero_kernel.elf");
+    create_fat_file!(kernel => "aero_kernel.elf");
 
     copy_contents_fat!(&efi_file => bootx64);
     copy_contents_fat!(&kernel_file => kernel);
