@@ -1,3 +1,5 @@
+#![feature(decl_macro)]
+
 use fs_extra::dir;
 use fs_extra::dir::CopyOptions;
 
@@ -33,13 +35,8 @@ fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
 
     match bootloader {
         AeroBootloader::AeroBoot => {}
-
-        AeroBootloader::Limine | AeroBootloader::Tomato => {
+        AeroBootloader::Limine => {
             kernel_build_cmd.args(&["--features", "stivale2"]);
-        }
-
-        AeroBootloader::Multiboot2 => {
-            kernel_build_cmd.args(&["--features", "multiboot2"]);
         }
     }
 
@@ -140,8 +137,6 @@ fn build_web() -> Result<(), Box<dyn Error>> {
 pub enum AeroBootloader {
     AeroBoot,
     Limine,
-    Tomato,
-    Multiboot2,
 }
 
 impl From<Option<String>> for AeroBootloader {
@@ -150,8 +145,6 @@ impl From<Option<String>> for AeroBootloader {
             match boot.as_ref() {
                 "aero" => Self::AeroBoot,
                 "limine" => Self::Limine,
-                "tomato" => Self::Tomato,
-                "multiboot2" => Self::Multiboot2,
                 _ => panic!("Invalid or unsupported bootloader {}", boot),
             }
         } else {
@@ -220,8 +213,6 @@ async fn main() {
                 match bootloader {
                     AeroBootloader::AeroBoot => bootloader::build_bootloader(),
                     AeroBootloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
-                    AeroBootloader::Tomato => {}
-                    AeroBootloader::Multiboot2 => {}
                 }
 
                 build_kernel(target, bootloader);
@@ -245,8 +236,6 @@ async fn main() {
                 match bootloader {
                     AeroBootloader::AeroBoot => bootloader::build_bootloader(),
                     AeroBootloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
-                    AeroBootloader::Tomato => {}
-                    AeroBootloader::Multiboot2 => {}
                 }
 
                 build_kernel(target, bootloader);

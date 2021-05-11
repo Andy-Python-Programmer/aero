@@ -125,7 +125,7 @@ fn create_fat_filesystem(
     efi_file: &Path,
     kernel_file: &Path,
     bootloader: AeroBootloader,
-) {
+) -> Result<(), Box<dyn Error>> {
     let mut fat = vec![efi_file, kernel_file];
 
     if let AeroBootloader::Limine = bootloader {
@@ -141,68 +141,62 @@ fn create_fat_filesystem(
         .write(true)
         .create(true)
         .truncate(true)
-        .open(&fat_path)
-        .unwrap();
+        .open(&fat_path)?;
 
-    fat_file.set_len(fat_len).unwrap();
+    fat_file.set_len(fat_len)?;
 
     // Create new FAT file system and open it.
     let format_options = fatfs::FormatVolumeOptions::new().fat_type(fatfs::FatType::Fat32);
-    fatfs::format_volume(&fat_file, format_options).unwrap();
+    fatfs::format_volume(&fat_file, format_options)?;
 
-    let filesystem = fatfs::FileSystem::new(&fat_file, fatfs::FsOptions::new()).unwrap();
+    let filesystem = fatfs::FileSystem::new(&fat_file, fatfs::FsOptions::new())?;
 
     // Copy EFI file to FAT filesystem.
     let root_dir = filesystem.root_dir();
 
-    root_dir.create_dir("EFI").unwrap();
-    root_dir.create_dir("EFI/BOOT").unwrap();
-    root_dir.create_dir("EFI/KERNEL").unwrap();
+    root_dir.create_dir("EFI")?;
+    root_dir.create_dir("EFI/BOOT")?;
+    root_dir.create_dir("EFI/KERNEL")?;
 
-    let mut bootx64 = root_dir.create_file("EFI/BOOT/BOOTX64.EFI").unwrap();
-    bootx64.truncate().unwrap();
-
-    let mut kernel = root_dir.create_file("EFI/KERNEL/aero_kernel.elf").unwrap();
-    kernel.truncate().unwrap();
-
-    if let AeroBootloader::Limine = bootloader {
-        let mut limine_sys = root_dir.create_file("limine.sys").unwrap();
-        limine_sys.truncate().unwrap();
-
-        let mut limine_cfg = root_dir.create_file("limine.cfg").unwrap();
-        limine_cfg.truncate().unwrap();
-
-        io::copy(
-            &mut fs::File::open("bundled/limine/limine.sys").unwrap(),
-            &mut limine_sys,
-        )
-        .unwrap();
-
-        io::copy(
-            &mut fs::File::open("src/.cargo/limine.cfg").unwrap(),
-            &mut limine_cfg,
-        )
-        .unwrap();
+    macro create_fat_file($name:ident => $path:expr) {
+        let mut $name = root_dir.create_file($path)?;
+        $name.truncate()?;
     }
 
-    io::copy(&mut fs::File::open(&efi_file).unwrap(), &mut bootx64).unwrap();
-    io::copy(&mut fs::File::open(&kernel_file).unwrap(), &mut kernel).unwrap();
+    macro copy_contents_fat($path:expr => $name:ident) {
+        io::copy(&mut fs::File::open($path)?, &mut $name)?;
+    }
+
+    create_fat_file!(bootx64 => "EFI/BOOT/BOOTX64.EFI");
+    create_fat_file!(kernel => "EFI/KERNEL/aero_kernel.elf");
+
+    copy_contents_fat!(&efi_file => bootx64);
+    copy_contents_fat!(&kernel_file => kernel);
+
+    if let AeroBootloader::Limine = bootloader {
+        create_fat_file!(limine_sys => "limine.sys");
+        create_fat_file!(limine_cfg => "limine.cfg");
+
+        copy_contents_fat!("bundled/limine/limine.sys" => limine_sys);
+        copy_contents_fat!("src/.cargo/limine.cfg" => limine_cfg);
+    }
+
+    Ok(())
 }
 
-fn create_gpt_disk(disk_path: &Path, fat_image: &Path) {
+fn create_gpt_disk(disk_path: &Path, fat_image: &Path) -> Result<(), Box<dyn Error>> {
     // Create new file.
     let mut disk = fs::OpenOptions::new()
         .create(true)
         .truncate(true)
         .read(true)
         .write(true)
-        .open(&disk_path)
-        .unwrap();
+        .open(&disk_path)?;
 
     // Set file size.
-    let partition_size: u64 = fs::metadata(&fat_image).unwrap().len();
+    let partition_size: u64 = fs::metadata(&fat_image)?.len();
     let disk_size = partition_size + 1024 * 64; // For GPT headers.
-    disk.set_len(disk_size).unwrap();
+    disk.set_len(disk_size)?;
 
     /*
      * Create a protective MBR at LBA0 so that disk is not considered
@@ -212,33 +206,36 @@ fn create_gpt_disk(disk_path: &Path, fat_image: &Path) {
         u32::try_from((disk_size / 512) - 1).unwrap_or(0xFF_FF_FF_FF),
     );
 
-    mbr.overwrite_lba0(&mut disk).unwrap();
+    mbr.overwrite_lba0(&mut disk)?;
 
     // Create new GPT structure.
     let block_size = gpt::disk::LogicalBlockSize::Lb512;
+
     let mut gpt = gpt::GptConfig::new()
         .writable(true)
         .initialized(false)
         .logical_block_size(block_size)
-        .create_from_device(Box::new(&mut disk), None)
-        .unwrap();
-    gpt.update_partitions(Default::default()).unwrap();
+        .create_from_device(Box::new(&mut disk), None)?;
+
+    gpt.update_partitions(Default::default())?;
 
     // Add new EFI system partition and get its byte offset in the file.
-    let partition_id = gpt
-        .add_partition("boot", partition_size, gpt::partition_types::EFI, 0)
-        .unwrap();
+    let partition_id = gpt.add_partition("boot", partition_size, gpt::partition_types::EFI, 0)?;
 
-    let partition = gpt.partitions().get(&partition_id).unwrap();
-    let start_offset = partition.bytes_start(block_size).unwrap();
+    let partition = gpt
+        .partitions()
+        .get(&partition_id)
+        .expect("Boot partition not found");
+    let start_offset = partition.bytes_start(block_size)?;
 
     // Close the GPT structure and flush out the changes.
-    gpt.write().unwrap();
+    gpt.write()?;
 
     // Place the FAT filesystem in the newly created partition.
-    disk.seek(io::SeekFrom::Start(start_offset)).unwrap();
+    disk.seek(io::SeekFrom::Start(start_offset))?;
+    io::copy(&mut File::open(&fat_image)?, &mut disk)?;
 
-    io::copy(&mut File::open(&fat_image).unwrap(), &mut disk).unwrap();
+    Ok(())
 }
 
 /// Packages all of the files by creating the build directory and copying
@@ -248,9 +245,6 @@ pub fn package_files(bootloader: AeroBootloader) -> Result<(), Box<dyn Error>> {
     let efi_file = match bootloader {
         AeroBootloader::AeroBoot => Path::new("src/target/x86_64-unknown-uefi/debug/aero_boot.efi"),
         AeroBootloader::Limine => Path::new("bundled/limine/BOOTX64.EFI"),
-
-        AeroBootloader::Tomato => Path::new(""),
-        AeroBootloader::Multiboot2 => Path::new(""),
     };
 
     let kernel_file = Path::new("src/target/x86_64-aero_os/debug/aero_kernel");
@@ -261,8 +255,8 @@ pub fn package_files(bootloader: AeroBootloader) -> Result<(), Box<dyn Error>> {
 
     fs::create_dir_all("build")?;
 
-    create_fat_filesystem(&fat_path, &efi_file, &kernel_file, bootloader);
-    create_gpt_disk(&img_path, &fat_path);
+    create_fat_filesystem(&fat_path, &efi_file, &kernel_file, bootloader)?;
+    create_gpt_disk(&img_path, &fat_path)?;
 
     if let AeroBootloader::Limine = bootloader {
         let mut limine_install_cmd = Command::new("wsl");
