@@ -36,6 +36,7 @@ mod apic;
 mod arch;
 mod boot;
 mod drivers;
+mod fs;
 mod logger;
 mod rendy;
 mod syscall;
@@ -79,15 +80,7 @@ unsafe extern "C" fn mission_hello_world() {
     asm!("mov rax, 60; mov rdi, 0; syscall", options(noreturn));
 }
 
-#[cfg_attr(
-    not(any(
-        feature = "stivale2",
-        feature = "stivale",
-        feature = "multiboot2",
-        feature = "multiboot"
-    )),
-    export_name = "_start"
-)]
+#[export_name = "_start"]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     /*
      * First of all make sure interrupts are disabled.
@@ -164,6 +157,9 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     drivers::pci::init(&mut offset_table, &mut frame_allocator);
     log::info!("Loaded PCI driver");
+
+    fs::init();
+    log::info!("Loaded filesystem");
 
     userland::init();
     log::info!("Loaded userland");

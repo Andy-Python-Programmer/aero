@@ -7,10 +7,7 @@ edition = "2018"
 [features]
 default = []
 
-stivale = []
 stivale2 = []
-multiboot = []
-multiboot2 = []
 
 [dependencies]
 spin = "0.9"
