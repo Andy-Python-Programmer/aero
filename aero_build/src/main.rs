@@ -71,7 +71,7 @@ fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
 /// mount the build directory as a FAT partition instead of creating a seperate
 /// `.fat` file. Check out [AeroBuild] for configuration settings about this.
 fn run_qemu(argv: Vec<String>) -> ExitStatus {
-    let mut qemu_run_cmd = Command::new("qemu-system-x86_64");
+    let mut qemu_run_cmd = Command::new("qemu-system-x86_64.exe");
 
     qemu_run_cmd.args(argv);
 

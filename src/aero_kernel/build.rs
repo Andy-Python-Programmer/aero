@@ -47,6 +47,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     assemble_trampoline(&out_dir)?;
 
+    if cfg!(feature = "stivale2") {
+        cc::Build::new()
+            .file("./src/boot/stivale2/boot.c")
+            .include("./src/boot/stivale2")
+            .compile("stivale2_boot");
+    }
+
     println!("cargo:rerun-if-changed=.cargo/kernel.ld");
     println!("cargo:rerun-if-changed=aero_kernel/src/boot/stivale2/kernel.ld");
 

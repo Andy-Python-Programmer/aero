@@ -80,7 +80,7 @@ unsafe extern "C" fn mission_hello_world() {
     asm!("mov rax, 60; mov rdi, 0; syscall", options(noreturn));
 }
 
-#[export_name = "_start"]
+#[no_mangle]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     /*
      * First of all make sure interrupts are disabled.

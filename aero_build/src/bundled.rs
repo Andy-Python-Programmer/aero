@@ -259,9 +259,8 @@ pub fn package_files(bootloader: AeroBootloader) -> Result<(), Box<dyn Error>> {
     create_gpt_disk(&img_path, &fat_path)?;
 
     if let AeroBootloader::Limine = bootloader {
-        let mut limine_install_cmd = Command::new("wsl");
+        let mut limine_install_cmd = Command::new("bundled/limine/limine-install-linux-x86_64");
 
-        limine_install_cmd.arg("bundled/limine/limine-install-linux-x86_64");
         limine_install_cmd.arg("build/aero.img");
 
         if !limine_install_cmd
