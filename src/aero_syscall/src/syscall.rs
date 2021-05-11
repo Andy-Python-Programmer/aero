@@ -40,6 +40,7 @@ define_syscall_fns!(
 
 /// Returns true if the current CPU supports the `syscall` and
 /// the `sysret` instruction.
+#[inline(always)]
 pub fn supports_syscall_sysret() -> bool {
     cfg_if::cfg_if!(
         if #[cfg(target_pointer_width = "64")] {
