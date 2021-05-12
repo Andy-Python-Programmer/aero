@@ -1,4 +1,4 @@
-use aero_boot::*;
+use stivale::memory::{MemoryMapEntryType, MemoryMapTag};
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
@@ -19,14 +19,14 @@ impl UnmapGuard {
     }
 }
 
-pub struct GlobalAllocator {
-    memory_map: &'static MemoryRegions,
+pub struct GlobalAllocator<'mmap> {
+    memory_map: &'mmap MemoryMapTag,
     next: usize,
 }
 
-impl GlobalAllocator {
+impl<'mmap> GlobalAllocator<'mmap> {
     /// Create a new global frame allocator from the memory map provided by the bootloader.
-    pub unsafe fn init(memory_map: &'static MemoryRegions) -> Self {
+    pub unsafe fn init(memory_map: &'mmap MemoryMapTag) -> Self {
         Self {
             memory_map,
             next: 0,
@@ -34,29 +34,29 @@ impl GlobalAllocator {
     }
 
     /// Get the [MemoryRegionType] of a frame
-    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryRegionType> {
+    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryMapEntryType> {
         self.memory_map
             .iter()
             .find(|v| {
                 let addr = frame.start_address().as_u64();
 
-                v.start >= addr && addr < v.end
+                v.start_address() >= addr && addr < v.end_address()
             })
-            .map(|v| v.kind)
+            .map(|v| v.entry_type())
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
-    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> + '_ {
         let regions = self.memory_map.iter();
-        let usable_regions = regions.filter(|r| r.kind == MemoryRegionType::Usable);
-        let addr_ranges = usable_regions.map(|r| r.start..r.end);
+        let usable_regions = regions.filter(|r| r.entry_type() == MemoryMapEntryType::Usable);
+        let addr_ranges = usable_regions.map(|r| r.start_address()..r.end_address());
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
 
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }
 }
 
-unsafe impl FrameAllocator<Size4KiB> for GlobalAllocator {
+unsafe impl<'mmap> FrameAllocator<Size4KiB> for GlobalAllocator<'mmap> {
     #[track_caller]
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let frame = self.usable_frames().nth(self.next);
@@ -66,13 +66,13 @@ unsafe impl FrameAllocator<Size4KiB> for GlobalAllocator {
     }
 }
 
-unsafe impl Sync for GlobalAllocator {}
-unsafe impl Send for GlobalAllocator {}
+unsafe impl<'mmap> Sync for GlobalAllocator<'mmap> {}
+unsafe impl<'mmap> Send for GlobalAllocator<'mmap> {}
 
 /// Initialize paging.
 pub fn init(
     physical_memory_offset: VirtAddr,
-    memory_regions: &'static MemoryRegions,
+    memory_regions: &MemoryMapTag,
 ) -> (OffsetPageTable<'static>, GlobalAllocator) {
     unsafe {
         let active_level_4 = active_level_4_table(physical_memory_offset);
@@ -107,9 +107,7 @@ pub unsafe fn memory_map_device(
         .ok_or(MapToError::FrameAllocationFailed)?;
 
     let extra_flags = match frame_type {
-        MemoryRegionType::UnknownBios(_) | MemoryRegionType::UnknownUefi(_) => {
-            PageTableFlags::WRITABLE
-        }
+        MemoryMapEntryType::Reserved => PageTableFlags::WRITABLE,
         _ => panic!(
             "Tried to memory map a device on a {:?} frame {:#X}",
             frame_type,

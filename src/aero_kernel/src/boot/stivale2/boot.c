@@ -77,19 +77,13 @@ void loop()
     }
 }
 
-struct stivale2_struct_tag_framebuffer *stivale2_get_framebuffer_tag(struct stivale2_struct *stivale2_struct)
+struct stivale2_bootinfo
 {
     struct stivale2_struct_tag_framebuffer *framebuffer_tag;
+    struct stivale2_struct_tag_memmap *mmap_tag;
+};
 
-    framebuffer_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
-
-    if (framebuffer_tag == NULL)
-        return NULL;
-
-    return framebuffer_tag;
-}
-
-extern void __stivale_boot();
+extern void __stivale_boot(struct stivale2_bootinfo *bootinfo);
 
 /// Entry point function for our kernel.
 ///
@@ -97,7 +91,15 @@ extern void __stivale_boot();
 /// As we are in C the `#[no_mangle]` attribute is not required.
 void _start(struct stivale2_struct *stivale2_struct)
 {
-    __stivale_boot(stivale2_struct);
+    struct stivale2_struct_tag_framebuffer *framebuffer_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
+    struct stivale2_struct_tag_memmap *mmap_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
+
+    struct stivale2_bootinfo bootinfo;
+
+    bootinfo.framebuffer_tag = framebuffer_tag;
+    bootinfo.mmap_tag = mmap_tag;
+
+    __stivale_boot(&bootinfo);
 
     /*
      * There is nothing that we can really do in this situation. So

@@ -51,6 +51,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         cc::Build::new()
             .file("./src/boot/stivale2/boot.c")
             .include("./src/boot/stivale2")
+            .flag("-ffreestanding")
+            .flag("-mno-red-zone")
+            .flag("-fno-exceptions")
+            .flag("-fshort-wchar")
             .compile("stivale2_boot");
     }
 

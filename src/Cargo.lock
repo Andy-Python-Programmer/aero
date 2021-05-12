@@ -1008,7 +1008,7 @@ dependencies = [
 [[package]]
 name = "stivale"
 version = "0.2.1"
-source = "git+https://github.com/Andy-Python-Programmer/stivale-rs#1c4ef643e4df6656ba772e4ab0a83fe8ce79714d"
+source = "git+https://github.com/Andy-Python-Programmer/stivale-rs#96dde15efe2519a9a3c02d8ab4c0fb694e74a3ef"
 dependencies = [
  "bitflags",
 ]
