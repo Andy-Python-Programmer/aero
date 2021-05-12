@@ -51,8 +51,6 @@ fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo)
     let mode_info = gop.current_mode_info();
     let mut framebuffer = gop.frame_buffer();
 
-    let slice = unsafe { slice::from_raw_parts_mut(framebuffer.as_mut_ptr(), framebuffer.size()) };
-
     let info = FrameBufferInfo {
         byte_len: framebuffer.size(),
         horizontal_resolution: mode_info.resolution().0,
@@ -68,7 +66,7 @@ fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo)
         stride: mode_info.stride(),
     };
 
-    let global_logger = LockedLogger::new(DebugRendy::new(slice, info));
+    let global_logger = LockedLogger::new(DebugRendy::new(0xc0000000, info));
     let locked_logger = logger::LOGGER.call_once(|| global_logger);
 
     log::set_logger(locked_logger).expect("Failed to set the global logger");

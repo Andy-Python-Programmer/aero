@@ -12,18 +12,18 @@ pub static LOGGER: Once<LockedLogger> = Once::new();
 ///
 /// We need a custom logger here instead of using the UEFI services prebuilt
 /// logger as it can only log until we are in boot services.
-pub struct LockedLogger<'buffer>(Mutex<DebugRendy<'buffer>>);
+pub struct LockedLogger(Mutex<DebugRendy>);
 
-impl<'buffer> LockedLogger<'buffer> {
+impl LockedLogger {
     #[inline(always)]
-    pub fn new(mut inner: DebugRendy<'buffer>) -> Self {
+    pub fn new(mut inner: DebugRendy) -> Self {
         inner.clear_screen();
 
         Self(Mutex::new(inner))
     }
 }
 
-impl<'buffer> log::Log for LockedLogger<'buffer> {
+impl log::Log for LockedLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= Level::Info
     }
