@@ -159,7 +159,7 @@ impl From<Option<String>> for AeroBootloader {
                 _ => panic!("Invalid or unsupported bootloader {}", boot),
             }
         } else {
-            Self::AeroBoot
+            Self::Limine
         }
     }
 }
