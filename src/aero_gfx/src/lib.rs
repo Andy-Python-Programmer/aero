@@ -47,20 +47,24 @@ pub struct FrameBuffer {
 
 impl FrameBuffer {
     /// Returns the raw bytes of the framebuffer as slice.
-    pub fn buffer(&self) -> &[u8] {
+    #[inline(always)]
+    pub fn buffer<'a>(&self) -> &'a [u8] {
         unsafe { self.create_buffer() }
     }
 
     /// Returns the raw bytes of the framebuffer as mutable slice.
-    pub fn buffer_mut(&mut self) -> &mut [u8] {
+    #[inline(always)]
+    pub fn buffer_mut<'a>(&mut self) -> &'a mut [u8] {
         unsafe { self.create_buffer() }
     }
 
+    #[inline(always)]
     unsafe fn create_buffer<'a>(&self) -> &'a mut [u8] {
         core::slice::from_raw_parts_mut(self.buffer_start as *mut u8, self.buffer_byte_len)
     }
 
     /// Returns layout and pixel format information of the framebuffer.
+    #[inline(always)]
     pub fn info(&self) -> FrameBufferInfo {
         self.info
     }

@@ -11,29 +11,14 @@
 /// We are going to allocate our stack as an uninitialised array in .bss.
 static uint8_t stack[4096];
 
-static struct stivale2_header_tag_terminal terminal_hdr_tag = {
-    // All tags need to begin with an identifier and a pointer to the next tag.
-    .tag = {
-        .identifier = STIVALE2_HEADER_TAG_TERMINAL_ID,
-        // If next is 0, it marks the end of the linked list of header tags.
-        .next = 0,
-    },
-
-    // The terminal header tag possesses a flags field, leave it as 0 for now
-    // as it is unused.
-    .flags = 0,
-};
-
 static struct stivale2_header_tag_framebuffer framebuffer_hdr_tag = {
     .tag = {
         .identifier = STIVALE2_HEADER_TAG_FRAMEBUFFER_ID,
-        // Instead of 0, we now point to the previous header tag. The order in
-        // which header tags are linked does not matter.
-        .next = (uint64_t)&terminal_hdr_tag,
+        .next = 0,
     },
     .framebuffer_width = 0,
     .framebuffer_height = 0,
-    .framebuffer_bpp = 4,
+    .framebuffer_bpp = 0,
 };
 
 /// The stivale2 specification expects us to define a "header structure".
@@ -112,22 +97,11 @@ extern void __stivale_boot();
 /// As we are in C the `#[no_mangle]` attribute is not required.
 void _start(struct stivale2_struct *stivale2_struct)
 {
-    struct stivale2_struct_tag_terminal *terminal_tag;
-
-    terminal_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
-
-    if (terminal_tag == NULL)
-        loop();
-
-    void *term_write_ptr = (void *)terminal_tag->term_write;
-    void (*terminal_write)(const char *string, size_t length) = term_write_ptr;
-
-    terminal_write("[boot] stivale 2\n", 17);
-
     __stivale_boot(stivale2_struct);
 
-    // There is nothing that we can really do in this situation. So
-    // we loop for ever!
-    terminal_write("[panic] entered unreachable code\n", 34);
+    /*
+     * There is nothing that we can really do in this situation. So
+     * we loop for ever!
+     */
     loop();
 }
