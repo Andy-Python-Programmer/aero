@@ -151,10 +151,6 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         interrupts::enable_interrupts();
     }
 
-    unsafe {
-        *(0xdeadbeef as *mut u32) = 69;
-    }
-
     acpi::init(
         &mut offset_table,
         &mut frame_allocator,

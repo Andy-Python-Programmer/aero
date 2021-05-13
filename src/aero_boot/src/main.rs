@@ -38,7 +38,8 @@ mod logger;
 mod paging;
 mod unwind;
 
-pub const KERNEL_ELF_PATH: &str = r"aero_kernel.elf";
+const AERO_KERNEL_ELF_PATH: &str = r"aero_kernel.elf";
+const AERO_PHYSICAL_OFFSET: u64 = 0xFFFF800000000000;
 
 fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo) {
     let gop = system_table
@@ -84,7 +85,7 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
     let (framebuffer_address, framebuffer_info) = init_display(&system_table);
     log::info!("Using framebuffer at: {:#x}", framebuffer_address);
 
-    let kernel_bytes = load::load_file(system_table.boot_services(), KERNEL_ELF_PATH);
+    let kernel_bytes = load::load_file(system_table.boot_services(), AERO_KERNEL_ELF_PATH);
 
     let mmap_storage = {
         let max_mmap_size =

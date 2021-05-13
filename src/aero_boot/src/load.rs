@@ -20,8 +20,11 @@ use xmas_elf::{
     ElfFile,
 };
 
-use crate::paging::{self, BootFrameAllocator, ReservedFrames};
 use crate::paging::{BootMemoryRegion, PageTables};
+use crate::{
+    paging::{self, BootFrameAllocator, ReservedFrames},
+    AERO_PHYSICAL_OFFSET,
+};
 
 const SIZE_4_KIB_ZERO_ARRAY: Size4KiBPageArray = [0; Size4KiB::SIZE as usize / 8];
 type Size4KiBPageArray = [u64; Size4KiB::SIZE as usize / 8];
@@ -355,7 +358,7 @@ where
     let framebuffer = framebuffer_start_page.start_address();
 
     // Get the physical memory offset.
-    let physical_memory_offset = used_entries.get_free_address();
+    let physical_memory_offset = unsafe { VirtAddr::new_unsafe(AERO_PHYSICAL_OFFSET) };
 
     let start_frame = PhysFrame::containing_address(PhysAddr::new(0));
     let max_physical = frame_allocator.max_physical_address();
