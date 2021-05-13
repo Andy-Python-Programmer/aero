@@ -26,6 +26,8 @@
 
 extern crate alloc;
 
+use aero_boot::BootInfo;
+
 use linked_list_allocator::LockedHeap;
 use x86_64::VirtAddr;
 
@@ -57,7 +59,6 @@ use utils::io;
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 use arch::memory::pti::PTI_CONTEXT_STACK_ADDRESS;
 
-use boot::BootInfo;
 use userland::{process::Process, scheduler};
 
 #[global_allocator]
@@ -80,7 +81,7 @@ unsafe extern "C" fn mission_hello_world() {
 }
 
 #[no_mangle]
-pub extern "C" fn kernel_main<'a>(boot_info: &'a mut BootInfo) -> ! {
+extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     /*
      * First of all make sure interrupts are disabled.
      */
@@ -122,7 +123,7 @@ pub extern "C" fn kernel_main<'a>(boot_info: &'a mut BootInfo) -> ! {
     );
 
     let (mut offset_table, mut frame_allocator) =
-        memory::paging::init(boot_info.physical_memory_offset, boot_info.memory_regions);
+        memory::paging::init(boot_info.physical_memory_offset, &boot_info.memory_regions);
     log::info!("Loaded paging");
 
     arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
@@ -146,7 +147,6 @@ pub extern "C" fn kernel_main<'a>(boot_info: &'a mut BootInfo) -> ! {
         interrupts::enable_interrupts();
     }
 
-    /*
     acpi::init(
         &mut offset_table,
         &mut frame_allocator,
@@ -178,13 +178,6 @@ pub extern "C" fn kernel_main<'a>(boot_info: &'a mut BootInfo) -> ! {
     unsafe {
         aero_syscall::sys_exit(1);
 
-        loop {
-            interrupts::halt();
-        }
-    }
-    */
-
-    unsafe {
         loop {
             interrupts::halt();
         }

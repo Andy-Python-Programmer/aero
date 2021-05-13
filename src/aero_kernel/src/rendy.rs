@@ -41,7 +41,7 @@ pub macro dbg {
 }
 
 /// Get a mutable reference to the debug renderer.
-fn get_debug_rendy() -> MutexGuard<'static, DebugRendy> {
+fn get_debug_rendy() -> MutexGuard<'static, DebugRendy<'static>> {
     DEBUG_RENDY
         .get()
         .expect("Attempted to get the debug renderer before it was initialized")
@@ -69,10 +69,12 @@ pub fn clear_screen() {
     get_debug_rendy().clear_screen();
 }
 
-pub fn init<'a>(framebuffer: &'a mut FrameBuffer) {
+pub fn init(framebuffer: &'static mut FrameBuffer) {
     let info = framebuffer.info();
+    let buffer = framebuffer.buffer_mut();
 
-    let mut rendy = DebugRendy::new(framebuffer.buffer_start, info);
+    let mut rendy = DebugRendy::new(buffer, info);
+
     rendy.clear_screen();
 
     DEBUG_RENDY.call_once(|| Mutex::new(rendy));

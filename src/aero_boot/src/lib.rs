@@ -35,8 +35,8 @@ pub struct BootInfo {
 #[derive(Debug)]
 #[repr(C)]
 pub struct MemoryRegions {
-    pub ptr: *mut MemoryRegion,
-    pub len: usize,
+    pub(crate) ptr: *mut MemoryRegion,
+    pub(crate) len: usize,
 }
 
 impl ops::Deref for MemoryRegions {
