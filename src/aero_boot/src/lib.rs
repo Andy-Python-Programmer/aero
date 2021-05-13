@@ -1,6 +1,5 @@
 #![no_std]
 #![feature(custom_test_frameworks)]
-#![test_runner(crate::test_runner)]
 
 use core::{ops, slice};
 
@@ -78,10 +77,4 @@ pub struct MemoryRegion {
     pub end: u64,
     /// The memory type of the memory region.
     pub kind: MemoryRegionType,
-}
-
-pub fn test_runner(tests: &[&dyn Fn()]) {
-    for test in tests {
-        test();
-    }
 }
