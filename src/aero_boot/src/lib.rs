@@ -21,6 +21,20 @@ pub enum MemoryRegionType {
     UnknownBios(u32),
 }
 
+#[derive(Debug, Copy, Clone)]
+#[repr(C)]
+pub struct UnwindInfo {
+    /// The base address of the kernel. The kernel base is required
+    /// for stack unwinding during kernel panics.
+    pub kernel_base: VirtAddr,
+    /// The size of the kernel, required to calculate the end of the
+    /// kernel base.
+    pub kernel_size: usize,
+
+    //// The stack end for the kernel. Stack on `x86_64` grows backwards.
+    pub stack_top: VirtAddr,
+}
+
 #[derive(Debug)]
 #[repr(C)]
 pub struct BootInfo {
@@ -28,7 +42,7 @@ pub struct BootInfo {
     pub physical_memory_offset: VirtAddr,
     pub framebuffer: FrameBuffer,
     pub memory_regions: MemoryRegions,
-    pub stack_top: VirtAddr,
+    pub unwind_info: UnwindInfo,
 }
 
 #[derive(Debug)]

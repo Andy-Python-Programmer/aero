@@ -1,7 +1,59 @@
-use core::panic::PanicInfo;
+use core::{mem, panic::PanicInfo};
 
-use crate::arch::interrupts;
+use crate::{arch::interrupts, UNWIND_INFO};
 use crate::{drivers::uart_16550::serial_println, rendy};
+
+#[no_mangle]
+pub extern "C" fn exception_begin_unwind() {
+    let mut rbp: usize;
+
+    unsafe {
+        asm!("mov {}, rbp", out(reg) rbp);
+    }
+
+    log::error!("RBP: {:#x}", rbp);
+
+    let unwind_info = UNWIND_INFO.get().expect("o_O");
+
+    for _ in 0..60 {
+        if let Some(rip_rbp) = rbp.checked_add(mem::size_of::<usize>()) {
+            let rip = unsafe { *(rip_rbp as *const usize) };
+
+            /*
+             * Check if the RIP register is 0 and that means it was an empty return. So just
+             * break out.
+             */
+            if rip == 0 {
+                log::error!("Empty return => (RIP == 0)");
+
+                break;
+            }
+
+            /*
+             * If we make through here, that means we can do the stack unwinding using the
+             * unwind info struct that Aero's bootloader gave us.
+             */
+            log::error!("RIP: {:#x}", rip);
+            log::error!("RBP: {:#x}", rbp);
+        } else {
+            /*
+             * If the checked addition fails that means the RBP has overflowed. So just break
+             * out.
+             */
+            log::error!("RBP overflowed => {:#x}", rbp);
+
+            break;
+        }
+    }
+
+    unsafe {
+        interrupts::disable_interrupts();
+
+        loop {
+            interrupts::halt();
+        }
+    }
+}
 
 #[panic_handler]
 pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {

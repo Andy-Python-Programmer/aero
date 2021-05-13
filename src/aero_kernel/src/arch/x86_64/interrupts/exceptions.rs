@@ -1,10 +1,13 @@
 use super::interrupt_error_stack;
+use crate::unwind;
 use x86_64::registers::control::Cr2;
 
 macro interrupt_exception(fn $name:ident() => $message:expr) {
     super::interrupt_error_stack!(
         fn $name(stack: &mut InterruptErrorStack) {
-            panic!($message)
+            log::error!($message);
+
+            $crate::unwind::exception_begin_unwind();
         }
     );
 }
@@ -34,7 +37,7 @@ interrupt_error_stack!(
          * We will need to prevent RIP from going out of sync with
          * instructions.
          *
-         * So we will set the RIP to RIP - 1, pointing to the int3 
+         * So we will set the RIP to RIP - 1, pointing to the int3
          * instruction.
          */
         (*stack).stack.iret.rip -= 1;
@@ -45,9 +48,12 @@ interrupt_error_stack!(
     fn page_fault(stack: &mut InterruptErrorStack) {
         let accessed_address = Cr2::read();
 
-        panic!(
+        log::error!(
             "EXCEPTION: Page Fault\n\nAccessed Address: {:?}\nStack: {:#x?}",
-            accessed_address, stack
-        )
+            accessed_address,
+            stack
+        );
+
+        unwind::exception_begin_unwind();
     }
 );

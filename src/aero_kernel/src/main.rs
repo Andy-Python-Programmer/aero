@@ -26,9 +26,10 @@
 
 extern crate alloc;
 
-use aero_boot::BootInfo;
+use aero_boot::{BootInfo, UnwindInfo};
 
 use linked_list_allocator::LockedHeap;
+use spin::Once;
 use x86_64::VirtAddr;
 
 mod acpi;
@@ -65,6 +66,7 @@ use userland::{process::Process, scheduler};
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
+static UNWIND_INFO: Once<UnwindInfo> = Once::new();
 
 const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -89,7 +91,8 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         interrupts::disable_interrupts();
     }
 
-    /* Initialize the COM ports before doing anything else.
+    /*
+     * Initialize the COM ports before doing anything else.
      *
      * This will help printing panics before or when the debug renderer is initialized
      * if serial output is avaliable.
@@ -97,9 +100,10 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     drivers::uart_16550::init();
 
     unsafe {
-        PTI_CONTEXT_STACK_ADDRESS = boot_info.stack_top.as_u64() as usize;
         PHYSICAL_MEMORY_OFFSET = boot_info.physical_memory_offset;
     }
+
+    UNWIND_INFO.call_once(|| boot_info.unwind_info);
 
     rendy::init(&mut boot_info.framebuffer);
     logger::init();
@@ -145,6 +149,10 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         io::outb(PIC2_DATA, 0b11101111);
 
         interrupts::enable_interrupts();
+    }
+
+    unsafe {
+        *(0xdeadbeef as *mut u32) = 69;
     }
 
     acpi::init(

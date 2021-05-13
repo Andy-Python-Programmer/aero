@@ -3,7 +3,7 @@ use core::{
     slice,
 };
 
-use aero_boot::{BootInfo, MemoryRegion};
+use aero_boot::{BootInfo, MemoryRegion, UnwindInfo};
 use aero_gfx::{FrameBuffer, FrameBufferInfo};
 
 use x86_64::{align_up, registers, structures::paging::*, PhysAddr, VirtAddr};
@@ -394,6 +394,7 @@ fn create_boot_info<I, D>(
     page_tables: &mut PageTables,
     mappings: &mut Mappings,
     system_info: SystemInfo,
+    unwind_info: UnwindInfo,
 ) -> (&'static mut BootInfo, ReservedFrames)
 where
     I: ExactSizeIterator<Item = D> + Clone,
@@ -464,7 +465,7 @@ where
             physical_memory_offset: mappings.physical_memory_offset,
             framebuffer,
             memory_regions: memory_regions.into(),
-            stack_top: mappings.stack_end.start_address(),
+            unwind_info,
         }),
         reserved_frames,
     )
@@ -491,11 +492,18 @@ where
         used_entries,
     );
 
+    let unwind_info = UnwindInfo {
+        kernel_base: VirtAddr::new(kernel_bytes[0] as u64),
+        kernel_size: kernel_bytes.len(),
+        stack_top: mappings.stack_end.start_address(),
+    };
+
     let (boot_info, mut reserved_frames) = create_boot_info(
         frame_allocator,
         &mut page_tables,
         &mut mappings,
         system_info,
+        unwind_info,
     );
 
     log::info!(
