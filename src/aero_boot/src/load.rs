@@ -22,7 +22,7 @@ use xmas_elf::{
 
 use crate::paging::{BootMemoryRegion, PageTables};
 use crate::{
-    paging::{self, BootFrameAllocator, ReservedFrames},
+    paging::{self, BootFrameAllocator},
     AERO_PHYSICAL_OFFSET,
 };
 
@@ -325,6 +325,25 @@ where
         }
     }
 
+    let context_switch_function = PhysAddr::new(context_switch as *const () as u64);
+    let context_switch_function_start_frame: PhysFrame =
+        PhysFrame::containing_address(context_switch_function);
+
+    for frame in PhysFrame::range_inclusive(
+        context_switch_function_start_frame,
+        context_switch_function_start_frame + 1,
+    ) {
+        unsafe {
+            page_tables.kernel_page_table.identity_map(
+                frame,
+                PageTableFlags::PRESENT,
+                frame_allocator,
+            )
+        }
+        .unwrap()
+        .flush();
+    }
+
     // Map the framebuffer.
     log::info!("Mapping framebuffer");
 
@@ -392,13 +411,32 @@ where
     }
 }
 
+struct Addresses {
+    page_table: PhysFrame,
+    stack_top: VirtAddr,
+    entry_point: VirtAddr,
+    boot_info: &'static mut BootInfo,
+}
+
+unsafe fn context_switch(addresses: Addresses) -> ! {
+    asm!(
+        "mov cr3, {}; mov rsp, {}; push 0; jmp {}",
+        in(reg) addresses.page_table.start_address().as_u64(),
+        in(reg) addresses.stack_top.as_u64(),
+        in(reg) addresses.entry_point.as_u64(),
+        in("rdi") addresses.boot_info as *const _ as usize,
+    );
+
+    unreachable!();
+}
+
 fn create_boot_info<I, D>(
     mut frame_allocator: BootFrameAllocator<I, D>,
     page_tables: &mut PageTables,
     mappings: &mut Mappings,
     system_info: SystemInfo,
     unwind_info: UnwindInfo,
-) -> (&'static mut BootInfo, ReservedFrames)
+) -> &'static mut BootInfo
 where
     I: ExactSizeIterator<Item = D> + Clone,
     D: BootMemoryRegion,
@@ -450,8 +488,6 @@ where
         (boot_info, memory_regions)
     };
 
-    let reserved_frames = ReservedFrames::new(&mut frame_allocator);
-
     log::info!("Creating memory map");
     let memory_regions = frame_allocator.construct_memory_map(memory_regions);
 
@@ -462,16 +498,13 @@ where
         info: system_info.framebuffer_info,
     };
 
-    (
-        boot_info.write(BootInfo {
-            rsdp_address: system_info.rsdp_address,
-            physical_memory_offset: mappings.physical_memory_offset,
-            framebuffer,
-            memory_regions: memory_regions.into(),
-            unwind_info,
-        }),
-        reserved_frames,
-    )
+    boot_info.write(BootInfo {
+        rsdp_address: system_info.rsdp_address,
+        physical_memory_offset: mappings.physical_memory_offset,
+        framebuffer,
+        memory_regions: memory_regions.into(),
+        unwind_info,
+    })
 }
 
 pub fn load_and_switch_to_kernel<I, D>(
@@ -501,7 +534,7 @@ where
         stack_top: mappings.stack_end.start_address(),
     };
 
-    let (boot_info, mut reserved_frames) = create_boot_info(
+    let boot_info = create_boot_info(
         frame_allocator,
         &mut page_tables,
         &mut mappings,
@@ -514,37 +547,15 @@ where
         mappings.entry_point
     );
 
-    let current_addr = PhysAddr::new(registers::read_rip().as_u64());
-    let current_frame: PhysFrame = PhysFrame::containing_address(current_addr);
-
-    for frame in PhysFrame::range_inclusive(current_frame, current_frame + 1) {
-        unsafe {
-            page_tables.kernel_page_table.identity_map(
-                frame,
-                PageTableFlags::PRESENT,
-                &mut reserved_frames,
-            )
-        }
-        .unwrap()
-        .flush();
-    }
-
     // We do not need the kernel page table anymore.
     mem::drop(page_tables.kernel_page_table);
 
     unsafe {
-        let kernel_level_4_start = page_tables.kernel_level_4_frame.start_address().as_u64();
-        let stack_top = mappings.stack_end.start_address().as_u64();
-        let entry_point = mappings.entry_point.as_u64();
-
-        asm!(
-            "mov cr3, {}; mov rsp, {}; push 0; jmp {}",
-            in(reg) kernel_level_4_start,
-            in(reg) stack_top,
-            in(reg) entry_point,
-            in("rdi") boot_info as *const _ as usize,
-        );
+        context_switch(Addresses {
+            page_table: page_tables.kernel_level_4_frame,
+            stack_top: mappings.stack_end.start_address(),
+            entry_point: mappings.entry_point,
+            boot_info,
+        })
     }
-
-    unreachable!()
 }

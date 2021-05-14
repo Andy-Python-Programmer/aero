@@ -11,7 +11,7 @@ use crate::AERO_SYSTEM_ALLOCATOR;
 
 use super::paging::GlobalAllocator;
 
-pub const HEAP_START: usize = 0x444444440000;
+pub const HEAP_START: usize = 0xfffffe8000000000;
 pub const HEAP_SIZE: usize = 100 * 1024;
 
 #[alloc_error_handler]

@@ -207,29 +207,6 @@ where
     }
 }
 
-/// Used for reversing two physical frames for identity mapping the context switch function.
-pub struct ReservedFrames {
-    frames: [Option<PhysFrame>; 2],
-}
-
-impl ReservedFrames {
-    /// Creates a new instance by allocating two physical frames from the given frame allocator.
-    pub fn new(frame_allocator: &mut impl FrameAllocator<Size4KiB>) -> Self {
-        ReservedFrames {
-            frames: [
-                Some(frame_allocator.allocate_frame().unwrap()),
-                Some(frame_allocator.allocate_frame().unwrap()),
-            ],
-        }
-    }
-}
-
-unsafe impl FrameAllocator<Size4KiB> for ReservedFrames {
-    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
-        self.frames.iter_mut().find_map(|f| f.take())
-    }
-}
-
 pub struct PageTables {
     pub boot_page_table: OffsetPageTable<'static>,
     pub kernel_page_table: OffsetPageTable<'static>,
