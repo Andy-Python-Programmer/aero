@@ -6,7 +6,7 @@ use core::{
 use aero_boot::{BootInfo, MemoryRegion, UnwindInfo};
 use aero_gfx::{FrameBuffer, FrameBufferInfo};
 
-use x86_64::{align_up, registers, structures::paging::*, PhysAddr, VirtAddr};
+use x86_64::{align_up, structures::paging::*, PhysAddr, VirtAddr};
 
 use uefi::{
     prelude::*,
@@ -257,6 +257,14 @@ fn load_kernel(
 
     paging::enable_no_execute();
     paging::enable_protection();
+
+    unsafe {
+        core::ptr::copy(
+            kernel_bytes.as_ptr(),
+            0x100000 as *mut u8,
+            kernel_bytes.len(),
+        );
+    }
 
     let kernel_elf = ElfFile::new(&kernel_bytes).expect("Found corrupt kernel ELF file");
     let kernel_offset = PhysAddr::new(&kernel_bytes[0] as *const u8 as u64);

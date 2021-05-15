@@ -48,6 +48,7 @@ mod unwind;
 mod userland;
 mod utils;
 mod prelude {
+    pub use crate::drivers::uart_16550::{serial_print, serial_println};
     pub use crate::rendy::{print, println};
     pub use crate::utils::*;
 }

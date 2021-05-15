@@ -1,7 +1,15 @@
-use core::{mem, panic::PanicInfo};
+use core::mem;
+use core::panic::PanicInfo;
 
-use crate::{arch::interrupts, UNWIND_INFO};
-use crate::{drivers::uart_16550::serial_println, rendy};
+use x86_64::VirtAddr;
+
+use xmas_elf::ElfFile;
+
+use crate::prelude::*;
+use crate::rendy;
+
+use crate::arch::interrupts;
+use crate::{PHYSICAL_MEMORY_OFFSET, UNWIND_INFO};
 
 #[no_mangle]
 pub extern "C" fn exception_begin_unwind() {
@@ -14,8 +22,17 @@ pub extern "C" fn exception_begin_unwind() {
     log::error!("RBP: {:#x}", rbp);
 
     let unwind_info = UNWIND_INFO.get().expect("o_O");
+    let kernel_slice: &[u8] = unsafe {
+        core::slice::from_raw_parts(
+            (VirtAddr::new_unsafe(0x100000) + PHYSICAL_MEMORY_OFFSET.as_u64()).as_ptr(),
+            unwind_info.kernel_size,
+        )
+    };
 
-    for _ in 0..60 {
+    let kernel_elf = ElfFile::new(kernel_slice).expect("o_O");
+    let kernel_elf_p2 = kernel_elf.header.pt2;
+
+    for _ in 0..kernel_elf_p2.sh_count() {
         if let Some(rip_rbp) = rbp.checked_add(mem::size_of::<usize>()) {
             let rip = unsafe { *(rip_rbp as *const usize) };
 
@@ -67,8 +84,10 @@ pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
         log::error!("{}", info.location().unwrap());
         log::error!("{}", panic_message);
     } else {
-        // Write the panic info to the COM 1 port if the debug renderer is not
-        // yet initialized.
+        /*
+         * Write the panic info to the COM 1 port if the debug renderer is not
+         * yet initialized.
+         */
 
         serial_println!(
             "The kernel unexpectedly panicked before the debug renderer was initialized"
