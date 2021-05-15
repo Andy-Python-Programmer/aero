@@ -165,7 +165,8 @@ pub fn init(
                 );
             } else {
                 let madt: &'static Madt = header.as_ptr();
-                madt.init(frame_allocator, offset_table);
+                madt.init(frame_allocator, offset_table)
+                    .expect("Failed to initialize APIC");
             }
         }
     }

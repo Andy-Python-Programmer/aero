@@ -5,7 +5,6 @@ use x86_64::VirtAddr;
 
 use xmas_elf::ElfFile;
 
-use crate::prelude::*;
 use crate::rendy;
 
 use crate::arch::interrupts;

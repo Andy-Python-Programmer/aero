@@ -1,12 +1,16 @@
 use core::{intrinsics, mem, sync::atomic::Ordering};
 
 use spin::Once;
-use x86_64::{registers::control::Cr3, structures::paging::*, PhysAddr, VirtAddr};
+use x86_64::{
+    registers::control::Cr3,
+    structures::paging::{mapper::MapToError, *},
+    PhysAddr, VirtAddr,
+};
 
 use super::sdt::Sdt;
 use crate::{
     apic::{self, IoApicHeader},
-    arch::{interrupts, memory::alloc::malloc_align},
+    arch::memory::alloc::malloc_align,
     kernel_ap_startup,
 };
 
@@ -30,7 +34,7 @@ impl Madt {
         &'static self,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         offset_table: &mut OffsetPageTable,
-    ) {
+    ) -> Result<(), MapToError<Size4KiB>> {
         MADT.call_once(move || self);
 
         let trampoline_frame: PhysFrame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
@@ -44,22 +48,20 @@ impl Madt {
          * frame when we are done and that should save one call.
          */
         unsafe {
-            offset_table
-                .map_to(
-                    trampoline_page,
-                    trampoline_frame,
-                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                    frame_allocator,
-                )
-                .unwrap()
-                .flush();
-        }
+            offset_table.map_to(
+                trampoline_page,
+                trampoline_frame,
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                frame_allocator,
+            )
+        }?
+        .flush();
 
         log::debug!("Storing AP trampoline in {:#x}", TRAMPOLINE);
 
         /*
-         * Atomic store the AP trampoline code to a fixed address in low conventional
-         * memory.
+         * Atomic store the AP trampoline code and page table to a fixed address
+         * in low conventional memory.
          */
         unsafe {
             for i in 0..TRAMPOLINE_BIN.len() {
@@ -154,7 +156,6 @@ impl Madt {
                 }
 
                 MadtEntry::IoApic(io_apic) => apic::init_io_apic(io_apic),
-
                 MadtEntry::IntSrcOverride(_) => {}
             }
         }
@@ -165,6 +166,8 @@ impl Madt {
          */
         let (_, toilet) = offset_table.unmap(trampoline_page).unwrap();
         toilet.flush();
+
+        Ok(())
     }
 
     fn iter(&self) -> MadtIterator {

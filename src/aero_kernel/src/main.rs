@@ -58,7 +58,6 @@ use arch::memory;
 use utils::io;
 
 use arch::interrupts::{PIC1_DATA, PIC2_DATA};
-use arch::memory::pti::PTI_CONTEXT_STACK_ADDRESS;
 
 use userland::{process::Process, scheduler};
 

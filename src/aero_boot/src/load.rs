@@ -20,10 +20,13 @@ use xmas_elf::{
     ElfFile,
 };
 
-use crate::paging::{BootMemoryRegion, PageTables};
 use crate::{
     paging::{self, BootFrameAllocator},
     AERO_PHYSICAL_OFFSET,
+};
+use crate::{
+    paging::{BootMemoryRegion, PageTables},
+    AERO_STACK_ADDRESS,
 };
 
 const SIZE_4_KIB_ZERO_ARRAY: Size4KiBPageArray = [0; Size4KiB::SIZE as usize / 8];
@@ -312,10 +315,10 @@ where
     // Create a stack for the kernel.
     log::info!("Creating a stack for the kernel");
 
-    let stack_start_addr = used_entries.get_free_address();
+    let stack_start_addr = VirtAddr::new(AERO_STACK_ADDRESS);
     let stack_start: Page = Page::containing_address(stack_start_addr);
 
-    let stack_end_addr = stack_start_addr + (20 * Size4KiB::SIZE);
+    let stack_end_addr = stack_start_addr + (8 * Size4KiB::SIZE);
     let stack_end: Page = Page::containing_address(stack_end_addr - 1u64);
 
     for page in Page::range_inclusive(stack_start, stack_end) {
