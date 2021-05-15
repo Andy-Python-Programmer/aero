@@ -69,7 +69,6 @@ dependencies = [
  "paste",
  "raw-cpuid",
  "spin 0.9.0",
- "stivale",
  "x86_64",
  "xmas-elf",
 ]
@@ -1003,14 +1002,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8bd0ab6b8c375d2d963503b90d3770010d95bc3b5f98036f948dee24bf4e8879"
 dependencies = [
  "lock_api",
-]
-
-[[package]]
-name = "stivale"
-version = "0.2.1"
-source = "git+https://github.com/Andy-Python-Programmer/stivale-rs#96dde15efe2519a9a3c02d8ab4c0fb694e74a3ef"
-dependencies = [
- "bitflags",
 ]
 
 [[package]]

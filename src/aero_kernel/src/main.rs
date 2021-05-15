@@ -35,7 +35,6 @@ use x86_64::VirtAddr;
 mod acpi;
 mod apic;
 mod arch;
-mod boot;
 mod drivers;
 mod fs;
 mod logger;
