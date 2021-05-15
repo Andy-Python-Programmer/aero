@@ -79,27 +79,15 @@ pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
 
     if rendy::is_initialized() {
         rendy::clear_screen();
-
-        log::error!("Kernel Panicked");
-        log::error!("{}", info.location().unwrap());
-        log::error!("{}", panic_message);
-    } else {
-        /*
-         * Write the panic info to the COM 1 port if the debug renderer is not
-         * yet initialized.
-         */
-
-        serial_println!(
-            "The kernel unexpectedly panicked before the debug renderer was initialized"
-        );
-
-        serial_println!(
-            "{}",
-            info.location().expect("Failed to get the panic location")
-        );
-
-        serial_println!("{}", panic_message);
     }
+
+    log::error!("Kernel Panicked");
+
+    if let Some(panic_location) = info.location() {
+        log::error!("{}", panic_location);
+    }
+
+    log::error!("{}", panic_message);
 
     unsafe {
         interrupts::disable_interrupts();

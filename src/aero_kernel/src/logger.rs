@@ -4,9 +4,7 @@ use aero_gfx::debug::color::{Color, ColorCode};
 use log::{Level, LevelFilter, Metadata, Record};
 use spin::{Mutex, MutexGuard, Once};
 
-use crate::prelude::*;
 use crate::rendy;
-
 use crate::utils::buffer::RingBuffer;
 
 const MAX_LOG_LEVEL_SPACE: usize = 6;
@@ -27,6 +25,16 @@ impl log::Log for AeroLogger {
             let level = record.level();
             let spaces = MAX_LOG_LEVEL_SPACE - level.as_str().len();
 
+            macro log($($arg:tt)*) {
+                $crate::prelude::print!("{}", format_args!($($arg)*));
+                $crate::prelude::serial_print!("{}", format_args!($($arg)*));
+            }
+
+            macro log_ln($($arg:tt)*) {
+                $crate::prelude::println!("{}", format_args!($($arg)*));
+                $crate::prelude::serial_println!("{}", format_args!($($arg)*));
+            }
+
             /*
              * First of all append the log message to the log ring buffer.
              */
@@ -34,7 +42,7 @@ impl log::Log for AeroLogger {
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
             rendy::set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
-            print!("[ ");
+            log!("[ ");
 
             match record.level() {
                 Level::Error => {
@@ -54,11 +62,10 @@ impl log::Log for AeroLogger {
                 }
             }
 
-            print!("{}", level);
+            log!("{}", level);
 
             rendy::set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
-
-            println!("{: <1$}]        {args}", "", spaces, args = record.args());
+            log_ln!("{: <1$}]        {args}", "", spaces, args = record.args());
         }
     }
 
