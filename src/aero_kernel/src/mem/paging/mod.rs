@@ -1,12 +1,17 @@
 use aero_boot::*;
 use x86_64::{
     registers::control::Cr3,
-    structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, OffsetPageTable, Page, PageTable,
-        PageTableFlags, PhysFrame, Size4KiB,
-    },
+    structures::paging::{mapper::MapToError, *},
     PhysAddr, VirtAddr,
 };
+
+use crate::{prelude::*, PHYSICAL_MEMORY_OFFSET};
+
+use crate::utils::linker::LinkerSymbol;
+
+const_unsafe! {
+    const KERNEL_PML4: VirtAddr = VirtAddr::new_unsafe(0xFFFF800000000000);
+}
 
 pub struct UnmapGuard {
     pub page: Page<Size4KiB>,
@@ -71,25 +76,52 @@ unsafe impl Send for GlobalAllocator {}
 
 /// Initialize paging.
 pub fn init(
-    physical_memory_offset: VirtAddr,
     memory_regions: &'static MemoryRegions,
-) -> (OffsetPageTable<'static>, GlobalAllocator) {
-    unsafe {
-        let active_level_4 = active_level_4_table(physical_memory_offset);
-
-        let offset_table = OffsetPageTable::new(active_level_4, physical_memory_offset);
-        let frame_allocator = GlobalAllocator::init(memory_regions);
-
-        (offset_table, frame_allocator)
+) -> Result<(OffsetPageTable<'static>, GlobalAllocator), MapToError<Size4KiB>> {
+    extern "C" {
+        static __kernel_start: LinkerSymbol;
+        static __kernel_end: LinkerSymbol;
     }
+
+    let kernel_start = unsafe { __kernel_start.virt_addr() };
+    let kernel_end = unsafe { __kernel_end.virt_addr() };
+
+    assert_eq!(kernel_start.p4_index(), KERNEL_PML4.p4_index());
+    assert_eq!(kernel_end.p4_index(), KERNEL_PML4.p4_index());
+
+    let active_level_4 = unsafe { active_level_4_table() };
+
+    let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };
+    let mut frame_allocator = unsafe { GlobalAllocator::init(memory_regions) };
+
+    /*
+     * Create a new page table for the kernel rather then using the one provided
+     * by the bootloader. This allows us to add support for modern features. For example,
+     * 5-level page tables and more.
+     */
+    let _: OffsetPageTable<'static> = unsafe {
+        let frame = frame_allocator
+            .allocate_frame()
+            .ok_or(MapToError::FrameAllocationFailed)?;
+
+        let phys_addr = frame.start_address();
+        let virt_addr = PHYSICAL_MEMORY_OFFSET + phys_addr.as_u64();
+
+        let page_table: *mut PageTable = virt_addr.as_mut_ptr();
+        let page_table = &mut *page_table;
+
+        OffsetPageTable::new(page_table, PHYSICAL_MEMORY_OFFSET)
+    };
+
+    Ok((offset_table, frame_allocator))
 }
 
 /// Get a mutable reference to the active level 4 page table.
-pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut PageTable {
+pub unsafe fn active_level_4_table() -> &'static mut PageTable {
     let (level_4_table_frame, _) = Cr3::read();
 
     let physical = level_4_table_frame.start_address();
-    let virtual_address = physical_memory_offset + physical.as_u64();
+    let virtual_address = PHYSICAL_MEMORY_OFFSET + physical.as_u64();
     let page_table_ptr: *mut PageTable = virtual_address.as_mut_ptr();
 
     &mut *page_table_ptr

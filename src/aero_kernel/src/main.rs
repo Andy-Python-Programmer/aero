@@ -126,7 +126,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     );
 
     let (mut offset_table, mut frame_allocator) =
-        mem::paging::init(boot_info.physical_memory_offset, &boot_info.memory_regions);
+        mem::paging::init(&boot_info.memory_regions).unwrap();
     log::info!("Loaded paging");
 
     mem::alloc::init_heap(&mut offset_table, &mut frame_allocator)

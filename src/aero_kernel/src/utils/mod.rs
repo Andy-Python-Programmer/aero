@@ -118,6 +118,12 @@ pub macro intel_asm($($code:expr,)+) {
     );
 }
 
+pub macro const_unsafe($($vis:vis const $name:ident: $ty:ty = $value:expr;)*) {
+    $(
+        $vis const $name: $ty = unsafe { $value };
+    )*
+}
+
 pub macro intel_fn {
     (
         $(#![$total:meta])*
