@@ -10,8 +10,8 @@ use x86_64::{
 use super::sdt::Sdt;
 use crate::{
     apic::{self, IoApicHeader},
-    arch::memory::alloc::malloc_align,
     kernel_ap_startup,
+    mem::alloc::malloc_align,
 };
 
 use crate::apic::CPU_COUNT;

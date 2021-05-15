@@ -1,10 +1,12 @@
 use core::mem;
 
+use crate::drivers::ahci::AHCI;
+use crate::mem::paging::GlobalAllocator;
+
 use crate::{
     acpi::mcfg::{self, DeviceConfig, Mcfg},
     utils::io,
 };
-use crate::{arch::memory::paging::GlobalAllocator, drivers::ahci::AHCI};
 
 use bit_field::BitField;
 use x86_64::structures::paging::OffsetPageTable;

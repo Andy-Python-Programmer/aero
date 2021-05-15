@@ -5,8 +5,7 @@
 use core::mem;
 
 use crate::utils::io;
-
-use super::memory::pti::{PTI_CPU_STACK, PTI_STACK_SIZE};
+use crate::mem::pti::{PTI_CPU_STACK, PTI_STACK_SIZE};
 
 bitflags::bitflags! {
     /// Specifies which element to load into a segment from

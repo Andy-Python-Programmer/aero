@@ -1,9 +1,8 @@
 use core::mem::{self, MaybeUninit};
 
-use crate::arch::{
-    interrupts,
-    memory::paging::{memory_map_device, GlobalAllocator},
-};
+use crate::arch::interrupts;
+
+use crate::mem::paging::{memory_map_device, GlobalAllocator};
 
 use x86_64::{
     structures::paging::{

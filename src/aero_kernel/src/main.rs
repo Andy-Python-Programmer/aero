@@ -38,6 +38,7 @@ mod arch;
 mod drivers;
 mod fs;
 mod logger;
+mod mem;
 mod rendy;
 mod syscall;
 mod tests;
@@ -53,7 +54,6 @@ mod prelude {
 }
 
 use arch::interrupts;
-use arch::memory;
 
 use utils::io;
 
@@ -126,10 +126,10 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     );
 
     let (mut offset_table, mut frame_allocator) =
-        memory::paging::init(boot_info.physical_memory_offset, &boot_info.memory_regions);
+        mem::paging::init(boot_info.physical_memory_offset, &boot_info.memory_regions);
     log::info!("Loaded paging");
 
-    arch::memory::alloc::init_heap(&mut offset_table, &mut frame_allocator)
+    mem::alloc::init_heap(&mut offset_table, &mut frame_allocator)
         .expect("Failed to initialize the heap.");
     log::info!("Loaded heap");
 

@@ -12,7 +12,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-use crate::arch::memory::paging::GlobalAllocator;
+use crate::mem::paging::GlobalAllocator;
 
 use self::{fadt::Fadt, hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
 
