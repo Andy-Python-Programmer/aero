@@ -1,21 +1,30 @@
-use alloc::sync::Arc;
+use alloc::{collections::BTreeMap, sync::Arc};
 
-use hashbrown::HashMap;
-use spin::Mutex;
+use spin::RwLock;
 
 pub mod devfs;
 
-lazy_static::lazy_static! {
-    pub static ref FILE_SYSTEMS: Mutex<HashMap<usize, Arc<dyn FileSystem>>> = Mutex::new(HashMap::new());
-}
+static FILE_SYSTEMS: RwLock<BTreeMap<usize, Arc<dyn FileSystem>>> = RwLock::new(BTreeMap::new());
 
 /// ## Notes
 /// * https://wiki.osdev.org/File_Systems
 pub trait FileSystem: Send + Sync {}
 
 #[inline(always)]
-pub(super) fn install_filesystem<F: 'static + FileSystem>(signature: usize, filesystem: F) {
-    FILE_SYSTEMS.lock().insert(signature, Arc::new(filesystem));
+pub(super) fn install_filesystem<F: 'static + FileSystem>(
+    signature: usize,
+    filesystem: F,
+) -> Result<(), AeroFilesystemError> {
+    let fs = FILE_SYSTEMS.read();
+
+    if fs.contains_key(&signature) {
+        Err(AeroFilesystemError::DeviceExists)
+    } else {
+        drop(fs);
+        FILE_SYSTEMS.write().insert(signature, Arc::new(filesystem));
+
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -25,7 +34,7 @@ pub enum AeroInvalidPath {
 }
 
 #[derive(Debug)]
-pub enum AeroDeviceError {
+pub enum AeroFilesystemError {
     DeviceExists,
 }
 

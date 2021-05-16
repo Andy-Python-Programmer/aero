@@ -3,7 +3,7 @@ use alloc::sync::Arc;
 
 use spin::RwLock;
 
-use super::{AeroDeviceError, FileSystem};
+use super::{AeroFilesystemError, FileSystem};
 
 static DEVICES: RwLock<BTreeMap<usize, Arc<dyn Device>>> = RwLock::new(BTreeMap::new());
 
@@ -14,22 +14,6 @@ pub trait Device: Send + Sync {
 macro impl_dev() {
     fn signature(&self) -> usize {
         Self::SIGNATURE
-    }
-}
-
-pub(super) fn install_device<D: 'static + Device>(
-    signature: usize,
-    device: D,
-) -> Result<(), AeroDeviceError> {
-    let dev = DEVICES.read();
-
-    if dev.contains_key(&signature) {
-        Err(AeroDeviceError::DeviceExists)
-    } else {
-        drop(dev);
-        DEVICES.write().insert(signature, Arc::new(device));
-
-        Ok(())
     }
 }
 
@@ -60,8 +44,24 @@ impl Device for DevZero {
     impl_dev!();
 }
 
-/// Initialize devfs and install it in the dyn filesystem hashmap.
-pub(super) fn init() -> Result<(), AeroDeviceError> {
+pub(super) fn install_device<D: 'static + Device>(
+    signature: usize,
+    device: D,
+) -> Result<(), AeroFilesystemError> {
+    let dev = DEVICES.read();
+
+    if dev.contains_key(&signature) {
+        Err(AeroFilesystemError::DeviceExists)
+    } else {
+        drop(dev);
+        DEVICES.write().insert(signature, Arc::new(device));
+
+        Ok(())
+    }
+}
+
+/// Initialize devfs and install it in the dyn filesystem btreemap.
+pub(super) fn init() -> Result<(), AeroFilesystemError> {
     let devfs = DevFs;
 
     {
@@ -76,7 +76,7 @@ pub(super) fn init() -> Result<(), AeroDeviceError> {
      * Now after we have initialized devfs we are going to install it as a filesystem
      * in our dyn filesystems hashmap with `0x646576` as its signature.
      */
-    super::install_filesystem(DevFs::SIGNATURE, devfs);
+    super::install_filesystem(DevFs::SIGNATURE, devfs)?;
 
     log::debug!("Installed devfs");
 
