@@ -1,4 +1,4 @@
-use alloc::boxed::Box;
+use alloc::sync::Arc;
 
 use hashbrown::HashMap;
 use spin::Mutex;
@@ -6,7 +6,7 @@ use spin::Mutex;
 pub mod devfs;
 
 lazy_static::lazy_static! {
-    pub static ref FILE_SYSTEMS: Mutex<HashMap<&'static str, Box<dyn FileSystem>>> = Mutex::new(HashMap::new());
+    pub static ref FILE_SYSTEMS: Mutex<HashMap<usize, Arc<dyn FileSystem>>> = Mutex::new(HashMap::new());
 }
 
 /// ## Notes
@@ -14,16 +14,19 @@ lazy_static::lazy_static! {
 pub trait FileSystem: Send + Sync {}
 
 #[inline(always)]
-pub(super) fn install_filesystem<F: 'static + FileSystem>(
-    signature: &'static str,
-    filesystem: Box<F>,
-) {
-    FILE_SYSTEMS.lock().insert(signature, filesystem);
+pub(super) fn install_filesystem<F: 'static + FileSystem>(signature: usize, filesystem: F) {
+    FILE_SYSTEMS.lock().insert(signature, Arc::new(filesystem));
 }
 
+#[derive(Debug)]
 pub enum AeroInvalidPath {
     /// If path's length is greater then `4096` (ie. The max path size in characters).
     HugePath,
+}
+
+#[derive(Debug)]
+pub enum AeroDeviceError {
+    DeviceExists,
 }
 
 /// Structure that represents a path in a file system. This structure is a transparent
@@ -49,5 +52,5 @@ impl<'path> Path<'path> {
 }
 
 pub fn init() {
-    devfs::init();
+    devfs::init().expect("Failed to initialize devfs");
 }

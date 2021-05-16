@@ -19,7 +19,8 @@
     global_asm,
     extern_types,
     new_uninit,
-    box_syntax
+    box_syntax,
+    const_btree_new // TODO: Do not abuse nightly rust :D
 )]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]

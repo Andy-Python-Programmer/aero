@@ -1,65 +1,84 @@
-use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
+use alloc::sync::Arc;
 
-use hashbrown::HashMap;
-use spin::Mutex;
+use spin::RwLock;
 
-use super::{install_filesystem, FileSystem};
+use super::{AeroDeviceError, FileSystem};
 
-const MAX_DEVICES: usize = 128;
+static DEVICES: RwLock<BTreeMap<usize, Arc<dyn Device>>> = RwLock::new(BTreeMap::new());
 
-lazy_static::lazy_static! {
-    pub static ref DEVICES: Mutex<HashMap<&'static str, Box<dyn Device>>> = Mutex::new(HashMap::with_capacity(MAX_DEVICES));
+pub trait Device: Send + Sync {
+    fn signature(&self) -> usize;
 }
 
-pub trait Device: Send + Sync {}
+macro impl_dev() {
+    fn signature(&self) -> usize {
+        Self::SIGNATURE
+    }
+}
+
+pub(super) fn install_device<D: 'static + Device>(
+    signature: usize,
+    device: D,
+) -> Result<(), AeroDeviceError> {
+    let dev = DEVICES.read();
+
+    if dev.contains_key(&signature) {
+        Err(AeroDeviceError::DeviceExists)
+    } else {
+        drop(dev);
+        DEVICES.write().insert(signature, Arc::new(device));
+
+        Ok(())
+    }
+}
 
 pub struct DevFs;
 
-impl FileSystem for DevFs {}
-
-pub(super) fn install_device<D: 'static + Device>(signature: &'static str, device: Box<D>) {
-    DEVICES.lock().insert(signature, device);
+impl DevFs {
+    pub const SIGNATURE: usize = 0x646576;
 }
+
+impl FileSystem for DevFs {}
 
 struct DevNull;
 struct DevZero;
-struct DevUrandom;
 
-impl Device for DevNull {}
-impl Device for DevZero {}
-impl Device for DevUrandom {}
+impl DevNull {
+    pub const SIGNATURE: usize = 0x6e756c6c;
+}
+
+impl DevZero {
+    pub const SIGNATURE: usize = 0x7a65726f;
+}
+
+impl Device for DevNull {
+    impl_dev!();
+}
+
+impl Device for DevZero {
+    impl_dev!();
+}
 
 /// Initialize devfs and install it in the dyn filesystem hashmap.
-pub(super) fn init() {
-    let devfs = box DevFs;
+pub(super) fn init() -> Result<(), AeroDeviceError> {
+    let devfs = DevFs;
 
-    /*
-     * First of all lets install all of the devices in devfs:
-     *
-     * /dev/null
-     * /dev/zero
-     * /dev/urandom
-     */
-    let null = box DevNull;
-    install_device("null", null);
+    {
+        install_device(DevNull::SIGNATURE, DevNull)?;
+        log::debug!("Installed /dev/null");
 
-    log::debug!("Installed /dev/null");
-
-    let zero = box DevZero;
-    install_device("zero", zero);
-
-    log::debug!("Installed /dev/zero");
-
-    let urandom = box DevUrandom;
-    install_device("urandom", urandom);
-
-    log::debug!("Installed /dev/urandom");
+        install_device(DevZero::SIGNATURE, DevZero)?;
+        log::debug!("Installed /dev/zero");
+    }
 
     /*
      * Now after we have initialized devfs we are going to install it as a filesystem
-     * in our dyn filesystems hashmap with "dev" as its signature.
+     * in our dyn filesystems hashmap with `0x646576` as its signature.
      */
-    install_filesystem("dev", devfs);
+    super::install_filesystem(DevFs::SIGNATURE, devfs);
 
     log::debug!("Installed devfs");
+
+    Ok(())
 }
