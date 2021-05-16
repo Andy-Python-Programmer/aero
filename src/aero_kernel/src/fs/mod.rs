@@ -1,13 +1,26 @@
-pub mod vfs;
+use alloc::boxed::Box;
 
-/// File systems are the machine's way of ordering your data on readable and/or writable media.
-///
-/// ## Notes
-/// * https://wiki.osdev.org/File_Systems
-pub trait FileSystem: Send + Sync {
-    const SIGNATURE: &'static str;
+use hashbrown::HashMap;
+use spin::Mutex;
+
+pub mod devfs;
+
+lazy_static::lazy_static! {
+    pub static ref FILE_SYSTEMS: Mutex<HashMap<&'static str, Box<dyn FileSystem>>> = Mutex::new(HashMap::new());
 }
 
-/// Initialize the file system. By default aero will use Aero VFS for its
-/// file system.
-pub fn init() {}
+/// ## Notes
+/// * https://wiki.osdev.org/File_Systems
+pub trait FileSystem: Send + Sync {}
+
+#[inline(always)]
+pub(super) fn install_filesystem<F: 'static + FileSystem>(
+    signature: &'static str,
+    filesystem: Box<F>,
+) {
+    FILE_SYSTEMS.lock().insert(signature, filesystem);
+}
+
+pub fn init() {
+    devfs::init();
+}
