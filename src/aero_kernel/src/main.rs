@@ -18,7 +18,8 @@
     decl_macro,
     global_asm,
     extern_types,
-    new_uninit
+    new_uninit,
+    box_syntax
 )]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]
