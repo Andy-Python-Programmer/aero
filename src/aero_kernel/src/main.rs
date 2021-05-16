@@ -78,11 +78,6 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
-#[naked]
-unsafe extern "C" fn mission_hello_world() {
-    asm!("mov rax, 60; mov rdi, 0; syscall", options(noreturn));
-}
-
 #[no_mangle]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     /*
@@ -190,18 +185,28 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     prelude::println!("{}", ASCII_INTRO);
     prelude::print!("$ ");
 
-    let hello_process = Process::from_function(mission_hello_world);
-
-    scheduler::get_scheduler().push(hello_process);
+    /*
+     * Now that all of the essential initialization is done we are going to schedule
+     * the kernel main thread.
+     */
+    let init = Process::from_function(kernel_main_thread);
+    scheduler::get_scheduler().push(init);
 
     unsafe {
-        aero_syscall::sys_exit(1);
-
         loop {
-            interrupts::halt();
+            interrupts::disable_interrupts();
+
+            if scheduler::reschedule() {
+                interrupts::enable_interrupts();
+            } else {
+                interrupts::enable_interrupts_and_halt();
+            }
         }
     }
 }
+
+#[no_mangle]
+extern "C" fn kernel_main_thread() {}
 
 #[no_mangle]
 extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
