@@ -32,7 +32,7 @@ use aero_boot::{BootInfo, UnwindInfo};
 
 use linked_list_allocator::LockedHeap;
 use spin::Once;
-use x86_64::VirtAddr;
+use x86_64::{registers, VirtAddr};
 
 mod acpi;
 mod apic;
@@ -86,6 +86,10 @@ unsafe extern "C" fn mission_hello_world() {
 #[no_mangle]
 extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     /*
+     * NOTE: In this function we only want to initialize essential serivces, including
+     * the task scheduler. Rest of the initializing (including kernel modules) should go
+     * into the kernel main thread function instead.
+     *
      * First of all make sure interrupts are disabled.
      */
     unsafe {
@@ -95,10 +99,21 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     /*
      * Initialize the COM ports before doing anything else.
      *
-     * This will help printing panics before or when the debug renderer is initialized
-     * if serial output is avaliable.
+     * This will help printing panics and logs before or when the debug renderer
+     * is initialized if serial output is avaliable.
      */
     drivers::uart_16550::init();
+    logger::init();
+
+    /*
+     * Now that we have initialized basic logging we have to make sure that the
+     * kernel is loaded in the higher half offset that we set in the linker script.
+     */
+    {
+        let rip = registers::read_rip().as_u64();
+
+        assert_eq!(rip & 0xffffffffffff0000, 0xffff800080000000);
+    }
 
     unsafe {
         PHYSICAL_MEMORY_OFFSET = boot_info.physical_memory_offset;
@@ -107,7 +122,6 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     UNWIND_INFO.call_once(|| boot_info.unwind_info);
 
     rendy::init(&mut boot_info.framebuffer);
-    logger::init();
 
     arch::gdt::init_boot();
     log::info!("Loaded bootstrap GDT");
