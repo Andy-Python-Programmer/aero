@@ -1,11 +1,18 @@
 //! The GDT contains entries telling the CPU about memory segments.
 //!
-//! **Notes**: <https://wiki.osdev.org/Global_Descriptor_Table>
+//! In our case we only need a descriptor table in `x86_64` (as in every other
+//! arch that Aero currently support) as those arch's do not implement segmentation
+//! at all.
+//!
+//! ## Notes
+//! * <https://wiki.osdev.org/Global_Descriptor_Table>
+
+#![cfg(target_arch = "x86_64")]
 
 use core::mem;
 
-use crate::utils::io;
 use crate::mem::pti::{PTI_CPU_STACK, PTI_STACK_SIZE};
+use crate::utils::io;
 
 bitflags::bitflags! {
     /// Specifies which element to load into a segment from
