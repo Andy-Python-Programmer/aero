@@ -1,9 +1,13 @@
+pub mod frame;
+
 use aero_boot::*;
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{mapper::MapToError, *},
-    PhysAddr, VirtAddr,
+    VirtAddr,
 };
+
+pub use frame::LockedFrameAllocator;
 
 use crate::{prelude::*, PHYSICAL_MEMORY_OFFSET};
 
@@ -12,6 +16,8 @@ use crate::utils::linker::LinkerSymbol;
 const_unsafe! {
     const KERNEL_PML4: VirtAddr = VirtAddr::new_unsafe(0xFFFF800000000000);
 }
+
+pub static mut FRAME_ALLOCATOR: LockedFrameAllocator = LockedFrameAllocator::new_uninit();
 
 pub struct UnmapGuard {
     pub page: Page<Size4KiB>,
@@ -24,60 +30,10 @@ impl UnmapGuard {
     }
 }
 
-pub struct GlobalAllocator {
-    memory_map: &'static MemoryRegions,
-    next: usize,
-}
-
-impl GlobalAllocator {
-    /// Create a new global frame allocator from the memory map provided by the bootloader.
-    pub unsafe fn init(memory_map: &'static MemoryRegions) -> Self {
-        Self {
-            memory_map,
-            next: 0,
-        }
-    }
-
-    /// Get the [MemoryRegionType] of a frame
-    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryRegionType> {
-        self.memory_map
-            .iter()
-            .find(|v| {
-                let addr = frame.start_address().as_u64();
-
-                v.start >= addr && addr < v.end
-            })
-            .map(|v| v.kind)
-    }
-
-    /// Returns an iterator over the usable frames specified in the memory map.
-    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
-        let regions = self.memory_map.iter();
-        let usable_regions = regions.filter(|r| r.kind == MemoryRegionType::Usable);
-        let addr_ranges = usable_regions.map(|r| r.start..r.end);
-        let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
-
-        frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
-    }
-}
-
-unsafe impl FrameAllocator<Size4KiB> for GlobalAllocator {
-    #[track_caller]
-    fn allocate_frame(&mut self) -> Option<PhysFrame> {
-        let frame = self.usable_frames().nth(self.next);
-        self.next += 1;
-
-        frame
-    }
-}
-
-unsafe impl Sync for GlobalAllocator {}
-unsafe impl Send for GlobalAllocator {}
-
 /// Initialize paging.
 pub fn init(
     memory_regions: &'static MemoryRegions,
-) -> Result<(OffsetPageTable<'static>, GlobalAllocator), MapToError<Size4KiB>> {
+) -> Result<OffsetPageTable<'static>, MapToError<Size4KiB>> {
     extern "C" {
         static __kernel_start: LinkerSymbol;
         static __kernel_end: LinkerSymbol;
@@ -92,7 +48,10 @@ pub fn init(
     let active_level_4 = unsafe { active_level_4_table() };
 
     let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };
-    let mut frame_allocator = unsafe { GlobalAllocator::init(memory_regions) };
+
+    unsafe {
+        FRAME_ALLOCATOR.init(memory_regions);
+    }
 
     /*
      * Create a new page table for the kernel rather then using the one provided
@@ -100,7 +59,7 @@ pub fn init(
      * 5-level page tables and more.
      */
     let _: OffsetPageTable<'static> = unsafe {
-        let frame = frame_allocator
+        let frame = FRAME_ALLOCATOR
             .allocate_frame()
             .ok_or(MapToError::FrameAllocationFailed)?;
 
@@ -113,7 +72,7 @@ pub fn init(
         OffsetPageTable::new(page_table, PHYSICAL_MEMORY_OFFSET)
     };
 
-    Ok((offset_table, frame_allocator))
+    Ok(offset_table)
 }
 
 /// Get a mutable reference to the active level 4 page table.
@@ -131,10 +90,9 @@ pub unsafe fn active_level_4_table() -> &'static mut PageTable {
 #[track_caller]
 pub unsafe fn memory_map_device(
     offset_table: &mut OffsetPageTable,
-    frame_allocator: &mut GlobalAllocator,
     frame: PhysFrame,
 ) -> Result<UnmapGuard, MapToError<Size4KiB>> {
-    let frame_type = frame_allocator
+    let frame_type = FRAME_ALLOCATOR
         .get_frame_type(frame)
         .ok_or(MapToError::FrameAllocationFailed)?;
 
@@ -158,7 +116,7 @@ pub unsafe fn memory_map_device(
                 | PageTableFlags::NO_CACHE
                 | PageTableFlags::WRITE_THROUGH
                 | extra_flags,
-            frame_allocator,
+            &mut FRAME_ALLOCATOR,
         )?
         .flush();
 

@@ -136,12 +136,10 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         apic_type.supports_x2_apic()
     );
 
-    let (mut offset_table, mut frame_allocator) =
-        mem::paging::init(&boot_info.memory_regions).unwrap();
+    let mut offset_table = mem::paging::init(&boot_info.memory_regions).unwrap();
     log::info!("Loaded paging");
 
-    mem::alloc::init_heap(&mut offset_table, &mut frame_allocator)
-        .expect("Failed to initialize the heap.");
+    mem::alloc::init_heap(&mut offset_table).expect("Failed to initialize the heap.");
     log::info!("Loaded heap");
 
     tls::init();
@@ -163,13 +161,12 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     acpi::init(
         &mut offset_table,
-        &mut frame_allocator,
         boot_info.rsdp_address,
         boot_info.physical_memory_offset,
     );
     log::info!("Loaded ACPI");
 
-    drivers::pci::init(&mut offset_table, &mut frame_allocator);
+    drivers::pci::init(&mut offset_table);
     log::info!("Loaded PCI driver");
 
     fs::init();

@@ -5,14 +5,9 @@
 
 use core::mem;
 
-use x86_64::{
-    structures::paging::{
-        FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags, PhysFrame, Size4KiB,
-    },
-    PhysAddr, VirtAddr,
-};
+use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
 
-use crate::mem::paging::GlobalAllocator;
+use crate::mem::paging::FRAME_ALLOCATOR;
 
 use self::{fadt::Fadt, hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
 
@@ -49,11 +44,7 @@ pub struct AcpiTable {
 
 impl AcpiTable {
     /// Create a new ACPI table from the RSDP address.
-    fn new(
-        offset_table: &mut OffsetPageTable,
-        frame_allocator: &mut GlobalAllocator,
-        rsdp_address: VirtAddr,
-    ) -> Self {
+    fn new(offset_table: &mut OffsetPageTable, rsdp_address: VirtAddr) -> Self {
         // SAFTEY: Safe to cast the RSDP address to the RSDP struct as the
         // address is verified by the bootloader.
         let rsdp = unsafe { &*(rsdp_address.as_u64() as *const Rsdp) };
@@ -61,7 +52,7 @@ impl AcpiTable {
 
         // SAFTEY: Already would have caused UB if the RSDP address was
         // anyhow invalid.
-        let sdt = unsafe { Sdt::from_address(sdt_address, frame_allocator, offset_table) };
+        let sdt = unsafe { Sdt::from_address(sdt_address, offset_table) };
 
         let sdt_signature = sdt.get_signature();
         let sdt_data_len = sdt.data_len();
@@ -83,7 +74,6 @@ impl AcpiTable {
     fn lookup_entry(
         &self,
         offset_table: &mut OffsetPageTable,
-        frame_allocator: &mut GlobalAllocator,
         signature: &str,
     ) -> Option<&'static Sdt> {
         let header_data_address = self.header.data_address() as *const u32;
@@ -92,7 +82,7 @@ impl AcpiTable {
             // SAFTEY: Item address is valid as we are looping under the entry count and
             // the data address.
             let item_address = unsafe { *(header_data_address.add(i)) } as u64;
-            let item = unsafe { Sdt::from_address(item_address, frame_allocator, offset_table) };
+            let item = unsafe { Sdt::from_address(item_address, offset_table) };
 
             if item.get_signature() == signature {
                 return Some(item);
@@ -114,11 +104,7 @@ pub struct GenericAddressStructure {
 }
 
 impl GenericAddressStructure {
-    pub unsafe fn init(
-        &self,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-        offset_table: &mut OffsetPageTable,
-    ) {
+    pub unsafe fn init(&self, offset_table: &mut OffsetPageTable) {
         let page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(self.address));
         let frame = PhysFrame::containing_address(PhysAddr::new(self.address));
 
@@ -127,7 +113,7 @@ impl GenericAddressStructure {
                 page,
                 frame,
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
-                frame_allocator,
+                &mut FRAME_ALLOCATOR,
             )
             .unwrap()
             .flush();
@@ -137,25 +123,24 @@ impl GenericAddressStructure {
 /// Initialize the ACPI tables.
 pub fn init(
     offset_table: &mut OffsetPageTable,
-    frame_allocator: &mut GlobalAllocator,
     rsdp_address: PhysAddr,
     physical_memory_offset: VirtAddr,
 ) {
     let rsdp_address = physical_memory_offset + rsdp_address.as_u64();
-    let acpi_table = AcpiTable::new(offset_table, frame_allocator, rsdp_address);
+    let acpi_table = AcpiTable::new(offset_table, rsdp_address);
 
     macro init_table($sig:path => $ty:ty) {
-        <$ty>::new(acpi_table.lookup_entry(offset_table, frame_allocator, $sig));
+        <$ty>::new(acpi_table.lookup_entry(offset_table, $sig));
     }
 
-    if let Some(header) = acpi_table.lookup_entry(offset_table, frame_allocator, mcfg::SIGNATURE) {
+    if let Some(header) = acpi_table.lookup_entry(offset_table, mcfg::SIGNATURE) {
         unsafe {
             let mcfg: &'static Mcfg = header.as_ptr();
             mcfg.init();
         }
     }
 
-    if let Some(header) = acpi_table.lookup_entry(offset_table, frame_allocator, madt::SIGNATURE) {
+    if let Some(header) = acpi_table.lookup_entry(offset_table, madt::SIGNATURE) {
         unsafe {
             // Not a valid MADT table without the local apic address and the flags.
             if header.data_len() < 8 {
@@ -165,8 +150,7 @@ pub fn init(
                 );
             } else {
                 let madt: &'static Madt = header.as_ptr();
-                madt.init(frame_allocator, offset_table)
-                    .expect("Failed to initialize APIC");
+                madt.init(offset_table).expect("Failed to initialize APIC");
             }
         }
     }
@@ -174,8 +158,7 @@ pub fn init(
     init_table!(fadt::SIGNATURE => Fadt);
 
     Hpet::new(
-        acpi_table.lookup_entry(offset_table, frame_allocator, hpet::SIGNATURE),
-        frame_allocator,
+        acpi_table.lookup_entry(offset_table, hpet::SIGNATURE),
         offset_table,
     );
 }

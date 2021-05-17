@@ -8,6 +8,8 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
+use crate::mem::paging::FRAME_ALLOCATOR;
+
 pub(super) const XSDT_SIGNATURE: &str = "XSDT";
 pub(super) const RSDT_SIGNATURE: &str = "RSDT";
 
@@ -27,11 +29,7 @@ pub struct Sdt {
 
 impl Sdt {
     /// Get SDT from its address.
-    pub unsafe fn from_address(
-        address: u64,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-        offset_table: &mut OffsetPageTable,
-    ) -> &'static Self {
+    pub unsafe fn from_address(address: u64, offset_table: &mut OffsetPageTable) -> &'static Self {
         let page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(address));
 
         if offset_table.translate_page(page).is_err() {
@@ -42,7 +40,7 @@ impl Sdt {
                     page,
                     frame,
                     PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
-                    frame_allocator,
+                    &mut FRAME_ALLOCATOR,
                 )
                 .unwrap()
                 .flush();
@@ -64,7 +62,7 @@ impl Sdt {
                         page,
                         frame,
                         PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
-                        frame_allocator,
+                        &mut FRAME_ALLOCATOR,
                     )
                     .unwrap()
                     .flush();

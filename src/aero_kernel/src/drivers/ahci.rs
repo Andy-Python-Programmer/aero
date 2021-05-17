@@ -1,8 +1,9 @@
-use core::mem::{self, MaybeUninit};
+use core::mem;
+
+use core::mem::MaybeUninit;
 
 use crate::arch::interrupts;
-
-use crate::mem::paging::{memory_map_device, GlobalAllocator};
+use crate::mem::paging::{memory_map_device, FRAME_ALLOCATOR};
 
 use x86_64::{
     structures::paging::{
@@ -244,14 +245,10 @@ impl Port {
         }
     }
 
-    unsafe fn configure(
-        &mut self,
-        offset_table: &mut OffsetPageTable,
-        frame_allocator: &mut GlobalAllocator,
-    ) {
+    unsafe fn configure(&mut self, offset_table: &mut OffsetPageTable) {
         self.stop_command();
 
-        let mapped_clb = frame_allocator.allocate_frame().unwrap();
+        let mapped_clb = FRAME_ALLOCATOR.allocate_frame().unwrap();
 
         offset_table
             .map_to(
@@ -261,7 +258,7 @@ impl Port {
                     | PageTableFlags::WRITE_THROUGH
                     | PageTableFlags::PRESENT
                     | PageTableFlags::WRITABLE,
-                frame_allocator,
+                &mut FRAME_ALLOCATOR,
             )
             .unwrap()
             .flush();
@@ -269,7 +266,7 @@ impl Port {
         self.hba_port.command_list_base = mapped_clb.start_address().as_u64() as u32;
         self.hba_port.command_list_base_upper = (mapped_clb.start_address().as_u64() >> 32) as u32;
 
-        let mapped_fis = frame_allocator.allocate_frame().unwrap();
+        let mapped_fis = FRAME_ALLOCATOR.allocate_frame().unwrap();
 
         offset_table
             .map_to(
@@ -279,7 +276,7 @@ impl Port {
                     | PageTableFlags::WRITE_THROUGH
                     | PageTableFlags::PRESENT
                     | PageTableFlags::WRITABLE,
-                frame_allocator,
+                &mut FRAME_ALLOCATOR,
             )
             .unwrap()
             .flush();
@@ -297,7 +294,7 @@ impl Port {
             // 8 prdt entries per command table.
             command_header.prdt_length = 8;
 
-            let command_table = frame_allocator.allocate_frame().unwrap();
+            let command_table = FRAME_ALLOCATOR.allocate_frame().unwrap();
 
             offset_table
                 .map_to(
@@ -307,7 +304,7 @@ impl Port {
                         | PageTableFlags::WRITE_THROUGH
                         | PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE,
-                    frame_allocator,
+                    &mut FRAME_ALLOCATOR,
                 )
                 .unwrap()
                 .flush();
@@ -424,11 +421,7 @@ pub struct AHCI {
 }
 
 impl AHCI {
-    pub unsafe fn new(
-        offset_table: &mut OffsetPageTable,
-        frame_allocator: &mut GlobalAllocator,
-        header: PCIHeader,
-    ) -> Self {
+    pub unsafe fn new(offset_table: &mut OffsetPageTable, header: PCIHeader) -> Self {
         log::info!("Loaded AHCI driver");
 
         let abar = header.get_bar(5).unwrap();
@@ -445,24 +438,19 @@ impl AHCI {
             PhysFrame::containing_address(PhysAddr::new((abar_address + abar_size - 1) as u64));
 
         for frame in PhysFrame::range_inclusive(start, end) {
-            memory_map_device(offset_table, frame_allocator, frame)
-                .expect("Failed to memory map the SATA device");
+            memory_map_device(offset_table, frame).expect("Failed to memory map the SATA device");
         }
 
         let memory = &mut *(abar_address as *mut HBAMemory);
 
         let mut this = Self { memory };
 
-        this.probe_ports(offset_table, frame_allocator);
+        this.probe_ports(offset_table);
 
         this
     }
 
-    unsafe fn probe_ports(
-        &mut self,
-        offset_table: &mut OffsetPageTable,
-        frame_allocator: &mut GlobalAllocator,
-    ) {
+    unsafe fn probe_ports(&mut self, offset_table: &mut OffsetPageTable) {
         for i in 0..32 {
             if (self.memory.ports_implemented & (1 << i)) == 1 {
                 let hba_port = self.memory.get_port(i);
@@ -473,7 +461,7 @@ impl AHCI {
 
                     let mut port = Port::new(hba_port, hba_port_type, i);
 
-                    port.configure(offset_table, frame_allocator);
+                    port.configure(offset_table);
                     // port.read(0, 4, &mut buffer);
                 }
             }

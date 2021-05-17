@@ -1,7 +1,7 @@
 use core::mem;
 
 use crate::drivers::ahci::AHCI;
-use crate::mem::paging::GlobalAllocator;
+use crate::mem::paging::LockedFrameAllocator;
 
 use crate::{
     acpi::mcfg::{self, DeviceConfig, Mcfg},
@@ -493,7 +493,7 @@ impl PCIHeader {
 }
 
 /// Lookup and initialize all PCI devices.
-pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllocator) {
+pub fn init(offset_table: &mut OffsetPageTable) {
     // Check if the MCFG table is avaliable.
     if mcfg::is_avaliable() {
         let mcfg_table = mcfg::get_mcfg_table();
@@ -545,7 +545,7 @@ pub fn init(offset_table: &mut OffsetPageTable, frame_allocator: &mut GlobalAllo
                                  * AHCI 1.0 Device
                                  */
 
-                                AHCI::new(offset_table, frame_allocator, device);
+                                AHCI::new(offset_table, device);
                             }
                             _ => (),
                         },

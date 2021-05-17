@@ -9,7 +9,7 @@ use x86_64::{
 
 use crate::AERO_SYSTEM_ALLOCATOR;
 
-use super::paging::GlobalAllocator;
+use super::paging::FRAME_ALLOCATOR;
 
 pub const HEAP_START: usize = 0xfffffe8000000000;
 pub const HEAP_SIZE: usize = 100 * 1024;
@@ -24,10 +24,7 @@ fn alloc_error_handler(layout: alloc::Layout) -> ! {
 }
 
 /// Initialize the heap.
-pub fn init_heap(
-    offset_table: &mut OffsetPageTable,
-    frame_allocator: &mut GlobalAllocator,
-) -> Result<(), MapToError<Size4KiB>> {
+pub fn init_heap(offset_table: &mut OffsetPageTable) -> Result<(), MapToError<Size4KiB>> {
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
         let heap_end = heap_start + HEAP_SIZE - 1u64;
@@ -39,16 +36,18 @@ pub fn init_heap(
     };
 
     for page in page_range {
-        let frame = frame_allocator
-            .allocate_frame()
-            .ok_or(MapToError::FrameAllocationFailed)?;
+        let frame = unsafe {
+            FRAME_ALLOCATOR
+                .allocate_frame()
+                .ok_or(MapToError::FrameAllocationFailed)?
+        };
 
         unsafe {
             offset_table.map_to(
                 page,
                 frame,
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                frame_allocator,
+                &mut FRAME_ALLOCATOR,
             )
         }?
         .flush();

@@ -11,7 +11,7 @@ use super::sdt::Sdt;
 use crate::{
     apic::{self, IoApicHeader},
     kernel_ap_startup,
-    mem::alloc::malloc_align,
+    mem::{alloc::malloc_align, paging::FRAME_ALLOCATOR},
 };
 
 use crate::apic::CPU_COUNT;
@@ -32,7 +32,6 @@ pub struct Madt {
 impl Madt {
     pub(super) fn init(
         &'static self,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         offset_table: &mut OffsetPageTable,
     ) -> Result<(), MapToError<Size4KiB>> {
         MADT.call_once(move || self);
@@ -52,7 +51,7 @@ impl Madt {
                 trampoline_page,
                 trampoline_frame,
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                frame_allocator,
+                &mut FRAME_ALLOCATOR,
             )
         }?
         .flush();
