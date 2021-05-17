@@ -3,9 +3,7 @@
 //!
 //! **Notes**: <https://wiki.osdev.org/Programmable_Interval_Timer>
 
-use core::time::Duration;
-
-use crate::{arch::interrupts, utils::io};
+use crate::utils::io;
 
 pub const PIT_DIVISOR: u64 = 1193180;
 pub const PIT_BASE_FREQUENCY: u64 = 1193182;
@@ -22,15 +20,6 @@ impl PitDescriptor {
         Self {
             ticks_since_epoch: 0,
             divisor: DEFAULT_PIT_DIVISOR,
-        }
-    }
-
-    pub fn sleep(&mut self, duration: Duration) {
-        let start_time = self.ticks_since_epoch;
-        let seconds = duration.as_secs();
-
-        while self.ticks_since_epoch < start_time + seconds {
-            interrupts::pause();
         }
     }
 
@@ -60,11 +49,13 @@ pub static mut PIT: PitDescriptor = PitDescriptor::new();
 /// Initialise the PIT chip.
 pub fn init() {
     unsafe {
-        // At boot the PIT frequency divider is set to 0 which
-        // results in around 54.926 ms between ticks.
-        //
-        // We change the divider to 1193180 which will have around 1.00 ms
-        // between ticks to improve time accuracy.
+        /*
+         * At boot the PIT frequency divider is set to 0 which
+         * results in around 54.926 ms between ticks.
+         *
+         * We change the divider to 1193180 which will have around 1.00 ms
+         * between ticks to improve time accuracy.
+         */
 
         PIT.set_divisor(PIT_DIVISOR);
     }

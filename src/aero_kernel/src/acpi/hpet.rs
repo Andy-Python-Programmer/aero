@@ -1,8 +1,9 @@
 use core::ptr;
 
-use x86_64::structures::paging::{FrameAllocator, OffsetPageTable, Size4KiB};
+use x86_64::structures::paging::OffsetPageTable;
 
-use super::{sdt::Sdt, GenericAddressStructure};
+use super::sdt::Sdt;
+use super::GenericAddressStructure;
 
 pub const SIGNATURE: &str = "HPET";
 

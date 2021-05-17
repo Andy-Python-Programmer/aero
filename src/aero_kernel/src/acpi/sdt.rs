@@ -1,12 +1,6 @@
 use core::mem;
 
-use x86_64::{
-    structures::paging::{
-        FrameAllocator, Mapper, OffsetPageTable, Page, PageSize, PageTableFlags, PhysFrame,
-        Size4KiB,
-    },
-    PhysAddr, VirtAddr,
-};
+use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
 
 use crate::mem::paging::FRAME_ALLOCATOR;
 
