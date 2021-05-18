@@ -7,6 +7,8 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
+use crate::prelude::*;
+
 use super::sdt::Sdt;
 use crate::{
     apic::{self, IoApicHeader},
@@ -16,8 +18,12 @@ use crate::{
 
 use crate::apic::CPU_COUNT;
 
-pub const SIGNATURE: &str = "APIC";
-pub const TRAMPOLINE: u64 = 0x8000;
+pub(super) const SIGNATURE: &str = "APIC";
+
+const_unsafe! {
+    const TRAMPOLINE_VIRTUAL: VirtAddr = VirtAddr::new_unsafe(0x8000);
+    const TRAMPOLINE_PHYSICAL: PhysAddr = PhysAddr::new_unsafe(0x8000);
+}
 
 static MADT: Once<&'static Madt> = Once::new();
 static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
@@ -36,8 +42,8 @@ impl Madt {
     ) -> Result<(), MapToError<Size4KiB>> {
         MADT.call_once(move || self);
 
-        let trampoline_frame: PhysFrame = PhysFrame::containing_address(PhysAddr::new(TRAMPOLINE));
-        let trampoline_page: Page = Page::containing_address(VirtAddr::new(TRAMPOLINE));
+        let trampoline_frame: PhysFrame = PhysFrame::containing_address(TRAMPOLINE_PHYSICAL);
+        let trampoline_page: Page = Page::containing_address(TRAMPOLINE_VIRTUAL);
 
         /*
          * Identity map the trampoline frame and make it writable.
@@ -56,7 +62,7 @@ impl Madt {
         }?
         .flush();
 
-        log::debug!("Storing AP trampoline in {:#x}", TRAMPOLINE);
+        log::debug!("Storing AP trampoline in {:#x}", TRAMPOLINE_VIRTUAL);
 
         /*
          * Atomic store the AP trampoline code and page table to a fixed address
@@ -64,7 +70,10 @@ impl Madt {
          */
         unsafe {
             for i in 0..TRAMPOLINE_BIN.len() {
-                intrinsics::atomic_store((TRAMPOLINE as *mut u8).add(i), TRAMPOLINE_BIN[i]);
+                intrinsics::atomic_store(
+                    TRAMPOLINE_VIRTUAL.as_mut_ptr::<u8>().add(i),
+                    TRAMPOLINE_BIN[i],
+                );
             }
         }
 
@@ -87,7 +96,12 @@ impl Madt {
                     // Increase the CPU count.
                     CPU_COUNT.fetch_add(1, Ordering::SeqCst);
 
-                    let ap_ready = (TRAMPOLINE + 8) as *mut u64;
+                    let ap_ready = unsafe {
+                        let label = TRAMPOLINE_VIRTUAL.as_ptr::<u64>().offset(8);
+
+                        label as *mut u64
+                    };
+
                     let ap_cpu_id = unsafe { ap_ready.offset(1) };
                     let ap_page_table = unsafe { ap_ready.offset(2) };
                     let ap_stack_start = unsafe { ap_ready.offset(3) };
