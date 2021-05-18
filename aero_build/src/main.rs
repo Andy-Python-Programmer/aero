@@ -5,8 +5,8 @@ use fs_extra::dir::CopyOptions;
 
 use structopt::StructOpt;
 
-use std::env;
 use std::fs;
+use std::{env, time::Instant};
 
 use std::error::Error;
 use std::path::Path;
@@ -217,6 +217,11 @@ async fn main() {
                 bootloader,
                 chainloader,
             } => {
+                /*
+                 * Get the current time. This is will be used to caclulate the build time
+                 * after the build is finished.
+                 */
+                let now = Instant::now();
                 let bootloader = AeroBootloader::from(bootloader);
 
                 bundled::download_ovmf_prebuilt().await.unwrap();
@@ -228,6 +233,8 @@ async fn main() {
 
                 build_kernel(target, bootloader);
                 bundled::package_files(bootloader).unwrap();
+
+                println!("Build took {:?}", now.elapsed());
 
                 if let Some(chainloader) = chainloader {
                     qemu_args.push("-drive".into());
@@ -240,6 +247,11 @@ async fn main() {
             }
 
             AeroBuildCommand::Build { bootloader, target } => {
+                /*
+                 * Get the current time. This is will be used to caclulate the build time
+                 * after the build is finished.
+                 */
+                let now = Instant::now();
                 let bootloader = AeroBootloader::from(bootloader);
 
                 bundled::download_ovmf_prebuilt().await.unwrap();
@@ -251,6 +263,8 @@ async fn main() {
 
                 build_kernel(target, bootloader);
                 bundled::package_files(bootloader).unwrap();
+
+                println!("Build took {:?}", now.elapsed());
             }
 
             AeroBuildCommand::Update { bootloader } => {
