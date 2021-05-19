@@ -4,7 +4,23 @@
 //! ## Code organization and architecture
 //! The code is divided into different *modules*, each representing a *subsystem* of the kernel.
 //!
-//! **Notes**: <https://en.wikipedia.org/wiki/Unix>
+//! ## Kernel design and principles
+//! The Aero kernel design is based up on two *popular* kernel designs, `monolithic` and `micro`.
+//! These two designs are substantial but they *both* have major drawbacks.
+//!
+//! Microkernels are considered as the *most* secure kernels not just from the theoretical point of
+//! view. For example, if you start a driver in a monolithic kernel it runs in ring 0 (ie. It has permissions
+//! to do anything the driver wants), thus unsafe. On the other hand microkernels run them in ring 3 which gets
+//! rid of these security issues. If we take a look at monolithic kernels on the other hand are more performent
+//! as everything gets compiled in a single executable and runs in the same privilage level (which means it requires
+//! less context switches).
+//!
+//! For the Aero kernel we comine the *good* parts of these two *popular* kernel designs to create a **performent** and
+//! **secure** kernel. This means that the memory management and file system handling will be done in the kernel and the
+//! drivers on the other hand will run in ring 3 (like a normal microkernel).
+//!
+//! ## Notes:
+//! * <https://en.wikipedia.org/wiki/Unix>
 
 #![feature(
     custom_test_frameworks,
