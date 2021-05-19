@@ -8,11 +8,7 @@ use aero_gfx::{FrameBuffer, FrameBufferInfo};
 
 use x86_64::{align_up, structures::paging::*, PhysAddr, VirtAddr};
 
-use uefi::{
-    prelude::*,
-    proto::media::{file::*, fs::SimpleFileSystem},
-    table::boot::*,
-};
+use uefi::{prelude::*, proto::media::file::*, table::boot::*};
 
 use xmas_elf::{
     header,
@@ -100,30 +96,18 @@ impl Level4Entries {
     }
 }
 
-pub fn load_file(boot_services: &BootServices, path: &str) -> &'static [u8] {
-    let mut info_buffer = [0u8; 0x100];
+pub struct BootFileSystem<'a> {
+    pub info_buffer: &'a mut [u8],
+    pub root: &'a mut Directory,
+}
 
-    let file_system = unsafe {
-        &mut *boot_services
-            .locate_protocol::<SimpleFileSystem>()
-            .expect_success("Failed to locate file system")
-            .get()
-    };
-
-    let mut root = file_system
-        .open_volume()
-        .expect_success("Failed to open volumes");
-
-    let volume_label = file_system
-        .open_volume()
-        .expect_success("Failed to open volume")
-        .get_info::<FileSystemVolumeLabel>(&mut info_buffer)
-        .expect_success("Failed to open volumes")
-        .volume_label();
-
-    log::info!("Volume label: {}", volume_label);
-
-    let file_handle = root
+pub fn load_file<'a>(
+    boot_filesystem: &mut BootFileSystem<'a>,
+    boot_services: &BootServices,
+    path: &str,
+) -> &'static [u8] {
+    let file_handle = boot_filesystem
+        .root
         .open(path, FileMode::Read, FileAttribute::empty())
         .expect_success("Failed to open file");
 
@@ -132,7 +116,7 @@ pub fn load_file(boot_services: &BootServices, path: &str) -> &'static [u8] {
     log::info!("Loading {} into memory", path);
 
     let info = file_handle
-        .get_info::<FileInfo>(&mut info_buffer)
+        .get_info::<FileInfo>(boot_filesystem.info_buffer)
         .expect_success("Failed to get file info");
 
     let pages = info.file_size() as usize / 0x1000 + 1;

@@ -13,7 +13,6 @@
 
 extern crate rlibc;
 
-use core::fmt::Write;
 use core::mem;
 use core::slice;
 
@@ -26,12 +25,20 @@ use paging::BootFrameAllocator;
 
 use uefi::{
     prelude::*,
-    proto::console::gop::{GraphicsOutput, PixelFormat},
+    proto::{
+        console::gop::{GraphicsOutput, PixelFormat},
+        media::{
+            file::{File, FileSystemVolumeLabel},
+            fs::SimpleFileSystem,
+        },
+    },
     table::boot::{MemoryDescriptor, MemoryType},
     table::cfg,
 };
 
 use x86_64::PhysAddr;
+
+use crate::load::BootFileSystem;
 
 mod load;
 mod logger;
@@ -81,12 +88,42 @@ fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo)
 
 #[entry]
 fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
-    writeln!(system_table.stdout(), "UEFI boot...").expect("Failed to write to stdout");
-
     let (framebuffer_address, framebuffer_info) = init_display(&system_table);
     log::info!("Using framebuffer at: {:#x}", framebuffer_address);
 
-    let kernel_bytes = load::load_file(system_table.boot_services(), AERO_KERNEL_ELF_PATH);
+    let mut info_buffer = [0u8; 0x100];
+
+    let file_system = unsafe {
+        &mut *system_table
+            .boot_services()
+            .locate_protocol::<SimpleFileSystem>()
+            .expect_success("Failed to locate file system")
+            .get()
+    };
+
+    let mut root = file_system
+        .open_volume()
+        .expect_success("Failed to open volumes");
+
+    let volume_label = file_system
+        .open_volume()
+        .expect_success("Failed to open volume")
+        .get_info::<FileSystemVolumeLabel>(&mut info_buffer)
+        .expect_success("Failed to open volumes")
+        .volume_label();
+
+    log::info!("Volume label: {}", volume_label);
+
+    let mut boot_filesystem = BootFileSystem {
+        info_buffer: &mut info_buffer,
+        root: &mut root,
+    };
+
+    let kernel_bytes = load::load_file(
+        &mut boot_filesystem,
+        system_table.boot_services(),
+        AERO_KERNEL_ELF_PATH,
+    );
 
     let mmap_storage = {
         let max_mmap_size =
