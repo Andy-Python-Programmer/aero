@@ -109,13 +109,7 @@ pub macro swapgs_iff_ring3_fast_errorcode() {
 }
 
 pub macro intel_asm($($code:expr,)+) {
-    global_asm!(
-        concat!(
-            ".intel_syntax noprefix\n",
-            $($code),+,
-            ".att_syntax prefix\n",
-        )
-    );
+    global_asm!(concat!($($code),+,));
 }
 
 pub macro const_unsafe($($vis:vis const $name:ident: $ty:ty = $value:expr;)*) {
