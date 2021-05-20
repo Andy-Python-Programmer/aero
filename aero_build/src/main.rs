@@ -90,6 +90,7 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
     qemu_run_cmd.arg("-cpu").arg("qemu64");
     qemu_run_cmd.arg("-smp").arg("2");
     qemu_run_cmd.arg("-m").arg("512M");
+    qemu_run_cmd.arg("-serial").arg("stdio");
 
     qemu_run_cmd
         .arg("-drive")

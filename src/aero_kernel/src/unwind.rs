@@ -72,7 +72,7 @@ pub extern "C" fn exception_begin_unwind() {
 }
 
 #[panic_handler]
-pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
+extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     let deafult_panic = &format_args!("");
     let panic_message = info.message().unwrap_or(deafult_panic);
 
@@ -99,11 +99,11 @@ pub extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
 
 #[lang = "eh_personality"]
 #[no_mangle]
-pub extern "C" fn rust_eh_personality() {}
+extern "C" fn rust_eh_personality() {}
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "C" fn _Unwind_Resume() -> ! {
+extern "C" fn _Unwind_Resume() -> ! {
     loop {
         unsafe {
             interrupts::halt();
