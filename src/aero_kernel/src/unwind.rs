@@ -97,15 +97,35 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     }
 }
 
-#[lang = "eh_personality"]
-#[no_mangle]
-extern "C" fn rust_eh_personality() {}
-
+/// This function is automatically called after each unwinding cleanup routine finishes
+/// executing. Our task here is to *resume* the unwinding procedure by figuring out where
+/// we just came from and picking up where we left off.
 #[allow(non_snake_case)]
 #[no_mangle]
-extern "C" fn _Unwind_Resume() -> ! {
-    loop {
-        unsafe {
+extern "C" fn _Unwind_Resume(unwind_context_ptr: usize) -> ! {
+    log::debug!("{}", unwind_context_ptr);
+
+    unsafe {
+        interrupts::disable_interrupts();
+
+        loop {
+            interrupts::halt();
+        }
+    }
+}
+
+/// Usually this function will be the entry point for the unwinding process. However,
+/// for Aero we use a custom unwinding scheme. Since we are *not* using `eh_personality`
+/// we will loop forever and log a bug to the debug display.
+#[lang = "eh_personality"]
+#[no_mangle]
+extern "C" fn rust_eh_personality() -> ! {
+    log::error!("Poisoned function `rust_eh_personaity` was invoked.");
+
+    unsafe {
+        interrupts::disable_interrupts();
+
+        loop {
             interrupts::halt();
         }
     }
