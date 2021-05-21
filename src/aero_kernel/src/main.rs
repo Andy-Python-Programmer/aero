@@ -166,7 +166,6 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         boot_info.physical_memory_offset,
     );
     log::info!("Loaded ACPI");
-    panic!("Testin");
 
     drivers::pci::init(&mut offset_table);
     log::info!("Loaded PCI driver");

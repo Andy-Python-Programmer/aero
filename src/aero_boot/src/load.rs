@@ -245,14 +245,6 @@ fn load_kernel(
     paging::enable_no_execute();
     paging::enable_protection();
 
-    unsafe {
-        core::ptr::copy(
-            kernel_bytes.as_ptr(),
-            0x100000 as *mut u8,
-            kernel_bytes.len(),
-        );
-    }
-
     let kernel_elf = ElfFile::new(&kernel_bytes).expect("Found corrupt kernel ELF file");
     let kernel_offset = PhysAddr::new(&kernel_bytes[0] as *const u8 as u64);
 
@@ -523,13 +515,8 @@ where
         used_entries,
     );
 
-    /*
-     * TODO(Andy-Python-Programmer): Currently we copy the kernel elf to
-     * `0x100000`. We should be able to use the kernel base to do this instead
-     * of copying the elf to a location.
-     */
     let unwind_info = UnwindInfo {
-        kernel_base: VirtAddr::new(0x100000),
+        kernel_base: VirtAddr::new(kernel_bytes.as_ptr() as _),
         kernel_size: kernel_bytes.len(),
         stack_top: mappings.stack_end.start_address(),
     };
