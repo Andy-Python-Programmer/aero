@@ -3,6 +3,8 @@ use core::panic::PanicInfo;
 
 use x86_64::VirtAddr;
 
+use xmas_elf::sections::{SectionData, ShType};
+use xmas_elf::symbol_table::Entry;
 use xmas_elf::ElfFile;
 
 use crate::rendy;
@@ -10,17 +12,16 @@ use crate::rendy;
 use crate::arch::interrupts;
 use crate::{PHYSICAL_MEMORY_OFFSET, UNWIND_INFO};
 
-#[no_mangle]
-pub extern "C" fn exception_begin_unwind() {
-    let mut rbp: usize;
+pub fn unwind_stack_trace() {
+    let unwind_info = UNWIND_INFO
+        .get()
+        .expect("Failed to retrieve the unwind information");
 
-    unsafe {
-        asm!("mov {}, rbp", out(reg) rbp);
-    }
-
-    log::error!("RBP: {:#x}", rbp);
-
-    let unwind_info = UNWIND_INFO.get().expect("o_O");
+    /*
+     * TODO(Andy-Python-Programmer): Currently we copy the kernel elf to
+     * `0x100000`. We should be able to use the kernel base to do this instead
+     * of copying the elf to a location. Should be an easy fix :D
+     */
     let kernel_slice: &[u8] = unsafe {
         core::slice::from_raw_parts(
             (VirtAddr::new_unsafe(0x100000) + PHYSICAL_MEMORY_OFFSET.as_u64()).as_ptr(),
@@ -28,29 +29,78 @@ pub extern "C" fn exception_begin_unwind() {
         )
     };
 
-    let kernel_elf = ElfFile::new(kernel_slice).expect("o_O");
-    let kernel_elf_p2 = kernel_elf.header.pt2;
+    let kernel_elf = ElfFile::new(kernel_slice).expect("Invalid kernel slice");
+    let mut symbol_table = None;
 
-    for _ in 0..kernel_elf_p2.sh_count() {
+    for section in kernel_elf.section_iter() {
+        if section.get_type() == Ok(ShType::SymTab) {
+            let section_data = section
+                .get_data(&kernel_elf)
+                .expect("Failed to get kernel section data information");
+
+            if let SectionData::SymbolTable64(symtab) = section_data {
+                symbol_table = Some(symtab);
+            }
+        }
+    }
+
+    let symbol_table = symbol_table.unwrap();
+
+    let mut rbp: usize;
+
+    unsafe {
+        asm!("mov {}, rbp", out(reg) rbp);
+    }
+
+    /*
+     * Make sure rbp is not NULL. If it is then we cannot do the stack unwinding/tracing
+     * as no frame pointers were emmited in this build. This should only occur if you
+     * set the field `eliminate-frame-pointer` in the target file to true. If thats the case
+     * we return (resumes the parent function).
+     */
+    if rbp == 0 {
+        log::error!("Frame pointers were not emmited in this build");
+        log::error!("Unable to unwind the stack");
+
+        return;
+    }
+
+    log::error!("Stack backtrace:");
+
+    let mut depth = 0;
+
+    /*
+     * The iteration goes up till the maximum of 64 frames.
+     */
+    for _ in 0..64 {
         if let Some(rip_rbp) = rbp.checked_add(mem::size_of::<usize>()) {
             let rip = unsafe { *(rip_rbp as *const usize) };
 
             /*
-             * Check if the RIP register is 0 and that means it was an empty return. So just
-             * break out.
+             * Check if the RIP register is 0 and that means that we are done with the
+             * stack trace so break out of the loop.
              */
             if rip == 0 {
-                log::error!("Empty return => (RIP == 0)");
-
                 break;
             }
 
-            /*
-             * If we make through here, that means we can do the stack unwinding using the
-             * unwind info struct that Aero's bootloader gave us.
-             */
-            log::error!("RIP: {:#x}", rip);
-            log::error!("RBP: {:#x}", rbp);
+            unsafe {
+                rbp = *(rbp as *const usize);
+            }
+
+            for data in symbol_table {
+                let st_value = data.value() as usize;
+                let st_size = data.size() as usize;
+
+                if rip >= st_value && rip < (st_value + st_size) {
+                    let mangled_name = data.get_name(&kernel_elf).expect("Oh No!");
+                    let demangled_name = rustc_demangle::demangle(mangled_name);
+
+                    log::error!("\t{}:    {:#x} - {}", depth, rip, demangled_name);
+                }
+            }
+
+            depth += 1;
         } else {
             /*
              * If the checked addition fails that means the RBP has overflowed. So just break
@@ -80,13 +130,19 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
         rendy::clear_screen();
     }
 
-    log::error!("Kernel Panicked");
+    log::error!("thread 'main' panicked at '{}'", panic_message);
 
     if let Some(panic_location) = info.location() {
         log::error!("{}", panic_location);
     }
 
-    log::error!("{}", panic_message);
+    /*
+     * Just to make the stack trace pretty. The programmer should be *very*
+     * stressed at this point.
+     */
+    log::error!("");
+
+    unwind_stack_trace();
 
     unsafe {
         interrupts::disable_interrupts();
@@ -114,9 +170,7 @@ extern "C" fn _Unwind_Resume(unwind_context_ptr: usize) -> ! {
     }
 }
 
-/// Usually this function will be the entry point for the unwinding process. However,
-/// for Aero we use a custom unwinding scheme. Since we are *not* using `eh_personality`
-/// we will loop forever and log a bug to the debug display.
+/// This function is the entry point for the unwinding process.
 #[lang = "eh_personality"]
 #[no_mangle]
 extern "C" fn rust_eh_personality() -> ! {

@@ -19,6 +19,7 @@ xmas-elf = "0.7"
 paste = "1.0"
 cfg-if = "1.0.0"
 hashbrown = "0.11.2"
+rustc-demangle = "0.1.19"
 
 [dependencies.font8x8]
 version = "0.3"

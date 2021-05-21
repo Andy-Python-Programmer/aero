@@ -7,7 +7,7 @@ macro interrupt_exception(fn $name:ident() => $message:expr) {
         fn $name(stack: &mut InterruptErrorStack) {
             log::error!($message);
 
-            $crate::unwind::exception_begin_unwind();
+            $crate::unwind::unwind_stack_trace();
         }
     );
 }
@@ -54,6 +54,6 @@ interrupt_error_stack!(
             stack
         );
 
-        unwind::exception_begin_unwind();
+        unwind::unwind_stack_trace();
     }
 );
