@@ -104,14 +104,6 @@ pub fn unwind_stack_trace() {
             break;
         }
     }
-
-    unsafe {
-        interrupts::disable_interrupts();
-
-        loop {
-            interrupts::halt();
-        }
-    }
 }
 
 #[panic_handler]

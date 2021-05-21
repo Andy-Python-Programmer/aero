@@ -8,6 +8,14 @@ macro interrupt_exception(fn $name:ident() => $message:expr) {
             log::error!($message);
 
             $crate::unwind::unwind_stack_trace();
+
+            unsafe {
+                $crate::arch::interrupts::disable_interrupts();
+
+                loop {
+                    $crate::arch::interrupts::halt();
+                }
+            }
         }
     );
 }
@@ -55,5 +63,13 @@ interrupt_error_stack!(
         );
 
         unwind::unwind_stack_trace();
+
+        unsafe {
+            super::disable_interrupts();
+
+            loop {
+                super::halt();
+            }
+        }
     }
 );
