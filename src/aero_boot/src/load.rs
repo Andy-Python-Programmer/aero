@@ -523,8 +523,13 @@ where
         used_entries,
     );
 
+    /*
+     * TODO(Andy-Python-Programmer): Currently we copy the kernel elf to
+     * `0x100000`. We should be able to use the kernel base to do this instead
+     * of copying the elf to a location.
+     */
     let unwind_info = UnwindInfo {
-        kernel_base: VirtAddr::new(kernel_bytes[0] as u64),
+        kernel_base: VirtAddr::new(0x100000),
         kernel_size: kernel_bytes.len(),
         stack_top: mappings.stack_end.start_address(),
     };

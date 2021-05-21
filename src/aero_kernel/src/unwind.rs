@@ -1,8 +1,6 @@
 use core::mem;
 use core::panic::PanicInfo;
 
-use x86_64::VirtAddr;
-
 use xmas_elf::sections::{SectionData, ShType};
 use xmas_elf::symbol_table::Entry;
 use xmas_elf::ElfFile;
@@ -17,14 +15,9 @@ pub fn unwind_stack_trace() {
         .get()
         .expect("Failed to retrieve the unwind information");
 
-    /*
-     * TODO(Andy-Python-Programmer): Currently we copy the kernel elf to
-     * `0x100000`. We should be able to use the kernel base to do this instead
-     * of copying the elf to a location. Should be an easy fix :D
-     */
     let kernel_slice: &[u8] = unsafe {
         core::slice::from_raw_parts(
-            (VirtAddr::new_unsafe(0x100000) + PHYSICAL_MEMORY_OFFSET.as_u64()).as_ptr(),
+            (unwind_info.kernel_base + PHYSICAL_MEMORY_OFFSET.as_u64()).as_ptr(),
             unwind_info.kernel_size,
         )
     };
