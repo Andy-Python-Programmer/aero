@@ -5,9 +5,8 @@ use super::process::Process;
 
 static SCHEDULER: Once<Mutex<Scheduler>> = Once::new();
 
-#[derive(Debug)]
 pub struct Scheduler {
-    pub processes: VecDeque<Process>,
+    processes: VecDeque<Process>,
 }
 
 impl Scheduler {
@@ -21,7 +20,17 @@ impl Scheduler {
 
     #[inline]
     pub fn push(&mut self, process: Process) {
+        let context = process.get_context_ref();
+
+        let instruction_ptr = context.get_instruction_ptr();
+        let stack_top = context.get_stack_top();
+        let rflags = context.rflags;
+
         self.processes.push_back(process);
+
+        unsafe {
+            super::jump_userland(stack_top, instruction_ptr, rflags as usize);
+        }
     }
 }
 

@@ -17,8 +17,6 @@ use spin::Once;
 use crate::utils::io;
 use crate::utils::linker::LinkerSymbol;
 
-use crate::arch::gdt::PROCESSOR_CONTROL_REGION;
-
 static THREAD_LOCAL_STORAGE: Once<ThreadLocalStorage> = Once::new();
 
 /// The TCB (Thread Control Block) containg the self pointer to itself and that means
@@ -102,7 +100,7 @@ pub fn init() {
     THREAD_LOCAL_STORAGE.call_once(move || ThreadLocalStorage::new(tls_offset, tcb_offset));
 
     // SAFTEY: Safe to access thread local variables as at this point are accessible.
-    unsafe {
-        PROCESSOR_CONTROL_REGION.fs_offset = tcb_offset as usize;
-    }
 }
+
+#[no_mangle]
+extern "C" fn restore_user_fs() {}

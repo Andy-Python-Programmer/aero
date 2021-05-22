@@ -75,7 +75,7 @@ interrupt!(
     }
 );
 
-intel_fn!(
+intel_fn! {
     #![cfg(target_pointer_width = "64")]
 
     /**
@@ -88,12 +88,12 @@ intel_fn!(
     pub extern "asm" fn syscall_handler() {
         "swapgs\n", // Set gs segment to TSS.
 
-        "mov gs:[0x08], rsp\n", // Save userspace stack pointer.
-        "mov rsp, gs:[0x14]\n", // Load kernel stack pointer.
+        "mov gs:[0x1C], rsp\n", // Save userspace stack pointer.
+        "mov rsp, gs:[0x04]\n", // Load kernel stack pointer.
 
         "push QWORD PTR 5 * 8 + 3\n", // Push fake userspace SS resembling `iret` frame.
 
-        "push QWORD PTR gs:[0x08]\n", // Push userspace rsp.
+        "push QWORD PTR gs:[0x1C]\n", // Push userspace rsp.
         "push r11\n", // Push rflags in r11.
 
         "push QWORD PTR 6 * 8 + 3\n", // Push fake CS resembling `iret` stack frame.
@@ -126,9 +126,9 @@ intel_fn!(
         "add rsp, 8\n", // Pop fake userspace CS.
 
         "pop r11\n", // Pop rflags in r11.
-        "pop QWORD PTR gs:[0x08]\n", // Pop userspace stack pointer.
+        "pop QWORD PTR gs:[0x1C]\n", // Pop userspace stack pointer.
 
-        "mov rsp, gs:[0x08]\n", // Restore userspace stack pointer.
+        "mov rsp, gs:[0x1C]\n", // Restore userspace stack pointer.
         "swapgs\n", // Restore gs from TSS to user data.
 
         "sysretq\n", // Return back into userspace.
@@ -140,7 +140,7 @@ intel_fn!(
         "swapgs\n",
         "iretq\n",
     }
-);
+}
 
 pub fn init() {
     unsafe {

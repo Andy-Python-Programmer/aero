@@ -172,8 +172,6 @@ impl GdtEntryType {
     pub const KERNEL_DATA: u16 = 2;
     pub const KERNEL_TLS: u16 = 3;
     pub const USER_CODE32_UNUSED: u16 = 4;
-    pub const USER_DATA: u16 = 5;
-    pub const USER_CODE: u16 = 6;
     pub const TSS: u16 = 8;
     pub const TSS_HI: u16 = 9;
 }
@@ -289,18 +287,12 @@ impl Tss {
 
 #[repr(C, packed)]
 pub struct ProcessorControlRegion {
-    pub fs_offset: usize,
-    pub user_rsp: usize,
     pub tss: Tss,
 }
 
 impl ProcessorControlRegion {
     const fn new() -> Self {
-        Self {
-            fs_offset: 0x00,
-            user_rsp: 0x00,
-            tss: Tss::new(),
-        }
+        Self { tss: Tss::new() }
     }
 }
 
@@ -351,8 +343,7 @@ pub fn init() {
 
         load_gdt(&gdt_descriptor as *const _);
 
-        io::wrmsr(io::IA32_GS_BASE, pcr as *mut _ as u64);
-        io::wrmsr(io::IA32_KERNEL_GSBASE, 0x00);
+        io::wrmsr(io::IA32_KERNEL_GSBASE, pcr as *mut _ as u64);
 
         // Reload the GDT segments.
         load_cs(SegmentSelector::new(GdtEntryType::KERNEL_CODE, Ring::Ring0));

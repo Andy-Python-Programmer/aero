@@ -11,6 +11,8 @@ use xmas_elf::{
 use crate::mem::paging::FRAME_ALLOCATOR;
 use crate::prelude::*;
 
+use super::context::Context;
+
 /// The process id counter. Increment after a new process is created.
 static PID_COUNTER: PIDCounter = PIDCounter::new();
 
@@ -37,8 +39,9 @@ pub enum ProcessState {
     Running,
 }
 
-#[derive(Debug)]
 pub struct Process {
+    context: Context,
+
     pub pid: usize,
     pub entry_point: VirtAddr,
     pub state: ProcessState,
@@ -137,28 +140,23 @@ impl Process {
             }
         }
 
+        let stack_top = VirtAddr::new(0x80000000 + 0xFF00);
         let entry_point = VirtAddr::new(elf_binary.header.pt2.entry_point());
-        // let stack_top = VirtAddr::new(0x80000000 + 0xFF00);
 
-        // unsafe {
-        //     super::jump_userland(entry_point, stack_top);
-        // }
+        let mut context = Context::new();
+
+        context.set_stack_top(stack_top);
+        context.set_instruction_ptr(entry_point);
 
         Self {
+            context,
             pid: PID_COUNTER.next(),
             entry_point,
             state: ProcessState::Running,
         }
     }
 
-    /// Create a new process from a function.
-    pub fn from_function(function: unsafe extern "C" fn()) -> Self {
-        let this = Self {
-            pid: PID_COUNTER.next(),
-            entry_point: VirtAddr::new((&function as *const _) as u64),
-            state: ProcessState::Running,
-        };
-
-        this
+    pub(super) fn get_context_ref(&self) -> &Context {
+        &self.context
     }
 }

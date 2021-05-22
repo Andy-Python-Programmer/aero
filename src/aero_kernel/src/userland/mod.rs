@@ -1,36 +1,44 @@
 use x86_64::{structures::paging::OffsetPageTable, VirtAddr};
 use xmas_elf::ElfFile;
 
-use crate::arch::gdt::GdtEntryType;
+use crate::prelude::*;
 use crate::syscall;
 
 use self::process::Process;
 
+pub mod context;
 pub mod process;
 pub mod scheduler;
 
 #[rustfmt::skip]
 static USERLAND_SHELL: &[u8] = include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
 
-#[inline(never)]
-pub unsafe fn jump_userland(address: VirtAddr, stack_top: VirtAddr) {
-    asm!(
-        "\
-        push rax
-        push rsi
-        push 0x200
-        push rdx
-        push rdi
-        iretq
-        ",
-        in("rdi") address.as_u64(),
-        in("rsi") stack_top.as_u64(),
+intel_fn! {
+    /**
+     * ## Notes
+     * Here its is fine to use [VirtAddr] as the argument type as it is represented as a
+     * transparent struct. So after translation the argument should result in u64 instead
+     * of [VirtAddr].
+     */
+    pub extern "asm" fn jump_userland(stack_top: VirtAddr, instruction_ptr: VirtAddr, rflags: usize) {
+        "push rdi\n", // Param: stack_top
+        "push rsi\n", // Param: instruction_ptr
+        "push rdx\n", // Param: rflags
 
-        in("dx") (GdtEntryType::USER_DATA * 8) | 3,
-        in("ax") (GdtEntryType::USER_CODE * 8) | 3,
+        /*
+         * After pushing all of the required registers on the stack
+         * disable interrupts as we are swaping stacks. Interrupts are
+         * automatically enabled after `sysretq`.
+         */
+        "cli\n",
+        "call restore_user_fs\n",
 
-        options(noreturn)
-    );
+        "pop r11\n",
+        "pop rcx\n",
+        "pop rsp\n",
+
+        "sysretq\n",
+    }
 }
 
 pub fn run(offset_table: &mut OffsetPageTable) -> Result<(), &'static str> {

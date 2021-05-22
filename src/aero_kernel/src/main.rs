@@ -55,16 +55,18 @@ mod prelude {
     pub use crate::drivers::uart_16550::{serial_print, serial_println};
     pub use crate::mem::{memcmp, memcpy, memmove, memset};
     pub use crate::rendy::{print, println};
-    pub use crate::utils::*;
+    pub use crate::utils::{
+        const_unsafe, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
+        push_preserved, push_scratch, swapgs_iff_ring3_fast_errorcode,
+    };
 }
 
 use arch::interrupts;
+use arch::interrupts::{PIC1_DATA, PIC2_DATA};
 
 use utils::io;
 
-use arch::interrupts::{PIC1_DATA, PIC2_DATA};
-
-use userland::{process::Process, scheduler};
+use userland::scheduler;
 
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
@@ -188,9 +190,13 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     /*
      * Now that all of the essential initialization is done we are going to schedule
      * the kernel main thread.
+     *
+     * TODO(Andy-Python-Programmer): Add support in the scheduler to run kernel processes
+     * with ring 0 permissions:
+     *
+     * let init = Process::from_function(kernel_main_thread);
+     * scheduler::get_scheduler().push(init);
      */
-    let init = Process::from_function(kernel_main_thread);
-    scheduler::get_scheduler().push(init);
 
     userland::run(&mut offset_table).expect("Failed to run userspace shell");
 
