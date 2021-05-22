@@ -84,6 +84,10 @@ intel_fn! {
      * The `syscall` instruction should only be used for 64-bit system calls. The
      * `syscall` instruction saves RIP to RAX, clears rflags.RF, saves rflags
      * to R11 and then loads new SS, CS and RIP from previously programmed MSRs.
+     *
+     * ## Saftey
+     * The syscall instruction should only be called in usermode/ring 3. If not you will
+     * be pleased by a page fault :D
      */
     pub extern "asm" fn syscall_handler() {
         "swapgs\n", // Set gs segment to TSS.
@@ -102,10 +106,12 @@ intel_fn! {
         "push rax\n",
         crate::prelude::push_scratch!(),
         crate::prelude::push_preserved!(),
+        crate::prelude::push_fs!(),
 
         "mov rdi, rsp\n",
         "call __impl_syscall_handler\n", // Call the inner syscall handler function.
 
+        crate::prelude::pop_fs!(),
         crate::prelude::pop_preserved!(),
         crate::prelude::pop_scratch!(),
 

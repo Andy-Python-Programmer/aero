@@ -14,6 +14,8 @@ extern "C" fn main() {
         assert_eq!(TEST_BSS_NON_ZERO, usize::MAX);
     }
 
+    aero_syscall::sys_exit(0x00);
+
     loop {}
 }
 
