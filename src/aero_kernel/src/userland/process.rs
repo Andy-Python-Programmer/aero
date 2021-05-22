@@ -138,9 +138,10 @@ impl Process {
         }
 
         let entry_point = VirtAddr::new(elf_binary.header.pt2.entry_point());
+        // let stack_top = VirtAddr::new(0x80000000 + 0xFF00);
 
         // unsafe {
-        //     super::jump_userland(entry_point.as_u64() as _);
+        //     super::jump_userland(entry_point, stack_top);
         // }
 
         Self {

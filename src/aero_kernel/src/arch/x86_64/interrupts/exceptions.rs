@@ -7,7 +7,7 @@ use x86_64::registers::control::Cr2;
 macro interrupt_exception(fn $name:ident() => $message:expr) {
     super::interrupt_error_stack!(
         fn $name(stack: &mut InterruptErrorStack) {
-            log::error!($message);
+            log::error!("EXCEPTION: {}\n\nStack: {:#x?}", $message, stack);
 
             $crate::unwind::unwind_stack_trace();
 

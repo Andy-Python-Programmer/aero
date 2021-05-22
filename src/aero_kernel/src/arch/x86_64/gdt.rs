@@ -36,9 +36,12 @@ bitflags::bitflags! {
     }
 }
 
+pub enum Ring {
+    Ring0 = 0b00,
+}
+
 const BOOT_GDT_ENTRY_COUNT: usize = 4;
 const GDT_ENTRY_COUNT: usize = 10;
-const USER_TCB_OFFSET: usize = 0xB0000000;
 
 static mut BOOT_GDT: [GdtEntry; BOOT_GDT_ENTRY_COUNT] = [
     // GDT null descriptor.
@@ -169,16 +172,16 @@ impl GdtEntryType {
     pub const KERNEL_DATA: u16 = 2;
     pub const KERNEL_TLS: u16 = 3;
     pub const USER_CODE32_UNUSED: u16 = 4;
-    pub const USER_TLS: u16 = 7;
+    pub const USER_DATA: u16 = 5;
+    pub const USER_CODE: u16 = 6;
     pub const TSS: u16 = 8;
     pub const TSS_HI: u16 = 9;
 }
 
 impl SegmentSelector {
-    #[inline(always)]
-    const fn new(index: u16, rpl: Self) -> Self {
+    const fn new(index: u16, rpl: Ring) -> Self {
         Self {
-            bits: index << 3 | rpl.bits,
+            bits: index << 3 | (rpl as u16),
         }
     }
 }
@@ -316,35 +319,12 @@ pub fn init_boot() {
 
     // Load the GDT segments.
     unsafe {
-        load_cs(SegmentSelector::new(
-            GdtEntryType::KERNEL_CODE,
-            SegmentSelector::RPL_0,
-        ));
-
-        load_ds(SegmentSelector::new(
-            GdtEntryType::KERNEL_DATA,
-            SegmentSelector::RPL_0,
-        ));
-
-        load_es(SegmentSelector::new(
-            GdtEntryType::KERNEL_DATA,
-            SegmentSelector::RPL_0,
-        ));
-
-        load_fs(SegmentSelector::new(
-            GdtEntryType::KERNEL_DATA,
-            SegmentSelector::RPL_0,
-        ));
-
-        load_gs(SegmentSelector::new(
-            GdtEntryType::KERNEL_TLS,
-            SegmentSelector::RPL_0,
-        ));
-
-        load_ss(SegmentSelector::new(
-            GdtEntryType::KERNEL_DATA,
-            SegmentSelector::RPL_0,
-        ));
+        load_cs(SegmentSelector::new(GdtEntryType::KERNEL_CODE, Ring::Ring0));
+        load_ds(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_es(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_fs(SegmentSelector::new(GdtEntryType::KERNEL_TLS, Ring::Ring0));
+        load_gs(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_ss(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
     }
 }
 
@@ -374,40 +354,14 @@ pub fn init() {
         io::wrmsr(io::IA32_GS_BASE, pcr as *mut _ as u64);
         io::wrmsr(io::IA32_KERNEL_GSBASE, 0x00);
 
-        // Now set the user space TLS (Thread Local Storage).
-        GDT[GdtEntryType::USER_TLS as usize].set_offset((USER_TCB_OFFSET * 0x1000) as u32);
-
-        load_fs(SegmentSelector::new(
-            GdtEntryType::USER_TLS,
-            SegmentSelector::RPL_3,
-        ));
-
         // Reload the GDT segments.
-        load_cs(SegmentSelector::new(
-            GdtEntryType::KERNEL_CODE,
-            SegmentSelector::RPL_0,
-        ));
-
-        load_ds(SegmentSelector::new(
-            GdtEntryType::KERNEL_DATA,
-            SegmentSelector::RPL_0,
-        ));
-
-        load_es(SegmentSelector::new(
-            GdtEntryType::KERNEL_DATA,
-            SegmentSelector::RPL_0,
-        ));
-
-        load_ss(SegmentSelector::new(
-            GdtEntryType::KERNEL_DATA,
-            SegmentSelector::RPL_0,
-        ));
+        load_cs(SegmentSelector::new(GdtEntryType::KERNEL_CODE, Ring::Ring0));
+        load_ds(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_es(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_ss(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
 
         // Load the Task State Segment.
-        load_tss(SegmentSelector::new(
-            GdtEntryType::TSS,
-            SegmentSelector::RPL_0,
-        ));
+        load_tss(SegmentSelector::new(GdtEntryType::TSS, Ring::Ring0));
     }
 }
 

@@ -65,7 +65,10 @@ pub fn init() {
     // Here we add the size of TCB to the total size to store the TCB pointer.
     let total_tls_size = total_size + mem::size_of::<ThreadControlBlock>();
     let tls_layout = unsafe {
-        Layout::from_size_align_unchecked(total_tls_size, mem::align_of::<ThreadControlBlock>())
+        Layout::from_size_align_unchecked(
+            total_tls_size + mem::align_of::<ThreadControlBlock>(),
+            mem::align_of::<ThreadControlBlock>(),
+        )
     };
 
     let tls_raw_ptr = unsafe { alloc_zeroed(tls_layout) };
