@@ -11,6 +11,8 @@
 
 use core::mem;
 
+use x86_64::VirtAddr;
+
 use crate::mem::pti::{PTI_CPU_STACK, PTI_STACK_SIZE};
 use crate::utils::io;
 
@@ -147,7 +149,7 @@ static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
 ];
 
 #[thread_local]
-pub static mut PROCESSOR_CONTROL_REGION: ProcessorControlRegion = ProcessorControlRegion::new();
+pub static mut TASK_STATE_SEGMENT: Tss = Tss::new();
 
 #[thread_local]
 static FAULT_STACK: [u8; 256] = [0; 256];
@@ -285,17 +287,6 @@ impl Tss {
     }
 }
 
-#[repr(C, packed)]
-pub struct ProcessorControlRegion {
-    pub tss: Tss,
-}
-
-impl ProcessorControlRegion {
-    const fn new() -> Self {
-        Self { tss: Tss::new() }
-    }
-}
-
 /// Initialize the bootstrap GDT which is required to initialize TLS (Thread Local Storage)
 /// support so, after the kernel heap we will map the TLS section and initialize the *actual* GDT
 /// and then each CPU will have it's own GDT but we only will have to define it once as a `#[thread_local]`.
@@ -321,10 +312,9 @@ pub fn init_boot() {
 }
 
 /// Initialize the *actual* GDT stored in TLS.
-pub fn init() {
+pub fn init(stack_top: VirtAddr) {
     unsafe {
-        let pcr = &mut PROCESSOR_CONTROL_REGION;
-        let tss_ptr = &pcr.tss as *const _;
+        let tss_ptr = &mut TASK_STATE_SEGMENT as *mut Tss;
 
         GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
         GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
@@ -333,8 +323,9 @@ pub fn init() {
         let init_stack_addr = PTI_CPU_STACK.as_ptr() as usize + PTI_STACK_SIZE;
         let fault_stack_addr = FAULT_STACK.as_ptr() as usize + FAULT_STACK.len();
 
-        PROCESSOR_CONTROL_REGION.tss.rsp[0] = init_stack_addr as u64;
-        PROCESSOR_CONTROL_REGION.tss.ist[0] = fault_stack_addr as u64;
+        TASK_STATE_SEGMENT.rsp[0] = init_stack_addr as _;
+        TASK_STATE_SEGMENT.rsp[0] = stack_top.as_u64();
+        TASK_STATE_SEGMENT.ist[0] = fault_stack_addr as u64;
 
         let gdt_descriptor = GdtDescriptor::new(
             (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,
@@ -343,7 +334,7 @@ pub fn init() {
 
         load_gdt(&gdt_descriptor as *const _);
 
-        io::wrmsr(io::IA32_KERNEL_GSBASE, pcr as *mut _ as u64);
+        io::wrmsr(io::IA32_KERNEL_GSBASE, tss_ptr as *mut _ as u64);
 
         // Reload the GDT segments.
         load_cs(SegmentSelector::new(GdtEntryType::KERNEL_CODE, Ring::Ring0));

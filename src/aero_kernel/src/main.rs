@@ -150,7 +150,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     tls::init();
     log::info!("Loaded TLS");
 
-    arch::gdt::init();
+    arch::gdt::init(boot_info.unwind_info.stack_top);
     log::info!("Loaded GDT");
 
     /*
@@ -219,14 +219,6 @@ extern "C" fn kernel_main_thread() {}
 #[no_mangle]
 extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
     log::info!("Starting CPU with id: {}", cpu_id);
-
-    arch::gdt::init();
-    log::info!("(cpu={}) Loaded GDT", cpu_id);
-
-    interrupts::init();
-    log::info!("(cpu={}) Loaded IDT", cpu_id);
-
-    apic::mark_ap_ready(true);
 
     while !apic::is_bsp_ready() {
         interrupts::pause();

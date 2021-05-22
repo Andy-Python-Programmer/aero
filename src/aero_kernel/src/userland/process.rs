@@ -147,6 +147,7 @@ impl Process {
 
         context.set_stack_top(stack_top);
         context.set_instruction_ptr(entry_point);
+        context.rflags = 0x2000;
 
         Self {
             context,
