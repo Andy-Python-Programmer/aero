@@ -52,6 +52,7 @@ mod userland;
 mod utils;
 mod prelude {
     pub use crate::drivers::uart_16550::{serial_print, serial_println};
+    pub use crate::mem::{memcmp, memcpy, memmove, memset};
     pub use crate::rendy::{print, println};
     pub use crate::utils::*;
 }
@@ -189,6 +190,8 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
      */
     let init = Process::from_function(kernel_main_thread);
     scheduler::get_scheduler().push(init);
+
+    userland::run(&mut offset_table).expect("Failed to run userspace shell");
 
     unsafe {
         loop {

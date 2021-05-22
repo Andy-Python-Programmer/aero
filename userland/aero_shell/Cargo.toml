@@ -1,0 +1,7 @@
+[package]
+name = "aero_shell"
+version = "0.1.0"
+authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
+edition = "2018"
+
+[dependencies]

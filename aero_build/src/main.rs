@@ -145,6 +145,23 @@ fn build_web() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn build_userland() {
+    println!("INFO: Building userland");
+
+    let mut build_userland_cmd = Command::new(CARGO);
+
+    build_userland_cmd.current_dir("userland");
+    build_userland_cmd.arg("build");
+
+    if !build_userland_cmd
+        .status()
+        .expect(&format!("Failed to run {:#?}", build_userland_cmd))
+        .success()
+    {
+        panic!("Failed to build docs")
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum AeroBootloader {
     AeroBoot,
@@ -232,6 +249,7 @@ async fn main() {
                     AeroBootloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
                 }
 
+                build_userland();
                 build_kernel(target, bootloader);
                 bundled::package_files(bootloader).unwrap();
 
@@ -262,6 +280,7 @@ async fn main() {
                     AeroBootloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
                 }
 
+                build_userland();
                 build_kernel(target, bootloader);
                 bundled::package_files(bootloader).unwrap();
 

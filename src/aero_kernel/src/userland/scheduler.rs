@@ -23,14 +23,6 @@ impl Scheduler {
     pub fn push(&mut self, process: Process) {
         self.processes.push_back(process);
     }
-
-    #[inline]
-    pub fn active_pid(&self) -> usize {
-        self.processes
-            .front()
-            .expect("No processes running o_O")
-            .pid
-    }
 }
 
 unsafe impl Send for Scheduler {}

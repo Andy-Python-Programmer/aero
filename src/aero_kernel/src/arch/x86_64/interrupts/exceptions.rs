@@ -1,4 +1,6 @@
+use super::idt::PageFaultErrorCode;
 use super::interrupt_error_stack;
+
 use crate::unwind;
 use x86_64::registers::control::Cr2;
 
@@ -57,9 +59,10 @@ interrupt_error_stack!(
         let accessed_address = Cr2::read();
 
         log::error!(
-            "EXCEPTION: Page Fault\n\nAccessed Address: {:?}\nStack: {:#x?}",
+            "EXCEPTION: Page Fault\n\nAccessed Address: {:?}\nError: {:?}\nStack: {:#x?}",
             accessed_address,
-            stack
+            PageFaultErrorCode::from_bits_truncate(stack.code as u64),
+            stack.stack,
         );
 
         unwind::unwind_stack_trace();
