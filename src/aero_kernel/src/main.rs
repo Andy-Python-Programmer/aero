@@ -21,6 +21,7 @@
     extern_types,
     new_uninit,
     box_syntax,
+    llvm_asm,
     const_btree_new // TODO: Do not abuse nightly rust :D
 )]
 #![test_runner(crate::tests::test_runner)]

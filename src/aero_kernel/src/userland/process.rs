@@ -46,11 +46,13 @@ pub struct Process {
 
 impl Process {
     /// Create a new process from the provided [ElfFile].
-    pub fn from_elf(offset_table: &mut OffsetPageTable, binary: &ElfFile) -> Self {
-        header::sanity_check(binary).expect("The binary failed the sanity check");
+    pub fn from_elf(offset_table: &mut OffsetPageTable, elf_binary: &ElfFile) -> Self {
+        let raw_binary = elf_binary.input.as_ptr();
 
-        for header in binary.program_iter() {
-            program::sanity_check(header, binary).expect("Failed header sanity check");
+        header::sanity_check(elf_binary).expect("The binary failed the sanity check");
+
+        for header in elf_binary.program_iter() {
+            program::sanity_check(header, elf_binary).expect("Failed header sanity check");
 
             let header_type = header.get_type().expect("Unable to get the header type");
             let header_flags = header.flags();
@@ -66,14 +68,12 @@ impl Process {
                     Page::range_inclusive(start_page, end_page)
                 };
 
-                let mut flags = PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE;
+                let mut flags = PageTableFlags::PRESENT
+                    | PageTableFlags::USER_ACCESSIBLE
+                    | PageTableFlags::WRITABLE;
 
                 if !header_flags.is_execute() {
                     flags |= PageTableFlags::NO_EXECUTE;
-                }
-
-                if header_flags.is_write() {
-                    flags |= PageTableFlags::WRITABLE;
                 }
 
                 for page in page_range {
@@ -85,11 +85,11 @@ impl Process {
                 }
 
                 unsafe {
-                    // memcpy(
-                    //     header.virtual_addr() as *mut u8,
-                    //     binary.input.as_ptr().add(header.offset() as usize) as *const u8,
-                    //     header.file_size() as usize,
-                    // );
+                    memcpy(
+                        header.virtual_addr() as *mut u8,
+                        raw_binary.add(header.offset() as usize) as *const u8,
+                        header.file_size() as usize,
+                    );
 
                     memset(
                         (header.virtual_addr() + header.file_size()) as *mut u8,
@@ -102,33 +102,45 @@ impl Process {
 
         /*
          * Allocate and map the user stack for the process.
-         *
-         * 0x7FFFFFFFF000 + Size4KiB = 0x800000000000 is where we want the
-         * stack to be.
          */
         {
-            let page: Page = Page::containing_address(VirtAddr::new(0x7FFFFFFFF000));
-            let frame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
+            let page_range = {
+                let start_addr = VirtAddr::new(0x80000000);
+                let end_addr = start_addr + 0xFFFFu64;
+
+                let start_page: Page = Page::containing_address(start_addr);
+                let end_page = Page::containing_address(end_addr);
+
+                Page::range_inclusive(start_page, end_page)
+            };
+
+            for page in page_range {
+                let frame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
+
+                unsafe {
+                    offset_table.map_to(
+                        page,
+                        frame,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::NO_EXECUTE
+                            | PageTableFlags::WRITABLE
+                            | PageTableFlags::USER_ACCESSIBLE,
+                        &mut FRAME_ALLOCATOR,
+                    )
+                }
+                .unwrap()
+                .flush();
+            }
 
             unsafe {
-                offset_table.map_to(
-                    page,
-                    frame,
-                    PageTableFlags::PRESENT
-                        | PageTableFlags::USER_ACCESSIBLE
-                        | PageTableFlags::WRITABLE
-                        | PageTableFlags::NO_EXECUTE,
-                    &mut FRAME_ALLOCATOR,
-                )
+                memset(0x80000000 as *mut u8, 0, 0x10000);
             }
-            .unwrap()
-            .flush();
         }
 
-        let entry_point = VirtAddr::new(binary.header.pt2.entry_point());
+        let entry_point = VirtAddr::new(elf_binary.header.pt2.entry_point());
 
         // unsafe {
-        // super::jump_userland(entry_point.as_u64() as _);
+        //     super::jump_userland(entry_point.as_u64() as _);
         // }
 
         Self {
