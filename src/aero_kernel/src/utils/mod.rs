@@ -93,21 +93,6 @@ pub macro pop_fs() {
     "
 }
 
-pub macro swapgs_iff_ring3_fast_errorcode() {
-    "
-    /*
-    * `swapgs` if ring 3.
-    */
-
-    test QWORD PTR [rsp + 16], 0x3
-
-    jz 1f
-    swapgs
-
-    1:
-    "
-}
-
 pub macro intel_asm($($code:expr,)+) {
     global_asm!(concat!($($code),+,));
 }

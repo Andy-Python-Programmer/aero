@@ -17,10 +17,10 @@ intel_fn! {
     /**
      * ## Notes
      * Here its is fine to use [VirtAddr] as the argument type as it is represented as a
-     * transparent struct. So after translation the argument should result in u64 instead
+     * transparent struct. So after compilation the argument should result in u64 instead
      * of [VirtAddr].
      */
-    pub extern "asm" fn jump_userland(stack_top: VirtAddr, instruction_ptr: VirtAddr, rflags: usize) {
+    pub extern "asm" fn jump_userland(stack_top: VirtAddr, instruction_ptr: VirtAddr, rflags: u64) {
         "push rdi\n", // Param: stack_top
         "push rsi\n", // Param: instruction_ptr
         "push rdx\n", // Param: rflags
@@ -31,12 +31,13 @@ intel_fn! {
          * automatically enabled after `sysretq`.
          */
         "cli\n",
-        "call restore_user_fs\n",
+        "call restore_user_tls\n",
 
         "pop r11\n",
         "pop rcx\n",
         "pop rsp\n",
 
+        "fninit\n",
         "sysretq\n",
     }
 }

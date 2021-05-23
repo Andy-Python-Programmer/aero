@@ -1,3 +1,4 @@
+use alloc::sync::Arc;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use x86_64::{structures::paging::*, VirtAddr};
@@ -49,7 +50,7 @@ pub struct Process {
 
 impl Process {
     /// Create a new process from the provided [ElfFile].
-    pub fn from_elf(offset_table: &mut OffsetPageTable, elf_binary: &ElfFile) -> Self {
+    pub fn from_elf(offset_table: &mut OffsetPageTable, elf_binary: &ElfFile) -> Arc<Self> {
         let raw_binary = elf_binary.input.as_ptr();
 
         header::sanity_check(elf_binary).expect("The binary failed the sanity check");
@@ -149,12 +150,14 @@ impl Process {
         context.set_instruction_ptr(entry_point);
         context.rflags = 0x2000;
 
-        Self {
+        let this = Self {
             context,
             pid: PID_COUNTER.next(),
             entry_point,
             state: ProcessState::Running,
-        }
+        };
+
+        Arc::new(this)
     }
 
     pub(super) fn get_context_ref(&self) -> &Context {

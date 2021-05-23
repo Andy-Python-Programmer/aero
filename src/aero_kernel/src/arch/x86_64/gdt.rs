@@ -321,7 +321,7 @@ pub fn init(stack_top: VirtAddr) {
         GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
 
         let init_stack_addr = PTI_CPU_STACK.as_ptr() as usize + PTI_STACK_SIZE;
-        let fault_stack_addr = FAULT_STACK.as_ptr() as usize + FAULT_STACK.len();
+        let fault_stack_addr = FAULT_STACK.as_ptr() as usize + mem::size_of::<&[u8; 256]>();
 
         TASK_STATE_SEGMENT.rsp[0] = init_stack_addr as _;
         TASK_STATE_SEGMENT.rsp[0] = stack_top.as_u64();

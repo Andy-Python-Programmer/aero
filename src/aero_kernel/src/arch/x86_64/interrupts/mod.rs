@@ -20,8 +20,6 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
 
         $crate::prelude::intel_fn!(
             pub extern "asm" fn $name() {
-                $crate::prelude::swapgs_iff_ring3_fast_errorcode!(),
-
                 // Move rax into code's place and put code in last instead to be
                 // compatible with interrupt stack.
                 "xchg [rsp], rax\n",
@@ -47,8 +45,6 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
                 $crate::prelude::pop_fs!(),
                 $crate::prelude::pop_preserved!(),
                 $crate::prelude::pop_scratch!(),
-
-                $crate::prelude::swapgs_iff_ring3_fast_errorcode!(),
 
                 "iretq\n",
             }

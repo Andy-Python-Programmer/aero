@@ -103,4 +103,6 @@ pub fn init() {
 }
 
 #[no_mangle]
-extern "C" fn restore_user_fs() {}
+extern "C" fn restore_user_tls() {
+    log::debug!("Loaded userland TLS");
+}

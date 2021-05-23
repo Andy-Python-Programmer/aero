@@ -11,7 +11,6 @@
     custom_test_frameworks,
     core_intrinsics,
     asm,
-    naked_functions,
     alloc_error_handler,
     lang_items,
     panic_info_message,
@@ -21,7 +20,6 @@
     extern_types,
     new_uninit,
     box_syntax,
-    llvm_asm,
     const_btree_new // TODO: Do not abuse nightly rust :D
 )]
 #![test_runner(crate::tests::test_runner)]
@@ -57,7 +55,7 @@ mod prelude {
     pub use crate::rendy::{print, println};
     pub use crate::utils::{
         const_unsafe, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
-        push_preserved, push_scratch, swapgs_iff_ring3_fast_errorcode,
+        push_preserved, push_scratch,
     };
 }
 
