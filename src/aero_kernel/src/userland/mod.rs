@@ -21,16 +21,17 @@ intel_fn! {
      * of [VirtAddr].
      */
     pub extern "asm" fn jump_userland(stack_top: VirtAddr, instruction_ptr: VirtAddr, rflags: u64) {
-        "push rdi\n", // Param: stack_top
-        "push rsi\n", // Param: instruction_ptr
-        "push rdx\n", // Param: rflags
-
         /*
          * After pushing all of the required registers on the stack
          * disable interrupts as we are swaping stacks. Interrupts are
          * automatically enabled after `sysretq`.
          */
         "cli\n",
+
+        "push rdi\n", // Param: stack_top
+        "push rsi\n", // Param: instruction_ptr
+        "push rdx\n", // Param: rflags
+
         "call restore_user_tls\n",
 
         "pop r11\n",

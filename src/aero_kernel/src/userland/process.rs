@@ -9,8 +9,8 @@ use xmas_elf::{
     ElfFile,
 };
 
-use crate::mem::paging::FRAME_ALLOCATOR;
 use crate::prelude::*;
+use crate::{mem::paging::FRAME_ALLOCATOR, utils::stack::Stack};
 
 use super::context::Context;
 
@@ -107,41 +107,14 @@ impl Process {
         /*
          * Allocate and map the user stack for the process.
          */
-        {
-            let page_range = {
-                let start_addr = VirtAddr::new(0x80000000);
-                let end_addr = start_addr + 0xFFFFu64;
+        let process_stack = {
+            let address = unsafe { VirtAddr::new_unsafe(0x80000000) };
 
-                let start_page: Page = Page::containing_address(start_addr);
-                let end_page = Page::containing_address(end_addr);
+            Stack::allocate_user(offset_table, address, 0x10000)
+                .expect("Failed to allocate stack for the user process (size=0x10000, address=0x80000000)")
+        };
 
-                Page::range_inclusive(start_page, end_page)
-            };
-
-            for page in page_range {
-                let frame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
-
-                unsafe {
-                    offset_table.map_to(
-                        page,
-                        frame,
-                        PageTableFlags::PRESENT
-                            | PageTableFlags::NO_EXECUTE
-                            | PageTableFlags::WRITABLE
-                            | PageTableFlags::USER_ACCESSIBLE,
-                        &mut FRAME_ALLOCATOR,
-                    )
-                }
-                .unwrap()
-                .flush();
-            }
-
-            unsafe {
-                memset(0x80000000 as *mut u8, 0, 0x10000);
-            }
-        }
-
-        let stack_top = VirtAddr::new(0x80000000 + 0xFF00);
+        let stack_top = process_stack.stack_top();
         let entry_point = VirtAddr::new(elf_binary.header.pt2.entry_point());
 
         let mut context = Context::new();

@@ -1,6 +1,7 @@
 pub mod buffer;
 pub mod io;
 pub mod linker;
+pub mod stack;
 
 /// Push scratch registers.
 pub macro push_scratch() {
