@@ -114,7 +114,7 @@ impl Process {
 
         context.set_stack_top(stack_top);
         context.set_instruction_ptr(entry_point);
-        context.rflags = 0x2000;
+        context.rflags = 0x200;
 
         let process_id = ProcessId::new(PID_COUNTER.fetch_add(1, Ordering::AcqRel));
 

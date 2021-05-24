@@ -382,10 +382,10 @@ unsafe fn load_ss(selector: SegmentSelector) {
 
 #[inline(always)]
 unsafe fn load_tss(selector: SegmentSelector) {
-    asm!("ltr [rdi]", in("rdi") selector.bits(), options(nomem, nostack))
+    asm!("ltr {0:x}", in(reg) selector.bits(), options(nostack, nomem));
 }
 
 #[inline(always)]
 unsafe fn load_gdt(gdt_descriptor: *const GdtDescriptor) {
-    asm!("lgdt [rdi]", in("rdi") gdt_descriptor, options(nostack))
+    asm!("lgdt [{}]", in(reg) gdt_descriptor, options(nostack));
 }
