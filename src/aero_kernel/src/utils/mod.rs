@@ -3,6 +3,23 @@ pub mod io;
 pub mod linker;
 pub mod stack;
 
+pub fn validate_slice<T>(ptr: *const T, len: usize) -> Option<&'static [T]> {
+    if len == 0 {
+        Some(&[])
+    } else {
+        Some(unsafe { core::slice::from_raw_parts(ptr, len) })
+    }
+}
+
+pub fn validate_str(ptr: *const u8, len: usize) -> Option<&'static str> {
+    let slice = validate_slice(ptr, len)?;
+
+    match core::str::from_utf8(slice) {
+        Ok(string) => Some(string),
+        Err(_) => None,
+    }
+}
+
 /// Push scratch registers.
 pub macro push_scratch() {
     "

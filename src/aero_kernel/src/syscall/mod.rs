@@ -43,11 +43,12 @@ fn __inner_syscall(stack: &mut InterruptStack) -> usize {
 
     let result = match a {
         SYS_EXIT => process::exit(b),
+        SYS_OPEN => fs::open(b, c, d),
         SYS_WRITE => fs::write(b, c, d),
         _ => {
             log::error!("Invalid syscall: {:#x}", a);
 
-            Err(AeroSyscallError::Unknown)
+            Err(AeroSyscallError::ENOSYS)
         }
     };
 
