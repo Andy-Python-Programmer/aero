@@ -3,16 +3,16 @@ use spin::{Mutex, Once};
 
 use hashbrown::HashMap;
 
-use super::process::Process;
+use super::process::{Process, ProcessId};
 
 static SCHEDULER: Once<Scheduler> = Once::new();
 
 /// Container or a transparent struct containing a hashmap of all of the processes
 /// in the scheduler's queue protected by mutex. The hashmap has a key
-/// of `usize` (the process id) and a value of a reference-counting pointer
+/// of `ProcessId` and a value of a reference-counting pointer
 /// to the process or task.
 #[repr(transparent)]
-struct ProcessContainer(Mutex<HashMap<usize, Arc<Process>>>);
+struct ProcessContainer(Mutex<HashMap<ProcessId, Arc<Process>>>);
 
 impl ProcessContainer {
     /// Creates a new task container with no tasks by default.
@@ -24,7 +24,7 @@ impl ProcessContainer {
     /// Registers the provided `process` in the process container.
     #[inline]
     fn register_process(&self, process: Arc<Process>) {
-        self.0.lock().insert(process.pid, process);
+        self.0.lock().insert(process.process_id, process);
     }
 }
 

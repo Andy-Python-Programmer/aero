@@ -20,7 +20,7 @@ intel_fn! {
      * transparent struct. So after compilation the argument should result in u64 instead
      * of [VirtAddr].
      */
-    pub extern "asm" fn jump_userland(stack_top: VirtAddr, instruction_ptr: VirtAddr, rflags: u64) {
+    pub extern "asm" fn jump_userland(stack_top: VirtAddr, instruction_ptr: VirtAddr, argument: u64) {
         /*
          * After pushing all of the required registers on the stack
          * disable interrupts as we are swaping stacks. Interrupts are

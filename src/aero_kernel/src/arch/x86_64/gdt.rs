@@ -151,9 +151,6 @@ static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
 #[thread_local]
 pub static mut TASK_STATE_SEGMENT: Tss = Tss::new();
 
-#[thread_local]
-static FAULT_STACK: [u8; 256] = [0; 256];
-
 struct GdtAccessFlags;
 
 impl GdtAccessFlags {
@@ -321,11 +318,9 @@ pub fn init(stack_top: VirtAddr) {
         GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
 
         let init_stack_addr = PTI_CPU_STACK.as_ptr() as usize + PTI_STACK_SIZE;
-        let fault_stack_addr = FAULT_STACK.as_ptr() as usize + mem::size_of::<&[u8; 256]>();
 
         TASK_STATE_SEGMENT.rsp[0] = init_stack_addr as _;
         TASK_STATE_SEGMENT.rsp[0] = stack_top.as_u64();
-        TASK_STATE_SEGMENT.ist[0] = fault_stack_addr as u64;
 
         let gdt_descriptor = GdtDescriptor::new(
             (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,

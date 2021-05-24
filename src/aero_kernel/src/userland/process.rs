@@ -14,24 +14,16 @@ use crate::{mem::paging::FRAME_ALLOCATOR, utils::stack::Stack};
 
 use super::context::Context;
 
-/// The process id counter. Increment after a new process is created.
-static PID_COUNTER: PIDCounter = PIDCounter::new();
+static PID_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(transparent)]
-struct PIDCounter(AtomicUsize);
+pub struct ProcessId(usize);
 
-impl PIDCounter {
-    /// Create a new process id counter.
+impl ProcessId {
     #[inline(always)]
-    const fn new() -> Self {
-        Self(AtomicUsize::new(1))
-    }
-
-    /// Increment the process id by 1.
-    #[inline(always)]
-    fn next(&self) -> usize {
-        self.0.fetch_add(1, Ordering::AcqRel)
+    const fn new(pid: usize) -> Self {
+        Self(pid)
     }
 }
 
@@ -43,7 +35,7 @@ pub enum ProcessState {
 pub struct Process {
     context: Context,
 
-    pub pid: usize,
+    pub process_id: ProcessId,
     pub entry_point: VirtAddr,
     pub state: ProcessState,
 }
@@ -110,8 +102,9 @@ impl Process {
         let process_stack = {
             let address = unsafe { VirtAddr::new_unsafe(0x80000000) };
 
-            Stack::allocate_user(offset_table, address, 0x10000)
-                .expect("Failed to allocate stack for the user process (size=0x10000, address=0x80000000)")
+            Stack::allocate_user(offset_table, address, 0x10000).expect(
+                "Failed to allocate stack for the user process (size=0x10000, address=0x80000000)",
+            )
         };
 
         let stack_top = process_stack.stack_top();
@@ -123,9 +116,11 @@ impl Process {
         context.set_instruction_ptr(entry_point);
         context.rflags = 0x2000;
 
+        let process_id = ProcessId::new(PID_COUNTER.fetch_add(1, Ordering::AcqRel));
+
         let this = Self {
             context,
-            pid: PID_COUNTER.next(),
+            process_id,
             entry_point,
             state: ProcessState::Running,
         };
