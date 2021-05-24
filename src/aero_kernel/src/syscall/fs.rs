@@ -14,7 +14,7 @@ use aero_syscall::AeroSyscallError;
 use crate::{fs::Path, userland::scheduler, utils::validate_str};
 
 pub fn write(fd: usize, buf: usize, len: usize) -> Result<usize, AeroSyscallError> {
-    log::trace!("sys_write(fd={:#x}, buf={:#x}, len={:#x})", fd, buf, len);
+    log::trace!("SYS_WRITE (fd={:#x}, buf={:#x}, len={:#x})", fd, buf, len);
 
     let current_task = scheduler::get_scheduler()
         .active_task_ref()
@@ -30,7 +30,7 @@ pub fn write(fd: usize, buf: usize, len: usize) -> Result<usize, AeroSyscallErro
 
 pub fn open(path: usize, len: usize, mode: usize) -> Result<usize, AeroSyscallError> {
     log::trace!(
-        "sys_open(path={:#x}, len={:#x}, mode={:#x})",
+        "SYS_OPEN (path={:#x}, len={:#x}, mode={:#x})",
         path,
         len,
         mode
