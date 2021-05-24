@@ -1,4 +1,5 @@
 [workspace]
 members = [
     "aero_shell",
+    "std"
 ]

@@ -7,6 +7,7 @@ name = "aero_shell"
 version = "0.1.0"
 dependencies = [
  "aero_syscall",
+ "std",
 ]
 
 [[package]]
@@ -61,4 +62,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b87bbf98cb81332a56c1ee8929845836f85e8ddd693157c30d76660196014478"
 dependencies = [
  "lock_api",
+]
+
+[[package]]
+name = "std"
+version = "0.1.0"
+dependencies = [
+ "aero_syscall",
 ]

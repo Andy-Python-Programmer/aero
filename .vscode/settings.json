@@ -1,6 +1,7 @@
 {
     "rust-analyzer.linkedProjects": [
-        "./src/Cargo.toml"
+        "./src/Cargo.toml",
+        "./userland/Cargo.toml"
     ],
     "rust-analyzer.checkOnSave.allTargets": false,
     "rust-analyzer.checkOnSave.extraArgs": [
