@@ -33,3 +33,15 @@ pub fn syscall_result_as_usize(result: AeroSyscallResult) -> usize {
 pub fn sys_exit(status: usize) -> usize {
     unsafe { syscall1(prelude::SYS_EXIT, status) }
 }
+
+#[inline(always)]
+pub fn sys_write(fd: usize, buf: &[u8]) -> usize {
+    unsafe {
+        syscall3(
+            prelude::SYS_WRITE,
+            fd as usize,
+            buf.as_ptr() as usize,
+            buf.len(),
+        )
+    }
+}

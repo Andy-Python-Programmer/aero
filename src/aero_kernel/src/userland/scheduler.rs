@@ -26,6 +26,10 @@ impl ProcessContainer {
     fn register_process(&self, process: Arc<Process>) {
         self.0.lock().insert(process.process_id, process);
     }
+
+    fn find_process_by_id(&self, id: ProcessId) -> Option<Arc<Process>> {
+        self.0.lock().get(&id).cloned()
+    }
 }
 
 pub struct Scheduler {
@@ -53,6 +57,15 @@ impl Scheduler {
         unsafe {
             super::jump_userland(stack_top, instruction_ptr, rflags);
         }
+    }
+
+    pub fn active_task_ref(&self) -> Option<Arc<Process>> {
+        /*
+         * FIXME(Andy-Python-Programmer): Support multiple processes. Currently
+         * we can only run one which is royal pain :D
+         */
+
+        self.processes.find_process_by_id(ProcessId::new(1))
     }
 }
 

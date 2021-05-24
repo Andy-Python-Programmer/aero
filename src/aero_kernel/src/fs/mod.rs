@@ -3,6 +3,7 @@ use alloc::{collections::BTreeMap, sync::Arc};
 use spin::RwLock;
 
 pub mod devfs;
+pub mod file_table;
 
 static FILE_SYSTEMS: RwLock<BTreeMap<usize, Arc<dyn FileSystem>>> = RwLock::new(BTreeMap::new());
 

@@ -9,7 +9,7 @@ use xmas_elf::{
     ElfFile,
 };
 
-use crate::prelude::*;
+use crate::{fs::file_table::FileTable, prelude::*};
 use crate::{mem::paging::FRAME_ALLOCATOR, utils::stack::Stack};
 
 use super::context::Context;
@@ -22,7 +22,7 @@ pub struct ProcessId(usize);
 
 impl ProcessId {
     #[inline(always)]
-    const fn new(pid: usize) -> Self {
+    pub(super) const fn new(pid: usize) -> Self {
         Self(pid)
     }
 }
@@ -35,6 +35,7 @@ pub enum ProcessState {
 pub struct Process {
     context: Context,
 
+    pub file_table: FileTable,
     pub process_id: ProcessId,
     pub entry_point: VirtAddr,
     pub state: ProcessState,
@@ -117,9 +118,11 @@ impl Process {
         context.rflags = 0x200;
 
         let process_id = ProcessId::new(PID_COUNTER.fetch_add(1, Ordering::AcqRel));
+        let file_table = FileTable::new();
 
         let this = Self {
             context,
+            file_table,
             process_id,
             entry_point,
             state: ProcessState::Running,

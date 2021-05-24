@@ -33,8 +33,8 @@ fn __inner_syscall(stack: &mut InterruptStack) -> usize {
     let b = scratch.rdi;
     let c = scratch.rsi;
     let d = scratch.rdx;
-    let e = scratch.r10;
-    let f = scratch.r8;
+    // let e = scratch.r10;
+    // let f = scratch.r8;
 
     match a {
         SYS_EXIT => {}
@@ -43,6 +43,7 @@ fn __inner_syscall(stack: &mut InterruptStack) -> usize {
 
     let result = match a {
         SYS_EXIT => process::exit(b),
+        SYS_WRITE => fs::write(b, c, d),
         _ => {
             log::error!("Invalid syscall: {:#x}", a);
 
