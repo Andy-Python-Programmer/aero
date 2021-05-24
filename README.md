@@ -1,6 +1,6 @@
 # Areo
 
-**Aero** is a new modern, experimental, unix based operating system written in Rust. Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and the Zircon Kernel.
+**Aero** is a new modern, experimental, unix-like operating system written in Rust. Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and the Zircon Kernel.
 
 Please make sure you use the **latest nightly** of rustc before building Aero.
 
@@ -29,11 +29,11 @@ Check out [ROADMAP.md](ROADMAP.md) for this month's roadmap.
 To build and run aero:
 
 ```sh
-$ cargo boot run
+$ cargo aero run
 ```
 
 ## Chainloading
-Chainloading is a technique that allows one bootloader to call another bootloader as if the system had just booted up. Aero's bootloader has support for chainloading. Check out the Aero Chainloading docs to get more information about how to use this feature.
+Chainloading is a technique that allows one bootloader to call another bootloader as if the system had just booted up. Aero's bootloader has support for chainloading. Check out the [Aero Chainloading](docs/chainloading.md) docs to get more information about how to use this feature.
 
 ## Contributing
 Contributions are absolutely, positively welcome and encouraged! Check out [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guidelines for aero.
