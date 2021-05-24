@@ -1,3 +1,14 @@
+/*
+ * Copyright 2021 The Aero Project Developers. See the COPYRIGHT
+ * file at the top-level directory of this project.
+ *
+ * Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+ * http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+ * <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+ * option. This file may not be copied, modified, or distributed
+ * except according to those terms.
+ */
+
 //! Thread Local Storage (TLS) are per-thread global variables. On 64-bit each CPU core's
 //! `fs` GDT segment points to the thread local memory area where the thread local static's
 //! live. TLS statics are simply accessed through an offset from `fs`.
