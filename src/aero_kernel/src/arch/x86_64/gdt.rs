@@ -20,7 +20,7 @@ bitflags::bitflags! {
     /// Specifies which element to load into a segment from
     /// descriptor tables (i.e., is a index to LDT or GDT table
     /// with some additional flags).
-    struct SegmentSelector: u16 {
+    pub struct SegmentSelector: u16 {
         const RPL_0 = 0b00;
         const RPL_1 = 0b01;
         const RPL_2 = 0b10;

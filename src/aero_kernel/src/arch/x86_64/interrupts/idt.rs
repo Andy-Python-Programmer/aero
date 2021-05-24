@@ -23,8 +23,8 @@ static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
 
 use bitflags::bitflags;
 use core::mem::size_of;
-use x86_64::VirtAddr;
 
+use crate::arch::gdt::SegmentSelector;
 use crate::utils::io;
 
 bitflags! {
@@ -66,16 +66,6 @@ bitflags! {
         /// instruction fetch.
         const INSTRUCTION_FETCH = 1 << 4;
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub struct InterruptStackFrame {
-    pub instruction_pointer: VirtAddr,
-    pub code_segment: u64,
-    pub cpu_flags: u64,
-    pub stack_pointer: VirtAddr,
-    pub stack_segment: u64,
 }
 
 #[repr(C, packed)]
@@ -169,6 +159,12 @@ pub struct IretRegisters {
     pub rflags: usize,
     pub rsp: usize,
     pub ss: usize,
+}
+
+impl IretRegisters {
+    pub fn is_user(&self) -> bool {
+        SegmentSelector::from_bits_truncate(self.cs as u16).contains(SegmentSelector::RPL_3)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

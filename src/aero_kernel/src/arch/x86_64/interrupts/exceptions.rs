@@ -9,6 +9,10 @@ macro interrupt_exception(fn $name:ident() => $message:expr) {
         fn $name(stack: &mut InterruptErrorStack) {
             log::error!("EXCEPTION: {}\n\nStack: {:#x?}", $message, stack);
 
+            if stack.stack.iret.is_user() {
+                loop {}
+            }
+
             $crate::unwind::unwind_stack_trace();
 
             unsafe {
@@ -64,6 +68,10 @@ interrupt_error_stack!(
             PageFaultErrorCode::from_bits_truncate(stack.code as u64),
             stack.stack,
         );
+
+        if stack.stack.iret.is_user() {
+            loop {}
+        }
 
         unwind::unwind_stack_trace();
 
