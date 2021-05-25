@@ -25,8 +25,11 @@ use alloc::alloc::alloc_zeroed;
 
 use spin::Once;
 
+use crate::arch::gdt::TASK_STATE_SEGMENT;
 use crate::utils::io;
 use crate::utils::linker::LinkerSymbol;
+
+use crate::prelude::*;
 
 static THREAD_LOCAL_STORAGE: Once<ThreadLocalStorage> = Once::new();
 
@@ -93,7 +96,7 @@ pub fn init() {
     }
 
     let tcb_ptr = ((tls_raw_ptr as u64) + (total_size as u64)) as *mut u64;
-    let tcb_offset = tcb_ptr as usize;
+    let tcb_offset = tcb_ptr as u64;
 
     /*
      * Set the FS base segment to the tcb_offset to enable thread locals and
@@ -105,15 +108,56 @@ pub fn init() {
     unsafe {
         io::wrmsr(io::IA32_FS_BASE, tcb_offset as u64);
 
-        *tcb_ptr = tcb_offset as u64;
+        *tcb_ptr = tcb_offset;
     }
 
-    THREAD_LOCAL_STORAGE.call_once(move || ThreadLocalStorage::new(tls_offset, tcb_offset));
+    THREAD_LOCAL_STORAGE
+        .call_once(move || ThreadLocalStorage::new(tls_offset, tcb_offset as usize));
 
     // SAFTEY: Safe to access thread local variables as at this point are accessible.
+    unsafe {
+        TASK_STATE_SEGMENT.set_kernel_fs(tcb_offset as u64);
+    }
+}
+
+intel_fn! {
+    /*
+     * This function is responsible for restoring the kernel thread local
+     * storage. Since this function is called on every syscall, it needs to
+     * be implemented in assembly to avoid lots of rust checks comming in place.
+     *
+     * ## `#[allow(unused)]`
+     * Since this function is only invoked in assembly, we need to add the attribute
+     * `unused` as the [intel_fn] macro auto externs the functions for us.
+     *
+     * ## Saftey
+     * Needs to be called under locked conditions. Ie. You need to call `swapgs` before
+     * invoking this function.
+     */
+    #[allow(unused)]
+    pub extern "asm" fn restore_kernel_tls() {
+        "push rbx\n",
+        "push rdx\n",
+        "push rcx\n",
+        "push rax\n",
+
+        "mov rbx, QWORD PTR gs:[104]\n", // Offset into TSS holding kernel tls base the current cpu.
+        "mov ecx, 0xC0000100\n", // IA32_FS_BASE
+
+        "mov eax, ebx\n",
+        "shr rbx, 32\n",
+        "mov edx, ebx\n",
+
+        "wrmsr\n",
+
+        "pop rax\n",
+        "pop rcx\n",
+        "pop rdx\n",
+        "pop rbx\n",
+
+        "ret\n",
+    }
 }
 
 #[no_mangle]
-extern "C" fn restore_user_tls() {
-    log::debug!("Loaded userland TLS");
-}
+extern "C" fn restore_user_tls() {}

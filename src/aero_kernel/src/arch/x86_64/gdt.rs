@@ -278,20 +278,27 @@ pub struct Tss {
 
     /// The 16-bit offset to the I/O permission bit map from the 64-bit TSS base.
     iomap_base: u16,
+    kernel_fs: u64,
 }
 
 impl Tss {
     #[inline]
     const fn new() -> Self {
         Self {
-            reserved: 0,
+            reserved: 0x00,
             rsp: [0; 3],
-            reserved2: 0,
+            reserved2: 0x00,
             ist: [0; 7],
-            reserved3: 0,
-            reserved4: 0,
+            reserved3: 0x00,
+            reserved4: 0x00,
             iomap_base: 0xFFFF,
+            kernel_fs: 0x00,
         }
+    }
+
+    #[inline(always)]
+    pub fn set_kernel_fs(&mut self, kernel_fs: u64) {
+        self.kernel_fs = kernel_fs;
     }
 }
 

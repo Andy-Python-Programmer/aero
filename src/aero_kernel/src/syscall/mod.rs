@@ -116,6 +116,8 @@ intel_fn! {
         "push QWORD PTR 6 * 8 + 3\n", // Push fake CS resembling `iret` stack frame.
         "push rcx\n", // Push userspace return pointer.
 
+        "call restore_kernel_tls\n", // Restore the kernel thread local storage.
+
         "push rax\n",
         crate::prelude::push_scratch!(),
         crate::prelude::push_preserved!(),
@@ -123,6 +125,9 @@ intel_fn! {
 
         "mov rdi, rsp\n",
         "call __impl_syscall_handler\n", // Call the inner syscall handler function.
+
+        "cli\n", // Renabled after `sysretq`. To be safe as we are doing `swapfs`.
+        "call restore_user_tls\n", // Restore the userland thread local storage.
 
         crate::prelude::pop_fs!(),
         crate::prelude::pop_preserved!(),

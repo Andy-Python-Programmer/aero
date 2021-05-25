@@ -140,7 +140,7 @@ pub macro intel_fn {
         $(pub extern "asm" $label_name:expr => { $($label_body:expr,)+ })*
     ) => {
         $(#[$total])*
-        crate::utils::intel_asm!(
+        $crate::utils::intel_asm!(
             ".global ", stringify!($name), "\n",
             ".type ", stringify!($name), ", @function\n",
             ".section .text.", stringify!($name), ", \"ax\", @progbits\n",
