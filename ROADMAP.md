@@ -1,3 +1,17 @@
+## Roadmap May - June 2021
+- [x] Load a shell as a seperate program and run it
+- [x] `sysret` vulnerability
+- [x] Refactors
+- [x] Higher Half kernel
+- [x] Minimal standard library
+- [x] Thread Local Storage (Per-Cpu storage)
+- [x] Improved logger
+- [x] Store logs in ring buffer
+- [x] Devfs
+- [ ] Filesystem table isolated for each process
+- [ ] Re-implement the APIC trampoline in more clean manner
+- [ ] Kernel drivers
+
 ## Roadmap April - May 2021
 - [x] Task State Segment
 - [x] New Aero UEFI bootloader
@@ -7,11 +21,11 @@
 - [x] Enter ring 3
 - [x] ELF file parser
 - [x] Load the kernel as an ELF file
-- [ ] Task Scheduler - *Work in progress*
-- [ ] Exit syscall - *Work in progress*
-- [ ] IO Apic
-- [ ] AHCI read and write using DMA (Direct memory access)
-- [ ] MADT table - Unlock the full potential of the CPU(s)
+- [x] 64-bit `syscall` instruction handler
+- [x] Basic Task Scheduler
+- [x] Exit syscall 
+- [x] IO Apic
+- [x] MADT table - Unlock the full potential of the CPU(s)
 
 
 ## Roadmap March - April 2021
