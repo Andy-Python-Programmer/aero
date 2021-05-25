@@ -26,8 +26,8 @@ static USERLAND_SHELL: &[u8] = include_bytes!("../../../../userland/target/x86_6
 
 intel_fn! {
     /**
-     * ## Notes
-     * Here its is fine to use [VirtAddr] as the argument type as it is represented as a
+     * ## Saftey
+     * Here its is *safe* to use [VirtAddr] as the argument type as it is represented as a
      * transparent struct. So after compilation the argument should result in u64 instead
      * of [VirtAddr].
      */
@@ -42,6 +42,15 @@ intel_fn! {
         "push rdi\n", // Param: stack_top
         "push rsi\n", // Param: instruction_ptr
         "push rdx\n", // Param: rflags
+
+        "mov ax, (6 << 3) | 3\n", // Set AX to user data segment with RPL 3
+
+        "mov ds, ax\n",
+        "mov es, ax\n",
+        "mov fs, ax\n",
+        "mov gs, ax\n",
+
+        // NOTE: We do not need to set SS as is handled by `sysretq.`
 
         "call restore_user_tls\n",
 
