@@ -131,7 +131,8 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
 
         let ptr = system_table
             .boot_services()
-            .allocate_pool(MemoryType::LOADER_DATA, max_mmap_size)?
+            .allocate_pool(MemoryType::LOADER_DATA, max_mmap_size)
+            .unwrap()
             .log();
 
         unsafe { slice::from_raw_parts_mut(ptr, max_mmap_size) }
