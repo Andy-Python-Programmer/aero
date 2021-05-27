@@ -9,7 +9,7 @@
  * except according to those terms.
  */
 
-use alloc::sync::Arc;
+use alloc::{collections::VecDeque, sync::Arc};
 use spin::{Mutex, Once};
 
 use hashbrown::HashMap;
@@ -26,7 +26,7 @@ static SCHEDULER: Once<Scheduler> = Once::new();
 struct ProcessContainer(Mutex<HashMap<ProcessId, Arc<Process>>>);
 
 impl ProcessContainer {
-    /// Creates a new task container with no tasks by default.
+    /// Creates a new process container with no processes by default.
     #[inline]
     fn new() -> Self {
         Self(Mutex::new(HashMap::new()))
@@ -38,13 +38,37 @@ impl ProcessContainer {
         self.0.lock().insert(process.process_id, process);
     }
 
-    fn find_process_by_id(&self, id: ProcessId) -> Option<Arc<Process>> {
+    fn find_by_id(&self, id: ProcessId) -> Option<Arc<Process>> {
         self.0.lock().get(&id).cloned()
     }
 }
 
+/// Scheduler queue containing a vector of all of the process id's of the enqueued
+/// processes.
+#[repr(transparent)]
+struct ProcessQueue(Mutex<VecDeque<ProcessId>>);
+
+impl ProcessQueue {
+    /// Creates a new process queue with no processes by default.
+    #[inline]
+    fn new() -> Self {
+        Self(Mutex::new(VecDeque::new()))
+    }
+
+    /// Registers the provided `process` in the process queue.
+    #[inline]
+    fn register_process(&self, process_id: ProcessId) {
+        self.0.lock().push_back(process_id);
+    }
+
+    fn front(&self) -> Option<ProcessId> {
+        self.0.lock().pop_front()
+    }
+}
+
 pub struct Scheduler {
-    processes: ProcessContainer,
+    process_container: ProcessContainer,
+    process_queue: ProcessQueue,
 }
 
 impl Scheduler {
@@ -52,21 +76,36 @@ impl Scheduler {
     #[inline]
     fn new() -> Self {
         Self {
-            processes: ProcessContainer::new(),
+            process_container: ProcessContainer::new(),
+            process_queue: ProcessQueue::new(),
         }
     }
 
-    pub fn push(&self, process: Arc<Process>) {
-        let context = process.get_context_ref();
+    pub fn register_process(&self, process: Arc<Process>) {
+        self.process_queue.register_process(process.process_id);
+        self.process_container.register_process(process);
+    }
 
-        let instruction_ptr = context.get_instruction_ptr();
-        let stack_top = context.get_stack_top();
-        let rflags = context.rflags;
+    pub fn reschedule(&self) -> bool {
+        if let Some(process_id) = self.process_queue.front() {
+            let process = self
+                .process_container
+                .find_by_id(process_id)
+                .expect("Process not found in the process container");
 
-        self.processes.register_process(process);
+            let context = process.get_context_ref();
 
-        unsafe {
-            super::jump_userland(stack_top, instruction_ptr, rflags);
+            unsafe {
+                super::jump_userland(
+                    context.get_stack_top(),
+                    context.get_instruction_ptr(),
+                    context.rflags,
+                );
+            }
+
+            true
+        } else {
+            false
         }
     }
 
@@ -76,7 +115,7 @@ impl Scheduler {
          * we can only run one which is royal pain :D
          */
 
-        self.processes.find_process_by_id(ProcessId::new(1))
+        self.process_container.find_by_id(ProcessId::new(1))
     }
 }
 
@@ -85,10 +124,6 @@ pub fn get_scheduler() -> &'static Scheduler {
     SCHEDULER
         .get()
         .expect("Attempted to get the scheduler before it was initialized")
-}
-
-pub fn reschedule() -> bool {
-    true
 }
 
 /// Initialize the scheduler.
