@@ -68,6 +68,7 @@ impl AddressSpace {
 
     /// Returns a mutable reference to the page table allocated for this
     /// address space.
+    #[allow(unused)]
     pub fn page_table(&mut self) -> &'static mut PageTable {
         unsafe {
             let phys_addr = self.cr3.start_address();
@@ -80,6 +81,7 @@ impl AddressSpace {
 
     /// Returns a mutable refernce to the mapper pointing to the page table
     /// allocated for this address space.
+    #[allow(unused)]
     pub fn offset_page_table(&mut self) -> OffsetPageTable {
         unsafe { OffsetPageTable::new(self.page_table(), PHYSICAL_MEMORY_OFFSET) }
     }

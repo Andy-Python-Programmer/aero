@@ -121,7 +121,7 @@ pub fn init() {
 }
 
 intel_fn! {
-    /*
+    /**
      * This function is responsible for restoring the kernel thread local
      * storage. Since this function is called on every syscall, it needs to
      * be implemented in assembly to avoid lots of rust checks comming in place.

@@ -65,7 +65,7 @@ mod prelude {
     pub use crate::mem::{memcmp, memcpy, memmove, memset};
     pub use crate::rendy::{print, println};
     pub use crate::utils::{
-        const_unsafe, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
+        const_unsafe, downcast, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
         push_preserved, push_scratch,
     };
 }

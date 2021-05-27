@@ -13,8 +13,9 @@ use alloc::{collections::BTreeMap, sync::Arc};
 
 use spin::RwLock;
 
-pub mod devfs;
+pub mod dev_fs;
 pub mod file_table;
+pub mod inode;
 
 static FILE_SYSTEMS: RwLock<BTreeMap<usize, Arc<dyn FileSystem>>> = RwLock::new(BTreeMap::new());
 
@@ -48,6 +49,7 @@ pub enum AeroInvalidPath {
 #[derive(Debug)]
 pub enum AeroFilesystemError {
     DeviceExists,
+    NotSupported,
 }
 
 /// Structure that represents a path in a file system. This structure is a transparent
@@ -73,5 +75,5 @@ impl<'path> Path<'path> {
 }
 
 pub fn init() {
-    devfs::init().expect("Failed to initialize devfs");
+    dev_fs::init().expect("Failed to initialize devfs");
 }

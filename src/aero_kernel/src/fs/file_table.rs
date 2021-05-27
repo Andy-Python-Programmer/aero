@@ -14,9 +14,7 @@ use alloc::vec::Vec;
 
 use spin::RwLock;
 
-pub struct FileHandle {
-    fd: usize,
-}
+pub struct FileHandle(usize);
 
 #[repr(transparent)]
 pub struct FileTable(RwLock<Vec<Option<Arc<FileHandle>>>>);
