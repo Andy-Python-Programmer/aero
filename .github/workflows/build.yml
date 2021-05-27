@@ -25,9 +25,9 @@ jobs:
     - name: Install `rust-src` Rustup Component
       run: rustup component add rust-src llvm-tools-preview
     - name: Run build
-      run: cargo boot build
+      run: cargo aero build
     - name: Build Docs
-      run: cargo boot web
+      run: cargo aero web
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
