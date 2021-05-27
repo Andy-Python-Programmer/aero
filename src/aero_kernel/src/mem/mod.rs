@@ -13,6 +13,78 @@ pub mod alloc;
 pub mod paging;
 pub mod pti;
 
+use x86_64::structures::paging::mapper::MapToError;
+use x86_64::structures::paging::*;
+
+use self::paging::{active_level_4_table, FRAME_ALLOCATOR};
+use crate::PHYSICAL_MEMORY_OFFSET;
+
+/// Structure representing a *virtual* address space. The address space
+/// contains a reference of the page table allocated for this address space.
+pub struct AddressSpace {
+    cr3: PhysFrame,
+}
+
+impl AddressSpace {
+    /// Allocates a new *virtual* address space.
+    pub fn new() -> Result<Self, MapToError<Size4KiB>> {
+        let cr3 = unsafe {
+            let frame = FRAME_ALLOCATOR
+                .allocate_frame()
+                .ok_or(MapToError::FrameAllocationFailed)?;
+
+            let phys_addr = frame.start_address();
+            let virt_addr = PHYSICAL_MEMORY_OFFSET + phys_addr.as_u64();
+
+            let page_table: *mut PageTable = virt_addr.as_mut_ptr();
+            let page_table = &mut *page_table;
+
+            let current_table = active_level_4_table();
+
+            for i in 0..256 {
+                page_table[i].set_unused();
+            }
+
+            for i in 256..512 {
+                page_table[i] = current_table[i].clone();
+            }
+
+            page_table[511].set_frame(
+                frame,
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
+            );
+
+            frame
+        };
+
+        Ok(Self { cr3 })
+    }
+
+    /// Returns a reference to the page table frame allocated for this address
+    /// space.
+    pub fn cr3(&self) -> PhysFrame {
+        self.cr3
+    }
+
+    /// Returns a mutable reference to the page table allocated for this
+    /// address space.
+    pub fn page_table(&mut self) -> &'static mut PageTable {
+        unsafe {
+            let phys_addr = self.cr3.start_address();
+            let virt_addr = PHYSICAL_MEMORY_OFFSET + phys_addr.as_u64();
+            let page_table_ptr: *mut PageTable = virt_addr.as_mut_ptr();
+
+            &mut *page_table_ptr
+        }
+    }
+
+    /// Returns a mutable refernce to the mapper pointing to the page table
+    /// allocated for this address space.
+    pub fn offset_page_table(&mut self) -> OffsetPageTable {
+        unsafe { OffsetPageTable::new(self.page_table(), PHYSICAL_MEMORY_OFFSET) }
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
     let mut i = 0;

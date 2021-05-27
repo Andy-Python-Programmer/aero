@@ -20,7 +20,7 @@ use xmas_elf::{
     ElfFile,
 };
 
-use crate::{fs::file_table::FileTable, prelude::*};
+use crate::{fs::file_table::FileTable, mem::AddressSpace, prelude::*};
 use crate::{mem::paging::FRAME_ALLOCATOR, utils::stack::Stack};
 
 use super::context::Context;
@@ -53,7 +53,13 @@ pub struct Process {
 }
 
 impl Process {
-    /// Create a new process from the provided [ElfFile].
+    /// Allocates a new userland process from the provided executable ELF. This function
+    /// is responsible for mapping the loadable program headers, allocating the user stack,
+    /// creating the file tables, creating the userland address space which contains the userland
+    /// page tables and finally setting up the process context.
+    ///
+    /// ## Transition
+    /// Userland process transition is done through `sysretq` method.
     pub fn from_elf(offset_table: &mut OffsetPageTable, elf_binary: &ElfFile) -> Arc<Self> {
         let raw_binary = elf_binary.input.as_ptr();
 
@@ -122,11 +128,14 @@ impl Process {
         let stack_top = process_stack.stack_top();
         let entry_point = VirtAddr::new(elf_binary.header.pt2.entry_point());
 
+        let address_space = AddressSpace::new().unwrap();
+
         let mut context = Context::new();
 
         context.set_stack_top(stack_top);
         context.set_instruction_ptr(entry_point);
         context.rflags = 0x200;
+        context.cr3 = address_space.cr3().start_address().as_u64();
 
         let process_id = ProcessId::new(PID_COUNTER.fetch_add(1, Ordering::AcqRel));
         let file_table = FileTable::new();
