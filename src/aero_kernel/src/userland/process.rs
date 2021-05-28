@@ -12,7 +12,10 @@
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use x86_64::{structures::paging::*, VirtAddr};
+use x86_64::{
+    structures::paging::{mapper::MapToError, *},
+    VirtAddr,
+};
 
 use xmas_elf::{
     header,
@@ -25,8 +28,6 @@ use crate::{mem::paging::FRAME_ALLOCATOR, utils::stack::Stack};
 
 use super::context::Context;
 
-static PID_COUNTER: AtomicUsize = AtomicUsize::new(1);
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct ProcessId(usize);
@@ -35,6 +36,14 @@ impl ProcessId {
     #[inline(always)]
     pub(super) const fn new(pid: usize) -> Self {
         Self(pid)
+    }
+
+    /// Allocates a new process ID. The caller has to garuntee that
+    /// the scheduler is locked until you register the process.
+    fn allocate() -> Self {
+        static NEXT_PID: AtomicUsize = AtomicUsize::new(1);
+
+        Self::new(NEXT_PID.fetch_add(1, Ordering::AcqRel))
     }
 }
 
@@ -60,10 +69,15 @@ impl Process {
     ///
     /// ## Transition
     /// Userland process transition is done through `sysretq` method.
-    pub fn from_elf(offset_table: &mut OffsetPageTable, elf_binary: &ElfFile) -> Arc<Self> {
+    pub fn from_elf(
+        offset_table: &mut OffsetPageTable,
+        elf_binary: &ElfFile,
+    ) -> Result<Arc<Self>, MapToError<Size4KiB>> {
         let raw_binary = elf_binary.input.as_ptr();
 
         header::sanity_check(elf_binary).expect("The binary failed the sanity check");
+
+        let address_space = AddressSpace::new()?;
 
         for header in elf_binary.program_iter() {
             program::sanity_check(header, elf_binary).expect("Failed header sanity check");
@@ -91,10 +105,13 @@ impl Process {
                 }
 
                 for page in page_range {
-                    let frame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
+                    let frame = unsafe {
+                        FRAME_ALLOCATOR
+                            .allocate_frame()
+                            .ok_or(MapToError::FrameAllocationFailed)?
+                    };
 
-                    unsafe { offset_table.map_to(page, frame, flags, &mut FRAME_ALLOCATOR) }
-                        .unwrap()
+                    unsafe { offset_table.map_to(page, frame, flags, &mut FRAME_ALLOCATOR) }?
                         .flush();
                 }
 
@@ -120,35 +137,29 @@ impl Process {
         let process_stack = {
             let address = unsafe { VirtAddr::new_unsafe(0x80000000) };
 
-            Stack::allocate_user(offset_table, address, 0x10000).expect(
-                "Failed to allocate stack for the user process (size=0x10000, address=0x80000000)",
-            )
+            Stack::allocate_user(offset_table, address, 0x10000)?
         };
 
         let stack_top = process_stack.stack_top();
         let entry_point = VirtAddr::new(elf_binary.header.pt2.entry_point());
 
-        let address_space = AddressSpace::new().unwrap();
-
         let mut context = Context::new();
 
         context.set_stack_top(stack_top);
         context.set_instruction_ptr(entry_point);
-        context.rflags = 0x200;
+        context.rflags = 1 << 9; // Interrupts enabled
         context.cr3 = address_space.cr3().start_address().as_u64();
 
-        let process_id = ProcessId::new(PID_COUNTER.fetch_add(1, Ordering::AcqRel));
+        let process_id = ProcessId::allocate();
         let file_table = FileTable::new();
 
-        let this = Self {
+        Ok(Arc::new(Self {
             context,
             file_table,
             process_id,
             entry_point,
             state: ProcessState::Running,
-        };
-
-        Arc::new(this)
+        }))
     }
 
     pub(super) fn get_context_ref(&self) -> &Context {

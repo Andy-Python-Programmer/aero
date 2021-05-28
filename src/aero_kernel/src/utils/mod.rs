@@ -174,11 +174,3 @@ impl<T: Any + Send + Sync> Downcastable for T {
         self
     }
 }
-
-pub fn downcast<S, T>(arc: &Arc<S>) -> Option<Arc<T>>
-where
-    S: Downcastable + ?Sized,
-    T: Send + Sync + 'static,
-{
-    arc.clone().as_any().downcast::<T>().ok()
-}

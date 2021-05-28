@@ -65,7 +65,7 @@ intel_fn! {
 
 pub fn run(offset_table: &mut OffsetPageTable) -> Result<(), &'static str> {
     let shell_elf = ElfFile::new(USERLAND_SHELL)?;
-    let shell_process = Process::from_elf(offset_table, &shell_elf);
+    let shell_process = Process::from_elf(offset_table, &shell_elf).unwrap();
 
     scheduler::get_scheduler().register_process(shell_process);
 

@@ -14,31 +14,31 @@
 //! **Notes**: <https://wiki.osdev.org/Interrupt_Descriptor_Table>
 
 /// The count of the IDT entries.
-pub(crate) const IDT_ENTRIES: usize = 256;
+pub const IDT_ENTRIES: usize = 256;
 
-pub(crate) const PIC1_COMMAND: u16 = 0x20;
-pub(crate) const PIC1_DATA: u16 = 0x21;
+pub const PIC1_COMMAND: u16 = 0x20;
+pub const PIC1_DATA: u16 = 0x21;
 
-pub(crate) const PIC2_COMMAND: u16 = 0xA0;
-pub(crate) const PIC2_DATA: u16 = 0xA1;
+pub const PIC2_COMMAND: u16 = 0xA0;
+pub const PIC2_DATA: u16 = 0xA1;
 
-pub(crate) const PIC_EOI: u8 = 0x20;
+pub const PIC_EOI: u8 = 0x20;
 
-pub(crate) const ICW1_INIT: u8 = 0x10;
-pub(crate) const ICW1_ICW4: u8 = 0x01;
-pub(crate) const ICW4_8086: u8 = 0x01;
+pub const ICW1_INIT: u8 = 0x10;
+pub const ICW1_READ_ISR: u8 = 0x0B;
+pub const ICW1_ICW4: u8 = 0x01;
+pub const ICW4_8086: u8 = 0x01;
 
-pub(crate) type InterruptHandlerFn = unsafe extern "C" fn();
+pub type InterruptHandlerFn = unsafe extern "C" fn();
 
 static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
 
-use bitflags::bitflags;
 use core::mem::size_of;
 
 use crate::arch::gdt::SegmentSelector;
 use crate::utils::io;
 
-bitflags! {
+bitflags::bitflags! {
     pub struct IDTFlags: u8 {
         const PRESENT = 1 << 7;
         const RING_0 = 0 << 5;
@@ -51,7 +51,7 @@ bitflags! {
     }
 }
 
-bitflags! {
+bitflags::bitflags! {
     /// Describes an page fault error code.
     #[repr(transparent)]
     pub struct PageFaultErrorCode: u64 {
@@ -243,7 +243,6 @@ pub fn init() {
         );
 
         load_idt(&idt_descriptor as *const _);
-        load_pic();
     }
 }
 
@@ -252,56 +251,10 @@ unsafe fn load_idt(idt_descriptor: *const IdtDescriptor) {
     asm!("lidt [{}]", in(reg) idt_descriptor, options(nostack));
 }
 
-#[inline]
-pub unsafe fn end_pic1() {
-    io::outb(PIC1_COMMAND, PIC_EOI);
-}
-
-#[inline]
-pub unsafe fn end_pic2() {
-    io::outb(PIC2_COMMAND, PIC_EOI);
-    io::outb(PIC1_COMMAND, PIC_EOI);
-}
-
 pub unsafe fn disable_pic() {
     io::outb(PIC1_DATA, 0xFF);
     io::wait();
 
     io::outb(PIC2_DATA, 0xFF);
-    io::wait();
-}
-
-pub unsafe fn load_pic() {
-    let (a1, a2);
-
-    a1 = io::inb(PIC1_DATA);
-    io::wait();
-
-    a2 = io::inb(PIC2_DATA);
-    io::wait();
-
-    io::outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
-    io::wait();
-    io::outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
-    io::wait();
-
-    io::outb(PIC1_DATA, 0x20);
-    io::wait();
-    io::outb(PIC2_DATA, 0x28);
-    io::wait();
-
-    io::outb(PIC1_DATA, 4);
-    io::wait();
-    io::outb(PIC2_DATA, 2);
-    io::wait();
-
-    io::outb(PIC1_DATA, ICW4_8086);
-    io::wait();
-    io::outb(PIC2_DATA, ICW4_8086);
-    io::wait();
-
-    io::outb(PIC1_DATA, a1);
-    io::wait();
-    io::outb(PIC2_DATA, a2);
     io::wait();
 }

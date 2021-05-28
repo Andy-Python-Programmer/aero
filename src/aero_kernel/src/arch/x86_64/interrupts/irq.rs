@@ -10,15 +10,14 @@
  */
 
 use super::interrupt;
+use crate::time;
 use crate::utils::io;
 use crate::{
     apic,
     drivers::{keyboard, mouse},
 };
-use crate::{
-    arch::interrupts::{end_pic1, end_pic2},
-    time,
-};
+
+use super::INTERRUPT_CONTROLLER;
 
 interrupt!(
     pub unsafe fn lapic_error(stack: &mut InterruptStack) {
@@ -35,7 +34,7 @@ interrupt!(
     pub unsafe fn pit(stack: &mut InterruptStack) {
         time::PIT.tick();
 
-        end_pic1();
+        INTERRUPT_CONTROLLER.eoi();
     }
 );
 
@@ -44,7 +43,7 @@ interrupt!(
         let scancode = io::inb(0x60);
 
         keyboard::handle(scancode);
-        end_pic1();
+        INTERRUPT_CONTROLLER.eoi();
     }
 );
 
@@ -53,6 +52,6 @@ interrupt!(
         let data = io::inb(0x60);
 
         mouse::handle(data);
-        end_pic2();
+        INTERRUPT_CONTROLLER.eoi();
     }
 );

@@ -254,6 +254,13 @@ pub fn init() -> ApicType {
 
     LOCAL_APIC.call_once(move || Mutex::new(local_apic));
 
+    #[cfg(target_arch = "x86_64")]
+    {
+        use crate::arch::interrupts::INTERRUPT_CONTROLLER;
+
+        INTERRUPT_CONTROLLER.switch_to_apic();
+    }
+
     // Now disable PIC as local APIC is initialized.
     //
     // SAFTEY: Its safe to disable the PIC chip as now the local APIC is initialized.

@@ -65,16 +65,12 @@ mod prelude {
     pub use crate::mem::{memcmp, memcpy, memmove, memset};
     pub use crate::rendy::{print, println};
     pub use crate::utils::{
-        const_unsafe, downcast, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
+        const_unsafe, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
         push_preserved, push_scratch,
     };
 }
 
 use arch::interrupts;
-use arch::interrupts::{PIC1_DATA, PIC2_DATA};
-
-use utils::io;
-
 use userland::scheduler;
 
 #[global_allocator]
@@ -167,9 +163,6 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
      * as the PTI context switch functions depend on thread local globals.
      */
     unsafe {
-        io::outb(PIC1_DATA, 0b11111000);
-        io::outb(PIC2_DATA, 0b11101111);
-
         interrupts::enable_interrupts();
     }
 
