@@ -28,6 +28,7 @@
     thread_local,
     decl_macro,
     global_asm,
+    ptr_internals,
     extern_types,
     new_uninit,
     box_syntax,

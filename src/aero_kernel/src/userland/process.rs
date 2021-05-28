@@ -137,18 +137,23 @@ impl Process {
         let process_stack = {
             let address = unsafe { VirtAddr::new_unsafe(0x80000000) };
 
-            Stack::allocate_user(offset_table, address, 0x10000)?
+            Stack::new_user_pinned(offset_table, address, 0x10000)?
         };
 
         let stack_top = process_stack.stack_top();
         let entry_point = VirtAddr::new(elf_binary.header.pt2.entry_point());
 
-        let mut context = Context::new();
+        let context = {
+            let mut context = Context::new();
 
-        context.set_stack_top(stack_top);
-        context.set_instruction_ptr(entry_point);
-        context.rflags = 1 << 9; // Interrupts enabled
-        context.cr3 = address_space.cr3().start_address().as_u64();
+            context.set_stack_top(stack_top);
+            context.set_instruction_ptr(entry_point);
+            context.set_page_table(address_space.cr3().start_address());
+
+            context.rflags = 1 << 9; // Interrupts enabled
+
+            context
+        };
 
         let process_id = ProcessId::allocate();
         let file_table = FileTable::new();

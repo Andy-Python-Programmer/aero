@@ -18,8 +18,6 @@
 //! ## Notes
 //! * <https://wiki.osdev.org/Global_Descriptor_Table>
 
-#![cfg(target_arch = "x86_64")]
-
 use core::mem;
 
 use x86_64::VirtAddr;

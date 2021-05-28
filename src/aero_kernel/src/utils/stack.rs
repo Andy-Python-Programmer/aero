@@ -23,12 +23,13 @@ pub struct Stack {
 }
 
 impl Stack {
-    /// Allocates a user stack at the provided `stack_address` with the
-    /// provided stack size.
-    pub fn allocate_user(
+    /// Allocates a new stack at the provided stack address and the provided
+    /// stack size.
+    pub fn new_pinned(
         offset_table: &mut OffsetPageTable,
         stack_address: VirtAddr,
         stack_size: usize,
+        flags: PageTableFlags,
     ) -> Result<Self, MapToError<Size4KiB>> {
         cfg_if::cfg_if! {
             if #[cfg(target_arch = "x86_64")] {
@@ -61,7 +62,7 @@ impl Stack {
                     PageTableFlags::PRESENT
                         | PageTableFlags::NO_EXECUTE
                         | PageTableFlags::WRITABLE
-                        | PageTableFlags::USER_ACCESSIBLE,
+                        | flags,
                     &mut FRAME_ALLOCATOR,
                 )
             }?
@@ -76,6 +77,21 @@ impl Stack {
             stack_start: start_addr,
             stack_size,
         })
+    }
+
+    /// Allocates a user stack at the provided `stack_address` with the
+    /// provided stack size.
+    pub fn new_user_pinned(
+        offset_table: &mut OffsetPageTable,
+        stack_address: VirtAddr,
+        stack_size: usize,
+    ) -> Result<Self, MapToError<Size4KiB>> {
+        Self::new_pinned(
+            offset_table,
+            stack_address,
+            stack_size,
+            PageTableFlags::USER_ACCESSIBLE,
+        )
     }
 
     pub fn stack_top(&self) -> VirtAddr {

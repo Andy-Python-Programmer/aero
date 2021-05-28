@@ -139,15 +139,12 @@ impl LocalApic {
 
     #[inline(always)]
     unsafe fn read(&self, register: u32) -> u32 {
-        intrinsics::volatile_load((self.address + register as usize).as_u64() as *const u32)
+        intrinsics::volatile_load((self.address + register as u64).as_u64() as *const u32)
     }
 
     #[inline(always)]
     unsafe fn write(&mut self, register: u32, value: u32) {
-        intrinsics::volatile_store(
-            (self.address + register as usize).as_u64() as *mut u32,
-            value,
-        );
+        intrinsics::volatile_store((self.address + register as u64).as_u64() as *mut u32, value);
     }
 }
 
@@ -259,9 +256,11 @@ pub fn init() -> ApicType {
     {
         use crate::arch::interrupts::INTERRUPT_CONTROLLER;
 
-        // Now disable PIC as local APIC is initialized.
-        //
-        // SAFTEY: Its safe to disable the PIC chip as now the local APIC is initialized.
+        /*
+         * Now disable PIC as local APIC is initialized.
+         *
+         * SAFTEY: Its safe to disable the PIC chip as now the local APIC is initialized.
+         */
         INTERRUPT_CONTROLLER.switch_to_apic();
     }
 

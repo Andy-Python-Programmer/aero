@@ -119,7 +119,7 @@ impl Scheduler {
     }
 }
 
-/// Get a mutable reference to the active scheduler.
+/// Get a reference to the active scheduler.
 pub fn get_scheduler() -> &'static Scheduler {
     SCHEDULER
         .get()

@@ -9,7 +9,7 @@
  * except according to those terms.
  */
 
-use x86_64::VirtAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 #[repr(C)]
 pub(super) struct Context {
@@ -47,6 +47,10 @@ impl Context {
 
     pub fn set_instruction_ptr(&mut self, func: VirtAddr) {
         self.rip = func.as_u64();
+    }
+
+    pub fn set_page_table(&mut self, page_table: PhysAddr) {
+        self.cr3 = page_table.as_u64();
     }
 
     pub fn get_stack_top(&self) -> VirtAddr {
