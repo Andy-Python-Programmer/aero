@@ -16,8 +16,9 @@ use raw_cpuid::{CpuId, FeatureInfo};
 use spin::{Mutex, MutexGuard, Once};
 use x86_64::VirtAddr;
 
-use crate::{acpi::madt, arch::interrupts};
-use crate::{utils::io, PHYSICAL_MEMORY_OFFSET};
+use crate::acpi::madt;
+use crate::utils::io;
+use crate::PHYSICAL_MEMORY_OFFSET;
 
 const APIC_SPURIOUS_VECTOR: u32 = 0xFF;
 
@@ -258,14 +259,11 @@ pub fn init() -> ApicType {
     {
         use crate::arch::interrupts::INTERRUPT_CONTROLLER;
 
+        // Now disable PIC as local APIC is initialized.
+        //
+        // SAFTEY: Its safe to disable the PIC chip as now the local APIC is initialized.
         INTERRUPT_CONTROLLER.switch_to_apic();
     }
-
-    // Now disable PIC as local APIC is initialized.
-    //
-    // SAFTEY: Its safe to disable the PIC chip as now the local APIC is initialized.
-    unsafe { interrupts::disable_pic() };
-    log::info!("Disabled PIC");
 
     return apic_type;
 }

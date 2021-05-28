@@ -9,7 +9,7 @@
  * except according to those terms.
  */
 
-use super::interrupt;
+use super::{interrupt, interrupt_stack};
 use crate::time;
 use crate::utils::io;
 use crate::{
@@ -19,19 +19,8 @@ use crate::{
 
 use super::INTERRUPT_CONTROLLER;
 
-interrupt!(
-    pub unsafe fn lapic_error(stack: &mut InterruptStack) {
-        log::error!("Local apic error");
-        log::error!("ESR={:#0x}", apic::get_local_apic().get_esr());
-
-        apic::get_local_apic().eoi();
-
-        loop {}
-    }
-);
-
-interrupt!(
-    pub unsafe fn pit(stack: &mut InterruptStack) {
+interrupt_stack!(
+    pub unsafe fn pit_stack(stack: &mut InterruptStack) {
         time::PIT.tick();
 
         INTERRUPT_CONTROLLER.eoi();
@@ -39,7 +28,16 @@ interrupt!(
 );
 
 interrupt!(
-    pub unsafe fn keyboard(stack: &mut InterruptStack) {
+    pub unsafe fn lapic_error() {
+        log::error!("Local apic error");
+        log::error!("ESR={:#0x}", apic::get_local_apic().get_esr());
+
+        apic::get_local_apic().eoi();
+    }
+);
+
+interrupt!(
+    pub unsafe fn keyboard() {
         let scancode = io::inb(0x60);
 
         keyboard::handle(scancode);
@@ -48,7 +46,7 @@ interrupt!(
 );
 
 interrupt!(
-    pub unsafe fn mouse(stack: &mut InterruptStack) {
+    pub unsafe fn mouse() {
         let data = io::inb(0x60);
 
         mouse::handle(data);

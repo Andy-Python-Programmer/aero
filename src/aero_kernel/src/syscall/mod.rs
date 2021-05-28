@@ -31,7 +31,7 @@ pub use fs::*;
 pub use process::*;
 pub use time::*;
 
-use crate::arch::interrupts::{interrupt, InterruptStack};
+use crate::arch::interrupts::{interrupt_stack, InterruptStack};
 use crate::arch::{gdt::GdtEntryType, interrupts};
 
 use crate::prelude::*;
@@ -74,7 +74,7 @@ unsafe extern "C" fn __impl_syscall_handler(stack: *mut InterruptStack) {
     (*stack).scratch.rax = result;
 }
 
-interrupt!(
+interrupt_stack!(
     pub unsafe fn syscall_interrupt_handler(stack: &mut InterruptStack) {
         if supports_syscall_sysret() {
             // If the current CPU suppots syscall instruction then print

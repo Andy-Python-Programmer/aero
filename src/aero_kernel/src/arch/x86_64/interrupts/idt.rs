@@ -36,7 +36,6 @@ static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
 use core::mem::size_of;
 
 use crate::arch::gdt::SegmentSelector;
-use crate::utils::io;
 
 bitflags::bitflags! {
     pub struct IDTFlags: u8 {
@@ -228,7 +227,7 @@ pub fn init() {
         IDT[30].set_function(super::exceptions::security);
 
         // Set up the IRQs.
-        IDT[32].set_function(super::irq::pit);
+        IDT[32].set_function(super::irq::pit_stack);
         IDT[33].set_function(super::irq::keyboard);
         IDT[44].set_function(super::irq::mouse);
 
@@ -237,24 +236,20 @@ pub fn init() {
         IDT[0x80].set_flags(IDTFlags::PRESENT | IDTFlags::RING_3 | IDTFlags::INTERRUPT);
         IDT[0x80].set_offset(8, crate::syscall::syscall_interrupt_handler as usize);
 
+        IDT[0x40].set_function(super::ipi::wakeup);
+        IDT[0x41].set_function(super::ipi::tlb);
+        IDT[0x43].set_function(super::ipi::pit);
+
         let idt_descriptor = IdtDescriptor::new(
             ((IDT.len() * size_of::<IdtEntry>()) - 1) as u16,
             (&IDT as *const _) as u64,
         );
 
-        load_idt(&idt_descriptor as *const _);
+        load_idt(&idt_descriptor);
     }
 }
 
 #[inline]
-unsafe fn load_idt(idt_descriptor: *const IdtDescriptor) {
+unsafe fn load_idt(idt_descriptor: &IdtDescriptor) {
     asm!("lidt [{}]", in(reg) idt_descriptor, options(nostack));
-}
-
-pub unsafe fn disable_pic() {
-    io::outb(PIC1_DATA, 0xFF);
-    io::wait();
-
-    io::outb(PIC2_DATA, 0xFF);
-    io::wait();
 }

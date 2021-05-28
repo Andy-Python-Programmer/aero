@@ -11,13 +11,15 @@
 
 mod exceptions;
 mod idt;
+mod ipi;
 mod irq;
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 pub use idt::*;
 
-use crate::{apic, utils::io};
+use crate::apic;
+use crate::utils::io;
 
 lazy_static::lazy_static! {
     pub static ref PIC_CONTROLLER: PicController = PicController::new();
@@ -29,9 +31,6 @@ lazy_static::lazy_static! {
 
 /// The interrupt controller interface. The task of an interrupt controller is to
 /// end the interrupt, mask the interrupt, send ipi, etc...
-///
-/// ## Notes
-/// The trait requires the implementor to implement [Send] and [Sync].
 #[repr(transparent)]
 pub struct InterruptController {
     method: AtomicUsize,
@@ -59,7 +58,11 @@ impl InterruptController {
     /// Sets the interrupt controller to APIC.
     #[inline(always)]
     pub fn switch_to_apic(&self) {
-        self.method.store(1, Ordering::Release)
+        self.method.store(1, Ordering::Release);
+
+        unsafe {
+            PIC_CONTROLLER.disable();
+        }
     }
 }
 
@@ -178,6 +181,17 @@ impl PicController {
             }
         }
     }
+
+    /// Disables the PIC interrupt controller.
+    unsafe fn disable(&self) {
+        log::debug!("Disabled PIC");
+
+        io::outb(PIC1_DATA, 0xFF);
+        io::wait();
+
+        io::outb(PIC2_DATA, 0xFF);
+        io::wait();
+    }
 }
 
 /// Helper macro to generate an interrupt exception handler that expects an
@@ -230,8 +244,9 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
     }
 }
 
-/// Helper macro to generate an interrupt handler.
-pub macro interrupt(pub unsafe fn $name:ident($stack:ident: &mut InterruptStack) $code:block) {
+/// Helper macro to generate an interrupt handler that takes the interrupt stack as
+/// an argument.
+pub macro interrupt_stack(pub unsafe fn $name:ident($stack:ident: &mut InterruptStack) $code:block) {
     paste::item! {
         #[no_mangle]
         #[doc(hidden)]
@@ -262,6 +277,37 @@ pub macro interrupt(pub unsafe fn $name:ident($stack:ident: &mut InterruptStack)
 
                 $crate::prelude::pop_fs!(),
                 $crate::prelude::pop_preserved!(),
+                $crate::prelude::pop_scratch!(),
+
+                "iretq\n",
+            }
+        );
+    }
+}
+
+/// Helper macro that generates an interrupt handler that does *not* require the
+/// interrupt stack as an argument.
+pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
+    paste::item! {
+        #[no_mangle]
+        #[doc(hidden)]
+        unsafe extern "C" fn [<__interrupt_ $name>]() {
+            $code
+        }
+
+        $crate::utils::intel_fn!(
+            pub extern "asm" fn $name() {
+                "push rax\n",
+
+                $crate::prelude::push_scratch!(),
+
+                "call map_pti\n",
+
+                "mov rdi, rsp\n",
+                "call __interrupt_", stringify!($name), "\n",
+
+                "call unmap_pti\n",
+
                 $crate::prelude::pop_scratch!(),
 
                 "iretq\n",
