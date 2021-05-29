@@ -5,7 +5,9 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
 
 [features]
-default = []
+round-robin = []
+
+default = ["round-robin"]
 
 [dependencies]
 spin = "0.9"
