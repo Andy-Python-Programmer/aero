@@ -246,10 +246,20 @@ pub fn init() {
         );
 
         load_idt(&idt_descriptor);
+
+        /*
+         * Since lazy statics are initialized on the first derefence, we have to
+         * manually initialize the static as the first derefernce happen in an IRQ interrupt.
+         * That means that the controller will never be initialized as an IRQ interrupt requires
+         * the controller to be initialized.
+         */
+        lazy_static::initialize(&super::INTERRUPT_CONTROLLER);
+        lazy_static::initialize(&super::PIC_CONTROLLER);
+        lazy_static::initialize(&super::APIC_CONTROLLER);
     }
 }
 
-#[inline]
+#[inline(always)]
 unsafe fn load_idt(idt_descriptor: &IdtDescriptor) {
     asm!("lidt [{}]", in(reg) idt_descriptor, options(nostack));
 }
