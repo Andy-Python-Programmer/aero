@@ -9,8 +9,10 @@
  * except according to those terms.
  */
 
-use alloc::sync::Arc;
-use core::any::Any;
+use alloc::{alloc::alloc_zeroed, sync::Arc};
+use core::{alloc::Layout, any::Any, cell::UnsafeCell, mem, ptr::Unique, sync::atomic::Ordering};
+
+use crate::apic::CPU_COUNT;
 
 pub mod buffer;
 pub mod io;
@@ -172,5 +174,44 @@ pub trait Downcastable: Any + Send + Sync {
 impl<T: Any + Send + Sync> Downcastable for T {
     fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
         self
+    }
+}
+
+pub struct PerCpu<T> {
+    data: UnsafeCell<Unique<T>>,
+}
+
+impl<T> PerCpu<T> {
+    pub const fn new_uninit() -> PerCpu<T> {
+        PerCpu::<T> {
+            data: UnsafeCell::new(Unique::dangling()),
+        }
+    }
+
+    pub fn new(init: fn() -> T) -> PerCpu<T> {
+        let mut this = PerCpu::<T>::new_uninit();
+
+        let cpu_count = CPU_COUNT.load(Ordering::SeqCst);
+
+        let size = mem::size_of::<T>() * cpu_count;
+        let raw = unsafe { alloc_zeroed(Layout::from_size_align_unchecked(size, 8)) as *mut T };
+
+        unsafe {
+            for i in 0..cpu_count {
+                raw.add(i).write(init());
+            }
+
+            this.data = UnsafeCell::new(Unique::new_unchecked(raw));
+        }
+
+        this
+    }
+
+    pub fn as_mut_ptr(&self) -> *mut T {
+        unsafe { (&mut *self.data.get()).as_mut() }
+    }
+
+    pub fn get(&self) -> &T {
+        unsafe { &*self.as_mut_ptr() }
     }
 }

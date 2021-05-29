@@ -1,7 +1,7 @@
 use alloc::{collections::VecDeque, sync::Arc};
-use spin::Mutex;
+use spin::{mutex::spin::SpinMutex, Mutex};
 
-use crate::userland::process::Process;
+use crate::{userland::process::Process, utils::PerCpu};
 
 use super::SchedulerInterface;
 
@@ -29,7 +29,7 @@ impl ProcessQueue {
 }
 
 pub struct RoundRobin {
-    queue: ProcessQueue,
+    queue: PerCpu<(SpinMutex<()>, ProcessQueue)>,
 }
 
 impl RoundRobin {
@@ -39,18 +39,22 @@ impl RoundRobin {
     /// algorithm requires.
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
-            queue: ProcessQueue::new(),
+            queue: PerCpu::new(|| (SpinMutex::new(()), ProcessQueue::new())),
         })
     }
 }
 
 impl SchedulerInterface for RoundRobin {
     fn register_process(&self, process: Arc<Process>) {
-        self.queue.register_process(process);
+        let (_, queue) = self.queue.get();
+
+        queue.register_process(process);
     }
 
     fn reschedule(&self) -> bool {
-        if let Some(process) = self.queue.front() {
+        let (_, queue) = self.queue.get();
+
+        if let Some(process) = queue.front() {
             let context = process.get_context_ref();
 
             unsafe {
