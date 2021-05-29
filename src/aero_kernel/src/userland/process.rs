@@ -11,6 +11,7 @@
 
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicUsize, Ordering};
+use spin::mutex::spin::SpinMutex;
 
 use x86_64::{
     structures::paging::{mapper::MapToError, *},
@@ -28,7 +29,7 @@ use crate::{mem::paging::FRAME_ALLOCATOR, utils::stack::Stack};
 
 use super::context::Context;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct ProcessId(usize);
 
@@ -66,7 +67,31 @@ impl Process {
     /// which is executed when there are no runnable processes in the scheduler's
     /// queue.
     #[allow(unused)]
-    pub fn new_idle() {}
+    pub fn new_idle() -> Arc<SpinMutex<Process>> {
+        let stack = Stack::new_kernel(0x1000);
+
+        let stack_top = stack.stack_top();
+        let entry_point = VirtAddr::new(0xcafebabe);
+
+        let context = {
+            let mut context = Context::new();
+
+            context.set_stack_top(stack_top);
+            context.set_instruction_ptr(entry_point);
+
+            context.rflags = 1 << 9; // Interrupts enabled
+
+            context
+        };
+
+        Arc::new(SpinMutex::new(Self {
+            context,
+            file_table: FileTable::new(),
+            process_id: ProcessId::allocate(),
+            entry_point,
+            state: ProcessState::Running,
+        }))
+    }
 
     /// Allocates a new userland process from the provided executable ELF. This function
     /// is responsible for mapping the loadable program headers, allocating the user stack,
@@ -78,7 +103,7 @@ impl Process {
     pub fn from_elf(
         offset_table: &mut OffsetPageTable,
         elf_binary: &ElfFile,
-    ) -> Result<Arc<Self>, MapToError<Size4KiB>> {
+    ) -> Result<Arc<SpinMutex<Self>>, MapToError<Size4KiB>> {
         let raw_binary = elf_binary.input.as_ptr();
 
         header::sanity_check(elf_binary).expect("The binary failed the sanity check");
@@ -164,13 +189,13 @@ impl Process {
         let process_id = ProcessId::allocate();
         let file_table = FileTable::new();
 
-        Ok(Arc::new(Self {
+        Ok(Arc::new(SpinMutex::new(Self {
             context,
             file_table,
             process_id,
             entry_point,
             state: ProcessState::Running,
-        }))
+        })))
     }
 
     pub(super) fn get_context_ref(&self) -> &Context {

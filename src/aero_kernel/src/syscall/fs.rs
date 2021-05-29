@@ -11,19 +11,19 @@
 
 use aero_syscall::AeroSyscallError;
 
-use crate::{fs::Path, userland::scheduler, utils::validate_str};
+use crate::{fs::Path, utils::validate_str};
 
 pub fn write(fd: usize, buf: usize, len: usize) -> Result<usize, AeroSyscallError> {
     log::trace!("SYS_WRITE (fd={:#x}, buf={:#x}, len={:#x})", fd, buf, len);
 
-    let current_task = scheduler::get_scheduler()
-        .active_task_ref()
-        .expect("`sys_write` was invoked with no active tasks running");
+    // let current_task = scheduler::active_task_ref();
 
-    current_task
-        .file_table
-        .get_handle(fd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+    // mem::drop(scheduler);
+
+    // current_task
+    //     .file_table
+    //     .get_handle(fd)
+    //     .ok_or(AeroSyscallError::EBADFD)?;
 
     Ok(0)
 }

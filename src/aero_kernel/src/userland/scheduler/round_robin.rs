@@ -1,14 +1,22 @@
 use alloc::{collections::VecDeque, sync::Arc};
-use spin::{mutex::spin::SpinMutex, Mutex};
+use spin::mutex::spin::SpinMutex;
 
-use crate::{arch::interrupts, userland::process::Process, utils::PerCpu};
+use crate::{
+    arch::interrupts,
+    userland::process::{Process, ProcessId},
+    utils::PerCpu,
+};
 
-use super::SchedulerInterface;
+use super::{SchedulerInterface, PROCESS_CONTAINER};
+use crate::userland::jump_userland;
 
 #[thread_local]
-static mut CURRENT_PROCESS: Option<Arc<Process>> = None;
+static mut CURRENT_PROCESS: Option<Arc<SpinMutex<Process>>> = None;
 
-fn set_current_process(process: &Arc<Process>) {
+#[thread_local]
+static mut IDLE_THREAD: Option<Arc<SpinMutex<Process>>> = None;
+
+fn set_current_process(process: &Arc<SpinMutex<Process>>) {
     // TODO(Andy-Python-Programmer): Instead of just disabling and enabling
     // interrupts, create an IRQ guard that stores if interrupt was enabled
     // and when the guard is dropped enable interupts if they were before.
@@ -22,22 +30,22 @@ fn set_current_process(process: &Arc<Process>) {
 /// Scheduler queue containing a vector of all of the process of the enqueued
 /// processes.
 #[repr(transparent)]
-struct ProcessQueue(Mutex<VecDeque<Arc<Process>>>);
+struct ProcessQueue(SpinMutex<VecDeque<ProcessId>>);
 
 impl ProcessQueue {
     /// Creates a new process queue with no processes by default.
     #[inline]
     fn new() -> Self {
-        Self(Mutex::new(VecDeque::new()))
+        Self(SpinMutex::new(VecDeque::new()))
     }
 
     /// Registers the provided `process` in the process queue.
     #[inline]
-    fn register_process(&self, process: Arc<Process>) {
-        self.0.lock().push_back(process);
+    fn register_process(&self, process_id: ProcessId) {
+        self.0.lock().push_back(process_id);
     }
 
-    fn front(&self) -> Option<Arc<Process>> {
+    fn front(&self) -> Option<ProcessId> {
         self.0.lock().pop_front()
     }
 }
@@ -59,6 +67,15 @@ impl RoundRobin {
     /// is to initialize the per-cpu queues that the round robin scheduling
     /// algorithm requires.
     pub fn new() -> Arc<Self> {
+        let idle_process = Process::new_idle();
+        set_current_process(&idle_process);
+
+        unsafe {
+            interrupts::disable_interrupts();
+            IDLE_THREAD = Some(idle_process);
+            interrupts::enable_interrupts();
+        }
+
         Arc::new(Self {
             queue: PerCpu::new(|| (SpinMutex::new(()), ProcessQueue::new())),
         })
@@ -67,11 +84,10 @@ impl RoundRobin {
 
 impl SchedulerInterface for RoundRobin {
     /// Registers the provided process into the process queue of this CPU.
-    fn register_process(&self, process: Arc<Process>) {
+    fn register_process(&self, process_id: ProcessId) {
         let (_, queue) = self.queue.get();
 
-        set_current_process(&process);
-        queue.register_process(process);
+        queue.register_process(process_id);
     }
 
     fn reschedule(&self) -> bool {
@@ -81,23 +97,50 @@ impl SchedulerInterface for RoundRobin {
             CURRENT_PROCESS
                 .as_ref()
                 .expect("`reschedule` was invoked with no active previous task")
+                .clone()
         };
 
-        if let Some(new_process) = queue.front() {
-            let context = new_process.get_context_ref();
+        let new_process = {
+            match queue.front() {
+                Some(new_process) => PROCESS_CONTAINER
+                    .find_by_id(new_process)
+                    .expect("Unknown process in queue"),
 
-            unsafe {
-                super::super::jump_userland(
-                    context.get_stack_top(),
-                    context.get_instruction_ptr(),
-                    context.rflags,
-                );
+                None => unsafe {
+                    IDLE_THREAD
+                        .as_ref()
+                        .expect("IDLE thread was not initialized")
+                        .clone()
+                },
             }
+        };
 
-            true
-        } else {
-            false
+        let new_process_lock = new_process.lock();
+        let context = new_process_lock.get_context_ref();
+
+        /*
+         * Check if the pointer of the new process is the same as the new process. If thats
+         * the case keep running the process and return out.
+         */
+        if Arc::ptr_eq(&new_process, &previous_process) {
+            return false;
         }
+
+        /*
+         * Now that we have passed all of the checks, its time to run the actual process. We first
+         * set the CURRENT_PROCESS static to the new process and then jump to ring 3. Leap of faith!
+         */
+        set_current_process(&new_process);
+
+        unsafe {
+            jump_userland(
+                context.get_stack_top(),
+                context.get_instruction_ptr(),
+                context.rflags,
+            );
+        }
+
+        true
     }
 }
 
