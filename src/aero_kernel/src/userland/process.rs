@@ -62,6 +62,12 @@ pub struct Process {
 }
 
 impl Process {
+    /// Creates a per-cpu idle process. An idle process is a special *kernel*
+    /// which is executed when there are no runnable processes in the scheduler's
+    /// queue.
+    #[allow(unused)]
+    pub fn new_idle() {}
+
     /// Allocates a new userland process from the provided executable ELF. This function
     /// is responsible for mapping the loadable program headers, allocating the user stack,
     /// creating the file tables, creating the userland address space which contains the userland
