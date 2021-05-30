@@ -55,6 +55,7 @@ pub enum ProcessState {
 
 pub struct Process {
     context: Context,
+    pub(super) address_space: Option<AddressSpace>,
 
     pub file_table: FileTable,
     pub process_id: ProcessId,
@@ -89,6 +90,7 @@ impl Process {
             file_table: FileTable::new(),
             process_id: ProcessId::allocate(),
             entry_point,
+            address_space: None,
             state: ProcessState::Running,
         }))
     }
@@ -193,6 +195,7 @@ impl Process {
             context,
             file_table,
             process_id,
+            address_space: Some(address_space),
             entry_point,
             state: ProcessState::Running,
         })))

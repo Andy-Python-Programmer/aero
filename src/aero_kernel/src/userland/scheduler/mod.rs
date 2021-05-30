@@ -9,7 +9,11 @@
  * except according to those terms.
  */
 
+#[cfg(feature = "round-robin")]
 pub mod round_robin;
+
+#[cfg(feature = "round-robin")]
+pub use round_robin::reschedule;
 
 use alloc::{collections::BTreeMap, sync::Arc};
 
@@ -30,7 +34,6 @@ static PROCESS_CONTAINER: ProcessContainer = ProcessContainer::new_uninit();
 pub trait SchedulerInterface: Send + Sync + Downcastable {
     /// Register the provided process into the task scheduler queue.
     fn register_process(&self, process_id: ProcessId);
-    fn reschedule(&self) -> bool;
 }
 
 /// Container or a transparent struct containing a hashmap of all of the processes
@@ -78,10 +81,6 @@ impl Scheduler {
 
         self.inner.register_process(process_id);
         PROCESS_CONTAINER.register_process(process_id, process);
-    }
-
-    pub fn reschedule(&self) -> bool {
-        self.inner.reschedule()
     }
 }
 

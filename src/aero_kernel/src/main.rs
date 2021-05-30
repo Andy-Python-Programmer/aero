@@ -207,7 +207,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         loop {
             interrupts::disable_interrupts();
 
-            if scheduler::get_scheduler().reschedule() {
+            if scheduler::reschedule() {
                 interrupts::enable_interrupts();
             } else {
                 interrupts::enable_interrupts_and_halt();
@@ -231,7 +231,7 @@ extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
         loop {
             interrupts::disable_interrupts();
 
-            if scheduler::get_scheduler().reschedule() {
+            if scheduler::reschedule() {
                 interrupts::enable_interrupts();
             } else {
                 interrupts::enable_interrupts_and_halt();
