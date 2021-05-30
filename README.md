@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="./misc/aero-logo.png">
+</p>
+
 # Aero
 
 **Aero** is a new modern, experimental, unix-like operating system written in Rust. Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and the Zircon Kernel.
