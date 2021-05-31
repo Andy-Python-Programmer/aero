@@ -9,30 +9,32 @@
  * except according to those terms.
  */
 
-use alloc::{alloc::alloc_zeroed, sync::Arc};
-use core::{
-    alloc::Layout,
-    ptr::Unique,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use alloc::alloc::alloc_zeroed;
+use alloc::sync::Arc;
+
+use core::alloc::Layout;
+use core::ptr::Unique;
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 use spin::mutex::spin::SpinMutex;
 
-use x86_64::{
-    structures::paging::{mapper::MapToError, *},
-    VirtAddr,
-};
+use x86_64::structures::paging::mapper::MapToError;
+use x86_64::structures::paging::*;
+use x86_64::VirtAddr;
 
-use xmas_elf::{
-    header,
-    program::{self, Type},
-    ElfFile,
-};
+use xmas_elf::program::Type;
+use xmas_elf::{header, program, ElfFile};
 
-use crate::{
-    arch::gdt::TASK_STATE_SEGMENT, fs::file_table::FileTable, mem::AddressSpace, prelude::*,
-    syscall::SyscallFrame, utils::stack::StackHelper,
-};
-use crate::{mem::paging::FRAME_ALLOCATOR, utils::stack::Stack};
+use crate::arch::gdt::TASK_STATE_SEGMENT;
+use crate::fs::file_table::FileTable;
+
+use crate::mem::paging::FRAME_ALLOCATOR;
+use crate::mem::AddressSpace;
+
+use crate::syscall::SyscallFrame;
+use crate::utils::stack::{Stack, StackHelper};
+
+use crate::prelude::*;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
@@ -93,7 +95,6 @@ pub struct Process {
     pub(super) process_id: ProcessId,
 
     pub file_table: FileTable,
-    pub entry_point: VirtAddr,
     pub state: ProcessState,
 }
 
@@ -101,18 +102,11 @@ impl Process {
     /// Creates a per-cpu idle process. An idle process is a special *kernel*
     /// which is executed when there are no runnable processes in the scheduler's
     /// queue.
-    #[allow(unused)]
     pub fn new_idle() -> Arc<SpinMutex<Process>> {
-        let stack = Stack::new_kernel(0x1000);
-
-        let stack_top = stack.stack_top();
-        let entry_point = VirtAddr::new(0xcafebabe);
-
         Arc::new(SpinMutex::new(Self {
             context: Unique::dangling(),
             file_table: FileTable::new(),
             process_id: ProcessId::allocate(),
-            entry_point,
             address_space: None,
             state: ProcessState::Running,
         }))
@@ -241,7 +235,6 @@ impl Process {
             file_table,
             process_id,
             address_space: Some(address_space),
-            entry_point,
             state: ProcessState::Running,
         })))
     }
@@ -255,22 +248,23 @@ intel_fn! {
          * automatically enabled after `sysretq`.
          */
         "cli\n",
+        "call context_switch_finalize\n",
         "call restore_user_tls\n",
 
-        "pop r11\n", // Restore RFLAGS
-        "pop rcx\n", // Restore RIP
+        "pop r11\n", // Restore RFLAGS.
+        "pop rcx\n", // Restore RIP.
 
         "push rdx\n",
 
         "swapgs\n",
 
         "mov rdx, rsp\n",
-        "add rdx, 16\n", // Skip RDX and user RSP currently on the stack
-        "mov gs:[0x04], rdx\n", // Stash kernel stack
+        "add rdx, 16\n", // Skip RDX and user RSP currently on the stack.
+        "mov gs:[0x04], rdx\n", // Stash kernel stack.
 
         "swapgs\n",
         "pop rdx\n",
-        "pop rsp\n", // Restore user stack
+        "pop rsp\n", // Restore user stack.
 
         "sysretq\n",
     }
@@ -289,13 +283,13 @@ intel_fn! {
         "push r12\n",
         "push rbx\n",
 
-        "mov rax, cr3\n", // Save CR3
+        "mov rax, cr3\n", // Save CR3.
         "push rax\n",
 
-        "mov [rdi], rsp\n",	// Update old context pointer with current stack pointer
-        "mov rsp, rsi\n", // Switch to new stack
+        "mov [rdi], rsp\n",	// Update old context pointer with current stack pointer.
+        "mov rsp, rsi\n", // Switch to new stack.
 
-        "pop rax\n", // Restore CR3
+        "pop rax\n", // Restore CR3.
         "mov cr3, rax\n",
 
         "pop rbx\n",

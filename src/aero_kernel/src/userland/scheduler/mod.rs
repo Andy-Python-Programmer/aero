@@ -13,7 +13,7 @@
 pub mod round_robin;
 
 #[cfg(feature = "round-robin")]
-pub use round_robin::reschedule;
+pub use round_robin::{exit_current_process, reschedule};
 
 use alloc::{collections::BTreeMap, sync::Arc};
 
@@ -26,7 +26,6 @@ use self::round_robin::RoundRobin;
 use super::process::{Process, ProcessId};
 
 static SCHEDULER: Once<SpinMutex<Scheduler>> = Once::new();
-
 static PROCESS_CONTAINER: ProcessContainer = ProcessContainer::new_uninit();
 
 /// Scheduler interface for each scheduling algorithm. The struct implementing
@@ -56,6 +55,7 @@ impl ProcessContainer {
         self.0.lock().insert(process_id, process);
     }
 
+    #[inline]
     fn find_by_id(&self, id: ProcessId) -> Option<Arc<SpinMutex<Process>>> {
         self.0.lock().get(&id).cloned()
     }
@@ -93,6 +93,7 @@ pub fn get_scheduler() -> SpinMutexGuard<'static, Scheduler> {
 }
 
 /// Initialize the scheduler.
+#[inline]
 pub fn init() {
     SCHEDULER.call_once(move || SpinMutex::new(Scheduler::new()));
 }

@@ -9,10 +9,9 @@
  * except according to those terms.
  */
 
-use aero_syscall::AeroSyscallError;
+use crate::userland::scheduler;
 
-pub fn exit(status: usize) -> Result<usize, AeroSyscallError> {
-    log::debug!("Exiting the current process with status: {}", status);
-
-    Err(AeroSyscallError::Unknown)
+pub fn exit(status: usize) -> ! {
+    log::trace!("Exiting the current process with status: {}", status);
+    scheduler::exit_current_process(status);
 }

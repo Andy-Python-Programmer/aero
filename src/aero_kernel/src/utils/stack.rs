@@ -9,12 +9,9 @@
  * except according to those terms.
  */
 
-use core::alloc::Layout;
-
 use crate::mem::paging::FRAME_ALLOCATOR;
 use crate::prelude::*;
 
-use alloc::alloc::alloc_zeroed;
 use x86_64::{
     structures::paging::{mapper::MapToError, *},
     VirtAddr,
@@ -95,18 +92,6 @@ impl Stack {
             stack_size,
             PageTableFlags::USER_ACCESSIBLE,
         )
-    }
-
-    // TODO(Andy-Python-Programmer): Instead of mapping the stack on the kernel's
-    // heap, allocate a block of pages instead.
-    pub fn new_kernel(stack_size: usize) -> Self {
-        let stack = unsafe { alloc_zeroed(Layout::from_size_align_unchecked(stack_size, 0x100)) };
-        let stack_start = unsafe { VirtAddr::from_ptr(stack.sub(stack_size)) };
-
-        Self {
-            stack_start,
-            stack_size,
-        }
     }
 
     pub fn stack_top(&self) -> VirtAddr {

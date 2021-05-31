@@ -9,18 +9,17 @@
  * except according to those terms.
  */
 
+use core::cell::Cell;
 use core::mem;
 
 use alloc::{collections::VecDeque, sync::Arc};
 use spin::mutex::spin::SpinMutex;
 
-use crate::{
-    userland::process::{Process, ProcessId},
-    utils::{downcast, PerCpu},
-};
+use crate::userland::process::context_switch;
+use crate::userland::process::{Process, ProcessId};
+use crate::utils::{downcast, PerCpu};
 
 use super::{SchedulerInterface, PROCESS_CONTAINER};
-use crate::userland::process::context_switch;
 
 #[thread_local]
 static mut CURRENT_PROCESS: Option<Arc<SpinMutex<Process>>> = None;
@@ -30,6 +29,14 @@ static mut CURRENT_PROCESS: Option<Arc<SpinMutex<Process>>> = None;
 /// is to be created for each CPU.
 #[thread_local]
 static mut IDLE_PROCESS: Option<Arc<SpinMutex<Process>>> = None;
+
+#[thread_local]
+static mut HELD_LOCKS: Cell<Option<HeldLocks>> = Cell::new(None);
+
+struct HeldLocks {
+    head: Arc<SpinMutex<Process>>,
+    tail: Arc<SpinMutex<Process>>,
+}
 
 /// Scheduler queue containing a vector of all of the process of the enqueued
 /// processes.
@@ -96,6 +103,25 @@ impl SchedulerInterface for RoundRobin {
 unsafe impl Send for RoundRobin {}
 unsafe impl Sync for RoundRobin {}
 
+pub fn exit_current_process(_: usize) -> ! {
+    loop {}
+}
+
+/// This function is responsible for releasing all of the locks on the current process and the
+/// previous process. These processes are locked by [reschedule] and this function is called after the
+/// the context switch is done.
+#[no_mangle]
+unsafe extern "C" fn context_switch_finalize() {
+    let held_locks = HELD_LOCKS
+        .take()
+        .expect("`HELD_LOCKS` static was not initialized");
+
+    held_locks.head.force_unlock();
+    held_locks.tail.force_unlock();
+
+    log::info!("Unlocked context switch locks");
+}
+
 /// Yields execution to another process. The task of this function is to get the
 /// process which is on the front of the process queue and jump to it. If no process are
 /// avaviable for execution then the [IDLE_PROCESS] process is executed.
@@ -151,16 +177,30 @@ pub fn reschedule() -> bool {
         CURRENT_PROCESS = Some(new_process.clone());
     }
 
-    let mut previous_process = previous_process.lock();
-    let new_process = new_process.lock();
+    let mut previous_process_locked = previous_process.lock();
+    let new_process_locked = new_process.lock();
 
-    if let Some(_) = new_process.address_space.as_ref() {
+    if let Some(_) = new_process_locked.address_space.as_ref() {
         // TODO(Andy-Python-Programmer): Switch to the new user page table. Also map the user stack
         // in the address space when creating the process itself.
     }
 
     unsafe {
-        context_switch(&mut previous_process.context, new_process.context.as_ref());
+        HELD_LOCKS.set(Some(HeldLocks {
+            head: previous_process.clone(),
+            tail: new_process.clone(),
+        }));
+
+        context_switch(
+            &mut previous_process_locked.context,
+            new_process_locked.context.as_ref(),
+        );
+
+        mem::forget(previous_process_locked);
+        mem::forget(new_process_locked);
+
+        mem::forget(previous_process);
+        mem::forget(new_process);
     }
 
     true
