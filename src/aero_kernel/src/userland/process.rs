@@ -59,7 +59,7 @@ pub enum ProcessState {
 }
 
 #[repr(C)]
-pub(super) struct Context {
+pub(super) struct InterruptFrame {
     pub cr3: u64,
     pub rbp: u64,
     pub r12: u64,
@@ -71,7 +71,7 @@ pub(super) struct Context {
     pub rip: u64,
 }
 
-impl Context {
+impl InterruptFrame {
     pub fn new() -> Self {
         Self {
             cr3: 0x00,
@@ -88,7 +88,7 @@ impl Context {
 }
 
 pub struct Process {
-    pub(super) context: Unique<Context>,
+    pub(super) context: Unique<InterruptFrame>,
     pub(super) address_space: Option<AddressSpace>,
     pub(super) process_id: ProcessId,
 
@@ -220,13 +220,14 @@ impl Process {
         syscall_stack.rip = entry_point.as_u64();
         syscall_stack.rflags = 1 << 9; // Interrupts enabled.
 
-        let interrupt_stack = unsafe { context_switch.offset::<Context>() };
-        *interrupt_stack = Context::new(); // Sanitize the interrupt stack.
+        let interrupt_stack = unsafe { context_switch.offset::<InterruptFrame>() };
+        *interrupt_stack = InterruptFrame::new(); // Sanitize the interrupt stack.
 
         interrupt_stack.rip = sysretq_userinit as u64;
         interrupt_stack.cr3 = kernel_cr3;
 
-        let interrupt_stack_ptr = unsafe { Unique::new_unchecked(interrupt_stack as *mut Context) };
+        let interrupt_stack_ptr =
+            unsafe { Unique::new_unchecked(interrupt_stack as *mut InterruptFrame) };
 
         unsafe {
             TASK_STATE_SEGMENT.rsp[0] = context_switch_rsp;
@@ -276,7 +277,7 @@ intel_fn! {
 }
 
 intel_fn! {
-    pub(super) extern "asm" fn context_switch(from: &mut Unique<Context>, to: &Context) {
+    pub(super) extern "asm" fn context_switch(from: &mut Unique<InterruptFrame>, to: &InterruptFrame) {
         "pushfq\n", // Push registers to current context.
 
         "cli\n",
