@@ -9,8 +9,12 @@
  * except according to those terms.
  */
 
-use alloc::sync::Arc;
-use core::sync::atomic::{AtomicUsize, Ordering};
+use alloc::{alloc::alloc_zeroed, sync::Arc};
+use core::{
+    alloc::Layout,
+    ptr::Unique,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 use spin::mutex::spin::SpinMutex;
 
 use x86_64::{
@@ -24,10 +28,11 @@ use xmas_elf::{
     ElfFile,
 };
 
-use crate::{fs::file_table::FileTable, mem::AddressSpace, prelude::*};
+use crate::{
+    arch::gdt::TASK_STATE_SEGMENT, fs::file_table::FileTable, mem::AddressSpace, prelude::*,
+    syscall::SyscallFrame, utils::stack::StackHelper,
+};
 use crate::{mem::paging::FRAME_ALLOCATOR, utils::stack::Stack};
-
-use super::context::Context;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
@@ -53,12 +58,41 @@ pub enum ProcessState {
     Running,
 }
 
+#[repr(C)]
+pub(super) struct Context {
+    pub cr3: u64,
+    pub rbp: u64,
+    pub r12: u64,
+    pub r13: u64,
+    pub r14: u64,
+    pub r15: u64,
+    pub rbx: u64,
+    pub rflags: u64,
+    pub rip: u64,
+}
+
+impl Context {
+    pub fn new() -> Self {
+        Self {
+            cr3: 0x00,
+            rflags: 0x00,
+            r15: 0x00,
+            r14: 0x00,
+            r13: 0x00,
+            r12: 0x00,
+            rbp: 0x00,
+            rbx: 0x00,
+            rip: 0x00,
+        }
+    }
+}
+
 pub struct Process {
-    context: Context,
+    pub(super) context: Unique<Context>,
     pub(super) address_space: Option<AddressSpace>,
+    pub(super) process_id: ProcessId,
 
     pub file_table: FileTable,
-    pub process_id: ProcessId,
     pub entry_point: VirtAddr,
     pub state: ProcessState,
 }
@@ -74,19 +108,8 @@ impl Process {
         let stack_top = stack.stack_top();
         let entry_point = VirtAddr::new(0xcafebabe);
 
-        let context = {
-            let mut context = Context::new();
-
-            context.set_stack_top(stack_top);
-            context.set_instruction_ptr(entry_point);
-
-            context.rflags = 1 << 9; // Interrupts enabled
-
-            context
-        };
-
         Arc::new(SpinMutex::new(Self {
-            context,
+            context: Unique::dangling(),
             file_table: FileTable::new(),
             process_id: ProcessId::allocate(),
             entry_point,
@@ -164,35 +187,56 @@ impl Process {
             }
         }
 
-        /*
-         * Allocate and map the user stack for the process.
-         */
         let process_stack = {
             let address = unsafe { VirtAddr::new_unsafe(0x80000000) };
 
             Stack::new_user_pinned(offset_table, address, 0x10000)?
         };
 
-        let stack_top = process_stack.stack_top();
         let entry_point = VirtAddr::new(elf_binary.header.pt2.entry_point());
+        let kernel_cr3: u64; // TODO(Andy-Python-Programmer): Switch to the userspace address space
 
-        let context = {
-            let mut context = Context::new();
+        unsafe {
+            asm!("mov {}, cr3", out(reg) kernel_cr3, options(nomem));
+        }
 
-            context.set_stack_top(stack_top);
-            context.set_instruction_ptr(entry_point);
-            context.set_page_table(address_space.cr3().start_address());
+        /*
+         * Now at this stage, we have mapped the user stack and the the user land ELF executable itself. Now
+         * we have to allocate a 16KiB stack for the context switch function on the kernel's heap
+         * (which should enough) and create the context switch context itself. This includes the syscall and
+         * interrupt contexts.
+         */
+        let mut context_switch_rsp = unsafe {
+            let layout = Layout::from_size_align_unchecked(0x400, 0x100);
+            let raw = alloc_zeroed(layout);
 
-            context.rflags = 1 << 9; // Interrupts enabled
-
-            context
+            raw as u64 + layout.size() as u64
         };
+
+        let mut context_switch = StackHelper::new(&mut context_switch_rsp);
+        let syscall_stack = unsafe { context_switch.offset::<SyscallFrame>() };
+
+        syscall_stack.rsp = process_stack.stack_top().as_u64();
+        syscall_stack.rip = entry_point.as_u64();
+        syscall_stack.rflags = 1 << 9; // Interrupts enabled.
+
+        let interrupt_stack = unsafe { context_switch.offset::<Context>() };
+        *interrupt_stack = Context::new(); // Sanitize the interrupt stack.
+
+        interrupt_stack.rip = sysretq_userinit as u64;
+        interrupt_stack.cr3 = kernel_cr3;
+
+        let interrupt_stack_ptr = unsafe { Unique::new_unchecked(interrupt_stack as *mut Context) };
+
+        unsafe {
+            TASK_STATE_SEGMENT.rsp[0] = context_switch_rsp;
+        }
 
         let process_id = ProcessId::allocate();
         let file_table = FileTable::new();
 
         Ok(Arc::new(SpinMutex::new(Self {
-            context,
+            context: interrupt_stack_ptr,
             file_table,
             process_id,
             address_space: Some(address_space),
@@ -200,8 +244,68 @@ impl Process {
             state: ProcessState::Running,
         })))
     }
+}
 
-    pub(super) fn get_context_ref(&self) -> &Context {
-        &self.context
+intel_fn! {
+    extern "asm" fn sysretq_userinit() {
+        /*
+         * After pushing all of the required registers on the stack
+         * disable interrupts as we are swaping stacks. Interrupts are
+         * automatically enabled after `sysretq`.
+         */
+        "cli\n",
+        "call restore_user_tls\n",
+
+        "pop r11\n", // Restore RFLAGS
+        "pop rcx\n", // Restore RIP
+
+        "push rdx\n",
+
+        "swapgs\n",
+
+        "mov rdx, rsp\n",
+        "add rdx, 16\n", // Skip RDX and user RSP currently on the stack
+        "mov gs:[0x04], rdx\n", // Stash kernel stack
+
+        "swapgs\n",
+        "pop rdx\n",
+        "pop rsp\n", // Restore user stack
+
+        "sysretq\n",
+    }
+}
+
+intel_fn! {
+    pub(super) extern "asm" fn context_switch(from: &mut Unique<Context>, to: &Context) {
+        "pushfq\n", // Push registers to current context.
+
+        "cli\n",
+
+        "push rbp\n",
+        "push r15\n",
+        "push r14\n",
+        "push r13\n",
+        "push r12\n",
+        "push rbx\n",
+
+        "mov rax, cr3\n", // Save CR3
+        "push rax\n",
+
+        "mov [rdi], rsp\n",	// Update old context pointer with current stack pointer
+        "mov rsp, rsi\n", // Switch to new stack
+
+        "pop rax\n", // Restore CR3
+        "mov cr3, rax\n",
+
+        "pop rbx\n",
+        "pop r12\n",
+        "pop r13\n",
+        "pop r14\n",
+        "pop r15\n",
+        "pop rbp\n",
+
+        "popfq\n",
+
+        "ret\n",
     }
 }

@@ -20,7 +20,7 @@ use crate::{
 };
 
 use super::{SchedulerInterface, PROCESS_CONTAINER};
-use crate::userland::jump_userland;
+use crate::userland::process::context_switch;
 
 #[thread_local]
 static mut CURRENT_PROCESS: Option<Arc<SpinMutex<Process>>> = None;
@@ -151,8 +151,8 @@ pub fn reschedule() -> bool {
         CURRENT_PROCESS = Some(new_process.clone());
     }
 
+    let mut previous_process = previous_process.lock();
     let new_process = new_process.lock();
-    let context = new_process.get_context_ref();
 
     if let Some(_) = new_process.address_space.as_ref() {
         // TODO(Andy-Python-Programmer): Switch to the new user page table. Also map the user stack
@@ -160,11 +160,7 @@ pub fn reschedule() -> bool {
     }
 
     unsafe {
-        jump_userland(
-            context.get_stack_top(),
-            context.get_instruction_ptr(),
-            context.rflags,
-        );
+        context_switch(&mut previous_process.context, new_process.context.as_ref());
     }
 
     true
