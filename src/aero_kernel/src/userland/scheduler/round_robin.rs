@@ -15,6 +15,7 @@ use core::mem;
 use alloc::{collections::VecDeque, sync::Arc};
 use spin::mutex::spin::SpinMutex;
 
+use crate::arch::gdt::TASK_STATE_SEGMENT;
 use crate::userland::process::context_switch;
 use crate::userland::process::{Process, ProcessId};
 use crate::utils::{downcast, PerCpu};
@@ -190,6 +191,8 @@ pub fn reschedule() -> bool {
             head: previous_process.clone(),
             tail: new_process.clone(),
         }));
+
+        TASK_STATE_SEGMENT.rsp[0] = new_process_locked.context_switch_rsp.as_u64();
 
         context_switch(
             &mut previous_process_locked.context,

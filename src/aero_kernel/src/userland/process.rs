@@ -25,7 +25,6 @@ use x86_64::VirtAddr;
 use xmas_elf::program::Type;
 use xmas_elf::{header, program, ElfFile};
 
-use crate::arch::gdt::TASK_STATE_SEGMENT;
 use crate::fs::file_table::FileTable;
 
 use crate::mem::paging::FRAME_ALLOCATOR;
@@ -93,6 +92,7 @@ pub struct Process {
     pub(super) context: Unique<InterruptFrame>,
     pub(super) address_space: Option<AddressSpace>,
     pub(super) process_id: ProcessId,
+    pub(super) context_switch_rsp: VirtAddr,
 
     pub file_table: FileTable,
     pub state: ProcessState,
@@ -107,6 +107,7 @@ impl Process {
             context: Unique::dangling(),
             file_table: FileTable::new(),
             process_id: ProcessId::allocate(),
+            context_switch_rsp: VirtAddr::zero(),
             address_space: None,
             state: ProcessState::Running,
         }))
@@ -223,17 +224,13 @@ impl Process {
         let interrupt_stack_ptr =
             unsafe { Unique::new_unchecked(interrupt_stack as *mut InterruptFrame) };
 
-        unsafe {
-            TASK_STATE_SEGMENT.rsp[0] = context_switch_rsp;
-        }
-
-        let process_id = ProcessId::allocate();
-        let file_table = FileTable::new();
+        let context_switch_rsp = unsafe { VirtAddr::new_unsafe(context_switch_rsp) };
 
         Ok(Arc::new(SpinMutex::new(Self {
             context: interrupt_stack_ptr,
-            file_table,
-            process_id,
+            context_switch_rsp,
+            file_table: FileTable::new(),
+            process_id: ProcessId::allocate(),
             address_space: Some(address_space),
             state: ProcessState::Running,
         })))
