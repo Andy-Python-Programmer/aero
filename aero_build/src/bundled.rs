@@ -9,7 +9,7 @@ use std::process::Command;
 
 use std::convert::TryFrom;
 
-use crate::{AeroBootloader, BUNDLED_DIR};
+use crate::{AeroChainloader, BUNDLED_DIR};
 
 const PREBUILT_OVMF_URL: &str =
     "https://github.com/rust-osdev/ovmf-prebuilt/releases/latest/download/";
@@ -124,11 +124,11 @@ fn create_fat_filesystem(
     fat_path: &Path,
     efi_file: &Path,
     kernel_file: &Path,
-    bootloader: AeroBootloader,
+    bootloader: AeroChainloader,
 ) -> Result<(), Box<dyn Error>> {
     let mut fat = vec![efi_file, kernel_file];
 
-    if let AeroBootloader::Limine = bootloader {
+    if let AeroChainloader::Limine = bootloader {
         fat.push(&Path::new("bundled/limine/limine.sys"));
         fat.push(&Path::new("src/.cargo/limine.cfg"));
     }
@@ -173,7 +173,7 @@ fn create_fat_filesystem(
     copy_contents_fat!(&efi_file => bootx64);
     copy_contents_fat!(&kernel_file => kernel);
 
-    if let AeroBootloader::Limine = bootloader {
+    if let AeroChainloader::Limine = bootloader {
         create_fat_file!(limine_sys => "limine.sys");
         create_fat_file!(limine_cfg => "limine.cfg");
 
@@ -241,11 +241,8 @@ fn create_gpt_disk(disk_path: &Path, fat_image: &Path) -> Result<(), Box<dyn Err
 /// Packages all of the files by creating the build directory and copying
 /// the `aero.elf` and the `BOOTX64.EFI` files to the build directory and creating
 /// fat file from the build directory.
-pub fn package_files(bootloader: AeroBootloader) -> Result<(), Box<dyn Error>> {
-    let efi_file = match bootloader {
-        AeroBootloader::AeroBoot => Path::new("src/target/x86_64-unknown-uefi/debug/aero_boot.efi"),
-        AeroBootloader::Limine => Path::new("bundled/limine/BOOTX64.EFI"),
-    };
+pub fn package_files(chainloader: AeroChainloader) -> Result<(), Box<dyn Error>> {
+    let efi_file = Path::new("src/target/x86_64-unknown-uefi/debug/aero_boot.efi");
 
     let kernel_file = Path::new("src/target/x86_64-aero_os/debug/aero_kernel");
     let out_path = Path::new("build");
@@ -255,12 +252,11 @@ pub fn package_files(bootloader: AeroBootloader) -> Result<(), Box<dyn Error>> {
 
     fs::create_dir_all("build")?;
 
-    create_fat_filesystem(&fat_path, &efi_file, &kernel_file, bootloader)?;
+    create_fat_filesystem(&fat_path, &efi_file, &kernel_file, chainloader)?;
     create_gpt_disk(&img_path, &fat_path)?;
 
-    if let AeroBootloader::Limine = bootloader {
+    if let AeroChainloader::Limine = chainloader {
         let mut limine_install_cmd = Command::new("bundled/limine/limine-install-linux-x86_64");
-
         limine_install_cmd.arg("build/aero.img");
 
         if !limine_install_cmd

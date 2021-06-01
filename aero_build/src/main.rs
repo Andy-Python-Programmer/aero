@@ -15,7 +15,6 @@ use std::process::{Command, ExitStatus};
 /// The cargo executable. This constant uses the `CARGO` environment variable to
 /// also support non-standard cargo versions.
 const CARGO: &str = env!("CARGO");
-
 const BUNDLED_DIR: &str = "bundled";
 
 mod bootloader;
@@ -23,7 +22,7 @@ mod bundled;
 
 /// Build the kernel by using `cargo build` with the cargo config defined
 /// in the `src\.cargo\config.toml` file.
-fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
+fn build_kernel(target: Option<String>, bootloader: AeroChainloader) {
     println!("INFO: Building kernel");
 
     let mut kernel_build_cmd = Command::new(CARGO);
@@ -33,7 +32,7 @@ fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
     kernel_build_cmd.arg("build");
     kernel_build_cmd.arg("--package").arg("aero_kernel");
 
-    if let AeroBootloader::Limine = bootloader {
+    if let AeroChainloader::Limine = bootloader {
         kernel_build_cmd.args(&["--features", "stivale2"]);
     }
 
@@ -43,19 +42,9 @@ fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
             .arg("--target")
             .arg(format!("./.cargo/{}.json", target));
     } else {
-        match bootloader {
-            AeroBootloader::AeroBoot => {
-                kernel_build_cmd
-                    .arg("--target")
-                    .arg("./.cargo/x86_64-aero_os.json");
-            }
-
-            AeroBootloader::Limine => {
-                kernel_build_cmd
-                    .arg("--target")
-                    .arg("./aero_kernel/src/boot/stivale2/x86_64-aero_os.json");
-            }
-        }
+        kernel_build_cmd
+            .arg("--target")
+            .arg("./.cargo/x86_64-aero_os.json");
     }
 
     if !kernel_build_cmd
@@ -71,7 +60,10 @@ fn build_kernel(target: Option<String>, bootloader: AeroBootloader) {
 /// mount the build directory as a FAT partition instead of creating a seperate
 /// `.fat` file. Check out [AeroBuild] for configuration settings about this.
 fn run_qemu(argv: Vec<String>) -> ExitStatus {
-    let mut qemu_run_cmd = Command::new("qemu-system-x86_64.exe");
+    let mut qemu_run_cmd = Command::new(format!(
+        "qemu-system-x86_64{}",
+        if is_wsl() { ".exe" } else { "" }
+    ));
 
     qemu_run_cmd.args(argv);
 
@@ -163,21 +155,20 @@ fn build_userland() {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum AeroBootloader {
-    AeroBoot,
+pub enum AeroChainloader {
     Limine,
+    None,
 }
 
-impl From<Option<String>> for AeroBootloader {
+impl From<Option<String>> for AeroChainloader {
     fn from(boot: Option<String>) -> Self {
         if let Some(boot) = boot {
             match boot.as_ref() {
-                "aero" => Self::AeroBoot,
                 "limine" => Self::Limine,
                 _ => panic!("Invalid or unsupported bootloader {}", boot),
             }
         } else {
-            Self::AeroBoot
+            Self::None
         }
     }
 }
@@ -192,9 +183,6 @@ enum AeroBuildCommand {
         #[structopt(long)]
         chainloader: Option<String>,
 
-        #[structopt(long)]
-        bootloader: Option<String>,
-
         /// Extra command line arguments passed to qemu.
         #[structopt(last = true)]
         qemu_args: Vec<String>,
@@ -202,7 +190,7 @@ enum AeroBuildCommand {
 
     Build {
         #[structopt(long)]
-        bootloader: Option<String>,
+        chainloader: Option<String>,
 
         #[structopt(long)]
         target: Option<String>,
@@ -211,7 +199,7 @@ enum AeroBuildCommand {
     /// Update all of the OVMF files required for UEFI and bootloader prebuilts.
     Update {
         #[structopt(long)]
-        bootloader: Option<String>,
+        chainloader: Option<String>,
     },
 
     Web,
@@ -223,6 +211,27 @@ struct AeroBuild {
     command: Option<AeroBuildCommand>,
 }
 
+/// Helper function to test if the host machine is WSL. For `aero_build` there are no
+/// special requirements for WSL 2 but using WSL version 2 is recommended.
+#[cfg(target_os = "linux")]
+pub fn is_wsl() -> bool {
+    if let Ok(info) = std::fs::read("/proc/sys/kernel/osrelease") {
+        if let Ok(info_str) = std::str::from_utf8(&info) {
+            let info_str = info_str.to_ascii_lowercase();
+            return info_str.contains("microsoft") || info_str.contains("wsl");
+        }
+    }
+
+    false
+}
+
+/// Helper function to test if the host machine is WSL. For `aero_build` there are no
+/// special requirements for WSL 2 but using WSL version 2 is recommended.
+#[cfg(not(target_os = "linux"))]
+pub fn is_wsl() -> bool {
+    false
+}
+
 #[tokio::main]
 async fn main() {
     let aero_build = AeroBuild::from_args();
@@ -230,9 +239,8 @@ async fn main() {
     match aero_build.command {
         Some(command) => match command {
             AeroBuildCommand::Run {
-                mut qemu_args,
+                qemu_args,
                 target,
-                bootloader,
                 chainloader,
             } => {
                 /*
@@ -240,61 +248,61 @@ async fn main() {
                  * after the build is finished.
                  */
                 let now = Instant::now();
-                let bootloader = AeroBootloader::from(bootloader);
+                let chainloader = AeroChainloader::from(chainloader);
 
                 bundled::download_ovmf_prebuilt().await.unwrap();
+                bootloader::build_bootloader();
 
-                match bootloader {
-                    AeroBootloader::AeroBoot => bootloader::build_bootloader(),
-                    AeroBootloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
+                match chainloader {
+                    AeroChainloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
+                    AeroChainloader::None => {}
                 }
 
                 build_userland();
-                build_kernel(target, bootloader);
-                bundled::package_files(bootloader).unwrap();
+                build_kernel(target, chainloader);
+                bundled::package_files(chainloader).unwrap();
 
                 println!("Build took {:?}", now.elapsed());
-
-                if let Some(chainloader) = chainloader {
-                    qemu_args.push("-drive".into());
-                    qemu_args.push(format!("format=raw,file={}", chainloader));
-                }
 
                 if !run_qemu(qemu_args).success() {
                     panic!("Failed to run qemu");
                 }
             }
 
-            AeroBuildCommand::Build { bootloader, target } => {
+            AeroBuildCommand::Build {
+                chainloader,
+                target,
+            } => {
                 /*
                  * Get the current time. This is will be used to caclulate the build time
                  * after the build is finished.
                  */
                 let now = Instant::now();
-                let bootloader = AeroBootloader::from(bootloader);
+                let chainloader = AeroChainloader::from(chainloader);
 
                 bundled::download_ovmf_prebuilt().await.unwrap();
+                bootloader::build_bootloader();
 
-                match bootloader {
-                    AeroBootloader::AeroBoot => bootloader::build_bootloader(),
-                    AeroBootloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
+                match chainloader {
+                    AeroChainloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
+                    AeroChainloader::None => {}
                 }
 
                 build_userland();
-                build_kernel(target, bootloader);
-                bundled::package_files(bootloader).unwrap();
+                build_kernel(target, chainloader);
+                bundled::package_files(chainloader).unwrap();
 
                 println!("Build took {:?}", now.elapsed());
             }
 
-            AeroBuildCommand::Update { bootloader } => {
-                let bootloader = AeroBootloader::from(bootloader);
+            AeroBuildCommand::Update { chainloader } => {
+                let chainloader = AeroChainloader::from(chainloader);
 
                 bundled::update_ovmf()
                     .await
                     .expect("Failed tp update OVMF files");
 
-                if let AeroBootloader::Limine = bootloader {
+                if let AeroChainloader::Limine = chainloader {
                     bundled::update_limine()
                         .await
                         .expect("Failed to update limine prebuilt files");
