@@ -59,19 +59,13 @@ pub enum ApicType {
 impl ApicType {
     #[inline(always)]
     pub fn is_none(&self) -> bool {
-        match self {
-            Self::None => true,
-            _ => false,
-        }
+        matches!(self, Self::None)
     }
 
     /// Return true if the current CPU supports X2 APIC.
     #[inline(always)]
     pub fn supports_x2_apic(&self) -> bool {
-        match self {
-            Self::X2apic => true,
-            _ => false,
-        }
+        matches!(self, Self::X2apic)
     }
 }
 
