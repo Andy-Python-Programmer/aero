@@ -1,3 +1,14 @@
+/*
+ * Copyright 2021 The Aero Project Developers. See the COPYRIGHT
+ * file at the top-level directory of this project.
+ *
+ * Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+ * http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+ * <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+ * option. This file may not be copied, modified, or distributed
+ * except according to those terms.
+ */
+
 use std::fs;
 use std::io;
 
@@ -158,13 +169,17 @@ fn create_fat_filesystem(
     root_dir.create_dir("EFI/BOOT")?;
     root_dir.create_dir("EFI/KERNEL")?;
 
-    macro create_fat_file($name:ident => $path:expr) {
-        let mut $name = root_dir.create_file($path)?;
-        $name.truncate()?;
+    macro_rules! create_fat_file {
+        ($name:ident => $path:expr) => {
+            let mut $name = root_dir.create_file($path)?;
+            $name.truncate()?;
+        };
     }
 
-    macro copy_contents_fat($path:expr => $name:ident) {
-        io::copy(&mut fs::File::open($path)?, &mut $name)?;
+    macro_rules! copy_contents_fat {
+        ($path:expr => $name:ident) => {
+            io::copy(&mut fs::File::open($path)?, &mut $name)?
+        };
     }
 
     create_fat_file!(bootx64 => "EFI/BOOT/BOOTX64.EFI");
