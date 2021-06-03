@@ -40,10 +40,10 @@ use crate::utils::io;
 fn __inner_syscall(stack: &mut InterruptStack) -> usize {
     let scratch = &stack.scratch;
 
-    let a = scratch.rax;
-    let b = scratch.rdi;
-    let c = scratch.rsi;
-    let d = scratch.rdx;
+    let a = scratch.rax as usize;
+    let b = scratch.rdi as usize;
+    let c = scratch.rsi as usize;
+    let d = scratch.rdx as usize;
     // let e = scratch.r10;
     // let f = scratch.r8;
 
@@ -71,7 +71,7 @@ unsafe extern "C" fn __impl_syscall_handler(stack: *mut InterruptStack) {
     let stack = &mut *stack;
     let result = __inner_syscall(stack);
 
-    (*stack).scratch.rax = result;
+    (*stack).scratch.rax = result as _;
 }
 
 interrupt_stack!(
@@ -84,7 +84,7 @@ interrupt_stack!(
         }
 
         let result = __inner_syscall(stack);
-        (*stack).scratch.rax = result;
+        (*stack).scratch.rax = result as _;
     }
 );
 

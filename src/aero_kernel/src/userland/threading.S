@@ -90,3 +90,9 @@ sysretq_userinit:
     sysretq
 
 .global sysretq_userinit
+
+iretq_kernelinit:
+    pop rdi
+    iretq // Leap of faith!
+
+.global iretq_kernelinit

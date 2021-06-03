@@ -25,6 +25,7 @@ use x86_64::VirtAddr;
 use xmas_elf::program::Type;
 use xmas_elf::{header, program, ElfFile};
 
+use crate::arch::interrupts::IretRegisters;
 use crate::fs::file_table::FileTable;
 
 use crate::mem::paging::FRAME_ALLOCATOR;
@@ -48,6 +49,12 @@ extern "C" {
     ///
     /// Check out the documentation of this function in `threading.S` for more information.
     fn sysretq_userinit();
+
+    /// This function is responsible for switching to the kernel process stack and switching to the kernek
+    /// process.
+    ///
+    /// Check out the documentation of this function in `threading.S` for more information.
+    fn iretq_kernelinit();
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -103,6 +110,13 @@ impl InterruptFrame {
     }
 }
 
+#[repr(C, packed)]
+struct KernelProcessFrame {
+    pub rdi: usize,
+    pub iretq: IretRegisters,
+    pub on_finish: usize,
+}
+
 pub struct Process {
     pub(super) context: Unique<InterruptFrame>,
     pub(super) address_space: Option<AddressSpace>,
@@ -128,6 +142,70 @@ impl Process {
         }))
     }
 
+    /// Allocates a new kernel process pointing at the provided entry point address. This function
+    /// is responsible for creating the kernel process and setting up the context switch stack itself.
+    ///
+    /// ## Transition
+    /// Userland process transition is done through `iretq` method.
+    #[allow(unused)] // FIXME: Use this beautiful code :D
+    pub fn new_kernel(entry_point: VirtAddr) -> Arc<SpinMutex<Self>> {
+        let process_stack = unsafe {
+            let layout = Layout::from_size_align_unchecked(0x1000, 0x100);
+            let raw = alloc_zeroed(layout);
+
+            raw
+        };
+
+        let kernel_cr3: u64;
+
+        unsafe {
+            asm!("mov {}, cr3", out(reg) kernel_cr3, options(nomem));
+        }
+
+        /*
+         * Now at this stage, we have mapped the kernek process stack. Now we have to allocate a 16KiB stack
+         * for the context switch function on the kernel's heap (which should enough) and create the context
+         * switch context itself. This includes the syscall and interrupt contexts.
+         */
+        let mut context_switch_rsp = unsafe {
+            let layout = Layout::from_size_align_unchecked(0x400, 0x100);
+            let raw = alloc_zeroed(layout);
+
+            raw as u64 + layout.size() as u64
+        };
+
+        let mut context_switch = StackHelper::new(&mut context_switch_rsp);
+        let kprocess_stack = unsafe { context_switch.offset::<KernelProcessFrame>() };
+
+        kprocess_stack.iretq.rsp = process_stack as u64 - 0x08;
+        kprocess_stack.iretq.rip = entry_point.as_u64();
+        kprocess_stack.iretq.cs = 0x08; // Ring 0 CS
+        kprocess_stack.iretq.ss = 0x10; // Ring 0 DS
+        kprocess_stack.iretq.rflags = 1 << 9; // Interrupts enabled.
+        kprocess_stack.rdi = 0x00;
+        kprocess_stack.on_finish = 0xcafebabe;
+
+        let interrupt_stack = unsafe { context_switch.offset::<InterruptFrame>() };
+        *interrupt_stack = InterruptFrame::new(); // Sanitize the interrupt stack.
+
+        interrupt_stack.rip = iretq_kernelinit as u64;
+        interrupt_stack.cr3 = kernel_cr3;
+
+        let interrupt_stack =
+            unsafe { Unique::new_unchecked(interrupt_stack as *mut InterruptFrame) };
+
+        let context_switch_rsp = unsafe { VirtAddr::new_unsafe(context_switch_rsp) };
+
+        Arc::new(SpinMutex::new(Self {
+            context: interrupt_stack,
+            address_space: None,
+            process_id: ProcessId::allocate(),
+            context_switch_rsp,
+            file_table: FileTable::new(),
+            state: ProcessState::Running,
+        }))
+    }
+
     /// Allocates a new userland process from the provided executable ELF. This function
     /// is responsible for mapping the loadable program headers, allocating the user stack,
     /// creating the file tables, creating the userland address space which contains the userland
@@ -135,7 +213,7 @@ impl Process {
     ///
     /// ## Transition
     /// Userland process transition is done through `sysretq` method.
-    pub fn from_elf(
+    pub fn from_user_elf(
         offset_table: &mut OffsetPageTable,
         elf_binary: &ElfFile,
     ) -> Result<Arc<SpinMutex<Self>>, MapToError<Size4KiB>> {

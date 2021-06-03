@@ -139,36 +139,36 @@ impl IdtEntry {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct ScratchRegisters {
-    pub r11: usize,
-    pub r10: usize,
-    pub r9: usize,
-    pub r8: usize,
-    pub rsi: usize,
-    pub rdi: usize,
-    pub rdx: usize,
-    pub rcx: usize,
-    pub rax: usize,
+    pub r11: u64,
+    pub r10: u64,
+    pub r9: u64,
+    pub r8: u64,
+    pub rsi: u64,
+    pub rdi: u64,
+    pub rdx: u64,
+    pub rcx: u64,
+    pub rax: u64,
 }
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct PreservedRegisters {
-    pub r15: usize,
-    pub r14: usize,
-    pub r13: usize,
-    pub r12: usize,
-    pub rbp: usize,
-    pub rbx: usize,
+    pub r15: u64,
+    pub r14: u64,
+    pub r13: u64,
+    pub r12: u64,
+    pub rbp: u64,
+    pub rbx: u64,
 }
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct IretRegisters {
-    pub rip: usize,
-    pub cs: usize,
-    pub rflags: usize,
-    pub rsp: usize,
-    pub ss: usize,
+    pub rip: u64,
+    pub cs: u64,
+    pub rflags: u64,
+    pub rsp: u64,
+    pub ss: u64,
 }
 
 impl IretRegisters {
@@ -180,7 +180,7 @@ impl IretRegisters {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct InterruptStack {
-    pub fs: usize,
+    pub fs: u64,
     pub preserved: PreservedRegisters,
     pub scratch: ScratchRegisters,
     pub iret: IretRegisters,
@@ -189,7 +189,7 @@ pub struct InterruptStack {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct InterruptErrorStack {
-    pub code: usize,
+    pub code: u64,
     pub stack: InterruptStack,
 }
 

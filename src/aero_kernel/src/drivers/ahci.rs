@@ -8,7 +8,7 @@
  * option. This file may not be copied, modified, or distributed
  * except according to those terms.
  */
-
+#![allow(unused)] //FIXME: Modular kernel :D
 use core::mem;
 
 use core::mem::MaybeUninit;

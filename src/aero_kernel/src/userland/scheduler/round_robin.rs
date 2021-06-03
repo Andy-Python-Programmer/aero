@@ -69,7 +69,7 @@ impl ProcessQueue {
 /// ## Notes
 /// * <https://en.wikipedia.org/wiki/Round-robin_scheduling>
 pub struct RoundRobin {
-    /// The per-cpu scheduler queues protected by a spin mutex.
+    /// The per-cpu scheduler queues.
     queue: PerCpu<ProcessQueue>,
 }
 
