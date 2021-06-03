@@ -23,6 +23,8 @@ pub mod scheduler;
 #[rustfmt::skip]
 static USERLAND_SHELL: &[u8] = include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
 
+global_asm!(include_str!("threading.S"));
+
 intel_fn! {
     /**
      * ## Saftey

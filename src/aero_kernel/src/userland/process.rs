@@ -35,6 +35,21 @@ use crate::utils::stack::{Stack, StackHelper};
 
 use crate::prelude::*;
 
+extern "C" {
+    /// This function is responsible for switching from the provided previous context to
+    /// the new one and also save the current state in the previous context so there is a restore
+    /// point.
+    ///
+    /// Check out the documentation of this function in `threading.S` for more information.
+    pub(super) fn context_switch(previous: &mut Unique<InterruptFrame>, new: &InterruptFrame);
+
+    /// This function is responsible for stashing the kernel stack and switching to the process stack,
+    /// and then jumping to userland.
+    ///
+    /// Check out the documentation of this function in `threading.S` for more information.
+    fn sysretq_userinit();
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct ProcessId(usize);
@@ -234,70 +249,5 @@ impl Process {
             address_space: Some(address_space),
             state: ProcessState::Running,
         })))
-    }
-}
-
-intel_fn! {
-    extern "asm" fn sysretq_userinit() {
-        /*
-         * After pushing all of the required registers on the stack
-         * disable interrupts as we are swaping stacks. Interrupts are
-         * automatically enabled after `sysretq`.
-         */
-        "cli\n",
-        "call context_switch_finalize\n",
-        "call restore_user_tls\n",
-
-        "pop r11\n", // Restore RFLAGS.
-        "pop rcx\n", // Restore RIP.
-
-        "push rdx\n",
-
-        "swapgs\n",
-
-        "mov rdx, rsp\n",
-        "add rdx, 16\n", // Skip RDX and user RSP currently on the stack.
-        "mov gs:[0x04], rdx\n", // Stash kernel stack.
-
-        "swapgs\n",
-        "pop rdx\n",
-        "pop rsp\n", // Restore user stack.
-
-        "sysretq\n",
-    }
-}
-
-intel_fn! {
-    pub(super) extern "asm" fn context_switch(from: &mut Unique<InterruptFrame>, to: &InterruptFrame) {
-        "pushfq\n", // Push registers to current context.
-
-        "cli\n",
-
-        "push rbp\n",
-        "push r15\n",
-        "push r14\n",
-        "push r13\n",
-        "push r12\n",
-        "push rbx\n",
-
-        "mov rax, cr3\n", // Save CR3.
-        "push rax\n",
-
-        "mov [rdi], rsp\n",	// Update old context pointer with current stack pointer.
-        "mov rsp, rsi\n", // Switch to new stack.
-
-        "pop rax\n", // Restore CR3.
-        "mov cr3, rax\n",
-
-        "pop rbx\n",
-        "pop r12\n",
-        "pop r13\n",
-        "pop r14\n",
-        "pop r15\n",
-        "pop rbp\n",
-
-        "popfq\n",
-
-        "ret\n",
     }
 }
