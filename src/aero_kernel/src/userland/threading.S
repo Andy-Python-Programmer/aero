@@ -16,7 +16,7 @@
  *
  * ## Signature
  * ```rust
- * extern C fn context_switch(previous: &mut Unique<InterruptFrame>, new: &InterruptFrame);
+ * extern "C" fn context_switch(previous: &mut Unique<InterruptFrame>, new: &InterruptFrame);
  * ```
  */
 context_switch:
@@ -96,3 +96,49 @@ iretq_kernelinit:
     iretq // Leap of faith!
 
 .global iretq_kernelinit
+
+/*
+ * This function is responsible for jumping to userland with the provided stack, instruction pointer
+ * and argument. This is used by sys_exec(2).
+ *
+ * ## Signature
+ * ```rust
+ * pub extern "C" fn jump_userland(stack_top: VirtAddr, instruction_ptr: VirtAddr, argument: u64);
+ * ```
+ *
+ * ## Saftey
+ * Here its is *safe* to use [VirtAddr] as the argument type as it is represented as a
+ * transparent struct. So after compilation the argument should result in u64 instead
+ * of [VirtAddr].
+ */
+jump_userland:
+    /*
+     * After pushing all of the required registers on the stack
+     * disable interrupts as we are swaping stacks. Interrupts are
+     * automatically enabled after `sysretq`.
+     */
+    cli
+
+    push rdi // Param: stack_top
+    push rsi // Param: instruction_ptr
+    push rdx // Param: rflags
+
+    mov ax, (6 << 3) | 3 // Set AX to user data segment with RPL 3
+
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    // NOTE: We do not need to set SS as is handled by `sysretq.`
+
+    call restore_user_tls
+
+    pop r11
+    pop rcx
+    pop rsp
+
+    fninit
+    sysretq
+
+.global jump_userland

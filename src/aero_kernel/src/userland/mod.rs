@@ -9,10 +9,9 @@
  * except according to those terms.
  */
 
-use x86_64::{structures::paging::OffsetPageTable, VirtAddr};
+use x86_64::structures::paging::OffsetPageTable;
 use xmas_elf::ElfFile;
 
-use crate::prelude::*;
 use crate::syscall;
 
 use self::process::Process;
@@ -24,45 +23,6 @@ pub mod scheduler;
 static USERLAND_SHELL: &[u8] = include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
 
 global_asm!(include_str!("threading.S"));
-
-intel_fn! {
-    /**
-     * ## Saftey
-     * Here its is *safe* to use [VirtAddr] as the argument type as it is represented as a
-     * transparent struct. So after compilation the argument should result in u64 instead
-     * of [VirtAddr].
-     */
-    pub extern "asm" fn jump_userland(stack_top: VirtAddr, instruction_ptr: VirtAddr, argument: u64) {
-        /*
-         * After pushing all of the required registers on the stack
-         * disable interrupts as we are swaping stacks. Interrupts are
-         * automatically enabled after `sysretq`.
-         */
-        "cli\n",
-
-        "push rdi\n", // Param: stack_top
-        "push rsi\n", // Param: instruction_ptr
-        "push rdx\n", // Param: rflags
-
-        "mov ax, (6 << 3) | 3\n", // Set AX to user data segment with RPL 3
-
-        "mov ds, ax\n",
-        "mov es, ax\n",
-        "mov fs, ax\n",
-        "mov gs, ax\n",
-
-        // NOTE: We do not need to set SS as is handled by `sysretq.`
-
-        "call restore_user_tls\n",
-
-        "pop r11\n",
-        "pop rcx\n",
-        "pop rsp\n",
-
-        "fninit\n",
-        "sysretq\n",
-    }
-}
 
 pub fn run(offset_table: &mut OffsetPageTable) -> Result<(), &'static str> {
     let shell_elf = ElfFile::new(USERLAND_SHELL)?;

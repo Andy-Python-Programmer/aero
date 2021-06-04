@@ -10,9 +10,9 @@
  */
 
 use alloc::{alloc::alloc_zeroed, sync::Arc};
-use core::{alloc::Layout, any::Any, cell::UnsafeCell, mem, ptr::Unique, sync::atomic::Ordering};
+use core::{alloc::Layout, any::Any, cell::UnsafeCell, mem, ptr::Unique};
 
-use crate::apic::CPU_COUNT;
+use crate::apic::get_cpu_count;
 
 pub mod buffer;
 pub mod io;
@@ -199,9 +199,9 @@ impl<T> PerCpu<T> {
     pub fn new(init: fn() -> T) -> PerCpu<T> {
         let mut this = PerCpu::<T>::new_uninit();
 
-        let cpu_count = CPU_COUNT.load(Ordering::SeqCst);
-
+        let cpu_count = get_cpu_count();
         let size = mem::size_of::<T>() * cpu_count;
+
         let raw = unsafe { alloc_zeroed(Layout::from_size_align_unchecked(size, 8)) as *mut T };
 
         unsafe {
