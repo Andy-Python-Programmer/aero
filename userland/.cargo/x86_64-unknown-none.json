@@ -5,11 +5,11 @@
     "target-endian": "little",
     "target-pointer-width": "64",
     "target-c-int-width": "32",
-    "os": "aero",
+    "os": "none",
     "executables": true,
     "linker-flavor": "ld.lld",
     "linker": "rust-lld",
-    "morestack": false,
+    "disable-redzone": true,
     "features": "-mmx,-sse,+soft-float",
     "panic": "abort"
 }
