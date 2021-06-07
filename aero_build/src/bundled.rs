@@ -118,7 +118,6 @@ pub async fn download_limine_prebuilt() -> Result<(), Box<dyn Error>> {
 
 pub fn fetch() -> Result<(), Box<dyn Error>> {
     let bundled_dir = Path::new(BUNDLED_DIR).canonicalize()?;
-    let user_build_dir = Path::new("userland/build").canonicalize()?;
 
     let mlibc_src_dir = bundled_dir.join("mlibc");
 
