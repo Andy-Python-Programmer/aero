@@ -117,8 +117,9 @@ pub async fn download_limine_prebuilt() -> Result<(), Box<dyn Error>> {
 }
 
 pub fn fetch() -> Result<(), Box<dyn Error>> {
-    let bundled_dir = Path::new(BUNDLED_DIR).canonicalize()?;
+    xshell::mkdir_p(BUNDLED_DIR)?;
 
+    let bundled_dir = Path::new(BUNDLED_DIR).canonicalize()?;
     let mlibc_src_dir = bundled_dir.join("mlibc");
 
     if !mlibc_src_dir.exists() {
