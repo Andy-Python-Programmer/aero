@@ -11,9 +11,7 @@
 
 use std::env;
 use std::error::Error;
-use std::path::PathBuf;
 use std::process::Command;
-use std::str::FromStr;
 
 fn assemble_trampoline(out_dir: &str) -> Result<(), Box<dyn Error>> {
     let result = Command::new("nasm")
@@ -45,28 +43,10 @@ fn assemble_trampoline(out_dir: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let target_env = env::var("TARGET").expect("The target enviornment variable was not set");
-    let target_triple = aero_build::target_triple!(target_env);
-
     let out_dir = env::var("OUT_DIR")?;
-
-    aero_build::assemble_assembly_source_files(
-        PathBuf::from_str("src")?,
-        &target_triple,
-        &vec!["trampoline.asm"],
-    )?;
-
     assemble_trampoline(&out_dir)?;
 
-    if cfg!(feature = "stivale2") {
-        cc::Build::new()
-            .file("./src/boot/stivale2/boot.c")
-            .include("./src/boot/stivale2")
-            .compile("stivale2_boot");
-    }
-
     println!("cargo:rerun-if-changed=.cargo/kernel.ld");
-    println!("cargo:rerun-if-changed=aero_kernel/src/boot/stivale2/kernel.ld");
 
     Ok(())
 }

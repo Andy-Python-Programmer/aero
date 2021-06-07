@@ -12,7 +12,7 @@ default = ["round-robin"]
 [dependencies]
 spin = "0.9"
 bitflags = "1.2"
-x86_64 = "0.14"
+x86_64 = "0.14.3"
 bit_field = "0.10"
 linked_list_allocator = "0.9.0"
 log = "0.4"
@@ -22,11 +22,6 @@ paste = "1.0"
 cfg-if = "1.0"
 hashbrown = "0.11"
 rustc-demangle = "0.1"
-
-[dependencies.font8x8]
-version = "0.3"
-default-features = false
-features = ["unicode"]
 
 [dependencies.lazy_static]
 version = "1.4"
@@ -47,5 +42,3 @@ path = "../aero_boot/"
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
-nasm-rs = { version = "0.2", features = ["parallel"] }
-aero_build = { path = "../../aero_build/" }
