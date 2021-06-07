@@ -5,10 +5,10 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-json = "0.12.4"
 reqwest = { version = "0.11.3", features = ["rustls-tls"], default-features = false }
 structopt = "0.3.21"
 tokio = { version = "1.5.0", features = ["macros", "rt", "rt-multi-thread"] }
 fs_extra = "1.2.0"
 fatfs = "0.3.5"
 gpt = "2.0.0"
+xshell = "0.1.14"

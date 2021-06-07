@@ -15,6 +15,7 @@
     "features": "-mmx,-sse,+soft-float",
     "pre-link-args": {
         "ld.lld": [
+            "--gc-sections",
             "--script=.cargo/kernel.ld"
         ]
     }

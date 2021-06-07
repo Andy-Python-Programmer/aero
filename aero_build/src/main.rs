@@ -257,6 +257,8 @@ async fn main() {
                 target,
                 chainloader,
             } => {
+                bundled::fetch().unwrap();
+
                 /*
                  * Get the current time. This is will be used to caclulate the build time
                  * after the build is finished.
@@ -287,6 +289,8 @@ async fn main() {
                 chainloader,
                 target,
             } => {
+                bundled::fetch().unwrap();
+
                 /*
                  * Get the current time. This is will be used to caclulate the build time
                  * after the build is finished.
@@ -310,6 +314,8 @@ async fn main() {
             }
 
             AeroBuildCommand::Update { chainloader } => {
+                bundled::fetch().unwrap();
+
                 let chainloader = AeroChainloader::from(chainloader);
 
                 bundled::update_ovmf()

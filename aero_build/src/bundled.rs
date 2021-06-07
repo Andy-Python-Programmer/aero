@@ -116,6 +116,22 @@ pub async fn download_limine_prebuilt() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+pub fn fetch() -> Result<(), Box<dyn Error>> {
+    let bundled_dir = Path::new(BUNDLED_DIR).canonicalize()?;
+    let user_build_dir = Path::new("userland/build").canonicalize()?;
+
+    let mlibc_src_dir = bundled_dir.join("mlibc");
+
+    if !mlibc_src_dir.exists() {
+        xshell::cmd!("git clone --depth 1 --branch master https://github.com/Andy-Python-Programmer/mlibc bundled/mlibc").run()?;
+    } else {
+        let _p = xshell::pushd(&mlibc_src_dir)?;
+        xshell::cmd!("git pull").run()?;
+    }
+
+    Ok(())
+}
+
 fn get_fat_filesystem_len(fat: Vec<&Path>) -> u64 {
     let mb = 1024 * 1024; // Size of a megabyte and round it to next megabyte.
     let mut size = 0x00;
