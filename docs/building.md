@@ -8,6 +8,15 @@ Before building the compiler, you need the following things installed:
 - `g++` 5.1 or later, `clang++` 3.5 or later, or `MSVC` 2017 or later.
 - `ninja`, or GNU `make` 3.81 or later (`ninja` is recommended, especially on Windows)
 
+## Hardware
+The following are *not* requirements but are *recommendations*:
+- ~15GB of free disk space
+- \>= 8GB RAM
+- \>= 2 cores
+- Internet access
+
+Beefier machines will lead to much faster builds!
+
 # How to Build and Run Aero
 
 ## Getting the source code
