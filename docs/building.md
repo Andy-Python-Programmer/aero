@@ -27,10 +27,9 @@ $ cd aero
 ```
 
 ## What is `aero_build`?
-`aero_build` is a small binary that is used to orchestrate the tooling in 
-or the Aero repository. It is used to build docs, run tests, and compile Aero. 
-It is the now preferred way to build rustc and it replaces the old makefiles from
-before.
+`aero_build` is a small binary that is used to orchestrate the tooling in the Aero repository. 
+It is used to build docs, run tests, and compile Aero. It is the now preferred way to build Aero and 
+it replaces the old makefiles from before.
 
 ## Building Aero
 
