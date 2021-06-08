@@ -15,3 +15,9 @@ pub fn exit(status: usize) -> ! {
     log::trace!("Exiting the current process with status: {}", status);
     scheduler::exit_current_process(status);
 }
+
+pub fn shutdown() -> ! {
+    crate::fs::cache::clear_inode_cache();
+    // TODO
+    loop {}
+}

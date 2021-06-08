@@ -16,6 +16,8 @@ use alloc::sync::Arc;
 
 use spin::{Once, RwLock};
 
+use crate::fs::cache::INODE_CACHE;
+
 use super::inode::INodeInterface;
 use super::{AeroFilesystemError, FileSystem};
 
@@ -101,6 +103,10 @@ pub fn get_null() -> &'static Arc<DevNull> {
 
 /// Initialize devfs and install it in the dyn filesystem btreemap.
 pub(super) fn init() -> Result<(), AeroFilesystemError> {
+    let _ = INODE_CACHE
+        .get()
+        .expect("INode cache was not even initialized");
+
     let devfs = DevFs;
 
     {

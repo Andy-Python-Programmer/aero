@@ -54,6 +54,7 @@ fn __inner_syscall(stack: &mut InterruptStack) -> usize {
 
     let result = match a {
         SYS_EXIT => process::exit(b),
+        SYS_SHUTDOWN => process::shutdown(),
         SYS_OPEN => fs::open(b, c, d),
         SYS_WRITE => fs::write(b, c, d),
         _ => {

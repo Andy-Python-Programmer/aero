@@ -13,6 +13,7 @@ use alloc::{collections::BTreeMap, sync::Arc};
 
 use spin::RwLock;
 
+pub mod cache;
 pub mod dev_fs;
 pub mod file_table;
 pub mod inode;
@@ -75,5 +76,6 @@ impl<'path> Path<'path> {
 }
 
 pub fn init() {
+    cache::init();
     dev_fs::init().expect("Failed to initialize devfs");
 }

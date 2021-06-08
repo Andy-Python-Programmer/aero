@@ -9,6 +9,7 @@ define_syscall_ids!(
     SYS_WRITE => 1;
     SYS_OPEN => 2;
     SYS_CLOSE => 3;
+    SYS_SHUTDOWN => 10;
     SYS_EXIT => 60;
     SYS_REBOOT => 169;
 );

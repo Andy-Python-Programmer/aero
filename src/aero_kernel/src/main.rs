@@ -32,6 +32,7 @@
     extern_types,
     new_uninit,
     box_syntax,
+    arc_new_cyclic,
     const_btree_new // TODO: Do not abuse nightly rust :D
 )]
 #![test_runner(crate::tests::test_runner)]
