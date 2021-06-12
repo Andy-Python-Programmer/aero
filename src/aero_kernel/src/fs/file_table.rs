@@ -24,6 +24,7 @@ impl FileTable {
         Self(RwLock::new(Vec::new()))
     }
 
+    #[allow(unused)]
     pub fn get_handle(&self, fd: usize) -> Option<Arc<FileHandle>> {
         let files = self.0.read();
 

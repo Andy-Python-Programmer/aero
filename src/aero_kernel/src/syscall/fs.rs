@@ -37,10 +37,7 @@ pub fn open(path: usize, len: usize, mode: usize) -> Result<usize, AeroSyscallEr
     );
 
     if let Some(path) = validate_str(path as *mut _, len) {
-        let _ = match Path::new(path) {
-            Ok(path) => path,
-            Err(_) => return Err(AeroSyscallError::EINVAL),
-        };
+        let _ = Path::new(path);
 
         Ok(0)
     } else {

@@ -20,7 +20,9 @@
 use core::borrow::Borrow;
 use core::fmt::Debug;
 use core::hash::Hash;
+use core::ops;
 
+use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 use spin::Mutex;
@@ -28,27 +30,51 @@ use spin::Mutex;
 use lru::LruCache;
 use spin::Once;
 
-use super::inode::INodeInterface;
+use crate::fs::inode::{DirEntry, INodeInterface};
 
 pub(super) static INODE_CACHE: Once<Arc<INodeCache>> = Once::new();
+pub(super) static DIR_CACHE: Once<Arc<DirCache>> = Once::new();
 
 pub trait CacheKey: Hash + Ord + Borrow<Self> + Debug {}
 
 impl<T> CacheKey for T where T: Hash + Ord + Borrow<Self> + Debug {}
 
-pub trait Cacheable<K: CacheKey>: Sized {}
+pub trait Cacheable<K: CacheKey>: Sized {
+    fn cache_key(&self) -> K;
+}
 
 /// Structure representing a cache item in the cache index. See the documentation of [CacheIndex]
 /// and the fields of this struct for more information.
-pub struct CacheItem<K: CacheKey, T: Cacheable<K>> {
-    cache: Weak<Cache<K, T>>,
+pub struct CacheItem<K: CacheKey, V: Cacheable<K>> {
+    #[allow(unused)]
+    cache: Weak<Cache<K, V>>,
+    value: V,
 }
+
+impl<K: CacheKey, V: Cacheable<K>> CacheItem<K, V> {
+    pub fn new(cache: &Weak<Cache<K, V>>, value: V) -> Arc<Self> {
+        Arc::new(Self {
+            cache: cache.clone(),
+            value,
+        })
+    }
+}
+
+impl<K: CacheKey, V: Cacheable<K>> ops::Deref for CacheItem<K, V> {
+    type Target = V;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+unsafe impl<K: CacheKey, V: Cacheable<K>> Sync for CacheItem<K, V> {}
 
 /// Inner implementation structure for caching. This structure basically contains the
 /// LRU cache of the unused entries and a hashmap of the used entries.
 struct CacheIndex<K: CacheKey, V: Cacheable<K>> {
     unused: LruCache<K, Arc<CacheItem<K, V>>>,
-    used: hashbrown::HashMap<K, Arc<CacheItem<K, V>>>,
+    used: hashbrown::HashMap<K, Weak<CacheItem<K, V>>>,
 }
 
 /// Structure representing a cache with a key of `K` and value of `V`. The cache
@@ -56,6 +82,8 @@ struct CacheIndex<K: CacheKey, V: Cacheable<K>> {
 /// the cache index (protected by a mutex) and a weak self reference to itself.
 pub struct Cache<K: CacheKey, V: Cacheable<K>> {
     index: Mutex<CacheIndex<K, V>>,
+
+    #[allow(unused)]
     self_ref: Weak<Cache<K, V>>,
 }
 
@@ -78,14 +106,84 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
         index_mut.unused.clear();
         index_mut.used.clear();
     }
+
+    pub fn make_item_cached(&self, value: V) -> Arc<CacheItem<K, V>> {
+        let item = CacheItem::<K, V>::new(&self.self_ref, value);
+
+        self.index
+            .lock()
+            .used
+            .insert(item.cache_key(), Arc::downgrade(&item));
+
+        item
+    }
+
+    pub fn make_item_no_cache(&self, value: V) -> Arc<CacheItem<K, V>> {
+        CacheItem::<K, V>::new(&Weak::default(), value)
+    }
+
+    pub fn get(&self, key: K) -> Option<Arc<CacheItem<K, V>>> {
+        let mut index = self.index.lock();
+
+        if let Some(entry) = index.used.get(&key) {
+            return entry.clone().upgrade();
+        } else if let Some(entry) = index.unused.pop(&key) {
+            return Some(entry.clone());
+        } else {
+            None
+        }
+    }
 }
 
-pub(super) type INodeCacheKey = (usize, usize);
-pub(super) type INodeCache = Cache<INodeCacheKey, CachedINode>;
+pub type INodeCacheKey = (usize, usize);
+pub type INodeCache = Cache<INodeCacheKey, CachedINode>;
+pub type INodeCacheItem = Arc<CacheItem<INodeCacheKey, CachedINode>>;
+pub type INodeCacheWeakItem = Weak<CacheItem<INodeCacheKey, CachedINode>>;
 
-pub(super) struct CachedINode(Arc<dyn INodeInterface>);
+/// The cache key for the directory entry cache used to get the cache item. The cache key
+/// is the tuple of the parent's cache marker (akin [usize]) and the name of the directory entry
+/// (akin [String]).
+pub type DirCacheKey = (usize, String);
+pub type DirCache = Cache<DirCacheKey, DirEntry>;
+pub type DirCacheItem = Arc<CacheItem<DirCacheKey, DirEntry>>;
 
-impl Cacheable<INodeCacheKey> for CachedINode {}
+pub struct CachedINode(Arc<dyn INodeInterface>);
+
+impl CachedINode {
+    pub fn new(inode: Arc<dyn INodeInterface>) -> Self {
+        Self(inode)
+    }
+
+    pub fn inner(&self) -> &Arc<dyn INodeInterface> {
+        &self.0
+    }
+}
+
+impl ops::Deref for CachedINode {
+    type Target = Arc<dyn INodeInterface>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Cacheable<INodeCacheKey> for CachedINode {
+    fn cache_key(&self) -> INodeCacheKey {
+        todo!()
+    }
+}
+
+impl Cacheable<DirCacheKey> for DirEntry {
+    fn cache_key(&self) -> DirCacheKey {
+        let this = self.data.lock();
+
+        if let Some(parent) = this.parent.as_ref() {
+            (parent.cache_marker, this.name.clone())
+        } else {
+            (0x00, this.name.clone())
+        }
+    }
+}
 
 /// Clears the inode cache. This function is mostly called when cleanup is required. For example
 /// on a reboot or shutdown.
@@ -95,7 +193,20 @@ pub fn clear_inode_cache() {
     }
 }
 
+pub(super) fn icache() -> &'static Arc<INodeCache> {
+    INODE_CACHE
+        .get()
+        .expect("`icache` was invoked before it was initialized")
+}
+
+pub(super) fn dcache() -> &'static Arc<DirCache> {
+    DIR_CACHE
+        .get()
+        .expect("`dcache` was invoked before it was initialized")
+}
+
 /// This function is responsible for initializing the inode cache.
 pub fn init() {
     INODE_CACHE.call_once(|| INodeCache::new(256));
+    DIR_CACHE.call_once(|| DirCache::new(256));
 }

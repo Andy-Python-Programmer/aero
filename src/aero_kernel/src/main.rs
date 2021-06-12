@@ -178,7 +178,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     drivers::pci::init(&mut offset_table);
     log::info!("Loaded PCI driver");
 
-    fs::init();
+    fs::init().unwrap();
     log::info!("Loaded filesystem");
 
     userland::init();

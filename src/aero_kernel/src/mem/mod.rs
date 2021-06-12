@@ -62,6 +62,7 @@ impl AddressSpace {
 
     /// Returns a reference to the page table frame allocated for this address
     /// space.
+    #[allow(unused)]
     pub fn cr3(&self) -> PhysFrame {
         self.cr3
     }

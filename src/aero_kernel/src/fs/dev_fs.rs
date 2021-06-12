@@ -19,7 +19,7 @@ use spin::{Once, RwLock};
 use crate::fs::cache::INODE_CACHE;
 
 use super::inode::INodeInterface;
-use super::{AeroFilesystemError, FileSystem};
+use super::{FileSystem, FilesystemError, Result};
 
 static DEVICES: RwLock<BTreeMap<usize, Arc<dyn Device>>> = RwLock::new(BTreeMap::new());
 
@@ -30,11 +30,11 @@ pub trait Device: Send + Sync {
     fn signature(&self) -> usize;
 }
 
-fn install_device(device: Arc<dyn Device>) -> Result<(), AeroFilesystemError> {
+fn install_device(device: Arc<dyn Device>) -> Result<()> {
     let dev = DEVICES.read();
 
     if dev.contains_key(&device.signature()) {
-        Err(AeroFilesystemError::DeviceExists)
+        Err(FilesystemError::DeviceExists)
     } else {
         mem::drop(dev);
 
@@ -60,11 +60,11 @@ macro impl_dev($(struct $name:ty;)*) {
 pub struct DevNull(usize);
 
 impl INodeInterface for DevNull {
-    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize, AeroFilesystemError> {
+    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
         Ok(0x00)
     }
 
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize, AeroFilesystemError> {
+    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
         Ok(0x00)
     }
 }
@@ -72,15 +72,15 @@ impl INodeInterface for DevNull {
 pub struct DevStdout(usize);
 
 impl INodeInterface for DevStdout {
-    fn write_at(&self, _offset: usize, buffer: &[u8]) -> Result<usize, AeroFilesystemError> {
+    fn write_at(&self, _offset: usize, buffer: &[u8]) -> Result<usize> {
         let string = unsafe { core::str::from_utf8_unchecked(buffer) };
 
         log::debug!("(stdout) {}", string);
         Ok(buffer.len())
     }
 
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize, AeroFilesystemError> {
-        Err(AeroFilesystemError::NotSupported)
+    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
+        Err(FilesystemError::NotSupported)
     }
 }
 
@@ -102,7 +102,7 @@ pub fn get_null() -> &'static Arc<DevNull> {
 }
 
 /// Initialize devfs and install it in the dyn filesystem btreemap.
-pub(super) fn init() -> Result<(), AeroFilesystemError> {
+pub(super) fn init() -> Result<()> {
     let _ = INODE_CACHE
         .get()
         .expect("INode cache was not even initialized");
