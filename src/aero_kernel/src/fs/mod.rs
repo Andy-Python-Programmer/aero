@@ -9,10 +9,16 @@
  * except according to those terms.
  */
 
-use alloc::{collections::BTreeMap, string::String, sync::Arc};
+use core::mem;
 
-use spin::{Once, RwLock};
+use alloc::collections::BTreeMap;
+use alloc::string::String;
+use alloc::sync::Arc;
 
+use spin::Mutex;
+use spin::Once;
+
+use self::cache::Cacheable;
 use self::{cache::DirCacheItem, ramfs::RamFs};
 
 pub mod cache;
@@ -21,9 +27,63 @@ pub mod file_table;
 pub mod inode;
 pub mod ramfs;
 
-static FILE_SYSTEMS: RwLock<BTreeMap<usize, Arc<dyn FileSystem>>> = RwLock::new(BTreeMap::new());
+static ROOT_FS: Once<Arc<RamFs>> = Once::new();
+static ROOT_DIR: Once<DirCacheItem> = Once::new();
 
-type Result<T> = core::result::Result<T, FilesystemError>;
+lazy_static::lazy_static! {
+    pub static ref MOUNT_MANAGER: MountManager = MountManager::new();
+}
+
+pub type Result<T> = core::result::Result<T, FileSystemError>;
+type MountKey = (usize, String);
+
+#[derive(Clone)]
+struct MountPoint {
+    filesystem: Arc<dyn FileSystem>,
+
+    root_entry: DirCacheItem,
+    origin_entry: DirCacheItem,
+}
+
+#[repr(transparent)]
+pub struct MountManager(Mutex<BTreeMap<MountKey, MountPoint>>);
+
+impl MountManager {
+    #[inline]
+    fn new() -> Self {
+        Self(Mutex::new(BTreeMap::new()))
+    }
+
+    fn mount(&self, directory: DirCacheItem, filesystem: Arc<dyn FileSystem>) -> Result<()> {
+        let mut this = self.0.lock();
+        let mount_key = directory.cache_key();
+
+        if this.contains_key(&mount_key) {
+            return Err(FileSystemError::EntryExists);
+        }
+
+        let root_dir = filesystem.root_dir();
+
+        let current_data = directory.data.lock();
+        let mut root_data = root_dir.data.lock();
+
+        root_data.parent = current_data.parent.clone();
+
+        mem::drop(root_data);
+        mem::drop(current_data);
+
+        this.insert(
+            mount_key,
+            MountPoint {
+                filesystem,
+                root_entry: root_dir,
+                origin_entry: directory,
+            },
+        );
+
+        Ok(())
+    }
+}
 
 /// ## Notes
 /// * https://wiki.osdev.org/File_Systems
@@ -33,26 +93,8 @@ pub trait FileSystem: Send + Sync {
     }
 }
 
-#[inline(always)]
-pub(super) fn install_filesystem<F: 'static + FileSystem>(
-    signature: usize,
-    filesystem: F,
-) -> Result<()> {
-    let fs = FILE_SYSTEMS.read();
-
-    if fs.contains_key(&signature) {
-        Err(FilesystemError::DeviceExists)
-    } else {
-        drop(fs);
-        FILE_SYSTEMS.write().insert(signature, Arc::new(filesystem));
-
-        Ok(())
-    }
-}
-
 #[derive(Debug)]
-pub enum FilesystemError {
-    DeviceExists,
+pub enum FileSystemError {
     NotSupported,
     EntryExists,
     EntryNotFound,
@@ -71,9 +113,6 @@ impl Path {
         self.0.split("/").filter(|e| *e != "" && *e != ".")
     }
 }
-
-static ROOT_FS: Once<Arc<RamFs>> = Once::new();
-static ROOT_DIR: Once<DirCacheItem> = Once::new();
 
 pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
     let mut result = root_dir().clone();
@@ -119,9 +158,11 @@ pub fn init() -> Result<()> {
     ROOT_DIR.call_once(|| filesystem.root_dir().clone());
 
     root_dir().inode().mkdir("dev")?;
-    lookup_path(Path::new("/dev"))?;
+    root_dir().inode().mkdir("etc")?;
+    root_dir().inode().mkdir("home")?;
+    root_dir().inode().mkdir("temp")?;
 
-    dev_fs::init().expect("Failed to initialize devfs");
+    dev_fs::init()?;
 
     Ok(())
 }

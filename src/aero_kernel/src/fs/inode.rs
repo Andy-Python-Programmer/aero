@@ -20,7 +20,7 @@ use crate::utils::Downcastable;
 
 use super::cache;
 use super::cache::{DirCacheItem, INodeCacheItem};
-use super::{FileSystem, FilesystemError, Result};
+use super::{FileSystem, FileSystemError, Result};
 
 static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 
@@ -34,22 +34,22 @@ static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 pub trait INodeInterface: Send + Sync + Downcastable {
     /// Write at the provided `offset` with the given `buffer` as its contents.
     fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
-        Err(FilesystemError::NotSupported)
+        Err(FileSystemError::NotSupported)
     }
 
     /// Read at the provided `offset` to the given `buffer.
     fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
-        Err(FilesystemError::NotSupported)
+        Err(FileSystemError::NotSupported)
     }
 
     /// Creates a new directory with the provided `name` in the filesystem.
     fn mkdir(&self, _name: &str) -> Result<INodeCacheItem> {
-        Err(FilesystemError::NotSupported)
+        Err(FileSystemError::NotSupported)
     }
 
     /// Looks up the directory entry in the filesystem.
     fn lookup(&self, _dir: DirCacheItem, _name: &str) -> Result<DirCacheItem> {
-        Err(FilesystemError::NotSupported)
+        Err(FileSystemError::NotSupported)
     }
 
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {

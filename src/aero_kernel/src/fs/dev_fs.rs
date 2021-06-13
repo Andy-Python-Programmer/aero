@@ -9,124 +9,137 @@
  * except according to those terms.
  */
 
+//! The `/dev` directory contains the special device files for all the devices.
+
 use core::mem;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 
-use spin::{Once, RwLock};
+use spin::RwLock;
 
-use crate::fs::cache::INODE_CACHE;
+use crate::fs::lookup_path;
+use crate::fs::Path;
 
-use super::inode::INodeInterface;
-use super::{FileSystem, FilesystemError, Result};
+use super::cache::DirCacheItem;
+use super::ramfs::RamFs;
+use super::FileSystemError;
+use super::{FileSystem, Result, MOUNT_MANAGER};
+
+lazy_static::lazy_static! {
+    static ref DEV_FILESYSTEM: Arc<DevFs> = DevFs::new();
+}
 
 static DEVICES: RwLock<BTreeMap<usize, Arc<dyn Device>>> = RwLock::new(BTreeMap::new());
+static DEVICE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 
-static DEV_STDOUT: Once<Arc<DevStdout>> = Once::new();
-static DEV_NULL: Once<Arc<DevNull>> = Once::new();
+/// A trait representing a device. A device has a device marker (or a device ID) and the
+/// device name (which is used in the creation of the device inode in the device filesystem).
+trait Device: Send + Sync {
+    /// Returns the device marker (or simply the device ID) of the device. (See the documentation of
+    /// this trait for more information.)
+    fn device_marker(&self) -> usize;
 
-pub trait Device: Send + Sync {
-    fn signature(&self) -> usize;
+    /// Returns the device name of this device. (See the documentation of this trait for more
+    /// information.)
+    fn device_name(&self) -> &str;
 }
 
+/// Installs the provided `device` in the device filesystem (ie. in /dev/) and the
+/// global [DEVICES] btree map.
 fn install_device(device: Arc<dyn Device>) -> Result<()> {
-    let dev = DEVICES.read();
+    let devices = DEVICES.read();
 
-    if dev.contains_key(&device.signature()) {
-        Err(FilesystemError::DeviceExists)
-    } else {
-        mem::drop(dev);
+    // We cannot have two devices with the same device marker.
+    if devices.contains_key(&device.device_marker()) {
+        return Err(FileSystemError::EntryExists);
+    }
 
-        DEVICES.write().insert(device.signature(), device);
-        Ok(())
+    mem::drop(devices);
+
+    DEVICES
+        .write()
+        .insert(device.device_marker(), device.clone());
+
+    log::debug!("Installed device `{}`", device.device_name());
+
+    Ok(())
+}
+
+struct DevFs(Arc<RamFs>);
+
+impl DevFs {
+    #[inline]
+    fn new() -> Arc<Self> {
+        Arc::new(Self(RamFs::new()))
     }
 }
 
-pub struct DevFs;
-
-impl FileSystem for DevFs {}
-
-macro impl_dev($(struct $name:ty;)*) {
-    $(
-        impl Device for $name {
-            fn signature(&self) -> usize {
-                self.0
-            }
-        }
-    )*
-}
-
-pub struct DevNull(usize);
-
-impl INodeInterface for DevNull {
-    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
-        Ok(0x00)
-    }
-
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
-        Ok(0x00)
+impl FileSystem for DevFs {
+    #[inline]
+    fn root_dir(&self) -> DirCacheItem {
+        self.0.root_dir()
     }
 }
 
-pub struct DevStdout(usize);
+/// Implementation of the null device (akin `/dev/null`).
+struct DevNull(usize);
 
-impl INodeInterface for DevStdout {
-    fn write_at(&self, _offset: usize, buffer: &[u8]) -> Result<usize> {
-        let string = unsafe { core::str::from_utf8_unchecked(buffer) };
-
-        log::debug!("(stdout) {}", string);
-        Ok(buffer.len())
-    }
-
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
-        Err(FilesystemError::NotSupported)
+impl DevNull {
+    #[inline]
+    fn new() -> Arc<Self> {
+        Arc::new(Self(DEVICE_MARKER.fetch_add(1, Ordering::SeqCst)))
     }
 }
 
-impl_dev! {
-    struct DevNull;
-    struct DevStdout;
+impl Device for DevNull {
+    #[inline]
+    fn device_marker(&self) -> usize {
+        self.0
+    }
+
+    #[inline]
+    fn device_name(&self) -> &str {
+        "null"
+    }
 }
 
-pub fn get_stdout() -> &'static Arc<DevStdout> {
-    DEV_STDOUT
-        .get()
-        .expect("Attempted to get /dev/stdout before it was initialized")
+/// Implementation of the stdout device (akin `/dev/stdout`).
+struct DevStdout(usize);
+
+impl DevStdout {
+    #[inline]
+    fn new() -> Arc<Self> {
+        Arc::new(Self(DEVICE_MARKER.fetch_add(1, Ordering::SeqCst)))
+    }
 }
 
-pub fn get_null() -> &'static Arc<DevNull> {
-    DEV_NULL
-        .get()
-        .expect("Attempted to get /dev/null before it was initialized")
+impl Device for DevStdout {
+    #[inline]
+    fn device_marker(&self) -> usize {
+        self.0
+    }
+
+    #[inline]
+    fn device_name(&self) -> &str {
+        "stdout"
+    }
 }
 
-/// Initialize devfs and install it in the dyn filesystem btreemap.
+/// Initializes the dev filesystem. (See the module-level documentation for more information).
 pub(super) fn init() -> Result<()> {
-    let _ = INODE_CACHE
-        .get()
-        .expect("INode cache was not even initialized");
+    let inode = lookup_path(Path::new("/dev"))?;
 
-    let devfs = DevFs;
+    MOUNT_MANAGER.mount(inode, DEV_FILESYSTEM.clone())?;
 
     {
-        DEV_NULL.call_once(|| Arc::new(DevNull(0x6e756c6c)));
-        DEV_STDOUT.call_once(|| Arc::new(DevStdout(0x7374646f7574)));
+        let null = DevNull::new();
+        let stdout = DevStdout::new();
 
-        install_device(get_null().clone())?;
-        log::debug!("Installed /dev/null");
-
-        install_device(get_stdout().clone())?;
-        log::debug!("Installed /dev/stdout");
+        install_device(null)?;
+        install_device(stdout)?;
     }
-
-    /*
-     * Now after we have initialized devfs we are going to install it as a filesystem
-     * in our dyn filesystems hashmap with `0x646576` as its signature.
-     */
-    super::install_filesystem(0x646576, devfs)?;
-
-    log::debug!("Installed devfs");
 
     Ok(())
 }

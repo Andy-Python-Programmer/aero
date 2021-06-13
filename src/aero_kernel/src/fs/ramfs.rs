@@ -9,6 +9,10 @@
  * except according to those terms.
  */
 
+//! Implementation of in-memory filesystem. This is used for temporary filesystems (e.g. dev, temp) and
+//! since Aero currently does not have support for actual disk filesystems (e.g. ex2 and FAT32), ram-fs is
+//! used as the root filesystem.
+
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::collections::BTreeMap;
@@ -22,7 +26,7 @@ use crate::utils::downcast;
 use super::cache;
 use super::cache::{CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem};
 use super::inode::{DirEntry, FileType, INodeInterface};
-use super::{FileSystem, FilesystemError, Result};
+use super::{FileSystem, FileSystemError, Result};
 
 #[derive(Default)]
 pub struct RamINode {
@@ -61,7 +65,7 @@ impl LockedRamINode {
         let mut this = self.0.write();
 
         if this.children.contains_key(name) || ["", ".", ".."].contains(&name) {
-            return Err(FilesystemError::EntryExists);
+            return Err(FileSystemError::EntryExists);
         }
 
         let filesystem = this
@@ -98,7 +102,7 @@ impl INodeInterface for LockedRamINode {
         let child = this
             .children
             .get(name)
-            .ok_or(FilesystemError::EntryNotFound)?;
+            .ok_or(FileSystemError::EntryNotFound)?;
 
         Ok(DirEntry::new(
             dir.clone(),
@@ -112,9 +116,8 @@ impl INodeInterface for LockedRamINode {
     }
 }
 
-/// Implementation of in-memory filesystem. This is used for temporary filesystems (e.g. dev, temp) and
-/// since Aero currently does not have support for actual disk filesystems (e.g. ex2 and FAT32), ram-fs is
-/// used as the root filesystem.
+/// Implementation of in-memory filesystem. (See the module-level documentation for more
+/// information).
 pub struct RamFs {
     root_inode: INodeCacheItem,
     root_dir: DirCacheItem,
