@@ -25,6 +25,8 @@ use crate::utils::downcast;
 
 use super::cache;
 use super::cache::{CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem};
+use super::devfs::DevINode;
+use super::inode::FileContents;
 use super::inode::{DirEntry, FileType, INodeInterface};
 use super::{FileSystem, FileSystemError, Result};
 
@@ -36,11 +38,13 @@ pub struct RamINode {
     children: BTreeMap<String, INodeCacheItem>,
     filesystem: Weak<RamFs>,
     file_type: FileType,
+    contents: FileContents,
 }
 
 pub struct LockedRamINode(RwLock<RamINode>);
 
 impl LockedRamINode {
+    #[inline]
     fn new(node: RamINode) -> Self {
         Self(RwLock::new(node))
     }
@@ -60,7 +64,12 @@ impl LockedRamINode {
         this.file_type = file_type;
     }
 
-    fn make_inode(&self, name: &str, file_type: FileType) -> Result<INodeCacheItem> {
+    fn make_inode(
+        &self,
+        name: &str,
+        file_type: FileType,
+        contents: FileContents,
+    ) -> Result<INodeCacheItem> {
         let icache = cache::icache();
         let mut this = self.0.write();
 
@@ -73,7 +82,7 @@ impl LockedRamINode {
             .upgrade()
             .expect("Failed to upgrade to strong filesystem");
 
-        let inode = filesystem.allocate_inode(file_type);
+        let inode = filesystem.allocate_inode(file_type, contents);
         let inode_cached = icache.make_item_no_cache(CachedINode::new(inode));
 
         downcast::<dyn INodeInterface, LockedRamINode>(&inode_cached.inner())
@@ -93,8 +102,18 @@ impl LockedRamINode {
 }
 
 impl INodeInterface for LockedRamINode {
+    #[inline]
     fn mkdir(&self, name: &str) -> Result<INodeCacheItem> {
-        self.make_inode(name, FileType::Directory)
+        self.make_inode(name, FileType::Directory, FileContents::None)
+    }
+
+    #[inline]
+    fn make_dev_inode(&self, name: &str, marker: usize) -> Result<INodeCacheItem> {
+        self.make_inode(
+            name,
+            FileType::Device,
+            FileContents::Device(DevINode::new(marker)?),
+        )
     }
 
     fn lookup(&self, dir: DirCacheItem, name: &str) -> Result<DirCacheItem> {
@@ -111,6 +130,7 @@ impl INodeInterface for LockedRamINode {
         ))
     }
 
+    #[inline]
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
         Some(self.0.read().filesystem.clone())
     }
@@ -155,19 +175,21 @@ impl RamFs {
         ramfs
     }
 
-    fn allocate_inode(&self, file_type: FileType) -> Arc<LockedRamINode> {
+    fn allocate_inode(&self, file_type: FileType, contents: FileContents) -> Arc<LockedRamINode> {
         Arc::new(LockedRamINode::new(RamINode {
             parent: Weak::default(),
             node: Weak::default(),
             filesystem: Weak::default(),
             children: BTreeMap::new(),
             id: self.next_id.fetch_add(1, Ordering::SeqCst),
+            contents,
             file_type,
         }))
     }
 }
 
 impl FileSystem for RamFs {
+    #[inline]
     fn root_dir(&self) -> DirCacheItem {
         self.root_dir.clone()
     }

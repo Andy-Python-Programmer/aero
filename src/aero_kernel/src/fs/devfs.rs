@@ -51,22 +51,49 @@ trait Device: Send + Sync {
 fn install_device(device: Arc<dyn Device>) -> Result<()> {
     let devices = DEVICES.read();
 
+    let device_marker = device.device_marker();
+    let device_name = device.device_name();
+
     // We cannot have two devices with the same device marker.
-    if devices.contains_key(&device.device_marker()) {
+    if devices.contains_key(&device_marker) {
         return Err(FileSystemError::EntryExists);
     }
 
     mem::drop(devices);
 
-    DEVICES
-        .write()
-        .insert(device.device_marker(), device.clone());
+    DEVICES.write().insert(device_marker, device.clone());
 
-    log::debug!("Installed device `{}`", device.device_name());
+    DEV_FILESYSTEM
+        .root_dir()
+        .inode()
+        .make_dev_inode(device_name, device_marker)?;
+
+    log::debug!("Installed device `{}`", device_name);
 
     Ok(())
 }
 
+/// Structure representing a device inode. This is internally used by ram-fs
+/// to create a new inode with the file type of `device` and its contents as a
+/// reference-counting pointer to the device itself.
+pub struct DevINode(Arc<dyn Device>);
+
+impl DevINode {
+    /// Creates a new device inode by looking up the device with the provided `marker`
+    /// as the key in the [DEVICES] b-tree map.
+    pub fn new(marker: usize) -> Result<Arc<Self>> {
+        let this = DEVICES.read();
+
+        if let Some(device) = this.get(&marker) {
+            Ok(Arc::new(Self(device.clone())))
+        } else {
+            Err(FileSystemError::EntryNotFound)
+        }
+    }
+}
+
+/// Implementation of dev filesystem. (See the module-level documentation for more
+/// information).
 struct DevFs(Arc<RamFs>);
 
 impl DevFs {

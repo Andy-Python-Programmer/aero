@@ -22,7 +22,7 @@ use self::cache::Cacheable;
 use self::{cache::DirCacheItem, ramfs::RamFs};
 
 pub mod cache;
-pub mod dev_fs;
+pub mod devfs;
 pub mod file_table;
 pub mod inode;
 pub mod ramfs;
@@ -162,7 +162,7 @@ pub fn init() -> Result<()> {
     root_dir().inode().mkdir("home")?;
     root_dir().inode().mkdir("temp")?;
 
-    dev_fs::init()?;
+    devfs::init()?;
 
     Ok(())
 }

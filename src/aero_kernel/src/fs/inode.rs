@@ -12,14 +12,18 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::string::String;
+use alloc::sync::Arc;
 use alloc::sync::Weak;
 
+use alloc::vec::Vec;
+use spin::mutex::spin::SpinMutex;
 use spin::{Mutex, Once};
 
 use crate::utils::Downcastable;
 
 use super::cache;
 use super::cache::{DirCacheItem, INodeCacheItem};
+use super::devfs::DevINode;
 use super::{FileSystem, FileSystemError, Result};
 
 static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
@@ -47,13 +51,38 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
+    /// Creates a new dev inode with the provided `name` and the device `marker` in
+    /// the filesystem.
+    ///
+    /// ## Overview
+    /// In the inner implementation this simply looks up for the device with the device
+    /// marker in the global devices b-tree map and adds it as a device inode in the children
+    /// array of itself.
+    fn make_dev_inode(&self, _name: &str, _marker: usize) -> Result<INodeCacheItem> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Looks up the directory entry in the filesystem.
     fn lookup(&self, _dir: DirCacheItem, _name: &str) -> Result<DirCacheItem> {
         Err(FileSystemError::NotSupported)
     }
 
+    /// Returns a weak reference to the filesystem that this inode belongs to.
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
         None
+    }
+}
+
+pub enum FileContents {
+    Content(SpinMutex<Vec<u8>>),
+    Device(Arc<DevINode>),
+
+    None,
+}
+
+impl Default for FileContents {
+    fn default() -> Self {
+        Self::Content(SpinMutex::new(Vec::new()))
     }
 }
 
@@ -61,6 +90,7 @@ pub trait INodeInterface: Send + Sync + Downcastable {
 pub enum FileType {
     File,
     Directory,
+    Device,
 }
 
 impl Default for FileType {
