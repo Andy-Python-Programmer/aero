@@ -36,13 +36,15 @@ impl log::Log for AeroLogger {
             let level = record.level();
             let spaces = MAX_LOG_LEVEL_SPACE - level.as_str().len();
 
+            let initialized = rendy::is_initialized();
+
             macro log($($arg:tt)*) {
-                $crate::prelude::print!("{}", format_args!($($arg)*));
+                if initialized { $crate::prelude::print!("{}", format_args!($($arg)*)); }
                 $crate::prelude::serial_print!("{}", format_args!($($arg)*));
             }
 
             macro log_ln($($arg:tt)*) {
-                $crate::prelude::println!("{}", format_args!($($arg)*));
+                if initialized { $crate::prelude::println!("{}", format_args!($($arg)*)); }
                 $crate::prelude::serial_println!("{}", format_args!($($arg)*));
             }
 
@@ -56,21 +58,23 @@ impl log::Log for AeroLogger {
             log!("[ ");
 
             match record.level() {
-                Level::Error => {
+                Level::Error if initialized => {
                     rendy::set_color_code(ColorCode::new(Color::from_hex(0xDFF2800), Color::BLACK))
                 }
 
-                Level::Warn => {
+                Level::Warn if initialized => {
                     rendy::set_color_code(ColorCode::new(Color::from_hex(0xFFD300), Color::BLACK))
                 }
 
-                Level::Info => {
+                Level::Info if initialized => {
                     rendy::set_color_code(ColorCode::new(Color::from_hex(0x50C878), Color::BLACK))
                 }
 
-                Level::Debug | Level::Trace => {
+                Level::Debug | Level::Trace if initialized => {
                     rendy::set_color_code(ColorCode::new(Color::from_hex(0x10A5F5), Color::BLACK))
                 }
+
+                _ => {}
             }
 
             log!("{}", level);
