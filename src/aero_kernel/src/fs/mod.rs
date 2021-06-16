@@ -137,6 +137,8 @@ pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
                     continue;
                 }
 
+                log::debug!("{:?}", result.inode().metadata());
+
                 result = result.inode().lookup(result.clone(), component)?;
             }
         }

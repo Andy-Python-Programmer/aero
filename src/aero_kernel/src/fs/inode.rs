@@ -36,6 +36,9 @@ static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 /// This trait requires the implementor to implement [Send], [Sync] and [Downcastable] on
 /// the inode structure.
 pub trait INodeInterface: Send + Sync + Downcastable {
+    /// Returns the inode metadata of `this` inode.
+    fn metadata(&self) -> Metadata;
+
     /// Write at the provided `offset` with the given `buffer` as its contents.
     fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
         Err(FileSystemError::NotSupported)
@@ -73,10 +76,35 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     }
 }
 
+/// Structure representing the curcial, characteristics of an inode. The metadata
+/// of an inode can be retrieved by invoking the [INodeInterface::metadata] function.
+#[derive(Debug, Copy, Clone)]
+pub struct Metadata {
+    pub(super) id: usize,
+    pub(super) file_type: FileType,
+
+    /// The total size of the content that the inode holds. Set to `0x00` if
+    /// the inode file type is *not* a file.
+    pub(super) size: usize,
+
+    /// The length of the children's map of the inode. Set to `0x00` if the inode
+    /// has no children and if the file type of the inode is *not* a directory.
+    pub(super) children_len: usize,
+}
+
+/// Enum representing the inner contents of a file. The file contents depend on the
+/// file type of the inode.
 pub enum FileContents {
+    /// This variant expresses a *normal file* (akin: A file that actually stores data
+    /// in bytes) and is protected by a spin lock.
     Content(SpinMutex<Vec<u8>>),
+
+    /// If the file type of the inode is [FileType::Device], in that case this variant
+    /// is used.
     Device(Arc<DevINode>),
 
+    /// This file does *not* and *cannot* have any contents in bytes. This is useful
+    /// in the cases of directories.
     None,
 }
 
@@ -86,7 +114,7 @@ impl Default for FileContents {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum FileType {
     File,
     Directory,

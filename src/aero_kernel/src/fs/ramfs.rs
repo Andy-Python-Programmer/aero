@@ -26,8 +26,8 @@ use crate::utils::downcast;
 use super::cache;
 use super::cache::{CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem};
 use super::devfs::DevINode;
-use super::inode::FileContents;
 use super::inode::{DirEntry, FileType, INodeInterface};
+use super::inode::{FileContents, Metadata};
 use super::{FileSystem, FileSystemError, Result};
 
 #[derive(Default)]
@@ -114,6 +114,20 @@ impl INodeInterface for LockedRamINode {
             FileType::Device,
             FileContents::Device(DevINode::new(marker)?),
         )
+    }
+
+    fn metadata(&self) -> Metadata {
+        let this = self.0.read();
+
+        Metadata {
+            id: this.id,
+            file_type: this.file_type,
+            size: match &this.contents {
+                FileContents::Content(bytes) => bytes.lock().len(), // Temporary value dropped and lock is unlocked!
+                _ => 0x00,
+            },
+            children_len: this.children.len(),
+        }
     }
 
     fn lookup(&self, dir: DirCacheItem, name: &str) -> Result<DirCacheItem> {
