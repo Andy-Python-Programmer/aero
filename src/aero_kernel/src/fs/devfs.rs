@@ -156,8 +156,9 @@ impl Device for DevStdout {
 
 /// Initializes the dev filesystem. (See the module-level documentation for more information).
 pub(super) fn init() -> Result<()> {
-    let inode = lookup_path(Path::new("/dev"))?;
+    lazy_static::initialize(&DEV_FILESYSTEM);
 
+    let inode = lookup_path(Path::new("/dev"))?;
     MOUNT_MANAGER.mount(inode, DEV_FILESYSTEM.clone())?;
 
     {

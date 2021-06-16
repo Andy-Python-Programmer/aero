@@ -18,6 +18,8 @@ use alloc::sync::Arc;
 use spin::Mutex;
 use spin::Once;
 
+use crate::fs::inode::FileType;
+
 use self::cache::Cacheable;
 use self::{cache::DirCacheItem, ramfs::RamFs};
 
@@ -83,6 +85,17 @@ impl MountManager {
 
         Ok(())
     }
+
+    fn find_mount(&self, directory: DirCacheItem) -> Result<MountPoint> {
+        let this = self.0.lock();
+        let cache_key = directory.cache_key();
+
+        if let Some(mount_point) = this.get(&cache_key) {
+            Ok(mount_point.clone())
+        } else {
+            Err(FileSystemError::EntryNotFound)
+        }
+    }
 }
 
 /// ## Notes
@@ -134,12 +147,15 @@ pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
 
                 if let Some(entry) = cache_entry {
                     result = entry;
-                    continue;
+                } else {
+                    result = result.inode().lookup(result.clone(), component)?;
                 }
 
-                log::debug!("{:?}", result.inode().metadata());
-
-                result = result.inode().lookup(result.clone(), component)?;
+                if result.inode().metadata().file_type == FileType::Directory {
+                    if let Ok(mount_point) = MOUNT_MANAGER.find_mount(result.clone()) {
+                        result = mount_point.root_entry;
+                    }
+                }
             }
         }
     }
@@ -165,6 +181,9 @@ pub fn init() -> Result<()> {
     root_dir().inode().mkdir("temp")?;
 
     devfs::init()?;
+    log::info!("Installed devfs");
+
+    lookup_path(Path::new("/dev/stdout"))?;
 
     Ok(())
 }
