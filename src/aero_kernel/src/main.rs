@@ -45,7 +45,7 @@ use aero_boot::{BootInfo, UnwindInfo};
 
 use linked_list_allocator::LockedHeap;
 use spin::Once;
-use x86_64::{registers, VirtAddr};
+use x86_64::VirtAddr;
 
 mod acpi;
 mod apic;
@@ -111,16 +111,6 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
      */
     drivers::uart_16550::init();
     logger::init();
-
-    /*
-     * Now that we have initialized basic logging we have to make sure that the
-     * kernel is loaded in the higher half offset that we set in the linker script.
-     */
-    {
-        let rip = registers::read_rip().as_u64();
-
-        assert_eq!(rip & 0xffffffffffff0000, 0xffff800080000000);
-    }
 
     unsafe {
         PHYSICAL_MEMORY_OFFSET = boot_info.physical_memory_offset;

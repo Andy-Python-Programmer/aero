@@ -36,6 +36,11 @@ impl log::Log for AeroLogger {
             let level = record.level();
             let spaces = MAX_LOG_LEVEL_SPACE - level.as_str().len();
 
+            /*
+             * Helper variable to track if the rendy was initialized when this function was invoked as
+             * we do not like to panic when we call log before the initialization because in that case
+             * we log to the serial (COM 1) output.
+             */
             let initialized = rendy::is_initialized();
 
             macro log($($arg:tt)*) {
@@ -54,7 +59,10 @@ impl log::Log for AeroLogger {
             let mut log_ring = get_log_ring_buffer();
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
-            rendy::set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
+            if initialized {
+                rendy::set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
+            }
+
             log!("[ ");
 
             match record.level() {
@@ -79,7 +87,10 @@ impl log::Log for AeroLogger {
 
             log!("{}", level);
 
-            rendy::set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
+            if initialized {
+                rendy::set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
+            }
+
             log_ln!("{: <1$}]        {args}", "", spaces, args = record.args());
         }
     }
