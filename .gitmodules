@@ -1,3 +1,0 @@
-[submodule "userland/mlibc"]
-	path = userland/mlibc
-	url = https://github.com/Andy-Python-Programmer/mlibc

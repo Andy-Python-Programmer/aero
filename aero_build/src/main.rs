@@ -216,6 +216,7 @@ enum AeroBuildCommand {
         chainloader: Option<String>,
     },
 
+    Clean,
     Web,
 }
 
@@ -327,6 +328,11 @@ async fn main() {
                         .await
                         .expect("Failed to update limine prebuilt files");
                 }
+            }
+
+            AeroBuildCommand::Clean => {
+                xshell::rm_rf("./src/target").unwrap();
+                xshell::rm_rf("./userland/target").unwrap();
             }
 
             AeroBuildCommand::Web => build_web().unwrap(),

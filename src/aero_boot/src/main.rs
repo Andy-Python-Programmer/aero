@@ -46,7 +46,7 @@ mod paging;
 mod unwind;
 
 const AERO_KERNEL_ELF_PATH: &str = r"aero_kernel.elf";
-const AERO_PHYSICAL_OFFSET: u64 = 0xFFFF808000000000;
+const AERO_PHYSICAL_OFFSET: u64 = 0xFFFF800000000000;
 const AERO_STACK_ADDRESS: u64 = 0x10000000;
 
 fn init_display(system_table: &SystemTable<Boot>) -> (PhysAddr, FrameBufferInfo) {

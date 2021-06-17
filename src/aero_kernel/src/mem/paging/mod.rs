@@ -12,21 +12,14 @@
 pub mod frame;
 
 use aero_boot::*;
-use x86_64::{
-    registers::control::Cr3,
-    structures::paging::{mapper::MapToError, *},
-    VirtAddr,
-};
+
+use x86_64::registers::control::Cr3;
+use x86_64::structures::paging::{mapper::MapToError, *};
+use x86_64::VirtAddr;
 
 pub use frame::LockedFrameAllocator;
 
-use crate::{prelude::*, PHYSICAL_MEMORY_OFFSET};
-
-use crate::utils::linker::LinkerSymbol;
-
-const_unsafe! {
-    const KERNEL_PML4: VirtAddr = VirtAddr::new_unsafe(0xFFFF800000000000);
-}
+use crate::PHYSICAL_MEMORY_OFFSET;
 
 pub static mut FRAME_ALLOCATOR: LockedFrameAllocator = LockedFrameAllocator::new_uninit();
 
@@ -45,19 +38,7 @@ impl UnmapGuard {
 pub fn init(
     memory_regions: &'static MemoryRegions,
 ) -> Result<OffsetPageTable<'static>, MapToError<Size4KiB>> {
-    extern "C" {
-        static __kernel_start: LinkerSymbol;
-        static __kernel_end: LinkerSymbol;
-    }
-
-    let kernel_start = unsafe { __kernel_start.virt_addr() };
-    let kernel_end = unsafe { __kernel_end.virt_addr() };
-
-    assert_eq!(kernel_start.p4_index(), KERNEL_PML4.p4_index());
-    assert_eq!(kernel_end.p4_index(), KERNEL_PML4.p4_index());
-
     let active_level_4 = unsafe { active_level_4_table() };
-
     let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };
 
     unsafe {

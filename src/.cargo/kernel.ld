@@ -1,7 +1,8 @@
-ENTRY(kernel_main)
-OUTPUT_FORMAT(elf64-x86-64)
+ENTRY(kernel_main) /* We want our entry point function to be [kernel_main] */
+OUTPUT_FORMAT(elf64-x86-64) /* We want the output format to be ELF x86_64*/
 
-KERNEL_OFFSET = 0xFFFF800080000000;
+/* We want to be placed in the higher half, 2MiB above 0x00 in physical memory */
+KERNEL_OFFSET = 0xFFFFFFFF80200000;
 
 SECTIONS {
     . = KERNEL_OFFSET;
@@ -11,6 +12,8 @@ SECTIONS {
 
     __kernel_start = .;
 
+
+    /* Then place all of the other traditional executable sections afterwards... */
     .text : {
         __text_start = .;
         *(.text*)
@@ -33,6 +36,7 @@ SECTIONS {
         __data_end = .;
     }
 
+    /* The kernel makes use of the tdata section for CPU-local variables... */
     .tdata : {
         __tdata_start = .;
         *(.tdata*)
@@ -52,9 +56,13 @@ SECTIONS {
         __bss_end = .;
     }
     
-    . = ALIGN(0x1000);
     __kernel_end = .;
 
+    /* 
+     * Discard all of the useless sections for us. Note that Aero does do stack unwinding on panic, instead
+     * of aborting, but it does not use the eh frame. See the `aero_kernel/src/unwind.rs` file for more
+     * information.
+     */
     /DISCARD/ : {
         *(.comment*)
         *(.eh_frame*)

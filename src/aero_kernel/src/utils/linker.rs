@@ -9,26 +9,19 @@
  * except according to those terms.
  */
 
-use x86_64::VirtAddr;
-
 extern "C" {
     pub type LinkerSymbol;
 }
 
 impl LinkerSymbol {
-    #[inline(always)]
+    #[inline]
     pub fn as_ptr(&'static self) -> *const u8 {
         self as *const Self as *const u8
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn as_usize(&'static self) -> usize {
         self.as_ptr() as usize
-    }
-
-    #[inline(always)]
-    pub fn virt_addr(&'static self) -> VirtAddr {
-        unsafe { VirtAddr::new_unsafe(self.as_usize() as u64) }
     }
 }
 
