@@ -1,6 +1,7 @@
-target
-/qemu.log
+*.iso
 *.img
+*.log
+
+target
 build
 bundled
-*.iso

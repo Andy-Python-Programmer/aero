@@ -11,6 +11,7 @@
 
 use core::mem;
 
+use aero_syscall::AeroSyscallError;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -113,6 +114,16 @@ pub enum FileSystemError {
     EntryNotFound,
 }
 
+impl From<FileSystemError> for AeroSyscallError {
+    fn from(error: FileSystemError) -> Self {
+        match error {
+            FileSystemError::NotSupported => AeroSyscallError::EACCES,
+            FileSystemError::EntryExists => AeroSyscallError::EEXIST,
+            FileSystemError::EntryNotFound => AeroSyscallError::ENOENT,
+        }
+    }
+}
+
 /// A slice of a path (akin to [str]).
 #[derive(Debug)]
 pub struct Path(str);
@@ -182,8 +193,6 @@ pub fn init() -> Result<()> {
 
     devfs::init()?;
     log::info!("Installed devfs");
-
-    lookup_path(Path::new("/dev/stdout"))?;
 
     Ok(())
 }

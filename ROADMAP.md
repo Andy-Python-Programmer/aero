@@ -8,7 +8,7 @@
 - [x] Improved logger
 - [x] Store logs in ring buffer
 - [x] Devfs
-- [ ] Filesystem table isolated for each process
+- [x] Filesystem table isolated for each process
 - [ ] Re-implement the APIC trampoline in more clean manner
 - [ ] Kernel drivers
 

@@ -210,7 +210,7 @@ impl DirEntry {
 /// the provided entry exists in the given parent directory cache.
 pub fn fetch_dir_entry(parent: DirCacheItem, name: String) -> Option<DirCacheItem> {
     let dcache = cache::dcache();
-    let cache_key = (parent.cache_marker, name.clone());
+    let cache_key = (parent.cache_marker, name);
 
     dcache.get(cache_key)
 }
