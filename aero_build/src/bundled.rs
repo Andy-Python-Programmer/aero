@@ -120,13 +120,33 @@ pub fn fetch() -> Result<(), Box<dyn Error>> {
     xshell::mkdir_p(BUNDLED_DIR)?;
 
     let bundled_dir = Path::new(BUNDLED_DIR).canonicalize()?;
+
     let mlibc_src_dir = bundled_dir.join("mlibc");
+    let gcc_src_dir = bundled_dir.join("gcc");
 
     if !mlibc_src_dir.exists() {
         xshell::cmd!("git clone --depth 1 --branch master https://github.com/Andy-Python-Programmer/mlibc bundled/mlibc").run()?;
+    }
+
+    if !gcc_src_dir.exists() {
+        /*
+         * We apprantly have to do a special check for windows here because GCC does not like files with CLRF so,
+         * we just GIT clone using WSL which apprantly seems to solve the gcc/configure script not running.
+         *
+         * FIXME(Andy-Python-Programmer): GIT should automatically convert all of the files into LF instead.
+         */
+
+        if cfg!(target_os = "windows") {
+            xshell::cmd!("wsl git clone --depth 1 --branch aero https://github.com/Andy-Python-Programmer/gcc bundled/gcc").run()?
+        } else {
+            xshell::cmd!("git clone --depth 1 --branch aero https://github.com/Andy-Python-Programmer/gcc bundled/gcc").run()?;
+        }
+    }
+
+    if cfg!(target_os = "windows") {
+        xshell::cmd!("wsl ./userland/setup.sh").run()?;
     } else {
-        let _p = xshell::pushd(&mlibc_src_dir)?;
-        xshell::cmd!("git pull").run()?;
+        xshell::cmd!("./userland/setup.sh").run()?;
     }
 
     Ok(())

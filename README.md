@@ -25,10 +25,10 @@ Please make sure you use the **latest nightly** of rustc before building Aero.
 
 Check out [ROADMAP.md](ROADMAP.md) for this month's roadmap.
 
-# Building Aero
+# How to Build and Run Aero
 
 ## Dependencies
-Before building the compiler, you need the following things installed:
+Before building Aero, you need the following things installed:
 - `rustc` should be the **latest nightly**
 - `qemu`
 - `nasm`
@@ -43,8 +43,6 @@ The following are *not* requirements but are *recommendations*:
 - Internet access
 
 Beefier machines will lead to much faster builds!
-
-# How to Build and Run Aero
 
 ## Getting the source code
 The very first step to work on Aero is to clone the repository:

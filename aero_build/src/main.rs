@@ -19,16 +19,18 @@ use fs_extra::dir::CopyOptions;
 
 use structopt::StructOpt;
 
+use std::env;
 use std::fs;
-use std::{env, time::Instant};
 
 use std::error::Error;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
+use std::time::Instant;
 
 /// The cargo executable. This constant uses the `CARGO` environment variable to
 /// also support non-standard cargo versions.
 const CARGO: &str = env!("CARGO");
+
 const BUNDLED_DIR: &str = "bundled";
 
 mod bootloader;
