@@ -152,8 +152,10 @@ pub fn fetch() -> Result<(), Box<dyn Error>> {
     }
 
     if cfg!(target_os = "windows") {
+        xshell::cmd!("wsl chmod +x ./userland/setup.sh").run()?;
         xshell::cmd!("wsl ./userland/setup.sh").run()?;
     } else {
+        xshell::cmd!("chmod +x ./userland/setup.sh").run()?;
         xshell::cmd!("./userland/setup.sh").run()?;
     }
 

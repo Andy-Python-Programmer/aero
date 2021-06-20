@@ -20,8 +20,8 @@ jobs:
       with:
         profile: minimal
         toolchain: nightly
-    - name: Install nasm
-      run: sudo apt-get install -y nasm
+    - name: Install dependencies
+      run: sudo apt-get install -y nasm meson ninja-build
     - name: Install `rust-src` Rustup Component
       run: rustup component add rust-src llvm-tools-preview
     - name: Run build
