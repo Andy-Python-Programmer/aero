@@ -1,3 +1,5 @@
+#!/bin/bash
+
 SPATH=$(dirname $(readlink -f "$0"))
 
 AERO_PATH=$(realpath $SPATH/..)
