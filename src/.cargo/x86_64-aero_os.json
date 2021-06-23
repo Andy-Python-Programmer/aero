@@ -10,7 +10,6 @@
     "linker-flavor": "ld.lld",
     "linker": "rust-lld",
     "eliminate-frame-pointer": false,
-    "morestack": false,
     "disable-redzone": true,
     "features": "-mmx,-sse,+soft-float",
     "pre-link-args": {

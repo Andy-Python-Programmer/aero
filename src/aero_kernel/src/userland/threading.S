@@ -1,12 +1,20 @@
 /*
- * Copyright 2021 The Aero Project Developers. See the COPYRIGHT
- * file at the top-level directory of this project.
+ * Copyright (C) 2021 The Aero Project Developers.
  *
- * Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
- * http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
- * <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
- * option. This file may not be copied, modified, or distributed
- * except according to those terms.
+ * This file is part of The Aero Project.
+ *
+ * Aero is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Aero is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*
@@ -20,9 +28,9 @@
  * ```
  */
 context_switch:
-    pushfq // Push registers to current context.
+    pushfq /* Push registers to current context. */
 
-    cli // Disable interrupts as we are switching stacks.
+    cli /* Disable interrupts as we are switching stacks. */
 
     push rbp
     push r15
@@ -31,13 +39,13 @@ context_switch:
     push r12
     push rbx
 
-    mov rax, cr3 // Save CR3.
+    mov rax, cr3 /* Save CR3. */
     push rax
 
-    mov [rdi], rsp // Update old context pointer with current stack pointer.
-    mov rsp, rsi // Switch to new stack.
+    mov [rdi], rsp /* Update old context pointer with current stack pointer. */
+    mov rsp, rsi /* Switch to new stack. */
 
-    pop rax // Restore CR3.
+    pop rax /* Restore CR3. */
     mov cr3, rax
 
     pop rbx
@@ -72,8 +80,8 @@ sysretq_userinit:
     call context_switch_finalize
     call restore_user_tls
 
-    pop r11 // Restore RFLAGS.
-    pop rcx // Restore RIP.
+    pop r11 /* Restore RFLAGS. */
+    pop rcx /* Restore RIP. */
 
     push rdx
 
@@ -85,7 +93,7 @@ sysretq_userinit:
 
     swapgs
     pop rdx
-    pop rsp // Restore user stack.
+    pop rsp /* Restore user stack. */
 
     sysretq
 
@@ -130,7 +138,7 @@ jump_userland:
     mov fs, ax
     mov gs, ax
 
-    // NOTE: We do not need to set SS as is handled by `sysretq.`
+    /* NOTE: We do not need to set SS as is handled by `sysretq.` */
 
     call restore_user_tls
 
