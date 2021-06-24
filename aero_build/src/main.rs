@@ -1,18 +1,18 @@
-/* 
+/*
  * Copyright (C) 2021 The Aero Project Developers.
- * 
+ *
  * This file is part of The Aero Project.
  *
  * Aero is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Aero is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -21,6 +21,17 @@
 //!
 //! This module, is the implementation of the Aero build system. The goal of `aero_build` is to be an
 //! easily understandable, easily extensible, and maintainable build system.
+
+/*
+ * Due to the requirement of building userland applications which require GCC and other unix-only tools
+ * we do not support compilation on windows subsystems. We could easily support this by entering the WSL subsystem
+ * when ever we want to run a unix-only tool but that would decrease the performence of compilation as we are writing
+ * to windows drives. If you are using windows then its reccomended to use WSL 2 and clone aero in the WSL 2 file system
+ * instead of the windows file system, due to the lack of performence. We do not want to waste precious time of the person
+ * who is compiling aero on windows and just raise a compile error.
+ */
+#[cfg(target_family = "windows")]
+compile_error!("aero does not support compilation on non-unix like systems");
 
 use fs_extra::dir;
 use fs_extra::dir::CopyOptions;

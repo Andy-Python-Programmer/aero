@@ -1,18 +1,18 @@
-/* 
+/*
  * Copyright (C) 2021 The Aero Project Developers.
- * 
+ *
  * This file is part of The Aero Project.
  *
  * Aero is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Aero is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -137,27 +137,11 @@ pub fn fetch() -> Result<(), Box<dyn Error>> {
     }
 
     if !gcc_src_dir.exists() {
-        /*
-         * We apprantly have to do a special check for windows here because GCC does not like files with CLRF so,
-         * we just GIT clone using WSL which apprantly seems to solve the gcc/configure script not running.
-         *
-         * FIXME(Andy-Python-Programmer): GIT should automatically convert all of the files into LF instead.
-         */
-
-        if cfg!(target_os = "windows") {
-            xshell::cmd!("wsl git clone --depth 1 --branch aero https://github.com/Andy-Python-Programmer/gcc bundled/gcc").run()?
-        } else {
-            xshell::cmd!("git clone --depth 1 --branch aero https://github.com/Andy-Python-Programmer/gcc bundled/gcc").run()?;
-        }
+        xshell::cmd!("git clone --depth 1 --branch aero https://github.com/Andy-Python-Programmer/gcc bundled/gcc").run()?;
     }
 
-    if cfg!(target_os = "windows") {
-        xshell::cmd!("wsl chmod +x ./userland/setup.sh").run()?;
-        xshell::cmd!("wsl ./userland/setup.sh").run()?;
-    } else {
-        xshell::cmd!("chmod +x ./userland/setup.sh").run()?;
-        xshell::cmd!("./userland/setup.sh").run()?;
-    }
+    xshell::cmd!("chmod +x ./tools/setup_userland.sh").run()?;
+    xshell::cmd!("./tools/setup_userland.sh").run()?;
 
     Ok(())
 }
