@@ -22,6 +22,10 @@ function setup_mlibc {
 
 # This function is responsible for building and assembling libgcc.
 function setup_gcc {
+    # Install all of the required packages required to build GCC from source. This would require admin permissions
+    # so, follow the prompt for putting in your root password.
+    sudo apt install bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo gcc automake make
+
     mkdir -p $AERO_SYSROOT_BUILD/gcc
 
     # The first step of compiling GCC for the Aero target is to download and extract the

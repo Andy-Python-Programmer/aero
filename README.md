@@ -4,13 +4,21 @@
 
 # Aero
 
-**Aero** is a new modern, experimental, unix-like operating system written in Rust. Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and the Zircon Kernel.
+**Aero** is a new modern, experimental, unix-like operating system written in Rust. 
+Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and 
+the Zircon Kernel.
 
-Please make sure you use the **latest nightly** of rustc before building Aero.
+Please make sure you use the **latest nightly** of rustc and a **unix-like** host system 
+before building Aero. If you are using windows, its highly recommended to use WSL 2.
 
 ![workflow](https://github.com/Andy-Python-Programmer/aero/actions/workflows/build.yml/badge.svg)
 [![lines_of_code](https://tokei.rs/b1/github/Andy-Python-Programmer/aero)](https://github.com/Andy-Python-Programmer/aero)
 [![discord](https://img.shields.io/discord/828564770063122432)](https://discord.gg/8gwhTTZwt8)
+
+**Is this a Linux distribution?**
+No, Aero runs its own kernel that does *not* originate from Linux and does not share any source code or binaries with the Linux kernel.
+
+**Official Discord Server**: <https://discord.gg/8gwhTTZwt8>
 
 # Screenshots
 <img src="misc/os.png">
@@ -95,4 +103,4 @@ Contributions are absolutely, positively welcome and encouraged! Check out [CONT
 Aero is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version. See the [LICENSE](LICENSE) file for license rights and limitations
+(at your option) any later version. See the [LICENSE](LICENSE) file for license rights and limitations.
