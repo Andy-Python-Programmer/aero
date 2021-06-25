@@ -14,6 +14,7 @@ dependencies = [
 name = "aero_syscall"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "cfg-if",
  "raw-cpuid",
  "spin",
@@ -57,9 +58,9 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "spin"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b87bbf98cb81332a56c1ee8929845836f85e8ddd693157c30d76660196014478"
+checksum = "f5fdd7196b4ae35a111c6dc97f9cc152ca3ea8ad744f7cb46a9f27b3ef8f2f54"
 dependencies = [
  "lock_api",
 ]

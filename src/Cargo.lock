@@ -10,7 +10,7 @@ dependencies = [
  "font8x8",
  "log",
  "rlibc",
- "spin 0.9.0",
+ "spin 0.9.1",
  "uefi",
  "x86_64",
  "xmas-elf",
@@ -51,7 +51,7 @@ dependencies = [
  "paste",
  "raw-cpuid",
  "rustc-demangle",
- "spin 0.9.0",
+ "spin 0.9.1",
  "x86_64",
  "xmas-elf",
 ]
@@ -60,9 +60,10 @@ dependencies = [
 name = "aero_syscall"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "cfg-if",
  "raw-cpuid",
- "spin 0.9.0",
+ "spin 0.9.1",
 ]
 
 [[package]]
@@ -239,9 +240,9 @@ checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
 
 [[package]]
 name = "rustc-demangle"
-version = "0.1.19"
+version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "410f7acf3cb3a44527c5d9546bad4bf4e6c460915d5f9f2fc524498bfe8f70ce"
+checksum = "dead70b0b5e03e9c814bcb6b01e03e68f7c57a80aa48c72ec92152ab3e818d49"
 
 [[package]]
 name = "scopeguard"
@@ -257,9 +258,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spin"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b87bbf98cb81332a56c1ee8929845836f85e8ddd693157c30d76660196014478"
+checksum = "f5fdd7196b4ae35a111c6dc97f9cc152ca3ea8ad744f7cb46a9f27b3ef8f2f54"
 dependencies = [
  "lock_api",
 ]
@@ -275,9 +276,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.72"
+version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1e8cdbefb79a9a5a65e0db8b47b723ee907b7c7f8496c76a1770b5c310bab82"
+checksum = "f71489ff30030d2ae598524f61326b902466f72a0fb1a8564c001cc63425bcc7"
 dependencies = [
  "proc-macro2",
  "quote",

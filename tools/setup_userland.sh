@@ -3,6 +3,7 @@
 SPATH=$(dirname $(readlink -f "$0"))
 
 AERO_PATH=$(realpath $SPATH/..)
+AERO_USERLAND=$AERO_PATH/userland
 AERO_SYSROOT=$AERO_PATH/sysroot/aero
 AERO_SYSROOT_BUILD=$AERO_PATH/sysroot/build
 AERO_BUNDLED=$AERO_PATH/bundled
@@ -15,7 +16,7 @@ set -x -e
 # This function is responsible for building and assembling the mlibc headers.
 function setup_mlibc {
     if [ ! -d $AERO_SYSROOT/usr/include ]; then # Avoid wasting time to re-install the headers in the prefix location.
-        meson setup --cross-file $SPATH/cross-file.ini --prefix $AERO_SYSROOT/usr -Dheaders_only=true -Dstatic=true $AERO_SYSROOT_BUILD/mlibc $AERO_BUNDLED/mlibc
+        meson setup --cross-file $AERO_USERLAND/cross-file.ini --prefix $AERO_SYSROOT/usr -Dheaders_only=true -Dstatic=true $AERO_SYSROOT_BUILD/mlibc $AERO_BUNDLED/mlibc
         meson install -C $AERO_SYSROOT_BUILD/mlibc
     fi
 }

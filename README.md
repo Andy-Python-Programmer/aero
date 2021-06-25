@@ -8,9 +8,6 @@
 Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and 
 the Zircon Kernel.
 
-Please make sure you use the **latest nightly** of rustc and a **unix-like** host system 
-before building Aero. If you are using windows, its highly recommended to use WSL 2.
-
 ![workflow](https://github.com/Andy-Python-Programmer/aero/actions/workflows/build.yml/badge.svg)
 [![lines_of_code](https://tokei.rs/b1/github/Andy-Python-Programmer/aero)](https://github.com/Andy-Python-Programmer/aero)
 [![discord](https://img.shields.io/discord/828564770063122432)](https://discord.gg/8gwhTTZwt8)
@@ -34,6 +31,9 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 Check out [ROADMAP.md](ROADMAP.md) for this month's roadmap.
 
 # How to Build and Run Aero
+
+Please make sure you have a **unix-like** host system before building 
+Aero. If you are using windows, its highly recommended to use WSL 2.
 
 ## Dependencies
 Before building Aero, you need the following things installed:
