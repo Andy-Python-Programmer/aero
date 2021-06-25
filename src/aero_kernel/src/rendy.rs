@@ -17,14 +17,218 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::fmt::{self, Write};
+use core::fmt::Write;
 
-use aero_gfx::FrameBuffer;
+use core::fmt;
+use core::u8;
 
-use aero_gfx::debug::color::ColorCode;
-use aero_gfx::debug::rendy::DebugRendy;
+use font8x8::UnicodeFonts;
 
 use spin::{mutex::Mutex, MutexGuard, Once};
+use stivale::framebuffer::FramebufferTag;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Color(u32);
+
+impl Color {
+    pub const WHITE: Self = Self::from_hex(0xFFFFFF);
+    pub const BLACK: Self = Self::from_hex(0x000000);
+
+    #[inline(always)]
+    pub const fn from_hex(hex: u32) -> Self {
+        Self(hex)
+    }
+
+    #[inline(always)]
+    pub const fn inner(&self) -> u32 {
+        self.0
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ColorCode(Color, Color);
+
+impl ColorCode {
+    #[inline(always)]
+    pub fn new(foreground: Color, background: Color) -> ColorCode {
+        ColorCode(foreground, background)
+    }
+
+    #[inline(always)]
+    pub fn get_foreground(&self) -> Color {
+        self.0
+    }
+
+    #[inline(always)]
+    pub fn get_background(&self) -> Color {
+        self.1
+    }
+}
+
+/// Color format of pixels in the framebuffer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(C)]
+#[allow(warnings)] // FIXME: Construct the other variants of this enum.
+pub enum PixelFormat {
+    /// One byte red, then one byte green, then one byte blue.
+    RGB,
+    /// One byte blue, then one byte green, then one byte red.
+    BGR,
+    /// A single byte, representing the grayscale value.
+    U8,
+}
+
+/// Describes the layout and pixel format of a framebuffer.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct FrameBufferInfo {
+    /// The total size in bytes.
+    pub byte_len: usize,
+    /// The width in pixels.
+    pub horizontal_resolution: usize,
+    /// The height in pixels.
+    pub vertical_resolution: usize,
+    /// The color format of each pixel.
+    pub pixel_format: PixelFormat,
+    /// The number of bytes per pixel.
+    pub bytes_per_pixel: usize,
+    /// Number of pixels between the start of a line and the start of the next.
+    ///
+    /// Some framebuffers use additional padding at the end of a line, so this
+    /// value might be larger than `horizontal_resolution`. It is
+    /// therefore recommended to use this field for calculating the start address of a line.
+    pub stride: usize,
+}
+
+/// Debug renderer used by the kernel and the bootloader to log messages to the
+/// framebuffer queried from the BIOS or UEFI firmware.
+pub struct DebugRendy {
+    /// The raw framebuffer pointer queried from the BIOS or UEFI firmware represented
+    /// as a [u8] slice.
+    buffer: u64,
+    info: FrameBufferInfo,
+    x_pos: usize,
+    y_pos: usize,
+    color: ColorCode,
+}
+
+impl DebugRendy {
+    /// Create a new debug renderer with the default foreground color set to white and
+    /// background color set to black.
+    ///
+    /// **Note**: The debug renderer should **not** be used after GUI has started. Use the
+    /// respective VGA functions instead.
+    #[inline]
+    pub fn new(buffer: u64, info: FrameBufferInfo) -> Self {
+        Self {
+            buffer,
+            info,
+            x_pos: 0,
+            y_pos: 0,
+            color: ColorCode::new(Color::WHITE, Color::BLACK),
+        }
+    }
+
+    pub fn write_string(&mut self, string: &str) {
+        for char in string.chars() {
+            self.write_character(char)
+        }
+    }
+
+    pub fn write_character(&mut self, char: char) {
+        match char {
+            '\n' => self.new_line(),
+            '\r' => self.carriage_return(),
+            _ => {
+                let char = font8x8::BASIC_FONTS.get(char).unwrap();
+
+                if self.x_pos >= self.width() {
+                    self.new_line();
+                }
+
+                if self.y_pos >= (self.height() - 16) {
+                    self.clear_screen()
+                }
+
+                self.put_bytes(&char);
+            }
+        }
+    }
+
+    pub fn put_bytes(&mut self, bytes: &[u8]) {
+        for (y, byte) in bytes.iter().enumerate() {
+            for (x, bit) in (0..8).enumerate() {
+                let background = *byte & (1 << bit) == 0;
+
+                if background {
+                    self.put_pixel(self.x_pos + x, self.y_pos + y, self.color.get_background());
+                } else {
+                    self.put_pixel(self.x_pos + x, self.y_pos + y, self.color.get_foreground());
+                }
+            }
+        }
+
+        self.x_pos += 8;
+    }
+
+    pub fn put_pixel(&mut self, x: usize, y: usize, color: Color) {
+        // SAFTEY: Safe as we are 100% sure the x, y will be correct.
+        unsafe {
+            *((self.buffer as usize + (x * (self.info.bytes_per_pixel / 8) + y * self.info.stride))
+                as *mut u32) = color.inner();
+        }
+    }
+
+    pub fn clear_screen(&mut self) {
+        self.x_pos = 0;
+        self.y_pos = 0;
+
+        // SAFTEY: Safe as we are looping under the buffer byte len.
+        unsafe {
+            for i in 0..self.info.byte_len {
+                *((self.buffer as *mut u8).add(i)) = self.color.get_background().inner() as u8;
+            }
+        }
+    }
+
+    fn new_line(&mut self) {
+        self.y_pos += 16;
+
+        self.carriage_return()
+    }
+
+    #[inline(always)]
+    fn carriage_return(&mut self) {
+        self.x_pos = 0;
+    }
+
+    #[inline(always)]
+    pub fn set_color_code(&mut self, color: ColorCode) {
+        self.color = color;
+    }
+
+    #[inline(always)]
+    pub fn width(&self) -> usize {
+        self.info.horizontal_resolution
+    }
+
+    #[inline(always)]
+    pub fn height(&self) -> usize {
+        self.info.vertical_resolution
+    }
+}
+
+impl fmt::Write for DebugRendy {
+    fn write_str(&mut self, string: &str) -> fmt::Result {
+        self.write_string(string);
+
+        Ok(())
+    }
+}
+
+unsafe impl Send for DebugRendy {}
+unsafe impl Sync for DebugRendy {}
 
 static DEBUG_RENDY: Once<Mutex<DebugRendy>> = Once::new();
 
@@ -60,7 +264,7 @@ pub macro dbg {
 }
 
 /// Get a mutable reference to the debug renderer.
-fn get_debug_rendy() -> MutexGuard<'static, DebugRendy<'static>> {
+fn get_debug_rendy() -> MutexGuard<'static, DebugRendy> {
     DEBUG_RENDY
         .get()
         .expect("Attempted to get the debug renderer before it was initialized")
@@ -88,11 +292,17 @@ pub fn clear_screen() {
     get_debug_rendy().clear_screen();
 }
 
-pub fn init(framebuffer: &'static mut FrameBuffer) {
-    let info = framebuffer.info();
-    let buffer = framebuffer.buffer_mut();
+pub fn init(framebuffer_tag: &'static FramebufferTag) {
+    let framebuffer_info = FrameBufferInfo {
+        byte_len: framebuffer_tag.size(),
+        bytes_per_pixel: framebuffer_tag.bpp() as usize,
+        horizontal_resolution: framebuffer_tag.width() as usize,
+        vertical_resolution: framebuffer_tag.height() as usize,
+        pixel_format: PixelFormat::BGR,
+        stride: framebuffer_tag.pitch() as usize,
+    };
 
-    let mut rendy = DebugRendy::new(buffer, info);
+    let mut rendy = DebugRendy::new(framebuffer_tag.start_address() as u64, framebuffer_info);
 
     rendy.clear_screen();
 

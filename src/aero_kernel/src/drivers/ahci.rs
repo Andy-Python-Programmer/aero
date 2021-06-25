@@ -451,20 +451,10 @@ impl AHCI {
             Bar::IO { .. } => panic!("ABAR is in port space o_O"),
         };
 
-        let start: PhysFrame<Size4KiB> =
-            PhysFrame::containing_address(PhysAddr::new(abar_address as u64));
-        let end =
-            PhysFrame::containing_address(PhysAddr::new((abar_address + abar_size - 1) as u64));
-
-        for frame in PhysFrame::range_inclusive(start, end) {
-            memory_map_device(offset_table, frame).expect("Failed to memory map the SATA device");
-        }
-
         let memory = &mut *(abar_address as *mut HBAMemory);
-
         let mut this = Self { memory };
 
-        this.probe_ports(offset_table);
+        // this.probe_ports(offset_table);
 
         this
     }

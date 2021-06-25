@@ -3,28 +3,6 @@
 version = 3
 
 [[package]]
-name = "aero_boot"
-version = "0.1.0"
-dependencies = [
- "aero_gfx",
- "font8x8",
- "log",
- "rlibc",
- "spin 0.9.0",
- "uefi",
- "x86_64",
- "xmas-elf",
-]
-
-[[package]]
-name = "aero_gfx"
-version = "0.1.0"
-dependencies = [
- "bit_field 0.10.1",
- "font8x8",
-]
-
-[[package]]
 name = "aero_hal"
 version = "0.1.0"
 dependencies = [
@@ -37,12 +15,11 @@ dependencies = [
 name = "aero_kernel"
 version = "0.1.0"
 dependencies = [
- "aero_boot",
- "aero_gfx",
  "aero_syscall",
  "bit_field 0.10.1",
  "bitflags",
  "cfg-if",
+ "font8x8",
  "hashbrown 0.11.2",
  "lazy_static",
  "linked_list_allocator",
@@ -51,7 +28,8 @@ dependencies = [
  "paste",
  "raw-cpuid",
  "rustc-demangle",
- "spin 0.9.0",
+ "spin 0.9.1",
+ "stivale",
  "x86_64",
  "xmas-elf",
 ]
@@ -60,9 +38,10 @@ dependencies = [
 name = "aero_syscall"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "cfg-if",
  "raw-cpuid",
- "spin 0.9.0",
+ "spin 0.9.1",
 ]
 
 [[package]]
@@ -205,24 +184,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
-name = "proc-macro2"
-version = "1.0.27"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0d8caf72986c1a598726adc988bb5984792ef84f5ee5aa50209145ee8077038"
-dependencies = [
- "unicode-xid",
-]
-
-[[package]]
-name = "quote"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3d0b9745dc2debf507c8422de05d7226cc1f0644216dfdfead988f9b1ab32a7"
-dependencies = [
- "proc-macro2",
-]
-
-[[package]]
 name = "raw-cpuid"
 version = "9.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -232,16 +193,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
-
-[[package]]
 name = "rustc-demangle"
-version = "0.1.19"
+version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "410f7acf3cb3a44527c5d9546bad4bf4e6c460915d5f9f2fc524498bfe8f70ce"
+checksum = "dead70b0b5e03e9c814bcb6b01e03e68f7c57a80aa48c72ec92152ab3e818d49"
 
 [[package]]
 name = "scopeguard"
@@ -257,9 +212,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spin"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b87bbf98cb81332a56c1ee8929845836f85e8ddd693157c30d76660196014478"
+checksum = "f5fdd7196b4ae35a111c6dc97f9cc152ca3ea8ad744f7cb46a9f27b3ef8f2f54"
 dependencies = [
  "lock_api",
 ]
@@ -274,53 +229,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "syn"
-version = "1.0.72"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1e8cdbefb79a9a5a65e0db8b47b723ee907b7c7f8496c76a1770b5c310bab82"
-dependencies = [
- "proc-macro2",
- "quote",
- "unicode-xid",
-]
-
-[[package]]
-name = "ucs2"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bad643914094137d475641b6bab89462505316ec2ce70907ad20102d28a79ab8"
-dependencies = [
- "bit_field 0.10.1",
-]
-
-[[package]]
-name = "uefi"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4630a92e80ac72f2b3dedb865dac3cf9e0215ce7e222301f0a37d8e6e3c5dbf4"
+name = "stivale"
+version = "0.2.1"
+source = "git+https://github.com/Andy-Python-Programmer/stivale#62b05bb7a1924001f647cfaa5893efa4f12d2e5b"
 dependencies = [
  "bitflags",
- "log",
- "ucs2",
- "uefi-macros",
 ]
-
-[[package]]
-name = "uefi-macros"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dcca10ca861f34a320d178f3fdb29ffbf05087fc2c70d2a99860e3329bee1a8"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "unicode-xid"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
 name = "version_check"

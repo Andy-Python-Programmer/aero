@@ -19,7 +19,7 @@
 
 pub mod frame;
 
-use aero_boot::*;
+use stivale::memory::{MemoryMapEntryType, MemoryMapTag};
 
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{mapper::MapToError, *};
@@ -44,7 +44,7 @@ impl UnmapGuard {
 
 /// Initialize paging.
 pub fn init(
-    memory_regions: &'static MemoryRegions,
+    memory_regions: &'static MemoryMapTag,
 ) -> Result<OffsetPageTable<'static>, MapToError<Size4KiB>> {
     let active_level_4 = unsafe { active_level_4_table() };
     let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };
@@ -97,9 +97,7 @@ pub unsafe fn memory_map_device(
         .ok_or(MapToError::FrameAllocationFailed)?;
 
     let extra_flags = match frame_type {
-        MemoryRegionType::UnknownBios(_) | MemoryRegionType::UnknownUefi(_) => {
-            PageTableFlags::WRITABLE
-        }
+        MemoryMapEntryType::Reserved => PageTableFlags::WRITABLE,
         _ => panic!(
             "Tried to memory map a device on a {:?} frame {:#X}",
             frame_type,

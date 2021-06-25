@@ -1,8 +1,26 @@
 #!/bin/bash
 
+# Copyright (C) 2021 The Aero Project Developers.
+#
+# This file is part of The Aero Project.
+#
+# Aero is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Aero is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Aero. If not, see <https://www.gnu.org/licenses/>.
+
 SPATH=$(dirname $(readlink -f "$0"))
 
 AERO_PATH=$(realpath $SPATH/..)
+AERO_USERLAND=$AERO_PATH/userland
 AERO_SYSROOT=$AERO_PATH/sysroot/aero
 AERO_SYSROOT_BUILD=$AERO_PATH/sysroot/build
 AERO_BUNDLED=$AERO_PATH/bundled
@@ -15,7 +33,7 @@ set -x -e
 # This function is responsible for building and assembling the mlibc headers.
 function setup_mlibc {
     if [ ! -d $AERO_SYSROOT/usr/include ]; then # Avoid wasting time to re-install the headers in the prefix location.
-        meson setup --cross-file $SPATH/cross-file.ini --prefix $AERO_SYSROOT/usr -Dheaders_only=true -Dstatic=true $AERO_SYSROOT_BUILD/mlibc $AERO_BUNDLED/mlibc
+        meson setup --cross-file $AERO_USERLAND/cross-file.ini --prefix $AERO_SYSROOT/usr -Dheaders_only=true -Dstatic=true $AERO_SYSROOT_BUILD/mlibc $AERO_BUNDLED/mlibc
         meson install -C $AERO_SYSROOT_BUILD/mlibc
     fi
 }
