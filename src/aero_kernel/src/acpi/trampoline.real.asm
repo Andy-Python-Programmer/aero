@@ -37,7 +37,7 @@ protected_ap:
     ; Initialize stack to null
     mov sp, 0x00
 
-    mov edi, 0x70000
+    mov edi, trampoline.page_table
     mov cr3, edi
 
     ; Enable FPU

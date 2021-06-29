@@ -44,7 +44,7 @@ const_unsafe! {
     const TRAMPOLINE_VIRTUAL: VirtAddr = VirtAddr::new_unsafe(0x1000);
 }
 
-static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
+static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/smp_trampoline"));
 
 #[derive(Clone, Copy, Debug)]
 pub struct Madt {
@@ -156,7 +156,7 @@ impl Madt {
 
                     // // Wait for the trampoline to be ready.
                     // while !apic::ap_ready() {
-                    //     log::debug!("I am waiting child...");
+                    //     log::debug!("I am waiting AP...");
                     //     interrupts::pause();
                     // }
 

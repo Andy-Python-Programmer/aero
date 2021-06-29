@@ -217,9 +217,6 @@ extern "C" fn kernel_main(boot_info: usize) -> ! {
 
     log::info!("Initialized kernel");
 
-    prelude::println!("{}", ASCII_INTRO);
-    prelude::print!("$ ");
-
     /*
      * Now that all of the essential initialization is done we are going to schedule
      * the kernel main thread.
@@ -244,7 +241,8 @@ extern "C" fn kernel_main(boot_info: usize) -> ! {
 
 #[no_mangle]
 extern "C" fn kernel_main_thread() {
-    log::debug!("Hello, kernel!");
+    prelude::println!("{}", ASCII_INTRO);
+
     loop {}
 }
 

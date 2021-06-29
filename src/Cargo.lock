@@ -32,6 +32,7 @@ dependencies = [
  "stivale",
  "x86_64",
  "xmas-elf",
+ "xshell",
 ]
 
 [[package]]
@@ -273,6 +274,21 @@ checksum = "e74de9a366f6ab8c405fa6b371d9ac24943921fa14b3d64afcb202065c405f11"
 dependencies = [
  "zero",
 ]
+
+[[package]]
+name = "xshell"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c640362f1b150e186b76e88606e4b01a7b2f1d56cc50fcc184ddb683fb567c23"
+dependencies = [
+ "xshell-macros",
+]
+
+[[package]]
+name = "xshell-macros"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0607c095c96c1d8420ce4a018a0954fb15d73d5eb59b521a05a0f04cffc05059"
 
 [[package]]
 name = "zero"

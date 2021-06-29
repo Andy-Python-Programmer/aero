@@ -23,7 +23,7 @@ cfg-if = "1.0"
 hashbrown = "0.11.2"
 rustc-demangle = "0.1"
 lru = "0.6.5"
-stivale = { git = "https://github.com/Andy-Python-Programmer/stivale" }
+stivale = { git="https://github.com/Andy-Python-Programmer/stivale" }
 
 [dependencies.font8x8]
 version = "0.3"
@@ -40,3 +40,6 @@ features = ["spin_no_std"]
 path = "../aero_syscall/"
 
 #####################################
+
+[build-dependencies]
+xshell = "0.1.14"
