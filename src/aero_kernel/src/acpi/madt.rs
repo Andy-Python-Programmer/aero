@@ -17,35 +17,34 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::{intrinsics, mem, sync::atomic::Ordering};
+use core::intrinsics;
+use core::mem;
 
-use spin::Once;
-use x86_64::{
-    registers::control::Cr3,
-    structures::paging::{mapper::MapToError, *},
-    PhysAddr, VirtAddr,
-};
+use core::sync::atomic::Ordering;
 
+use x86_64::registers::control::Cr3;
+use x86_64::structures::paging::mapper::MapToError;
+use x86_64::structures::paging::*;
+
+use x86_64::VirtAddr;
+
+use crate::apic;
 use crate::prelude::*;
 
-use super::sdt::Sdt;
-use crate::{
-    apic::{self, IoApicHeader},
-    kernel_ap_startup,
-    mem::{alloc::malloc_align, paging::FRAME_ALLOCATOR},
-};
-
+use crate::apic::IoApicHeader;
 use crate::apic::CPU_COUNT;
+use crate::kernel_ap_startup;
+use crate::mem::alloc::malloc_align;
+
+use super::sdt::Sdt;
 
 pub(super) const SIGNATURE: &str = "APIC";
 
 const_unsafe! {
-    const TRAMPOLINE_VIRTUAL: VirtAddr = VirtAddr::new_unsafe(0x8000);
-    const TRAMPOLINE_PHYSICAL: PhysAddr = PhysAddr::new_unsafe(0x8000);
+    const TRAMPOLINE_VIRTUAL: VirtAddr = VirtAddr::new_unsafe(0x1000);
 }
 
-static MADT: Once<&'static Madt> = Once::new();
-static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/trampoline"));
+static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/smp_trampoline"));
 
 #[derive(Clone, Copy, Debug)]
 pub struct Madt {
@@ -55,33 +54,8 @@ pub struct Madt {
 }
 
 impl Madt {
-    pub(super) fn init(
-        &'static self,
-        offset_table: &mut OffsetPageTable,
-    ) -> Result<(), MapToError<Size4KiB>> {
-        MADT.call_once(move || self);
-
-        let trampoline_frame: PhysFrame = PhysFrame::containing_address(TRAMPOLINE_PHYSICAL);
-        let trampoline_page: Page = Page::containing_address(TRAMPOLINE_VIRTUAL);
-
-        /*
-         * Identity map the trampoline frame and make it writable.
-         *
-         * NOTE: Rather then using the identity_map function in the mapper
-         * struct we are using the map_to function as we will be unmapping the
-         * frame when we are done and that should save one call.
-         */
-        unsafe {
-            offset_table.map_to(
-                trampoline_page,
-                trampoline_frame,
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                &mut FRAME_ALLOCATOR,
-            )
-        }?
-        .flush();
-
-        log::debug!("Storing AP trampoline in {:#x}", TRAMPOLINE_VIRTUAL);
+    pub(super) fn init(&'static self) -> Result<(), MapToError<Size4KiB>> {
+        log::debug!("Storing AP trampoline at {:#x}", TRAMPOLINE_VIRTUAL);
 
         /*
          * Atomic store the AP trampoline code and page table to a fixed address
@@ -116,7 +90,7 @@ impl Madt {
                     CPU_COUNT.fetch_add(1, Ordering::SeqCst);
 
                     let ap_ready = unsafe {
-                        let label = TRAMPOLINE_VIRTUAL.as_ptr::<u64>().offset(8);
+                        let label = TRAMPOLINE_VIRTUAL.as_ptr::<u8>().offset(8);
 
                         label as *mut u64
                     };
@@ -160,7 +134,7 @@ impl Madt {
 
                     // // Send start IPI to the bsp.
                     // unsafe {
-                    //     let ap_segment = (TRAMPOLINE >> 12) & 0xFF;
+                    //     let ap_segment = (0x1000 >> 12) & 0xFF;
                     //     let mut icr = 0x4600 | ap_segment as u64;
 
                     //     match bsp.apic_type() {
@@ -174,30 +148,25 @@ impl Madt {
 
                     // unsafe {
                     //     // Wait for the AP to be ready.
-                    //     while intrinsics::atomic_load(ap_ready) == 0 {
+                    //     while intrinsics::atomic_load(ap_ready) != 0xcafe {
+                    //         log::debug!("I am waiting...");
                     //         interrupts::pause();
                     //     }
                     // }
 
                     // // Wait for the trampoline to be ready.
                     // while !apic::ap_ready() {
+                    //     log::debug!("I am waiting AP...");
                     //     interrupts::pause();
                     // }
 
-                    log::info!("Loaded multicore");
+                    log::info!("Loaded AP: {}", local_apic.apic_id);
                 }
 
                 MadtEntry::IoApic(io_apic) => apic::init_io_apic(io_apic),
                 MadtEntry::IntSrcOverride(_) => {}
             }
         }
-
-        /*
-         * Now that we have initialized are APs. Its now safe to unmap the
-         * AP trampoline and the trampoline region is marked as usable again.
-         */
-        let (_, toilet) = offset_table.unmap(trampoline_page).unwrap();
-        toilet.flush();
 
         Ok(())
     }

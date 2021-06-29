@@ -52,12 +52,11 @@ const CARGO: &str = env!("CARGO");
 
 const BUNDLED_DIR: &str = "bundled";
 
-mod bootloader;
 mod bundled;
 
 /// Build the kernel by using `cargo build` with the cargo config defined
 /// in the `src\.cargo\config.toml` file.
-fn build_kernel(target: Option<String>, bootloader: AeroChainloader) {
+fn build_kernel(target: Option<String>) {
     println!("INFO: Building kernel");
 
     let mut kernel_build_cmd = Command::new(CARGO);
@@ -66,10 +65,6 @@ fn build_kernel(target: Option<String>, bootloader: AeroChainloader) {
 
     kernel_build_cmd.arg("build");
     kernel_build_cmd.arg("--package").arg("aero_kernel");
-
-    if let AeroChainloader::Limine = bootloader {
-        kernel_build_cmd.args(&["--features", "stivale2"]);
-    }
 
     // Use the specified target. By default it will build for x86_64-aero_os
     if let Some(target) = target {
@@ -189,34 +184,12 @@ fn build_userland() {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum AeroChainloader {
-    Limine,
-    None,
-}
-
-impl From<Option<String>> for AeroChainloader {
-    fn from(boot: Option<String>) -> Self {
-        if let Some(boot) = boot {
-            match boot.as_ref() {
-                "limine" => Self::Limine,
-                _ => panic!("Invalid or unsupported bootloader {}", boot),
-            }
-        } else {
-            Self::None
-        }
-    }
-}
-
 #[derive(Debug, StructOpt)]
 enum AeroBuildCommand {
     /// Build and run Aero in qemu.
     Run {
         #[structopt(long)]
         target: Option<String>,
-
-        #[structopt(long)]
-        chainloader: Option<String>,
 
         /// Extra command line arguments passed to qemu.
         #[structopt(last = true)]
@@ -225,18 +198,11 @@ enum AeroBuildCommand {
 
     Build {
         #[structopt(long)]
-        chainloader: Option<String>,
-
-        #[structopt(long)]
         target: Option<String>,
     },
 
     /// Update all of the OVMF files required for UEFI and bootloader prebuilts.
-    Update {
-        #[structopt(long)]
-        chainloader: Option<String>,
-    },
-
+    Update,
     Clean,
     Web,
 }
@@ -277,7 +243,6 @@ async fn main() {
             AeroBuildCommand::Run {
                 qemu_args,
                 target,
-                chainloader,
             } => {
                 bundled::fetch().unwrap();
 
@@ -286,19 +251,12 @@ async fn main() {
                  * after the build is finished.
                  */
                 let now = Instant::now();
-                let chainloader = AeroChainloader::from(chainloader);
 
                 bundled::download_ovmf_prebuilt().await.unwrap();
-                bootloader::build_bootloader();
-
-                match chainloader {
-                    AeroChainloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
-                    AeroChainloader::None => {}
-                }
 
                 build_userland();
-                build_kernel(target, chainloader);
-                bundled::package_files(chainloader).unwrap();
+                build_kernel(target);
+                bundled::package_files().unwrap();
 
                 println!("Build took {:?}", now.elapsed());
 
@@ -308,7 +266,6 @@ async fn main() {
             }
 
             AeroBuildCommand::Build {
-                chainloader,
                 target,
             } => {
                 bundled::fetch().unwrap();
@@ -318,37 +275,22 @@ async fn main() {
                  * after the build is finished.
                  */
                 let now = Instant::now();
-                let chainloader = AeroChainloader::from(chainloader);
 
                 bundled::download_ovmf_prebuilt().await.unwrap();
-                bootloader::build_bootloader();
-
-                match chainloader {
-                    AeroChainloader::Limine => bundled::download_limine_prebuilt().await.unwrap(),
-                    AeroChainloader::None => {}
-                }
 
                 build_userland();
-                build_kernel(target, chainloader);
-                bundled::package_files(chainloader).unwrap();
+                build_kernel(target);
+                bundled::package_files().unwrap();
 
                 println!("Build took {:?}", now.elapsed());
             }
 
-            AeroBuildCommand::Update { chainloader } => {
+            AeroBuildCommand::Update => {
                 bundled::fetch().unwrap();
-
-                let chainloader = AeroChainloader::from(chainloader);
 
                 bundled::update_ovmf()
                     .await
                     .expect("Failed tp update OVMF files");
-
-                if let AeroChainloader::Limine = chainloader {
-                    bundled::update_limine()
-                        .await
-                        .expect("Failed to update limine prebuilt files");
-                }
             }
 
             AeroBuildCommand::Clean => {

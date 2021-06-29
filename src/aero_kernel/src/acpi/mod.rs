@@ -24,9 +24,7 @@
 
 use core::mem;
 
-use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
-
-use crate::mem::paging::FRAME_ALLOCATOR;
+use x86_64::{PhysAddr, VirtAddr};
 
 use self::{fadt::Fadt, hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
 
@@ -63,7 +61,7 @@ pub struct AcpiTable {
 
 impl AcpiTable {
     /// Create a new ACPI table from the RSDP address.
-    fn new(offset_table: &mut OffsetPageTable, rsdp_address: VirtAddr) -> Self {
+    fn new(rsdp_address: VirtAddr) -> Self {
         // SAFTEY: Safe to cast the RSDP address to the RSDP struct as the
         // address is verified by the bootloader.
         let rsdp = unsafe { &*(rsdp_address.as_u64() as *const Rsdp) };
@@ -71,7 +69,7 @@ impl AcpiTable {
 
         // SAFTEY: Already would have caused UB if the RSDP address was
         // anyhow invalid.
-        let sdt = unsafe { Sdt::from_address(sdt_address, offset_table) };
+        let sdt = unsafe { Sdt::from_address(sdt_address) };
 
         let sdt_signature = sdt.get_signature();
         let sdt_data_len = sdt.data_len();
@@ -90,18 +88,14 @@ impl AcpiTable {
     }
 
     /// Lookup ACPI table entry with the provided signature.
-    fn lookup_entry(
-        &self,
-        offset_table: &mut OffsetPageTable,
-        signature: &str,
-    ) -> Option<&'static Sdt> {
+    fn lookup_entry(&self, signature: &str) -> Option<&'static Sdt> {
         let header_data_address = self.header.data_address() as *const u32;
 
         for i in 0..self.entry_count {
             // SAFTEY: Item address is valid as we are looping under the entry count and
             // the data address.
             let item_address = unsafe { *(header_data_address.add(i)) } as u64;
-            let item = unsafe { Sdt::from_address(item_address, offset_table) };
+            let item = unsafe { Sdt::from_address(item_address) };
 
             if item.get_signature() == signature {
                 return Some(item);
@@ -122,44 +116,23 @@ pub struct GenericAddressStructure {
     pub address: u64,
 }
 
-impl GenericAddressStructure {
-    pub unsafe fn init(&self, offset_table: &mut OffsetPageTable) {
-        let page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(self.address));
-        let frame = PhysFrame::containing_address(PhysAddr::new(self.address));
-
-        offset_table
-            .map_to(
-                page,
-                frame,
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
-                &mut FRAME_ALLOCATOR,
-            )
-            .unwrap()
-            .flush();
-    }
-}
-
 /// Initialize the ACPI tables.
-pub fn init(
-    offset_table: &mut OffsetPageTable,
-    rsdp_address: PhysAddr,
-    physical_memory_offset: VirtAddr,
-) {
+pub fn init(rsdp_address: PhysAddr, physical_memory_offset: VirtAddr) {
     let rsdp_address = physical_memory_offset + rsdp_address.as_u64();
-    let acpi_table = AcpiTable::new(offset_table, rsdp_address);
+    let acpi_table = AcpiTable::new(rsdp_address);
 
     macro init_table($sig:path => $ty:ty) {
-        <$ty>::new(acpi_table.lookup_entry(offset_table, $sig));
+        <$ty>::new(acpi_table.lookup_entry($sig));
     }
 
-    if let Some(header) = acpi_table.lookup_entry(offset_table, mcfg::SIGNATURE) {
+    if let Some(header) = acpi_table.lookup_entry(mcfg::SIGNATURE) {
         unsafe {
             let mcfg: &'static Mcfg = header.as_ptr();
             mcfg.init();
         }
     }
 
-    if let Some(header) = acpi_table.lookup_entry(offset_table, madt::SIGNATURE) {
+    if let Some(header) = acpi_table.lookup_entry(madt::SIGNATURE) {
         unsafe {
             // Not a valid MADT table without the local apic address and the flags.
             if header.data_len() < 8 {
@@ -169,15 +142,11 @@ pub fn init(
                 );
             } else {
                 let madt: &'static Madt = header.as_ptr();
-                madt.init(offset_table).expect("Failed to initialize APIC");
+                madt.init().expect("Failed to initialize APIC");
             }
         }
     }
 
     init_table!(fadt::SIGNATURE => Fadt);
-
-    Hpet::new(
-        acpi_table.lookup_entry(offset_table, hpet::SIGNATURE),
-        offset_table,
-    );
+    init_table!(hpet::SIGNATURE => Hpet);
 }

@@ -12,6 +12,9 @@ SECTIONS {
 
     __kernel_start = .;
 
+    .stivale2hdr : ALIGN(4K) {
+        KEEP(*(.stivale2hdr))
+    }
 
     /* Then place all of the other traditional executable sections afterwards... */
     .text : {

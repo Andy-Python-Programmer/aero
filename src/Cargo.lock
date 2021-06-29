@@ -3,28 +3,6 @@
 version = 3
 
 [[package]]
-name = "aero_boot"
-version = "0.1.0"
-dependencies = [
- "aero_gfx",
- "font8x8",
- "log",
- "rlibc",
- "spin 0.9.1",
- "uefi",
- "x86_64",
- "xmas-elf",
-]
-
-[[package]]
-name = "aero_gfx"
-version = "0.1.0"
-dependencies = [
- "bit_field 0.10.1",
- "font8x8",
-]
-
-[[package]]
 name = "aero_hal"
 version = "0.1.0"
 dependencies = [
@@ -37,12 +15,11 @@ dependencies = [
 name = "aero_kernel"
 version = "0.1.0"
 dependencies = [
- "aero_boot",
- "aero_gfx",
  "aero_syscall",
  "bit_field 0.10.1",
  "bitflags",
  "cfg-if",
+ "font8x8",
  "hashbrown 0.11.2",
  "lazy_static",
  "linked_list_allocator",
@@ -52,8 +29,10 @@ dependencies = [
  "raw-cpuid",
  "rustc-demangle",
  "spin 0.9.1",
+ "stivale",
  "x86_64",
  "xmas-elf",
+ "xshell",
 ]
 
 [[package]]
@@ -206,24 +185,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
-name = "proc-macro2"
-version = "1.0.27"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0d8caf72986c1a598726adc988bb5984792ef84f5ee5aa50209145ee8077038"
-dependencies = [
- "unicode-xid",
-]
-
-[[package]]
-name = "quote"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3d0b9745dc2debf507c8422de05d7226cc1f0644216dfdfead988f9b1ab32a7"
-dependencies = [
- "proc-macro2",
-]
-
-[[package]]
 name = "raw-cpuid"
 version = "9.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -231,12 +192,6 @@ checksum = "c27cb5785b85bd05d4eb171556c9a1a514552e26123aeae6bb7d811353148026"
 dependencies = [
  "bitflags",
 ]
-
-[[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
 
 [[package]]
 name = "rustc-demangle"
@@ -275,53 +230,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "syn"
-version = "1.0.73"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f71489ff30030d2ae598524f61326b902466f72a0fb1a8564c001cc63425bcc7"
-dependencies = [
- "proc-macro2",
- "quote",
- "unicode-xid",
-]
-
-[[package]]
-name = "ucs2"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bad643914094137d475641b6bab89462505316ec2ce70907ad20102d28a79ab8"
-dependencies = [
- "bit_field 0.10.1",
-]
-
-[[package]]
-name = "uefi"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4630a92e80ac72f2b3dedb865dac3cf9e0215ce7e222301f0a37d8e6e3c5dbf4"
+name = "stivale"
+version = "0.2.1"
+source = "git+https://github.com/Andy-Python-Programmer/stivale#62b05bb7a1924001f647cfaa5893efa4f12d2e5b"
 dependencies = [
  "bitflags",
- "log",
- "ucs2",
- "uefi-macros",
 ]
-
-[[package]]
-name = "uefi-macros"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dcca10ca861f34a320d178f3fdb29ffbf05087fc2c70d2a99860e3329bee1a8"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "unicode-xid"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
 name = "version_check"
@@ -360,6 +274,21 @@ checksum = "e74de9a366f6ab8c405fa6b371d9ac24943921fa14b3d64afcb202065c405f11"
 dependencies = [
  "zero",
 ]
+
+[[package]]
+name = "xshell"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c640362f1b150e186b76e88606e4b01a7b2f1d56cc50fcc184ddb683fb567c23"
+dependencies = [
+ "xshell-macros",
+]
+
+[[package]]
+name = "xshell-macros"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0607c095c96c1d8420ce4a018a0954fb15d73d5eb59b521a05a0f04cffc05059"
 
 [[package]]
 name = "zero"

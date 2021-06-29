@@ -19,7 +19,7 @@
 
 use core::fmt::Write;
 
-use aero_gfx::debug::color::{Color, ColorCode};
+use crate::rendy::{Color, ColorCode};
 use log::{Level, LevelFilter, Metadata, Record};
 use spin::{Mutex, MutexGuard, Once};
 

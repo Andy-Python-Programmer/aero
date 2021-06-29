@@ -19,8 +19,6 @@
 
 use core::ptr;
 
-use x86_64::structures::paging::OffsetPageTable;
-
 use super::sdt::Sdt;
 use super::GenericAddressStructure;
 
@@ -40,14 +38,9 @@ pub struct Hpet {
 }
 
 impl Hpet {
-    pub fn new(sdt: Option<&'static Sdt>, offset_table: &mut OffsetPageTable) -> Self {
+    pub fn new(sdt: Option<&'static Sdt>) -> Self {
         let sdt = sdt.expect("HPET not found");
-
         let this = unsafe { ptr::read((sdt as *const Sdt) as *const Self) };
-
-        unsafe {
-            this.base_address.init(offset_table);
-        }
 
         this
     }

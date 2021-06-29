@@ -19,10 +19,6 @@
 
 use core::mem;
 
-use x86_64::{structures::paging::*, PhysAddr, VirtAddr};
-
-use crate::mem::paging::FRAME_ALLOCATOR;
-
 pub(super) const XSDT_SIGNATURE: &str = "XSDT";
 pub(super) const RSDT_SIGNATURE: &str = "RSDT";
 
@@ -42,50 +38,13 @@ pub struct Sdt {
 
 impl Sdt {
     /// Get SDT from its address.
-    pub unsafe fn from_address(address: u64, offset_table: &mut OffsetPageTable) -> &'static Self {
-        let page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(address));
-
-        if offset_table.translate_page(page).is_err() {
-            let frame = PhysFrame::containing_address(PhysAddr::new(page.start_address().as_u64()));
-
-            offset_table
-                .map_to(
-                    page,
-                    frame,
-                    PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
-                    &mut FRAME_ALLOCATOR,
-                )
-                .unwrap()
-                .flush();
-        }
-
-        let sdt = &*(address as *const Self);
-
-        // Map additional frames for the SDT is needed.
-        let start_page: Page<Size4KiB> =
-            Page::containing_address(VirtAddr::new(address + Size4KiB::SIZE));
-        let end_page = Page::containing_address(VirtAddr::new(address + sdt.length as u64));
-
-        for page in Page::range_inclusive(start_page, end_page) {
-            if offset_table.translate_page(page).is_err() {
-                let frame =
-                    PhysFrame::containing_address(PhysAddr::new(page.start_address().as_u64()));
-                offset_table
-                    .map_to(
-                        page,
-                        frame,
-                        PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
-                        &mut FRAME_ALLOCATOR,
-                    )
-                    .unwrap()
-                    .flush();
-            }
-        }
-
-        sdt
+    #[inline]
+    pub unsafe fn from_address(address: u64) -> &'static Self {
+        &*(address as *const Self)
     }
 
     /// Get the address of this tables data.
+    #[inline]
     pub fn data_address(&self) -> usize {
         self as *const _ as usize + mem::size_of::<Self>()
     }
@@ -103,11 +62,12 @@ impl Sdt {
     }
 
     /// Get the SDT's signature.
+    #[inline]
     pub fn get_signature(&self) -> &str {
         core::str::from_utf8(&self.signature).expect("Invalid UTF8 in SDT's signature")
     }
 
-    #[inline(always)]
+    #[inline]
     pub(super) unsafe fn as_ptr<T>(&self) -> &'static T {
         &*(self as *const _ as *const T)
     }

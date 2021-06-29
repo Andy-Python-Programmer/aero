@@ -49,11 +49,8 @@
 
 extern crate alloc;
 
-use aero_boot::{BootInfo, UnwindInfo};
-
 use linked_list_allocator::LockedHeap;
-use spin::Once;
-use x86_64::VirtAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 mod acpi;
 mod apic;
@@ -83,11 +80,16 @@ mod prelude {
 use arch::interrupts;
 use userland::scheduler;
 
+use stivale::*;
+
+use crate::userland::process::Process;
+
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
-static UNWIND_INFO: Once<UnwindInfo> = Once::new();
+prelude::const_unsafe! {
+    const PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::new_unsafe(0xffff800000000000);
+}
 
 const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -98,8 +100,47 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
+const STACK_SIZE: usize = 4096;
+
+/// We need to tell the stivale bootloader where we want our stack to be.
+/// We are going to allocate our stack as an uninitialised array in .bss.
+static STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+/// We are now going to define a framebuffer header tag. This tag tells the bootloader that
+/// we want a graphical framebuffer instead of a CGA-compatible text mode. Omitting this tag will
+/// make the bootloader default to text mode, if available.
+static FRAMEBUFFER_TAG: HeaderFramebufferTag = HeaderFramebufferTag::new().bpp(24);
+
+/// The stivale2 specification says we need to define a "header structure".
+/// This structure needs to reside in the .stivale2hdr ELF section in order
+/// for the bootloader to find it. We use the #[linker_section] and #[used] macros to
+/// tell the compiler to put the following structure in said section.
+#[link_section = ".stivale2hdr"]
 #[no_mangle]
-extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+#[used]
+static STIVALE_HDR: StivaleHeader = StivaleHeader::new(&STACK[STACK_SIZE - 1] as *const u8)
+    .tags((&FRAMEBUFFER_TAG as *const HeaderFramebufferTag).cast());
+
+#[no_mangle]
+extern "C" fn kernel_main(boot_info: usize) -> ! {
+    let boot_info = unsafe { stivale::load(boot_info) };
+
+    let mmap_tag = boot_info
+        .memory_map()
+        .expect("Aero requires the bootloader to provide a non-null memory map tag");
+
+    let rsdp_tag = boot_info
+        .rsdp()
+        .expect("Aero requires the bootloader to provided a non-null rsdp tag");
+
+    let framebuffer_tag = boot_info
+        .framebuffer()
+        .expect("Aero requires the bootloader to provide a non-null framebuffer tag");
+
+    let rsdp_address = unsafe { PhysAddr::new_unsafe(rsdp_tag.rsdp()) };
+    let stack_top_addr =
+        unsafe { VirtAddr::new_unsafe((&STACK[STACK_SIZE - 1] as *const u8) as _) };
+
     /*
      * NOTE: In this function we only want to initialize essential serivces, including
      * the task scheduler. Rest of the initializing (including kernel modules) should go
@@ -120,13 +161,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     drivers::uart_16550::init();
     logger::init();
 
-    unsafe {
-        PHYSICAL_MEMORY_OFFSET = boot_info.physical_memory_offset;
-    }
-
-    UNWIND_INFO.call_once(|| boot_info.unwind_info);
-
-    rendy::init(&mut boot_info.framebuffer);
+    rendy::init(framebuffer_tag);
 
     arch::gdt::init_boot();
     log::info!("Loaded bootstrap GDT");
@@ -146,7 +181,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         apic_type.supports_x2_apic()
     );
 
-    let mut offset_table = mem::paging::init(&boot_info.memory_regions).unwrap();
+    let mut offset_table = mem::paging::init(mmap_tag).unwrap();
     log::info!("Loaded paging");
 
     mem::alloc::init_heap(&mut offset_table).expect("Failed to initialize the heap.");
@@ -155,7 +190,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     tls::init();
     log::info!("Loaded TLS");
 
-    arch::gdt::init(boot_info.unwind_info.stack_top);
+    arch::gdt::init(stack_top_addr);
     log::info!("Loaded GDT");
 
     /*
@@ -166,11 +201,7 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         interrupts::enable_interrupts();
     }
 
-    acpi::init(
-        &mut offset_table,
-        boot_info.rsdp_address,
-        boot_info.physical_memory_offset,
-    );
+    acpi::init(rsdp_address, PHYSICAL_MEMORY_OFFSET);
     log::info!("Loaded ACPI");
 
     drivers::pci::init(&mut offset_table);
@@ -186,21 +217,14 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     log::info!("Initialized kernel");
 
-    prelude::println!("{}", ASCII_INTRO);
-    prelude::print!("$ ");
-
     /*
      * Now that all of the essential initialization is done we are going to schedule
      * the kernel main thread.
-     *
-     * TODO(Andy-Python-Programmer): Add support in the scheduler to run kernel processes
-     * with ring 0 permissions:
-     *
-     * let init = Process::from_function(kernel_main_thread);
-     * scheduler::get_scheduler().push(init);
      */
+    let init = unsafe { Process::new_kernel(VirtAddr::new_unsafe(kernel_main_thread as u64)) };
+    scheduler::get_scheduler().register_process(init);
 
-    userland::run(&mut offset_table).expect("Failed to run userspace shell");
+    // userland::run(&mut offset_table).unwrap();
 
     unsafe {
         loop {
@@ -216,7 +240,11 @@ extern "C" fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 }
 
 #[no_mangle]
-extern "C" fn kernel_main_thread() {}
+extern "C" fn kernel_main_thread() {
+    prelude::println!("{}", ASCII_INTRO);
+
+    loop {}
+}
 
 #[no_mangle]
 extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {

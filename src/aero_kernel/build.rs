@@ -19,39 +19,16 @@
 
 use std::env;
 use std::error::Error;
-use std::process::Command;
 
-fn assemble_trampoline(out_dir: &str) -> Result<(), Box<dyn Error>> {
-    let result = Command::new("nasm")
-        .args(&[
-            "-f",
-            "bin",
-            "-o",
-            &format!("{}/trampoline", out_dir),
-            "src/acpi/trampoline.asm",
-        ])
-        .output()?;
+fn assemble_trampoline(out_dir: &str) -> xshell::Result<()> {
+    let trampoline_bin = format!("{}/smp_trampoline", out_dir);
 
-    let stdout = core::str::from_utf8(&result.stdout)?;
-    let stderr = core::str::from_utf8(&result.stderr)?;
-
-    if !stdout.is_empty() {
-        panic!(
-            "NASM build failed. Make sure you have nasm installed. https://nasm.us: {}",
-            stdout
-        );
-    } else if !stderr.is_empty() {
-        panic!(
-            "NASM build failed. Make sure you have nasm installed. https://nasm.us: {}",
-            stderr
-        );
-    }
-
-    Ok(())
+    xshell::cmd!("nasm -f bin -o {trampoline_bin} src/acpi/trampoline.real.asm").run()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let out_dir = env::var("OUT_DIR")?;
+
     assemble_trampoline(&out_dir)?;
 
     println!("cargo:rerun-if-changed=.cargo/kernel.ld");

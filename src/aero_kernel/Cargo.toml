@@ -23,6 +23,12 @@ cfg-if = "1.0"
 hashbrown = "0.11.2"
 rustc-demangle = "0.1"
 lru = "0.6.5"
+stivale = { git="https://github.com/Andy-Python-Programmer/stivale" }
+
+[dependencies.font8x8]
+version = "0.3"
+default-features = false
+features = ["unicode"]
 
 [dependencies.lazy_static]
 version = "1.4"
@@ -33,10 +39,7 @@ features = ["spin_no_std"]
 [dependencies.aero_syscall]
 path = "../aero_syscall/"
 
-[dependencies.aero_gfx]
-path = "../aero_gfx/"
-
-[dependencies.aero_boot]
-path = "../aero_boot/"
-
 #####################################
+
+[build-dependencies]
+xshell = "0.1.14"
