@@ -12,6 +12,7 @@
     "eliminate-frame-pointer": false,
     "disable-redzone": true,
     "features": "-mmx,-sse,+soft-float",
+    "code-model": "kernel",
     "pre-link-args": {
         "ld.lld": [
             "--gc-sections",

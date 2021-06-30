@@ -247,22 +247,14 @@ extern "C" fn kernel_main_thread() {
 }
 
 #[no_mangle]
-extern "C" fn kernel_ap_startup(cpu_id: u64) -> ! {
-    log::info!("Starting CPU with id: {}", cpu_id);
+extern "C" fn kernel_ap_startup(ap_id: u64) -> ! {
+    log::info!("Starting CPU with id: {}", ap_id);
+
+    apic::mark_ap_ready(true);
 
     while !apic::is_bsp_ready() {
         interrupts::pause();
     }
 
-    unsafe {
-        loop {
-            interrupts::disable_interrupts();
-
-            if scheduler::reschedule() {
-                interrupts::enable_interrupts();
-            } else {
-                interrupts::enable_interrupts_and_halt();
-            }
-        }
-    }
+    loop {}
 }

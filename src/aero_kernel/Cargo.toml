@@ -43,3 +43,4 @@ path = "../aero_syscall/"
 
 [build-dependencies]
 xshell = "0.1.14"
+nasm-rs = { version="0.2", features=["parallel"] }

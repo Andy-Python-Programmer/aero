@@ -22,8 +22,6 @@ jobs:
         toolchain: nightly
     - name: Install dependencies
       run: sudo apt-get install -y nasm meson ninja-build
-    - name: Install `rust-src` Rustup Component
-      run: rustup component add rust-src llvm-tools-preview
     - name: Run build
       run: cargo aero build
     - name: Build Docs

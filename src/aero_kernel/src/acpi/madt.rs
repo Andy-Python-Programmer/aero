@@ -17,24 +17,24 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::intrinsics;
+use core::alloc::Layout;
 use core::mem;
 
 use core::sync::atomic::Ordering;
 
-use x86_64::registers::control::Cr3;
+use alloc::alloc::alloc_zeroed;
 use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::*;
 
 use x86_64::VirtAddr;
 
 use crate::apic;
+use crate::arch::interrupts;
 use crate::prelude::*;
 
 use crate::apic::IoApicHeader;
 use crate::apic::CPU_COUNT;
 use crate::kernel_ap_startup;
-use crate::mem::alloc::malloc_align;
 
 use super::sdt::Sdt;
 
@@ -44,7 +44,11 @@ const_unsafe! {
     const TRAMPOLINE_VIRTUAL: VirtAddr = VirtAddr::new_unsafe(0x1000);
 }
 
-static TRAMPOLINE_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/smp_trampoline"));
+extern "C" {
+    fn smp_prepare_trampoline() -> u16;
+    fn smp_prepare_launch(entry_point: u64, page_table: u64, stack_top: u64, ap_id: u64);
+    fn smp_check_ap_flag() -> bool;
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct Madt {
@@ -57,17 +61,8 @@ impl Madt {
     pub(super) fn init(&'static self) -> Result<(), MapToError<Size4KiB>> {
         log::debug!("Storing AP trampoline at {:#x}", TRAMPOLINE_VIRTUAL);
 
-        /*
-         * Atomic store the AP trampoline code and page table to a fixed address
-         * in low conventional memory.
-         */
         unsafe {
-            for i in 0..TRAMPOLINE_BIN.len() {
-                intrinsics::atomic_store(
-                    TRAMPOLINE_VIRTUAL.as_mut_ptr::<u8>().add(i),
-                    TRAMPOLINE_BIN[i],
-                );
-            }
+            smp_prepare_trampoline();
         }
 
         for entry in self.iter() {
@@ -89,30 +84,26 @@ impl Madt {
                     // Increase the CPU count.
                     CPU_COUNT.fetch_add(1, Ordering::SeqCst);
 
-                    let ap_ready = unsafe {
-                        let label = TRAMPOLINE_VIRTUAL.as_ptr::<u8>().offset(8);
-
-                        label as *mut u64
-                    };
-
-                    let ap_cpu_id = unsafe { ap_ready.offset(1) };
-                    let ap_page_table = unsafe { ap_ready.offset(2) };
-                    let ap_stack_start = unsafe { ap_ready.offset(3) };
-                    let ap_stack_end = unsafe { ap_ready.offset(4) };
-                    let ap_code = unsafe { ap_ready.offset(5) };
-
-                    let page_table = Cr3::read().0.start_address().as_u64();
-
-                    let stack = malloc_align(4096 * 16, 4096);
-                    let stack_end = unsafe { stack.offset(4096 * 16) } as u64;
+                    let kernel_cr3: u64;
 
                     unsafe {
-                        intrinsics::atomic_store(ap_ready, 0x00);
-                        intrinsics::atomic_store(ap_cpu_id, local_apic.apic_id as u64);
-                        intrinsics::atomic_store(ap_page_table, page_table);
-                        intrinsics::atomic_store(ap_stack_start, stack as u64);
-                        intrinsics::atomic_store(ap_stack_end, stack_end);
-                        intrinsics::atomic_store(ap_code, kernel_ap_startup as u64)
+                        asm!("mov {}, cr3", out(reg) kernel_cr3, options(nomem));
+                    }
+
+                    let stack_top = unsafe {
+                        let layout = Layout::from_size_align_unchecked(4096, 4096);
+                        let raw = alloc_zeroed(layout);
+
+                        raw.offset(4096)
+                    };
+
+                    unsafe {
+                        smp_prepare_launch(
+                            kernel_ap_startup as u64,
+                            kernel_cr3,
+                            stack_top as u64,
+                            local_apic.apic_id as u64,
+                        );
                     }
 
                     apic::mark_ap_ready(false);
@@ -132,35 +123,31 @@ impl Madt {
                         bsp.set_icr(icr);
                     }
 
-                    // // Send start IPI to the bsp.
-                    // unsafe {
-                    //     let ap_segment = (0x1000 >> 12) & 0xFF;
-                    //     let mut icr = 0x4600 | ap_segment as u64;
+                    // Send start IPI to the bsp.
+                    unsafe {
+                        let ap_segment = (0x1000 >> 12) & 0xFF;
+                        let mut icr = 0x4600 | ap_segment as u64;
 
-                    //     match bsp.apic_type() {
-                    //         apic::ApicType::Xapic => icr |= (local_apic.apic_id as u64) << 56,
-                    //         apic::ApicType::X2apic => icr |= (local_apic.apic_id as u64) << 32,
-                    //         apic::ApicType::None => unreachable!(),
-                    //     }
+                        match bsp.apic_type() {
+                            apic::ApicType::Xapic => icr |= (local_apic.apic_id as u64) << 56,
+                            apic::ApicType::X2apic => icr |= (local_apic.apic_id as u64) << 32,
+                            apic::ApicType::None => unreachable!(),
+                        }
 
-                    //     bsp.set_icr(icr);
-                    // }
+                        bsp.set_icr(icr);
+                    }
 
-                    // unsafe {
-                    //     // Wait for the AP to be ready.
-                    //     while intrinsics::atomic_load(ap_ready) != 0xcafe {
-                    //         log::debug!("I am waiting...");
-                    //         interrupts::pause();
-                    //     }
-                    // }
+                    unsafe {
+                        // Wait for the AP to be ready.
+                        while !smp_check_ap_flag() {
+                            interrupts::pause();
+                        }
+                    }
 
-                    // // Wait for the trampoline to be ready.
-                    // while !apic::ap_ready() {
-                    //     log::debug!("I am waiting AP...");
-                    //     interrupts::pause();
-                    // }
-
-                    log::info!("Loaded AP: {}", local_apic.apic_id);
+                    // Wait for the trampoline to be ready.
+                    while !apic::ap_ready() {
+                        interrupts::pause();
+                    }
                 }
 
                 MadtEntry::IoApic(io_apic) => apic::init_io_apic(io_apic),

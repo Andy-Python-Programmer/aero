@@ -17,20 +17,19 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::env;
 use std::error::Error;
 
-fn assemble_trampoline(out_dir: &str) -> xshell::Result<()> {
-    let trampoline_bin = format!("{}/smp_trampoline", out_dir);
-
-    xshell::cmd!("nasm -f bin -o {trampoline_bin} src/acpi/trampoline.real.asm").run()
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
-    let out_dir = env::var("OUT_DIR")?;
+    xshell::cmd!("nasm -f bin -o ../target/smp_trampoline.bin src/acpi/trampoline.real.asm")
+        .run()?;
 
-    assemble_trampoline(&out_dir)?;
+    nasm_rs::Build::new()
+        .file("src/acpi/smp_trampoline.asm")
+        .flag("-felf64")
+        .target("x86_64-unknown-none")
+        .compile("smp_trampoline")?;
 
+    println!("cargo:rustc-link-lib=static=smp_trampoline");
     println!("cargo:rerun-if-changed=.cargo/kernel.ld");
 
     Ok(())
