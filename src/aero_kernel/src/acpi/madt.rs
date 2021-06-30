@@ -26,11 +26,8 @@ use alloc::alloc::alloc_zeroed;
 use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::*;
 
-use x86_64::VirtAddr;
-
 use crate::apic;
 use crate::arch::interrupts;
-use crate::prelude::*;
 
 use crate::apic::IoApicHeader;
 use crate::apic::CPU_COUNT;
@@ -39,10 +36,6 @@ use crate::kernel_ap_startup;
 use super::sdt::Sdt;
 
 pub(super) const SIGNATURE: &str = "APIC";
-
-const_unsafe! {
-    const TRAMPOLINE_VIRTUAL: VirtAddr = VirtAddr::new_unsafe(0x1000);
-}
 
 extern "C" {
     fn smp_prepare_trampoline() -> u16;
@@ -59,7 +52,7 @@ pub struct Madt {
 
 impl Madt {
     pub(super) fn init(&'static self) -> Result<(), MapToError<Size4KiB>> {
-        log::debug!("Storing AP trampoline at {:#x}", TRAMPOLINE_VIRTUAL);
+        log::debug!("Storing AP trampoline at 0x1000");
 
         unsafe {
             smp_prepare_trampoline();
