@@ -44,6 +44,8 @@ Before building Aero, you need the following things installed:
 - `nasm`
 - `g++` 5.1 or later
 - `ninja`
+- `parted`
+- `meson`
 
 ## Hardware
 

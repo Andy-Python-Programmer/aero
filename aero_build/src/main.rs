@@ -97,20 +97,9 @@ fn run_qemu(argv: Vec<String>) -> ExitStatus {
 
     qemu_run_cmd.args(argv);
 
-    // Set up OVMF.
-    qemu_run_cmd
-        .arg("-drive")
-        .arg("if=pflash,format=raw,file=bundled/ovmf/OVMF_CODE-pure-efi.fd");
-    qemu_run_cmd
-        .arg("-drive")
-        .arg("if=pflash,format=raw,file=bundled/ovmf/OVMF_VARS-pure-efi.fd");
-    qemu_run_cmd
-        .arg("-bios")
-        .arg("bundled/ovmf/OVMF-pure-efi.fd");
-
     qemu_run_cmd.arg("-machine").arg("type=q35");
     qemu_run_cmd.arg("-cpu").arg("qemu64");
-    qemu_run_cmd.arg("-smp").arg("2");
+    qemu_run_cmd.arg("-smp").arg("4");
     qemu_run_cmd.arg("-m").arg("512M");
     qemu_run_cmd.arg("-serial").arg("stdio");
 
