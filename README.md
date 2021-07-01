@@ -42,8 +42,8 @@ Before building Aero, you need the following things installed:
 - `rustc` should be the **latest nightly**
 - `qemu`
 - `nasm`
-- `g++` 5.1 or later, `clang++` 3.5 or later, or `MSVC` 2017 or later.
-- `ninja`, or GNU `make` 3.81 or later (`ninja` is recommended, especially on Windows)
+- `g++` 5.1 or later
+- `ninja`
 
 ## Hardware
 

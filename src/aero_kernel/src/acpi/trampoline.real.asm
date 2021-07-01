@@ -68,9 +68,12 @@ bits 64
 
     mov rsp, qword [0x550]
 
+    ; Set AP Ready to true 
     mov byte [0x510], 1
     
-    mov rdi, qword [0x560]
+    ; Set up the arguments required for our [kernel_ap_startup] function
+    mov rdi, qword [0x560] ; Param: AP ID
+    mov rsi, qword [0x550] ; Param: Stack Top
 
     ; Jump to our AP entry point
     mov rbx, qword [0x520]

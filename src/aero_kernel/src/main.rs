@@ -247,8 +247,14 @@ extern "C" fn kernel_main_thread() {
 }
 
 #[no_mangle]
-extern "C" fn kernel_ap_startup(ap_id: u64) -> ! {
-    log::info!("Starting CPU with id: {}", ap_id);
+extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
+    log::debug!("Booting CPU {}", ap_id);
+
+    tls::init();
+    log::info!("AP{}: Loaded TLS", ap_id);
+
+    arch::gdt::init(stack_top_addr);
+    log::info!("AP{}: Loaded GDT", ap_id);
 
     apic::mark_ap_ready(true);
 
