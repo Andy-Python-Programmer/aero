@@ -30,7 +30,7 @@ dependencies = [
  "raw-cpuid",
  "rustc-demangle",
  "spin 0.9.1",
- "stivale",
+ "stivale-boot",
  "x86_64",
  "xmas-elf",
  "xshell",
@@ -356,9 +356,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "stivale"
+name = "stivale-boot"
 version = "0.2.1"
-source = "git+https://github.com/Andy-Python-Programmer/stivale#58a53147ec003dd63a12c2e59fcf52cfbe471f7b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6338b6417a0e109faec315306ff0076bcfc5f239e099043c6ee734332a804d3"
 dependencies = [
  "bitflags",
 ]

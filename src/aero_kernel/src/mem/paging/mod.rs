@@ -19,7 +19,7 @@
 
 pub mod frame;
 
-use stivale::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapTag};
+use stivale_boot::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapTag};
 
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{mapper::MapToError, *};

@@ -80,7 +80,7 @@ mod prelude {
 use arch::interrupts;
 use userland::scheduler;
 
-use stivale::v2::*;
+use stivale_boot::v2::*;
 
 use crate::userland::process::Process;
 

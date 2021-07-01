@@ -25,7 +25,7 @@ use core::u8;
 use font8x8::UnicodeFonts;
 
 use spin::{mutex::Mutex, MutexGuard, Once};
-use stivale::v2::StivaleFramebufferTag;
+use stivale_boot::v2::StivaleFramebufferTag;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
