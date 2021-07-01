@@ -25,7 +25,7 @@ use core::u8;
 use font8x8::UnicodeFonts;
 
 use spin::{mutex::Mutex, MutexGuard, Once};
-use stivale::framebuffer::FramebufferTag;
+use stivale::v2::StivaleFramebufferTag;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
@@ -292,17 +292,17 @@ pub fn clear_screen() {
     get_debug_rendy().clear_screen();
 }
 
-pub fn init(framebuffer_tag: &'static FramebufferTag) {
+pub fn init(framebuffer_tag: &'static StivaleFramebufferTag) {
     let framebuffer_info = FrameBufferInfo {
         byte_len: framebuffer_tag.size(),
-        bytes_per_pixel: framebuffer_tag.bpp() as usize,
-        horizontal_resolution: framebuffer_tag.width() as usize,
-        vertical_resolution: framebuffer_tag.height() as usize,
+        bytes_per_pixel: framebuffer_tag.framebuffer_bpp as usize,
+        horizontal_resolution: framebuffer_tag.framebuffer_width as usize,
+        vertical_resolution: framebuffer_tag.framebuffer_height as usize,
         pixel_format: PixelFormat::BGR,
-        stride: framebuffer_tag.pitch() as usize,
+        stride: framebuffer_tag.framebuffer_pitch as usize,
     };
 
-    let mut rendy = DebugRendy::new(framebuffer_tag.start_address() as u64, framebuffer_info);
+    let mut rendy = DebugRendy::new(framebuffer_tag.framebuffer_addr as u64, framebuffer_info);
 
     rendy.clear_screen();
 

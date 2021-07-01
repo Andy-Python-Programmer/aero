@@ -80,7 +80,7 @@ mod prelude {
 use arch::interrupts;
 use userland::scheduler;
 
-use stivale::*;
+use stivale::v2::*;
 
 use crate::userland::process::Process;
 
@@ -109,7 +109,8 @@ static STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 /// We are now going to define a framebuffer header tag. This tag tells the bootloader that
 /// we want a graphical framebuffer instead of a CGA-compatible text mode. Omitting this tag will
 /// make the bootloader default to text mode, if available.
-static FRAMEBUFFER_TAG: HeaderFramebufferTag = HeaderFramebufferTag::new().bpp(24);
+static FRAMEBUFFER_TAG: StivaleFramebufferHeaderTag =
+    StivaleFramebufferHeaderTag::new().framebuffer_bpp(24);
 
 /// The stivale2 specification says we need to define a "header structure".
 /// This structure needs to reside in the .stivale2hdr ELF section in order
@@ -118,13 +119,12 @@ static FRAMEBUFFER_TAG: HeaderFramebufferTag = HeaderFramebufferTag::new().bpp(2
 #[link_section = ".stivale2hdr"]
 #[no_mangle]
 #[used]
-static STIVALE_HDR: StivaleHeader = StivaleHeader::new(&STACK[STACK_SIZE - 1] as *const u8)
-    .tags((&FRAMEBUFFER_TAG as *const HeaderFramebufferTag).cast());
+static STIVALE_HDR: StivaleHeader = StivaleHeader::new()
+    .stack(&STACK[STACK_SIZE - 1] as *const u8)
+    .tags((&FRAMEBUFFER_TAG as *const StivaleFramebufferHeaderTag).cast());
 
 #[no_mangle]
-extern "C" fn kernel_main(boot_info: usize) -> ! {
-    let boot_info = unsafe { stivale::load(boot_info) };
-
+extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     let mmap_tag = boot_info
         .memory_map()
         .expect("Aero requires the bootloader to provide a non-null memory map tag");
@@ -137,7 +137,7 @@ extern "C" fn kernel_main(boot_info: usize) -> ! {
         .framebuffer()
         .expect("Aero requires the bootloader to provide a non-null framebuffer tag");
 
-    let rsdp_address = unsafe { PhysAddr::new_unsafe(rsdp_tag.rsdp()) };
+    let rsdp_address = unsafe { PhysAddr::new_unsafe(rsdp_tag.rsdp) };
     let stack_top_addr =
         unsafe { VirtAddr::new_unsafe((&STACK[STACK_SIZE - 1] as *const u8) as _) };
 

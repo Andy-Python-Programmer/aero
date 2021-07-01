@@ -18,7 +18,7 @@
  */
 
 use spin::{Mutex, Once};
-use stivale::memory::{MemoryMapEntryType, MemoryMapTag};
+use stivale::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapTag};
 use x86_64::{structures::paging::*, PhysAddr};
 
 pub struct LockedFrameAllocator(Once<Mutex<GlobalFrameAllocator>>);
@@ -31,12 +31,12 @@ impl LockedFrameAllocator {
     }
 
     /// Initializes the inner locked global frame allocator.
-    pub(super) fn init(&self, memory_map: &'static MemoryMapTag) {
+    pub(super) fn init(&self, memory_map: &'static StivaleMemoryMapTag) {
         self.0
             .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
     }
 
-    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryMapEntryType> {
+    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<StivaleMemoryMapEntryType> {
         if let Some(ref mut allocator) = self.0.get() {
             allocator.lock().get_frame_type(frame)
         } else {
@@ -57,13 +57,13 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
 }
 
 pub struct GlobalFrameAllocator {
-    memory_map: &'static MemoryMapTag,
+    memory_map: &'static StivaleMemoryMapTag,
     next: usize,
 }
 
 impl GlobalFrameAllocator {
     /// Create a new global frame allocator from the memory map provided by the bootloader.
-    fn new(memory_map: &'static MemoryMapTag) -> Self {
+    fn new(memory_map: &'static StivaleMemoryMapTag) -> Self {
         Self {
             memory_map,
             next: 0,
@@ -71,13 +71,13 @@ impl GlobalFrameAllocator {
     }
 
     /// Get the [MemoryRegionType] of a frame
-    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<MemoryMapEntryType> {
+    pub fn get_frame_type(&self, frame: PhysFrame) -> Option<StivaleMemoryMapEntryType> {
         self.memory_map
             .iter()
             .find(|v| {
                 let addr = frame.start_address().as_u64();
 
-                v.start_address() >= addr && addr < v.end_address()
+                v.base >= addr && addr < v.end_address()
             })
             .map(|v| v.entry_type())
     }
@@ -85,8 +85,9 @@ impl GlobalFrameAllocator {
     /// Returns an iterator over the usable frames specified in the memory map.
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         let regions = self.memory_map.iter();
-        let usable_regions = regions.filter(|r| r.entry_type() == MemoryMapEntryType::Usable);
-        let addr_ranges = usable_regions.map(|r| r.start_address()..r.end_address());
+        let usable_regions =
+            regions.filter(|r| r.entry_type() == StivaleMemoryMapEntryType::Usable);
+        let addr_ranges = usable_regions.map(|r| r.base..r.end_address());
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
 
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))

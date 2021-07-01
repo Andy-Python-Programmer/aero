@@ -80,7 +80,6 @@ bits 64
     call rbx
 
 align 16
-
 gdt_ptr:
     dw .gdt_end - .gdt_start - 1  ; GDT size
     dq .gdt_start                 ; GDT start
