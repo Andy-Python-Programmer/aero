@@ -22,12 +22,12 @@ use alloc::sync::Arc;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use spin::mutex::spin::SpinMutex;
-
 use x86_64::VirtAddr;
 
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
+
+use intrusive_collections::{intrusive_adapter, LinkedListLink};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
@@ -58,38 +58,47 @@ pub struct Task {
 
     pub file_table: FileTable,
     pub state: TaskState,
+
+    pub(super) link: intrusive_collections::LinkedListLink,
 }
 
 impl Task {
     /// Creates a per-cpu idle task. An idle task is a special *kernel*
     /// which is executed when there are no runnable taskes in the scheduler's
     /// queue.
-    pub fn new_idle() -> Arc<SpinMutex<Task>> {
-        Arc::new(SpinMutex::new(Self {
+    pub fn new_idle() -> Arc<Task> {
+        Arc::new(Self {
             arch_task: UnsafeCell::new(ArchTask::new_idle()),
             file_table: FileTable::new(),
             task_id: TaskId::allocate(),
             state: TaskState::Running,
-        }))
+
+            link: Default::default(),
+        })
     }
 
     /// Allocates a new kernel task pointing at the provided entry point address. This function
     /// is responsible for creating the kernel task and setting up the context switch stack itself.
-    pub fn new_kernel(entry_point: VirtAddr) -> Arc<SpinMutex<Self>> {
-        Arc::new(SpinMutex::new(Self {
+    pub fn new_kernel(entry_point: VirtAddr) -> Arc<Self> {
+        Arc::new(Self {
             arch_task: UnsafeCell::new(ArchTask::new_kernel(entry_point)),
             task_id: TaskId::allocate(),
             file_table: FileTable::new(),
             state: TaskState::Running,
-        }))
+
+            link: Default::default(),
+        })
     }
 
     #[inline]
-    pub fn arch_task_mut(&mut self) -> &mut ArchTask {
+    pub fn arch_task_mut(&self) -> &mut ArchTask {
         unsafe { &mut (*self.arch_task.get()) }
     }
 
+    #[inline]
     pub fn arch_task_ref(&self) -> &ArchTask {
         unsafe { &(*self.arch_task.get()) }
     }
 }
+
+intrusive_collections::intrusive_adapter!(pub TaskAdapter = Arc<Task> : Task { link: LinkedListLink });

@@ -123,6 +123,9 @@ static STIVALE_HDR: StivaleHeader = StivaleHeader::new()
     .stack(&STACK[STACK_SIZE - 1] as *const u8)
     .tags((&FRAMEBUFFER_TAG as *const StivaleFramebufferHeaderTag).cast());
 
+#[thread_local]
+static mut CPU_ID: u64 = 0x00;
+
 #[no_mangle]
 extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     let mmap_tag = boot_info
@@ -255,6 +258,10 @@ extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
 
     arch::gdt::init(stack_top_addr);
     log::info!("AP{}: Loaded GDT", ap_id);
+
+    unsafe {
+        CPU_ID = ap_id; // Set the local cpu id global to the AP id provided in the AP bootinfo
+    }
 
     apic::mark_ap_ready(true);
 

@@ -19,7 +19,6 @@ global context_switch
 global sysretq_userinit
 global iretq_kernelinit
 
-extern context_switch_finalize
 extern restore_user_tls
 
 section .text
@@ -65,7 +64,6 @@ sysretq_userinit:
     ; disable interrupts as we are swaping stacks. Interrupts are
     ; automatically enabled after `sysretq`.
     cli
-    call context_switch_finalize
     call restore_user_tls
 
     pop r11 ; Restore RFLAGS.

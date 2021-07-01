@@ -17,54 +17,46 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::cell::Cell;
 use core::mem;
 
-use alloc::{collections::VecDeque, sync::Arc};
-use spin::mutex::spin::SpinMutex;
+use alloc::sync::Arc;
 
-use crate::userland::task::{Task, TaskId};
+use intrusive_collections::LinkedList;
+
+use crate::userland::task::{Task, TaskAdapter};
 use crate::utils::{downcast, PerCpu};
 
-use super::{SchedulerInterface, PROCESS_CONTAINER};
+use super::SchedulerInterface;
 
 #[thread_local]
-static mut CURRENT_PROCESS: Option<Arc<SpinMutex<Task>>> = None;
-
-/// The kernel idle task is a special kind of task that is run when
-/// no taskes in the scheduler's queue are avaliable to execute. The idle task
-/// is to be created for each CPU.
-#[thread_local]
-static mut IDLE_PROCESS: Option<Arc<SpinMutex<Task>>> = None;
-
-#[thread_local]
-static mut HELD_LOCKS: Cell<Option<HeldLocks>> = Cell::new(None);
-
-struct HeldLocks {
-    head: Arc<SpinMutex<Task>>,
-    tail: Arc<SpinMutex<Task>>,
-}
+static mut CURRENT_PROCESS: Option<Arc<Task>> = None;
 
 /// Scheduler queue containing a vector of all of the task of the enqueued
 /// taskes.
-#[repr(transparent)]
-struct ProcessQueue(SpinMutex<VecDeque<TaskId>>);
+struct TaskQueue {
+    /// The kernel idle task is a special kind of task that is run when
+    /// no taskes in the scheduler's queue are avaliable to execute. The idle task
+    /// is to be created for each CPU.
+    idle_process: Arc<Task>,
+    runnable: LinkedList<TaskAdapter>,
+}
 
-impl ProcessQueue {
+impl TaskQueue {
     /// Creates a new task queue with no taskes by default.
     #[inline]
     fn new() -> Self {
-        Self(SpinMutex::new(VecDeque::new()))
+        Self {
+            idle_process: Task::new_idle(),
+            runnable: LinkedList::new(TaskAdapter::new()),
+        }
     }
 
-    /// Registers the provided `task` in the task queue.
     #[inline]
-    fn register_task(&self, task_id: TaskId) {
-        self.0.lock().push_back(task_id);
-    }
+    fn push_runnable(&mut self, task: Arc<Task>) {
+        debug_assert!(task.link.is_linked() == false); // Make sure the task is not already linked in the queue
+        debug_assert!(task.task_id != self.idle_process.task_id); // Make sure we are not adding the IDLE task in the queue
 
-    fn front(&self) -> Option<TaskId> {
-        self.0.lock().pop_front()
+        self.runnable.push_back(task);
     }
 }
 
@@ -76,7 +68,7 @@ impl ProcessQueue {
 /// * <https://en.wikipedia.org/wiki/Round-robin_scheduling>
 pub struct RoundRobin {
     /// The per-cpu scheduler queues.
-    queue: PerCpu<ProcessQueue>,
+    queue: PerCpu<TaskQueue>,
 }
 
 impl RoundRobin {
@@ -85,24 +77,25 @@ impl RoundRobin {
     /// is to initialize the per-cpu queues that the round robin scheduling
     /// algorithm requires.
     pub fn new() -> Arc<Self> {
-        let idle_task = Task::new_idle();
+        let this = Arc::new(Self {
+            queue: PerCpu::new(|| TaskQueue::new()),
+        });
+
+        let queue = this.queue.get();
 
         unsafe {
-            CURRENT_PROCESS = Some(idle_task.clone());
-            IDLE_PROCESS = Some(idle_task);
+            CURRENT_PROCESS = Some(queue.idle_process.clone());
         }
 
-        Arc::new(Self {
-            queue: PerCpu::new(|| ProcessQueue::new()),
-        })
+        this
     }
 }
 
 impl SchedulerInterface for RoundRobin {
-    fn register_task(&self, task_id: TaskId) {
-        let queue = self.queue.get();
+    fn register_task(&self, task: Arc<Task>) {
+        let queue = self.queue.get_mut();
 
-        queue.register_task(task_id);
+        queue.push_runnable(task);
     }
 }
 
@@ -111,21 +104,6 @@ unsafe impl Sync for RoundRobin {}
 
 pub fn exit_current_task(_: usize) -> ! {
     loop {}
-}
-
-/// This function is responsible for releasing all of the locks on the current task and the
-/// previous task. These taskes are locked by [reschedule] and this function is called after the
-/// the context switch is done.
-#[no_mangle]
-unsafe extern "C" fn context_switch_finalize() {
-    let held_locks = HELD_LOCKS
-        .take()
-        .expect("`HELD_LOCKS` static was not initialized");
-
-    held_locks.head.force_unlock();
-    held_locks.tail.force_unlock();
-
-    log::info!("Unlocked context switch locks");
 }
 
 /// Yields execution to another task. The task of this function is to get the
@@ -141,7 +119,7 @@ pub fn reschedule() -> bool {
     let round_robin: Option<Arc<RoundRobin>> = downcast(&scheduler.inner);
     let scheduler_ref = round_robin.expect("Failed to downcast the scheduler");
 
-    let queue = scheduler_ref.queue.get();
+    let queue = scheduler_ref.queue.get_mut();
 
     mem::drop(scheduler); // Unlock the scheduler
 
@@ -153,25 +131,17 @@ pub fn reschedule() -> bool {
     };
 
     let new_task = {
-        match queue.front() {
-            Some(new_task) => PROCESS_CONTAINER
-                .find_by_id(new_task)
-                .expect("Unknown task in queue"),
-
-            None => unsafe {
-                IDLE_PROCESS
-                    .as_ref()
-                    .expect("IDLE thread was not initialized")
-                    .clone()
-            },
-        }
+        queue
+            .runnable
+            .pop_front()
+            .expect("The scheduler's queue was empty")
     };
 
     /*
-     * Check if the pointer of the new task is the same as the new task. If thats
+     * Check if the task id of the new task is the same as the new task. If thats
      * the case keep running the task and return out.
      */
-    if Arc::ptr_eq(&new_task, &previous_task) {
+    if new_task.task_id == previous_task.task_id {
         return false;
     }
 
@@ -183,26 +153,13 @@ pub fn reschedule() -> bool {
         CURRENT_PROCESS = Some(new_task.clone());
     }
 
-    let mut previous_task_locked = previous_task.lock();
-    let new_task_locked = new_task.lock();
+    let previous_arch = previous_task.arch_task_mut();
+    let new_arch = new_task.arch_task_ref();
 
-    unsafe {
-        HELD_LOCKS.set(Some(HeldLocks {
-            head: previous_task.clone(),
-            tail: new_task.clone(),
-        }));
+    crate::arch::task::arch_switch(previous_arch, new_arch);
 
-        let previous_arch = previous_task_locked.arch_task_mut();
-        let new_arch = new_task_locked.arch_task_ref();
-
-        crate::arch::task::arch_switch(previous_arch, new_arch);
-
-        mem::forget(previous_task_locked);
-        mem::forget(new_task_locked);
-
-        mem::forget(previous_task);
-        mem::forget(new_task);
-    }
+    mem::forget(previous_task);
+    mem::forget(new_task);
 
     true
 }
