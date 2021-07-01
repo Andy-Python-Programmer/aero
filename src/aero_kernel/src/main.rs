@@ -82,7 +82,7 @@ use userland::scheduler;
 
 use stivale_boot::v2::*;
 
-use crate::userland::process::Process;
+use crate::userland::task::Task;
 
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
@@ -221,8 +221,8 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
      * Now that all of the essential initialization is done we are going to schedule
      * the kernel main thread.
      */
-    let init = unsafe { Process::new_kernel(VirtAddr::new_unsafe(kernel_main_thread as u64)) };
-    scheduler::get_scheduler().register_process(init);
+    let init = unsafe { Task::new_kernel(VirtAddr::new_unsafe(kernel_main_thread as u64)) };
+    scheduler::get_scheduler().register_task(init);
 
     // userland::run(&mut offset_table).unwrap();
 

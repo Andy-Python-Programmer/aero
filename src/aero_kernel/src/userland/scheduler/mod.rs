@@ -21,7 +21,7 @@
 pub mod round_robin;
 
 #[cfg(feature = "round-robin")]
-pub use round_robin::{exit_current_process, reschedule};
+pub use round_robin::{exit_current_task, reschedule};
 
 use alloc::{collections::BTreeMap, sync::Arc};
 
@@ -31,7 +31,7 @@ use spin::Once;
 use crate::utils::Downcastable;
 
 use self::round_robin::RoundRobin;
-use super::process::{Process, ProcessId};
+use super::task::{Task, TaskId};
 
 static SCHEDULER: Once<SpinMutex<Scheduler>> = Once::new();
 static PROCESS_CONTAINER: ProcessContainer = ProcessContainer::new_uninit();
@@ -39,32 +39,32 @@ static PROCESS_CONTAINER: ProcessContainer = ProcessContainer::new_uninit();
 /// Scheduler interface for each scheduling algorithm. The struct implementing
 /// this trait has to implement [Send], [Sync] and [Downcastable].
 pub trait SchedulerInterface: Send + Sync + Downcastable {
-    /// Register the provided process into the task scheduler queue.
-    fn register_process(&self, process_id: ProcessId);
+    /// Register the provided task into the task scheduler queue.
+    fn register_task(&self, task_id: TaskId);
 }
 
-/// Container or a transparent struct containing a hashmap of all of the processes
+/// Container or a transparent struct containing a hashmap of all of the taskes
 /// in the scheduler's queue protected by mutex. The hashmap has a key
 /// of `ProcessId` and a value of a reference-counting pointer
-/// to the process or task.
+/// to the task or task.
 #[repr(transparent)]
-struct ProcessContainer(SpinMutex<BTreeMap<ProcessId, Arc<SpinMutex<Process>>>>);
+struct ProcessContainer(SpinMutex<BTreeMap<TaskId, Arc<SpinMutex<Task>>>>);
 
 impl ProcessContainer {
-    /// Creates a new process container with no processes by default.
+    /// Creates a new task container with no taskes by default.
     #[inline]
     const fn new_uninit() -> Self {
         Self(SpinMutex::new(BTreeMap::new()))
     }
 
-    /// Registers the provided `process` in the process container.
+    /// Registers the provided `task` in the task container.
     #[inline]
-    fn register_process(&self, process_id: ProcessId, process: Arc<SpinMutex<Process>>) {
-        self.0.lock().insert(process_id, process);
+    fn register_task(&self, task_id: TaskId, task: Arc<SpinMutex<Task>>) {
+        self.0.lock().insert(task_id, task);
     }
 
     #[inline]
-    fn find_by_id(&self, id: ProcessId) -> Option<Arc<SpinMutex<Process>>> {
+    fn find_by_id(&self, id: TaskId) -> Option<Arc<SpinMutex<Task>>> {
         self.0.lock().get(&id).cloned()
     }
 }
@@ -83,12 +83,12 @@ impl Scheduler {
         }
     }
 
-    /// Registers the provided process in the schedulers queue.
-    pub fn register_process(&self, process: Arc<SpinMutex<Process>>) {
-        let process_id = process.lock().process_id;
+    /// Registers the provided task in the schedulers queue.
+    pub fn register_task(&self, task: Arc<SpinMutex<Task>>) {
+        let task_id = task.lock().task_id;
 
-        self.inner.register_process(process_id);
-        PROCESS_CONTAINER.register_process(process_id, process);
+        self.inner.register_task(task_id);
+        PROCESS_CONTAINER.register_task(task_id, task);
     }
 }
 

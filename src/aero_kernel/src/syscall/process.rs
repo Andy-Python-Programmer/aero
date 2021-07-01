@@ -21,7 +21,7 @@ use crate::userland::scheduler;
 
 pub fn exit(status: usize) -> ! {
     log::trace!("Exiting the current process with status: {}", status);
-    scheduler::exit_current_process(status);
+    scheduler::exit_current_task(status);
 }
 
 pub fn shutdown() -> ! {

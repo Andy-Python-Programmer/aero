@@ -23,56 +23,54 @@ use core::mem;
 use alloc::{collections::VecDeque, sync::Arc};
 use spin::mutex::spin::SpinMutex;
 
-use crate::arch::gdt::TASK_STATE_SEGMENT;
-use crate::userland::process::context_switch;
-use crate::userland::process::{Process, ProcessId};
+use crate::userland::task::{Task, TaskId};
 use crate::utils::{downcast, PerCpu};
 
 use super::{SchedulerInterface, PROCESS_CONTAINER};
 
 #[thread_local]
-static mut CURRENT_PROCESS: Option<Arc<SpinMutex<Process>>> = None;
+static mut CURRENT_PROCESS: Option<Arc<SpinMutex<Task>>> = None;
 
-/// The kernel idle process is a special kind of process that is run when
-/// no processes in the scheduler's queue are avaliable to execute. The idle process
+/// The kernel idle task is a special kind of task that is run when
+/// no taskes in the scheduler's queue are avaliable to execute. The idle task
 /// is to be created for each CPU.
 #[thread_local]
-static mut IDLE_PROCESS: Option<Arc<SpinMutex<Process>>> = None;
+static mut IDLE_PROCESS: Option<Arc<SpinMutex<Task>>> = None;
 
 #[thread_local]
 static mut HELD_LOCKS: Cell<Option<HeldLocks>> = Cell::new(None);
 
 struct HeldLocks {
-    head: Arc<SpinMutex<Process>>,
-    tail: Arc<SpinMutex<Process>>,
+    head: Arc<SpinMutex<Task>>,
+    tail: Arc<SpinMutex<Task>>,
 }
 
-/// Scheduler queue containing a vector of all of the process of the enqueued
-/// processes.
+/// Scheduler queue containing a vector of all of the task of the enqueued
+/// taskes.
 #[repr(transparent)]
-struct ProcessQueue(SpinMutex<VecDeque<ProcessId>>);
+struct ProcessQueue(SpinMutex<VecDeque<TaskId>>);
 
 impl ProcessQueue {
-    /// Creates a new process queue with no processes by default.
+    /// Creates a new task queue with no taskes by default.
     #[inline]
     fn new() -> Self {
         Self(SpinMutex::new(VecDeque::new()))
     }
 
-    /// Registers the provided `process` in the process queue.
+    /// Registers the provided `task` in the task queue.
     #[inline]
-    fn register_process(&self, process_id: ProcessId) {
-        self.0.lock().push_back(process_id);
+    fn register_task(&self, task_id: TaskId) {
+        self.0.lock().push_back(task_id);
     }
 
-    fn front(&self) -> Option<ProcessId> {
+    fn front(&self) -> Option<TaskId> {
         self.0.lock().pop_front()
     }
 }
 
 /// Round Robin is the simplest algorithm for a preemptive scheduler. When the
-/// system timer fires, the next process in the queue is switched to, and the
-/// preempted process is put back into the queue.
+/// system timer fires, the next task in the queue is switched to, and the
+/// preempted task is put back into the queue.
 ///
 /// ## Notes
 /// * <https://en.wikipedia.org/wiki/Round-robin_scheduling>
@@ -87,11 +85,11 @@ impl RoundRobin {
     /// is to initialize the per-cpu queues that the round robin scheduling
     /// algorithm requires.
     pub fn new() -> Arc<Self> {
-        let idle_process = Process::new_idle();
+        let idle_task = Task::new_idle();
 
         unsafe {
-            CURRENT_PROCESS = Some(idle_process.clone());
-            IDLE_PROCESS = Some(idle_process);
+            CURRENT_PROCESS = Some(idle_task.clone());
+            IDLE_PROCESS = Some(idle_task);
         }
 
         Arc::new(Self {
@@ -101,23 +99,22 @@ impl RoundRobin {
 }
 
 impl SchedulerInterface for RoundRobin {
-    /// Registers the provided process into the process queue of this CPU.
-    fn register_process(&self, process_id: ProcessId) {
+    fn register_task(&self, task_id: TaskId) {
         let queue = self.queue.get();
 
-        queue.register_process(process_id);
+        queue.register_task(task_id);
     }
 }
 
 unsafe impl Send for RoundRobin {}
 unsafe impl Sync for RoundRobin {}
 
-pub fn exit_current_process(_: usize) -> ! {
+pub fn exit_current_task(_: usize) -> ! {
     loop {}
 }
 
-/// This function is responsible for releasing all of the locks on the current process and the
-/// previous process. These processes are locked by [reschedule] and this function is called after the
+/// This function is responsible for releasing all of the locks on the current task and the
+/// previous task. These taskes are locked by [reschedule] and this function is called after the
 /// the context switch is done.
 #[no_mangle]
 unsafe extern "C" fn context_switch_finalize() {
@@ -131,14 +128,14 @@ unsafe extern "C" fn context_switch_finalize() {
     log::info!("Unlocked context switch locks");
 }
 
-/// Yields execution to another process. The task of this function is to get the
-/// process which is on the front of the process queue and jump to it. If no process are
-/// avaviable for execution then the [IDLE_PROCESS] process is executed.
+/// Yields execution to another task. The task of this function is to get the
+/// task which is on the front of the task queue and jump to it. If no task are
+/// avaviable for execution then the [IDLE_PROCESS] task is executed.
 ///
 /// ## Overview
 /// Instead of adding `reschedule` as a method in the [SchedulerInterface] trait we are making
 /// this a normal function as in the trait case, the scheduler will be locked for a longer time. The
-/// scheduler only needs lock protection for reserving the process id allocated.
+/// scheduler only needs lock protection for reserving the task id allocated.
 pub fn reschedule() -> bool {
     let scheduler = super::get_scheduler();
     let round_robin: Option<Arc<RoundRobin>> = downcast(&scheduler.inner);
@@ -148,18 +145,18 @@ pub fn reschedule() -> bool {
 
     mem::drop(scheduler); // Unlock the scheduler
 
-    let previous_process = unsafe {
+    let previous_task = unsafe {
         CURRENT_PROCESS
             .as_ref()
             .expect("`reschedule` was invoked with no active previous task")
             .clone()
     };
 
-    let new_process = {
+    let new_task = {
         match queue.front() {
-            Some(new_process) => PROCESS_CONTAINER
-                .find_by_id(new_process)
-                .expect("Unknown process in queue"),
+            Some(new_task) => PROCESS_CONTAINER
+                .find_by_id(new_task)
+                .expect("Unknown task in queue"),
 
             None => unsafe {
                 IDLE_PROCESS
@@ -171,47 +168,40 @@ pub fn reschedule() -> bool {
     };
 
     /*
-     * Check if the pointer of the new process is the same as the new process. If thats
-     * the case keep running the process and return out.
+     * Check if the pointer of the new task is the same as the new task. If thats
+     * the case keep running the task and return out.
      */
-    if Arc::ptr_eq(&new_process, &previous_process) {
+    if Arc::ptr_eq(&new_task, &previous_task) {
         return false;
     }
 
     /*
-     * Now that we have passed all of the checks, its time to run the actual process. We first
-     * set the CURRENT_PROCESS static to the new process and then jump to ring 3. Leap of faith!
+     * Now that we have passed all of the checks, its time to run the actual task. We first
+     * set the CURRENT_PROCESS static to the new task and then jump to ring 3. Leap of faith!
      */
     unsafe {
-        CURRENT_PROCESS = Some(new_process.clone());
+        CURRENT_PROCESS = Some(new_task.clone());
     }
 
-    let mut previous_process_locked = previous_process.lock();
-    let new_process_locked = new_process.lock();
-
-    if let Some(_) = new_process_locked.address_space.as_ref() {
-        // TODO(Andy-Python-Programmer): Switch to the new user page table. Also map the user stack
-        // in the address space when creating the process itself.
-    }
+    let mut previous_task_locked = previous_task.lock();
+    let new_task_locked = new_task.lock();
 
     unsafe {
         HELD_LOCKS.set(Some(HeldLocks {
-            head: previous_process.clone(),
-            tail: new_process.clone(),
+            head: previous_task.clone(),
+            tail: new_task.clone(),
         }));
 
-        TASK_STATE_SEGMENT.rsp[0] = new_process_locked.context_switch_rsp.as_u64();
+        let previous_arch = previous_task_locked.arch_task_mut();
+        let new_arch = new_task_locked.arch_task_ref();
 
-        context_switch(
-            &mut previous_process_locked.context,
-            new_process_locked.context.as_ref(),
-        );
+        crate::arch::task::arch_switch(previous_arch, new_arch);
 
-        mem::forget(previous_process_locked);
-        mem::forget(new_process_locked);
+        mem::forget(previous_task_locked);
+        mem::forget(new_task_locked);
 
-        mem::forget(previous_process);
-        mem::forget(new_process);
+        mem::forget(previous_task);
+        mem::forget(new_task);
     }
 
     true

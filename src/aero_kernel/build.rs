@@ -20,14 +20,21 @@
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    macro_rules! compile_asm {
+        ($path:expr => $object:expr) => {
+            nasm_rs::Build::new()
+                .file($path)
+                .flag("-felf64")
+                .target("x86_64-unknown-none")
+                .compile("smp_trampoline")?;
+        };
+    }
+
     xshell::cmd!("nasm -f bin -o ../target/smp_trampoline.bin src/acpi/trampoline.real.asm")
         .run()?;
 
-    nasm_rs::Build::new()
-        .file("src/acpi/smp_trampoline.asm")
-        .flag("-felf64")
-        .target("x86_64-unknown-none")
-        .compile("smp_trampoline")?;
+    compile_asm!("src/acpi/smp_trampoline.asm" => "smp_trampoline");
+    compile_asm!("src/arch/x86_64/task.asm" => "task");
 
     println!("cargo:rustc-link-lib=static=smp_trampoline");
     println!("cargo:rerun-if-changed=.cargo/kernel.ld");
