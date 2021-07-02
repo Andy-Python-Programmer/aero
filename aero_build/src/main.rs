@@ -180,6 +180,9 @@ enum AeroBuildCommand {
         #[structopt(long)]
         target: Option<String>,
 
+        #[structopt(long)]
+        bios: Option<String>,
+
         /// Extra command line arguments passed to qemu.
         #[structopt(last = true)]
         qemu_args: Vec<String>,
@@ -188,6 +191,9 @@ enum AeroBuildCommand {
     Build {
         #[structopt(long)]
         target: Option<String>,
+
+        #[structopt(long)]
+        bios: Option<String>,
     },
 
     /// Update all of the OVMF files required for UEFI and bootloader prebuilts.
@@ -232,6 +238,7 @@ async fn main() {
             AeroBuildCommand::Run {
                 qemu_args,
                 target,
+                bios,
             } => {
                 bundled::fetch().unwrap();
 
@@ -245,7 +252,7 @@ async fn main() {
 
                 build_userland();
                 build_kernel(target);
-                bundled::package_files().unwrap();
+                bundled::package_files(bios).unwrap();
 
                 println!("Build took {:?}", now.elapsed());
 
@@ -254,9 +261,7 @@ async fn main() {
                 }
             }
 
-            AeroBuildCommand::Build {
-                target,
-            } => {
+            AeroBuildCommand::Build { target, bios } => {
                 bundled::fetch().unwrap();
 
                 /*
@@ -269,7 +274,7 @@ async fn main() {
 
                 build_userland();
                 build_kernel(target);
-                bundled::package_files().unwrap();
+                bundled::package_files(bios).unwrap();
 
                 println!("Build took {:?}", now.elapsed());
             }

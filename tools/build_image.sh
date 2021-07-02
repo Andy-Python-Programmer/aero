@@ -28,16 +28,36 @@ AERO_KERNEL_TARGET=$AERO_PATH/src/target/x86_64-aero_os/debug
 
 set -x -e
 
+usage() {
+    echo -e "usage: $0 [--bios] [--efi]"
+}
+
+bios=
+efi=
+
+while getopts o:t:p:s:l:bengc:h arg
+do
+    case $arg in
+        b) bios=1;;
+        e) efi=1;;
+    esac
+
+    shift
+done
+
 if [ ! -d $AERO_BUNDLED/limine ]; then
     git clone --branch=v2.0-branch-binary --depth=1 https://github.com/limine-bootloader/limine.git $AERO_BUNDLED/limine
 fi
 
-mkdir -p $AERO_BUILD
+if [ -d $AERO_BUILD ]; then
+    sudo rm -rf $AERO_BUILD
+    mkdir $AERO_BUILD
+fi
 
 dd if=/dev/zero bs=1M count=0 seek=64 of=$AERO_BUILD/aero.img
 
-parted -s $AERO_BUILD/aero.img mklabel msdos
-parted -s $AERO_BUILD/aero.img mkpart primary 1 100%
+parted -s $AERO_BUILD/aero.img mklabel gpt
+parted -s $AERO_BUILD/aero.img mkpart primary 2048s 100%
 
 if [ -d $AERO_BUILD/mnt ]; then
     sudo rm -rf $AERO_BUILD/mnt
@@ -46,13 +66,25 @@ fi
 mkdir $AERO_BUILD/mnt
 
 sudo losetup -Pf --show $AERO_BUILD/aero.img > loopback_dev
-sudo mkfs.ext2 -F `cat loopback_dev`p1
-sudo mount `cat loopback_dev`p1 $AERO_BUILD/mnt
+
+if [ "$bios" ]; then
+    sudo mkfs.ext2 `cat loopback_dev`p1
+    sudo mount `cat loopback_dev`p1 $AERO_BUILD/mnt
+else
+    sudo mkfs.fat -F 32 `cat loopback_dev`p1
+    sudo mount `cat loopback_dev`p1 $AERO_BUILD/mnt
+fi
 
 sudo mkdir $AERO_BUILD/mnt/boot
+
 sudo cp $AERO_KERNEL_TARGET/aero_kernel $AERO_BUILD/mnt/boot/aero.elf
 sudo cp $AERO_SRC/.cargo/limine.cfg $AERO_BUILD/mnt/
 sudo cp $AERO_BUNDLED/limine/limine.sys $AERO_BUILD/mnt/boot/
+
+if [ "$efi" ]; then
+    sudo mkdir -p $AERO_BUILD/mnt/EFI/BOOT/
+    sudo cp $AERO_BUNDLED/limine/BOOTX64.EFI $AERO_BUILD/mnt/EFI/BOOT/
+fi
 
 sync
 

@@ -96,9 +96,14 @@ pub fn fetch() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn package_files() -> Result<(), Box<dyn Error>> {
+pub fn package_files(bios: Option<String>) -> Result<(), Box<dyn Error>> {
     xshell::cmd!("chmod +x ./tools/build_image.sh").run()?;
-    xshell::cmd!("./tools/build_image.sh").run()?;
+
+    match bios.as_deref() {
+        Some("legacy") | None => xshell::cmd!("./tools/build_image.sh -b").run()?,
+        Some("efi") => xshell::cmd!("./tools/build_image.sh -e").run()?,
+        Some(_) => panic!()
+    }
 
     Ok(())
 }
