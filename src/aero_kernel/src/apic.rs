@@ -101,50 +101,92 @@ impl LocalApic {
 
     /// Initialize the application processor.
     unsafe fn init_cpu(&mut self) {
-        // Enable local APIC; set spurious interrupt vector.
-        self.write(XAPIC_SVR, 0x100 | APIC_SPURIOUS_VECTOR);
+        match self.apic_type {
+            ApicType::Xapic => {
+                // Enable local APIC; set spurious interrupt vector.
+                self.write(XAPIC_SVR, 0x100 | APIC_SPURIOUS_VECTOR);
 
-        // Set up LVT (Local Vector Table) error.
-        self.write(XAPIC_LVT_ERROR, 49);
+                // Set up LVT (Local Vector Table) error.
+                self.write(XAPIC_LVT_ERROR, 49);
+            }
+
+            ApicType::X2apic => {
+                // Enable X2APIC (Bit 10)
+                io::wrmsr(io::IA32_APIC_BASE, io::rdmsr(io::IA32_APIC_BASE) | 1 << 10);
+
+                // Set up LVT (Local Vector Table) error.
+                io::wrmsr(io::IA32_X2APIC_LVT_ERROR, 49);
+
+                // Enable local APIC; set spurious interrupt vector.
+                io::wrmsr(io::IA32_X2APIC_SIVR, (0x100 | APIC_SPURIOUS_VECTOR) as _);
+            }
+
+            ApicType::None => {}
+        }
     }
 
-    #[inline(always)]
+    #[inline]
     fn bsp_id(&self) -> u32 {
-        unsafe { self.read(0x20) }
+        match self.apic_type {
+            ApicType::Xapic => unsafe { self.read(0x20) },
+            ApicType::X2apic => unsafe { io::rdmsr(io::IA32_X2APIC_APICID) as _ },
+            ApicType::None => u32::MAX,
+        }
     }
 
     /// Get the error code of the lapic by reading the error status register.
     pub unsafe fn get_esr(&mut self) -> u32 {
-        self.write(XAPIC_ESR, 0x00);
+        match self.apic_type {
+            ApicType::Xapic => {
+                self.write(XAPIC_ESR, 0x00);
+                self.read(XAPIC_ESR)
+            }
 
-        self.read(XAPIC_ESR)
+            ApicType::X2apic => {
+                io::wrmsr(io::IA32_X2APIC_ESR, 0x00);
+                io::rdmsr(io::IA32_X2APIC_ESR) as _
+            }
+
+            ApicType::None => u32::MAX,
+        }
     }
 
-    #[inline(always)]
+    #[inline]
     pub unsafe fn eoi(&mut self) {
-        self.write(XAPIC_EOI, 0x00)
+        match self.apic_type {
+            ApicType::Xapic => self.write(XAPIC_EOI, 0x00),
+            ApicType::X2apic => io::wrmsr(io::IA32_X2APIC_EOI, 0x00),
+            ApicType::None => {}
+        }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn apic_type(&self) -> ApicType {
         self.apic_type
     }
 
     pub unsafe fn set_icr(&mut self, value: u64) {
-        while self.read(XAPIC_ICR0) & 1 << 12 == 1 << 12 {}
+        match self.apic_type {
+            ApicType::Xapic => {
+                while self.read(XAPIC_ICR0) & 1 << 12 == 1 << 12 {}
 
-        self.write(XAPIC_ICR1, (value >> 32) as u32);
-        self.write(XAPIC_ICR0, value as u32);
+                self.write(XAPIC_ICR1, (value >> 32) as u32);
+                self.write(XAPIC_ICR0, value as u32);
 
-        while self.read(XAPIC_ICR0) & 1 << 12 == 1 << 12 {}
+                while self.read(XAPIC_ICR0) & 1 << 12 == 1 << 12 {}
+            }
+
+            ApicType::X2apic => io::wrmsr(io::IA32_X2APIC_ICR, value),
+            ApicType::None => {}
+        }
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn read(&self, register: u32) -> u32 {
         intrinsics::volatile_load((self.address + register as u64).as_u64() as *const u32)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn write(&mut self, register: u32, value: u32) {
         intrinsics::volatile_store((self.address + register as u64).as_u64() as *mut u32, value);
     }

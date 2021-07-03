@@ -38,6 +38,23 @@ pub const IA32_APIC_BASE: u32 = 0x1b;
 /// Swap Target of BASE Address of GS (R/W).
 pub const IA32_KERNEL_GSBASE: u32 = 0xc0000102;
 
+/// x2APIC Spurious Interrupt Vector register (R/W)
+pub const IA32_X2APIC_SIVR: u32 = 0x80f;
+
+/// x2APIC ID register (R/O) See X2APIC Specification.
+pub const IA32_X2APIC_APICID: u32 = 0x802;
+
+/// Error Status Register.
+pub const IA32_X2APIC_ESR: u32 = 0x828;
+
+/// x2APIC Interrupt Command register (R/W)
+pub const IA32_X2APIC_ICR: u32 = 0x830;
+
+/// x2APIC End of Interrupt.
+pub const IA32_X2APIC_EOI: u32 = 0x80b;
+
+pub const IA32_X2APIC_LVT_ERROR: u32 = 0x837;
+
 /// Wrapper function to the `outb` assembly instruction used to do the
 /// low level port output.
 #[inline]
