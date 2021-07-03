@@ -51,9 +51,9 @@ fi
 
 if [ -d $AERO_BUILD ]; then
     sudo rm -rf $AERO_BUILD
-    mkdir $AERO_BUILD
 fi
 
+mkdir $AERO_BUILD
 dd if=/dev/zero bs=1M count=0 seek=64 of=$AERO_BUILD/aero.img
 
 parted -s $AERO_BUILD/aero.img mklabel gpt

@@ -71,14 +71,14 @@ impl AcpiTable {
         // anyhow invalid.
         let sdt = unsafe { Sdt::from_address(sdt_address) };
 
-        let sdt_signature = sdt.get_signature();
+        let sdt_signature = &sdt.signature;
         let sdt_data_len = sdt.data_len();
 
         let (header, entry_count) = match sdt_signature {
             sdt::RSDT_SIGNATURE => (AcpiHeader::Rsdt(sdt), sdt_data_len / mem::size_of::<u32>()),
             sdt::XSDT_SIGNATURE => (AcpiHeader::Xsdt(sdt), sdt_data_len / mem::size_of::<u64>()),
 
-            _ => panic!("Invalid ACPI header signature: {}", sdt_signature),
+            _ => panic!("Invalid ACPI header signature: {:?}", sdt_signature),
         };
 
         Self {
@@ -97,7 +97,7 @@ impl AcpiTable {
             let item_address = unsafe { *(header_data_address.add(i)) } as u64;
             let item = unsafe { Sdt::from_address(item_address) };
 
-            if item.get_signature() == signature {
+            if item.signature == signature.as_bytes() {
                 return Some(item);
             }
         }

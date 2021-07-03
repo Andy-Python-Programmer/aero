@@ -19,8 +19,8 @@
 
 use core::mem;
 
-pub(super) const XSDT_SIGNATURE: &str = "XSDT";
-pub(super) const RSDT_SIGNATURE: &str = "RSDT";
+pub(super) const XSDT_SIGNATURE: &[u8; 4] = b"XSDT";
+pub(super) const RSDT_SIGNATURE: &[u8; 4] = b"RSDT";
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
@@ -59,12 +59,6 @@ impl Sdt {
         } else {
             0
         }
-    }
-
-    /// Get the SDT's signature.
-    #[inline]
-    pub fn get_signature(&self) -> &str {
-        core::str::from_utf8(&self.signature).expect("Invalid UTF8 in SDT's signature")
     }
 
     #[inline]
