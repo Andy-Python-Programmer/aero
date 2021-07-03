@@ -198,6 +198,7 @@ pub struct PerCpu<T> {
 }
 
 impl<T> PerCpu<T> {
+    #[inline]
     pub const fn new_uninit() -> PerCpu<T> {
         PerCpu::<T> {
             data: UnsafeCell::new(Unique::dangling()),
@@ -223,11 +224,18 @@ impl<T> PerCpu<T> {
         this
     }
 
+    #[inline]
     pub fn as_mut_ptr(&self) -> *mut T {
         unsafe { (&mut *self.data.get()).as_mut() }
     }
 
+    #[inline]
     pub fn get(&self) -> &T {
-        unsafe { &*self.as_mut_ptr() }
+        unsafe { &*self.as_mut_ptr().offset(crate::CPU_ID as _) }
+    }
+
+    #[inline]
+    pub fn get_mut(&self) -> &mut T {
+        unsafe { &mut *self.as_mut_ptr().offset(crate::CPU_ID as _) }
     }
 }

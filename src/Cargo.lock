@@ -21,6 +21,7 @@ dependencies = [
  "cfg-if",
  "font8x8",
  "hashbrown 0.11.2",
+ "intrusive-collections",
  "lazy_static",
  "linked_list_allocator",
  "log",
@@ -129,7 +130,7 @@ dependencies = [
  "cfg-if",
  "crossbeam-utils",
  "lazy_static",
- "memoffset",
+ "memoffset 0.6.4",
  "scopeguard",
 ]
 
@@ -194,6 +195,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "intrusive-collections"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c1d0072a5e5c56adba35b9001f029ccc46f0e9ad0c7bcecd9b2f33b37123bca"
+dependencies = [
+ "memoffset 0.5.6",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -242,6 +252,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f374d42cdfc1d7dbf3d3dec28afab2eb97ffbf43a3234d795b5986dbf4b90ba"
 dependencies = [
  "hashbrown 0.9.1",
+]
+
+[[package]]
+name = "memoffset"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "043175f069eda7b85febe4a74abbaeff828d9f8b448515d3151a14a3542811aa"
+dependencies = [
+ "autocfg",
 ]
 
 [[package]]
@@ -395,9 +414,9 @@ dependencies = [
 
 [[package]]
 name = "xmas-elf"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e74de9a366f6ab8c405fa6b371d9ac24943921fa14b3d64afcb202065c405f11"
+checksum = "8d29b4d8e7beaceb4e77447ba941a7600d23d0319ab52da0461abea214832d5a"
 dependencies = [
  "zero",
 ]

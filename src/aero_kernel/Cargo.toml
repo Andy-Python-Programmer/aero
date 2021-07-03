@@ -10,28 +10,29 @@ round-robin = []
 default = ["round-robin"]
 
 [dependencies]
-spin = "0.9"
-bitflags = "1.2"
+spin = "0.9.1"
+bitflags = "1.2.1"
 x86_64 = "0.14.3"
 bit_field = "0.10"
 linked_list_allocator = "0.9.0"
-log = "0.4"
-raw-cpuid = "9.0"
-xmas-elf = "0.7"
-paste = "1.0"
-cfg-if = "1.0"
+log = "0.4.14"
+raw-cpuid = "9.0.0"
+xmas-elf = "0.8.0"
+paste = "1.0.0"
+cfg-if = "1.0.0"
 hashbrown = "0.11.2"
-rustc-demangle = "0.1"
+rustc-demangle = "0.1.20"
 lru = "0.6.5"
 stivale-boot = "0.2.1"
+intrusive-collections = "0.9.1"
 
 [dependencies.font8x8]
-version = "0.3"
+version = "0.3.1"
 default-features = false
 features = ["unicode"]
 
 [dependencies.lazy_static]
-version = "1.4"
+version = "1.4.0"
 features = ["spin_no_std"]
 
 #####################################

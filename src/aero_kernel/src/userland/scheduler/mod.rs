@@ -21,55 +21,53 @@
 pub mod round_robin;
 
 #[cfg(feature = "round-robin")]
-pub use round_robin::{exit_current_process, reschedule};
+pub use round_robin::{exit_current_task, reschedule};
 
-use alloc::{collections::BTreeMap, sync::Arc};
+use alloc::sync::Arc;
 
-use spin::mutex::spin::{SpinMutex, SpinMutexGuard};
+use spin::mutex::spin::SpinMutex;
 use spin::Once;
 
 use crate::utils::Downcastable;
 
 use self::round_robin::RoundRobin;
-use super::process::{Process, ProcessId};
+use super::task::{Task, TaskId};
 
-static SCHEDULER: Once<SpinMutex<Scheduler>> = Once::new();
-static PROCESS_CONTAINER: ProcessContainer = ProcessContainer::new_uninit();
+static SCHEDULER: Once<Scheduler> = Once::new();
 
 /// Scheduler interface for each scheduling algorithm. The struct implementing
 /// this trait has to implement [Send], [Sync] and [Downcastable].
 pub trait SchedulerInterface: Send + Sync + Downcastable {
-    /// Register the provided process into the task scheduler queue.
-    fn register_process(&self, process_id: ProcessId);
+    /// Register the provided task into the task scheduler queue.
+    fn register_task(&self, task: Arc<Task>);
 }
 
-/// Container or a transparent struct containing a hashmap of all of the processes
+/// Container or a transparent struct containing a hashmap of all of the taskes
 /// in the scheduler's queue protected by mutex. The hashmap has a key
 /// of `ProcessId` and a value of a reference-counting pointer
-/// to the process or task.
+/// to the task or task.
 #[repr(transparent)]
-struct ProcessContainer(SpinMutex<BTreeMap<ProcessId, Arc<SpinMutex<Process>>>>);
+struct TaskContainer(SpinMutex<hashbrown::HashMap<TaskId, Arc<Task>>>);
 
-impl ProcessContainer {
-    /// Creates a new process container with no processes by default.
+impl TaskContainer {
+    /// Creates a new task container with no taskes by default.
     #[inline]
-    const fn new_uninit() -> Self {
-        Self(SpinMutex::new(BTreeMap::new()))
+    fn new() -> Self {
+        Self(SpinMutex::new(hashbrown::HashMap::new()))
     }
 
-    /// Registers the provided `process` in the process container.
+    /// Registers the provided `task` in the task container.
     #[inline]
-    fn register_process(&self, process_id: ProcessId, process: Arc<SpinMutex<Process>>) {
-        self.0.lock().insert(process_id, process);
-    }
-
-    #[inline]
-    fn find_by_id(&self, id: ProcessId) -> Option<Arc<SpinMutex<Process>>> {
-        self.0.lock().get(&id).cloned()
+    fn register_task(&self, task_id: TaskId, task: Arc<Task>) {
+        self.0.lock().insert(task_id, task);
     }
 }
 
+unsafe impl Send for TaskContainer {}
+unsafe impl Sync for TaskContainer {}
+
 pub struct Scheduler {
+    tasks: TaskContainer,
     inner: Arc<dyn SchedulerInterface>,
 }
 
@@ -78,30 +76,29 @@ impl Scheduler {
     #[inline]
     fn new() -> Self {
         Self {
+            tasks: TaskContainer::new(),
+
             #[cfg(feature = "round-robin")]
             inner: RoundRobin::new(),
         }
     }
 
-    /// Registers the provided process in the schedulers queue.
-    pub fn register_process(&self, process: Arc<SpinMutex<Process>>) {
-        let process_id = process.lock().process_id;
-
-        self.inner.register_process(process_id);
-        PROCESS_CONTAINER.register_process(process_id, process);
+    /// Registers the provided task in the schedulers queue.
+    pub fn register_task(&self, task: Arc<Task>) {
+        self.tasks.register_task(task.task_id, task.clone());
+        self.inner.register_task(task.clone());
     }
 }
 
 /// Get a reference to the active scheduler.
-pub fn get_scheduler() -> SpinMutexGuard<'static, Scheduler> {
+pub fn get_scheduler() -> &'static Scheduler {
     SCHEDULER
         .get()
         .expect("Attempted to get the scheduler before it was initialized")
-        .lock()
 }
 
 /// Initialize the scheduler.
 #[inline]
 pub fn init() {
-    SCHEDULER.call_once(move || SpinMutex::new(Scheduler::new()));
+    SCHEDULER.call_once(move || Scheduler::new());
 }
