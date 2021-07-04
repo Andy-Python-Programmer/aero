@@ -22,7 +22,7 @@ use alloc::sync::Arc;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use x86_64::VirtAddr;
+use crate::mem::paging::VirtAddr;
 
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;

@@ -50,7 +50,7 @@
 extern crate alloc;
 
 use linked_list_allocator::LockedHeap;
-use x86_64::{PhysAddr, VirtAddr};
+use mem::paging::{PhysAddr, VirtAddr};
 
 mod acpi;
 mod apic;
@@ -87,9 +87,7 @@ use crate::userland::task::Task;
 #[global_allocator]
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-prelude::const_unsafe! {
-    const PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::new_unsafe(0xffff800000000000);
-}
+static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
 
 const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -109,8 +107,11 @@ static STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 /// We are now going to define a framebuffer header tag. This tag tells the bootloader that
 /// we want a graphical framebuffer instead of a CGA-compatible text mode. Omitting this tag will
 /// make the bootloader default to text mode, if available.
-static FRAMEBUFFER_TAG: StivaleFramebufferHeaderTag =
-    StivaleFramebufferHeaderTag::new().framebuffer_bpp(24);
+static FRAMEBUFFER_TAG: StivaleFramebufferHeaderTag = StivaleFramebufferHeaderTag::new()
+    .framebuffer_bpp(24)
+    .next((&PAGING_TAG as *const Stivale5LevelPagingHeaderTag).cast());
+
+static PAGING_TAG: Stivale5LevelPagingHeaderTag = Stivale5LevelPagingHeaderTag::new();
 
 /// The stivale2 specification says we need to define a "header structure".
 /// This structure needs to reside in the .stivale2hdr ELF section in order
@@ -153,6 +154,12 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
      */
     unsafe {
         interrupts::disable_interrupts();
+    }
+
+    if mem::paging::level_5_paging_enabled() {
+        unsafe { PHYSICAL_MEMORY_OFFSET = VirtAddr::new_unsafe(0xff00000000000000) }
+    } else {
+        unsafe { PHYSICAL_MEMORY_OFFSET = VirtAddr::new_unsafe(0xffff800000000000) }
     }
 
     /*
@@ -204,7 +211,7 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
         interrupts::enable_interrupts();
     }
 
-    acpi::init(rsdp_address, PHYSICAL_MEMORY_OFFSET);
+    acpi::init(rsdp_address, unsafe { PHYSICAL_MEMORY_OFFSET });
     log::info!("Loaded ACPI");
 
     drivers::pci::init(&mut offset_table);

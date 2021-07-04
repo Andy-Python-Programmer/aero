@@ -19,13 +19,7 @@
 
 use core::alloc::{self, GlobalAlloc, Layout};
 
-use x86_64::{
-    structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags, Size4KiB,
-    },
-    VirtAddr,
-};
-
+use crate::mem::paging::*;
 use crate::AERO_SYSTEM_ALLOCATOR;
 
 use super::paging::FRAME_ALLOCATOR;

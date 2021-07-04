@@ -20,9 +20,9 @@
 use core::intrinsics;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
+use crate::mem::paging::VirtAddr;
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::{Mutex, MutexGuard, Once};
-use x86_64::VirtAddr;
 
 use crate::acpi::madt;
 use crate::utils::io;
@@ -256,7 +256,7 @@ pub fn mark_bsp_ready(value: bool) {
 /// Initialize the IO apic. This function is called in the init function
 /// of the [madt::Madt] acpi table.
 pub fn init_io_apic(io_apic: &'static IoApicHeader) {
-    let io_virtual = PHYSICAL_MEMORY_OFFSET + io_apic.io_apic_address as usize;
+    let io_virtual = unsafe { PHYSICAL_MEMORY_OFFSET } + io_apic.io_apic_address as usize;
 
     let mut io_apic = IoApic::new(io_virtual);
 
@@ -282,7 +282,7 @@ pub fn init() -> ApicType {
 
     log::debug!("Found apic at: {:#x}", address_phys);
 
-    let address_virt = PHYSICAL_MEMORY_OFFSET + address_phys;
+    let address_virt = unsafe { PHYSICAL_MEMORY_OFFSET } + address_phys;
 
     let mut local_apic = LocalApic::new(address_virt, apic_type);
 

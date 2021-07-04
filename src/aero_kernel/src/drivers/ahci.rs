@@ -24,12 +24,7 @@ use core::mem::MaybeUninit;
 use crate::arch::interrupts;
 use crate::mem::paging::{memory_map_device, FRAME_ALLOCATOR};
 
-use x86_64::{
-    structures::paging::{
-        FrameAllocator, Mapper, OffsetPageTable, Page, PageTableFlags, PhysFrame, Size4KiB,
-    },
-    PhysAddr, VirtAddr,
-};
+use crate::mem::paging::*;
 
 use super::pci::{Bar, PCIHeader};
 

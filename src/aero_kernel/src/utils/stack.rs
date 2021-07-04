@@ -17,13 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::mem::paging::FRAME_ALLOCATOR;
+use crate::mem::paging::*;
 use crate::prelude::*;
-
-use x86_64::{
-    structures::paging::{mapper::MapToError, *},
-    VirtAddr,
-};
 
 pub struct Stack {
     stack_start: VirtAddr,

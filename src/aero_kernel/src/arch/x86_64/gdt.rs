@@ -28,7 +28,7 @@
 
 use core::mem;
 
-use x86_64::VirtAddr;
+use crate::mem::paging::VirtAddr;
 
 use crate::mem::pti::{PTI_CPU_STACK, PTI_STACK_SIZE};
 use crate::utils::io;

@@ -17,13 +17,22 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod frame;
+mod addr;
+mod frame;
+mod mapper;
+mod page;
+mod page_table;
+
+pub use self::addr::*;
+pub use self::frame::*;
+pub use self::mapper::MapperFlush;
+pub use self::mapper::*;
+pub use self::page::*;
+pub use self::page_table::*;
 
 use stivale_boot::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapTag};
 
-use x86_64::registers::control::Cr3;
-use x86_64::structures::paging::{mapper::MapToError, *};
-use x86_64::VirtAddr;
+use x86_64::registers::control::{Cr3, Cr4, Cr4Flags};
 
 pub use frame::LockedFrameAllocator;
 
@@ -40,6 +49,12 @@ impl UnmapGuard {
     fn new(page: Page<Size4KiB>) -> Self {
         Self { page }
     }
+}
+
+/// Returns true if level 5 paging is supported by the CPU and is enabled in Cr4.
+#[inline]
+pub fn level_5_paging_enabled() -> bool {
+    Cr4::read().contains(Cr4Flags::L5_PAGING)
 }
 
 /// Initialize paging.

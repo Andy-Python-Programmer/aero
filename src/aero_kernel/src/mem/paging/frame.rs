@@ -19,7 +19,11 @@
 
 use spin::{Mutex, Once};
 use stivale_boot::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapTag};
-use x86_64::{structures::paging::*, PhysAddr};
+
+use super::mapper::*;
+use super::page::*;
+
+use super::addr::PhysAddr;
 
 pub struct LockedFrameAllocator(Once<Mutex<GlobalFrameAllocator>>);
 

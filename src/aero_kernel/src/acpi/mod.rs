@@ -24,7 +24,7 @@
 
 use core::mem;
 
-use x86_64::{PhysAddr, VirtAddr};
+use crate::mem::paging::{PhysAddr, VirtAddr};
 
 use self::{fadt::Fadt, hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
 

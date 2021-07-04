@@ -26,8 +26,8 @@ use crate::{
     utils::io,
 };
 
+use crate::mem::paging::OffsetPageTable;
 use bit_field::BitField;
-use x86_64::structures::paging::OffsetPageTable;
 
 pub const PCI_CONFIG_ADDRESS_PORT: u16 = 0xCF8;
 pub const PCI_CONFIG_DATA_PORT: u16 = 0xCFC;

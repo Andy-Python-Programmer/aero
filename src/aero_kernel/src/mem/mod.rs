@@ -21,8 +21,7 @@ pub mod alloc;
 pub mod paging;
 pub mod pti;
 
-use x86_64::structures::paging::mapper::MapToError;
-use x86_64::structures::paging::*;
+use crate::mem::paging::*;
 
 use self::paging::{active_level_4_table, FRAME_ALLOCATOR};
 use crate::PHYSICAL_MEMORY_OFFSET;

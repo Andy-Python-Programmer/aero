@@ -22,7 +22,7 @@ use alloc::alloc::alloc_zeroed;
 use core::alloc::Layout;
 use core::ptr::Unique;
 
-use x86_64::VirtAddr;
+use crate::mem::paging::VirtAddr;
 
 use super::gdt::TASK_STATE_SEGMENT;
 use super::interrupts::IretRegisters;
