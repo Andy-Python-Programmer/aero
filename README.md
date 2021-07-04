@@ -6,7 +6,8 @@
 
 **Aero** is a new modern, experimental, unix-like operating system written in Rust. 
 Aero follows the monolithic kernel design and it is inspired by the Linux Kernel and 
-the Zircon Kernel.
+the Zircon Kernel. Aero supports *modern* PC features such as Long Mode, 5-level paging, 
+and SMP (multicore), to name a few.
 
 ![workflow](https://github.com/Andy-Python-Programmer/aero/actions/workflows/build.yml/badge.svg)
 [![lines_of_code](https://tokei.rs/b1/github/Andy-Python-Programmer/aero)](https://github.com/Andy-Python-Programmer/aero)
@@ -22,6 +23,7 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 
 # Features
 - 64-bit higher half kernel
+- 4/5 level paging
 - Preemptive per-cpu scheduler
 - Modern UEFI bootloader
 - ACPI support (ioapic, lapic)

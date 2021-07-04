@@ -31,7 +31,7 @@ use crate::arch::interrupts;
 
 use crate::apic::IoApicHeader;
 use crate::apic::CPU_COUNT;
-use crate::kernel_ap_startup;
+use crate::mem::paging;
 
 use super::sdt::Sdt;
 
@@ -39,7 +39,7 @@ pub(super) const SIGNATURE: &str = "APIC";
 
 extern "C" {
     fn smp_prepare_trampoline() -> u16;
-    fn smp_prepare_launch(entry_point: u64, page_table: u64, stack_top: u64, ap_id: u64);
+    fn smp_prepare_launch(page_table: u64, stack_top: u64, ap_id: u64, mode: u32);
     fn smp_check_ap_flag() -> bool;
 }
 
@@ -90,12 +90,18 @@ impl Madt {
                         raw.offset(4096)
                     };
 
+                    let mode = if paging::level_5_paging_enabled() {
+                        1 << 1
+                    } else {
+                        0 << 1
+                    };
+
                     unsafe {
                         smp_prepare_launch(
-                            kernel_ap_startup as u64,
                             kernel_cr3,
                             stack_top as u64,
                             local_apic.apic_id as u64,
+                            mode,
                         );
                     }
 

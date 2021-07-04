@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2021 The Aero Project Developers.
+ *
+ * This file is part of The Aero Project.
+ *
+ * Aero is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Aero is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Aero. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 //! Physical and virtual addresses manipulation
 
 use core::fmt;
@@ -6,16 +25,13 @@ use core::ops::{Add, AddAssign, Sub, SubAssign};
 use super::page_table::{PageOffset, PageTableIndex};
 use bit_field::BitField;
 
-/// A canonical 64-bit virtual memory address.
+/// A 64-bit virtual memory address.
 ///
 /// This is a wrapper type around an `u64`, so it is always 8 bytes, even when compiled
 /// on non 64-bit systems. The
 /// [`TryFrom`](https://doc.rust-lang.org/std/convert/trait.TryFrom.html) trait can be used for performing conversions
 /// between `u64` and `usize`.
-///
-/// On `x86_64`, only the 48 lower bits of a virtual address can be used. The top 16 bits need
-/// to be copies of bit 47, i.e. the most significant bit. Addresses that fulfil this criterium
-/// are called “canonical”. This type guarantees that it always represents a canonical address.
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct VirtAddr(u64);
@@ -46,29 +62,11 @@ impl VirtAddr {
     /// Creates a new canonical virtual address.
     ///
     /// This function performs sign extension of bit 47 to make the address canonical.
-    ///
-    /// ## Panics
-    ///
-    /// This function panics if the bits in the range 48 to 64 contain data (i.e. are not null and no sign extension).
     #[inline]
     pub fn new(addr: u64) -> VirtAddr {
-        Self::try_new(addr).expect(
-            "address passed to VirtAddr::new must not contain any data \
-             in bits 48 to 64",
-        )
-    }
-
-    /// Tries to create a new canonical virtual address.
-    ///
-    /// This function tries to performs sign
-    /// extension of bit 47 to make the address canonical. It succeeds if bits 48 to 64 are
-    /// either a correct sign extension (i.e. copies of bit 47) or all null. Else, an error
-    /// is returned.
-    #[inline]
-    pub fn try_new(addr: u64) -> Result<VirtAddr, VirtAddrNotValid> {
         match addr.get_bits(47..64) {
-            1 => Ok(VirtAddr::new_truncate(addr)), // address needs sign extension
-            _ => Ok(VirtAddr(addr)),
+            1 => VirtAddr::new_truncate(addr), // address needs sign extension
+            _ => VirtAddr(addr),
         }
     }
 

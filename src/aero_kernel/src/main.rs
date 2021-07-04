@@ -111,6 +111,9 @@ static FRAMEBUFFER_TAG: StivaleFramebufferHeaderTag = StivaleFramebufferHeaderTa
     .framebuffer_bpp(24)
     .next((&PAGING_TAG as *const Stivale5LevelPagingHeaderTag).cast());
 
+/// We are now going to define a level 5 paging header tag. This tag tells the bootloader to
+/// enable the LEVEL_5_PAGING bit in the Cr4 register. This is not possible to implement in the kernel
+/// as we can only enable it in protected mode.
 static PAGING_TAG: Stivale5LevelPagingHeaderTag = Stivale5LevelPagingHeaderTag::new();
 
 /// The stivale2 specification says we need to define a "header structure".

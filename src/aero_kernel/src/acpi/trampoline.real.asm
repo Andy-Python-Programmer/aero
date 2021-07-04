@@ -37,8 +37,15 @@ fix_cs:
     mov edx, dword [0x540]
     mov cr3, edx
 
+    test dword [0x570], (1 << 1)
+    jz .no_level_5_paging
+
     mov eax, cr4
     or eax, 1 << 12
+    mov cr4, eax
+
+.no_level_5_paging:
+    mov eax, cr4
     or eax, 1 << 5
     or eax, 1 << 7
     mov cr4, eax

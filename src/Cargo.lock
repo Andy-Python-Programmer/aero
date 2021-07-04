@@ -3,15 +3,6 @@
 version = 3
 
 [[package]]
-name = "aero_hal"
-version = "0.1.0"
-dependencies = [
- "bit_field 0.10.1",
- "bitflags",
- "cfg-if",
-]
-
-[[package]]
 name = "aero_kernel"
 version = "0.1.0"
 dependencies = [

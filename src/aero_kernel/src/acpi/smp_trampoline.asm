@@ -19,6 +19,8 @@ global smp_prepare_trampoline
 global smp_prepare_launch
 global smp_check_ap_flag
 
+extern kernel_ap_startup
+
 section .data
 
 %define smp_trampoline_size  smp_trampoline_end - smp_trampoline
@@ -45,11 +47,13 @@ smp_prepare_trampoline:
 ; This function is responsible for preparing the SMP trampoline 
 ; structure.
 smp_prepare_launch:
-    mov byte [0x510], 0    
-    mov qword [0x520], rdi ; Param: Entry Point
-    mov qword [0x540], rsi ; Param: Page Table
-    mov qword [0x550], rdx ; Param: Stack Top
-    mov qword [0x560], rcx ; Param: AP ID
+    mov byte [0x510], 0                     ; Info: AP Ready Flag 
+    mov qword [0x520], kernel_ap_startup    ; Info: Entry point
+
+    mov qword [0x540], rdi                  ; Param: Page Table
+    mov qword [0x550], rsi                  ; Param: Stack Top
+    mov qword [0x560], rdx                  ; Param: AP ID
+    mov dword [0x570], ecx                  ; Param: Mode
 
     ret
 
