@@ -134,7 +134,9 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
         rendy::clear_screen();
     }
 
-    log::error!("thread 'main' panicked at '{}'", panic_message);
+    let cpu_id = unsafe { crate::CPU_ID };
+
+    log::error!("cpu '{}' panicked at '{}'", cpu_id, panic_message);
 
     if let Some(panic_location) = info.location() {
         log::error!("{}", panic_location);
@@ -145,6 +147,8 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
      * stressed at this point.
      */
     log::error!("");
+
+    unwind_stack_trace();
 
     unsafe {
         interrupts::disable_interrupts();

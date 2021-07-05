@@ -279,5 +279,18 @@ extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
         interrupts::pause();
     }
 
-    loop {}
+    userland::init_ap();
+    log::info!("AP{}: Loaded userland", ap_id);
+
+    unsafe {
+        loop {
+            interrupts::disable_interrupts();
+
+            if scheduler::reschedule() {
+                interrupts::enable_interrupts();
+            } else {
+                interrupts::enable_interrupts_and_halt();
+            }
+        }
+    }
 }

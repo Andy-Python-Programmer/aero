@@ -34,7 +34,11 @@ pub fn run(offset_table: &mut OffsetPageTable) -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Initialize userland.
+pub fn init_ap() {
+    scheduler::get_scheduler().init();
+    syscall::init();
+}
+
 pub fn init() {
     scheduler::init();
     syscall::init();

@@ -40,6 +40,9 @@ static SCHEDULER: Once<Scheduler> = Once::new();
 pub trait SchedulerInterface: Send + Sync + Downcastable {
     /// Register the provided task into the task scheduler queue.
     fn register_task(&self, task: Arc<Task>);
+
+    /// Initialize the scheduler variables for this CPU.
+    fn init(&self);
 }
 
 /// Container or a transparent struct containing a hashmap of all of the taskes
@@ -83,6 +86,11 @@ impl Scheduler {
         }
     }
 
+    #[inline]
+    pub fn init(&self) {
+        self.inner.init();
+    }
+
     /// Registers the provided task in the schedulers queue.
     pub fn register_task(&self, task: Arc<Task>) {
         self.tasks.register_task(task.task_id, task.clone());
@@ -100,5 +108,6 @@ pub fn get_scheduler() -> &'static Scheduler {
 /// Initialize the scheduler.
 #[inline]
 pub fn init() {
-    SCHEDULER.call_once(move || Scheduler::new());
+    SCHEDULER.call_once(|| Scheduler::new());
+    get_scheduler().init(); // Initialize the scheduler variables for the BSP
 }

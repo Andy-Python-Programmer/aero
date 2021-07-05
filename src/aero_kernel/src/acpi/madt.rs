@@ -61,6 +61,15 @@ impl Madt {
         for entry in self.iter() {
             match entry {
                 MadtEntry::LocalApic(local_apic) => {
+                    if local_apic.flags & 1 != 1 {
+                        // We cannot initialize disabled hardware :D
+                        log::warn!("APIC {} is disabled by the hardware", local_apic.apic_id);
+                        continue;
+                    }
+
+                    // Increase the CPU count.
+                    CPU_COUNT.fetch_add(1, Ordering::SeqCst);
+
                     if local_apic.apic_id == apic::get_bsp_id() as u8 {
                         /*
                          * We do not want to start the BSP that is already running
@@ -68,14 +77,6 @@ impl Madt {
                          */
                         continue;
                     }
-
-                    if local_apic.flags & 1 != 1 {
-                        // We cannot initialize disabled hardware :D
-                        log::warn!("APIC {} is disabled by the hardware", local_apic.apic_id);
-                    }
-
-                    // Increase the CPU count.
-                    CPU_COUNT.fetch_add(1, Ordering::SeqCst);
 
                     let kernel_cr3: u64;
 

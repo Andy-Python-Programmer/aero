@@ -47,9 +47,9 @@ impl TaskId {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TaskState {
-    Running,
+    Runnable,
 }
 
 pub struct Task {
@@ -71,7 +71,7 @@ impl Task {
             arch_task: UnsafeCell::new(ArchTask::new_idle()),
             file_table: FileTable::new(),
             task_id: TaskId::allocate(),
-            state: TaskState::Running,
+            state: TaskState::Runnable,
 
             link: Default::default(),
         })
@@ -84,7 +84,7 @@ impl Task {
             arch_task: UnsafeCell::new(ArchTask::new_kernel(entry_point)),
             task_id: TaskId::allocate(),
             file_table: FileTable::new(),
-            state: TaskState::Running,
+            state: TaskState::Runnable,
 
             link: Default::default(),
         })

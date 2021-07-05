@@ -81,12 +81,6 @@ impl RoundRobin {
             queue: PerCpu::new(|| TaskQueue::new()),
         });
 
-        let queue = this.queue.get();
-
-        unsafe {
-            CURRENT_PROCESS = Some(queue.idle_process.clone());
-        }
-
         this
     }
 }
@@ -96,6 +90,14 @@ impl SchedulerInterface for RoundRobin {
         let queue = self.queue.get_mut();
 
         queue.push_runnable(task);
+    }
+
+    fn init(&self) {
+        let queue = self.queue.get();
+
+        unsafe {
+            CURRENT_PROCESS = Some(queue.idle_process.clone());
+        }
     }
 }
 
@@ -130,36 +132,33 @@ pub fn reschedule() -> bool {
             .clone()
     };
 
-    let new_task = {
-        queue
-            .runnable
-            .pop_front()
-            .expect("The scheduler's queue was empty")
-    };
+    if let Some(new_task) = queue.runnable.pop_front() {
+        /*
+         * Check if the task id of the new task is the same as the new task. If thats
+         * the case keep running the task and return out.
+         */
+        if new_task.task_id == previous_task.task_id {
+            return false;
+        }
 
-    /*
-     * Check if the task id of the new task is the same as the new task. If thats
-     * the case keep running the task and return out.
-     */
-    if new_task.task_id == previous_task.task_id {
-        return false;
+        /*
+         * Now that we have passed all of the checks, its time to run the actual task. We first
+         * set the CURRENT_PROCESS static to the new task and then jump to ring 3. Leap of faith!
+         */
+        unsafe {
+            CURRENT_PROCESS = Some(new_task.clone());
+        }
+
+        let previous_arch = previous_task.arch_task_mut();
+        let new_arch = new_task.arch_task_ref();
+
+        crate::arch::task::arch_switch(previous_arch, new_arch);
+
+        mem::forget(previous_task);
+        mem::forget(new_task);
+
+        true
+    } else {
+        false
     }
-
-    /*
-     * Now that we have passed all of the checks, its time to run the actual task. We first
-     * set the CURRENT_PROCESS static to the new task and then jump to ring 3. Leap of faith!
-     */
-    unsafe {
-        CURRENT_PROCESS = Some(new_task.clone());
-    }
-
-    let previous_arch = previous_task.arch_task_mut();
-    let new_arch = new_task.arch_task_ref();
-
-    crate::arch::task::arch_switch(previous_arch, new_arch);
-
-    mem::forget(previous_task);
-    mem::forget(new_task);
-
-    true
 }
