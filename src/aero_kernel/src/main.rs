@@ -40,6 +40,7 @@
     extern_types,
     new_uninit,
     box_syntax,
+    const_fn_fn_ptr_basics,
     arc_new_cyclic,
     const_btree_new // TODO: Do not abuse nightly rust :D
 )]
@@ -59,6 +60,7 @@ mod drivers;
 mod fs;
 mod logger;
 mod mem;
+mod modules;
 mod rendy;
 mod syscall;
 mod tests;
@@ -254,6 +256,9 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
 
 #[no_mangle]
 extern "C" fn kernel_main_thread() {
+    modules::init();
+    log::info!("Loaded kernel modules");
+
     prelude::println!("{}", ASCII_INTRO);
 
     loop {}

@@ -22,3 +22,9 @@ pub mod keyboard;
 pub mod mouse;
 pub mod pci;
 pub mod uart_16550;
+
+fn hello_init() {
+    log::debug!("Hello, kernel module!");
+}
+
+crate::module_init!(hello_init);

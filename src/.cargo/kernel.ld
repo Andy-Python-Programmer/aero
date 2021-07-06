@@ -52,6 +52,13 @@ SECTIONS {
         __tbss_end = .;
     }
 
+
+    .kernel_modules : {
+        __kernel_modules_start = .;
+        KEEP(*(.kernel_modules.init))
+        __kernel_modules_end = .;
+    }
+
     .bss : {
         __bss_start = .;
         *(.bss*)
