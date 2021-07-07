@@ -50,7 +50,7 @@ pub(crate) fn init() {
 
     /*
      * Iterate over the `kernel_modules` linker section containing pointers to module
-     * finalisation functions.
+     * initialization functions.
      */
     unsafe {
         (__kernel_modules_start.as_usize()..__kernel_modules_end.as_usize())

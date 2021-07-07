@@ -57,7 +57,7 @@ pub static CPU_COUNT: AtomicUsize = AtomicUsize::new(0);
 static AP_READY: AtomicBool = AtomicBool::new(false);
 static BSP_READY: AtomicBool = AtomicBool::new(false);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ApicType {
     Xapic,
     X2apic,
@@ -165,20 +165,13 @@ impl LocalApic {
         self.apic_type
     }
 
-    pub unsafe fn set_icr(&mut self, value: u64) {
-        match self.apic_type {
-            ApicType::Xapic => {
-                while self.read(XAPIC_ICR0) & 1 << 12 == 1 << 12 {}
+    pub unsafe fn set_icr_xapic(&mut self, value_master: u32, value_slave: u32) {
+        self.write(XAPIC_ICR1, value_master);
+        self.write(XAPIC_ICR0, value_slave);
+    }
 
-                self.write(XAPIC_ICR1, (value >> 32) as u32);
-                self.write(XAPIC_ICR0, value as u32);
-
-                while self.read(XAPIC_ICR0) & 1 << 12 == 1 << 12 {}
-            }
-
-            ApicType::X2apic => io::wrmsr(io::IA32_X2APIC_ICR, value),
-            ApicType::None => {}
-        }
+    pub unsafe fn set_icr_x2apic(&mut self, value: u64) {
+        io::wrmsr(io::IA32_X2APIC_ICR, value);
     }
 
     #[inline]

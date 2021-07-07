@@ -134,3 +134,12 @@ pub unsafe fn rdmsr(msr: u32) -> u64 {
 
     ((high as u64) << 32) | (low as u64)
 }
+
+#[inline]
+pub fn delay(cycles: usize) {
+    unsafe {
+        for _ in 0..cycles {
+            inb(0x80);
+        }
+    }
+}

@@ -27,11 +27,13 @@ use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::*;
 
 use crate::apic;
+use crate::apic::ApicType;
 use crate::arch::interrupts;
 
 use crate::apic::IoApicHeader;
 use crate::apic::CPU_COUNT;
 use crate::mem::paging;
+use crate::utils::io;
 
 use super::sdt::Sdt;
 
@@ -54,27 +56,22 @@ impl Madt {
     pub(super) fn init(&'static self) -> Result<(), MapToError<Size4KiB>> {
         log::debug!("Storing AP trampoline at 0x1000");
 
-        unsafe {
-            smp_prepare_trampoline();
-        }
+        let page_index = unsafe { smp_prepare_trampoline() };
 
         for entry in self.iter() {
             match entry {
                 MadtEntry::LocalApic(local_apic) => {
-                    if local_apic.flags & 1 != 1 {
-                        // We cannot initialize disabled hardware :D
-                        log::warn!("APIC {} is disabled by the hardware", local_apic.apic_id);
+                    // Make sure that we can actually start the application processor.
+                    if (!((local_apic.flags & 1) ^ ((local_apic.flags >> 1) & 1))) == 1 {
+                        log::warn!("Unable to start AP{}", local_apic.apic_id);
                         continue;
                     }
 
                     // Increase the CPU count.
                     CPU_COUNT.fetch_add(1, Ordering::SeqCst);
 
+                    // Do not restart the BSP.
                     if local_apic.apic_id == apic::get_bsp_id() as u8 {
-                        /*
-                         * We do not want to start the BSP that is already running
-                         * this code :D
-                         */
                         continue;
                     }
 
@@ -110,37 +107,39 @@ impl Madt {
 
                     let mut bsp = apic::get_local_apic();
 
-                    // Send init IPI to the bsp.
+                    // Send the init IPI.
                     unsafe {
-                        let mut icr = 0x4500;
-
-                        match bsp.apic_type() {
-                            apic::ApicType::Xapic => icr |= (local_apic.apic_id as u64) << 56,
-                            apic::ApicType::X2apic => icr |= (local_apic.apic_id as u64) << 32,
-                            apic::ApicType::None => unreachable!(),
+                        if bsp.apic_type() == ApicType::X2apic {
+                            bsp.set_icr_x2apic(((local_apic.apic_id as u64) << 32) | 0x4500);
+                        } else {
+                            bsp.set_icr_xapic((local_apic.apic_id as u32) << 24, 0x4500);
                         }
-
-                        bsp.set_icr(icr);
                     }
 
-                    // Send start IPI to the bsp.
+                    io::delay(5000);
+
+                    // Send the startup IPI.
                     unsafe {
-                        let ap_segment = (0x1000 >> 12) & 0xFF;
-                        let mut icr = 0x4600 | ap_segment as u64;
-
-                        match bsp.apic_type() {
-                            apic::ApicType::Xapic => icr |= (local_apic.apic_id as u64) << 56,
-                            apic::ApicType::X2apic => icr |= (local_apic.apic_id as u64) << 32,
-                            apic::ApicType::None => unreachable!(),
+                        if bsp.apic_type() == ApicType::X2apic {
+                            bsp.set_icr_x2apic(
+                                ((local_apic.apic_id as u64) << 32) | (page_index | 0x4600) as u64,
+                            );
+                        } else {
+                            bsp.set_icr_xapic(
+                                ((local_apic.apic_id as u64) << 24) as u32,
+                                (page_index | 0x4600) as u32,
+                            )
                         }
-
-                        bsp.set_icr(icr);
                     }
 
                     unsafe {
                         // Wait for the AP to be ready.
-                        while !smp_check_ap_flag() {
-                            interrupts::pause();
+                        for _ in 0..100 {
+                            if smp_check_ap_flag() {
+                                break;
+                            }
+
+                            io::delay(10000)
                         }
                     }
 
