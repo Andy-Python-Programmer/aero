@@ -78,9 +78,7 @@ pub struct Fadt {
 }
 
 impl Fadt {
-    pub fn new(sdt: Option<&'static Sdt>) -> Self {
-        let sdt = sdt.expect("FADT not found");
-
+    pub fn new(sdt: &'static Sdt) -> Self {
         unsafe { ptr::read((sdt as *const Sdt) as *const Self) }
     }
 }

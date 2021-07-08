@@ -38,8 +38,7 @@ pub struct Hpet {
 }
 
 impl Hpet {
-    pub fn new(sdt: Option<&'static Sdt>) -> Self {
-        let sdt = sdt.expect("HPET not found");
+    pub fn new(sdt: &'static Sdt) -> Self {
         let this = unsafe { ptr::read((sdt as *const Sdt) as *const Self) };
 
         this

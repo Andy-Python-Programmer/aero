@@ -228,6 +228,10 @@ impl Iterator for MadtIterator {
                     }
                 };
 
+                if header.length == 0 {
+                    return None;
+                }
+
                 return Some(item);
             }
         }

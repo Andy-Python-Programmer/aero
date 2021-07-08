@@ -122,7 +122,9 @@ pub fn init(rsdp_address: PhysAddr, physical_memory_offset: VirtAddr) {
     let acpi_table = AcpiTable::new(rsdp_address);
 
     macro init_table($sig:path => $ty:ty) {
-        <$ty>::new(acpi_table.lookup_entry($sig));
+        if let Some(table) = acpi_table.lookup_entry($sig) {
+            <$ty>::new(table);
+        }
     }
 
     if let Some(header) = acpi_table.lookup_entry(mcfg::SIGNATURE) {
