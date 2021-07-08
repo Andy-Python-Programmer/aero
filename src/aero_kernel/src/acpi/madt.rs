@@ -46,6 +46,7 @@ extern "C" {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[repr(C, packed)]
 pub struct Madt {
     header: Sdt,
     local_apic_address: u32,
@@ -160,7 +161,7 @@ impl Madt {
     fn iter(&self) -> MadtIterator {
         unsafe {
             MadtIterator {
-                current: (self as *const Self as *const u8).add(mem::size_of::<Self>()),
+                current: (self as *const _ as *const u8).add(mem::size_of::<Self>()),
                 limit: (self as *const _ as *const u8).offset(self.header.length as isize),
             }
         }
@@ -227,10 +228,6 @@ impl Iterator for MadtIterator {
                         return None;
                     }
                 };
-
-                if header.length == 0 {
-                    return None;
-                }
 
                 return Some(item);
             }
