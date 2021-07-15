@@ -20,6 +20,7 @@
 use alloc::alloc::alloc_zeroed;
 
 use core::alloc::Layout;
+use core::mem;
 use core::ptr::Unique;
 
 use crate::mem::paging::VirtAddr;
@@ -31,7 +32,7 @@ use crate::mem::AddressSpace;
 use crate::utils::stack::StackHelper;
 
 #[repr(C)]
-pub(super) struct InterruptFrame {
+struct InterruptFrame {
     pub cr3: u64,
     pub rbp: u64,
     pub r12: u64,
@@ -83,34 +84,37 @@ impl ArchTask {
 
     /// Allocates a new kernel task pointing at the provided entry point address. This function
     /// is responsible for creating the kernel task and setting up the context switch stack itself.
-    ///
-    /// ## Transition
-    /// Userland task transition is done through `iretq` method.
     pub fn new_kernel(entry_point: VirtAddr) -> Self {
         extern "C" {
             pub fn iretq_kernelinit();
         }
 
         let task_stack = unsafe {
+            // We want the task stack to be page aligned.
             let layout = Layout::from_size_align_unchecked(0x1000, 0x100);
             let raw = alloc_zeroed(layout);
 
             raw
         };
 
-        let kernel_cr3: u64;
+        let kernel_cr3: u64; // Get the current Cr3 as we are making the task for the kernel itself
 
         unsafe {
             asm!("mov {}, cr3", out(reg) kernel_cr3, options(nomem));
         }
 
         /*
-         * Now at this stage, we have mapped the kernek task stack. Now we have to allocate a 16KiB stack
-         * for the context switch function on the kernel's heap (which should enough) and create the context
-         * switch context itself. This includes the syscall and interrupt contexts.
+         * Now at this stage, we have mapped the kernel task stack. Now we have to allocate memory
+         * for the context switch function on the kernel's heap and create the context switch context
+         * itself. This includes the syscall and interrupt contexts.
          */
         let mut context_switch_rsp = unsafe {
-            let layout = Layout::from_size_align_unchecked(0x400, 0x100);
+            // Size needed for the context switch is simply the size of task frame added to the size
+            // of interrupt frame.
+            let size = mem::size_of::<KernelTaskFrame>() + mem::size_of::<InterruptFrame>();
+
+            // We want the memory that we allocate for context switch to be page aligned.
+            let layout = Layout::from_size_align_unchecked(size, 0x100);
             let raw = alloc_zeroed(layout);
 
             raw as u64 + layout.size() as u64
@@ -146,15 +150,16 @@ impl ArchTask {
     }
 }
 
+/// This function is responsible for performing the inner task switch. Firstly it sets the
+/// new RSP in the TSS and then performes the actual context switch (saving the previous tasks
+/// state in its context and then switching to the new task).
 pub fn arch_switch(from: &mut ArchTask, to: &ArchTask) {
     extern "C" {
         fn context_switch(previous: &mut Unique<InterruptFrame>, new: &InterruptFrame);
-
     }
 
     unsafe {
-        TASK_STATE_SEGMENT.rsp[0] = to.context_switch_rsp.as_u64();
-
-        context_switch(&mut from.context, to.context.as_ref())
+        TASK_STATE_SEGMENT.rsp[0] = to.context_switch_rsp.as_u64(); // Set the stack pointer
+        context_switch(&mut from.context, to.context.as_ref()) // Perform the switch
     }
 }
