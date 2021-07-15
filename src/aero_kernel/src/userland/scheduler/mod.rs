@@ -93,7 +93,7 @@ impl Scheduler {
 
     /// Registers the provided task in the schedulers queue.
     pub fn register_task(&self, task: Arc<Task>) {
-        self.tasks.register_task(task.task_id, task.clone());
+        self.tasks.register_task(task.task_id(), task.clone());
         self.inner.register_task(task.clone());
     }
 }

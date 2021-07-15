@@ -54,7 +54,7 @@ impl TaskQueue {
     #[inline]
     fn push_runnable(&mut self, task: Arc<Task>) {
         debug_assert!(task.link.is_linked() == false); // Make sure the task is not already linked in the queue
-        debug_assert!(task.task_id != self.idle_process.task_id); // Make sure we are not adding the IDLE task in the queue
+        debug_assert!(task.task_id() != self.idle_process.task_id()); // Make sure we are not adding the IDLE task in the queue
 
         self.runnable.push_back(task);
     }
@@ -137,7 +137,7 @@ pub fn reschedule() -> bool {
          * Check if the task id of the new task is the same as the new task. If thats
          * the case keep running the task and return out.
          */
-        if new_task.task_id == previous_task.task_id {
+        if new_task.task_id() == previous_task.task_id() {
             return false;
         }
 

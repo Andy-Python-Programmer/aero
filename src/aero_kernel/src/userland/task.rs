@@ -34,7 +34,7 @@ use intrusive_collections::{intrusive_adapter, LinkedListLink};
 pub struct TaskId(usize);
 
 impl TaskId {
-    #[inline(always)]
+    #[inline]
     pub(super) const fn new(pid: usize) -> Self {
         Self(pid)
     }
@@ -54,7 +54,7 @@ pub enum TaskState {
 
 pub struct Task {
     arch_task: UnsafeCell<ArchTask>,
-    pub(super) task_id: TaskId,
+    task_id: TaskId,
 
     pub file_table: FileTable,
     pub state: TaskState,
@@ -66,6 +66,7 @@ impl Task {
     /// Creates a per-cpu idle task. An idle task is a special *kernel*
     /// which is executed when there are no runnable taskes in the scheduler's
     /// queue.
+    #[inline]
     pub fn new_idle() -> Arc<Task> {
         Arc::new(Self {
             arch_task: UnsafeCell::new(ArchTask::new_idle()),
@@ -79,6 +80,7 @@ impl Task {
 
     /// Allocates a new kernel task pointing at the provided entry point address. This function
     /// is responsible for creating the kernel task and setting up the context switch stack itself.
+    #[inline]
     pub fn new_kernel(entry_point: VirtAddr) -> Arc<Self> {
         Arc::new(Self {
             arch_task: UnsafeCell::new(ArchTask::new_kernel(entry_point)),
@@ -90,15 +92,25 @@ impl Task {
         })
     }
 
+    /// Returns a mutable reference to the inner [ArchTask] structure.
     #[inline]
     pub fn arch_task_mut(&self) -> &mut ArchTask {
         unsafe { &mut (*self.arch_task.get()) }
     }
 
+    /// Returns an immutable reference to the inner [ArchTask] structure.
     #[inline]
     pub fn arch_task_ref(&self) -> &ArchTask {
         unsafe { &(*self.arch_task.get()) }
     }
+
+    /// Returns the task ID that was allocated for this task.
+    #[inline]
+    pub fn task_id(&self) -> TaskId {
+        self.task_id
+    }
 }
 
+// Create a new intrustive adapter for the [Task] struct as the tasks are stored as a linked
+// list in the scheduler.
 intrusive_collections::intrusive_adapter!(pub TaskAdapter = Arc<Task> : Task { link: LinkedListLink });
