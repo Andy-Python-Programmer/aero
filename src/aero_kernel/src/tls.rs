@@ -168,4 +168,6 @@ intel_fn! {
 }
 
 #[no_mangle]
-extern "C" fn restore_user_tls() {}
+extern "C" fn restore_user_tls() {
+    log::trace!("Restoring user TLS...");
+}

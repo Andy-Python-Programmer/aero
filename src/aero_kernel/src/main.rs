@@ -260,6 +260,7 @@ extern "C" fn kernel_main_thread() {
     log::info!("Loaded kernel modules");
 
     prelude::println!("{}", ASCII_INTRO);
+    userland::run();
 
     loop {}
 }

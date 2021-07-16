@@ -27,6 +27,7 @@ use alloc::sync::Arc;
 
 use spin::mutex::spin::SpinMutex;
 use spin::Once;
+use xmas_elf::ElfFile;
 
 use crate::utils::Downcastable;
 
@@ -43,6 +44,9 @@ pub trait SchedulerInterface: Send + Sync + Downcastable {
 
     /// Initialize the scheduler variables for this CPU.
     fn init(&self);
+
+    /// Get a reference-counting pointer to the current task.
+    fn current_task(&self) -> Arc<Task>;
 }
 
 /// Container or a transparent struct containing a hashmap of all of the taskes
@@ -95,6 +99,10 @@ impl Scheduler {
     pub fn register_task(&self, task: Arc<Task>) {
         self.tasks.register_task(task.task_id(), task.clone());
         self.inner.register_task(task.clone());
+    }
+
+    pub fn exec(&self, executable: &ElfFile) {
+        self.inner.current_task().exec(executable).unwrap();
     }
 }
 

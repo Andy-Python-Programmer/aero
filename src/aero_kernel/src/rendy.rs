@@ -302,7 +302,10 @@ pub fn init(framebuffer_tag: &'static StivaleFramebufferTag) {
         stride: framebuffer_tag.framebuffer_pitch as usize,
     };
 
-    let mut rendy = DebugRendy::new(framebuffer_tag.framebuffer_addr as u64, framebuffer_info);
+    let mut rendy = DebugRendy::new(
+        unsafe { crate::PHYSICAL_MEMORY_OFFSET + framebuffer_tag.framebuffer_addr }.as_u64(),
+        framebuffer_info,
+    );
 
     rendy.clear_screen();
 

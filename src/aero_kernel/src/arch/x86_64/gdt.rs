@@ -55,6 +55,7 @@ bitflags::bitflags! {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Ring {
     Ring0 = 0b00,
 }

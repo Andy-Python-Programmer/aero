@@ -18,7 +18,6 @@
  */
 
 use crate::mem::paging::*;
-use crate::prelude::*;
 
 pub struct Stack {
     stack_start: VirtAddr,
@@ -70,10 +69,6 @@ impl Stack {
                 )
             }?
             .flush();
-        }
-
-        unsafe {
-            memset(start_addr.as_mut_ptr(), 0x00, stack_size);
         }
 
         Ok(Self {

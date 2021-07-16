@@ -18,11 +18,12 @@
  */
 
 use alloc::sync::Arc;
+use xmas_elf::ElfFile;
 
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::mem::paging::VirtAddr;
+use crate::mem::paging::{MapToError, Size4KiB, VirtAddr};
 
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
@@ -90,6 +91,11 @@ impl Task {
 
             link: Default::default(),
         })
+    }
+
+    #[inline]
+    pub fn exec(&self, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
+        self.arch_task_mut().exec(executable)
     }
 
     /// Returns a mutable reference to the inner [ArchTask] structure.

@@ -16,8 +16,8 @@
 ; along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 global context_switch
-global sysretq_userinit
 global iretq_kernelinit
+global jump_userland_exec
 
 extern restore_user_tls
 
@@ -57,34 +57,22 @@ context_switch:
 
     ret
 
-; This function is responsible for stashing the kernel stack and switching to the task stack,
-; and then jumping to userland.
-sysretq_userinit:
-    ; After pushing all of the required registers on the stack
-    ; disable interrupts as we are swaping stacks. Interrupts are
-    ; automatically enabled after `sysretq`.
-    cli
-    call restore_user_tls
-
-    pop r11 ; Restore RFLAGS.
-    pop rcx ; Restore RIP.
-
-    push rdx
-
-    swapgs
-
-    mov rdx, rsp
-    add rdx, 16        ; Skip RDX and user RSP currently on the stack.
-    mov [gs:0x04], rdx ; Stash kernel stack.
-
-    swapgs
-    pop rdx
-    pop rsp ; Restore user stack.
-
-    sysretq
-
 ; This function is responsible for switching to the kernel task stack and switching to the kernel
 ; task.
 iretq_kernelinit:
     pop rdi
     iretq ; Leap of faith!
+
+jump_userland_exec:
+    push rdi ; Param: stack
+    push rsi ; Param: RIP
+    push rdx ; Param: RFLAGS
+
+    cli
+    call restore_user_tls
+
+    pop r11
+    pop rcx
+    pop rsp
+
+    o64 sysret

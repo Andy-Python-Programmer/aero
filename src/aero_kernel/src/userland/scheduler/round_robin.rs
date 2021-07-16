@@ -99,6 +99,15 @@ impl SchedulerInterface for RoundRobin {
             CURRENT_PROCESS = Some(queue.idle_process.clone());
         }
     }
+
+    fn current_task(&self) -> Arc<Task> {
+        unsafe {
+            CURRENT_PROCESS
+                .as_ref()
+                .expect("`current_task` was invoked before the current task was initialized")
+                .clone()
+        }
+    }
 }
 
 unsafe impl Send for RoundRobin {}

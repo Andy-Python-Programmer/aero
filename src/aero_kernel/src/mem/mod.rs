@@ -48,18 +48,16 @@ impl AddressSpace {
 
             let current_table = active_level_4_table();
 
+            // Zero out the page table entries from the range 0..256.
             for i in 0..256 {
                 page_table[i].set_unused();
             }
 
+            // Map the higher half of the kernel's address space into this address
+            // space.
             for i in 256..512 {
                 page_table[i] = current_table[i].clone();
             }
-
-            page_table[511].set_frame(
-                frame,
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
-            );
 
             frame
         };
@@ -67,16 +65,41 @@ impl AddressSpace {
         Ok(Self { cr3 })
     }
 
+    /// Returns the current active address space.
+    pub fn this() -> Self {
+        let cr3 = {
+            // Get the value of the Cr3 register.
+            let value: u64;
+
+            unsafe {
+                asm!("mov {}, cr3", out(reg) value, options(nomem));
+            }
+
+            let addr = PhysAddr::new(value & 0x_000f_ffff_ffff_f000);
+            let frame = PhysFrame::containing_address(addr);
+
+            frame
+        };
+
+        Self { cr3 }
+    }
+
+    pub fn switch(&self) {
+        let cr3 = self.cr3().start_address().as_u64();
+
+        unsafe {
+            asm!("mov cr3, {}", in(reg) cr3, options(nostack)); // Load the new address space
+        }
+    }
+
     /// Returns a reference to the page table frame allocated for this address
     /// space.
-    #[allow(unused)]
     pub fn cr3(&self) -> PhysFrame {
         self.cr3
     }
 
     /// Returns a mutable reference to the page table allocated for this
     /// address space.
-    #[allow(unused)]
     pub fn page_table(&mut self) -> &'static mut PageTable {
         unsafe {
             let phys_addr = self.cr3.start_address();
@@ -89,7 +112,6 @@ impl AddressSpace {
 
     /// Returns a mutable refernce to the mapper pointing to the page table
     /// allocated for this address space.
-    #[allow(unused)]
     pub fn offset_page_table(&mut self) -> OffsetPageTable {
         unsafe { OffsetPageTable::new(self.page_table(), PHYSICAL_MEMORY_OFFSET) }
     }

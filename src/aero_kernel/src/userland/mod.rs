@@ -17,7 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use x86_64::structures::paging::OffsetPageTable;
 use xmas_elf::ElfFile;
 
 use crate::syscall;
@@ -28,10 +27,10 @@ pub mod task;
 #[rustfmt::skip]
 static USERLAND_SHELL: &[u8] = include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
 
-#[allow(unused)]
-pub fn run(offset_table: &mut OffsetPageTable) -> Result<(), &'static str> {
-    let shell_elf = ElfFile::new(USERLAND_SHELL)?;
-    Ok(())
+pub fn run() {
+    let shell_elf = ElfFile::new(USERLAND_SHELL).unwrap();
+
+    scheduler::get_scheduler().exec(&shell_elf);
 }
 
 pub fn init_ap() {

@@ -18,18 +18,20 @@
  */
 
 use alloc::alloc::alloc_zeroed;
+use xmas_elf::program::Type;
+use xmas_elf::{header, program, ElfFile};
 
 use core::alloc::Layout;
 use core::mem;
 use core::ptr::Unique;
 
-use crate::mem::paging::VirtAddr;
+use crate::mem::paging::*;
 
-use super::gdt::TASK_STATE_SEGMENT;
+use super::gdt::{Ring, TASK_STATE_SEGMENT};
 use super::interrupts::IretRegisters;
 
 use crate::mem::AddressSpace;
-use crate::utils::stack::StackHelper;
+use crate::utils::stack::{Stack, StackHelper};
 
 #[repr(C)]
 struct InterruptFrame {
@@ -69,8 +71,10 @@ struct KernelTaskFrame {
 
 pub struct ArchTask {
     context: Unique<InterruptFrame>,
-    address_space: Option<AddressSpace>,
+    address_space: AddressSpace,
     context_switch_rsp: VirtAddr,
+
+    rpl: Ring,
 }
 
 impl ArchTask {
@@ -78,7 +82,11 @@ impl ArchTask {
         Self {
             context: Unique::dangling(),
             context_switch_rsp: VirtAddr::zero(),
-            address_space: None,
+
+            // Since the IDLE task is a special kernel task, we use the kernel's
+            // address space here and we also use the kernel privilage level here.
+            address_space: AddressSpace::this(),
+            rpl: Ring::Ring0,
         }
     }
 
@@ -97,11 +105,8 @@ impl ArchTask {
             raw
         };
 
-        let kernel_cr3: u64; // Get the current Cr3 as we are making the task for the kernel itself
-
-        unsafe {
-            asm!("mov {}, cr3", out(reg) kernel_cr3, options(nomem));
-        }
+        // Get the current active address space as we are making the task for the kernel itself.
+        let address_space = AddressSpace::this();
 
         /*
          * Now at this stage, we have mapped the kernel task stack. Now we have to allocate memory
@@ -135,7 +140,7 @@ impl ArchTask {
         *interrupt_stack = InterruptFrame::new(); // Sanitize the interrupt stack.
 
         interrupt_stack.rip = iretq_kernelinit as u64;
-        interrupt_stack.cr3 = kernel_cr3;
+        interrupt_stack.cr3 = address_space.cr3().start_address().as_u64();
 
         let interrupt_stack =
             unsafe { Unique::new_unchecked(interrupt_stack as *mut InterruptFrame) };
@@ -144,9 +149,103 @@ impl ArchTask {
 
         Self {
             context: interrupt_stack,
-            address_space: None,
+            address_space,
             context_switch_rsp,
+
+            // Since we are creating a kernel task, we set the ring privilage
+            // level to ring 0.
+            rpl: Ring::Ring0,
         }
+    }
+
+    pub fn exec(&mut self, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
+        header::sanity_check(executable).expect("Failed sanity check"); // Sanity check the provided ELF executable
+
+        let mut address_space = if self.rpl == Ring::Ring0 {
+            // If the kernel task wants to execute an executable, then we have to
+            // create a new address space for it as we cannot use the kernel's address space
+            // here.
+            AddressSpace::new()?
+        } else {
+            // If we are the user who wants to execute an executable, we can just use the
+            // current address space allocated for the user and deallocate all of the user
+            // page entries.
+            //
+            // TODO: deallocate the user address space's page entries.
+            AddressSpace::this()
+        };
+
+        // Get the page map reference from the address space.
+        let mut offset_table = address_space.offset_page_table();
+
+        for header in executable.program_iter() {
+            program::sanity_check(header, executable).expect("Failed header sanity check");
+
+            let header_type = header
+                .get_type()
+                .expect("Failed to get program header type");
+
+            let header_flags = header.flags();
+
+            if header_type == Type::Load {
+                let page_range = {
+                    let start_addr = VirtAddr::new(header.virtual_addr());
+                    let end_addr = start_addr + header.mem_size() - 1u64;
+
+                    let start_page: Page = Page::containing_address(start_addr);
+                    let end_page = Page::containing_address(end_addr);
+
+                    Page::range_inclusive(start_page, end_page)
+                };
+
+                let mut flags = PageTableFlags::PRESENT
+                    | PageTableFlags::USER_ACCESSIBLE
+                    | PageTableFlags::WRITABLE;
+
+                if !header_flags.is_execute() {
+                    flags |= PageTableFlags::NO_EXECUTE;
+                }
+
+                for page in page_range {
+                    let frame = unsafe {
+                        FRAME_ALLOCATOR
+                            .allocate_frame()
+                            .ok_or(MapToError::FrameAllocationFailed)?
+                    };
+
+                    unsafe { offset_table.map_to(page, frame, flags, &mut FRAME_ALLOCATOR) }?
+                        .flush();
+                }
+            }
+        }
+
+        let task_stack = {
+            // 2 GiB is chosen arbitrarily (as programs are expected to fit below 2 GiB).
+            let address = unsafe { VirtAddr::new_unsafe(0x8000_0000_0000) };
+
+            // Allocate the user stack (it's page aligned).
+            Stack::new_user_pinned(&mut offset_table, address, 0x64000)?
+        };
+
+        self.context = Unique::dangling();
+
+        unsafe {
+            // Set the new stack pointer in TSS.
+            TASK_STATE_SEGMENT.rsp[0] = task_stack.stack_top().as_u64();
+        }
+
+        address_space.switch(); // Perform the address space switch
+        self.address_space = address_space; // Update the address space reference
+
+        extern "C" {
+            fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
+        }
+
+        let entry_point = VirtAddr::new(executable.header.pt2.entry_point());
+
+        // unsafe { jump_userland_exec(task_stack.stack_top(), entry_point, 1 << 9) }
+
+        Ok(())
     }
 }
 
