@@ -26,6 +26,7 @@ use core::mem;
 use core::ptr::Unique;
 
 use crate::mem::paging::*;
+use crate::prelude::*;
 
 use super::gdt::{Ring, TASK_STATE_SEGMENT};
 use super::interrupts::IretRegisters;
@@ -161,6 +162,8 @@ impl ArchTask {
     pub fn exec(&mut self, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
         header::sanity_check(executable).expect("Failed sanity check"); // Sanity check the provided ELF executable
 
+        let raw_executable = executable.input.as_ptr();
+
         let mut address_space = if self.rpl == Ring::Ring0 {
             // If the kernel task wants to execute an executable, then we have to
             // create a new address space for it as we cannot use the kernel's address space
@@ -206,6 +209,8 @@ impl ArchTask {
                     flags |= PageTableFlags::NO_EXECUTE;
                 }
 
+                let mut addr = None;
+
                 for page in page_range {
                     let frame = unsafe {
                         FRAME_ALLOCATOR
@@ -213,8 +218,25 @@ impl ArchTask {
                             .ok_or(MapToError::FrameAllocationFailed)?
                     };
 
+                    if addr.is_none() {
+                        addr = Some(frame.start_address().as_u64());
+                    }
+
                     unsafe { offset_table.map_to(page, frame, flags, &mut FRAME_ALLOCATOR) }?
                         .flush();
+                }
+
+                let addr = addr.unwrap();
+
+                // Segments need to be cleared to zero.
+                unsafe {
+                    let buffer: *mut u8 = (crate::PHYSICAL_MEMORY_OFFSET + addr).as_mut_ptr();
+
+                    memcpy(
+                        buffer,
+                        raw_executable.add(header.offset() as usize),
+                        header.file_size() as usize,
+                    );
                 }
             }
         }
@@ -241,7 +263,7 @@ impl ArchTask {
             fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
         }
 
-        let entry_point = VirtAddr::new(executable.header.pt2.entry_point());
+        // let entry_point = VirtAddr::new(executable.header.pt2.entry_point());
 
         // unsafe { jump_userland_exec(task_stack.stack_top(), entry_point, 1 << 9) }
 
