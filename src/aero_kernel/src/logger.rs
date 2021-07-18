@@ -106,6 +106,14 @@ impl log::Log for AeroLogger {
     fn flush(&self) {}
 }
 
+/// Force-unlocks the logger ring buffer to prevent a deadlock.
+///
+/// ## Saftey
+/// This method is not memory safe and should be only used when absolutely necessary.
+pub unsafe fn force_unlock() {
+    LOG_RING_BUFFER.get().map(|l| l.force_unlock());
+}
+
 /// Returns a mutable reference to the logging ring buffer.
 fn get_log_ring_buffer() -> MutexGuard<'static, RingBuffer<[u8; DEFAULT_LOG_RING_BUFFER_SIZE]>> {
     LOG_RING_BUFFER

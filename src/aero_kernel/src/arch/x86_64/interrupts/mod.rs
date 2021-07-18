@@ -345,13 +345,6 @@ pub unsafe fn enable_interrupts() {
     asm!("sti", options(nomem, nostack));
 }
 
-/// Enables interrupts and then halts the CPU.
-#[inline(always)]
-pub unsafe fn enable_interrupts_and_halt() {
-    enable_interrupts();
-    halt();
-}
-
 /// Wrapper function to the `pause` assembly instruction used to pause
 /// the cpu.
 ///

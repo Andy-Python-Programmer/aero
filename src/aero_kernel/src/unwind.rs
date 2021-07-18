@@ -24,7 +24,7 @@ use core::panic::PanicInfo;
 // use xmas_elf::symbol_table::Entry;
 // use xmas_elf::ElfFile;
 
-use crate::rendy;
+use crate::{logger, rendy};
 
 use crate::arch::interrupts;
 // use crate::PHYSICAL_MEMORY_OFFSET;
@@ -127,32 +127,42 @@ pub fn unwind_stack_trace() {
 
 #[panic_handler]
 extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
+    // Disable interrupts as we do not want to be interrupted while
+    // we are unwinding the stack.
+    unsafe {
+        interrupts::disable_interrupts();
+    }
+
+    // Force unlock rendy and the logger ring buffer to prevent deadlock while
+    // unwinding.
+    unsafe {
+        rendy::force_unlock();
+        logger::force_unlock();
+    }
+
     let deafult_panic = &format_args!("");
     let panic_message = info.message().unwrap_or(deafult_panic);
 
+    // Clear the screen if the debug renderer is initialized.
     if rendy::is_initialized() {
         rendy::clear_screen();
     }
 
-    let cpu_id = unsafe { crate::CPU_ID };
-
+    let cpu_id = unsafe { crate::CPU_ID }; // Get the CPU ID where this panic happened.
     log::error!("cpu '{}' panicked at '{}'", cpu_id, panic_message);
 
+    // Print the panic location if it is available.
     if let Some(panic_location) = info.location() {
         log::error!("{}", panic_location);
     }
 
-    /*
-     * Just to make the stack trace pretty. The programmer should be *very*
-     * stressed at this point.
-     */
+    // Add a new line to make the stack trace more readable.
     log::error!("");
 
     unwind_stack_trace();
 
     unsafe {
-        interrupts::disable_interrupts();
-
+        // Go into a halt loop to to save power.
         loop {
             interrupts::halt();
         }

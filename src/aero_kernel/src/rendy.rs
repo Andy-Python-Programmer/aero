@@ -292,6 +292,14 @@ pub fn clear_screen() {
     get_debug_rendy().clear_screen();
 }
 
+/// Force-unlocks the rendy to prevent a deadlock.
+///
+/// ## Saftey
+/// This method is not memory safe and should be only used when absolutely necessary.
+pub unsafe fn force_unlock() {
+    DEBUG_RENDY.get().map(|l| l.force_unlock());
+}
+
 pub fn init(framebuffer_tag: &'static StivaleFramebufferTag) {
     let framebuffer_info = FrameBufferInfo {
         byte_len: framebuffer_tag.size(),

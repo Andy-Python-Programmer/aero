@@ -104,12 +104,6 @@ impl Task {
         unsafe { &mut (*self.arch_task.get()) }
     }
 
-    /// Returns an immutable reference to the inner [ArchTask] structure.
-    #[inline]
-    pub fn arch_task_ref(&self) -> &ArchTask {
-        unsafe { &(*self.arch_task.get()) }
-    }
-
     /// Returns the task ID that was allocated for this task.
     #[inline]
     pub fn task_id(&self) -> TaskId {
