@@ -158,10 +158,9 @@ pub fn reschedule() -> bool {
             CURRENT_PROCESS = Some(new_task.clone());
         }
 
-        let previous_arch = previous_task.arch_task_mut();
-        let new_arch = new_task.arch_task_ref();
+        let new_arch = new_task.arch_task_mut();
 
-        crate::arch::task::arch_switch(previous_arch, new_arch);
+        crate::arch::task::arch_switch(new_arch);
 
         mem::forget(previous_task);
         mem::forget(new_task);

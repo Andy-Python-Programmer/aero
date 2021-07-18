@@ -18,6 +18,7 @@
 global context_switch
 global iretq_kernelinit
 global jump_userland_exec
+global task_spinup
 
 extern restore_user_tls
 
@@ -76,3 +77,34 @@ jump_userland_exec:
     pop rsp
 
     o64 sysret
+
+task_spinup:
+    cli
+
+    test rsi, rsi      ; Test if we have a new page table to load.
+    jz .dont_load_cr3
+
+    mov cr3, rsi       ; Load the new page table pointer on RSI.
+
+.dont_load_cr3:
+    mov rsp, rdi
+
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rsi
+    pop rdi
+    pop rbp
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+
+    add rsp, 16
+
+    iretq
