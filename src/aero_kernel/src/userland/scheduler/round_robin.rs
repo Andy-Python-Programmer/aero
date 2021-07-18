@@ -23,6 +23,7 @@ use alloc::sync::Arc;
 
 use intrusive_collections::LinkedList;
 
+use crate::arch;
 use crate::userland::task::{Task, TaskAdapter};
 use crate::utils::{downcast, PerCpu};
 
@@ -125,7 +126,7 @@ pub fn exit_current_task(_: usize) -> ! {
 /// Instead of adding `reschedule` as a method in the [SchedulerInterface] trait we are making
 /// this a normal function as in the trait case, the scheduler will be locked for a longer time. The
 /// scheduler only needs lock protection for reserving the task id allocated.
-pub fn reschedule() -> bool {
+pub fn reschedule() {
     let scheduler = super::get_scheduler();
     let round_robin: Option<Arc<RoundRobin>> = downcast(&scheduler.inner);
     let scheduler_ref = round_robin.expect("Failed to downcast the scheduler");
@@ -142,31 +143,13 @@ pub fn reschedule() -> bool {
     };
 
     if let Some(new_task) = queue.runnable.pop_front() {
-        /*
-         * Check if the task id of the new task is the same as the new task. If thats
-         * the case keep running the task and return out.
-         */
-        if new_task.task_id() == previous_task.task_id() {
-            return false;
+        // Swap Cr3 if neccessary.
+        if previous_task.task_id() != new_task.task_id() {
+            // Switch Cr3 and return to the thread.
+            arch::task::arch_task_spinup(new_task.arch_task_mut(), true);
+        } else {
+            // Do not switch Cr3 and return to the thread.
+            arch::task::arch_task_spinup(previous_task.arch_task_mut(), false);
         }
-
-        /*
-         * Now that we have passed all of the checks, its time to run the actual task. We first
-         * set the CURRENT_PROCESS static to the new task and then jump to ring 3. Leap of faith!
-         */
-        unsafe {
-            CURRENT_PROCESS = Some(new_task.clone());
-        }
-
-        let new_arch = new_task.arch_task_mut();
-
-        crate::arch::task::arch_switch(new_arch);
-
-        mem::forget(previous_task);
-        mem::forget(new_task);
-
-        true
-    } else {
-        false
     }
 }

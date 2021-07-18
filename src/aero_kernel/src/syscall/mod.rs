@@ -175,13 +175,6 @@ intel_fn! {
     }
 }
 
-#[repr(C)]
-pub struct SyscallFrame {
-    pub rflags: u64,
-    pub rip: u64,
-    pub rsp: u64,
-}
-
 pub fn init() {
     unsafe {
         /*

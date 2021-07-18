@@ -225,6 +225,13 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     log::info!("Initialized kernel");
 
     /*
+     * Now that all of the essential initialization is done we are going to schedule
+     * the kernel main thread.
+     */
+    let init = unsafe { Task::new_kernel(VirtAddr::new_unsafe(kernel_main_thread as u64)) };
+    scheduler::get_scheduler().register_task(init);
+
+    /*
      * NOTE: We need to enable interrupts after we have initialized TLS and GDT
      * as the PTI context switch functions depend on thread local globals.
      */
@@ -232,15 +239,8 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
         interrupts::enable_interrupts();
     }
 
-    /*
-     * Now that all of the essential initialization is done we are going to schedule
-     * the kernel main thread.
-     */
-    let init = unsafe { Task::new_kernel(VirtAddr::new_unsafe(kernel_main_thread as u64)) };
-    scheduler::get_scheduler().register_task(init);
-
-    // userland::run(&mut offset_table).unwrap();
-
+    // Pre-scheduler init done. Now we are waiting for the main kernel
+    // thread to be scheduled.
     loop {
         unsafe { interrupts::halt() }
     }

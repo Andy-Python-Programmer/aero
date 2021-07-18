@@ -248,13 +248,23 @@ impl ArchTask {
 /// This function is responsible for performing the inner task switch. Firstly it sets the
 /// new RSP in the TSS and then performes the actual context switch (saving the previous tasks
 /// state in its context and then switching to the new task).
-pub fn arch_switch(to: &mut ArchTask) {
+pub fn arch_task_spinup(to: &mut ArchTask, address_space_switch: bool) {
     extern "C" {
         fn task_spinup(context: u64, cr3: u64);
     }
 
     unsafe {
-        TASK_STATE_SEGMENT.rsp[0] = to.context_switch_rsp.as_u64(); // Set the stack pointer in the TSS.
-        task_spinup((&mut to.context as *mut Context) as u64, 0x00) // Perform the context switch.
+        // Set the stack pointer in the TSS.
+        TASK_STATE_SEGMENT.rsp[0] = to.context_switch_rsp.as_u64();
+
+        if address_space_switch {
+            let cr3 = to.address_space.cr3().start_address().as_u64();
+
+            // Perform the context switch with the new address space.
+            task_spinup((&mut to.context as *mut Context) as u64, cr3)
+        } else {
+            // Perform the context switch without switching the address space.
+            task_spinup((&mut to.context as *mut Context) as u64, 0x00)
+        }
     }
 }
