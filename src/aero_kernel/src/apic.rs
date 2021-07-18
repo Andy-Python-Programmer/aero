@@ -17,8 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::intrinsics;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use core::{intrinsics, ptr};
 
 use crate::mem::paging::VirtAddr;
 use raw_cpuid::{CpuId, FeatureInfo};
@@ -65,13 +65,13 @@ pub enum ApicType {
 }
 
 impl ApicType {
-    #[inline(always)]
+    #[inline]
     pub fn is_none(&self) -> bool {
         matches!(self, Self::None)
     }
 
     /// Return true if the current CPU supports X2 APIC.
-    #[inline(always)]
+    #[inline]
     pub fn supports_x2_apic(&self) -> bool {
         matches!(self, Self::X2apic)
     }
@@ -170,6 +170,7 @@ impl LocalApic {
         self.write(XAPIC_ICR0, value_slave);
     }
 
+    #[inline]
     pub unsafe fn set_icr_x2apic(&mut self, value: u64) {
         io::wrmsr(io::IA32_X2APIC_ICR, value);
     }
@@ -183,17 +184,6 @@ impl LocalApic {
     unsafe fn write(&mut self, register: u32, value: u32) {
         intrinsics::volatile_store((self.address + register as u64).as_u64() as *mut u32, value);
     }
-}
-
-#[repr(transparent)]
-pub struct IoApic(VirtAddr);
-
-impl IoApic {
-    fn new(address_virt: VirtAddr) -> Self {
-        Self(address_virt)
-    }
-
-    unsafe fn init(&mut self) {}
 }
 
 #[repr(C, packed)]
@@ -246,16 +236,97 @@ pub fn mark_bsp_ready(value: bool) {
     BSP_READY.store(value, Ordering::SeqCst);
 }
 
-/// Initialize the IO apic. This function is called in the init function
-/// of the [madt::Madt] acpi table.
-pub fn init_io_apic(io_apic: &'static IoApicHeader) {
-    let io_virtual = unsafe { PHYSICAL_MEMORY_OFFSET } + io_apic.io_apic_address as usize;
+/// Read from the `io_apic_id` I/O APIC as described by the MADT.
+pub unsafe fn io_apic_read(io_apic_id: usize, register: u32) -> u32 {
+    let io_apic = madt::IO_APICS.read()[io_apic_id];
+    let addr = crate::PHYSICAL_MEMORY_OFFSET + io_apic.io_apic_address as usize;
+    let ptr: *mut u32 = addr.as_mut_ptr();
 
-    let mut io_apic = IoApic::new(io_virtual);
+    ptr::write_volatile(ptr, register);
+    ptr::read(ptr.offset(4))
+}
+
+/// Write from the `io_apic_id` I/O APIC as described by the MADT.
+pub unsafe fn io_apic_write(io_apic_id: usize, register: u32, data: u32) {
+    let io_apic = madt::IO_APICS.read()[io_apic_id];
+    let addr = crate::PHYSICAL_MEMORY_OFFSET + io_apic.io_apic_address as usize;
+    let ptr: *mut u32 = addr.as_mut_ptr();
+
+    ptr::write_volatile(ptr, register);
+    ptr::write_volatile(ptr.offset(4), data)
+}
+
+/// Get the maximum number of redirects this I/O APIC can handle.
+pub fn io_apic_get_max_redirect(io_apic_id: usize) -> u32 {
+    unsafe { (io_apic_read(io_apic_id, 1) & 0xff0000) >> 16 }
+}
+
+/// Return the index of the I/O APIC that handles this redirect
+pub fn io_apic_from_redirect(gsi: u32) -> usize {
+    let io_apics = madt::IO_APICS.read();
+
+    for (i, entry) in io_apics.iter().enumerate() {
+        let max_redirect = entry.global_system_interrupt_base + io_apic_get_max_redirect(i) > gsi;
+
+        if entry.global_system_interrupt_base <= gsi && max_redirect {
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+pub fn io_apic_set_redirect(vec: u8, gsi: u32, flags: u16, status: i32) {
+    let io_apic = io_apic_from_redirect(gsi);
+
+    let mut redirect = 0x00;
+
+    // Active high(0) or low(1)
+    if flags & 2 == 1 {
+        redirect |= (1 << 13) as u8;
+    }
+
+    // Edge(0) or level(1) triggered
+    if flags & 8 == 1 {
+        redirect |= (1 << 15) as u8;
+    }
+
+    if status == 1 {
+        // Set the mask bit
+        redirect |= (1 << 16) as u8;
+    }
+
+    redirect |= vec;
+    redirect |= unsafe { crate::CPU_ID << 56 } as u8; // Set the target APIC ID.
+
+    let entry = madt::IO_APICS.read()[io_apic];
+    let ioredtbl = (gsi - entry.global_system_interrupt_base) * 2 + 16;
 
     unsafe {
-        io_apic.init();
+        io_apic_write(io_apic, ioredtbl + 0, redirect as _);
+        io_apic_write(io_apic, ioredtbl + 1, (redirect as u64 >> 32) as _);
     }
+}
+
+pub fn io_apic_setup_legacy_irq(irq: u8, status: i32) {
+    // Redirect will handle weather IRQ is masked or not, we just need to
+    // search the MADT ISOs for a corrosponsing IRQ.
+    let isos_entries = madt::ISOS.read();
+
+    for entry in isos_entries.iter() {
+        if entry.irq == irq {
+            io_apic_set_redirect(
+                entry.irq + 0x20,
+                entry.global_system_interrupt,
+                entry.flags,
+                status,
+            );
+
+            return;
+        }
+    }
+
+    io_apic_set_redirect(irq + 0x20, irq as _, 0, status)
 }
 
 /// Initialize the local apic.

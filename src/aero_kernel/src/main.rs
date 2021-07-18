@@ -184,9 +184,6 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     interrupts::init();
     log::info!("Loaded IDT");
 
-    time::init();
-    log::info!("Loaded PIT");
-
     drivers::mouse::init();
     log::info!("Loaded PS/2 driver");
 
@@ -208,16 +205,11 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     arch::gdt::init(stack_top_addr);
     log::info!("Loaded GDT");
 
-    /*
-     * NOTE: We need to enable interrupts after we have initialized TLS and GDT
-     * as the PTI context switch functions depend on thread local globals.
-     */
-    unsafe {
-        interrupts::enable_interrupts();
-    }
-
     acpi::init(rsdp_address, unsafe { PHYSICAL_MEMORY_OFFSET });
     log::info!("Loaded ACPI");
+
+    time::init();
+    log::info!("Loaded PIT");
 
     drivers::pci::init(&mut offset_table);
     log::info!("Loaded PCI driver");
@@ -233,6 +225,14 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     log::info!("Initialized kernel");
 
     /*
+     * NOTE: We need to enable interrupts after we have initialized TLS and GDT
+     * as the PTI context switch functions depend on thread local globals.
+     */
+    unsafe {
+        interrupts::enable_interrupts();
+    }
+
+    /*
      * Now that all of the essential initialization is done we are going to schedule
      * the kernel main thread.
      */
@@ -241,16 +241,8 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
 
     // userland::run(&mut offset_table).unwrap();
 
-    unsafe {
-        loop {
-            interrupts::disable_interrupts();
-
-            if scheduler::reschedule() {
-                interrupts::enable_interrupts();
-            } else {
-                interrupts::enable_interrupts_and_halt();
-            }
-        }
+    loop {
+        unsafe { interrupts::halt() }
     }
 }
 
@@ -288,15 +280,7 @@ extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
     userland::init_ap();
     log::info!("AP{}: Loaded userland", ap_id);
 
-    unsafe {
-        loop {
-            interrupts::disable_interrupts();
-
-            if scheduler::reschedule() {
-                interrupts::enable_interrupts();
-            } else {
-                interrupts::enable_interrupts_and_halt();
-            }
-        }
+    loop {
+        unsafe { interrupts::halt() }
     }
 }

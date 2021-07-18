@@ -23,8 +23,9 @@ use core::mem;
 use core::sync::atomic::Ordering;
 
 use alloc::alloc::alloc_zeroed;
-use x86_64::structures::paging::mapper::MapToError;
-use x86_64::structures::paging::*;
+
+use alloc::vec::Vec;
+use spin::RwLock;
 
 use crate::apic;
 use crate::apic::ApicType;
@@ -45,7 +46,9 @@ extern "C" {
     fn smp_check_ap_flag() -> bool;
 }
 
-#[derive(Clone, Copy, Debug)]
+pub static IO_APICS: RwLock<Vec<&'static IoApicHeader>> = RwLock::new(Vec::new());
+pub static ISOS: RwLock<Vec<&'static MadtIntSrcOverride>> = RwLock::new(Vec::new());
+
 #[repr(C, packed)]
 pub struct Madt {
     header: Sdt,
@@ -54,7 +57,7 @@ pub struct Madt {
 }
 
 impl Madt {
-    pub(super) fn init(&'static self) -> Result<(), MapToError<Size4KiB>> {
+    pub(super) fn init(&'static self) {
         log::debug!("Storing AP trampoline at 0x1000");
 
         let page_index = unsafe { smp_prepare_trampoline() };
@@ -150,12 +153,10 @@ impl Madt {
                     }
                 }
 
-                MadtEntry::IoApic(io_apic) => apic::init_io_apic(io_apic),
-                MadtEntry::IntSrcOverride(_) => {}
+                MadtEntry::IoApic(e) => IO_APICS.write().push(e),
+                MadtEntry::IntSrcOverride(e) => ISOS.write().push(e),
             }
         }
-
-        Ok(())
     }
 
     fn iter(&self) -> MadtIterator {
@@ -184,12 +185,12 @@ struct MadtLocalApic {
 }
 
 #[repr(C, packed)]
-struct MadtIntSrcOverride {
-    header: EntryHeader,
-    bus: u8,
-    irq: u8,
-    global_system_interrupt: u32,
-    flags: u16,
+pub struct MadtIntSrcOverride {
+    pub header: EntryHeader,
+    pub bus: u8,
+    pub irq: u8,
+    pub global_system_interrupt: u32,
+    pub flags: u16,
 }
 
 enum MadtEntry {

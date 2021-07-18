@@ -15,54 +15,12 @@
 ; You should have received a copy of the GNU General Public License
 ; along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-global context_switch
-global iretq_kernelinit
 global jump_userland_exec
 global task_spinup
 
 extern restore_user_tls
 
 section .text
-
-; This function is responsible for switching from the provided previous context to
-; the new one and also save the current state in the previous context so there is a restore
-; point (explains the &mut reference requirement).
-context_switch:
-    pushfq ; Push registers to current context.
-    cli    ; Disable interrupts as we are switching stacks.
-
-    push rbp
-    push r15
-    push r14
-    push r13
-    push r12
-    push rbx
-
-    mov rax, cr3 ; Save CR3.
-    push rax
-
-    mov [rdi], rsp ; Update old context pointer with current stack pointer.
-    mov rsp,   rsi ; Switch to new stack.
-
-    pop rax ; Restore CR3.
-    mov cr3, rax
-
-    pop rbx
-    pop r12
-    pop r13
-    pop r14
-    pop r15
-    pop rbp
-
-    popfq
-
-    ret
-
-; This function is responsible for switching to the kernel task stack and switching to the kernel
-; task.
-iretq_kernelinit:
-    pop rdi
-    iretq ; Leap of faith!
 
 jump_userland_exec:
     push rdi ; Param: stack
@@ -78,13 +36,17 @@ jump_userland_exec:
 
     o64 sysret
 
+; This function is responsible for switching from the current context to the new one and 
+; also save the current state in the previous context so there is a restore point.
 task_spinup:
+    ; Make sure that interrupts are disabled as we are switching 
+    ; stacks.
     cli
 
     test rsi, rsi      ; Test if we have a new page table to load.
     jz .dont_load_cr3
 
-    mov cr3, rsi       ; Load the new page table pointer on RSI.
+    mov cr3, rsi       ; Load the new page table pointer in RSI.
 
 .dont_load_cr3:
     mov rsp, rdi

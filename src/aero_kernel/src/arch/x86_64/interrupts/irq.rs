@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use super::{interrupt, interrupt_stack};
+use super::interrupt;
 use crate::time;
 use crate::utils::io;
 use crate::{
@@ -27,11 +27,11 @@ use crate::{
 
 use super::INTERRUPT_CONTROLLER;
 
-interrupt_stack!(
-    pub unsafe fn pit_stack(stack: &mut InterruptStack) {
-        time::PIT.tick();
-
+interrupt!(
+    pub unsafe fn pit_stack() {
         INTERRUPT_CONTROLLER.eoi();
+
+        time::tick();
     }
 );
 

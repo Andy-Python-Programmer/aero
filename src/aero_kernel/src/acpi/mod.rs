@@ -144,7 +144,7 @@ pub fn init(rsdp_address: PhysAddr, physical_memory_offset: VirtAddr) {
                 );
             } else {
                 let madt: &'static Madt = header.as_ptr();
-                madt.init().expect("Failed to initialize APIC");
+                madt.init();
             }
         }
     }

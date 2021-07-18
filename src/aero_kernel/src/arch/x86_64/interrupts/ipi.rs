@@ -40,6 +40,6 @@ interrupt_stack!(
     pub unsafe fn pit(stack: &mut InterruptStack) {
         apic::get_local_apic().eoi();
 
-        time::PIT.tick();
+        time::tick();
     }
 );
