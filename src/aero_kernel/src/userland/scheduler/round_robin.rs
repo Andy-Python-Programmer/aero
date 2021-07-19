@@ -22,9 +22,10 @@ use core::mem;
 
 use intrusive_collections::LinkedList;
 
-use crate::arch;
+use crate::arch::interrupts::IPI_RESCHEDULE;
 use crate::userland::task::{Task, TaskAdapter};
 use crate::utils::{downcast, PerCpu};
+use crate::{apic, arch};
 
 use super::SchedulerInterface;
 
@@ -119,13 +120,17 @@ pub fn exit_current_task(_: usize) -> ! {
 
 /// Yields execution to another task. The task of this function is to get the
 /// task which is on the front of the task queue and jump to it. If no task are
-/// avaviable for execution then the [IDLE_PROCESS] task is executed.
+/// avaviable for execution then the IDLE process task is executed.
 ///
 /// ## Overview
 /// Instead of adding `reschedule` as a method in the [SchedulerInterface] trait we are making
 /// this a normal function as in the trait case, the scheduler will be locked for a longer time. The
 /// scheduler only needs lock protection for reserving the task id allocated.
 pub fn reschedule() {
+    unsafe {
+        apic::get_local_apic().send_ipi(1, IPI_RESCHEDULE);
+    }
+
     let scheduler = super::get_scheduler();
     let round_robin: Option<Arc<RoundRobin>> = downcast(&scheduler.inner);
     let scheduler_ref = round_robin.expect("Failed to downcast the scheduler");

@@ -55,6 +55,9 @@ pub const IA32_X2APIC_EOI: u32 = 0x80b;
 
 pub const IA32_X2APIC_LVT_ERROR: u32 = 0x837;
 
+/// x2APIC Task Priority register (R/W)
+pub const IA32_X2APIC_TPR: u32 = 0x808;
+
 /// Wrapper function to the `outb` assembly instruction used to do the
 /// low level port output.
 #[inline]

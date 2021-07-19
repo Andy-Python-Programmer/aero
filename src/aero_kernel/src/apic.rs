@@ -48,6 +48,9 @@ const XAPIC_ICR0: u32 = 0x300;
 /// Interrupt Command Register (ICR). Read/write.
 const XAPIC_ICR1: u32 = 0x310;
 
+/// Task Priority Register (TPR). Read/write. Bits 31:8 are reserved.
+const XAPIC_TPR: u32 = 0x080;
+
 static LOCAL_APIC: Once<Mutex<LocalApic>> = Once::new();
 static BSP_APIC_ID: AtomicU64 = AtomicU64::new(0xFFFF_FFFF_FFFF_FFFF);
 
@@ -108,6 +111,9 @@ impl LocalApic {
     unsafe fn init(&mut self) {
         match self.apic_type {
             ApicType::Xapic => {
+                // Clear the task priority register to enable all interrupts.
+                self.write(XAPIC_TPR, 0x00);
+
                 // Enable local APIC; set spurious interrupt vector.
                 self.write(XAPIC_SVR, 0x100 | APIC_SPURIOUS_VECTOR);
 
@@ -119,6 +125,9 @@ impl LocalApic {
                 // Enable X2APIC (Bit 10)
                 io::wrmsr(io::IA32_APIC_BASE, io::rdmsr(io::IA32_APIC_BASE) | 1 << 10);
 
+                // Clear the task priority register to enable all interrupts.
+                io::wrmsr(io::IA32_X2APIC_TPR, 0x00);
+
                 // Set up LVT (Local Vector Table) error.
                 io::wrmsr(io::IA32_X2APIC_LVT_ERROR, 49);
 
@@ -126,6 +135,7 @@ impl LocalApic {
                 io::wrmsr(io::IA32_X2APIC_SIVR, (0x100 | APIC_SPURIOUS_VECTOR) as _);
             }
 
+            // Do nothing for the case of the None APIC type.
             ApicType::None => {}
         }
     }
@@ -143,26 +153,18 @@ impl LocalApic {
                 self.write(XAPIC_ICR0, vec as _);
 
                 // Make the ICR delivery status is clear, indicating that the
-                // local APIC has completed sending any previous IPIs. If set to 1
-                // the local APIC has not completed sending the last IPI.
-                let mut status = self.read(XAPIC_ICR0) & (1u32 << 12);
-
-                while status > 0 {
-                    status = self.read(XAPIC_ICR0) & (1u32 << 12);
-                }
+                // local APIC has completed sending the IPI. If set to 1 the
+                // local APIC has not completed sending the IPI.
+                while self.read(XAPIC_ICR0) & (1u32 << 12) > 0 {}
             }
 
             ApicType::X2apic => {
                 io::wrmsr(io::IA32_X2APIC_ICR, vec as u64 | ((cpu as u64) << 32));
 
                 // Make the ICR delivery status is clear, indicating that the
-                // local APIC has completed sending any previous IPIs. If set to 1
-                // the local APIC has not completed sending the last IPI.
-                let mut status = io::rdmsr(io::IA32_X2APIC_ICR) & (1u64 << 32);
-
-                while status > 0 {
-                    status = io::rdmsr(io::IA32_X2APIC_ICR) & (1u64 << 32);
-                }
+                // local APIC has completed sending the IPI. If set to 1 the
+                // local APIC has not completed sending the IPI.
+                while io::rdmsr(io::IA32_X2APIC_ICR) & (1u64 << 12) > 0 {}
             }
 
             // Do nothing for the case of the None APIC type.
@@ -388,10 +390,6 @@ pub fn io_apic_setup_legacy_irq(irq: u8, status: i32) {
     }
 
     io_apic_set_redirect(irq + 0x20, irq as _, 0, status)
-}
-
-pub fn init_ipi() {
-    unsafe { get_local_apic().send_ipi(1, 0x40) }
 }
 
 /// Initialize the local apic.
