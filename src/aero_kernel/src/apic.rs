@@ -95,12 +95,17 @@ pub struct LocalApic {
 }
 
 impl LocalApic {
+    /// Creates a new local APIC instance.
+    ///
+    /// ## Saftey
+    /// The provided `address` points to a valid local APIC memory region and
+    /// the `apic_type` is valid.
     fn new(address: VirtAddr, apic_type: ApicType) -> Self {
         Self { address, apic_type }
     }
 
-    /// Initialize the application processor.
-    unsafe fn init_cpu(&mut self) {
+    /// This function is responsible for initializing this instance of the local APIC.
+    unsafe fn init(&mut self) {
         match self.apic_type {
             ApicType::Xapic => {
                 // Enable local APIC; set spurious interrupt vector.
@@ -125,6 +130,48 @@ impl LocalApic {
         }
     }
 
+    /// This function is responsible for sending IPI to the provided target logical
+    /// processors by writing to the ICR register of this instance.
+    ///
+    /// ## Saftey
+    /// The provided `cpu` must be a valid logical processor ID and the provided `vec` must be
+    /// a valid interrupt vector.
+    pub unsafe fn send_ipi(&mut self, cpu: usize, vec: u8) {
+        match self.apic_type {
+            ApicType::Xapic => {
+                self.write(XAPIC_ICR1, (cpu as u32) << 24);
+                self.write(XAPIC_ICR0, vec as _);
+
+                // Make the ICR delivery status is clear, indicating that the
+                // local APIC has completed sending any previous IPIs. If set to 1
+                // the local APIC has not completed sending the last IPI.
+                let mut status = self.read(XAPIC_ICR0) & (1u32 << 12);
+
+                while status > 0 {
+                    status = self.read(XAPIC_ICR0) & (1u32 << 12);
+                }
+            }
+
+            ApicType::X2apic => {
+                io::wrmsr(io::IA32_X2APIC_ICR, vec as u64 | ((cpu as u64) << 32));
+
+                // Make the ICR delivery status is clear, indicating that the
+                // local APIC has completed sending any previous IPIs. If set to 1
+                // the local APIC has not completed sending the last IPI.
+                let mut status = io::rdmsr(io::IA32_X2APIC_ICR) & (1u64 << 32);
+
+                while status > 0 {
+                    status = io::rdmsr(io::IA32_X2APIC_ICR) & (1u64 << 32);
+                }
+            }
+
+            // Do nothing for the case of the None APIC type.
+            ApicType::None => {}
+        }
+    }
+
+    /// At power up, system hardware assigns a unique APIC ID to each local APIC on the
+    /// system bus. This function returns the unique APIC ID this instance.
     #[inline]
     fn bsp_id(&self) -> u32 {
         match self.apic_type {
@@ -134,7 +181,9 @@ impl LocalApic {
         }
     }
 
-    /// Get the error code of the lapic by reading the error status register.
+    /// The local APIC records errors detected during interrupt handling in the error status
+    /// register (ESR). This function returns the value stored in the error status register
+    /// of this instance.
     pub unsafe fn get_esr(&mut self) -> u32 {
         match self.apic_type {
             ApicType::Xapic => {
@@ -151,6 +200,9 @@ impl LocalApic {
         }
     }
 
+    /// Writes to the EOI register to signal the end of an interrupt. This makes the local APIC
+    /// to delete the interrupt from its ISR queue and send a message on the bus indicating that the
+    /// interrupt handling has been completed.
     #[inline]
     pub unsafe fn eoi(&mut self) {
         match self.apic_type {
@@ -160,26 +212,35 @@ impl LocalApic {
         }
     }
 
+    /// Returns the APIC type of this local APIC instance.
     #[inline]
     pub fn apic_type(&self) -> ApicType {
         self.apic_type
     }
 
+    /// Sets the provided `value` to the ICR register of the instance.
     pub unsafe fn set_icr_xapic(&mut self, value_master: u32, value_slave: u32) {
+        debug_assert!(self.apic_type == ApicType::Xapic); // Make sure we are dealing with XAPIC.
+
         self.write(XAPIC_ICR1, value_master);
         self.write(XAPIC_ICR0, value_slave);
     }
 
+    /// Sets the provided `value` to the ICR register of this instance.
     #[inline]
     pub unsafe fn set_icr_x2apic(&mut self, value: u64) {
+        debug_assert!(self.apic_type == ApicType::X2apic); // Make sure we are dealing with X2APIC.
+
         io::wrmsr(io::IA32_X2APIC_ICR, value);
     }
 
+    /// Reads from the provided `register` as described by the MADT.
     #[inline]
     unsafe fn read(&self, register: u32) -> u32 {
         intrinsics::volatile_load((self.address + register as u64).as_u64() as *const u32)
     }
 
+    /// Write to the provided `register` with the provided `data` as described by the MADT.
     #[inline]
     unsafe fn write(&mut self, register: u32, value: u32) {
         intrinsics::volatile_store((self.address + register as u64).as_u64() as *mut u32, value);
@@ -204,34 +265,34 @@ pub fn get_local_apic() -> MutexGuard<'static, LocalApic> {
 }
 
 /// Get the local BSP's id.
-#[inline(always)]
+#[inline]
 pub fn get_bsp_id() -> u64 {
     BSP_APIC_ID.load(Ordering::SeqCst)
 }
 
 /// Return the number of active CPUs.
-#[inline(always)]
+#[inline]
 pub fn get_cpu_count() -> usize {
     CPU_COUNT.load(Ordering::Relaxed)
 }
 
 /// Returns true if the AP is ready.
-#[inline(always)]
+#[inline]
 pub fn ap_ready() -> bool {
     AP_READY.load(Ordering::SeqCst)
 }
 
-#[inline(always)]
+#[inline]
 pub fn mark_ap_ready(value: bool) {
     AP_READY.store(value, Ordering::SeqCst);
 }
 
-#[inline(always)]
+#[inline]
 pub fn is_bsp_ready() -> bool {
     BSP_READY.load(Ordering::SeqCst)
 }
 
-#[inline(always)]
+#[inline]
 pub fn mark_bsp_ready(value: bool) {
     BSP_READY.store(value, Ordering::SeqCst);
 }
@@ -329,6 +390,10 @@ pub fn io_apic_setup_legacy_irq(irq: u8, status: i32) {
     io_apic_set_redirect(irq + 0x20, irq as _, 0, status)
 }
 
+pub fn init_ipi() {
+    unsafe { get_local_apic().send_ipi(1, 0x40) }
+}
+
 /// Initialize the local apic.
 pub fn init() -> ApicType {
     let feature_info = CpuId::new()
@@ -351,7 +416,7 @@ pub fn init() -> ApicType {
     let mut local_apic = LocalApic::new(address_virt, apic_type);
 
     unsafe {
-        local_apic.init_cpu();
+        local_apic.init();
     }
 
     // Now atomic store the BSP id.

@@ -17,9 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::mem;
-
 use alloc::sync::Arc;
+use core::mem;
 
 use intrusive_collections::LinkedList;
 

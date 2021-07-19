@@ -17,29 +17,16 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use x86_64::instructions::tlb;
-
-use super::interrupt_stack;
-use crate::{apic, time};
+use super::{interrupt_stack, INTERRUPT_CONTROLLER};
 
 interrupt_stack!(
-    pub unsafe fn wakeup(stack: &mut InterruptStack) {
-        apic::get_local_apic().eoi();
+    pub unsafe fn reschedule(stack: &mut InterruptStack) {
+        INTERRUPT_CONTROLLER.eoi(); // Signal end of interrupt
     }
 );
 
 interrupt_stack!(
-    pub unsafe fn tlb(stack: &mut InterruptStack) {
-        apic::get_local_apic().eoi();
-
-        tlb::flush_all();
-    }
-);
-
-interrupt_stack!(
-    pub unsafe fn pit(stack: &mut InterruptStack) {
-        apic::get_local_apic().eoi();
-
-        time::tick();
+    pub unsafe fn abort(stack: &mut InterruptStack) {
+        INTERRUPT_CONTROLLER.eoi(); // Signal end of interrupt
     }
 );

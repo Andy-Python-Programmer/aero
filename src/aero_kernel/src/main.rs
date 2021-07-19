@@ -248,6 +248,8 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
 
 #[no_mangle]
 extern "C" fn kernel_main_thread() {
+    apic::init_ipi();
+
     modules::init();
     log::info!("Loaded kernel modules");
 

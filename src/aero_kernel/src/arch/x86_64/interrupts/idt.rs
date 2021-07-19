@@ -21,21 +21,12 @@
 //!
 //! **Notes**: <https://wiki.osdev.org/Interrupt_Descriptor_Table>
 
-/// The count of the IDT entries.
-pub const IDT_ENTRIES: usize = 256;
+const IDT_ENTRIES: usize = 256;
 
-pub const PIC1_COMMAND: u16 = 0x20;
-pub const PIC1_DATA: u16 = 0x21;
+pub const IPI_BASE: u8 = 0x40;
 
-pub const PIC2_COMMAND: u16 = 0xA0;
-pub const PIC2_DATA: u16 = 0xA1;
-
-pub const PIC_EOI: u8 = 0x20;
-
-pub const ICW1_INIT: u8 = 0x10;
-pub const ICW1_READ_ISR: u8 = 0x0B;
-pub const ICW1_ICW4: u8 = 0x01;
-pub const ICW4_8086: u8 = 0x01;
+pub const IPI_ABORT: u8 = IPI_BASE + 0x00;
+pub const IPI_RESCHEDULE: u8 = IPI_BASE + 0x01;
 
 pub type InterruptHandlerFn = unsafe extern "C" fn();
 
@@ -244,9 +235,8 @@ pub fn init() {
         IDT[0x80].set_flags(IDTFlags::PRESENT | IDTFlags::RING_3 | IDTFlags::INTERRUPT);
         IDT[0x80].set_offset(8, crate::syscall::syscall_interrupt_handler as usize);
 
-        IDT[0x40].set_function(super::ipi::wakeup);
-        IDT[0x41].set_function(super::ipi::tlb);
-        IDT[0x43].set_function(super::ipi::pit);
+        IDT[IPI_ABORT as usize].set_function(super::ipi::abort);
+        IDT[IPI_RESCHEDULE as usize].set_function(super::ipi::reschedule);
 
         let idt_descriptor = IdtDescriptor::new(
             ((IDT.len() * size_of::<IdtEntry>()) - 1) as u16,
@@ -256,9 +246,9 @@ pub fn init() {
         load_idt(&idt_descriptor);
 
         /*
-         * Since lazy statics are initialized on the first derefence, we have to
-         * manually initialize the static as the first derefernce happen in an IRQ interrupt.
-         * That means that the controller will never be initialized as an IRQ interrupt requires
+         * Since lazy statics are initialized on the their first dereference, we have to
+         * manually initialize the static as the first dereference happen in an IRQ interrupt.
+         * This means that the controller will never be initialized as an IRQ interrupt requires
          * the controller to be initialized.
          */
         lazy_static::initialize(&super::INTERRUPT_CONTROLLER);

@@ -29,6 +29,19 @@ pub use idt::*;
 use crate::apic;
 use crate::utils::io;
 
+const PIC1_COMMAND: u16 = 0x20;
+const PIC1_DATA: u16 = 0x21;
+
+const PIC2_DATA: u16 = 0xA1;
+const PIC2_COMMAND: u16 = 0xA0;
+
+const PIC_EOI: u8 = 0x20;
+
+const ICW1_INIT: u8 = 0x10;
+const ICW1_READ_ISR: u8 = 0x0B;
+const ICW1_ICW4: u8 = 0x01;
+const ICW4_8086: u8 = 0x01;
+
 lazy_static::lazy_static! {
     pub static ref PIC_CONTROLLER: PicController = PicController::new();
     pub static ref APIC_CONTROLLER: ApicController = ApicController;
