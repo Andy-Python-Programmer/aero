@@ -19,18 +19,23 @@
 
 use core::mem;
 
-use crate::drivers::ahci::AHCI;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+
+use spin::mutex::SpinMutex;
 
 use crate::{
     acpi::mcfg::{self, DeviceConfig, Mcfg},
+    mem::paging::OffsetPageTable,
     utils::io,
 };
 
-use crate::mem::paging::OffsetPageTable;
 use bit_field::BitField;
 
-pub const PCI_CONFIG_ADDRESS_PORT: u16 = 0xCF8;
-pub const PCI_CONFIG_DATA_PORT: u16 = 0xCFC;
+static PCI_TABLE: SpinMutex<PciTable> = SpinMutex::new(PciTable::new());
+
+const PCI_CONFIG_ADDRESS_PORT: u16 = 0xCF8;
+const PCI_CONFIG_DATA_PORT: u16 = 0xCFC;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Bar {
@@ -375,9 +380,9 @@ impl Vendor {
     }
 }
 
-pub struct PCIHeader(u32);
+pub struct PciHeader(u32);
 
-impl PCIHeader {
+impl PciHeader {
     pub fn new(bus: u8, device: u8, function: u8) -> Self {
         let mut result: u32 = 0;
 
@@ -436,6 +441,7 @@ impl PCIHeader {
         id.get_bits(0..16)
     }
 
+    #[allow(unused)]
     pub unsafe fn get_interface_id(&self) -> u32 {
         let id = self.read(0x08);
 
@@ -510,6 +516,34 @@ impl PCIHeader {
     }
 }
 
+pub trait PciDeviceHandle: Sync + Send {
+    /// Returns true if the PCI device driver handles the device with
+    /// the provided `vendor_id` and `device_id`.
+    fn handles(&self, vendor_id: Vendor, device_id: DeviceType) -> bool;
+
+    /// This function is responsible for initializing the device driver
+    /// and starting it.
+    fn start(&self, header: &PciHeader, offset_table: &mut OffsetPageTable);
+}
+
+struct PciDevice {
+    handle: Arc<dyn PciDeviceHandle>,
+}
+
+struct PciTable {
+    inner: Vec<PciDevice>,
+}
+
+impl PciTable {
+    const fn new() -> Self {
+        Self { inner: Vec::new() }
+    }
+}
+
+pub fn register_device_driver(handle: Arc<dyn PciDeviceHandle>) {
+    PCI_TABLE.lock().inner.push(PciDevice { handle })
+}
+
 /// Lookup and initialize all PCI devices.
 pub fn init(offset_table: &mut OffsetPageTable) {
     // Check if the MCFG table is avaliable.
@@ -539,14 +573,14 @@ pub fn init(offset_table: &mut OffsetPageTable) {
      */
     for bus in 0..255 {
         for device in 0..32 {
-            let function_count = if PCIHeader::new(bus, device, 0x00).has_multiple_functions() {
+            let function_count = if PciHeader::new(bus, device, 0x00).has_multiple_functions() {
                 8
             } else {
                 1
             };
 
             for function in 0..function_count {
-                let device = PCIHeader::new(bus, device, function);
+                let device = PciHeader::new(bus, device, function);
 
                 unsafe {
                     if device.get_vendor_id() == 0xFFFF {
@@ -560,18 +594,13 @@ pub fn init(offset_table: &mut OffsetPageTable) {
                         device.get_vendor()
                     );
 
-                    match device.get_device() {
-                        DeviceType::SataController => match device.get_interface_id() {
-                            0x01 => {
-                                /*
-                                 * AHCI 1.0 Device
-                                 */
-
-                                AHCI::new(offset_table, device);
-                            }
-                            _ => (),
-                        },
-                        _ => (),
+                    for driver in &mut PCI_TABLE.lock().inner {
+                        if driver
+                            .handle
+                            .handles(device.get_vendor(), device.get_device())
+                        {
+                            driver.handle.start(&device, offset_table)
+                        }
                     }
                 }
             }

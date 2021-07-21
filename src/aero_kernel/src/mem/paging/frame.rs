@@ -40,6 +40,7 @@ impl LockedFrameAllocator {
             .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
     }
 
+    #[allow(unused)]
     pub fn get_frame_type(&self, frame: PhysFrame) -> Option<StivaleMemoryMapEntryType> {
         if let Some(ref mut allocator) = self.0.get() {
             allocator.lock().get_frame_type(frame)

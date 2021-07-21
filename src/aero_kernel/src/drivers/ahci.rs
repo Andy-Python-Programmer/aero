@@ -16,459 +16,499 @@
  * You should have received a copy of the GNU General Public License
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
-#![allow(unused)] //FIXME: Modular kernel :D
-use core::mem;
 
-use core::mem::MaybeUninit;
+use alloc::sync::Arc;
+
+use bit_field::BitField;
+use spin::mutex::SpinMutex;
+use spin::Once;
 
 use crate::arch::interrupts;
-use crate::mem::paging::{memory_map_device, FRAME_ALLOCATOR};
-
 use crate::mem::paging::*;
+use crate::utils::VolatileCell;
 
-use super::pci::{Bar, PCIHeader};
+use super::pci::*;
 
-use bitflags::bitflags;
+static DRIVER: Once<Arc<AhciDriver>> = Once::new();
 
-bitflags! {
-    #[repr(C)]
-    pub struct HBACapabilities: u32 {
-        const SXS_SUPPORT = 1 << 5;
-        const EMS_SUPPORT = 1 << 6;
-        const CCC_SUPPORT = 1 << 7;
-        const PS_CAPABLE = 1 << 13;
-        const SS_CAPABLE = 1 << 14;
-        const PIO_MULTI_DRQ_SUPPORT = 1 << 15;
-        const FBSS_SUPPORT = 1 << 16;
-        const PM_SUPPORT = 1 << 17;
-        const AHCI_ONLY = 1 << 18;
-        const CLO_SUPPORT = 1 << 24;
-        const AL_SUPPORT = 1 << 25;
-        const ALP_SUPPORT = 1 << 26;
-        const SS_SUPPORT = 1 << 27;
-        const MPS_SUPPORT = 1 << 28;
-        const SNTF_SUPPORT = 1 << 29;
-        const NCQ_SUPPORT = 1 << 30;
-        const SUPPORTS_64_ADDRESSES = 1 << 31;
+bitflags::bitflags! {
+    struct HbaEnclosureCtrl: u32 {
+        const STS_MR =      1 << 0;  // Message Received
+        const CTL_TM =      1 << 8;  // Transmit Message
+        const CTL_RST =     1 << 9;  // Reset
+        const SUPP_LED =    1 << 16; // LED Message Types
+        const SUPP_SAFTE =  1 << 17; // SAF-TE Enclosure Management Messages
+        const SUPP_SES2 =   1 << 18; // SES-2 Enclosure Management Messages
+        const SUPP_SGPIO =  1 << 19; // SGPIO Enclosure Management Messages
+        const ATTR_SMB =    1 << 24; // Single Message Buffer
+        const ATTR_XMT =    1 << 25; // Transmit Only
+        const ATTR_ALHD =   1 << 26; // Activity LED Hardware Driven
+        const ATTR_PM =     1 << 27; // Port Multiplier Support
     }
 }
 
-bitflags! {
-    #[repr(C)]
-    pub struct GlobalHBAControl: u32 {
-        const HBA_RESET = 1;
-        const INT_ENABLE = 1 << 1;
-        const MRSM = 1 << 2;
-        const AHCI_ENABLE = 1 << 31;
+bitflags::bitflags! {
+    struct HbaCapabilities2: u32 {
+        const BOH   = 1 << 0; // BIOS/OS Handoff
+        const NVMP  = 1 << 1; // NVMHCI Present
+        const APST  = 1 << 2; // Automatic Partial to Slumber Transitions
+        const SDS   = 1 << 3; // Supports Device Sleep
+        const SADM  = 1 << 4; // Supports Aggressive Device Sleep management
+        const DESO  = 1 << 5; // DevSleep Entrance from Slumber Only
     }
 }
 
-const SATA_SIG_ATAPI: u32 = 0xEB140101;
-const SATA_SIG_ATA: u32 = 0x00000101;
-const SATA_SIG_SEMB: u32 = 0xC33C0101;
-const SATA_SIG_PM: u32 = 0x96690101;
-
-const HBA_PORT_DEV_PRESENT: u32 = 0x3;
-const HBA_PORT_IPM_ACTIVE: u32 = 0x1;
-
-const HBA_PX_CMD_CR: u32 = 0x8000;
-const HBA_PX_CMD_FRE: u32 = 0x0010;
-const HBA_PX_CMD_ST: u32 = 0x0001;
-const HBA_PX_CMD_FR: u32 = 0x4000;
-
-const ATA_DEV_BUSY: u32 = 0x80;
-const ATA_DEV_DRQ: u32 = 0x08;
-const ATA_CMD_READ_DMA_EX: u32 = 0x25;
-
-const FIS_TYPE_REG_H2D: u32 = 0x27;
-const HBA_PXIS_TFES: u32 = 1 << 30;
-
-#[derive(Debug, PartialEq)]
-pub enum AHCIPortType {
-    None,
-    SATA,
-    SEMB,
-    PM,
-    SATAPI,
+bitflags::bitflags! {
+    struct HbaBohc: u32 {
+        const BOS =     1 << 0; // BIOS Owned Semaphore
+        const OOS =     1 << 1; // OS Owned Semaphore
+        const SOOE =    1 << 2; // SMI on OS Ownership Change Enable
+        const OOC =     1 << 3; // OS Ownership Change
+        const BB =      1 << 4; // BIOS Busy
+    }
 }
 
-#[repr(C, packed)]
-struct HBAMemory {
-    host_capability: HBACapabilities,
-    global_host_control: GlobalHBAControl,
-    interrupt_status: u32,
-    ports_implemented: u32,
-    version: u32,
-    ccc_control: u32,
-    ccc_ports: u32,
-    enclosure_management_location: u32,
-    enclosure_management_control: u32,
-    host_capabilities_extended: u32,
-    bios_handoff_ctrl_sts: u32,
-    rsv0: [u8; 116],
-    vendor: [u8; 96],
-    ports: [MaybeUninit<HBAPort>; 32],
+bitflags::bitflags! {
+    struct HbaCapabilities: u32 {
+        const SXS           = 1 << 5;  // Supports External SATA
+        const EMS           = 1 << 6;  // Enclosure Management Supported
+        const CCCS          = 1 << 7;  // Command Completion Coalescing Supported
+        const PSC           = 1 << 13; // Partial State Capable
+        const SSC           = 1 << 14; // Slumber State Capable
+        const PMD           = 1 << 15; // PIO Multiple DRQ Block
+        const FBSS          = 1 << 16; // FIS-based Switching Supported
+        const SPM           = 1 << 17; // Supports Port Multiplier
+        const SAM           = 1 << 18; // Supports AHCI mode only
+        const SCLO          = 1 << 24; // Supports Command List Override
+        const SAL           = 1 << 25; // Supports Activity LED
+        const SALP          = 1 << 26; // Supports Aggressive Link Power Mgmt
+        const SSS           = 1 << 27; // Supports Staggered Spin-up
+        const SMPS          = 1 << 28; // Supports Mechanical Presence Switch
+        const SSNTF         = 1 << 29; // Supports SNotification Register
+        const SNCQ          = 1 << 30; // Supports Native Command Queuing
+        const S64A          = 1 << 31; // Supports 64-bit Addressing
+    }
 }
 
-impl HBAMemory {
-    /// Get a HBA port at `idx`.
-    pub fn get_port(&mut self, idx: u32) -> &'static mut HBAPort {
-        assert!(idx < 32, "There are only 32 ports!");
+bitflags::bitflags! {
+    struct HbaHostCont: u32 {
+        const HR =   1 << 0;  // HBA Reset
+        const IE =   1 << 1;  // Interrupt Enable
+        const MRSM = 1 << 2;  // MSI Revert to Single Message
+        const AE =   1 << 31; // AHCI Enable
+    }
+}
 
-        let bit = self.ports_implemented >> idx;
+bitflags::bitflags! {
+    struct HbaPortIS: u32 {
+        const DHRS = 1 << 0; // Device to Host Register FIS Interrupt
+        const PSS = 1 << 1; // PIO Setup FIS Interrupt
+        const DSS = 1 << 2; // DMA Setup FIS Interrupt
+        const SDBS = 1 << 3; // Set Device Bits Interrupt
+        const UFS = 1 << 4; // Unknown FIS Interrupt
+        const DPS = 1 << 5; // Descriptor Processed
+        const PCS = 1 << 6; // Port Connect Change Status
+        const DMPS = 1 << 7; // Device Mechanical Presence Status
+        const PRCS = 1 << 22; // PhyRdy Change Status
+        const IPMS = 1 << 23; // Incorrect Port Multiplier Status
+        const OFS = 1 << 24; // Overflow Status
+        const INFS = 1 << 26; // Interface Not-fatal Error Status
+        const IFS = 1 << 27; // Interface Fatal Error Status
+        const HBDS = 1 << 28; // Host Bus Data Error Status
+        const HBFS = 1 << 29; // Host Bus Fatal Error Status
+        const TFES = 1 << 30; // Task File Error Status
+        const CPDS = 1 << 31; // Cold Port Detect Status
+    }
+}
 
-        if bit & 1 == 1 {
-            let ptr = self.ports[idx as usize].as_mut_ptr();
+bitflags::bitflags! {
+    struct HbaPortIE: u32 {
+        const DHRE = 1 << 0; // Device to Host Register FIS Interrupt
+        const PSE = 1 << 1; // PIO Setup FIS Interrupt
+        const DSE = 1 << 2; // DMA Setup FIS Interrupt
+        const SDBE = 1 << 3; // Set Device Bits Interrupt
+        const UFE = 1 << 4; // Unknown FIS Interrupt
+        const DPE = 1 << 5; // Descriptor Processed
+        const PCE = 1 << 6; // Port Connect Change Status
+        const DMPE = 1 << 7; // Device Mechanical Presence Status
+        const PRCE = 1 << 22; // PhyRdy Change Status
+        const IPME = 1 << 23; // Incorrect Port Multiplier Status
+        const OFE= 1 << 24; // Overflow Status
+        const INFE = 1 << 26; // Interface Not-fatal Error Status
+        const IFE = 1 << 27; // Interface Fatal Error Status
+        const HBDE = 1 << 28; // Host Bus Data Error Status
+        const HBFE = 1 << 29; // Host Bus Fatal Error Status
+        const TFEE = 1 << 30; // Task File Error Status
+        const CPDE = 1 << 31; // Cold Port Detect Status
+    }
+}
 
-            unsafe { &mut *ptr }
-        } else {
-            panic!()
+bitflags::bitflags! {
+    struct HbaPortCmd: u32 {
+        const ST = 1 << 0; // Start
+        const SUD = 1 << 1; // Spin-Up Device
+        const POD = 1 << 2; // Power On Device
+        const CLO = 1 << 3; // Command List Override
+        const FRE = 1 << 4; // FIS Receive Enable
+        const MPSS = 1 << 13; // Mechanical Presence Switch State
+        const FR = 1 << 14; // FIS Receive Running
+        const CR = 1 << 15; // Command List Running
+        const CPS = 1 << 16; // Cold Presence State
+        const PMA = 1 << 17; // Port Multiplier Attached
+        const HPCP = 1 << 18; // Hot Plug Capable Port
+        const MSPC = 1 << 19; // Mechanical Presence Switch Attached to Port
+        const CPD = 1 << 20; // Cold Presence Detection
+        const ESP = 1 << 21; // External SATA Port
+        const FBSCP = 1 << 22; // FIS-based Switching Capable Port
+        const APSTE = 1 << 23; // Automatic Partial to Slumber Transition Enabled
+        const ATAPI = 1 << 24; // Device is ATAPI
+        const DLAE = 1 << 25; // Drive LED on ATAPI Enable
+        const ALPE = 1 << 26; // Aggressive Link Power Management Enable
+        const ASP = 1 << 27; // Aggressive Slumber / Partial
+    }
+}
+
+bitflags::bitflags! {
+    pub struct HbaCmdHeaderFlags: u16 {
+        const A = 1 << 5; // ATAPI
+        const W = 1 << 6; // Write
+        const P = 1 << 7; // Prefetchable
+        const R = 1 << 8; // Reset
+        const B = 1 << 9; // Bist
+        const C = 1 << 10; // Clear Busy upon R_OK
+    }
+}
+
+#[repr(C)]
+pub struct HbaMemory {
+    host_capability: VolatileCell<HbaCapabilities>,
+    global_host_control: VolatileCell<HbaHostCont>,
+    interrupt_status: VolatileCell<u32>,
+    ports_implemented: VolatileCell<u32>,
+    version: VolatileCell<u32>,
+    ccc_control: VolatileCell<u32>,
+    ccc_ports: VolatileCell<u32>,
+    enclosure_management_location: VolatileCell<u32>,
+    enclosure_management_control: VolatileCell<HbaEnclosureCtrl>,
+    host_capabilities_extended: VolatileCell<HbaCapabilities2>,
+    bios_handoff_ctrl_sts: VolatileCell<HbaBohc>,
+    _reserved: [u8; 0xa0 - 0x2c],
+    vendor: [u8; 0x100 - 0xa0],
+}
+
+enum HbaPortDd {
+    None = 0,
+    PresentNotE = 1,
+    PresentAndE = 3,
+    Offline = 4,
+}
+
+enum HbaPortIpm {
+    None = 0,
+    Active = 1,
+    Partial = 2,
+    Slumber = 6,
+    DevSleep = 8,
+}
+
+#[repr(transparent)]
+#[derive(Clone, Copy)]
+struct HbaSataStatus(u64);
+
+impl HbaSataStatus {
+    fn device_detection(&self) -> HbaPortDd {
+        match self.0.get_bits(0..=3) {
+            0 => HbaPortDd::None,
+            1 => HbaPortDd::PresentNotE,
+            3 => HbaPortDd::PresentAndE,
+            4 => HbaPortDd::Offline,
+            v => panic!("Invalid HbaPortSstsRegDet {}", v),
+        }
+    }
+
+    fn interface_power_management(&self) -> HbaPortIpm {
+        match self.0.get_bits(8..=11) {
+            0 => HbaPortIpm::None,
+            1 => HbaPortIpm::Active,
+            2 => HbaPortIpm::Partial,
+            6 => HbaPortIpm::Slumber,
+            8 => HbaPortIpm::DevSleep,
+            v => panic!("Invalid HbaPortSstsRegIpm {}", v),
         }
     }
 }
 
-#[repr(C, packed)]
-struct HBAPort {
-    command_list_base: u32,
-    command_list_base_upper: u32,
-    fis_base_address: u32,
-    fis_base_address_upper: u32,
-    interrupt_status: u32,
-    interrupt_enable: u32,
-    cmd_sts: u32,
-    rsv0: u32,
-    task_file_data: u32,
-    signature: u32,
-    sata_status: u32,
-    sata_control: u32,
-    sata_error: u32,
-    sata_active: u32,
-    command_issue: u32,
-    sata_notification: u32,
-    fis_switch_control: u32,
-    rsv1: [u32; 11],
+#[repr(C)]
+struct HbaPort {
+    clb: VolatileCell<PhysAddr>,
+    fb: VolatileCell<PhysAddr>,
+    is: VolatileCell<HbaPortIS>,
+    ie: VolatileCell<HbaPortIE>,
+    cmd: VolatileCell<HbaPortCmd>,
+    _reserved: u32,
+    tfd: VolatileCell<u32>,
+    sig: VolatileCell<u32>,
+    ssts: VolatileCell<HbaSataStatus>,
+    sctl: VolatileCell<u32>,
+    serr: VolatileCell<u32>,
+    sact: VolatileCell<u32>,
+    ci: VolatileCell<u32>,
+    sntf: VolatileCell<u32>,
+    fbs: VolatileCell<u32>,
+    devslp: VolatileCell<u32>,
+    _reserved_1: [u32; 10],
     vendor: [u32; 4],
 }
 
-impl HBAPort {
-    fn get_port_type(&self) -> AHCIPortType {
-        let ipm = (self.sata_status >> 8) & 0x0F;
-        let device_detection = self.sata_status & 0x0F;
-
-        if device_detection != HBA_PORT_DEV_PRESENT {
-            return AHCIPortType::None;
-        } else if ipm != HBA_PORT_IPM_ACTIVE {
-            return AHCIPortType::None;
-        }
-
-        match self.signature {
-            SATA_SIG_ATAPI => AHCIPortType::SATAPI,
-            SATA_SIG_ATA => AHCIPortType::SATA,
-            SATA_SIG_PM => AHCIPortType::PM,
-            SATA_SIG_SEMB => AHCIPortType::SEMB,
-
-            _ => AHCIPortType::None,
-        }
-    }
+#[repr(C)]
+struct HbaCmdHeader {
+    flags: VolatileCell<HbaCmdHeaderFlags>,
+    prdtl: VolatileCell<u16>,
+    prdbc: VolatileCell<u32>,
+    ctb: VolatileCell<PhysAddr>,
+    _reserved: [u32; 4],
 }
 
-#[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
-struct HBACommandHeader {
-    command_fis_length: u8,
-    atapi: u8,
-    write: u8,
-    prefetchable: u8,
+impl HbaPort {
+    pub fn cmd_header_at(&mut self, index: usize) -> &mut HbaCmdHeader {
+        // Since the CLB holds the physical address, we make the address mapped
+        // before reading it.
+        let clb_mapped = unsafe { crate::PHYSICAL_MEMORY_OFFSET + self.clb.get().as_u64() };
+        // Get the address of the command header at `index`.
+        let clb_addr = clb_mapped + core::mem::size_of::<HbaCmdHeader>() * index;
 
-    reset: u8,
-    bist: u8,
-    clear_busy: u8,
-    rsv0: u8,
-    port_multiplier: u8,
-
-    prdt_length: u16,
-    prdb_count: u32,
-    command_table_base_address: u32,
-    command_table_base_address_upper: u32,
-    reserved: [u32; 4],
-}
-
-#[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
-struct FISRegisterH2D {
-    fis_type: u32,
-
-    port_multiplier: u32,
-    rsv0: u32,
-    command_control: u32,
-
-    command: u32,
-    feature_low: u32,
-
-    lba0: u32,
-    lba1: u32,
-    lba2: u32,
-    device_register: u32,
-
-    lba3: u32,
-    lba4: u32,
-    lba5: u32,
-    feature_high: u32,
-
-    count_low: u32,
-    count_high: u32,
-    iso_command_completion: u32,
-    control: u32,
-
-    reserved: [u32; 4],
-}
-
-#[repr(C, packed)]
-struct HBAPRDTEntry {
-    data_base_address: u32,
-    data_base_address_upper: u32,
-    reserved: u32,
-
-    byte_count: u32,
-    reserved_2: u32,
-    interrupt_on_completion: u32,
-}
-
-#[repr(C, align(128))]
-struct HBACommandTable {
-    command_fis: [u8; 64],
-    atapi_command: [u8; 16],
-    reserved: [u8; 48],
-
-    hba_prdt_entry: [HBAPRDTEntry; 8],
-}
-
-pub struct Port {
-    hba_port: &'static mut HBAPort,
-    port_type: AHCIPortType,
-    id: u32,
-}
-
-impl Port {
-    #[inline]
-    fn new(hba_port: &'static mut HBAPort, port_type: AHCIPortType, id: u32) -> Self {
-        Self {
-            hba_port,
-            port_type,
-            id,
-        }
+        // Cast it as [`HbaCmdHeader`] and return a mutable reference to it.
+        unsafe { &mut *(clb_addr).as_mut_ptr::<HbaCmdHeader>() }
     }
 
-    unsafe fn configure(&mut self, offset_table: &mut OffsetPageTable) {
-        self.stop_command();
+    /// This function is responsible for allocating space for command lists,
+    /// tables, etc.. for a given this instance of HBA port.
+    pub fn start(&mut self) {
+        self.stop_cmd(); // Stop the command engine before starting the port
 
-        let mapped_clb = FRAME_ALLOCATOR.allocate_frame().unwrap();
+        // Allocate area for for the command list.
+        let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+            .expect("Failed to allocate space for the command list");
 
-        offset_table
-            .map_to(
-                Page::containing_address(VirtAddr::new(mapped_clb.start_address().as_u64())),
-                mapped_clb,
-                PageTableFlags::NO_CACHE
-                    | PageTableFlags::WRITE_THROUGH
-                    | PageTableFlags::PRESENT
-                    | PageTableFlags::WRITABLE,
-                &mut FRAME_ALLOCATOR,
-            )
-            .unwrap()
-            .flush();
+        self.clb.set(frame.start_address());
 
-        self.hba_port.command_list_base = mapped_clb.start_address().as_u64() as u32;
-        self.hba_port.command_list_base_upper = (mapped_clb.start_address().as_u64() >> 32) as u32;
+        // Allocate area for FISs.
+        let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+            .expect("Failed to allocate space for the FISs");
 
-        let mapped_fis = FRAME_ALLOCATOR.allocate_frame().unwrap();
-
-        offset_table
-            .map_to(
-                Page::containing_address(VirtAddr::new(mapped_fis.start_address().as_u64())),
-                mapped_fis,
-                PageTableFlags::NO_CACHE
-                    | PageTableFlags::WRITE_THROUGH
-                    | PageTableFlags::PRESENT
-                    | PageTableFlags::WRITABLE,
-                &mut FRAME_ALLOCATOR,
-            )
-            .unwrap()
-            .flush();
-
-        self.hba_port.fis_base_address = mapped_clb.start_address().as_u64() as u32;
-        self.hba_port.fis_base_address = (mapped_clb.start_address().as_u64() >> 32) as u32;
-
-        let hba_command_header = (self.hba_port.command_list_base as u64
-            + ((self.hba_port.command_list_base_upper as u64) << 32))
-            as *mut HBACommandHeader;
+        // Set the address that received FISes will be copied to.
+        self.fb.set(frame.start_address());
 
         for i in 0..32 {
-            let command_header = &mut *hba_command_header.offset(i);
+            let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+                .expect("Here is a nickel kid, go and buy your self a real computer");
 
-            // 8 prdt entries per command table.
-            command_header.prdt_length = 8;
+            let command_header = self.cmd_header_at(i);
 
-            let command_table = FRAME_ALLOCATOR.allocate_frame().unwrap();
-
-            offset_table
-                .map_to(
-                    Page::containing_address(VirtAddr::new(command_table.start_address().as_u64())),
-                    command_table,
-                    PageTableFlags::NO_CACHE
-                        | PageTableFlags::WRITE_THROUGH
-                        | PageTableFlags::PRESENT
-                        | PageTableFlags::WRITABLE,
-                    &mut FRAME_ALLOCATOR,
-                )
-                .unwrap()
-                .flush();
-
-            let address = command_table.start_address().as_u64() + ((i as u64) << 8);
-
-            command_header.command_table_base_address = address as u32;
-            command_header.command_table_base_address_upper = (address >> 32) as u32;
+            // 8 prdt entries per command table
+            // 256 bytes per command table, 64 + 16 + 48 + 16 * 8
+            command_header.prdtl.set(8);
+            command_header.prdbc.set(0);
+            command_header.ctb.set(frame.start_address());
         }
 
-        self.start_command();
+        self.start_cmd(); // Start the command engine...
     }
 
-    pub fn read(&mut self, sector: u64, sector_count: u32, buffer: &mut [u16]) -> bool {
-        let mut spin = 0; // Spin lock timeout counter.
-
-        while (self.hba_port.task_file_data & (ATA_DEV_BUSY | ATA_DEV_DRQ)) == 1 && spin < 1000000 {
-            spin += 1;
-        }
-
-        if spin == 1000000 {
-            return false;
-        }
-
-        let sector_low = sector as u32;
-        let sector_hi = (sector >> 32) as u32;
-
-        // Clear the pending interrupt bits.
-        self.hba_port.interrupt_status = !0;
-
-        let command_header =
-            unsafe { &mut *(self.hba_port.command_list_base as *mut HBACommandHeader) };
-
-        command_header.command_fis_length =
-            (mem::size_of::<FISRegisterH2D>() / mem::size_of::<u32>()) as u8;
-        command_header.write = 0; // Set write to 0x00 as we are doing a read command.
-        command_header.prdt_length = 1;
-
-        let command_table =
-            (command_header.command_table_base_address as u64) as *mut HBACommandTable;
-
-        let command_table = unsafe { &mut *command_table };
-
-        command_table.hba_prdt_entry[0].data_base_address = buffer.as_mut_ptr() as u32;
-        command_table.hba_prdt_entry[0].data_base_address_upper =
-            ((buffer.as_mut_ptr() as u64) >> 32) as u32;
-        command_table.hba_prdt_entry[0].byte_count = (sector_count << 9) - 1;
-        command_table.hba_prdt_entry[0].interrupt_on_completion = 1; // TODO: Function on completion.
-
-        let command_fis_address = unsafe { *(&command_table.command_fis as *const u8) as usize };
-        let command_fis = unsafe { &mut *(command_fis_address as *mut FISRegisterH2D) };
-
-        command_fis.fis_type = FIS_TYPE_REG_H2D;
-        command_fis.command_control = 1;
-        command_fis.command = ATA_CMD_READ_DMA_EX;
-
-        command_fis.lba0 = sector_low;
-        command_fis.lba1 = sector_low >> 8;
-        command_fis.lba2 = sector_low >> 16;
-
-        command_fis.lba3 = sector_hi;
-        command_fis.lba4 = sector_hi >> 8;
-        command_fis.lba5 = sector_hi >> 16;
-
-        command_fis.device_register = 1 << 6; // LBA mode
-
-        command_fis.count_low = sector_count & 0xFF;
-        command_fis.count_high = (sector_count >> 8) & 0xFF;
-
-        self.hba_port.command_issue = 0x1;
-
-        loop {
-            if self.hba_port.command_list_base == 0 {
-                break;
-            } else if self.hba_port.interrupt_status & HBA_PXIS_TFES == 1 {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /// Stop the command engine.
-    fn stop_command(&mut self) {
-        self.hba_port.cmd_sts &= !HBA_PX_CMD_ST;
-        self.hba_port.cmd_sts &= !HBA_PX_CMD_FRE;
-
-        loop {
-            if self.hba_port.cmd_sts & HBA_PX_CMD_FR == 1 {
-                continue;
-            }
-
-            if self.hba_port.cmd_sts & HBA_PX_CMD_CR == 1 {
-                continue;
-            }
-
-            break;
-        }
-    }
-
-    /// Start the command engine.
-    fn start_command(&mut self) {
-        while self.hba_port.cmd_sts & HBA_PX_CMD_CR == 1 {
+    pub fn start_cmd(&mut self) {
+        while self.cmd.get().contains(HbaPortCmd::CR) {
             interrupts::pause();
         }
 
-        self.hba_port.cmd_sts |= HBA_PX_CMD_FRE;
-        self.hba_port.cmd_sts |= HBA_PX_CMD_ST;
+        let value = self.cmd.get() | (HbaPortCmd::FRE | HbaPortCmd::ST);
+        self.cmd.set(value);
+    }
+
+    pub fn stop_cmd(&mut self) {
+        let mut cmd = self.cmd.get();
+        cmd.remove(HbaPortCmd::FRE | HbaPortCmd::ST);
+
+        self.cmd.set(cmd);
+
+        while self.cmd.get().intersects(HbaPortCmd::FR | HbaPortCmd::CR) {
+            interrupts::pause();
+        }
+    }
+
+    pub fn probe(&mut self, port: usize) -> bool {
+        let status = self.ssts.get();
+
+        let ipm = status.interface_power_management();
+        let dd = status.device_detection();
+
+        // Check if the port is active and is present. If thats the case
+        // we can start the AHCI port.
+        if let (HbaPortDd::PresentAndE, HbaPortIpm::Active) = (dd, ipm) {
+            log::trace!("Enabling AHCI port {}", port);
+
+            self.start();
+            true
+        } else {
+            // Else we can't enable the port.
+            false
+        }
     }
 }
 
-pub struct AHCI {
-    memory: &'static mut HBAMemory,
+impl HbaMemory {
+    fn port_mut(&mut self, port: usize) -> &mut HbaPort {
+        unsafe { &mut *((self as *mut Self).offset(1) as *mut HbaPort).offset(port as isize) }
+    }
 }
 
-impl AHCI {
-    pub unsafe fn new(offset_table: &mut OffsetPageTable, header: PCIHeader) -> Self {
-        log::info!("Loaded AHCI driver");
+struct AhciPortProtected {
+    address: VirtAddr,
+}
 
-        let abar = header.get_bar(5).unwrap();
+impl AhciPortProtected {
+    fn hba_port(&mut self) -> &mut HbaPort {
+        unsafe { &mut *(self.address.as_mut_ptr::<HbaPort>()) }
+    }
 
-        let (abar_address, abar_size) = match abar {
+    fn run_request(&mut self) {
+        let _port = self.hba_port();
+    }
+}
+
+struct AhciPort {
+    inner: SpinMutex<AhciPortProtected>,
+}
+
+impl AhciPort {
+    #[inline]
+    fn new(address: VirtAddr) -> Self {
+        Self {
+            inner: SpinMutex::new(AhciPortProtected { address }),
+        }
+    }
+}
+
+struct AhciProtected {
+    ports: [Option<Arc<AhciPort>>; 32],
+    hba: VirtAddr,
+}
+
+impl AhciProtected {
+    #[inline]
+    fn hba_mem(&self) -> &mut HbaMemory {
+        unsafe { &mut *(self.hba.as_u64() as *mut HbaMemory) }
+    }
+
+    fn start_hba(&mut self) {
+        let mut hba = self.hba_mem();
+        let current_flags = hba.global_host_control.get();
+
+        hba.global_host_control.set(current_flags | HbaHostCont::IE); // Enable Interrupts
+
+        let pi = hba.ports_implemented.get();
+
+        for i in 0..32 {
+            if pi.get_bit(i) {
+                let port = hba.port_mut(i);
+
+                if port.probe(i) {
+                    // Get the address of the HBA port.
+                    let address = unsafe { VirtAddr::new_unsafe(port as *const _ as _) };
+
+                    drop(port); // Drop the reference to the port.
+                    drop(hba); // Drop the reference to the HBA.
+
+                    let port = Arc::new(AhciPort::new(address));
+
+                    // Add the port to the ports array.
+                    self.ports[i] = Some(port);
+
+                    // Workaround to get access to the HBA and still satify the
+                    // borrow checker.
+                    hba = self.hba_mem();
+                }
+            }
+        }
+    }
+
+    /// This function is responsible for initializing and starting the AHCI driver.
+    fn start_driver(&mut self, header: &PciHeader) -> Result<(), MapToError<Size4KiB>> {
+        let abar = unsafe { header.get_bar(5).expect("Failed to get ABAR") };
+
+        let (abar_address, _) = match abar {
             Bar::Memory32 { address, size, .. } => (address as u64, size as u64),
             Bar::Memory64 { address, size, .. } => (address, size),
             Bar::IO { .. } => panic!("ABAR is in port space o_O"),
         };
 
-        let memory = &mut *(abar_address as *mut HBAMemory);
-        let mut this = Self { memory };
+        self.hba = unsafe { crate::PHYSICAL_MEMORY_OFFSET + abar_address }; // Update the HBA address.
 
-        // this.probe_ports(offset_table);
+        self.start_hba();
 
-        this
+        Ok(())
+    }
+}
+
+/// Structure representing the ACHI driver.
+struct AhciDriver {
+    inner: SpinMutex<AhciProtected>,
+}
+
+impl PciDeviceHandle for AhciDriver {
+    fn handles(&self, vendor_id: Vendor, device_id: DeviceType) -> bool {
+        match (vendor_id, device_id) {
+            (Vendor::Intel, DeviceType::SataController) => true,
+
+            _ => false,
+        }
     }
 
-    unsafe fn probe_ports(&mut self, offset_table: &mut OffsetPageTable) {
-        for i in 0..32 {
-            if (self.memory.ports_implemented & (1 << i)) == 1 {
-                let hba_port = self.memory.get_port(i);
-                let hba_port_type = hba_port.get_port_type();
+    fn start(&self, header: &PciHeader, _offset_table: &mut OffsetPageTable) {
+        log::info!("Starting AHCI driver...");
 
-                if hba_port_type == AHCIPortType::SATA || hba_port_type == AHCIPortType::SATAPI {
-                    // let mut buffer = [0u16; 256];
+        // Disable interrupts as we do not want to be interrupted durning
+        // the initialization of the AHCI driver.
+        unsafe {
+            interrupts::disable_interrupts();
+        }
 
-                    let mut port = Port::new(hba_port, hba_port_type, i);
+        get_ahci().inner.lock().start_driver(header).unwrap(); // Start and initialize the AHCI controller.
 
-                    port.configure(offset_table);
-                    // port.read(0, 4, &mut buffer);
-                }
-            }
+        // Temporary testing...
+        if let Some(port) = get_ahci().inner.lock().ports[0].clone() {
+            port.inner.lock().run_request();
+        }
+
+        // Now the AHCI driver is initialized, we can enable interrupts.
+        unsafe {
+            interrupts::enable_interrupts();
         }
     }
 }
+
+/// Returns a reference-counting pointer to the AHCI driver.
+fn get_ahci() -> &'static Arc<AhciDriver> {
+    DRIVER
+        .get()
+        .expect("Attempted to get the AHCI driver before it was initialized")
+}
+
+/// This function is responsible for initializing and running the AHCI driver.
+pub fn ahci_init() {
+    // Initialize the AHCI driver instance.
+    DRIVER.call_once(|| {
+        const EMPTY: Option<Arc<AhciPort>> = None; // To satisfy the Copy trait bound when the AHCI creating data.
+
+        Arc::new(AhciDriver {
+            inner: SpinMutex::new(AhciProtected {
+                ports: [EMPTY; 32],    // Initialize the AHCI ports to an empty slice.
+                hba: VirtAddr::zero(), // Initialize the AHCI HBA address to zero.
+            }),
+        })
+    });
+
+    // Now register the AHCI driver with the PCI subsystem.
+    register_device_driver(get_ahci().clone());
+}
+
+crate::module_init!(ahci_init);

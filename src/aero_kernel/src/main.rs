@@ -37,6 +37,7 @@
     decl_macro,
     global_asm,
     ptr_internals,
+    const_fn_trait_bound,
     extern_types,
     new_uninit,
     box_syntax,
@@ -211,9 +212,6 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     time::init();
     log::info!("Loaded PIT");
 
-    drivers::pci::init(&mut offset_table);
-    log::info!("Loaded PCI driver");
-
     fs::init().unwrap();
     log::info!("Loaded filesystem");
 
@@ -248,8 +246,14 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
 
 #[no_mangle]
 extern "C" fn kernel_main_thread() {
+    let mut address_space = mem::AddressSpace::this();
+    let mut offset_table = address_space.offset_page_table();
+
     modules::init();
     log::info!("Loaded kernel modules");
+
+    drivers::pci::init(&mut offset_table);
+    log::info!("Loaded PCI driver");
 
     prelude::println!("{}", ASCII_INTRO);
     userland::run();

@@ -185,6 +185,29 @@ impl<T: Any + Send + Sync> Downcastable for T {
     }
 }
 
+/// Just like [`Cell`] but with [volatile] read / write operations
+///
+/// [`Cell`]: https://doc.rust-lang.org/std/cell/struct.Cell.html
+/// [volatile]: https://doc.rust-lang.org/std/ptr/fn.read_volatile.html
+#[repr(transparent)]
+pub struct VolatileCell<T> {
+    value: UnsafeCell<T>,
+}
+
+impl<T: Copy> VolatileCell<T> {
+    /// Returns a copy of the contained value.
+    #[inline]
+    pub fn get(&self) -> T {
+        unsafe { core::ptr::read_volatile(self.value.get()) }
+    }
+
+    /// Sets the contained value.
+    #[inline]
+    pub fn set(&self, value: T) {
+        unsafe { core::ptr::write_volatile(self.value.get(), value) }
+    }
+}
+
 pub fn downcast<S, T>(arc: &Arc<S>) -> Option<Arc<T>>
 where
     S: Downcastable + ?Sized,

@@ -30,7 +30,7 @@ pub use self::mapper::*;
 pub use self::page::*;
 pub use self::page_table::*;
 
-use stivale_boot::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapTag};
+use stivale_boot::v2::StivaleMemoryMapTag;
 
 pub use frame::LockedFrameAllocator;
 
@@ -64,17 +64,6 @@ bitflags::bitflags! {
         /// If this flag is set, it indicates that the access that caused the page fault was an
         /// instruction fetch.
         const INSTRUCTION_FETCH = 1 << 4;
-    }
-}
-
-pub struct UnmapGuard {
-    pub page: Page<Size4KiB>,
-}
-
-impl UnmapGuard {
-    #[inline]
-    fn new(page: Page<Size4KiB>) -> Self {
-        Self { page }
     }
 }
 
@@ -126,39 +115,4 @@ pub unsafe fn active_level_4_table() -> &'static mut PageTable {
     let page_table_ptr: *mut PageTable = virtual_address.as_mut_ptr();
 
     &mut *page_table_ptr
-}
-
-/// Identity maps a frame for a memory mapped device.
-#[track_caller]
-pub unsafe fn memory_map_device(
-    offset_table: &mut OffsetPageTable,
-    frame: PhysFrame,
-) -> Result<UnmapGuard, MapToError<Size4KiB>> {
-    let frame_type = FRAME_ALLOCATOR
-        .get_frame_type(frame)
-        .ok_or(MapToError::FrameAllocationFailed)?;
-
-    let extra_flags = match frame_type {
-        StivaleMemoryMapEntryType::Reserved => PageTableFlags::WRITABLE,
-        _ => panic!(
-            "Tried to memory map a device on a {:?} frame {:#X}",
-            frame_type,
-            frame.start_address()
-        ),
-    };
-
-    let page = Page::containing_address(VirtAddr::new(frame.start_address().as_u64()));
-
-    offset_table
-        .identity_map(
-            frame,
-            PageTableFlags::PRESENT
-                | PageTableFlags::NO_CACHE
-                | PageTableFlags::WRITE_THROUGH
-                | extra_flags,
-            &mut FRAME_ALLOCATOR,
-        )?
-        .flush();
-
-    Ok(UnmapGuard::new(page))
 }
