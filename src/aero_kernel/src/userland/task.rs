@@ -23,7 +23,7 @@ use xmas_elf::ElfFile;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::mem::paging::{MapToError, Size4KiB, VirtAddr};
+use crate::mem::paging::*;
 
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
@@ -108,6 +108,15 @@ impl Task {
     #[inline]
     pub fn task_id(&self) -> TaskId {
         self.task_id
+    }
+
+    #[inline]
+    pub fn handle_page_fault(
+        &self,
+        _accessed_address: VirtAddr,
+        _reason: PageFaultErrorCode,
+    ) -> bool {
+        false
     }
 }
 

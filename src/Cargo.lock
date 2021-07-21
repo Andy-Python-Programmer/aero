@@ -7,7 +7,7 @@ name = "aero_kernel"
 version = "0.1.0"
 dependencies = [
  "aero_syscall",
- "bit_field 0.10.1",
+ "bit_field",
  "bitflags",
  "cfg-if",
  "font8x8",
@@ -23,7 +23,6 @@ dependencies = [
  "rustc-demangle",
  "spin 0.9.1",
  "stivale-boot",
- "x86_64",
  "xmas-elf",
  "xshell",
 ]
@@ -66,12 +65,6 @@ name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
-
-[[package]]
-name = "bit_field"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed8765909f9009617974ab6b7d332625b320b33c326b1e9321382ef1999b5d56"
 
 [[package]]
 name = "bit_field"
@@ -381,27 +374,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 
 [[package]]
-name = "volatile"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4c2dbd44eb8b53973357e6e207e370f0c1059990df850aca1eca8947cf464f0"
-
-[[package]]
 name = "wasi"
 version = "0.10.2+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
-
-[[package]]
-name = "x86_64"
-version = "0.14.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7c54a17492391c594753ce2a180142bec7ad2876543565c2a08aa11cddef251"
-dependencies = [
- "bit_field 0.9.0",
- "bitflags",
- "volatile",
-]
 
 [[package]]
 name = "xmas-elf"

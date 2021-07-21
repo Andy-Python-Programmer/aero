@@ -307,7 +307,11 @@ impl<S: PageSize> MapperFlush<S> {
     /// Flush the page from the TLB to ensure that the newest mapping is used.
     #[inline]
     pub fn flush(self) {
-        x86_64::instructions::tlb::flush(x86_64::VirtAddr::new(self.0.start_address().as_u64()));
+        let raw = self.0.start_address().as_u64();
+
+        unsafe {
+            asm!("invlpg [{}]", in(reg) raw, options(nostack));
+        }
     }
 }
 

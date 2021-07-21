@@ -101,8 +101,14 @@ impl Scheduler {
         self.inner.register_task(task.clone());
     }
 
+    #[inline]
     pub fn exec(&self, executable: &ElfFile) {
         self.inner.current_task().exec(executable).unwrap();
+    }
+
+    #[inline]
+    pub fn current_task(&self) -> Arc<Task> {
+        self.inner.current_task()
     }
 }
 

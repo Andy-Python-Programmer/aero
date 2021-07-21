@@ -17,11 +17,13 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use super::idt::PageFaultErrorCode;
 use super::interrupt_error_stack;
 
+use crate::arch::controlregs;
+use crate::mem::paging::PageFaultErrorCode;
+
 use crate::unwind;
-use x86_64::registers::control::Cr2;
+use crate::userland::scheduler;
 
 macro interrupt_exception(fn $name:ident() => $message:expr) {
     super::interrupt_error_stack!(
@@ -79,18 +81,29 @@ interrupt_error_stack!(
 
 interrupt_error_stack!(
     fn page_fault(stack: &mut InterruptErrorStack) {
-        let accessed_address = Cr2::read();
+        let accessed_address = controlregs::read_cr2();
+        let reason = PageFaultErrorCode::from_bits_truncate(stack.code as u64);
+
+        if stack.stack.iret.is_user() {
+            // The page fault has triggred in user mode. Now we need to
+            // check if the page was mapped in the VM and if so, we will
+            // recover the page fault by allocating the page and mapping it (demand
+            // paging). If the page was not mapped, we will signal kill the task.
+            let signal = scheduler::get_scheduler()
+                .current_task()
+                .handle_page_fault(accessed_address, reason);
+
+            if !signal {
+                return;
+            }
+        }
 
         log::error!(
             "EXCEPTION: Page Fault\n\nAccessed Address: {:?}\nError: {:?}\nStack: {:#x?}",
             accessed_address,
-            PageFaultErrorCode::from_bits_truncate(stack.code as u64),
+            reason,
             stack.stack,
         );
-
-        if stack.stack.iret.is_user() {
-            loop {}
-        }
 
         unwind::unwind_stack_trace();
 
