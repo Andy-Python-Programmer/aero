@@ -20,7 +20,7 @@
 use alloc::{alloc::alloc_zeroed, sync::Arc};
 use core::{alloc::Layout, any::Any, cell::UnsafeCell, mem, ptr::Unique};
 
-use crate::apic::get_cpu_count;
+use crate::{apic::get_cpu_count, arch::interrupts};
 
 pub mod buffer;
 pub mod io;
@@ -205,6 +205,36 @@ impl<T: Copy> VolatileCell<T> {
     #[inline]
     pub fn set(&self, value: T) {
         unsafe { core::ptr::write_volatile(self.value.get(), value) }
+    }
+}
+
+/// Helper guard structure used to lock interrupts. When dropped, interrupts
+/// are enabled again. This is useful for volatile operations where we don't
+/// want to be interrupted.
+pub struct IrqGuard {
+    locked: bool,
+}
+
+impl IrqGuard {
+    /// Creates a new IRQ guard. See the [`IrqGuard`] documentation for more.
+    pub fn new() -> Self {
+        unsafe {
+            interrupts::disable_interrupts();
+        }
+
+        Self {
+            locked: interrupts::is_enabled(),
+        }
+    }
+}
+
+impl Drop for IrqGuard {
+    /// Drops the IRQ guard, enabling interrupts again. See the [`IrqGuard`]
+    /// documentation for more.
+    fn drop(&mut self) {
+        if self.locked {
+            unsafe { interrupts::enable_interrupts() }
+        }
     }
 }
 

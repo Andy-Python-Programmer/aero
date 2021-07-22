@@ -441,6 +441,20 @@ impl PciHeader {
         id.get_bits(0..16)
     }
 
+    /// This function is responsible for enabling bus masterning on this device. This
+    /// allows the AHCI to perform DMA.
+    #[inline]
+    pub fn enable_bus_mastering(&self) {
+        // Read the Command Register from the device's PCI Configuration Space, set bit 2
+        // (bus mastering bit) and write the modified Command Register. Some BISOs do enable
+        // bus mastering by default so, we need to check for that.
+        let command = unsafe { self.read(0x04) };
+
+        if (command & (1 << 2)) == 0 {
+            unsafe { self.write(0x04, command | (1 << 2)) }
+        }
+    }
+
     #[allow(unused)]
     pub unsafe fn get_interface_id(&self) -> u32 {
         let id = self.read(0x08);

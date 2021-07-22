@@ -29,6 +29,8 @@ pub use idt::*;
 use crate::apic;
 use crate::utils::io;
 
+use super::controlregs;
+
 const PIC1_COMMAND: u16 = 0x20;
 const PIC1_DATA: u16 = 0x21;
 
@@ -356,6 +358,12 @@ pub unsafe fn disable_interrupts() {
 #[inline(always)]
 pub unsafe fn enable_interrupts() {
     asm!("sti", options(nomem, nostack));
+}
+
+/// Returns true if interrupts are enabled.
+#[inline(always)]
+pub fn is_enabled() -> bool {
+    controlregs::read_rflags().contains(controlregs::RFlags::INTERRUPT_FLAG)
 }
 
 /// Wrapper function to the `pause` assembly instruction used to pause

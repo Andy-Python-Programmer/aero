@@ -19,13 +19,14 @@
 
 use alloc::sync::Arc;
 
+use alloc::vec::Vec;
 use bit_field::BitField;
 use spin::mutex::SpinMutex;
 use spin::Once;
 
 use crate::arch::interrupts;
 use crate::mem::paging::*;
-use crate::utils::VolatileCell;
+use crate::utils::{IrqGuard, VolatileCell};
 
 use super::pci::*;
 
@@ -179,6 +180,149 @@ bitflags::bitflags! {
     }
 }
 
+enum DmaCommand {
+    Read,
+}
+
+struct DmaBuffer {
+    /// The start address of the DMA buffer.
+    start: PhysAddr,
+    /// The data size of the DMA buffer.
+    data_size: usize,
+
+    /// True if the sector size is greator then 4KiB and we need
+    /// to allocate a huge page for it.
+    huge: bool,
+}
+
+struct DmaRequest {
+    sector: usize,
+    count: usize,
+    buffer: Vec<DmaBuffer>,
+    command: DmaCommand,
+}
+
+impl DmaRequest {
+    /// Creates a new DMA request for the given sector and count.
+    pub fn new(sector: usize, count: usize) -> Self {
+        let mut size = count * 512;
+        let mut buffer = Vec::<DmaBuffer>::new();
+
+        while size > 0 {
+            let huge = size > 0x1000; // Check if we want to allocate a huge page?
+            let data_size = core::cmp::min(size, 0x2000);
+
+            let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+                .expect("Failed to allocate frame for DMA request");
+
+            buffer.push(DmaBuffer {
+                start: frame.start_address(),
+                data_size,
+
+                huge,
+            });
+
+            size -= data_size; // Subtract the data size from the total size.
+        }
+
+        Self {
+            sector,
+            count,
+            buffer,
+            command: DmaCommand::Read,
+        }
+    }
+
+    /// Copys the data from the DMA buffer into the given buffer.
+    fn copy_into(&self, into: &mut [u8]) {
+        let mut offset = 0x00; // Keep track of the offset
+        let mut remaning = into.len(); // Keep track of the remaining data
+
+        for buffer in self.buffer.iter() {
+            let count = core::cmp::min(remaning, 0x2000);
+
+            let buffer_address = unsafe { crate::PHYSICAL_MEMORY_OFFSET + buffer.start.as_u64() };
+            let buffer_pointer = buffer_address.as_ptr();
+            let buffer = unsafe { core::slice::from_raw_parts::<u8>(buffer_pointer, count) };
+
+            // Copy the data from the buffer into the given buffer with the
+            // calculated offset.
+            into[offset..offset + count].copy_from_slice(buffer);
+
+            remaning -= count; // Subtract the size from the remaining size.
+            offset += count; // Add the size to the offset.
+        }
+    }
+
+    fn into_command(&self) -> AtaCommand {
+        let lba48 = self.sector > 0x0FFF_FFFF;
+
+        match self.command {
+            DmaCommand::Read => {
+                if lba48 {
+                    AtaCommand::AtaCommandReadDmaExt
+                } else {
+                    AtaCommand::AtaCommandReadDma
+                }
+            }
+        }
+    }
+
+    fn at_offset(&self, offset: usize) -> &[DmaBuffer] {
+        &self.buffer[offset / 16..]
+    }
+}
+
+#[allow(unused)]
+#[derive(PartialEq)]
+#[repr(u8)]
+enum AtaCommand {
+    AtaCommandWriteDma = 0xCA,
+    AtaCommandWriteDmaQueued = 0xCC,
+    AtaCommandWriteMultiple = 0xC5,
+    AtaCommandWriteSectors = 0x30,
+
+    AtaCommandReadDma = 0xC8,
+    AtaCommandReadDmaQueued = 0xC7,
+    AtaCommandReadMultiple = 0xC4,
+    AtaCommandReadSectors = 0x20,
+
+    AtaCommandWriteDmaExt = 0x35,
+    AtaCommandWriteDmaQueuedExt = 0x36,
+    AtaCommandWriteMultipleExt = 0x39,
+    AtaCommandWriteSectorsExt = 0x34,
+
+    AtaCommandReadDmaExt = 0x25,
+    AtaCommandReadDmaQueuedExt = 0x26,
+    AtaCommandReadMultipleExt = 0x29,
+    AtaCommandReadSectorsExt = 0x24,
+
+    AtaCommandPacket = 0xA0,
+    AtaCommandDeviceReset = 0x08,
+
+    AtaCommandService = 0xA2,
+    AtaCommandNop = 0,
+    AtaCommandNopNopAutopoll = 1,
+
+    AtaCommandGetMediaStatus = 0xDA,
+
+    AtaCommandFlushCache = 0xE7,
+    AtaCommandFlushCacheExt = 0xEA,
+
+    AtaCommandDataSetManagement = 0x06,
+
+    AtaCommandMediaEject = 0xED,
+
+    AtaCommandIdentifyPacketDevice = 0xA1,
+    AtaCommandIdentifyDevice = 0xEC,
+
+    AtaCommandSetFeatures = 0xEF,
+    AtaCommandSetFeaturesEnableReleaseInt = 0x5D,
+    AtaCommandSetFeaturesEnableServiceInt = 0x5E,
+    AtaCommandSetFeaturesDisableReleaseInt = 0xDD,
+    AtaCommandSetFeaturesDisableServiceInt = 0xDE,
+}
+
 #[repr(C)]
 pub struct HbaMemory {
     host_capability: VolatileCell<HbaCapabilities>,
@@ -194,6 +338,62 @@ pub struct HbaMemory {
     bios_handoff_ctrl_sts: VolatileCell<HbaBohc>,
     _reserved: [u8; 0xa0 - 0x2c],
     vendor: [u8; 0x100 - 0xa0],
+}
+
+#[repr(C)]
+pub struct FisRegH2D {
+    fis_type: VolatileCell<FisType>,
+    flags: VolatileCell<u8>,
+    command: VolatileCell<AtaCommand>,
+    featurel: VolatileCell<u8>,
+
+    lba0: VolatileCell<u8>,
+    lba1: VolatileCell<u8>,
+    lba2: VolatileCell<u8>,
+    device: VolatileCell<u8>,
+
+    lba3: VolatileCell<u8>,
+    lba4: VolatileCell<u8>,
+    lba5: VolatileCell<u8>,
+    featureh: VolatileCell<u8>,
+
+    count: VolatileCell<u16>,
+    icc: VolatileCell<u8>,
+    control: VolatileCell<u8>,
+
+    _reserved: [u8; 4],
+}
+
+#[repr(C)]
+pub struct HbaCmdTbl {
+    cfis: [u8; 64],
+    acmd: [u8; 16],
+    _reserved: [u8; 48],
+
+    prdt_entry: [HbaPrdtEntry; 1],
+}
+
+impl HbaCmdTbl {
+    fn cfis_as_h2d_mut(&mut self) -> &mut FisRegH2D {
+        unsafe { &mut *(self.cfis.as_mut_ptr() as *mut FisRegH2D) }
+    }
+
+    fn prdt_entry_mut(&mut self, i: usize) -> &mut HbaPrdtEntry {
+        unsafe { &mut *self.prdt_entry.as_mut_ptr().offset(i as isize) }
+    }
+}
+
+#[repr(C)]
+pub struct HbaPrdtEntry {
+    dba: VolatileCell<PhysAddr>,
+    _reserved: u32,
+    flags: VolatileCell<u32>,
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone)]
+pub enum FisType {
+    RegH2D = 0x27,
 }
 
 enum HbaPortDd {
@@ -270,7 +470,7 @@ struct HbaCmdHeader {
 }
 
 impl HbaPort {
-    pub fn cmd_header_at(&mut self, index: usize) -> &mut HbaCmdHeader {
+    fn cmd_header_at(&mut self, index: usize) -> &mut HbaCmdHeader {
         // Since the CLB holds the physical address, we make the address mapped
         // before reading it.
         let clb_mapped = unsafe { crate::PHYSICAL_MEMORY_OFFSET + self.clb.get().as_u64() };
@@ -283,7 +483,7 @@ impl HbaPort {
 
     /// This function is responsible for allocating space for command lists,
     /// tables, etc.. for a given this instance of HBA port.
-    pub fn start(&mut self) {
+    fn start(&mut self) {
         self.stop_cmd(); // Stop the command engine before starting the port
 
         // Allocate area for for the command list.
@@ -315,7 +515,7 @@ impl HbaPort {
         self.start_cmd(); // Start the command engine...
     }
 
-    pub fn start_cmd(&mut self) {
+    fn start_cmd(&mut self) {
         while self.cmd.get().contains(HbaPortCmd::CR) {
             interrupts::pause();
         }
@@ -324,7 +524,7 @@ impl HbaPort {
         self.cmd.set(value);
     }
 
-    pub fn stop_cmd(&mut self) {
+    fn stop_cmd(&mut self) {
         let mut cmd = self.cmd.get();
         cmd.remove(HbaPortCmd::FRE | HbaPortCmd::ST);
 
@@ -335,7 +535,7 @@ impl HbaPort {
         }
     }
 
-    pub fn probe(&mut self, port: usize) -> bool {
+    fn probe(&mut self, port: usize) -> bool {
         let status = self.ssts.get();
 
         let ipm = status.interface_power_management();
@@ -353,6 +553,83 @@ impl HbaPort {
             false
         }
     }
+
+    fn run_command(
+        &mut self,
+        command: AtaCommand,
+        sector: usize,
+        count: usize,
+        slot: usize,
+        buffer: &[DmaBuffer],
+    ) {
+        let header = self.cmd_header_at(slot);
+        let mut flags = header.flags.get();
+
+        if command == AtaCommand::AtaCommandWriteDmaExt || command == AtaCommand::AtaCommandWriteDma
+        {
+            flags.insert(HbaCmdHeaderFlags::W); // If its a write command add the write flag.
+        } else {
+            flags.remove(HbaCmdHeaderFlags::W); // If its a read command remove the write flag.
+        }
+
+        flags.insert(HbaCmdHeaderFlags::P | HbaCmdHeaderFlags::C);
+        flags
+            .bits
+            .set_bits(0..=4, (core::mem::size_of::<FisRegH2D>() / 4) as u16);
+
+        header.flags.set(flags); // Update command header flags.
+
+        let length = ((count - 1) >> 4) + 1;
+        header.prdtl.set(length as _); // Update the number of PRD entries.
+
+        let command_table_addr =
+            unsafe { crate::PHYSICAL_MEMORY_OFFSET + header.ctb.get().as_u64() };
+
+        let command_table = unsafe { &mut *(command_table_addr).as_mut_ptr::<HbaCmdTbl>() };
+
+        for pri in 0..length {
+            let prdt = command_table.prdt_entry_mut(pri);
+
+            prdt.dba.set(buffer[pri].start);
+            prdt.flags.set(
+                *prdt
+                    .flags
+                    .get()
+                    .set_bits(0..=21, (buffer[pri].data_size - 1) as _),
+            );
+
+            // TODO: Set interrupt on completion...
+        }
+
+        let fis = command_table.cfis_as_h2d_mut();
+
+        fis.fis_type.set(FisType::RegH2D);
+        fis.flags.set(0x00);
+        fis.featurel.set(0x00);
+        fis.featureh.set(0x00);
+        fis.lba0.set(sector as u8);
+        fis.lba1.set((sector >> 8) as u8);
+        fis.lba2.set((sector >> 16) as u8);
+        fis.lba3.set((sector >> 24) as u8);
+        fis.lba4.set((sector >> 32) as u8);
+        fis.lba5.set((sector >> 40) as u8);
+        fis.device.set(1 << 6);
+        fis.count.set(count as _);
+        fis.icc.set(0x00);
+        fis.control.set(0x00);
+
+        fis.flags.set(*fis.flags.get().set_bit(7, true));
+
+        // Issue the command!
+        self.ci.set(1 << slot);
+
+        // Wait for the command to complete.
+        loop {
+            if self.ci.get() & (1 << slot) == 0 {
+                break;
+            }
+        }
+    }
 }
 
 impl HbaMemory {
@@ -361,8 +638,14 @@ impl HbaMemory {
     }
 }
 
+struct AhciCommand {
+    request: Arc<DmaRequest>,
+}
+
 struct AhciPortProtected {
     address: VirtAddr,
+    cmds: [Option<AhciCommand>; 32],
+    free_cmds: usize,
 }
 
 impl AhciPortProtected {
@@ -370,8 +653,46 @@ impl AhciPortProtected {
         unsafe { &mut *(self.address.as_mut_ptr::<HbaPort>()) }
     }
 
-    fn run_request(&mut self) {
-        let _port = self.hba_port();
+    fn run_request(&mut self, request: Arc<DmaRequest>, mut offset: usize) -> usize {
+        let mut remaining = request.count - offset;
+
+        while remaining > 0 {
+            let slot = {
+                let command =
+                    self.cmds
+                        .iter()
+                        .enumerate()
+                        .find_map(|(i, e)| if e.is_none() { Some(i) } else { None });
+
+                if let Some(i) = command {
+                    let hba = self.hba_port();
+                    let count = core::cmp::min(remaining, 128);
+
+                    hba.run_command(
+                        request.into_command(),
+                        request.sector + offset,
+                        count,
+                        i,
+                        request.at_offset(offset),
+                    );
+
+                    remaining -= count;
+                    offset += count;
+
+                    i
+                } else {
+                    return offset;
+                }
+            };
+
+            self.cmds[slot] = Some(AhciCommand {
+                request: request.clone(),
+            });
+
+            self.free_cmds -= 1;
+        }
+
+        offset
     }
 }
 
@@ -382,9 +703,41 @@ struct AhciPort {
 impl AhciPort {
     #[inline]
     fn new(address: VirtAddr) -> Self {
+        const EMPTY: Option<AhciCommand> = None;
+
         Self {
-            inner: SpinMutex::new(AhciPortProtected { address }),
+            inner: SpinMutex::new(AhciPortProtected {
+                address,
+                cmds: [EMPTY; 32],
+                free_cmds: 32,
+            }),
         }
+    }
+
+    fn run_request(&self, request: Arc<DmaRequest>) -> Option<usize> {
+        let mut offset = 0x00;
+
+        // Run request and wait for it to complete.
+        while offset < request.count {
+            let _guard = IrqGuard::new(); // We do not want to be interrupted while running the request.
+
+            offset = self.inner.lock().run_request(request.clone(), offset);
+        }
+
+        Some(request.count * 512)
+    }
+
+    fn read(&self, sector: usize, buffer: &mut [u8]) -> Option<usize> {
+        let count = (buffer.len() + 512 - 1) / 512;
+        let request = Arc::new(DmaRequest::new(sector, count));
+
+        let result = self.run_request(request.clone()); // Perform the DMA request.
+
+        if result.is_some() {
+            request.copy_into(buffer); // Copy the result into the provided buffer.
+        }
+
+        result
     }
 }
 
@@ -431,6 +784,12 @@ impl AhciProtected {
         }
     }
 
+    /// This function is responsible for enabling bus mastering and add AHCI
+    /// IRQ handler.
+    fn enable_interrupts(&mut self, header: &PciHeader) {
+        header.enable_bus_mastering();
+    }
+
     /// This function is responsible for initializing and starting the AHCI driver.
     fn start_driver(&mut self, header: &PciHeader) -> Result<(), MapToError<Size4KiB>> {
         let abar = unsafe { header.get_bar(5).expect("Failed to get ABAR") };
@@ -444,6 +803,7 @@ impl AhciProtected {
         self.hba = unsafe { crate::PHYSICAL_MEMORY_OFFSET + abar_address }; // Update the HBA address.
 
         self.start_hba();
+        self.enable_interrupts(header);
 
         Ok(())
     }
@@ -468,20 +828,18 @@ impl PciDeviceHandle for AhciDriver {
 
         // Disable interrupts as we do not want to be interrupted durning
         // the initialization of the AHCI driver.
-        unsafe {
-            interrupts::disable_interrupts();
-        }
+        let lock = IrqGuard::new();
 
         get_ahci().inner.lock().start_driver(header).unwrap(); // Start and initialize the AHCI controller.
 
+        // Now the AHCI driver is initialized, we drop the IRQ lock.
+        core::mem::drop(lock);
+
         // Temporary testing...
         if let Some(port) = get_ahci().inner.lock().ports[0].clone() {
-            port.inner.lock().run_request();
-        }
-
-        // Now the AHCI driver is initialized, we can enable interrupts.
-        unsafe {
-            interrupts::enable_interrupts();
+            let buffer = &mut [0u8; 512];
+            port.read(0, buffer);
+            log::info!("Read sector 0: {:?}", buffer);
         }
     }
 }
