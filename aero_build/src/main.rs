@@ -100,7 +100,7 @@ fn build_kernel(target: Option<String>) -> anyhow::Result<PathBuf> {
 /// launch an xserver in order to launch Qemu with GUI. On the other you are also
 /// required to set the `xserver` argument to true if you are running Qemu in WSLG. This
 /// function will return an error if the qemu failed to start.
-fn run_qemu(argv: Vec<String>, xserver: bool) -> anyhow::Result<()> {
+fn run_qemu(argv: Vec<String>, xserver: bool, bios: &str) -> anyhow::Result<()> {
     // Calculate the qemu executable suffix.
     let qemu_suffix = if xserver && is_wsl() { "" } else { ".exe" };
 
@@ -111,7 +111,7 @@ fn run_qemu(argv: Vec<String>, xserver: bool) -> anyhow::Result<()> {
     // - Set the number of CPUs to 4.
     // - Set the amount of memory to 512MiB.
     // - Set serial port to qemu stdio.
-    xshell::cmd!("qemu-system-x86_64{qemu_suffix}")
+    let mut command = xshell::cmd!("qemu-system-x86_64{qemu_suffix}")
         .arg("-machine")
         .arg("type=q35")
         .arg("-cpu")
@@ -124,8 +124,15 @@ fn run_qemu(argv: Vec<String>, xserver: bool) -> anyhow::Result<()> {
         .arg("stdio")
         .arg("-drive")
         .arg("format=raw,file=build/aero.img")
-        .args(argv)
-        .run()?;
+        .args(argv);
+
+    if bios.eq("efi") {
+        // FIXME: A simple workaround since xshell moves the value command when we
+        // invoke the `arg` function.
+        command = command.arg("-bios").arg("bundled/ovmf/OVMF-pure-efi.fd");
+    }
+
+    command.run()?;
 
     Ok(())
 }
@@ -287,11 +294,13 @@ fn main() -> anyhow::Result<()> {
                 build_userland()?;
                 build_kernel(target)?;
 
-                bundled::package_files(bios)?;
+                bundled::package_files(bios.clone())?;
 
                 println!("Build took {:?}", now.elapsed());
 
-                run_qemu(qemu_args, xserver)?;
+                let bios = bios.unwrap_or(String::from("legacy"));
+
+                run_qemu(qemu_args, xserver, &bios)?;
             }
 
             AeroBuildCommand::Build { target, bios } => {

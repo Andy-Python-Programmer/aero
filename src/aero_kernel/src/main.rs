@@ -51,9 +51,6 @@
 
 extern crate alloc;
 
-use linked_list_allocator::LockedHeap;
-use mem::paging::{PhysAddr, VirtAddr};
-
 mod acpi;
 mod apic;
 mod arch;
@@ -80,15 +77,18 @@ mod prelude {
     };
 }
 
-use arch::interrupts;
-use userland::scheduler;
-
 use stivale_boot::v2::*;
 
-use crate::userland::task::Task;
+use self::mem::alloc::LockedHeap;
+use self::mem::paging::{PhysAddr, VirtAddr};
+
+use self::arch::interrupts;
+use self::userland::scheduler;
+
+use self::userland::task::Task;
 
 #[global_allocator]
-static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::empty();
+static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::new_uninit();
 
 static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
 

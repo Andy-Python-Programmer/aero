@@ -207,9 +207,6 @@ name = "linked_list_allocator"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0b725207570aa16096962d0b20c79f8a543df2280bd3c903022b9b0b4d7ea68"
-dependencies = [
- "spinning_top",
-]
 
 [[package]]
 name = "lock_api"
@@ -345,15 +342,6 @@ name = "spin"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5fdd7196b4ae35a111c6dc97f9cc152ca3ea8ad744f7cb46a9f27b3ef8f2f54"
-dependencies = [
- "lock_api",
-]
-
-[[package]]
-name = "spinning_top"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75adad84ee84b521fb2cca2d4fd0f1dab1d8d026bda3c5bea4ca63b5f9f9293c"
 dependencies = [
  "lock_api",
 ]
