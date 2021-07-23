@@ -41,9 +41,7 @@ use structopt::StructOpt;
 use std::env;
 use std::fs;
 
-use std::error::Error;
-use std::path::Path;
-use std::process::{Command, ExitStatus};
+use std::path::PathBuf;
 use std::time::Instant;
 
 /// The cargo executable. This constant uses the `CARGO` environment variable to
@@ -54,94 +52,111 @@ const BUNDLED_DIR: &str = "bundled";
 
 mod bundled;
 
-/// Build the kernel by using `cargo build` with the cargo config defined
-/// in the `src\.cargo\config.toml` file.
-fn build_kernel(target: Option<String>) {
+/// Extracts the built executable from output of `cargo build`.
+fn extract_build_artifact(output: &str) -> anyhow::Result<Option<PathBuf>> {
+    let json = json::parse(&output)?;
+
+    // Get the executable path from the provided json output from
+    // cargo.
+    if let Some(executable) = json["executable"].as_str() {
+        Ok(Some(PathBuf::from(executable)))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Builds the kernel with the provided target and returns the executable
+/// path, or an error if the build failed.
+fn build_kernel(target: Option<String>) -> anyhow::Result<PathBuf> {
     println!("INFO: Building kernel");
 
-    let mut kernel_build_cmd = Command::new(CARGO);
+    let _p = xshell::pushd("src");
 
-    kernel_build_cmd.current_dir("src");
+    // Use the provided target, or else use the default target.
+    let target = target.unwrap_or(String::from("x86_64-aero_os"));
+    let executable =
+        xshell::cmd!("{CARGO} build --package aero_kernel --target ./.cargo/{target}.json")
+            .arg("--message-format=json")
+            .read()?
+            .lines()
+            .map(extract_build_artifact)
+            .take_while(Result::is_ok)
+            .map(Result::unwrap)
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .next();
 
-    kernel_build_cmd.arg("build");
-    kernel_build_cmd.arg("--package").arg("aero_kernel");
-
-    // Use the specified target. By default it will build for x86_64-aero_os
-    if let Some(target) = target {
-        kernel_build_cmd
-            .arg("--target")
-            .arg(format!("./.cargo/{}.json", target));
+    if let Some(executable) = executable {
+        Ok(executable)
     } else {
-        kernel_build_cmd
-            .arg("--target")
-            .arg("./.cargo/x86_64-aero_os.json");
-    }
-
-    if !kernel_build_cmd
-        .status()
-        .expect(&format!("Failed to run {:#?}", kernel_build_cmd))
-        .success()
-    {
-        panic!("Failed to build the kernel")
+        // Error out if cargo did not provide us the build artifact.
+        anyhow::bail!("no build atrifact found");
     }
 }
 
-/// Runs Aero in qemu with UEFI as its default mode. By default it will
-/// mount the build directory as a FAT partition instead of creating a seperate
-/// `.fat` file. Check out [AeroBuild] for configuration settings about this.
-fn run_qemu(argv: Vec<String>) -> ExitStatus {
-    let mut qemu_run_cmd = Command::new(format!(
-        "qemu-system-x86_64{}",
-        if is_wsl() { ".exe" } else { "" }
-    ));
+/// Runs Aero in qemu with the provided arguments. This function runs the qemu
+/// executable located in the windows subsystem if the `xserver` argument is false. If true
+/// qemu executable in the linux subsytem is ran and the user is required to
+/// launch an xserver in order to launch Qemu with GUI. On the other you are also
+/// required to set the `xserver` argument to true if you are running Qemu in WSLG. This
+/// function will return an error if the qemu failed to start.
+fn run_qemu(argv: Vec<String>, xserver: bool) -> anyhow::Result<()> {
+    // Calculate the qemu executable suffix.
+    let qemu_suffix = if xserver && is_wsl() { "" } else { ".exe" };
 
-    qemu_run_cmd.args(argv);
-
-    qemu_run_cmd.arg("-machine").arg("type=q35");
-    qemu_run_cmd.arg("-cpu").arg("qemu64,+la57");
-    qemu_run_cmd.arg("-smp").arg("4");
-    qemu_run_cmd.arg("-m").arg("512M");
-    qemu_run_cmd.arg("-serial").arg("stdio");
-
-    qemu_run_cmd
+    // Run the qemu executable. With the following default settings:
+    //
+    // - Set the machine type to q35.
+    // - Set the CPU to the latest intel lake CPUs with 5 level paging support.
+    // - Set the number of CPUs to 4.
+    // - Set the amount of memory to 512MiB.
+    // - Set serial port to qemu stdio.
+    xshell::cmd!("qemu-system-x86_64{qemu_suffix}")
+        .arg("-machine")
+        .arg("type=q35")
+        .arg("-cpu")
+        .arg("qemu64,+la57")
+        .arg("-smp")
+        .arg("4")
+        .arg("-m")
+        .arg("512M")
+        .arg("-serial")
+        .arg("stdio")
         .arg("-drive")
-        .arg("format=raw,file=build/aero.img");
+        .arg("format=raw,file=build/aero.img")
+        .args(argv)
+        .run()?;
 
-    qemu_run_cmd
-        .status()
-        .expect(&format!("Failed to run {:#?}", qemu_run_cmd))
+    Ok(())
 }
 
-/// Build Aero's main webiste including its docs.
-fn build_web() -> Result<(), Box<dyn Error>> {
-    let mut docs_build_cmd = Command::new(CARGO);
+/// Builds and assembled the kernel and userland documentation into the web
+/// build directory. This function will return an error if the documentation
+/// build failed.
+fn build_web(target: Option<String>) -> anyhow::Result<()> {
+    let pushd = xshell::pushd("src");
+    let target = target.unwrap_or(String::from("x86_64-aero_os"));
 
-    docs_build_cmd.current_dir("src");
-    docs_build_cmd.arg("doc");
+    xshell::cmd!("{CARGO} doc --target ./.cargo/{target}.json").run()?;
 
-    // Generate the docs.
-    if !docs_build_cmd
-        .status()
-        .expect(&format!("Failed to run {:#?}", docs_build_cmd))
-        .success()
-    {
-        panic!("Failed to build docs")
-    }
+    core::mem::drop(pushd);
 
-    let cargo_output_dir = Path::new("src")
-        .join("target")
-        .join("x86_64-aero_os")
-        .join("doc");
+    let src_dir = PathBuf::from("src");
+    let web_dir = PathBuf::from("web");
 
-    let build_dir = Path::new("web").join("build");
+    let src_canonical = src_dir.canonicalize()?;
+    let web_canonical = web_dir.canonicalize()?;
 
-    // Create the docs build directory.
+    let out = src_canonical.join("target").join(target).join("doc");
+    let build_dir = web_canonical.join("build");
+
+    // Create the docs build directory if it does not exist.
     fs::create_dir_all(&build_dir)?;
 
     let mut cp_options = CopyOptions::new();
     cp_options.overwrite = true;
 
-    // First move each file from the web/* directory to web/build/*
+    // First move each file from the web directory to the build directory.
     for entry in fs::read_dir("web")? {
         let item = entry?;
 
@@ -150,56 +165,75 @@ fn build_web() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // Now move all of the generated doc files by cargo to web/build/.
-    dir::copy(cargo_output_dir, &build_dir, &cp_options)?;
+    // Move all of the generated documentation files by cargo to the build directory.
+    dir::copy(out, &build_dir, &cp_options)?;
 
     Ok(())
 }
 
-fn build_userland() {
+/// Builds all of the userland applications. This function will return an error
+/// if the build failed.
+fn build_userland() -> anyhow::Result<()> {
     println!("INFO: Building userland");
+    let _p = xshell::pushd("userland");
 
-    let mut build_userland_cmd = Command::new(CARGO);
+    xshell::cmd!("{CARGO} build").run()?;
 
-    build_userland_cmd.current_dir("userland");
-    build_userland_cmd.arg("build");
-
-    if !build_userland_cmd
-        .status()
-        .expect(&format!("Failed to run {:#?}", build_userland_cmd))
-        .success()
-    {
-        panic!("Failed to build docs")
-    }
+    Ok(())
 }
 
 #[derive(Debug, StructOpt)]
 enum AeroBuildCommand {
-    /// Build and run Aero in qemu.
+    /// Builds and runs Aero in the provided `emulator`.
     Run {
+        /// Sets the target triple to the provided `target`.
         #[structopt(long)]
         target: Option<String>,
 
+        /// Assembles the image with the provided BIOS. Possible options are
+        /// `efi` and `legacy`. By default its set to `legacy`.
         #[structopt(long)]
         bios: Option<String>,
 
-        /// Extra command line arguments passed to qemu.
+        /// If set, the the `emulator` executable will run in the linux subsystem
+        /// and the user is required to launch an xserver in order to run the `emulator`.
+        /// If using WSLG, the `xserver` argument must be set to true. On the other hand
+        /// if you have the `emulator` installed in the windows subsystem, then set this
+        /// argument to false (set by default).
+        ///
+        /// ## Notes
+        /// - On Linux, the `xserver` argument is ignored.
+        #[structopt(short, long)]
+        xserver: bool,
+
+        /// Extra command line arguments to pass to the `emulator`.
         #[structopt(last = true)]
         qemu_args: Vec<String>,
     },
 
     Build {
+        /// Sets the target triple to the provided `target`.
         #[structopt(long)]
         target: Option<String>,
 
+        /// Assembles the image with the provided BIOS. Possible options are
+        /// `efi` and `legacy`. By default its set to `legacy`.
         #[structopt(long)]
         bios: Option<String>,
     },
 
-    /// Update all of the OVMF files required for UEFI and bootloader prebuilts.
+    /// Updates all of the build artifacts.
     Update,
+
+    /// Cleans the build directory.
     Clean,
-    Web,
+
+    /// Builds and assembles the documentation.
+    Web {
+        /// Sets the target triple to the provided `target`.
+        #[structopt(long)]
+        target: Option<String>,
+    },
 }
 
 #[derive(Debug, StructOpt)]
@@ -211,7 +245,7 @@ struct AeroBuild {
 /// Helper function to test if the host machine is WSL. For `aero_build` there are no
 /// special requirements for WSL 2 but using WSL version 2 is recommended.
 #[cfg(target_os = "linux")]
-pub fn is_wsl() -> bool {
+fn is_wsl() -> bool {
     if let Ok(info) = std::fs::read("/proc/sys/kernel/osrelease") {
         if let Ok(info_str) = std::str::from_utf8(&info) {
             let info_str = info_str.to_ascii_lowercase();
@@ -225,12 +259,11 @@ pub fn is_wsl() -> bool {
 /// Helper function to test if the host machine is WSL. For `aero_build` there are no
 /// special requirements for WSL 2 but using WSL version 2 is recommended.
 #[cfg(not(target_os = "linux"))]
-pub fn is_wsl() -> bool {
+fn is_wsl() -> bool {
     false
 }
 
-#[tokio::main]
-async fn main() {
+fn main() -> anyhow::Result<()> {
     let aero_build = AeroBuild::from_args();
 
     match aero_build.command {
@@ -238,9 +271,10 @@ async fn main() {
             AeroBuildCommand::Run {
                 qemu_args,
                 target,
+                xserver,
                 bios,
             } => {
-                bundled::fetch().unwrap();
+                bundled::fetch()?;
 
                 /*
                  * Get the current time. This is will be used to caclulate the build time
@@ -248,21 +282,20 @@ async fn main() {
                  */
                 let now = Instant::now();
 
-                bundled::download_ovmf_prebuilt().await.unwrap();
+                bundled::download_ovmf_prebuilt()?;
 
-                build_userland();
-                build_kernel(target);
-                bundled::package_files(bios).unwrap();
+                build_userland()?;
+                build_kernel(target)?;
+
+                bundled::package_files(bios)?;
 
                 println!("Build took {:?}", now.elapsed());
 
-                if !run_qemu(qemu_args).success() {
-                    panic!("Failed to run qemu");
-                }
+                run_qemu(qemu_args, xserver)?;
             }
 
             AeroBuildCommand::Build { target, bios } => {
-                bundled::fetch().unwrap();
+                bundled::fetch()?;
 
                 /*
                  * Get the current time. This is will be used to caclulate the build time
@@ -270,31 +303,31 @@ async fn main() {
                  */
                 let now = Instant::now();
 
-                bundled::download_ovmf_prebuilt().await.unwrap();
+                bundled::download_ovmf_prebuilt()?;
 
-                build_userland();
-                build_kernel(target);
-                bundled::package_files(bios).unwrap();
+                build_userland()?;
+                build_kernel(target)?;
+                bundled::package_files(bios)?;
 
                 println!("Build took {:?}", now.elapsed());
             }
 
             AeroBuildCommand::Update => {
-                bundled::fetch().unwrap();
+                bundled::fetch()?;
 
-                bundled::update_ovmf()
-                    .await
-                    .expect("Failed tp update OVMF files");
+                bundled::update_ovmf()?;
             }
 
             AeroBuildCommand::Clean => {
-                xshell::rm_rf("./src/target").unwrap();
-                xshell::rm_rf("./userland/target").unwrap();
+                xshell::rm_rf("./src/target")?;
+                xshell::rm_rf("./userland/target")?;
             }
 
-            AeroBuildCommand::Web => build_web().unwrap(),
+            AeroBuildCommand::Web { target } => build_web(target)?,
         },
 
         None => {}
     }
+
+    Ok(())
 }

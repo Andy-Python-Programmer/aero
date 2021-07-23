@@ -18,54 +18,45 @@
  */
 
 use std::fs;
-
-use std::error::Error;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::BUNDLED_DIR;
 
 const PREBUILT_OVMF_URL: &str =
     "https://github.com/rust-osdev/ovmf-prebuilt/releases/latest/download/";
 
-const OVMF_FILES: [&str; 3] = [
-    "OVMF-pure-efi.fd",
-    "OVMF_CODE-pure-efi.fd",
-    "OVMF_VARS-pure-efi.fd",
-];
+const OVMF_FILES: [&str; 1] = ["OVMF-pure-efi.fd"];
 
 /// Download the latest release of the OVMF prebuilt files from `https://github.com/rust-osdev/ovmf-prebuilt`
 /// and save them in the bundled/ovmf directory.
-///
-/// **Note**: The existing OVMF files will be overwritten.
-pub async fn update_ovmf() -> Result<(), Box<dyn Error>> {
-    let ovmf_out_dir = Path::new(BUNDLED_DIR).join("ovmf");
+pub fn update_ovmf() -> anyhow::Result<()> {
+    let bundled = PathBuf::from("./bundled");
+    let bundled_canonical = bundled.canonicalize()?;
 
-    fs::create_dir_all(&ovmf_out_dir)?;
+    let ovmf_out_dir = bundled_canonical.join("ovmf");
+
+    fs::create_dir_all(&ovmf_out_dir)?; // Create the directory if it doesn't exist
 
     for ovmf_file in OVMF_FILES.iter() {
         println!("INFO: Downloading {}", ovmf_file);
 
-        let response = reqwest::get(format!("{}{}", PREBUILT_OVMF_URL, ovmf_file)).await?;
-        let bytes = response.bytes().await?;
-
-        let mut output = File::create(ovmf_out_dir.join(ovmf_file))?;
-        output.write_all(bytes.as_ref())?;
+        xshell::cmd!("curl")
+            .arg("--location")
+            .arg(format!("{}{}", PREBUILT_OVMF_URL, ovmf_file))
+            .arg("--output")
+            .arg(format!("{}", ovmf_out_dir.join(ovmf_file).display()))
+            .run()?;
     }
 
     Ok(())
 }
 
-/// Run [update_ovmf] if the OVMF files do not exist.
-///
-/// **Note**: To update the existing OVMF files run `cargo boot update`.
-pub async fn download_ovmf_prebuilt() -> Result<(), Box<dyn Error>> {
+pub fn download_ovmf_prebuilt() -> anyhow::Result<()> {
     let ovmf_out_dir = Path::new(BUNDLED_DIR).join("ovmf");
 
     for ovmf_file in OVMF_FILES.iter() {
         if !ovmf_out_dir.join(ovmf_file).exists() {
-            update_ovmf().await?;
+            update_ovmf()?;
 
             return Ok(());
         }
@@ -74,7 +65,7 @@ pub async fn download_ovmf_prebuilt() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn fetch() -> Result<(), Box<dyn Error>> {
+pub fn fetch() -> anyhow::Result<()> {
     xshell::mkdir_p(BUNDLED_DIR)?;
 
     let bundled_dir = Path::new(BUNDLED_DIR).canonicalize()?;
@@ -96,13 +87,13 @@ pub fn fetch() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn package_files(bios: Option<String>) -> Result<(), Box<dyn Error>> {
+pub fn package_files(bios: Option<String>) -> anyhow::Result<()> {
     xshell::cmd!("chmod +x ./tools/build_image.sh").run()?;
 
     match bios.as_deref() {
         Some("legacy") | None => xshell::cmd!("./tools/build_image.sh -b").run()?,
         Some("efi") => xshell::cmd!("./tools/build_image.sh -e").run()?,
-        Some(_) => panic!()
+        Some(_) => panic!(),
     }
 
     Ok(())
