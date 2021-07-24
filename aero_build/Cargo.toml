@@ -5,7 +5,7 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-structopt = "0.3.21"
+structopt = "0.3.22"
 fs_extra = "1.2.0"
 xshell = "0.1.14"
 json = "0.12.4"
