@@ -52,6 +52,18 @@ const BUNDLED_DIR: &str = "bundled";
 
 mod bundled;
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum BuildType {
+    Debug,
+    Release,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Bios {
+    Legacy,
+    Uefi,
+}
+
 /// Extracts the built executable from output of `cargo build`.
 fn extract_build_artifact(output: &str) -> anyhow::Result<Option<PathBuf>> {
     let json = json::parse(&output)?;
@@ -67,24 +79,32 @@ fn extract_build_artifact(output: &str) -> anyhow::Result<Option<PathBuf>> {
 
 /// Builds the kernel with the provided target and returns the executable
 /// path, or an error if the build failed.
-fn build_kernel(target: Option<String>) -> anyhow::Result<PathBuf> {
+fn build_kernel(target: Option<String>, build_type: BuildType) -> anyhow::Result<PathBuf> {
     println!("INFO: Building kernel");
 
     let _p = xshell::pushd("src");
 
     // Use the provided target, or else use the default target.
     let target = target.unwrap_or(String::from("x86_64-aero_os"));
-    let executable =
-        xshell::cmd!("{CARGO} build --package aero_kernel --target ./.cargo/{target}.json")
-            .arg("--message-format=json")
-            .read()?
-            .lines()
-            .map(extract_build_artifact)
-            .take_while(Result::is_ok)
-            .map(Result::unwrap)
-            .filter(Option::is_some)
-            .map(Option::unwrap)
-            .next();
+    let mut command = xshell::cmd!(
+        "{CARGO} build --package aero_kernel --target ./.cargo/{target}.json --message-format=json"
+    );
+
+    if build_type == BuildType::Release {
+        // FIXME: A simple workaround since xshell moves the value command when we
+        // invoke the `arg` function.
+        command = command.arg("--release");
+    }
+
+    let executable = command
+        .read()?
+        .lines()
+        .map(extract_build_artifact)
+        .take_while(Result::is_ok)
+        .map(Result::unwrap)
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .next();
 
     if let Some(executable) = executable {
         Ok(executable)
@@ -100,7 +120,7 @@ fn build_kernel(target: Option<String>) -> anyhow::Result<PathBuf> {
 /// launch an xserver in order to launch Qemu with GUI. On the other you are also
 /// required to set the `xserver` argument to true if you are running Qemu in WSLG. This
 /// function will return an error if the qemu failed to start.
-fn run_qemu(argv: Vec<String>, xserver: bool, bios: &str) -> anyhow::Result<()> {
+fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> {
     // Calculate the qemu executable suffix.
     let qemu_suffix = if xserver && is_wsl() { "" } else { ".exe" };
 
@@ -126,7 +146,7 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: &str) -> anyhow::Result<()> 
         .arg("format=raw,file=build/aero.img")
         .args(argv);
 
-    if bios.eq("efi") {
+    if bios == Bios::Uefi {
         // FIXME: A simple workaround since xshell moves the value command when we
         // invoke the `arg` function.
         command = command.arg("-bios").arg("bundled/ovmf/OVMF-pure-efi.fd");
@@ -197,6 +217,11 @@ enum AeroBuildCommand {
         #[structopt(long)]
         target: Option<String>,
 
+        /// If set, the kernel will be compiled in release mode. If you are debugging
+        /// this option should be set to false.
+        #[structopt(short, long)]
+        release: bool,
+
         /// Assembles the image with the provided BIOS. Possible options are
         /// `efi` and `legacy`. By default its set to `legacy`.
         #[structopt(long)]
@@ -208,8 +233,7 @@ enum AeroBuildCommand {
         /// if you have the `emulator` installed in the windows subsystem, then set this
         /// argument to false (set by default).
         ///
-        /// ## Notes
-        /// - On Linux, the `xserver` argument is ignored.
+        /// Note: On Linux, the `xserver` argument is ignored.
         #[structopt(short, long)]
         xserver: bool,
 
@@ -222,6 +246,11 @@ enum AeroBuildCommand {
         /// Sets the target triple to the provided `target`.
         #[structopt(long)]
         target: Option<String>,
+
+        /// If set, the kernel will be compiled in release mode. If you are debugging
+        /// this option should be set to false.
+        #[structopt(short, long)]
+        release: bool,
 
         /// Assembles the image with the provided BIOS. Possible options are
         /// `efi` and `legacy`. By default its set to `legacy`.
@@ -279,8 +308,21 @@ fn main() -> anyhow::Result<()> {
                 qemu_args,
                 target,
                 xserver,
+                release,
                 bios,
             } => {
+                let build_type = if release {
+                    BuildType::Release
+                } else {
+                    BuildType::Debug
+                };
+
+                let bios = match bios.as_deref() {
+                    Some("legacy") | None => Bios::Legacy,
+                    Some("uefi") => Bios::Uefi,
+                    Some(v) => anyhow::bail!("unsupported bios `{}`", v),
+                };
+
                 bundled::fetch()?;
 
                 /*
@@ -292,18 +334,32 @@ fn main() -> anyhow::Result<()> {
                 bundled::download_ovmf_prebuilt()?;
 
                 build_userland()?;
-                build_kernel(target)?;
+                build_kernel(target, build_type)?;
 
-                bundled::package_files(bios.clone())?;
+                bundled::package_files(bios, build_type)?;
 
                 println!("Build took {:?}", now.elapsed());
 
-                let bios = bios.unwrap_or(String::from("legacy"));
-
-                run_qemu(qemu_args, xserver, &bios)?;
+                run_qemu(qemu_args, xserver, bios)?;
             }
 
-            AeroBuildCommand::Build { target, bios } => {
+            AeroBuildCommand::Build {
+                target,
+                bios,
+                release,
+            } => {
+                let build_type = if release {
+                    BuildType::Release
+                } else {
+                    BuildType::Debug
+                };
+
+                let bios = match bios.as_deref() {
+                    Some("legacy") | None => Bios::Legacy,
+                    Some("uefi") => Bios::Uefi,
+                    Some(v) => anyhow::bail!("unsupported bios `{}`", v),
+                };
+
                 bundled::fetch()?;
 
                 /*
@@ -315,8 +371,8 @@ fn main() -> anyhow::Result<()> {
                 bundled::download_ovmf_prebuilt()?;
 
                 build_userland()?;
-                build_kernel(target)?;
-                bundled::package_files(bios)?;
+                build_kernel(target, build_type)?;
+                bundled::package_files(bios, build_type)?;
 
                 println!("Build took {:?}", now.elapsed());
             }

@@ -20,7 +20,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::BUNDLED_DIR;
+use crate::{Bios, BuildType, BUNDLED_DIR};
 
 const PREBUILT_OVMF_URL: &str =
     "https://github.com/rust-osdev/ovmf-prebuilt/releases/latest/download/";
@@ -87,13 +87,19 @@ pub fn fetch() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn package_files(bios: Option<String>) -> anyhow::Result<()> {
+pub fn package_files(bios: Bios, mode: BuildType) -> anyhow::Result<()> {
     xshell::cmd!("chmod +x ./tools/build_image.sh").run()?;
 
-    match bios.as_deref() {
-        Some("legacy") | None => xshell::cmd!("./tools/build_image.sh -b").run()?,
-        Some("efi") => xshell::cmd!("./tools/build_image.sh -e").run()?,
-        Some(_) => panic!(),
+    match (bios, mode) {
+        (Bios::Legacy, BuildType::Debug) => xshell::cmd!("./tools/build_image.sh -b").run()?,
+        (Bios::Legacy, BuildType::Release) => xshell::cmd!("./tools/build_image.sh -b")
+            .env("RELEASE", "1")
+            .run()?,
+
+        (Bios::Uefi, BuildType::Debug) => xshell::cmd!("./tools/build_image.sh -e").run()?,
+        (Bios::Uefi, BuildType::Release) => xshell::cmd!("./tools/build_image.sh -e")
+            .env("RELEASE", "1")
+            .run()?,
     }
 
     Ok(())
