@@ -110,12 +110,25 @@ impl LockedHeap {
 
 unsafe impl GlobalAlloc for LockedHeap {
     unsafe fn alloc(&self, layout: alloc::Layout) -> *mut u8 {
-        let pointer = self
-            .allocate(layout)
-            .ok()
-            .map_or(0 as *mut u8, |alloc| alloc.as_ptr());
+        debug_assert!(layout.align().is_power_of_two());
 
-        pointer
+        // Rounded up size is:
+        //   size_rounded_up = (size + align - 1) & !(align - 1);
+        //
+        // We know from above that align != 0. If adding (align - 1)
+        // does not overflow, then rounding up will be fine.
+        //
+        // Conversely, &-masking with !(align - 1) will subtract off
+        // only low-order-bits. Thus if overflow occurs with the sum,
+        // the &-mask cannot subtract enough to undo that overflow.
+        //
+        // Above implies that checking for summation overflow is both
+        // necessary and sufficient.
+        debug_assert!(layout.size() < usize::MAX - (layout.align() - 1));
+
+        self.allocate(layout)
+            .ok()
+            .map_or(0 as *mut u8, |alloc| alloc.as_ptr())
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {

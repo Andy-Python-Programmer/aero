@@ -1,11 +1,2 @@
 [workspace]
 members = ["aero_kernel", "aero_syscall"]
-
-[profile.dev]
-opt-level = 3
-lto = true
-debug = true
-
-[profile.release]
-lto = true
-debug = true

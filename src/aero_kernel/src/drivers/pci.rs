@@ -17,18 +17,14 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::mem;
-
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
 use spin::mutex::SpinMutex;
 
-use crate::{
-    acpi::mcfg::{self, DeviceConfig, Mcfg},
-    mem::paging::OffsetPageTable,
-    utils::io,
-};
+use crate::acpi::mcfg;
+use crate::mem::paging::OffsetPageTable;
+use crate::utils::io;
 
 use bit_field::BitField;
 
@@ -563,21 +559,7 @@ pub fn init(offset_table: &mut OffsetPageTable) {
     // Check if the MCFG table is avaliable.
     if mcfg::is_avaliable() {
         let mcfg_table = mcfg::get_mcfg_table();
-        let entry_count = mcfg_table.entry_count();
-
-        /*
-         * Since the MCFG table is avaliable now, we will use the device
-         * config provided by it to retrieve the bus start and bus end
-         * variables to speed up the search process.
-         */
-        for i in 0..entry_count {
-            let mcfg_addr = unsafe { *(mcfg_table as *const _ as *const usize) };
-            let offset = mem::size_of::<Mcfg>() + (mem::size_of::<DeviceConfig>() * i);
-
-            let device_config = unsafe { &*((mcfg_addr + offset) as *const DeviceConfig) };
-
-            for _ in device_config.start_bus..device_config.end_bus {}
-        }
+        let _entry_count = mcfg_table.entry_count();
     }
 
     /*

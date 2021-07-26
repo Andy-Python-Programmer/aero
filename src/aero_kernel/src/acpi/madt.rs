@@ -86,10 +86,10 @@ impl Madt {
                     }
 
                     let stack_top = unsafe {
-                        let layout = Layout::from_size_align_unchecked(4096, 4096);
+                        let layout = Layout::from_size_align_unchecked(4096 * 16, 4096);
                         let raw = alloc_zeroed(layout);
 
-                        raw.offset(4096)
+                        raw.offset(4096 * 16)
                     };
 
                     let mode = if paging::level_5_paging_enabled() {

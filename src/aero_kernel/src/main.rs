@@ -101,11 +101,14 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
-const STACK_SIZE: usize = 4096;
+#[repr(C, align(4096))]
+struct P2Align12<T>(T);
+
+const STACK_SIZE: usize = 4096 * 16;
 
 /// We need to tell the stivale bootloader where we want our stack to be.
 /// We are going to allocate our stack as an uninitialised array in .bss.
-static STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+static STACK: P2Align12<[u8; STACK_SIZE]> = P2Align12([0; STACK_SIZE]);
 
 /// We are now going to define a framebuffer header tag. This tag tells the bootloader that
 /// we want a graphical framebuffer instead of a CGA-compatible text mode. Omitting this tag will
@@ -127,7 +130,7 @@ static PAGING_TAG: Stivale5LevelPagingHeaderTag = Stivale5LevelPagingHeaderTag::
 #[no_mangle]
 #[used]
 static STIVALE_HDR: StivaleHeader = StivaleHeader::new()
-    .stack(&STACK[STACK_SIZE - 1] as *const u8)
+    .stack(&STACK.0[STACK_SIZE - 4096] as *const u8)
     .tags((&FRAMEBUFFER_TAG as *const StivaleFramebufferHeaderTag).cast());
 
 #[thread_local]
@@ -148,8 +151,13 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
         .expect("Aero requires the bootloader to provide a non-null framebuffer tag");
 
     let rsdp_address = unsafe { PhysAddr::new_unsafe(rsdp_tag.rsdp) };
+
+    // Note: STACK_SIZE - 1 points to the last u8 in the array, i.e.
+    // it's guaranteed to be at an address with its least significant bit
+    // being a 1, i.e. it never has an alignment greater than 1. STACK_SIZE - 4096
+    // points to the last u8 in STACK, that is aligned to 4096.
     let stack_top_addr =
-        unsafe { VirtAddr::new_unsafe((&STACK[STACK_SIZE - 1] as *const u8) as _) };
+        unsafe { VirtAddr::new_unsafe((&STACK.0[STACK_SIZE - 4096] as *const u8) as _) };
 
     /*
      * NOTE: In this function we only want to initialize essential serivces, including
