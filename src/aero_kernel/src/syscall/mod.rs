@@ -125,7 +125,7 @@ intel_fn! {
         "push QWORD PTR 6 * 8 + 3\n", // Push fake CS resembling `iret` stack frame.
         "push rcx\n", // Push userspace return pointer.
 
-        "call restore_kernel_tls\n", // Restore the kernel thread local storage.
+        "call restore_kernel_fs_base_locked\n", // Restore the kernel thread local storage.
 
         "push rax\n",
         crate::prelude::push_scratch!(),

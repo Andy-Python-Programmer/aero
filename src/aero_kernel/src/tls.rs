@@ -128,45 +128,6 @@ pub fn init() {
     }
 }
 
-intel_fn! {
-    /**
-     * This function is responsible for restoring the kernel thread local
-     * storage. Since this function is called on every syscall, it needs to
-     * be implemented in assembly to avoid lots of rust checks comming in place.
-     *
-     * ## `#[allow(unused)]`
-     * Since this function is only invoked in assembly, we need to add the attribute
-     * `unused` as the [intel_fn] macro auto externs the functions for us.
-     *
-     * ## Saftey
-     * Needs to be called under locked conditions. Ie. You need to call `swapgs` before
-     * invoking this function.
-     */
-    #[allow(unused)]
-    pub extern "asm" fn restore_kernel_tls() {
-        "push rbx\n",
-        "push rdx\n",
-        "push rcx\n",
-        "push rax\n",
-
-        "mov rbx, QWORD PTR gs:[104]\n", // Offset into TSS holding kernel tls base the current cpu.
-        "mov ecx, 0xC0000100\n", // IA32_FS_BASE
-
-        "mov eax, ebx\n",
-        "shr rbx, 32\n",
-        "mov edx, ebx\n",
-
-        "wrmsr\n",
-
-        "pop rax\n",
-        "pop rcx\n",
-        "pop rdx\n",
-        "pop rbx\n",
-
-        "ret\n",
-    }
-}
-
 #[no_mangle]
 extern "C" fn restore_user_tls() {
     log::trace!("Restoring user TLS...");

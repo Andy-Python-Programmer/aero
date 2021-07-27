@@ -319,7 +319,7 @@ pub fn init_boot() {
             (&BOOT_GDT as *const _) as u64,
         );
 
-        load_gdt(&gdt_descriptor as *const _);
+        load_gdt(&gdt_descriptor);
     }
 
     // Load the GDT segments.
@@ -352,7 +352,7 @@ pub fn init(stack_top: VirtAddr) {
             (&GDT as *const _) as u64,
         );
 
-        load_gdt(&gdt_descriptor as *const _);
+        load_gdt(&gdt_descriptor);
 
         io::wrmsr(io::IA32_KERNEL_GSBASE, tss_ptr as *mut _ as u64);
 
@@ -411,6 +411,6 @@ unsafe fn load_tss(selector: SegmentSelector) {
 }
 
 #[inline(always)]
-unsafe fn load_gdt(gdt_descriptor: *const GdtDescriptor) {
+unsafe fn load_gdt(gdt_descriptor: &GdtDescriptor) {
     asm!("lgdt [{}]", in(reg) gdt_descriptor, options(nostack));
 }
