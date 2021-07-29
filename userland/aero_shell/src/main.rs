@@ -1,23 +1,44 @@
 /*
- * Copyright 2021 The Aero Project Developers. See the COPYRIGHT
- * file at the top-level directory of this project.
+ * Copyright (C) 2021 The Aero Project Developers.
  *
- * Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
- * http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
- * <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
- * option. This file may not be copied, modified, or distributed
- * except according to those terms.
+ * This file is part of The Aero Project.
+ *
+ * Aero is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Aero is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-static TEST_BSS_NON_ZERO: usize = usize::MAX;
-static TEST_BSS_ZEROED: usize = 0x00;
+#![feature(lang_items, asm)]
+#![no_std]
+#![no_main]
 
-fn main() {
-    {
-        assert!(TEST_BSS_ZEROED == 0x00);
-        assert!(TEST_BSS_NON_ZERO == usize::MAX);
-    }
+use core::panic::PanicInfo;
 
-    aero_syscall::sys_open("/dev/stdout", 0x00);
-    aero_syscall::sys_write(1, "Hello, World".as_bytes());
+#[no_mangle]
+extern "C" fn _start() {
+    aero_syscall::sys_write(1, b"Hello, World!");
+    aero_syscall::sys_exit(0x00);
 }
+
+#[panic_handler]
+extern "C" fn rust_begin_unwind(_info: &PanicInfo) -> ! {
+    aero_syscall::sys_exit(0x01);
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+extern "C" fn _Unwind_Resume() -> ! {
+    loop {}
+}
+
+#[lang = "eh_personality"]
+extern "C" fn eh_personality() {}

@@ -454,6 +454,7 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
         if !p2[page.p2_index()].is_unused() {
             return Err(MapToError::PageAlreadyMapped(frame));
         }
+
         p2[page.p2_index()].set_addr(frame.start_address(), flags | PageTableFlags::HUGE_PAGE);
 
         Ok(MapperFlush::new(page))
@@ -600,7 +601,16 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size2MiB> for MappedPageTable<'a, P> {
     }
 
     fn translate_page(&self, page: Page<Size2MiB>) -> Result<PhysFrame<Size2MiB>, TranslateError> {
-        let p4 = &self.page_table;
+        let p4;
+
+        if self.level_5_paging_enabled {
+            let p5 = &self.page_table;
+
+            p4 = self.page_table_walker.next_table(&p5[page.p5_index()])?;
+        } else {
+            p4 = &self.page_table;
+        }
+
         let p3 = self.page_table_walker.next_table(&p4[page.p4_index()])?;
         let p2 = self.page_table_walker.next_table(&p3[page.p3_index()])?;
 
@@ -705,7 +715,16 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size4KiB> for MappedPageTable<'a, P> {
     }
 
     fn translate_page(&self, page: Page<Size4KiB>) -> Result<PhysFrame<Size4KiB>, TranslateError> {
-        let p4 = &self.page_table;
+        let p4;
+
+        if self.level_5_paging_enabled {
+            let p5 = &self.page_table;
+
+            p4 = self.page_table_walker.next_table(&p5[page.p5_index()])?;
+        } else {
+            p4 = &self.page_table;
+        }
+
         let p3 = self.page_table_walker.next_table(&p4[page.p4_index()])?;
         let p2 = self.page_table_walker.next_table(&p3[page.p3_index()])?;
         let p1 = self.page_table_walker.next_table(&p2[page.p2_index()])?;
@@ -724,7 +743,22 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size4KiB> for MappedPageTable<'a, P> {
 impl<'a, P: PageTableFrameMapping> Translate for MappedPageTable<'a, P> {
     #[allow(clippy::inconsistent_digit_grouping)]
     fn translate(&self, addr: VirtAddr) -> TranslateResult {
-        let p4 = &self.page_table;
+        let p4;
+
+        if self.level_5_paging_enabled {
+            let p5 = &self.page_table;
+
+            p4 = match self.page_table_walker.next_table(&p5[addr.p5_index()]) {
+                Ok(page_table) => page_table,
+                Err(PageTableWalkError::NotMapped) => return TranslateResult::NotMapped,
+                Err(PageTableWalkError::MappedToHugePage) => {
+                    panic!("level 4 entry has huge page bit set")
+                }
+            };
+        } else {
+            p4 = &self.page_table;
+        }
+
         let p3 = match self.page_table_walker.next_table(&p4[addr.p4_index()]) {
             Ok(page_table) => page_table,
             Err(PageTableWalkError::NotMapped) => return TranslateResult::NotMapped,

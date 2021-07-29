@@ -38,6 +38,7 @@
     global_asm,
     ptr_internals,
     const_fn_trait_bound,
+    linked_list_cursors,
     extern_types,
     new_uninit,
     box_syntax,
@@ -45,6 +46,7 @@
     arc_new_cyclic,
     const_btree_new // TODO: Do not abuse nightly rust :D
 )]
+#![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]
 #![no_main]
@@ -69,7 +71,6 @@ mod userland;
 mod utils;
 mod prelude {
     pub use crate::drivers::uart_16550::{serial_print, serial_println};
-    pub use crate::mem::{memcmp, memcpy, memmove, memset};
     pub use crate::rendy::{print, println};
     pub use crate::utils::{
         const_unsafe, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
@@ -150,14 +151,13 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
         .framebuffer()
         .expect("Aero requires the bootloader to provide a non-null framebuffer tag");
 
-    let rsdp_address = unsafe { PhysAddr::new_unsafe(rsdp_tag.rsdp) };
+    let rsdp_address = PhysAddr::new(rsdp_tag.rsdp);
 
     // Note: STACK_SIZE - 1 points to the last u8 in the array, i.e.
     // it's guaranteed to be at an address with its least significant bit
     // being a 1, i.e. it never has an alignment greater than 1. STACK_SIZE - 4096
     // points to the last u8 in STACK, that is aligned to 4096.
-    let stack_top_addr =
-        unsafe { VirtAddr::new_unsafe((&STACK.0[STACK_SIZE - 4096] as *const u8) as _) };
+    let stack_top_addr = VirtAddr::new((&STACK.0[STACK_SIZE - 4096] as *const u8) as _);
 
     /*
      * NOTE: In this function we only want to initialize essential serivces, including
@@ -171,9 +171,9 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     }
 
     if mem::paging::level_5_paging_enabled() {
-        unsafe { PHYSICAL_MEMORY_OFFSET = VirtAddr::new_unsafe(0xff00000000000000) }
+        unsafe { PHYSICAL_MEMORY_OFFSET = VirtAddr::new(0xff00000000000000) }
     } else {
-        unsafe { PHYSICAL_MEMORY_OFFSET = VirtAddr::new_unsafe(0xffff800000000000) }
+        unsafe { PHYSICAL_MEMORY_OFFSET = VirtAddr::new(0xffff800000000000) }
     }
 
     /*
@@ -234,7 +234,7 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
      * Now that all of the essential initialization is done we are going to schedule
      * the kernel main thread.
      */
-    let init = unsafe { Task::new_kernel(VirtAddr::new_unsafe(kernel_main_thread as u64)) };
+    let init = Task::new_kernel(VirtAddr::new(kernel_main_thread as u64));
     scheduler::get_scheduler().register_task(init);
 
     /*

@@ -766,7 +766,7 @@ impl AhciProtected {
 
                 if port.probe(i) {
                     // Get the address of the HBA port.
-                    let address = unsafe { VirtAddr::new_unsafe(port as *const _ as _) };
+                    let address = VirtAddr::new(port as *const _ as _);
 
                     drop(port); // Drop the reference to the port.
                     drop(hba); // Drop the reference to the HBA.

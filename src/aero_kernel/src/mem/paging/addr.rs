@@ -60,35 +60,8 @@ pub struct VirtAddrNotValid(u64);
 
 impl VirtAddr {
     /// Creates a new canonical virtual address.
-    ///
-    /// This function performs sign extension of bit 47 to make the address canonical.
     #[inline]
     pub fn new(addr: u64) -> VirtAddr {
-        match addr.get_bits(47..64) {
-            1 => VirtAddr::new_truncate(addr), // address needs sign extension
-            _ => VirtAddr(addr),
-        }
-    }
-
-    /// Creates a new canonical virtual address, throwing out bits 48..64.
-    ///
-    /// This function performs sign extension of bit 47 to make the address canonical, so
-    /// bits 48 to 64 are overwritten. If you want to check that these bits contain no data,
-    /// use `new` or `try_new`.
-    #[inline]
-    pub const fn new_truncate(addr: u64) -> VirtAddr {
-        // By doing the right shift as a signed operation (on a i64), it will
-        // sign extend the value, repeating the leftmost bit.
-        VirtAddr(((addr << 16) as i64 >> 16) as u64)
-    }
-
-    /// Creates a new virtual address, without any checks.
-    ///
-    /// ## Safety
-    ///
-    /// You must make sure bits 48..64 are equal to bit 47. This is not checked.
-    #[inline]
-    pub const unsafe fn new_unsafe(addr: u64) -> VirtAddr {
         VirtAddr(addr)
     }
 
@@ -127,6 +100,17 @@ impl VirtAddr {
         U: Into<u64>,
     {
         VirtAddr(align_down(self.0, align.into()))
+    }
+
+    /// Aligns the virtual address upwards to the given alignment.
+    ///
+    /// See the `align_up` function for more information.
+    #[inline]
+    pub fn align_up<U>(self, align: U) -> Self
+    where
+        U: Into<u64>,
+    {
+        VirtAddr(align_up(self.0, align.into()))
     }
 
     /// Returns the 12-bit page offset of this virtual address.
@@ -303,16 +287,6 @@ impl PhysAddr {
         PhysAddr(addr)
     }
 
-    /// Creates a new physical address, without any checks.
-    ///
-    /// ## Safety
-    ///
-    /// You must make sure bits 52..64 are zero. This is not checked.
-    #[inline]
-    pub const unsafe fn new_unsafe(addr: u64) -> PhysAddr {
-        PhysAddr(addr)
-    }
-
     /// Converts the address to an `u64`.
     #[inline]
     pub const fn as_u64(self) -> u64 {
@@ -463,4 +437,21 @@ impl Sub<PhysAddr> for PhysAddr {
 pub fn align_down(addr: u64, align: u64) -> u64 {
     assert!(align.is_power_of_two(), "`align` must be a power of two");
     addr & !(align - 1)
+}
+
+/// Align address upwards.
+///
+/// Returns the smallest `x` with alignment `align` so that `x >= addr`.
+///
+/// Panics if the alignment is not a power of two. Without the `const_fn`
+/// feature, the panic message will be "index out of bounds".
+#[inline]
+pub fn align_up(addr: u64, align: u64) -> u64 {
+    let align_mask = align - 1;
+
+    if addr & align_mask == 0 {
+        addr // already aligned
+    } else {
+        (addr | align_mask) + 1
+    }
 }

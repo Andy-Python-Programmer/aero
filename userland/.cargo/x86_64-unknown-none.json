@@ -10,6 +10,5 @@
     "linker-flavor": "ld.lld",
     "linker": "rust-lld",
     "disable-redzone": true,
-    "features": "-mmx,-sse,+soft-float",
-    "panic-strategy": "abort"
+    "features": "-mmx,-sse,+soft-float"
 }

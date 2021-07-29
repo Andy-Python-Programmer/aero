@@ -13,6 +13,24 @@ pub mod prelude {
     pub use crate::{AeroSyscallError, AeroSyscallResult};
 }
 
+bitflags::bitflags! {
+    pub struct MMapProt: usize {
+        const PROT_READ = 0x1;
+        const PROT_WRITE = 0x2;
+        const PROT_EXEC = 0x4;
+        const PROT_NONE = 0x0;
+    }
+}
+
+bitflags::bitflags! {
+    pub struct MMapFlags: usize {
+        const MAP_PRIVATE = 0x1;
+        const MAP_SHARED = 0x2;
+        const MAP_FIXED = 0x4;
+        const MAP_ANONYOMUS = 0x8;
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(isize)]
 pub enum AeroSyscallError {

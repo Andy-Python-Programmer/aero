@@ -4,9 +4,3 @@ build-std-features = ["compiler-builtins-mem"]
 
 [build]
 target = "./.cargo/x86_64-unknown-none.json"
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"

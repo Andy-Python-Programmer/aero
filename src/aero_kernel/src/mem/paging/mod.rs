@@ -77,31 +77,19 @@ pub fn level_5_paging_enabled() -> bool {
 pub fn init(
     memory_regions: &'static StivaleMemoryMapTag,
 ) -> Result<OffsetPageTable<'static>, MapToError<Size4KiB>> {
+    let memory_regions = unsafe {
+        let addr = (memory_regions as *const StivaleMemoryMapTag) as u64;
+        let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
+
+        &*new_addr.as_mut_ptr::<StivaleMemoryMapTag>()
+    };
+
     let active_level_4 = unsafe { active_level_4_table() };
     let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };
 
     unsafe {
         FRAME_ALLOCATOR.init(memory_regions);
     }
-
-    /*
-     * Create a new page table for the kernel rather then using the one provided
-     * by the bootloader. This allows us to add support for modern features. For example,
-     * 5-level page tables and more.
-     */
-    let _: OffsetPageTable<'static> = unsafe {
-        let frame = FRAME_ALLOCATOR
-            .allocate_frame()
-            .ok_or(MapToError::FrameAllocationFailed)?;
-
-        let phys_addr = frame.start_address();
-        let virt_addr = PHYSICAL_MEMORY_OFFSET + phys_addr.as_u64();
-
-        let page_table: *mut PageTable = virt_addr.as_mut_ptr();
-        let page_table = &mut *page_table;
-
-        OffsetPageTable::new(page_table, PHYSICAL_MEMORY_OFFSET)
-    };
 
     Ok(offset_table)
 }

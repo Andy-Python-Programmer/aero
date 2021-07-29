@@ -194,6 +194,6 @@ pub fn read_cr2() -> VirtAddr {
         // Do not perform address checks on the address stored in the
         // CR2 control register as we want the address to be accurate and
         // not tranucated in the [`VirtAddr::new`] function.
-        VirtAddr::new_unsafe(value)
+        VirtAddr::new(value)
     }
 }

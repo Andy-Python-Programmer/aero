@@ -19,7 +19,7 @@ dependencies = [
  "lru",
  "nasm-rs",
  "paste",
- "raw-cpuid 10.0.0",
+ "raw-cpuid",
  "rustc-demangle",
  "spin 0.9.2",
  "stivale-boot",
@@ -31,9 +31,6 @@ name = "aero_syscall"
 version = "0.1.0"
 dependencies = [
  "bitflags",
- "cfg-if",
- "raw-cpuid 9.0.0",
- "spin 0.9.2",
 ]
 
 [[package]]
@@ -283,15 +280,6 @@ name = "paste"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
-
-[[package]]
-name = "raw-cpuid"
-version = "9.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c27cb5785b85bd05d4eb171556c9a1a514552e26123aeae6bb7d811353148026"
-dependencies = [
- "bitflags",
-]
 
 [[package]]
 name = "raw-cpuid"

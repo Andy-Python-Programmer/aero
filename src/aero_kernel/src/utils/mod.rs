@@ -25,7 +25,6 @@ use crate::{apic::get_cpu_count, arch::interrupts};
 pub mod buffer;
 pub mod io;
 pub mod linker;
-pub mod stack;
 
 pub fn validate_slice<T>(ptr: *const T, len: usize) -> Option<&'static [T]> {
     if len == 0 {

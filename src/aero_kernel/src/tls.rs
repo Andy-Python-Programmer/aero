@@ -37,8 +37,6 @@ use crate::arch::gdt::TASK_STATE_SEGMENT;
 use crate::utils::io;
 use crate::utils::linker::LinkerSymbol;
 
-use crate::prelude::*;
-
 static THREAD_LOCAL_STORAGE: Once<ThreadLocalStorage> = Once::new();
 
 /// The TCB (Thread Control Block) containg the self pointer to itself and that means
@@ -114,7 +112,7 @@ pub fn init() {
      * SAFTEY: The fs pointer and tcb offset are guaranteed to be correct.
      */
     unsafe {
-        io::wrmsr(io::IA32_FS_BASE, tcb_offset as u64);
+        io::wrmsr(io::IA32_FS_BASE, tcb_offset);
 
         *tcb_ptr = tcb_offset;
     }
@@ -124,11 +122,17 @@ pub fn init() {
 
     // SAFTEY: Safe to access thread local variables as at this point are accessible.
     unsafe {
-        TASK_STATE_SEGMENT.set_kernel_fs(tcb_offset as u64);
+        TASK_STATE_SEGMENT.set_kernel_fs(tcb_offset);
     }
 }
 
 #[no_mangle]
 extern "C" fn restore_user_tls() {
-    log::trace!("Restoring user TLS...");
+    log::trace!("restoring user TLS...");
+
+    // FIXME(Andy-Python-Programmer): Actual support for userland TLS. For now
+    // we sanitse the FS base to 0x00.
+    unsafe {
+        io::wrmsr(io::IA32_FS_BASE, 0x00);
+    }
 }

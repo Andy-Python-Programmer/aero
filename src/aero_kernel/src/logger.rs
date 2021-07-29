@@ -122,11 +122,6 @@ fn get_log_ring_buffer() -> MutexGuard<'static, RingBuffer<[u8; DEFAULT_LOG_RING
         .lock()
 }
 
-#[no_mangle]
-extern "C" fn log_debug() {
-    log::debug!("(asm)");
-}
-
 /// Initialize the global logger instance and the logger ring
 /// buffer.
 pub fn init() {

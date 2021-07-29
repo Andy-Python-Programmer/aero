@@ -184,11 +184,8 @@ impl DebugRendy {
         self.x_pos = 0;
         self.y_pos = 0;
 
-        // SAFTEY: Safe as we are looping under the buffer byte len.
         unsafe {
-            for i in 0..self.info.byte_len {
-                *((self.buffer as *mut u8).add(i)) = self.color.get_background().inner() as u8;
-            }
+            core::slice::from_raw_parts_mut(self.buffer as *mut u8, self.info.byte_len).fill(0x00);
         }
     }
 

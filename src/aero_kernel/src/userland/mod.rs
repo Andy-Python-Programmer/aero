@@ -23,6 +23,7 @@ use crate::syscall;
 
 pub mod scheduler;
 pub mod task;
+pub mod vm;
 
 #[rustfmt::skip]
 static USERLAND_SHELL: &[u8] = include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");

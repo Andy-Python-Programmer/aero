@@ -30,6 +30,8 @@ use crate::fs::file_table::FileTable;
 
 use intrusive_collections::{intrusive_adapter, LinkedListLink};
 
+use super::vm::Vm;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct TaskId(usize);
@@ -56,6 +58,7 @@ pub enum TaskState {
 pub struct Task {
     arch_task: UnsafeCell<ArchTask>,
     task_id: TaskId,
+    vm: Arc<Vm>,
 
     pub file_table: FileTable,
     pub state: TaskState,
@@ -73,6 +76,7 @@ impl Task {
             arch_task: UnsafeCell::new(ArchTask::new_idle()),
             file_table: FileTable::new(),
             task_id: TaskId::allocate(),
+            vm: Arc::new(Vm::new()),
             state: TaskState::Runnable,
 
             link: Default::default(),
@@ -87,6 +91,7 @@ impl Task {
             arch_task: UnsafeCell::new(ArchTask::new_kernel(entry_point)),
             task_id: TaskId::allocate(),
             file_table: FileTable::new(),
+            vm: Arc::new(Vm::new()),
             state: TaskState::Runnable,
 
             link: Default::default(),
@@ -95,7 +100,17 @@ impl Task {
 
     #[inline]
     pub fn exec(&self, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
-        self.arch_task_mut().exec(executable)
+        let vm = self.vm();
+
+        vm.clear();
+        vm.load_bin(executable);
+
+        self.arch_task_mut().exec(vm, executable)
+    }
+
+    #[inline]
+    pub fn vm(&self) -> &Arc<Vm> {
+        &self.vm
     }
 
     /// Returns a mutable reference to the inner [ArchTask] structure.
@@ -113,10 +128,10 @@ impl Task {
     #[inline]
     pub fn handle_page_fault(
         &self,
-        _accessed_address: VirtAddr,
-        _reason: PageFaultErrorCode,
+        accessed_address: VirtAddr,
+        reason: PageFaultErrorCode,
     ) -> bool {
-        false
+        self.vm.handle_page_fault(reason, accessed_address)
     }
 }
 

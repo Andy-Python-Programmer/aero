@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: sudo apt-get install -y nasm meson ninja-build
     - name: Run build
-      run: cargo aero build
+      run: cargo aero build --release
     - name: Build Docs
       run: cargo aero web
     - name: Deploy

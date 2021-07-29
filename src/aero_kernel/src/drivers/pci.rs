@@ -409,10 +409,7 @@ impl PciHeader {
         let bus = self.bus() as u32;
         let device = self.device() as u32;
         let func = self.function() as u32;
-        let offset = offset as u32;
-
-        let address =
-            ((bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000) as u32;
+        let address = (bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000;
 
         io::outl(PCI_CONFIG_ADDRESS_PORT, address);
         io::inl(PCI_CONFIG_DATA_PORT)
@@ -422,10 +419,7 @@ impl PciHeader {
         let bus = self.bus() as u32;
         let device = self.device() as u32;
         let func = self.function() as u32;
-        let offset = offset as u32;
-
-        let address =
-            ((bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000) as u32;
+        let address = (bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000;
 
         io::outl(PCI_CONFIG_ADDRESS_PORT, address);
         io::outl(PCI_CONFIG_DATA_PORT, value);

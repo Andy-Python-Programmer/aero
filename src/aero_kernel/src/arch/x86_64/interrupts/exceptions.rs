@@ -82,7 +82,7 @@ interrupt_error_stack!(
 interrupt_error_stack!(
     fn page_fault(stack: &mut InterruptErrorStack) {
         let accessed_address = controlregs::read_cr2();
-        let reason = PageFaultErrorCode::from_bits_truncate(stack.code as u64);
+        let reason = PageFaultErrorCode::from_bits_truncate(stack.code);
 
         if stack.stack.iret.is_user() {
             // The page fault has triggred in user mode. Now we need to
@@ -93,8 +93,10 @@ interrupt_error_stack!(
                 .current_task()
                 .handle_page_fault(accessed_address, reason);
 
-            if !signal {
+            if signal {
                 return;
+            } else {
+                log::debug!("SIGSEGV");
             }
         }
 

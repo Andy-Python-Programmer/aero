@@ -1,5 +1,2 @@
 [workspace]
-members = [
-    "aero_shell",
-    "std"
-]
+members = ["aero_shell"]

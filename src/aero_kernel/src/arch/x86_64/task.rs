@@ -17,12 +17,13 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::{MMapFlags, MMapProt};
 use alloc::alloc::alloc_zeroed;
 use xmas_elf::{header, ElfFile};
 
 use core::alloc::Layout;
 
-use crate::mem::paging::*;
+use crate::{mem::paging::*, userland::vm::Vm};
 
 use super::gdt::{Ring, TASK_STATE_SEGMENT};
 
@@ -132,7 +133,7 @@ impl ArchTask {
         }
     }
 
-    pub fn exec(&mut self, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
+    pub fn exec(&mut self, vm: &Vm, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
         header::sanity_check(executable).expect("Failed sanity check"); // Sanity check the provided ELF executable
 
         let address_space = if self.rpl == Ring::Ring0 {
@@ -149,9 +150,15 @@ impl ArchTask {
             AddressSpace::this()
         };
 
-        unsafe {
-            // Set the new stack pointer in TSS.
-        }
+        // mmap the userland stack...
+        vm.mmap(
+            VirtAddr::new(0x8000_0000_0000 - 0x64000),
+            0x64000,
+            MMapProt::PROT_WRITE | MMapProt::PROT_READ | MMapProt::PROT_EXEC,
+            MMapFlags::MAP_FIXED | MMapFlags::MAP_PRIVATE | MMapFlags::MAP_ANONYOMUS,
+        );
+
+        vm.log();
 
         address_space.switch(); // Perform the address space switch
 
@@ -165,11 +172,7 @@ impl ArchTask {
         let entry_point = VirtAddr::new(executable.header.pt2.entry_point());
 
         unsafe {
-            jump_userland_exec(
-                VirtAddr::new_unsafe(0x8000_0000_0000 + 0x64000),
-                entry_point,
-                0x200,
-            );
+            jump_userland_exec(VirtAddr::new(0x8000_0000_0000), entry_point, 0x200);
         }
 
         Ok(())

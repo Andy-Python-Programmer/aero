@@ -44,7 +44,7 @@ pub fn open(path: usize, len: usize, mode: usize) -> Result<usize, AeroSyscallEr
         mode
     );
 
-    if let Some(path) = validate_str(path as *mut _, len) {
+    if let Some(path) = validate_str(path as *const u8, len) {
         let _ = Path::new(path);
 
         Ok(0)

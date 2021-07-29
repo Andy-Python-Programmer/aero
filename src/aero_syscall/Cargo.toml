@@ -5,7 +5,4 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-spin = "0.9.2"
-raw-cpuid = "9"
-cfg-if = "1.0.0"
 bitflags = "1.2.1"

@@ -56,7 +56,7 @@ impl LockedHeap {
             let max_mem = HEAP_START + (128 * 1024 * 1024) as usize;
 
             // Check if our heap has not increased beyond the maximum allowed size.
-            if heap_top as usize + size as usize > max_mem {
+            if heap_top + size > max_mem {
                 panic!("The heap size has increased more then 128GiB")
             }
 
