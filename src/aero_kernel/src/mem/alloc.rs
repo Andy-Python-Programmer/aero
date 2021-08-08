@@ -57,7 +57,7 @@ impl LockedHeap {
 
             // Check if our heap has not increased beyond the maximum allowed size.
             if heap_top + size > max_mem {
-                panic!("The heap size has increased more then 128GiB")
+                panic!("The heap size has increased more then {}", max_mem)
             }
 
             // Else we just have to extend the heap.

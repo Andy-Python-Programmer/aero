@@ -176,6 +176,8 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
         unsafe { PHYSICAL_MEMORY_OFFSET = VirtAddr::new(0xffff800000000000) }
     }
 
+    arch::init_cpu();
+
     /*
      * Initialize the COM ports before doing anything else.
      *

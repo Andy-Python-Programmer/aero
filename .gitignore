@@ -8,5 +8,4 @@ bundled
 sysroot
 
 # Bochs specific files:
-bochslog.txt
 bx_enh_dbg.ini

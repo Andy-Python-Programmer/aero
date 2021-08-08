@@ -84,19 +84,21 @@ interrupt_error_stack!(
         let accessed_address = controlregs::read_cr2();
         let reason = PageFaultErrorCode::from_bits_truncate(stack.code);
 
-        if stack.stack.iret.is_user() {
-            // The page fault has triggred in user mode. Now we need to
-            // check if the page was mapped in the VM and if so, we will
-            // recover the page fault by allocating the page and mapping it (demand
-            // paging). If the page was not mapped, we will signal kill the task.
+        // We cannot directly check if we want to handle the page fault by checking
+        // if the CS register contains the RPL_3 flag since, we also want to handle the
+        // situation where we are trying to access a user provided buffer in the kernel and
+        // its not mapped. So we handle the page fault if the accessed address is less then the
+        // MAX userland address and we only signal kill the process if its trying to access
+        // a non-mapped memory region while in RPL_3.
+        if accessed_address.as_u64() < 0x8000_0000_0000 {
             let signal = scheduler::get_scheduler()
                 .current_task()
                 .handle_page_fault(accessed_address, reason);
 
-            if signal {
-                return;
-            } else {
+            if !signal && stack.stack.iret.is_user() {
                 log::debug!("SIGSEGV");
+            } else {
+                return;
             }
         }
 

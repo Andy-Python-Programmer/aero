@@ -25,7 +25,7 @@ use core::panic::PanicInfo;
 
 #[no_mangle]
 extern "C" fn _start() {
-    aero_syscall::sys_write(1, b"Hello, World!");
+    aero_syscall::sys_open("/dev/stdout", 0x00);
     aero_syscall::sys_exit(0x00);
 }
 

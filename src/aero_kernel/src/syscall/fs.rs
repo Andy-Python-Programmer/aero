@@ -21,9 +21,7 @@ use aero_syscall::AeroSyscallError;
 
 use crate::{fs::Path, utils::validate_str};
 
-pub fn write(fd: usize, buf: usize, len: usize) -> Result<usize, AeroSyscallError> {
-    log::trace!("SYS_WRITE (fd={:#x}, buf={:#x}, len={:#x})", fd, buf, len);
-
+pub fn write(_fd: usize, _buf: usize, _len: usize) -> Result<usize, AeroSyscallError> {
     // let current_task = scheduler::active_task_ref();
 
     // mem::drop(scheduler);
@@ -36,15 +34,9 @@ pub fn write(fd: usize, buf: usize, len: usize) -> Result<usize, AeroSyscallErro
     Ok(0)
 }
 
-pub fn open(path: usize, len: usize, mode: usize) -> Result<usize, AeroSyscallError> {
-    log::trace!(
-        "SYS_OPEN (path={:#x}, len={:#x}, mode={:#x})",
-        path,
-        len,
-        mode
-    );
-
+pub fn open(_fd: usize, path: usize, len: usize, _mode: usize) -> Result<usize, AeroSyscallError> {
     if let Some(path) = validate_str(path as *const u8, len) {
+        log::debug!("{}", path);
         let _ = Path::new(path);
 
         Ok(0)

@@ -21,3 +21,12 @@ pub mod controlregs;
 pub mod gdt;
 pub mod interrupts;
 pub mod task;
+
+use crate::utils::io;
+
+pub fn init_cpu() {
+    unsafe {
+        // Enable the no-execute page protection feature.
+        io::wrmsr(io::IA32_EFER, io::rdmsr(io::IA32_EFER) | 1 << 11);
+    }
+}
