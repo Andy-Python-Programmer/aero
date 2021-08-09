@@ -25,12 +25,15 @@ use core::alloc::Layout;
 
 use crate::{mem::paging::*, userland::vm::Vm};
 
-use super::gdt::{Ring, TASK_STATE_SEGMENT};
+use super::{
+    controlregs,
+    gdt::{Ring, TASK_STATE_SEGMENT},
+};
 
 use crate::mem::AddressSpace;
 
 #[repr(C)]
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Context {
     r15: u64,
     r14: u64,
@@ -131,6 +134,26 @@ impl ArchTask {
             // level to ring 0.
             rpl: Ring::Ring0,
         }
+    }
+
+    pub fn fork(&self) -> Result<Self, MapToError<Size4KiB>> {
+        let new_address_space = AddressSpace::this().offset_page_table().fork()?;
+
+        // Since the fork function marks all of the userspace entries in both the forked
+        // and the parent address spaces as read only, we will flush the page table of the
+        // current process to trigger COW.
+        unsafe {
+            asm!("mov cr3, {}", in(reg) controlregs::read_cr3_raw(), options(nostack));
+        }
+
+        let context = self.context.clone();
+
+        Ok(Self {
+            context,
+            context_switch_rsp: VirtAddr::new(0x8000_0000_0000 - 0x64000),
+            address_space: new_address_space,
+            rpl: Ring::Ring3,
+        })
     }
 
     pub fn exec(&mut self, vm: &Vm, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {

@@ -442,6 +442,13 @@ impl VmProtected {
             }
         }
     }
+
+    fn fork_from(&mut self, parent: &Vm) {
+        let data = parent.inner.lock();
+
+        // Copy over all of the mappings from the parent into the child.
+        self.mappings = data.mappings.clone();
+    }
 }
 
 pub struct Vm {
@@ -468,6 +475,11 @@ impl Vm {
         self.inner
             .lock()
             .mmap(address, size, protocol, flags, 0x00, None)
+    }
+
+    #[inline]
+    pub(super) fn fork_from(&self, parent: &Vm) {
+        self.inner.lock().fork_from(parent)
     }
 
     /// Mapping the provided `bin` file into the VM.

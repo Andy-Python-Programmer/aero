@@ -42,6 +42,7 @@ extern "C" fn _start() {
     );
     aero_syscall::sys_write(0, ASCII_INTRO.as_bytes());
     aero_syscall::sys_write(0, b"$");
+    aero_syscall::sys_fork();
 
     aero_syscall::sys_exit(0x00);
 }

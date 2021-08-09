@@ -90,6 +90,7 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_SHUTDOWN => process::shutdown(),
         SYS_OPEN => fs::open(b, c, d, e),
         SYS_WRITE => fs::write(b, c, d),
+        SYS_FORK => process::fork(),
         _ => {
             log::error!("Invalid syscall: {:#x}", a);
 

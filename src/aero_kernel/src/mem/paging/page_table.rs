@@ -24,6 +24,7 @@ use core::ops::{Index, IndexMut};
 
 use super::addr::PhysAddr;
 use super::page::{PageSize, PhysFrame, Size4KiB};
+use super::MapToError;
 
 use bitflags::bitflags;
 
@@ -203,7 +204,7 @@ const ENTRY_COUNT: usize = 512;
 #[repr(C)]
 #[derive(Clone)]
 pub struct PageTable {
-    entries: [PageTableEntry; ENTRY_COUNT],
+    pub(super) entries: [PageTableEntry; ENTRY_COUNT],
 }
 
 impl PageTable {
@@ -222,6 +223,18 @@ impl PageTable {
         for entry in self.entries.iter_mut() {
             entry.set_unused();
         }
+    }
+
+    pub fn for_entries_mut(
+        &mut self,
+        flags: PageTableFlags,
+        mut fun: impl FnMut(usize, &mut PageTableEntry) -> Result<(), MapToError<Size4KiB>>,
+    ) -> Result<(), MapToError<Size4KiB>> {
+        self.entries
+            .iter_mut()
+            .enumerate()
+            .filter(|(_, e)| e.flags().contains(flags))
+            .try_for_each(|(idx, e)| fun(idx, e))
     }
 }
 

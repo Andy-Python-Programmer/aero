@@ -20,11 +20,14 @@
 // Some code borrowed from the x86_64 crate (MIT + Apache) and add support for 5-level paging
 // and some kernel specific features that cannot be directly done in the crate itself.
 
+use crate::mem::AddressSpace;
+
 use super::{
     addr::{PhysAddr, VirtAddr},
     page::PhysFrame,
     page::{AddressNotAligned, Page, PageSize, Size1GiB, Size2MiB, Size4KiB},
     page_table::{FrameError, PageTable, PageTableEntry, PageTableFlags},
+    FRAME_ALLOCATOR,
 };
 
 /// A trait for types that can allocate a frame of memory.
@@ -1141,5 +1144,118 @@ impl<'a> Translate for OffsetPageTable<'a> {
     #[inline]
     fn translate(&self, addr: VirtAddr) -> TranslateResult {
         self.inner.translate(addr)
+    }
+}
+
+impl<'a> OffsetPageTable<'a> {
+    pub fn fork(&mut self) -> Result<AddressSpace, MapToError<Size4KiB>> {
+        let mut address_space = AddressSpace::new()?; // Allocate the new address space
+
+        let page_table = address_space.page_table();
+        let offset_table = address_space.offset_page_table();
+
+        // Copy all of the user space page table entries to the new address
+        // space.
+        for entry in 256..512 {
+            page_table[entry] = self.inner.page_table[entry].clone();
+        }
+
+        let level_1_fork = |_, entry: &mut PageTableEntry| {
+            let mut flags = entry.flags();
+
+            // We have to remove the WRITABLE flag in the page table entry since
+            // we want to copy the entry on first write.
+            flags.remove(PageTableFlags::WRITABLE);
+
+            entry.set_flags(flags);
+            Ok(())
+        };
+
+        let level_5_paging_enabled = self.inner.level_5_paging_enabled;
+
+        // TODO(Andy-Python-Programmer): Clean up the following code. Turn this into a recursively
+        // called function.
+        self.inner.page_table.for_entries_mut(
+            PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
+            |_, entry| {
+                let table = unsafe {
+                    offset_table.inner.page_table_walker.create_next_table(
+                        entry,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::USER_ACCESSIBLE
+                            | PageTableFlags::WRITABLE,
+                        &mut FRAME_ALLOCATOR,
+                    )
+                }?;
+
+                table.for_entries_mut(
+                    PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
+                    |_, entry| {
+                        let table = unsafe {
+                            offset_table.inner.page_table_walker.create_next_table(
+                                entry,
+                                PageTableFlags::PRESENT
+                                    | PageTableFlags::USER_ACCESSIBLE
+                                    | PageTableFlags::WRITABLE,
+                                &mut FRAME_ALLOCATOR,
+                            )
+                        }
+                        .expect("failed to allocate next table level");
+
+                        table.for_entries_mut(
+                            PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
+                            |_, entry| {
+                                let table = unsafe {
+                                    offset_table.inner.page_table_walker.create_next_table(
+                                        entry,
+                                        PageTableFlags::PRESENT
+                                            | PageTableFlags::USER_ACCESSIBLE
+                                            | PageTableFlags::WRITABLE,
+                                        &mut FRAME_ALLOCATOR,
+                                    )
+                                }
+                                .expect("failed to allocate next table level");
+
+                                if level_5_paging_enabled {
+                                    table.for_entries_mut(
+                                        PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
+                                        |_, entry| {
+                                            let table = unsafe {
+                                                offset_table
+                                                    .inner
+                                                    .page_table_walker
+                                                    .create_next_table(
+                                                        entry,
+                                                        PageTableFlags::PRESENT
+                                                            | PageTableFlags::USER_ACCESSIBLE
+                                                            | PageTableFlags::WRITABLE,
+                                                        &mut FRAME_ALLOCATOR,
+                                                    )
+                                            }
+                                            .expect("failed to allocate next table level");
+
+                                            table.for_entries_mut(
+                                                PageTableFlags::PRESENT
+                                                    | PageTableFlags::USER_ACCESSIBLE,
+                                                level_1_fork,
+                                            )
+                                        },
+                                    )?;
+                                } else {
+                                    table.for_entries_mut(
+                                        PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
+                                        level_1_fork,
+                                    )?;
+                                }
+
+                                Ok(())
+                            },
+                        )
+                    },
+                )
+            },
+        )?;
+
+        Ok(address_space)
     }
 }

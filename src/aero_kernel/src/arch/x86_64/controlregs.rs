@@ -166,15 +166,21 @@ pub fn read_cr4() -> Cr4Flags {
     Cr4Flags::from_bits_truncate(value) // Get the flags from the bits.
 }
 
-/// Read the current P4 table address from the CR3 register.
 #[inline]
-pub fn read_cr3() -> (PhysFrame, Cr3Flags) {
+pub fn read_cr3_raw() -> u64 {
     let value: u64;
 
     unsafe {
         asm!("mov {}, cr3", out(reg) value, options(nomem));
     }
 
+    value
+}
+
+/// Read the current P4 table address from the CR3 register.
+#[inline]
+pub fn read_cr3() -> (PhysFrame, Cr3Flags) {
+    let value = read_cr3_raw();
     let addr = PhysAddr::new(value & 0x_000f_ffff_ffff_f000); // Grab the frame address
     let frame = PhysFrame::containing_address(addr); // Get the frame containing the address
 

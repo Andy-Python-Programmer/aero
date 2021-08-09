@@ -17,11 +17,19 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::AeroSyscallResult;
+
 use crate::userland::scheduler;
 
 pub fn exit(status: usize) -> ! {
     log::trace!("Exiting the current process with status: {}", status);
     scheduler::exit_current_task(status);
+}
+
+pub fn fork() -> AeroSyscallResult {
+    scheduler::get_scheduler().current_task().fork();
+
+    Ok(0)
 }
 
 pub fn shutdown() -> ! {

@@ -58,6 +58,7 @@ bitflags::bitflags! {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Ring {
     Ring0 = 0b00,
+    Ring3 = 0b11,
 }
 
 const BOOT_GDT_ENTRY_COUNT: usize = 4;

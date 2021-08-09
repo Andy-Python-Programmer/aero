@@ -17,16 +17,11 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::OpenFlags;
-
 use alloc::sync::Arc;
 use xmas_elf::ElfFile;
 
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
-
-use crate::fs;
-use crate::fs::cache::DirCacheItem;
 
 use crate::mem::paging::*;
 
@@ -101,6 +96,14 @@ impl Task {
 
             link: Default::default(),
         })
+    }
+
+    pub fn fork(&self) {
+        let _arch_task = UnsafeCell::new(
+            self.arch_task_mut()
+                .fork()
+                .expect("failed to fork arch task"),
+        );
     }
 
     #[inline]

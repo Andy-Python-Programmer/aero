@@ -180,3 +180,7 @@ pub fn sys_write(fd: usize, buf: &[u8]) -> usize {
         )
     }
 }
+
+pub fn sys_fork() -> usize {
+    unsafe { syscall0(prelude::SYS_FORK) }
+}
