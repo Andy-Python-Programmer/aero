@@ -17,8 +17,9 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::AeroSyscallResult;
+use aero_syscall::{AeroSyscallError, AeroSyscallResult, MMapFlags, MMapProt};
 
+use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 
 pub fn exit(status: usize) -> ! {
@@ -30,6 +31,34 @@ pub fn fork() -> AeroSyscallResult {
     scheduler::get_scheduler().current_task().fork();
 
     Ok(0)
+}
+
+pub fn mmap(
+    address: usize,
+    size: usize,
+    protocol: usize,
+    flags: usize,
+    _fd: usize,
+    _offset: usize,
+) -> AeroSyscallResult {
+    let address = VirtAddr::new(address as u64);
+
+    let protocol = MMapProt::from_bits(protocol).ok_or(AeroSyscallError::EINVAL)?;
+    let flags = MMapFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+
+    if !flags.contains(MMapFlags::MAP_ANONYOMUS) {
+        unimplemented!()
+    }
+
+    if let Some(alloc) = scheduler::get_scheduler()
+        .current_task()
+        .vm()
+        .mmap(address, size, protocol, flags)
+    {
+        Ok(alloc.as_u64() as usize)
+    } else {
+        Err(AeroSyscallError::EFAULT)
+    }
 }
 
 pub fn shutdown() -> ! {

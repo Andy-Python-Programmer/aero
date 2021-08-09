@@ -184,3 +184,24 @@ pub fn sys_write(fd: usize, buf: &[u8]) -> usize {
 pub fn sys_fork() -> usize {
     unsafe { syscall0(prelude::SYS_FORK) }
 }
+
+pub fn sys_mmap(
+    address: usize,
+    size: usize,
+    protocol: MMapProt,
+    flags: MMapFlags,
+    fd: usize,
+    offset: usize,
+) -> usize {
+    unsafe {
+        syscall6(
+            prelude::SYS_MMAP,
+            address,
+            size,
+            protocol.bits(),
+            flags.bits(),
+            fd,
+            offset,
+        )
+    }
+}

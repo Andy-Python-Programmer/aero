@@ -78,7 +78,8 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
     let c = stack.rsi as usize;
     let d = stack.rdx as usize;
     let e = stack.r10 as usize;
-    // let f = scratch.r8;
+    let f = stack.r8 as usize;
+    let g = stack.r9 as usize;
 
     match a {
         SYS_EXIT => {}
@@ -91,6 +92,7 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_OPEN => fs::open(b, c, d, e),
         SYS_WRITE => fs::write(b, c, d),
         SYS_FORK => process::fork(),
+        SYS_MMAP => process::mmap(b, c, d, e, f, g),
         _ => {
             log::error!("Invalid syscall: {:#x}", a);
 

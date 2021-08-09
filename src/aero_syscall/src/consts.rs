@@ -13,4 +13,5 @@ define_syscall_ids!(
     SYS_EXIT => 60;
     SYS_FORK => 61;
     SYS_REBOOT => 169;
+    SYS_MMAP => 170;
 );
