@@ -36,7 +36,7 @@ struct AeroLogger;
 
 impl log::Log for AeroLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Trace
+        metadata.level() <= Level::Debug
     }
 
     fn log(&self, record: &Record) {
@@ -128,6 +128,6 @@ pub fn init() {
     LOG_RING_BUFFER.call_once(|| Mutex::new(RingBuffer::new([0; DEFAULT_LOG_RING_BUFFER_SIZE])));
 
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(LevelFilter::Trace))
+        .map(|()| log::set_max_level(LevelFilter::Debug))
         .unwrap();
 }

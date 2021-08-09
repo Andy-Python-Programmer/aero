@@ -93,15 +93,6 @@ static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::new_uninit();
 
 static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
 
-const ASCII_INTRO: &str = r"
-_______ _______ ______ _______    _______ ______ 
-(_______|_______|_____ (_______)  (_______) _____)
- _______ _____   _____) )     _    _     ( (____  
-|  ___  |  ___) |  __  / |   | |  | |   | \____ \ 
-| |   | | |_____| |  \ \ |___| |  | |___| |____) )
-|_|   |_|_______)_|   |_\_____/    \_____(______/ 
-";
-
 #[repr(C, align(4096))]
 struct P2Align12<T>(T);
 
@@ -265,7 +256,6 @@ extern "C" fn kernel_main_thread() {
     drivers::pci::init(&mut offset_table);
     log::info!("Loaded PCI driver");
 
-    prelude::println!("{}", ASCII_INTRO);
     userland::run();
 
     loop {}

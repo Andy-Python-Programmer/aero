@@ -120,6 +120,7 @@ pub enum FileSystemError {
     NotSupported,
     EntryExists,
     EntryNotFound,
+    Busy,
 }
 
 impl From<FileSystemError> for AeroSyscallError {
@@ -128,6 +129,7 @@ impl From<FileSystemError> for AeroSyscallError {
             FileSystemError::NotSupported => AeroSyscallError::EACCES,
             FileSystemError::EntryExists => AeroSyscallError::EEXIST,
             FileSystemError::EntryNotFound => AeroSyscallError::ENOENT,
+            FileSystemError::Busy => AeroSyscallError::EBUSY,
         }
     }
 }

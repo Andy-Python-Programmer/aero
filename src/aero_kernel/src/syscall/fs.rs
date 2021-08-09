@@ -17,27 +17,62 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::AeroSyscallError;
+use aero_syscall::{AeroSyscallError, OpenFlags};
 
-use crate::{fs::Path, utils::validate_str};
+use crate::fs;
+use crate::userland::scheduler;
 
-pub fn write(_fd: usize, _buf: usize, _len: usize) -> Result<usize, AeroSyscallError> {
-    // let current_task = scheduler::active_task_ref();
+use crate::fs::Path;
+use crate::utils::{validate_slice, validate_str};
 
-    // mem::drop(scheduler);
+pub fn write(fd: usize, buffer: usize, len: usize) -> Result<usize, AeroSyscallError> {
+    let fd = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd);
 
-    // current_task
-    //     .file_table
-    //     .get_handle(fd)
-    //     .ok_or(AeroSyscallError::EBADFD)?;
-
-    Ok(0)
+    if let Some(handle) = fd {
+        if handle
+            .flags
+            .intersects(OpenFlags::O_WRONLY | OpenFlags::O_RDWR)
+        {
+            if let Some(buffer) = validate_slice(buffer as *const u8, len) {
+                Ok(handle.write(buffer)?)
+            } else {
+                Err(AeroSyscallError::EINVAL)
+            }
+        } else {
+            Err(AeroSyscallError::EACCES)
+        }
+    } else {
+        Err(AeroSyscallError::EBADFD)
+    }
 }
 
-pub fn open(_fd: usize, path: usize, len: usize, _mode: usize) -> Result<usize, AeroSyscallError> {
+pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, AeroSyscallError> {
+    let mut flags = OpenFlags::from_bits(mode).ok_or(AeroSyscallError::EINVAL)?;
+
+    if !flags.intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR | OpenFlags::O_WRONLY) {
+        flags.insert(OpenFlags::O_RDONLY);
+    }
+
     if let Some(path) = validate_str(path as *const u8, len) {
-        log::debug!("{}", path);
-        let _ = Path::new(path);
+        let path = Path::new(path);
+        let inode = fs::lookup_path(path)?;
+
+        if flags.contains(OpenFlags::O_DIRECTORY) && inode.inode().metadata().is_directory() {
+            return Err(AeroSyscallError::ENOTDIR);
+        }
+
+        if flags.contains(OpenFlags::O_TRUNC) {
+            // FIXME(Andy-Python-Programmer): Implement file truncation.
+            unimplemented!()
+        }
+
+        scheduler::get_scheduler()
+            .current_task()
+            .file_table
+            .open_file(inode, flags)?;
 
         Ok(0)
     } else {

@@ -124,6 +124,22 @@ impl INodeInterface for LockedRamINode {
         )
     }
 
+    fn write_at(&self, offset: usize, buffer: &[u8]) -> Result<usize> {
+        let this = self.0.read();
+
+        match &this.contents {
+            FileContents::Content(_) => todo!(),
+            FileContents::Device(dev) => {
+                let device = dev.clone();
+                drop(dev);
+
+                device.write_at(offset, buffer)
+            }
+
+            FileContents::None => Err(FileSystemError::NotSupported),
+        }
+    }
+
     fn metadata(&self) -> Metadata {
         let this = self.0.read();
 

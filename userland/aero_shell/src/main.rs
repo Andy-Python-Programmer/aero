@@ -23,9 +23,26 @@
 
 use core::panic::PanicInfo;
 
+use aero_syscall::OpenFlags;
+
+const ASCII_INTRO: &str = r"
+_______ _______ ______ _______    _______ ______ 
+(_______|_______|_____ (_______)  (_______) _____)
+ _______ _____   _____) )     _    _     ( (____  
+|  ___  |  ___) |  __  / |   | |  | |   | \____ \ 
+| |   | | |_____| |  \ \ |___| |  | |___| |____) )
+|_|   |_|_______)_|   |_\_____/    \_____(______/ 
+";
+
 #[no_mangle]
 extern "C" fn _start() {
-    aero_syscall::sys_open("/dev/stdout", 0x00);
+    aero_syscall::sys_open(
+        "/dev/stdout",
+        (OpenFlags::O_RDONLY | OpenFlags::O_RDWR).bits(),
+    );
+    aero_syscall::sys_write(0, ASCII_INTRO.as_bytes());
+    aero_syscall::sys_write(0, b"$");
+
     aero_syscall::sys_exit(0x00);
 }
 

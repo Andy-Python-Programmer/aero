@@ -31,6 +31,20 @@ bitflags::bitflags! {
     }
 }
 
+bitflags::bitflags! {
+    pub struct OpenFlags: usize {
+        const O_RDONLY      = 2;
+        const O_RDWR        = 3;
+        const O_WRONLY      = 5;
+        const O_CREAT       = 0x10;
+        const O_DIRECTORY   = 0x20;
+        const O_EXCL        = 0x40;
+        const O_NOCTTY      = 0x80;
+        const O_TRUNC       = 0x0200;
+        const O_CLOEXEC     = 0x4000;
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(isize)]
 pub enum AeroSyscallError {

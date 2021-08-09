@@ -19,6 +19,8 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::OpenFlags;
+
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
@@ -78,6 +80,10 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
+    fn open(&self, _flags: OpenFlags) -> Result<()> {
+        Ok(())
+    }
+
     /// Returns a weak reference to the filesystem that this inode belongs to.
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
         None
@@ -98,6 +104,14 @@ pub struct Metadata {
     /// The length of the children's map of the inode. Set to `0x00` if the inode
     /// has no children and if the file type of the inode is *not* a directory.
     pub(super) children_len: usize,
+}
+
+impl Metadata {
+    /// Returns true if the file type of the inode is a directory.
+    #[inline]
+    pub fn is_directory(&self) -> bool {
+        self.file_type == FileType::Directory
+    }
 }
 
 /// Enum representing the inner contents of a file. The file contents depend on the

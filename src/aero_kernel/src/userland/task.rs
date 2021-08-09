@@ -17,11 +17,16 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::OpenFlags;
+
 use alloc::sync::Arc;
 use xmas_elf::ElfFile;
 
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
+
+use crate::fs;
+use crate::fs::cache::DirCacheItem;
 
 use crate::mem::paging::*;
 
