@@ -321,6 +321,53 @@ impl VmProtected {
         Some((address, cursor))
     }
 
+    fn find_any_above(
+        &mut self,
+        address: VirtAddr,
+        size: usize,
+    ) -> Option<(VirtAddr, CursorMut<Mapping>)> {
+        if self.mappings.is_empty() {
+            return Some((address, self.mappings.cursor_front_mut()));
+        }
+
+        let mut cursor = self.mappings.cursor_front_mut();
+
+        // Search the mappings starting at the current cursor position for a big
+        // enough hole for where the address is above the provided `address`. A hole is
+        // big enough if it can hold the requested `size`. We use the first fit strategy,
+        // so it breaks as soon as a big enough hole is found.
+        while let Some(map) = cursor.current() {
+            let map_start = map.start_addr;
+
+            if map.start_addr < address {
+                cursor.move_next();
+            } else {
+                if let Some(pmap) = cursor.peek_prev() {
+                    let start = core::cmp::max(address, pmap.end_addr);
+                    let hole = map_start.as_u64() - start.as_u64();
+
+                    if hole as usize >= size {
+                        return Some((start, cursor));
+                    } else {
+                        // The hole is too small
+                        cursor.move_next();
+                    }
+                } else {
+                    let hole = map_start.as_u64() - address.as_u64();
+
+                    return if hole as usize >= size {
+                        Some((address, cursor))
+                    } else {
+                        // The hole is too small
+                        None
+                    };
+                }
+            }
+        }
+
+        None
+    }
+
     fn mmap(
         &mut self,
         address: VirtAddr,
@@ -342,37 +389,42 @@ impl VmProtected {
 
         let size_aligned = align_up(size as _, Size4KiB::SIZE);
 
-        if flags.contains(MMapFlags::MAP_FIXED) {
-            self.find_fixed_mapping(address, size_aligned as _)
-                .and_then(|(addr, mut cursor)| {
-                    // Merge same mappings instead of creating a new one.
-                    if let Some(prev) = cursor.peek_prev() {
-                        if prev.end_addr == addr
-                            && prev.flags == flags
-                            && prev.protocol == protocol
-                            && prev.file.is_none()
-                        {
-                            prev.end_addr = addr + size_aligned;
-
-                            return Some(addr);
-                        }
-                    }
-
-                    cursor.insert_before(Mapping {
-                        protocol,
-                        flags,
-
-                        start_addr: addr,
-                        end_addr: addr + size_aligned,
-
-                        file: file.map(|f| MMapFile::new(f, offset, size)),
-                    });
-
-                    Some(addr)
-                })
+        if address == VirtAddr::zero() {
+            // We need to find a free mapping above 0x7000_0000_0000.
+            self.find_any_above(VirtAddr::new(0x7000_0000_0000), size_aligned as _)
         } else {
-            None
+            if flags.contains(MMapFlags::MAP_FIXED) {
+                self.find_fixed_mapping(address, size_aligned as _)
+            } else {
+                self.find_any_above(address, size)
+            }
         }
+        .and_then(|(addr, mut cursor)| {
+            // Merge same mappings instead of creating a new one.
+            if let Some(prev) = cursor.peek_prev() {
+                if prev.end_addr == addr
+                    && prev.flags == flags
+                    && prev.protocol == protocol
+                    && prev.file.is_none()
+                {
+                    prev.end_addr = addr + size_aligned;
+
+                    return Some(addr);
+                }
+            }
+
+            cursor.insert_before(Mapping {
+                protocol,
+                flags,
+
+                start_addr: addr,
+                end_addr: addr + size_aligned,
+
+                file: file.map(|f| MMapFile::new(f, offset, size)),
+            });
+
+            Some(addr)
+        })
     }
 
     fn load_bin(&mut self, bin: &ElfFile) {

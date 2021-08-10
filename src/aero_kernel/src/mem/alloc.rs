@@ -30,7 +30,8 @@ use crate::AERO_SYSTEM_ALLOCATOR;
 use super::paging::FRAME_ALLOCATOR;
 use super::AddressSpace;
 
-const HEAP_START: usize = 0xfffffe8000000000;
+const HEAP_MAX_SIZE: usize = 128 * 1024 * 1024;
+const HEAP_START: usize = 0xFFFFFFFF80200000 - HEAP_MAX_SIZE;
 
 pub struct LockedHeap(Mutex<Heap>);
 
@@ -53,7 +54,7 @@ impl LockedHeap {
             let heap_top = heap.top();
             let size = align_up(layout.size(), 0x1000);
 
-            let max_mem = HEAP_START + (128 * 1024 * 1024) as usize;
+            let max_mem = HEAP_START + HEAP_MAX_SIZE;
 
             // Check if our heap has not increased beyond the maximum allowed size.
             if heap_top + size > max_mem {
@@ -149,33 +150,21 @@ fn alloc_error_handler(layout: alloc::Layout) -> ! {
 
 /// Initialize the heap at the [HEAP_START].
 pub fn init_heap(offset_table: &mut OffsetPageTable) -> Result<(), MapToError<Size4KiB>> {
-    let page_range = {
-        let heap_start = VirtAddr::new(HEAP_START as u64);
-        let heap_end = heap_start + 4096u64 - 1u64;
-
-        let heap_start_page = Page::containing_address(heap_start);
-        let heap_end_page = Page::containing_address(heap_end);
-
-        Page::range_inclusive(heap_start_page, heap_end_page)
+    let frame = unsafe {
+        FRAME_ALLOCATOR
+            .allocate_frame()
+            .ok_or(MapToError::FrameAllocationFailed)?
     };
 
-    for page in page_range {
-        let frame = unsafe {
-            FRAME_ALLOCATOR
-                .allocate_frame()
-                .ok_or(MapToError::FrameAllocationFailed)?
-        };
-
-        unsafe {
-            offset_table.map_to(
-                page,
-                frame,
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                &mut FRAME_ALLOCATOR,
-            )
-        }?
-        .flush();
-    }
+    unsafe {
+        offset_table.map_to(
+            Page::containing_address(VirtAddr::new(HEAP_START as _)),
+            frame,
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            &mut FRAME_ALLOCATOR,
+        )
+    }?
+    .flush();
 
     unsafe {
         AERO_SYSTEM_ALLOCATOR.init(HEAP_START, 4096);

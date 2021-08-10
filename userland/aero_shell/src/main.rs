@@ -43,8 +43,9 @@ extern "C" fn _start() {
     aero_syscall::sys_write(0, ASCII_INTRO.as_bytes());
     aero_syscall::sys_write(0, b"$");
     aero_syscall::sys_fork();
-    aero_syscall::sys_mmap(
-        0x10000,
+
+    let address = aero_syscall::sys_mmap(
+        0x00,
         0x100,
         MMapProt::PROT_READ | MMapProt::PROT_WRITE,
         MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_FIXED | MMapFlags::MAP_PRIVATE,
@@ -53,7 +54,7 @@ extern "C" fn _start() {
     );
 
     unsafe {
-        *(0x10000 as *mut u8) = 32;
+        *(address as *mut u8) = 32;
     }
 
     aero_syscall::sys_exit(0x00);
