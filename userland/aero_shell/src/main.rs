@@ -23,7 +23,7 @@
 
 use core::panic::PanicInfo;
 
-use aero_syscall::{MMapFlags, MMapProt, OpenFlags};
+use aero_syscall::OpenFlags;
 
 const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -42,21 +42,9 @@ extern "C" fn _start() {
     );
     aero_syscall::sys_write(0, ASCII_INTRO.as_bytes());
     aero_syscall::sys_write(0, b"$");
-    aero_syscall::sys_fork();
-
-    let address = aero_syscall::sys_mmap(
-        0x00,
-        0x100,
-        MMapProt::PROT_READ | MMapProt::PROT_WRITE,
-        MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_FIXED | MMapFlags::MAP_PRIVATE,
-        0x00,
-        0x00,
-    );
-
-    unsafe {
-        *(address as *mut u8) = 32;
+    if aero_syscall::sys_fork() == 3 {
+        loop {}
     }
-
     aero_syscall::sys_exit(0x00);
 }
 

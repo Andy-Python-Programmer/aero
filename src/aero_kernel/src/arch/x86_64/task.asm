@@ -17,6 +17,8 @@
 
 global jump_userland_exec
 global task_spinup
+global iretq_init
+global sysret_fork_init
 
 extern restore_user_tls
 
@@ -36,37 +38,77 @@ jump_userland_exec:
 
     o64 sysret
 
+iretq_init:
+    pop rdi
+    iretq
+
+sysret_fork_init:
+    cli
+    call restore_user_tls
+
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+    push rbp
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    push rbx
+    push rax
+    mov rax, cr2
+    push rax
+
+    pop r11     ; Restore rflags
+    pop rcx     ; Restore rip
+
+    push rdx
+    swapgs
+    mov rdx, rsp
+    add rdx, 16         ; Skip RDX and user RSP currently on the stack
+    mov [gs:0x04], rdx     ; Stash kernel stack
+    swapgs
+    pop rdx
+
+    pop rsp             ; Restore user stack
+
+    o64 sysret
+
 ; This function is responsible for switching from the current context to the new one and 
 ; also save the current state in the previous context so there is a restore point.
 task_spinup:
-    ; Make sure that interrupts are disabled as we are switching 
-    ; stacks.
+    pushfq
+
     cli
 
-    test rsi, rsi      ; Test if we have a new page table to load.
-    jz .dont_load_cr3
+    push rbp
+    push r15
+    push r14
+    push r13
+    push r12
+    push rbx
 
-    mov cr3, rsi       ; Load the new page table pointer in RSI.
+    mov rax, cr3    ; Save CR3
+    push rax
 
-.dont_load_cr3:
-    mov rsp, rdi
+    mov [rdi], rsp	; Update old context pointer with current stack pointer
+    mov rsp, rsi	; Switch to new stack
 
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rsi
-    pop rdi
-    pop rbp
-    pop rdx
-    pop rcx
+    pop rax         ; Restore CR3
+    mov cr3, rax
+
     pop rbx
-    pop rax
+    pop r12
+    pop r13
+    pop r14
+    pop r15
+    pop rbp
 
-    add rsp, 16
+    popfq
 
-    iretq
+    ret

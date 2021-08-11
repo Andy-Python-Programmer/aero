@@ -28,9 +28,11 @@ pub fn exit(status: usize) -> ! {
 }
 
 pub fn fork() -> AeroSyscallResult {
-    scheduler::get_scheduler().current_task().fork();
+    let scheduler = scheduler::get_scheduler();
+    let forked = scheduler.current_task().fork();
 
-    Ok(0)
+    scheduler.register_task(forked.clone());
+    Ok(forked.task_id().as_usize())
 }
 
 pub fn mmap(

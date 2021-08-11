@@ -48,6 +48,11 @@ impl TaskId {
 
         Self::new(NEXT_PID.fetch_add(1, Ordering::AcqRel))
     }
+
+    #[inline]
+    pub fn as_usize(&self) -> usize {
+        self.0
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -60,7 +65,7 @@ pub struct Task {
     task_id: TaskId,
     vm: Arc<Vm>,
 
-    pub file_table: FileTable,
+    pub file_table: Arc<FileTable>,
     pub state: TaskState,
 
     pub(super) link: intrusive_collections::LinkedListLink,
@@ -74,7 +79,7 @@ impl Task {
     pub fn new_idle() -> Arc<Task> {
         Arc::new(Self {
             arch_task: UnsafeCell::new(ArchTask::new_idle()),
-            file_table: FileTable::new(),
+            file_table: Arc::new(FileTable::new()),
             task_id: TaskId::allocate(),
             vm: Arc::new(Vm::new()),
             state: TaskState::Runnable,
@@ -90,7 +95,7 @@ impl Task {
         Arc::new(Self {
             arch_task: UnsafeCell::new(ArchTask::new_kernel(entry_point)),
             task_id: TaskId::allocate(),
-            file_table: FileTable::new(),
+            file_table: Arc::new(FileTable::new()),
             vm: Arc::new(Vm::new()),
             state: TaskState::Runnable,
 
@@ -98,12 +103,24 @@ impl Task {
         })
     }
 
-    pub fn fork(&self) {
-        let _arch_task = UnsafeCell::new(
+    pub fn fork(&self) -> Arc<Task> {
+        let arch_task = UnsafeCell::new(
             self.arch_task_mut()
                 .fork()
                 .expect("failed to fork arch task"),
         );
+
+        let this = Arc::new(Self {
+            arch_task,
+            task_id: TaskId::allocate(),
+            file_table: self.file_table.clone(),
+            vm: Arc::new(Vm::new()),
+            state: self.state,
+            link: Default::default(),
+        });
+
+        this.vm.fork_from(self.vm());
+        this
     }
 
     #[inline]

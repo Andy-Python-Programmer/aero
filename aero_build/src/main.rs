@@ -137,7 +137,7 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
         .arg("-cpu")
         .arg("qemu64,+la57")
         .arg("-smp")
-        .arg("4")
+        .arg("1")
         .arg("-m")
         .arg("512M")
         .arg("-serial")

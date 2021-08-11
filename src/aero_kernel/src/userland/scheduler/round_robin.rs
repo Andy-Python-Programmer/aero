@@ -149,11 +149,11 @@ pub fn reschedule() {
     if let Some(new_task) = queue.runnable.pop_front() {
         // Swap Cr3 if neccessary.
         if previous_task.task_id() != new_task.task_id() {
+            unsafe {
+                CURRENT_PROCESS = Some(new_task.clone());
+            }
             // Switch Cr3 and return to the thread.
-            arch::task::arch_task_spinup(new_task.arch_task_mut(), true);
-        } else {
-            // Do not switch Cr3 and return to the thread.
-            arch::task::arch_task_spinup(previous_task.arch_task_mut(), false);
+            arch::task::arch_task_spinup(previous_task.arch_task_mut(), new_task.arch_task_mut());
         }
     }
 }
