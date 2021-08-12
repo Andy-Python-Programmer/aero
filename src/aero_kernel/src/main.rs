@@ -227,7 +227,7 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
      * Now that all of the essential initialization is done we are going to schedule
      * the kernel main thread.
      */
-    let init = Task::new_kernel(VirtAddr::new(kernel_main_thread as u64));
+    let init = Task::new_kernel(kernel_main_thread, true);
     scheduler::get_scheduler().register_task(init);
 
     /*
@@ -245,8 +245,7 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     }
 }
 
-#[no_mangle]
-extern "C" fn kernel_main_thread() {
+fn kernel_main_thread() {
     let mut address_space = mem::AddressSpace::this();
     let mut offset_table = address_space.offset_page_table();
 

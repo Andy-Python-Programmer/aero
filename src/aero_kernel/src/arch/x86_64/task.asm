@@ -22,8 +22,6 @@ global sysret_fork_init
 
 extern restore_user_tls
 
-section .text
-
 jump_userland_exec:
     push rdi ; Param: stack
     push rsi ; Param: RIP
@@ -46,23 +44,23 @@ sysret_fork_init:
     cli
     call restore_user_tls
 
-    push r15
-    push r14
-    push r13
-    push r12
-    push r11
-    push r10
-    push r9
-    push r8
-    push rbp
-    push rdi
-    push rsi
-    push rdx
-    push rcx
-    push rbx
-    push rax
-    mov rax, cr2
-    push rax
+    pop rax
+    mov cr2, rax
+    pop rax
+    pop rbx
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+    pop rbp
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    pop r13
+    pop r14
+    pop r15
 
     pop r11     ; Restore rflags
     pop rcx     ; Restore rip
@@ -70,12 +68,12 @@ sysret_fork_init:
     push rdx
     swapgs
     mov rdx, rsp
-    add rdx, 16         ; Skip RDX and user RSP currently on the stack
+    add rdx, 16            ; Skip RDX and user RSP currently on the stack
     mov [gs:0x04], rdx     ; Stash kernel stack
     swapgs
     pop rdx
 
-    pop rsp             ; Restore user stack
+    pop rsp                ; Restore user stack
 
     o64 sysret
 

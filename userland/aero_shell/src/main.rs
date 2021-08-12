@@ -23,7 +23,7 @@
 
 use core::panic::PanicInfo;
 
-use aero_syscall::OpenFlags;
+use aero_syscall::{MMapFlags, MMapProt, OpenFlags};
 
 const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -40,11 +40,15 @@ extern "C" fn _start() {
         "/dev/stdout",
         (OpenFlags::O_RDONLY | OpenFlags::O_RDWR).bits(),
     );
+
     aero_syscall::sys_write(0, ASCII_INTRO.as_bytes());
     aero_syscall::sys_write(0, b"$");
-    if aero_syscall::sys_fork() == 3 {
-        loop {}
-    }
+
+    // if aero_syscall::sys_fork() == 0 {
+    //     aero_syscall::sys_write(0, b"Hello, forked!");
+    //     loop {}
+    // }
+
     aero_syscall::sys_exit(0x00);
 }
 

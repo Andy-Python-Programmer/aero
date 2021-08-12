@@ -73,3 +73,4 @@ function setup_gcc {
 }
 
 setup_mlibc
+setup_gcc

@@ -24,7 +24,7 @@ use crate::userland::scheduler;
 
 pub fn exit(status: usize) -> ! {
     log::trace!("Exiting the current process with status: {}", status);
-    scheduler::exit_current_task(status);
+    scheduler::get_scheduler().inner.exit(status as isize);
 }
 
 pub fn fork() -> AeroSyscallResult {

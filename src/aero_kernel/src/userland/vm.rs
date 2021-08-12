@@ -210,20 +210,32 @@ impl Mapping {
     /// table entry is not.
     fn handle_cow(&mut self, offset_table: &mut OffsetPageTable, address: VirtAddr) -> bool {
         if offset_table.translate_addr(address).is_some() {
-            // This page is not shared with anyone, so just make it writable.
+            // This page is used by more then one process, so make it a private copy.
             let page: Page = Page::containing_address(address);
+            let frame =
+                unsafe { FRAME_ALLOCATOR.allocate_frame() }.expect("frame allocation failed");
 
             unsafe {
-                offset_table
-                    .update_flags(
-                        page,
-                        PageTableFlags::USER_ACCESSIBLE
-                            | PageTableFlags::PRESENT
-                            | self.protocol.into(),
-                    )
-                    .expect("Failed to update flags")
-                    .flush();
+                address.as_ptr::<u8>().copy_to(
+                    (crate::PHYSICAL_MEMORY_OFFSET + frame.start_address().as_u64()).as_mut_ptr(),
+                    Size4KiB::SIZE as _,
+                );
             }
+
+            offset_table.unmap(page).expect("unmap faild").1.flush();
+
+            unsafe {
+                offset_table.map_to(
+                    page,
+                    frame,
+                    PageTableFlags::PRESENT
+                        | PageTableFlags::USER_ACCESSIBLE
+                        | self.protocol.into(),
+                    &mut FRAME_ALLOCATOR,
+                )
+            }
+            .expect("page mapping failed")
+            .flush();
 
             true
         } else {
@@ -290,7 +302,7 @@ impl VmProtected {
                 (false, false) => unimplemented!(),
             }
         } else {
-            log::trace!("mapping not found for address: {:#x}", accessed_address);
+            log::trace!("mapping not found for address: {:#x}", accessed_address,);
 
             // Else the mapping does not exist, so return false.
             false

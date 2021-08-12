@@ -30,7 +30,7 @@ use crate::userland::scheduler;
 use crate::utils::io;
 
 const PIT_FREQUENCY_HZ: usize = 1000;
-const SCHED_TIMESLICE_MS: usize = 5;
+const SCHED_TIMESLICE_MS: usize = 15;
 
 static SCHED_TICKS: AtomicUsize = AtomicUsize::new(0);
 static UPTIME_RAW: AtomicUsize = AtomicUsize::new(0);
@@ -52,7 +52,7 @@ pub fn tick() {
     if value == SCHED_TIMESLICE_MS {
         SCHED_TICKS.store(0, Ordering::Relaxed); // Reset the scheduler ticks counter.
 
-        scheduler::reschedule();
+        scheduler::get_scheduler().inner.preempt();
         return;
     }
 }

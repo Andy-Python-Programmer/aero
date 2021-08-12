@@ -63,6 +63,7 @@ syscall_handler:
     add rdi, 128
     mov rsi, rsp          ; Param: pointer to the registers frame
 
+    cld
     call __inner_syscall  ; Invoke the inner syscall handler implementation
 
     cli

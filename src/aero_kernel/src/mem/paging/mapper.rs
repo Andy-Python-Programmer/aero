@@ -907,7 +907,9 @@ impl<P: PageTableFrameMapping> PageTableWalker<P> {
             Err(PageTableWalkError::MappedToHugePage) => {
                 return Err(PageTableCreateError::MappedToHugePage);
             }
-            Err(PageTableWalkError::NotMapped) => panic!("entry should be mapped at this point"),
+            Err(PageTableWalkError::NotMapped) => {
+                unreachable!("entry should be mapped at this point")
+            }
             Ok(page_table) => page_table,
         };
 
@@ -1151,14 +1153,7 @@ impl<'a> OffsetPageTable<'a> {
     pub fn fork(&mut self) -> Result<AddressSpace, MapToError<Size4KiB>> {
         let mut address_space = AddressSpace::new()?; // Allocate the new address space
 
-        let page_table = address_space.page_table();
         let offset_table = address_space.offset_page_table();
-
-        // Copy all of the user space page table entries to the new address
-        // space.
-        for entry in 256..512 {
-            page_table[entry] = self.inner.page_table[entry].clone();
-        }
 
         let level_1_fork = |_, entry: &mut PageTableEntry| {
             let mut flags = entry.flags();
@@ -1173,8 +1168,6 @@ impl<'a> OffsetPageTable<'a> {
 
         let level_5_paging_enabled = self.inner.level_5_paging_enabled;
 
-        // TODO(Andy-Python-Programmer): Clean up the following code. Turn this into a recursively
-        // called function.
         self.inner.page_table.for_entries_mut(
             PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
             |_, entry| {
@@ -1199,8 +1192,7 @@ impl<'a> OffsetPageTable<'a> {
                                     | PageTableFlags::WRITABLE,
                                 &mut FRAME_ALLOCATOR,
                             )
-                        }
-                        .expect("failed to allocate next table level");
+                        }?;
 
                         table.for_entries_mut(
                             PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
@@ -1213,8 +1205,7 @@ impl<'a> OffsetPageTable<'a> {
                                             | PageTableFlags::WRITABLE,
                                         &mut FRAME_ALLOCATOR,
                                     )
-                                }
-                                .expect("failed to allocate next table level");
+                                }?;
 
                                 if level_5_paging_enabled {
                                     table.for_entries_mut(
@@ -1231,8 +1222,7 @@ impl<'a> OffsetPageTable<'a> {
                                                             | PageTableFlags::WRITABLE,
                                                         &mut FRAME_ALLOCATOR,
                                                     )
-                                            }
-                                            .expect("failed to allocate next table level");
+                                            }?;
 
                                             table.for_entries_mut(
                                                 PageTableFlags::PRESENT

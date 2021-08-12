@@ -305,7 +305,7 @@ impl<'a> StackHelper<'a> {
         *self.ptr -= by;
     }
 
-    pub unsafe fn next<T: Sized>(&mut self) -> &mut T {
+    pub unsafe fn offset<T: Sized>(&mut self) -> &mut T {
         self.skip_by(core::mem::size_of::<T>() as u64);
 
         &mut *(*self.ptr as *mut T)

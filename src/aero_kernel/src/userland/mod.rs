@@ -35,7 +35,6 @@ pub fn run() {
 }
 
 pub fn init_ap() {
-    scheduler::get_scheduler().init();
     syscall::init();
 }
 

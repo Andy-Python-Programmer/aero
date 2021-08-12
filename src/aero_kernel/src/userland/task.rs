@@ -21,7 +21,7 @@ use alloc::sync::Arc;
 use xmas_elf::ElfFile;
 
 use core::cell::UnsafeCell;
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicIsize, AtomicU8, AtomicUsize, Ordering};
 
 use crate::mem::paging::*;
 
@@ -58,6 +58,17 @@ impl TaskId {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TaskState {
     Runnable,
+    Zombie,
+}
+
+impl From<u8> for TaskState {
+    fn from(x: u8) -> Self {
+        match x {
+            0 => TaskState::Runnable,
+            1 => TaskState::Zombie,
+            _ => panic!("invalid task state"),
+        }
+    }
 }
 
 pub struct Task {
@@ -66,13 +77,14 @@ pub struct Task {
     vm: Arc<Vm>,
 
     pub file_table: Arc<FileTable>,
-    pub state: TaskState,
+    pub state: AtomicU8,
 
     pub(super) link: intrusive_collections::LinkedListLink,
+    pub(super) exit_status: AtomicIsize,
 }
 
 impl Task {
-    /// Creates a per-cpu idle task. An idle task is a special *kernel*
+    /// Creates a per-cpu idle task. An idle task is a special *kernel* process
     /// which is executed when there are no runnable taskes in the scheduler's
     /// queue.
     #[inline]
@@ -82,24 +94,28 @@ impl Task {
             file_table: Arc::new(FileTable::new()),
             task_id: TaskId::allocate(),
             vm: Arc::new(Vm::new()),
-            state: TaskState::Runnable,
+            state: AtomicU8::new(TaskState::Runnable as _),
 
             link: Default::default(),
+            exit_status: AtomicIsize::new(0),
         })
     }
 
-    /// Allocates a new kernel task pointing at the provided entry point address. This function
-    /// is responsible for creating the kernel task and setting up the context switch stack itself.
+    /// Allocates a new kernel task pointing at the provided entry point function.
     #[inline]
-    pub fn new_kernel(entry_point: VirtAddr) -> Arc<Self> {
+    pub fn new_kernel(entry_point: fn(), enable_interrupts: bool) -> Arc<Self> {
         Arc::new(Self {
-            arch_task: UnsafeCell::new(ArchTask::new_kernel(entry_point)),
+            arch_task: UnsafeCell::new(ArchTask::new_kernel(
+                VirtAddr::new(entry_point as u64),
+                enable_interrupts,
+            )),
             task_id: TaskId::allocate(),
             file_table: Arc::new(FileTable::new()),
             vm: Arc::new(Vm::new()),
-            state: TaskState::Runnable,
+            state: AtomicU8::new(TaskState::Runnable as _),
 
             link: Default::default(),
+            exit_status: AtomicIsize::new(0),
         })
     }
 
@@ -115,11 +131,13 @@ impl Task {
             task_id: TaskId::allocate(),
             file_table: self.file_table.clone(),
             vm: Arc::new(Vm::new()),
-            state: self.state,
+            state: AtomicU8::new(TaskState::Runnable as _),
             link: Default::default(),
+            exit_status: AtomicIsize::new(0),
         });
 
         this.vm.fork_from(self.vm());
+        this.vm.log();
         this
     }
 
@@ -138,10 +156,25 @@ impl Task {
         &self.vm
     }
 
+    /// Returns a immutable reference to the inner [ArchTask] structure.
+    #[inline]
+    pub fn arch_task(&self) -> &ArchTask {
+        unsafe { &(*self.arch_task.get()) }
+    }
+
     /// Returns a mutable reference to the inner [ArchTask] structure.
     #[inline]
     pub fn arch_task_mut(&self) -> &mut ArchTask {
         unsafe { &mut (*self.arch_task.get()) }
+    }
+
+    pub(super) fn update_state(&self, state: TaskState) {
+        self.state.store(state as _, Ordering::SeqCst);
+    }
+
+    #[inline]
+    pub fn state(&self) -> TaskState {
+        self.state.load(Ordering::SeqCst).into()
     }
 
     /// Returns the task ID that was allocated for this task.
@@ -149,6 +182,8 @@ impl Task {
     pub fn task_id(&self) -> TaskId {
         self.task_id
     }
+
+    pub(super) fn into_zombie(&self) {}
 
     #[inline]
     pub fn handle_page_fault(

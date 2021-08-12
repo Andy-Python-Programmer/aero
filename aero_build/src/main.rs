@@ -64,6 +64,16 @@ pub enum Bios {
     Uefi,
 }
 
+impl From<Option<String>> for Bios {
+    fn from(bios: Option<String>) -> Self {
+        match bios.as_deref() {
+            Some("legacy") | None => Self::Legacy,
+            Some("uefi") => Self::Uefi,
+            Some(v) => panic!("unsupported bios `{}`", v),
+        }
+    }
+}
+
 /// Extracts the built executable from output of `cargo build`.
 fn extract_build_artifact(output: &str) -> anyhow::Result<Option<PathBuf>> {
     let json = json::parse(&output)?;
@@ -114,12 +124,6 @@ fn build_kernel(target: Option<String>, build_type: BuildType) -> anyhow::Result
     }
 }
 
-/// Runs Aero in qemu with the provided arguments. This function runs the qemu
-/// executable located in the windows subsystem if the `xserver` argument is false. If true
-/// qemu executable in the linux subsytem is ran and the user is required to
-/// launch an xserver in order to launch Qemu with GUI. On the other you are also
-/// required to set the `xserver` argument to true if you are running Qemu in WSLG. This
-/// function will return an error if the qemu failed to start.
 fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> {
     // Calculate the qemu executable suffix.
     let qemu_suffix = if xserver && is_wsl() { "" } else { ".exe" };
@@ -264,6 +268,9 @@ enum AeroBuildCommand {
     /// Cleans the build directory.
     Clean,
 
+    /// Build the sysroot.
+    Sysroot,
+
     /// Builds and assembles the documentation.
     Web {
         /// Sets the target triple to the provided `target`.
@@ -311,24 +318,16 @@ fn main() -> anyhow::Result<()> {
                 release,
                 bios,
             } => {
+                let bios = Bios::from(bios);
+
                 let build_type = if release {
                     BuildType::Release
                 } else {
                     BuildType::Debug
                 };
 
-                let bios = match bios.as_deref() {
-                    Some("legacy") | None => Bios::Legacy,
-                    Some("uefi") => Bios::Uefi,
-                    Some(v) => anyhow::bail!("unsupported bios `{}`", v),
-                };
-
-                bundled::fetch()?;
-
-                /*
-                 * Get the current time. This is will be used to caclulate the build time
-                 * after the build is finished.
-                 */
+                // Get the current time. This is will be used to caclulate the build time
+                // after the build is finished.
                 let now = Instant::now();
 
                 bundled::download_ovmf_prebuilt()?;
@@ -348,24 +347,16 @@ fn main() -> anyhow::Result<()> {
                 bios,
                 release,
             } => {
+                let bios = Bios::from(bios);
+
                 let build_type = if release {
                     BuildType::Release
                 } else {
                     BuildType::Debug
                 };
 
-                let bios = match bios.as_deref() {
-                    Some("legacy") | None => Bios::Legacy,
-                    Some("uefi") => Bios::Uefi,
-                    Some(v) => anyhow::bail!("unsupported bios `{}`", v),
-                };
-
-                bundled::fetch()?;
-
-                /*
-                 * Get the current time. This is will be used to caclulate the build time
-                 * after the build is finished.
-                 */
+                // Get the current time. This is will be used to caclulate the build time
+                // after the build is finished.
                 let now = Instant::now();
 
                 bundled::download_ovmf_prebuilt()?;
@@ -379,7 +370,6 @@ fn main() -> anyhow::Result<()> {
 
             AeroBuildCommand::Update => {
                 bundled::fetch()?;
-
                 bundled::update_ovmf()?;
             }
 
@@ -388,6 +378,7 @@ fn main() -> anyhow::Result<()> {
                 xshell::rm_rf("./userland/target")?;
             }
 
+            AeroBuildCommand::Sysroot => bundled::fetch()?,
             AeroBuildCommand::Web { target } => build_web(target)?,
         },
 

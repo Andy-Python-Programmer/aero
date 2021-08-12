@@ -20,9 +20,6 @@
 #[cfg(feature = "round-robin")]
 pub mod round_robin;
 
-#[cfg(feature = "round-robin")]
-pub use round_robin::{exit_current_task, reschedule};
-
 use alloc::sync::Arc;
 
 use spin::mutex::spin::SpinMutex;
@@ -42,11 +39,16 @@ pub trait SchedulerInterface: Send + Sync + Downcastable {
     /// Register the provided task into the task scheduler queue.
     fn register_task(&self, task: Arc<Task>);
 
-    /// Initialize the scheduler variables for this CPU.
-    fn init(&self);
-
     /// Get a reference-counting pointer to the current task.
     fn current_task(&self) -> Arc<Task>;
+
+    fn init(&self);
+
+    /// Yields execution to another task.
+    fn preempt(&self);
+
+    /// Exits the current task.
+    fn exit(&self, status: isize) -> !;
 }
 
 /// Container or a transparent struct containing a hashmap of all of the taskes
@@ -75,7 +77,7 @@ unsafe impl Sync for TaskContainer {}
 
 pub struct Scheduler {
     tasks: TaskContainer,
-    inner: Arc<dyn SchedulerInterface>,
+    pub inner: Arc<dyn SchedulerInterface>,
 }
 
 impl Scheduler {
@@ -88,11 +90,6 @@ impl Scheduler {
             #[cfg(feature = "round-robin")]
             inner: RoundRobin::new(),
         }
-    }
-
-    #[inline]
-    pub fn init(&self) {
-        self.inner.init();
     }
 
     /// Registers the provided task in the schedulers queue.
@@ -122,6 +119,5 @@ pub fn get_scheduler() -> &'static Scheduler {
 /// Initialize the scheduler.
 #[inline]
 pub fn init() {
-    SCHEDULER.call_once(|| Scheduler::new());
-    get_scheduler().init(); // Initialize the scheduler variables for the BSP
+    SCHEDULER.call_once(|| Scheduler::new()).inner.init();
 }
