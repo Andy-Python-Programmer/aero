@@ -326,6 +326,8 @@ fn main() -> anyhow::Result<()> {
                     BuildType::Debug
                 };
 
+                xshell::mkdir_p(BUNDLED_DIR)?;
+
                 // Get the current time. This is will be used to caclulate the build time
                 // after the build is finished.
                 let now = Instant::now();
@@ -354,6 +356,8 @@ fn main() -> anyhow::Result<()> {
                 } else {
                     BuildType::Debug
                 };
+
+                xshell::mkdir_p(BUNDLED_DIR)?;
 
                 // Get the current time. This is will be used to caclulate the build time
                 // after the build is finished.

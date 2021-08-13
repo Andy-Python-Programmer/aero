@@ -228,13 +228,24 @@ impl PageTable {
     pub fn for_entries_mut(
         &mut self,
         flags: PageTableFlags,
-        mut fun: impl FnMut(usize, &mut PageTableEntry) -> Result<(), MapToError<Size4KiB>>,
+        mut fun: impl FnMut(
+            usize,
+            &mut PageTableEntry,
+            &mut PageTable,
+        ) -> Result<(), MapToError<Size4KiB>>,
     ) -> Result<(), MapToError<Size4KiB>> {
         self.entries
             .iter_mut()
             .enumerate()
             .filter(|(_, e)| e.flags().contains(flags))
-            .try_for_each(|(idx, e)| fun(idx, e))
+            .try_for_each(|(idx, e)| {
+                let table = unsafe {
+                    let addr = crate::PHYSICAL_MEMORY_OFFSET + e.addr().as_u64();
+                    &mut *addr.as_mut_ptr::<PageTable>()
+                };
+
+                fun(idx, e, table)
+            })
     }
 }
 

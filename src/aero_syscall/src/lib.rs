@@ -157,14 +157,14 @@ pub fn sys_exit(status: usize) -> ! {
 }
 
 #[inline(always)]
-pub fn sys_open(path: &str, mode: usize) -> usize {
+pub fn sys_open(path: &str, mode: OpenFlags) -> usize {
     unsafe {
         syscall4(
             prelude::SYS_OPEN,
             0x00,
             path.as_ptr() as usize,
             path.len(),
-            mode,
+            mode.bits(),
         )
     }
 }

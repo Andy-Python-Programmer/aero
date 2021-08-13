@@ -1154,91 +1154,86 @@ impl<'a> OffsetPageTable<'a> {
         let mut address_space = AddressSpace::new()?; // Allocate the new address space
 
         let offset_table = address_space.offset_page_table();
+        let make_next_level =
+            |table: &mut PageTable, i: usize| -> Result<&mut PageTable, MapToError<Size4KiB>> {
+                let entry = &mut table[i];
+                let created;
 
-        let level_1_fork = |_, entry: &mut PageTableEntry| {
-            let mut flags = entry.flags();
+                if !entry.flags().contains(PageTableFlags::PRESENT) {
+                    let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+                        .ok_or(MapToError::FrameAllocationFailed)?;
 
-            // We have to remove the WRITABLE flag in the page table entry since
-            // we want to copy the entry on first write.
-            flags.remove(PageTableFlags::WRITABLE);
+                    entry.set_frame(
+                        frame,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::WRITABLE
+                            | PageTableFlags::USER_ACCESSIBLE,
+                    );
 
-            entry.set_flags(flags);
-            Ok(())
-        };
+                    created = true;
+                } else {
+                    entry.set_flags(
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::WRITABLE
+                            | PageTableFlags::USER_ACCESSIBLE,
+                    );
 
-        let level_5_paging_enabled = self.inner.level_5_paging_enabled;
+                    created = false;
+                }
 
+                let page_table_ptr = unsafe {
+                    let addr = crate::PHYSICAL_MEMORY_OFFSET
+                        + entry.frame().unwrap().start_address().as_u64();
+
+                    addr.as_mut_ptr::<PageTable>()
+                };
+
+                let page_table: &mut PageTable = unsafe { &mut *page_table_ptr };
+                if created {
+                    page_table.zero();
+                }
+
+                Ok(page_table)
+            };
+
+        // We loop through each of the page table entries in the page table which are user
+        // accessable and we remove the writeable flag from the entry if present. This will
+        // make the page table entry copy on the first write. Then we clone the page table entry
+        // and place it in the new page table.
         self.inner.page_table.for_entries_mut(
             PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-            |_, entry| {
-                let table = unsafe {
-                    offset_table.inner.page_table_walker.create_next_table(
-                        entry,
-                        PageTableFlags::PRESENT
-                            | PageTableFlags::USER_ACCESSIBLE
-                            | PageTableFlags::WRITABLE,
-                        &mut FRAME_ALLOCATOR,
-                    )
-                }?;
+            |i, _, table| {
+                let n4 = make_next_level(offset_table.inner.page_table, i)?;
 
                 table.for_entries_mut(
                     PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                    |_, entry| {
-                        let table = unsafe {
-                            offset_table.inner.page_table_walker.create_next_table(
-                                entry,
-                                PageTableFlags::PRESENT
-                                    | PageTableFlags::USER_ACCESSIBLE
-                                    | PageTableFlags::WRITABLE,
-                                &mut FRAME_ALLOCATOR,
-                            )
-                        }?;
+                    |j, _, table| {
+                        let n3 = make_next_level(n4, j)?;
 
                         table.for_entries_mut(
                             PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                            |_, entry| {
-                                let table = unsafe {
-                                    offset_table.inner.page_table_walker.create_next_table(
-                                        entry,
-                                        PageTableFlags::PRESENT
-                                            | PageTableFlags::USER_ACCESSIBLE
-                                            | PageTableFlags::WRITABLE,
-                                        &mut FRAME_ALLOCATOR,
-                                    )
-                                }?;
+                            |k, _, table| {
+                                let n2 = make_next_level(n3, k)?;
 
-                                if level_5_paging_enabled {
-                                    table.for_entries_mut(
-                                        PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                                        |_, entry| {
-                                            let table = unsafe {
-                                                offset_table
-                                                    .inner
-                                                    .page_table_walker
-                                                    .create_next_table(
-                                                        entry,
-                                                        PageTableFlags::PRESENT
-                                                            | PageTableFlags::USER_ACCESSIBLE
-                                                            | PageTableFlags::WRITABLE,
-                                                        &mut FRAME_ALLOCATOR,
-                                                    )
-                                            }?;
+                                table.for_entries_mut(
+                                    PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
+                                    |l, _, table| {
+                                        let n1 = make_next_level(n2, l)?;
 
-                                            table.for_entries_mut(
-                                                PageTableFlags::PRESENT
-                                                    | PageTableFlags::USER_ACCESSIBLE,
-                                                level_1_fork,
-                                            )
-                                        },
-                                    )?;
-                                } else {
-                                    table.for_entries_mut(
-                                        PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                                        level_1_fork,
-                                    )?;
-                                }
+                                        table.for_entries_mut(
+                                            PageTableFlags::PRESENT
+                                                | PageTableFlags::USER_ACCESSIBLE,
+                                            |i, entry, _| {
+                                                let mut flags = entry.flags();
+                                                flags.remove(PageTableFlags::WRITABLE);
+                                                entry.set_flags(flags);
 
-                                Ok(())
+                                                n1[i].set_frame(entry.frame().unwrap(), flags);
+                                                Ok(())
+                                            },
+                                        )
+                                    },
+                                )
                             },
                         )
                     },

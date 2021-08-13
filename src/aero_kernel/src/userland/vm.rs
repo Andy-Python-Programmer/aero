@@ -71,6 +71,7 @@ struct Mapping {
     end_addr: VirtAddr,
 
     file: Option<MMapFile>,
+    ref_count: usize,
 }
 
 impl Mapping {
@@ -210,32 +211,52 @@ impl Mapping {
     /// table entry is not.
     fn handle_cow(&mut self, offset_table: &mut OffsetPageTable, address: VirtAddr) -> bool {
         if offset_table.translate_addr(address).is_some() {
-            // This page is used by more then one process, so make it a private copy.
             let page: Page = Page::containing_address(address);
-            let frame =
-                unsafe { FRAME_ALLOCATOR.allocate_frame() }.expect("frame allocation failed");
 
-            unsafe {
-                address.as_ptr::<u8>().copy_to(
-                    (crate::PHYSICAL_MEMORY_OFFSET + frame.start_address().as_u64()).as_mut_ptr(),
-                    Size4KiB::SIZE as _,
-                );
+            if self.ref_count >= 1 {
+                // This page is used by more then one process, so make it a private copy.
+                log::trace!("    - making {:?} into a private copy", page);
+
+                let frame =
+                    unsafe { FRAME_ALLOCATOR.allocate_frame() }.expect("frame allocation failed");
+
+                unsafe {
+                    address.as_ptr::<u8>().copy_to(
+                        (crate::PHYSICAL_MEMORY_OFFSET + frame.start_address().as_u64())
+                            .as_mut_ptr(),
+                        Size4KiB::SIZE as _,
+                    );
+                }
+
+                offset_table.unmap(page).expect("unmap faild").1.flush();
+
+                unsafe {
+                    offset_table.map_to(
+                        page,
+                        frame,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::USER_ACCESSIBLE
+                            | self.protocol.into(),
+                        &mut FRAME_ALLOCATOR,
+                    )
+                }
+                .expect("page mapping failed")
+                .flush();
+            } else {
+                // This page is used by only one process, so make it writable.
+                log::trace!("    - making {:?} writable", page);
+
+                unsafe {
+                    offset_table.update_flags(
+                        page,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::USER_ACCESSIBLE
+                            | self.protocol.into(),
+                    )
+                }
+                .expect("failed to update page table flags")
+                .flush();
             }
-
-            offset_table.unmap(page).expect("unmap faild").1.flush();
-
-            unsafe {
-                offset_table.map_to(
-                    page,
-                    frame,
-                    PageTableFlags::PRESENT
-                        | PageTableFlags::USER_ACCESSIBLE
-                        | self.protocol.into(),
-                    &mut FRAME_ALLOCATOR,
-                )
-            }
-            .expect("page mapping failed")
-            .flush();
 
             true
         } else {
@@ -289,7 +310,7 @@ impl VmProtected {
             let mut address_space = AddressSpace::this();
             let mut offset_table = address_space.offset_page_table();
 
-            match (is_private, is_annon) {
+            let result = match (is_private, is_annon) {
                 (true, true) => {
                     map.handle_pf_private_anon(&mut offset_table, reason, accessed_address)
                 }
@@ -300,7 +321,13 @@ impl VmProtected {
 
                 (false, true) => unreachable!("shared and anonymous mapping"),
                 (false, false) => unimplemented!(),
+            };
+
+            if result {
+                map.ref_count += 1;
             }
+
+            result
         } else {
             log::trace!("mapping not found for address: {:#x}", accessed_address,);
 
@@ -433,6 +460,7 @@ impl VmProtected {
                 end_addr: addr + size_aligned,
 
                 file: file.map(|f| MMapFile::new(f, offset, size)),
+                ref_count: 0x00,
             });
 
             Some(addr)

@@ -36,18 +36,27 @@ _______ _______ ______ _______    _______ ______
 
 #[no_mangle]
 extern "C" fn _start() {
-    aero_syscall::sys_open(
-        "/dev/stdout",
-        (OpenFlags::O_RDONLY | OpenFlags::O_RDWR).bits(),
-    );
+    aero_syscall::sys_open("/dev/stdout", OpenFlags::O_RDONLY);
 
     aero_syscall::sys_write(0, ASCII_INTRO.as_bytes());
     aero_syscall::sys_write(0, b"$");
 
-    // if aero_syscall::sys_fork() == 0 {
-    //     aero_syscall::sys_write(0, b"Hello, forked!");
-    //     loop {}
-    // }
+    if aero_syscall::sys_fork() == 0 {
+        for _ in 0..5 {
+            let address = aero_syscall::sys_mmap(
+                0x00,
+                0x1000,
+                MMapProt::PROT_READ | MMapProt::PROT_WRITE,
+                MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_FIXED | MMapFlags::MAP_PRIVATE,
+                0,
+                0,
+            );
+
+            unsafe {
+                *(address as *mut u32) = 32;
+            }
+        }
+    }
 
     aero_syscall::sys_exit(0x00);
 }
