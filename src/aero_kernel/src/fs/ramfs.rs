@@ -202,7 +202,7 @@ impl RamFs {
         root_dir.filesystem.call_once(|| Arc::downgrade(&copy));
 
         downcast::<dyn INodeInterface, LockedRamINode>(root_cached.inner())
-            .expect("Cannot downcast inode to ram inode")
+            .expect("cannot downcast inode to ram inode")
             .init(
                 &Arc::downgrade(&ramfs.root_inode),
                 &Arc::downgrade(&root_cached),

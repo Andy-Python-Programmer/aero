@@ -20,6 +20,7 @@
 //! Physical and virtual addresses manipulation
 
 use core::fmt;
+use core::iter::Step;
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 use super::page_table::{PageOffset, PageTableIndex};
@@ -262,6 +263,27 @@ impl Sub<VirtAddr> for VirtAddr {
     #[inline]
     fn sub(self, rhs: VirtAddr) -> Self::Output {
         self.as_u64().checked_sub(rhs.as_u64()).unwrap()
+    }
+}
+
+impl Step for VirtAddr {
+    #[inline]
+    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+        if start < end {
+            Some((end.as_u64() - start.as_u64()) as _)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn forward_checked(start: Self, count: usize) -> Option<Self> {
+        Some(start + count)
+    }
+
+    #[inline]
+    fn backward_checked(start: Self, count: usize) -> Option<Self> {
+        Some(start - count)
     }
 }
 

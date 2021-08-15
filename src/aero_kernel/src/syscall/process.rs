@@ -63,6 +63,20 @@ pub fn mmap(
     }
 }
 
+pub fn munmap(address: usize, size: usize) -> AeroSyscallResult {
+    let address = VirtAddr::new(address as u64);
+
+    if scheduler::get_scheduler()
+        .current_task()
+        .vm
+        .munmap(address, size)
+    {
+        Ok(0x00)
+    } else {
+        Err(AeroSyscallError::EFAULT)
+    }
+}
+
 pub fn shutdown() -> ! {
     crate::fs::cache::clear_inode_cache();
     // TODO

@@ -55,6 +55,8 @@ extern "C" fn _start() {
             unsafe {
                 *(address as *mut u32) = 32;
             }
+
+            aero_syscall::sys_munmap(address, 0x1000);
         }
     }
 

@@ -44,7 +44,8 @@
     box_syntax,
     const_fn_fn_ptr_basics,
     arc_new_cyclic,
-    const_btree_new // TODO: Do not abuse nightly rust :D
+    step_trait,
+    const_btree_new
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]

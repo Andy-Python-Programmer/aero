@@ -46,6 +46,14 @@ impl From<MMapProt> for PageTableFlags {
     }
 }
 
+enum UnmapResult {
+    None,
+    Parital(Mapping),
+    Full,
+    Start,
+    End,
+}
+
 #[derive(Clone)]
 pub struct MMapFile {
     offset: usize,
@@ -71,7 +79,6 @@ struct Mapping {
     end_addr: VirtAddr,
 
     file: Option<MMapFile>,
-    ref_count: usize,
 }
 
 impl Mapping {
@@ -210,10 +217,10 @@ impl Mapping {
     /// is recognised because the VMA for the region is marked writable even though the individual page
     /// table entry is not.
     fn handle_cow(&mut self, offset_table: &mut OffsetPageTable, address: VirtAddr) -> bool {
-        if offset_table.translate_addr(address).is_some() {
+        if let TranslateResult::Mapped { flags, .. } = offset_table.translate(address) {
             let page: Page = Page::containing_address(address);
 
-            if self.ref_count >= 1 {
+            if !flags.contains(PageTableFlags::ACCESSED) {
                 // This page is used by more then one process, so make it a private copy.
                 log::trace!("    - making {:?} into a private copy", page);
 
@@ -261,6 +268,65 @@ impl Mapping {
             true
         } else {
             false
+        }
+    }
+
+    fn unmap(
+        &mut self,
+        offset_table: &mut OffsetPageTable,
+        start: VirtAddr,
+        end: VirtAddr,
+    ) -> Result<UnmapResult, UnmapError> {
+        if end <= self.start_addr || start >= self.end_addr {
+            Ok(UnmapResult::None)
+        } else if start > self.start_addr && end < self.end_addr {
+            // The address we want to unmap is in the middle of the region. So we
+            // will need to split the mapping and update the end address accordingly.
+            offset_table.unmap_range(start..end, Size4KiB::SIZE)?;
+
+            let new_file = self.file.as_ref().map(|file| {
+                let offset = file.offset + (end - self.start_addr) as usize;
+                let size = file.size - (offset - file.offset);
+
+                MMapFile::new(file.file.clone(), offset, size)
+            });
+
+            let new_mapping = Mapping {
+                protocol: self.protocol.clone(),
+                flags: self.flags.clone(),
+                start_addr: end,
+                end_addr: end + (self.end_addr - end),
+                file: new_file,
+            };
+
+            self.end_addr = end;
+
+            Ok(UnmapResult::Parital(new_mapping))
+        } else if start <= self.start_addr && end >= self.end_addr {
+            // We are unmapping the whole region.
+            offset_table.unmap_range(self.start_addr..self.end_addr, Size4KiB::SIZE)?;
+            Ok(UnmapResult::Full)
+        } else if start <= self.start_addr && end < self.end_addr {
+            offset_table.unmap_range(self.start_addr..end, Size4KiB::SIZE)?;
+
+            // Update the start address of the mapping since we have unmapped the
+            // first chunk of the mapping.
+            let offset = end - self.start_addr;
+
+            if let Some(file) = self.file.as_mut() {
+                file.offset += offset as usize;
+            }
+
+            self.start_addr = end;
+
+            Ok(UnmapResult::Start)
+        } else {
+            offset_table.unmap_range(start..self.end_addr, Size4KiB::SIZE)?;
+
+            // Update the end address of the mapping since we have unmapped the
+            // last chunk of the mapping.
+            self.end_addr = end;
+            Ok(UnmapResult::End)
         }
     }
 }
@@ -322,10 +388,6 @@ impl VmProtected {
                 (false, true) => unreachable!("shared and anonymous mapping"),
                 (false, false) => unimplemented!(),
             };
-
-            if result {
-                map.ref_count += 1;
-            }
 
             result
         } else {
@@ -433,6 +495,7 @@ impl VmProtected {
             self.find_any_above(VirtAddr::new(0x7000_0000_0000), size_aligned as _)
         } else {
             if flags.contains(MMapFlags::MAP_FIXED) {
+                self.munmap(address, size_aligned as usize); // Unmap any existing mappings.
                 self.find_fixed_mapping(address, size_aligned as _)
             } else {
                 self.find_any_above(address, size)
@@ -460,11 +523,55 @@ impl VmProtected {
                 end_addr: addr + size_aligned,
 
                 file: file.map(|f| MMapFile::new(f, offset, size)),
-                ref_count: 0x00,
             });
 
             Some(addr)
         })
+    }
+
+    fn munmap(&mut self, address: VirtAddr, size: usize) -> bool {
+        let start = address.align_up(Size4KiB::SIZE);
+        let end = (address + size).align_up(Size4KiB::SIZE);
+
+        let mut cursor = self.mappings.cursor_front_mut();
+        let mut success = false;
+
+        let mut address_space = AddressSpace::this();
+        let mut offset_table = address_space.offset_page_table();
+
+        log::debug!("unmapping {:?}..{:?}", start, end);
+
+        while let Some(map) = cursor.current() {
+            if map.end_addr <= start {
+                cursor.move_next();
+            } else {
+                match map.unmap(&mut offset_table, start, end) {
+                    Ok(result) => match result {
+                        UnmapResult::None => return success,
+                        UnmapResult::Start => return true,
+
+                        UnmapResult::Full => {
+                            success = true;
+                            cursor.remove_current();
+                        }
+
+                        UnmapResult::Parital(mapping) => {
+                            cursor.insert_after(mapping);
+                            return true;
+                        }
+
+                        UnmapResult::End => {
+                            success = true;
+                            cursor.move_next();
+                        }
+                    },
+
+                    Err(_) => return false,
+                }
+            }
+        }
+
+        success
     }
 
     fn load_bin(&mut self, bin: &ElfFile) {
@@ -567,6 +674,10 @@ impl Vm {
         self.inner
             .lock()
             .mmap(address, size, protocol, flags, 0x00, None)
+    }
+
+    pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
+        self.inner.lock().munmap(address, size)
     }
 
     #[inline]

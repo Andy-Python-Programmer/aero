@@ -185,6 +185,10 @@ pub fn sys_fork() -> usize {
     unsafe { syscall0(prelude::SYS_FORK) }
 }
 
+pub fn sys_munmap(address: usize, size: usize) -> usize {
+    unsafe { syscall2(prelude::SYS_MUNMAP, address as usize, size as usize) }
+}
+
 pub fn sys_mmap(
     address: usize,
     size: usize,

@@ -20,6 +20,8 @@
 // Some code borrowed from the x86_64 crate (MIT + Apache) and add support for 5-level paging
 // and some kernel specific features that cannot be directly done in the crate itself.
 
+use core::ops::Range;
+
 use crate::mem::AddressSpace;
 
 use super::{
@@ -1150,6 +1152,15 @@ impl<'a> Translate for OffsetPageTable<'a> {
 }
 
 impl<'a> OffsetPageTable<'a> {
+    pub fn unmap_range(&mut self, range: Range<VirtAddr>, step: u64) -> Result<(), UnmapError> {
+        for addr in range.step_by(step as usize) {
+            let page: Page = Page::containing_address(addr);
+            self.inner.unmap(page)?.1.flush();
+        }
+
+        Ok(())
+    }
+
     pub fn fork(&mut self) -> Result<AddressSpace, MapToError<Size4KiB>> {
         let mut address_space = AddressSpace::new()?; // Allocate the new address space
 
@@ -1225,10 +1236,15 @@ impl<'a> OffsetPageTable<'a> {
                                                 | PageTableFlags::USER_ACCESSIBLE,
                                             |i, entry, _| {
                                                 let mut flags = entry.flags();
-                                                flags.remove(PageTableFlags::WRITABLE);
-                                                entry.set_flags(flags);
 
+                                                flags.remove(
+                                                    PageTableFlags::WRITABLE
+                                                        | PageTableFlags::ACCESSED,
+                                                );
+
+                                                entry.set_flags(flags);
                                                 n1[i].set_frame(entry.frame().unwrap(), flags);
+
                                                 Ok(())
                                             },
                                         )

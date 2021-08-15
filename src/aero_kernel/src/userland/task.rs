@@ -74,7 +74,7 @@ impl From<u8> for TaskState {
 pub struct Task {
     arch_task: UnsafeCell<ArchTask>,
     task_id: TaskId,
-    vm: Arc<Vm>,
+    pub(crate) vm: Arc<Vm>,
 
     pub file_table: Arc<FileTable>,
     pub state: AtomicU8,
@@ -184,15 +184,6 @@ impl Task {
     }
 
     pub(super) fn into_zombie(&self) {}
-
-    #[inline]
-    pub fn handle_page_fault(
-        &self,
-        accessed_address: VirtAddr,
-        reason: PageFaultErrorCode,
-    ) -> bool {
-        self.vm.handle_page_fault(reason, accessed_address)
-    }
 }
 
 // Create a new intrustive adapter for the [Task] struct as the tasks are stored as a linked

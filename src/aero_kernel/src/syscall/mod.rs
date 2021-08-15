@@ -95,6 +95,7 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_WRITE => fs::write(b, c, d),
         SYS_FORK => process::fork(),
         SYS_MMAP => process::mmap(b, c, d, e, f, g),
+        SYS_MUNMAP => process::munmap(b, c),
         _ => {
             log::error!("Invalid syscall: {:#x}", a);
 

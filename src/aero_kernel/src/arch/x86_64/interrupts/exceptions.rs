@@ -93,7 +93,8 @@ interrupt_error_stack!(
         if accessed_address.as_u64() < 0x8000_0000_0000 {
             let signal = scheduler::get_scheduler()
                 .current_task()
-                .handle_page_fault(accessed_address, reason);
+                .vm
+                .handle_page_fault(reason, accessed_address);
 
             if !signal && stack.stack.iret.is_user() {
                 log::debug!("SIGSEGV");
