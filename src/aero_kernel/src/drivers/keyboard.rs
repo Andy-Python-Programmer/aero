@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::prelude::*;
+use crate::{apic, prelude::*};
 
 const LEFT_SHIFT_PRESSED: u8 = 0x2A;
 const LEFT_SHIFT_RELEASED: u8 = LEFT_SHIFT_PRESSED + 0x80;
@@ -94,3 +94,10 @@ pub unsafe fn handle(scancode: u8) {
         print!("{}", ascii_char);
     }
 }
+
+/// This function is responsible for initializing PS2 keyboard driver.
+pub fn ps2_keyboard_init() {
+    apic::io_apic_setup_legacy_irq(1, 1);
+}
+
+crate::module_init!(ps2_keyboard_init);

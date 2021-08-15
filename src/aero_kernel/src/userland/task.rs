@@ -74,10 +74,10 @@ impl From<u8> for TaskState {
 pub struct Task {
     arch_task: UnsafeCell<ArchTask>,
     task_id: TaskId,
-    pub(crate) vm: Arc<Vm>,
+    state: AtomicU8,
 
+    pub vm: Arc<Vm>,
     pub file_table: Arc<FileTable>,
-    pub state: AtomicU8,
 
     pub(super) link: intrusive_collections::LinkedListLink,
     pub(super) exit_status: AtomicIsize,
@@ -168,6 +168,7 @@ impl Task {
         unsafe { &mut (*self.arch_task.get()) }
     }
 
+    #[inline]
     pub(super) fn update_state(&self, state: TaskState) {
         self.state.store(state as _, Ordering::SeqCst);
     }

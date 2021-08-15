@@ -324,50 +324,50 @@ pub fn io_apic_get_max_redirect(io_apic_id: usize) -> u32 {
     unsafe { (io_apic_read(io_apic_id, 1) & 0xff0000) >> 16 }
 }
 
-/// Return the index of the I/O APIC that handles this redirect
-pub fn io_apic_from_redirect(gsi: u32) -> usize {
+/// Return the index of the I/O APIC that handles this redirect.
+pub fn io_apic_from_redirect(gsi: u32) -> Option<usize> {
     let io_apics = madt::IO_APICS.read();
 
     for (i, entry) in io_apics.iter().enumerate() {
         let max_redirect = entry.global_system_interrupt_base + io_apic_get_max_redirect(i) > gsi;
 
         if entry.global_system_interrupt_base <= gsi && max_redirect {
-            return i;
+            return Some(i);
         }
     }
 
-    return 0;
+    None
 }
 
 pub fn io_apic_set_redirect(vec: u8, gsi: u32, flags: u16, status: i32) {
-    let io_apic = io_apic_from_redirect(gsi);
+    if let Some(io_apic) = io_apic_from_redirect(gsi) {
+        let mut redirect = 0x00;
 
-    let mut redirect = 0x00;
+        // Active high(0) or low(1)
+        if flags & 2 == 1 {
+            redirect |= (1 << 13) as u8;
+        }
 
-    // Active high(0) or low(1)
-    if flags & 2 == 1 {
-        redirect |= (1 << 13) as u8;
-    }
+        // Edge(0) or level(1) triggered
+        if flags & 8 == 1 {
+            redirect |= (1 << 15) as u8;
+        }
 
-    // Edge(0) or level(1) triggered
-    if flags & 8 == 1 {
-        redirect |= (1 << 15) as u8;
-    }
+        if status == 1 {
+            // Set the mask bit
+            redirect |= (1 << 16) as u8;
+        }
 
-    if status == 1 {
-        // Set the mask bit
-        redirect |= (1 << 16) as u8;
-    }
+        redirect |= vec;
+        redirect |= unsafe { crate::CPU_ID << 56 } as u8; // Set the target APIC ID.
 
-    redirect |= vec;
-    redirect |= unsafe { crate::CPU_ID << 56 } as u8; // Set the target APIC ID.
+        let entry = madt::IO_APICS.read()[io_apic];
+        let ioredtbl = (gsi - entry.global_system_interrupt_base) * 2 + 16;
 
-    let entry = madt::IO_APICS.read()[io_apic];
-    let ioredtbl = (gsi - entry.global_system_interrupt_base) * 2 + 16;
-
-    unsafe {
-        io_apic_write(io_apic, ioredtbl + 0, redirect as _);
-        io_apic_write(io_apic, ioredtbl + 1, (redirect as u64 >> 32) as _);
+        unsafe {
+            io_apic_write(io_apic, ioredtbl + 0, redirect as _);
+            io_apic_write(io_apic, ioredtbl + 1, (redirect as u64 >> 32) as _);
+        }
     }
 }
 
