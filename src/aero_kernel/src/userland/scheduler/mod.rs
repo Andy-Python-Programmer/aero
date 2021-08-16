@@ -44,6 +44,8 @@ pub trait SchedulerInterface: Send + Sync + Downcastable {
     fn current_task(&self) -> Arc<Task>;
 
     fn init(&self);
+    fn await_io(&self);
+    fn wake_up(&self, task: Arc<Task>);
 
     /// Yields execution to another task.
     fn preempt(&self);

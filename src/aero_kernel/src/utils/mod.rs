@@ -34,6 +34,14 @@ pub fn validate_slice<T>(ptr: *const T, len: usize) -> Option<&'static [T]> {
     }
 }
 
+pub fn validate_slice_mut<T>(ptr: *mut T, len: usize) -> Option<&'static mut [T]> {
+    if len == 0 {
+        Some(&mut [])
+    } else {
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr, len) })
+    }
+}
+
 pub fn validate_str(ptr: *const u8, len: usize) -> Option<&'static str> {
     let slice = validate_slice(ptr, len)?;
 

@@ -46,15 +46,17 @@ static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 /// the inode structure.
 pub trait INodeInterface: Send + Sync + Downcastable {
     /// Returns the inode metadata of `this` inode.
-    fn metadata(&self) -> Metadata;
-
-    /// Write at the provided `offset` with the given `buffer` as its contents.
-    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
+    fn metadata(&self) -> Result<Metadata> {
         Err(FileSystemError::NotSupported)
     }
 
-    /// Read at the provided `offset` to the given `buffer.
+    /// Read at the provided `offset` to the given `buffer`.
     fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
+        Err(FileSystemError::NotSupported)
+    }
+
+    /// Write at the provided `offset` with the given `buffer` as its contents.
+    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
         Err(FileSystemError::NotSupported)
     }
 

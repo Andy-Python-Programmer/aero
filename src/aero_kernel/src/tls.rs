@@ -128,8 +128,6 @@ pub fn init() {
 
 #[no_mangle]
 extern "C" fn restore_user_tls() {
-    log::trace!("restoring user TLS...");
-
     // FIXME(Andy-Python-Programmer): Actual support for userland TLS. For now
     // we sanitse the FS base to 0x00.
     unsafe {

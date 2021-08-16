@@ -59,6 +59,7 @@ impl TaskId {
 pub enum TaskState {
     Runnable,
     Zombie,
+    AwaitingIo,
 }
 
 impl From<u8> for TaskState {
@@ -66,6 +67,7 @@ impl From<u8> for TaskState {
         match x {
             0 => TaskState::Runnable,
             1 => TaskState::Zombie,
+            2 => TaskState::AwaitingIo,
             _ => panic!("invalid task state"),
         }
     }
@@ -186,6 +188,8 @@ impl Task {
 
     pub(super) fn into_zombie(&self) {}
 }
+
+unsafe impl Sync for Task {}
 
 // Create a new intrustive adapter for the [Task] struct as the tasks are stored as a linked
 // list in the scheduler.

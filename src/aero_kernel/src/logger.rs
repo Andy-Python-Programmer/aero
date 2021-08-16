@@ -19,11 +19,8 @@
 
 use core::fmt::Write;
 
-use crate::rendy::{Color, ColorCode};
 use log::{Level, LevelFilter, Metadata, Record};
 use spin::Once;
-
-use crate::rendy;
 
 use crate::utils::buffer::RingBuffer;
 use crate::utils::Mutex;
@@ -46,20 +43,11 @@ impl log::Log for AeroLogger {
             let level = record.level();
             let spaces = MAX_LOG_LEVEL_SPACE - level.as_str().len();
 
-            /*
-             * Helper variable to track if the rendy was initialized when this function was invoked as
-             * we do not like to panic when we call log before the initialization because in that case
-             * we log to the serial (COM 1) output.
-             */
-            let initialized = rendy::is_initialized();
-
             macro log($($arg:tt)*) {
-                if initialized { $crate::prelude::print!("{}", format_args!($($arg)*)); }
                 $crate::prelude::serial_print!("{}", format_args!($($arg)*));
             }
 
             macro log_ln($($arg:tt)*) {
-                if initialized { $crate::prelude::println!("{}", format_args!($($arg)*)); }
                 $crate::prelude::serial_println!("{}", format_args!($($arg)*));
             }
 
@@ -67,37 +55,8 @@ impl log::Log for AeroLogger {
             let mut log_ring = LOG_RING_BUFFER.get().unwrap().lock_irq();
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
-            if initialized {
-                rendy::set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
-            }
-
             log!("[ ");
-
-            match record.level() {
-                Level::Error if initialized => {
-                    rendy::set_color_code(ColorCode::new(Color::from_hex(0xDFF2800), Color::BLACK))
-                }
-
-                Level::Warn if initialized => {
-                    rendy::set_color_code(ColorCode::new(Color::from_hex(0xFFD300), Color::BLACK))
-                }
-
-                Level::Info if initialized => {
-                    rendy::set_color_code(ColorCode::new(Color::from_hex(0x50C878), Color::BLACK))
-                }
-
-                Level::Debug | Level::Trace if initialized => {
-                    rendy::set_color_code(ColorCode::new(Color::from_hex(0x10A5F5), Color::BLACK))
-                }
-
-                _ => {}
-            }
-
             log!("{}", level);
-
-            if initialized {
-                rendy::set_color_code(ColorCode::new(Color::WHITE, Color::BLACK));
-            }
 
             log_ln!("{: <1$}]        {args}", "", spaces, args = record.args());
         }

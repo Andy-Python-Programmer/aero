@@ -131,7 +131,7 @@ impl INodeInterface for LockedRamINode {
             FileContents::Content(_) => todo!(),
             FileContents::Device(dev) => {
                 let device = dev.clone();
-                drop(dev);
+                drop(this);
 
                 device.write_at(offset, buffer)
             }
@@ -140,10 +140,26 @@ impl INodeInterface for LockedRamINode {
         }
     }
 
-    fn metadata(&self) -> Metadata {
+    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
         let this = self.0.read();
 
-        Metadata {
+        match &this.contents {
+            FileContents::Content(_) => todo!(),
+            FileContents::Device(device) => {
+                let device = device.clone();
+                drop(this);
+
+                device.read_at(offset, buffer)
+            }
+
+            FileContents::None => Err(FileSystemError::NotSupported),
+        }
+    }
+
+    fn metadata(&self) -> Result<Metadata> {
+        let this = self.0.read();
+
+        Ok(Metadata {
             id: this.id,
             file_type: this.file_type,
             size: match &this.contents {
@@ -151,7 +167,7 @@ impl INodeInterface for LockedRamINode {
                 _ => 0x00,
             },
             children_len: this.children.len(),
-        }
+        })
     }
 
     fn lookup(&self, dir: DirCacheItem, name: &str) -> Result<DirCacheItem> {

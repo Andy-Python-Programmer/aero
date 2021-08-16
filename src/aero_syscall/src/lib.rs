@@ -181,6 +181,18 @@ pub fn sys_write(fd: usize, buf: &[u8]) -> usize {
     }
 }
 
+#[inline(always)]
+pub fn sys_read(fd: usize, buf: &mut [u8]) -> usize {
+    unsafe {
+        syscall3(
+            prelude::SYS_READ,
+            fd as usize,
+            buf.as_mut_ptr() as usize,
+            buf.len(),
+        )
+    }
+}
+
 pub fn sys_fork() -> usize {
     unsafe { syscall0(prelude::SYS_FORK) }
 }

@@ -172,7 +172,7 @@ pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
                     result = result.inode().lookup(result.clone(), component)?;
                 }
 
-                if result.inode().metadata().file_type == FileType::Directory {
+                if result.inode().metadata()?.file_type == FileType::Directory {
                     if let Ok(mount_point) = MOUNT_MANAGER.find_mount(result.clone()) {
                         result = mount_point.root_entry;
                     }

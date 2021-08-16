@@ -39,6 +39,7 @@ struct TaskQueue {
 
     runnable: LinkedList<TaskAdapter>,
     dead: LinkedList<TaskAdapter>,
+    awaiting: LinkedList<TaskAdapter>,
 }
 
 impl TaskQueue {
@@ -52,22 +53,31 @@ impl TaskQueue {
 
             runnable: LinkedList::new(TaskAdapter::new()),
             dead: LinkedList::new(TaskAdapter::new()),
+            awaiting: LinkedList::new(TaskAdapter::new()),
         }
     }
 
     #[inline]
     fn push_runnable(&mut self, task: Arc<Task>) {
-        debug_assert_eq!(task.state(), TaskState::Runnable);
         debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
 
+        task.update_state(TaskState::Runnable);
         self.runnable.push_back(task);
     }
 
+    #[inline]
     fn push_dead(&mut self, task: Arc<Task>) {
         debug_assert_eq!(task.state(), TaskState::Runnable);
         debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
 
         self.dead.push_back(task);
+    }
+
+    fn push_awaiting(&mut self, task: Arc<Task>) {
+        debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
+
+        task.update_state(TaskState::AwaitingIo);
+        self.awaiting.push_back(task);
     }
 }
 
@@ -153,6 +163,19 @@ impl SchedulerInterface for RoundRobin {
         super::get_scheduler().register_task(Task::new_kernel(sweeper, true));
     }
 
+    fn wake_up(&self, task: Arc<Task>) {
+        let _guard = IrqGuard::new();
+        let queue = self.queue.get_mut();
+
+        if task.state() == TaskState::AwaitingIo {
+            let mut cursor = unsafe { queue.awaiting.cursor_mut_from_ptr(task.as_ref()) };
+
+            if let Some(task) = cursor.remove() {
+                queue.push_runnable(task);
+            }
+        }
+    }
+
     fn preempt(&self) {
         // We want to preempt under the following curcumstances:
         //
@@ -176,6 +199,21 @@ impl SchedulerInterface for RoundRobin {
                 queue.preempt_task.arch_task(),
             );
         }
+    }
+
+    fn await_io(&self) {
+        let _guard = IrqGuard::new();
+        let queue = self.queue.get_mut();
+
+        queue.push_awaiting(
+            queue
+                .current_task
+                .as_ref()
+                .expect("IDLE task should not await for anything")
+                .clone(),
+        );
+
+        self.preempt();
     }
 
     fn exit(&self, status: isize) -> ! {

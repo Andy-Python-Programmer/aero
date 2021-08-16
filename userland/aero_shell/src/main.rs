@@ -23,7 +23,7 @@
 
 use core::panic::PanicInfo;
 
-use aero_syscall::{MMapFlags, MMapProt, OpenFlags};
+use aero_syscall::OpenFlags;
 
 const ASCII_INTRO: &str = r"
 _______ _______ ______ _______    _______ ______ 
@@ -36,31 +36,28 @@ _______ _______ ______ _______    _______ ______
 
 #[no_mangle]
 extern "C" fn _start() {
-    aero_syscall::sys_open("/dev/stdout", OpenFlags::O_RDONLY);
+    aero_syscall::sys_open("/dev/tty", OpenFlags::O_RDONLY); // device: stdin
+    aero_syscall::sys_open("/dev/tty", OpenFlags::O_WRONLY); // device: stdout
+    aero_syscall::sys_open("/dev/tty", OpenFlags::O_WRONLY); // device: stderr
 
-    aero_syscall::sys_write(0, ASCII_INTRO.as_bytes());
-    aero_syscall::sys_write(0, b"$");
+    aero_syscall::sys_write(1, ASCII_INTRO.as_bytes());
+    aero_syscall::sys_write(1, b"\n");
 
-    if aero_syscall::sys_fork() == 0 {
-        for _ in 0..5 {
-            let address = aero_syscall::sys_mmap(
-                0x00,
-                0x1000,
-                MMapProt::PROT_READ | MMapProt::PROT_WRITE,
-                MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_FIXED | MMapFlags::MAP_PRIVATE,
-                0,
-                0,
-            );
+    loop {
+        aero_syscall::sys_write(1, b"root@aero:/ ");
 
-            unsafe {
-                *(address as *mut u32) = 32;
-            }
+        let mut buffer = [0u8; 256];
+        aero_syscall::sys_read(0, &mut buffer);
 
-            aero_syscall::sys_munmap(address, 0x1000);
+        let command = unsafe { core::str::from_utf8_unchecked(&mut buffer) };
+
+        if command.starts_with("echo") {
+            aero_syscall::sys_write(1, b"what should I echo :^)\n");
+        } else if command.starts_with("\n") {
+        } else {
+            aero_syscall::sys_write(1, b"invalid command ;)\n");
         }
     }
-
-    aero_syscall::sys_exit(0x00);
 }
 
 #[panic_handler]

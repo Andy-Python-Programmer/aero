@@ -204,6 +204,7 @@ impl DebugRendy {
     }
 
     #[inline(always)]
+    #[allow(unused)]
     pub fn set_color_code(&mut self, color: ColorCode) {
         self.color = color;
     }
@@ -272,12 +273,6 @@ pub fn is_initialized() -> bool {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     DEBUG_RENDY.get().map(|l| l.lock_irq().write_fmt(args));
-}
-
-pub fn set_color_code(color_code: ColorCode) {
-    DEBUG_RENDY
-        .get()
-        .map(|l| l.lock_irq().set_color_code(color_code));
 }
 
 pub fn clear_screen() {

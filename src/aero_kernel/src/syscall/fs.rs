@@ -23,29 +23,41 @@ use crate::fs;
 use crate::userland::scheduler;
 
 use crate::fs::Path;
-use crate::utils::{validate_slice, validate_str};
+use crate::utils::{validate_slice, validate_slice_mut, validate_str};
 
-pub fn write(fd: usize, buffer: usize, len: usize) -> Result<usize, AeroSyscallError> {
-    let fd = scheduler::get_scheduler()
+pub fn write(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    let handle = scheduler::get_scheduler()
         .current_task()
         .file_table
-        .get_handle(fd);
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
 
-    if let Some(handle) = fd {
-        if handle
-            .flags
-            .intersects(OpenFlags::O_WRONLY | OpenFlags::O_RDWR)
-        {
-            if let Some(buffer) = validate_slice(buffer as *const u8, len) {
-                Ok(handle.write(buffer)?)
-            } else {
-                Err(AeroSyscallError::EINVAL)
-            }
-        } else {
-            Err(AeroSyscallError::EACCES)
-        }
+    if handle
+        .flags
+        .intersects(OpenFlags::O_WRONLY | OpenFlags::O_RDWR)
+    {
+        let buffer = validate_slice(buffer as *const u8, size).ok_or(AeroSyscallError::EINVAL)?;
+        Ok(handle.write(buffer)?)
     } else {
-        Err(AeroSyscallError::EBADFD)
+        Err(AeroSyscallError::EACCES)
+    }
+}
+
+pub fn read(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    let handle = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    if handle
+        .flags
+        .intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR)
+    {
+        let buffer = validate_slice_mut(buffer as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+        Ok(handle.read(buffer)?)
+    } else {
+        Err(AeroSyscallError::EACCES)
     }
 }
 
@@ -60,7 +72,7 @@ pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, A
         let path = Path::new(path);
         let inode = fs::lookup_path(path)?;
 
-        if flags.contains(OpenFlags::O_DIRECTORY) && inode.inode().metadata().is_directory() {
+        if flags.contains(OpenFlags::O_DIRECTORY) && inode.inode().metadata()?.is_directory() {
             return Err(AeroSyscallError::ENOTDIR);
         }
 

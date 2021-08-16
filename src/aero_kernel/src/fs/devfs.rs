@@ -43,9 +43,13 @@ lazy_static::lazy_static! {
 static DEVICES: RwLock<BTreeMap<usize, Arc<dyn Device>>> = RwLock::new(BTreeMap::new());
 static DEVICE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 
+pub fn alloc_device_marker() -> usize {
+    DEVICE_MARKER.fetch_add(1, Ordering::SeqCst)
+}
+
 /// A trait representing a device. A device has a device marker (or a device ID) and the
 /// device name (which is used in the creation of the device inode in the device filesystem).
-trait Device: Send + Sync {
+pub trait Device: Send + Sync {
     /// Returns the device marker (or simply the device ID) of the device. (See the documentation of
     /// this trait for more information.)
     fn device_marker(&self) -> usize;
@@ -58,7 +62,7 @@ trait Device: Send + Sync {
 
 /// Installs the provided `device` in the device filesystem (ie. in /dev/) and the
 /// global [DEVICES] btree map.
-fn install_device(device: Arc<dyn Device>) -> Result<()> {
+pub fn install_device(device: Arc<dyn Device>) -> Result<()> {
     let devices = DEVICES.read();
 
     let device_marker = device.device_marker();
@@ -107,8 +111,8 @@ impl INodeInterface for DevINode {
         self.0.inode().write_at(offset, buffer)
     }
 
-    fn metadata(&self) -> super::inode::Metadata {
-        unimplemented!()
+    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
+        self.0.inode().read_at(offset, buffer)
     }
 }
 
@@ -131,7 +135,6 @@ impl FileSystem for DevFs {
 }
 
 static DEV_NULL: Once<Arc<DevNull>> = Once::new();
-static DEV_STDOUT: Once<Arc<DevStdout>> = Once::new();
 
 /// Implementation of the null device (akin `/dev/null`).
 struct DevNull(usize);
@@ -139,7 +142,7 @@ struct DevNull(usize);
 impl DevNull {
     #[inline]
     fn new() -> Arc<Self> {
-        Arc::new(Self(DEVICE_MARKER.fetch_add(1, Ordering::SeqCst)))
+        Arc::new(Self(alloc_device_marker()))
     }
 }
 
@@ -167,48 +170,6 @@ impl INodeInterface for DevNull {
     fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
         Ok(0x00)
     }
-
-    fn metadata(&self) -> super::inode::Metadata {
-        unimplemented!()
-    }
-}
-
-/// Implementation of the stdout device (akin `/dev/stdout`).
-struct DevStdout(usize);
-
-impl DevStdout {
-    #[inline]
-    fn new() -> Arc<Self> {
-        Arc::new(Self(DEVICE_MARKER.fetch_add(1, Ordering::SeqCst)))
-    }
-}
-
-impl Device for DevStdout {
-    #[inline]
-    fn device_marker(&self) -> usize {
-        self.0
-    }
-
-    #[inline]
-    fn device_name(&self) -> &str {
-        "stdout"
-    }
-
-    fn inode(&self) -> Arc<dyn INodeInterface> {
-        DEV_STDOUT.get().expect("device not initialized").clone()
-    }
-}
-
-impl INodeInterface for DevStdout {
-    fn write_at(&self, _offset: usize, buffer: &[u8]) -> Result<usize> {
-        crate::prelude::print!("{}", unsafe { core::str::from_utf8_unchecked(buffer) });
-
-        Ok(buffer.len())
-    }
-
-    fn metadata(&self) -> super::inode::Metadata {
-        unimplemented!()
-    }
 }
 
 /// Initializes the dev filesystem. (See the module-level documentation for more information).
@@ -220,10 +181,8 @@ pub(super) fn init() -> Result<()> {
 
     {
         let null = DEV_NULL.call_once(|| DevNull::new());
-        let stdout = DEV_STDOUT.call_once(|| DevStdout::new());
 
         install_device(null.clone())?;
-        install_device(stdout.clone())?;
     }
 
     Ok(())
