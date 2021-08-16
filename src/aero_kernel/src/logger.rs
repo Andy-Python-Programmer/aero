@@ -21,10 +21,12 @@ use core::fmt::Write;
 
 use crate::rendy::{Color, ColorCode};
 use log::{Level, LevelFilter, Metadata, Record};
-use spin::{Mutex, MutexGuard, Once};
+use spin::Once;
 
 use crate::rendy;
+
 use crate::utils::buffer::RingBuffer;
+use crate::utils::Mutex;
 
 const MAX_LOG_LEVEL_SPACE: usize = 6;
 const DEFAULT_LOG_RING_BUFFER_SIZE: usize = 256;
@@ -61,10 +63,8 @@ impl log::Log for AeroLogger {
                 $crate::prelude::serial_println!("{}", format_args!($($arg)*));
             }
 
-            /*
-             * First of all append the log message to the log ring buffer.
-             */
-            let mut log_ring = get_log_ring_buffer();
+            // Append the log message to the log ring buffer.
+            let mut log_ring = LOG_RING_BUFFER.get().unwrap().lock_irq();
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
             if initialized {
@@ -112,14 +112,6 @@ impl log::Log for AeroLogger {
 /// This method is not memory safe and should be only used when absolutely necessary.
 pub unsafe fn force_unlock() {
     LOG_RING_BUFFER.get().map(|l| l.force_unlock());
-}
-
-/// Returns a mutable reference to the logging ring buffer.
-fn get_log_ring_buffer() -> MutexGuard<'static, RingBuffer<[u8; DEFAULT_LOG_RING_BUFFER_SIZE]>> {
-    LOG_RING_BUFFER
-        .get()
-        .expect("Attempted to get the logging ring buffer before it was initialized")
-        .lock()
 }
 
 /// Initialize the global logger instance and the logger ring

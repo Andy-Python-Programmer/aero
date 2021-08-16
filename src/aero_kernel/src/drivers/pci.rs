@@ -20,7 +20,7 @@
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
-use spin::mutex::SpinMutex;
+use crate::utils::Mutex;
 
 use crate::acpi::mcfg;
 use crate::mem::paging::OffsetPageTable;
@@ -28,7 +28,7 @@ use crate::utils::io;
 
 use bit_field::BitField;
 
-static PCI_TABLE: SpinMutex<PciTable> = SpinMutex::new(PciTable::new());
+static PCI_TABLE: Mutex<PciTable> = Mutex::new(PciTable::new());
 
 const PCI_CONFIG_ADDRESS_PORT: u16 = 0xCF8;
 const PCI_CONFIG_DATA_PORT: u16 = 0xCFC;

@@ -22,7 +22,9 @@ use core::{intrinsics, ptr};
 
 use crate::mem::paging::VirtAddr;
 use raw_cpuid::{CpuId, FeatureInfo};
-use spin::{Mutex, MutexGuard, Once};
+use spin::Once;
+
+use crate::utils::{Mutex, MutexGuard};
 
 use crate::acpi::madt;
 use crate::utils::io;
@@ -331,7 +333,7 @@ pub fn io_apic_from_redirect(gsi: u32) -> Option<usize> {
     for (i, entry) in io_apics.iter().enumerate() {
         let max_redirect = entry.global_system_interrupt_base + io_apic_get_max_redirect(i) > gsi;
 
-        if entry.global_system_interrupt_base <= gsi && max_redirect {
+        if entry.global_system_interrupt_base <= gsi || max_redirect {
             return Some(i);
         }
     }
@@ -368,6 +370,10 @@ pub fn io_apic_set_redirect(vec: u8, gsi: u32, flags: u16, status: i32) {
             io_apic_write(io_apic, ioredtbl + 0, redirect as _);
             io_apic_write(io_apic, ioredtbl + 1, (redirect as u64 >> 32) as _);
         }
+
+        log::info!("registered redirect  (vec={}, gsi={})", vec, gsi);
+    } else {
+        log::warn!("unable to register redirect (vec={}, gsi={})", vec, gsi);
     }
 }
 

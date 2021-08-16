@@ -17,13 +17,15 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use spin::{Mutex, Once};
+use spin::Once;
 use stivale_boot::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapTag};
 
 use super::mapper::*;
 use super::page::*;
 
 use super::addr::PhysAddr;
+
+use crate::utils::Mutex;
 
 pub struct LockedFrameAllocator(Once<Mutex<GlobalFrameAllocator>>);
 

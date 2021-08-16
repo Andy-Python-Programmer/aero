@@ -33,12 +33,12 @@ use core::ops;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
-use spin::Mutex;
 
 use lru::LruCache;
 use spin::Once;
 
 use crate::fs::inode::{DirEntry, INodeInterface};
+use crate::utils::Mutex;
 
 pub(super) static INODE_CACHE: Once<Arc<INodeCache>> = Once::new();
 pub(super) static DIR_CACHE: Once<Arc<DirCache>> = Once::new();

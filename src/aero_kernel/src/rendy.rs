@@ -24,8 +24,11 @@ use core::u8;
 
 use font8x8::UnicodeFonts;
 
-use spin::{mutex::Mutex, MutexGuard, Once};
+use spin::Once;
+
 use stivale_boot::v2::StivaleFramebufferTag;
+
+use crate::utils::Mutex;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
@@ -260,14 +263,6 @@ pub macro dbg {
     },
 }
 
-/// Get a mutable reference to the debug renderer.
-fn get_debug_rendy() -> MutexGuard<'static, DebugRendy> {
-    DEBUG_RENDY
-        .get()
-        .expect("Attempted to get the debug renderer before it was initialized")
-        .lock()
-}
-
 /// Return [true] if the debug renderer is initialized.
 #[inline]
 pub fn is_initialized() -> bool {
@@ -276,17 +271,17 @@ pub fn is_initialized() -> bool {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    get_debug_rendy()
-        .write_fmt(args)
-        .expect("Failed to write to the framebuffer");
+    DEBUG_RENDY.get().map(|l| l.lock_irq().write_fmt(args));
 }
 
 pub fn set_color_code(color_code: ColorCode) {
-    get_debug_rendy().set_color_code(color_code);
+    DEBUG_RENDY
+        .get()
+        .map(|l| l.lock_irq().set_color_code(color_code));
 }
 
 pub fn clear_screen() {
-    get_debug_rendy().clear_screen();
+    DEBUG_RENDY.get().map(|l| l.lock_irq().clear_screen());
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.

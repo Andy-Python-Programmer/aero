@@ -22,7 +22,8 @@ pub mod round_robin;
 
 use alloc::sync::Arc;
 
-use spin::mutex::spin::SpinMutex;
+use crate::utils::Mutex;
+
 use spin::Once;
 use xmas_elf::ElfFile;
 
@@ -56,13 +57,13 @@ pub trait SchedulerInterface: Send + Sync + Downcastable {
 /// of `ProcessId` and a value of a reference-counting pointer
 /// to the task or task.
 #[repr(transparent)]
-struct TaskContainer(SpinMutex<hashbrown::HashMap<TaskId, Arc<Task>>>);
+struct TaskContainer(Mutex<hashbrown::HashMap<TaskId, Arc<Task>>>);
 
 impl TaskContainer {
     /// Creates a new task container with no taskes by default.
     #[inline]
     fn new() -> Self {
-        Self(SpinMutex::new(hashbrown::HashMap::new()))
+        Self(Mutex::new(hashbrown::HashMap::new()))
     }
 
     /// Registers the provided `task` in the task container.

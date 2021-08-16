@@ -231,10 +231,6 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     let init = Task::new_kernel(kernel_main_thread, true);
     scheduler::get_scheduler().register_task(init);
 
-    /*
-     * NOTE: We need to enable interrupts after we have initialized TLS and GDT
-     * as the PTI context switch functions depend on thread local globals.
-     */
     unsafe {
         interrupts::enable_interrupts();
     }
@@ -258,7 +254,9 @@ fn kernel_main_thread() {
 
     userland::run();
 
-    loop {}
+    loop {
+        unsafe { interrupts::halt() }
+    }
 }
 
 #[no_mangle]

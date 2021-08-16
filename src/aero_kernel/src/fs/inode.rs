@@ -26,10 +26,9 @@ use alloc::sync::Arc;
 use alloc::sync::Weak;
 
 use alloc::vec::Vec;
-use spin::mutex::spin::SpinMutex;
-use spin::{Mutex, Once};
+use spin::Once;
 
-use crate::utils::Downcastable;
+use crate::utils::{Downcastable, Mutex};
 
 use super::cache;
 use super::cache::{DirCacheItem, INodeCacheItem};
@@ -119,7 +118,7 @@ impl Metadata {
 pub enum FileContents {
     /// This variant expresses a *normal file* (akin: A file that actually stores data
     /// in bytes) and is protected by a spin lock.
-    Content(SpinMutex<Vec<u8>>),
+    Content(Mutex<Vec<u8>>),
 
     /// If the file type of the inode is [FileType::Device], in that case this variant
     /// is used.
@@ -132,7 +131,7 @@ pub enum FileContents {
 
 impl Default for FileContents {
     fn default() -> Self {
-        Self::Content(SpinMutex::new(Vec::new()))
+        Self::Content(Mutex::new(Vec::new()))
     }
 }
 

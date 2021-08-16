@@ -19,10 +19,10 @@
 
 use crate::prelude::*;
 use crate::utils::io;
+use crate::utils::Mutex;
 
 use bitflags::bitflags;
 use lazy_static::lazy_static;
-use spin::Mutex;
 
 const MOUSE_WAIT_TIMEOUT: usize = 100000;
 

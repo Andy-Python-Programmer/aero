@@ -21,12 +21,11 @@ use alloc::sync::Arc;
 
 use alloc::vec::Vec;
 use bit_field::BitField;
-use spin::mutex::SpinMutex;
 use spin::Once;
 
 use crate::arch::interrupts;
 use crate::mem::paging::*;
-use crate::utils::{IrqGuard, VolatileCell};
+use crate::utils::{IrqGuard, Mutex, VolatileCell};
 
 use super::pci::*;
 
@@ -697,7 +696,7 @@ impl AhciPortProtected {
 }
 
 struct AhciPort {
-    inner: SpinMutex<AhciPortProtected>,
+    inner: Mutex<AhciPortProtected>,
 }
 
 impl AhciPort {
@@ -706,7 +705,7 @@ impl AhciPort {
         const EMPTY: Option<AhciCommand> = None;
 
         Self {
-            inner: SpinMutex::new(AhciPortProtected {
+            inner: Mutex::new(AhciPortProtected {
                 address,
                 cmds: [EMPTY; 32],
                 free_cmds: 32,
@@ -811,7 +810,7 @@ impl AhciProtected {
 
 /// Structure representing the ACHI driver.
 struct AhciDriver {
-    inner: SpinMutex<AhciProtected>,
+    inner: Mutex<AhciProtected>,
 }
 
 impl PciDeviceHandle for AhciDriver {
@@ -826,14 +825,7 @@ impl PciDeviceHandle for AhciDriver {
     fn start(&self, header: &PciHeader, _offset_table: &mut OffsetPageTable) {
         log::info!("Starting AHCI driver...");
 
-        // Disable interrupts as we do not want to be interrupted durning
-        // the initialization of the AHCI driver.
-        let lock = IrqGuard::new();
-
-        get_ahci().inner.lock().start_driver(header).unwrap(); // Start and initialize the AHCI controller.
-
-        // Now the AHCI driver is initialized, we drop the IRQ lock.
-        core::mem::drop(lock);
+        get_ahci().inner.lock_irq().start_driver(header).unwrap(); // Start and initialize the AHCI controller.
 
         // Temporary testing...
         if let Some(port) = get_ahci().inner.lock().ports[0].clone() {
@@ -858,7 +850,7 @@ pub fn ahci_init() {
         const EMPTY: Option<Arc<AhciPort>> = None; // To satisfy the Copy trait bound when the AHCI creating data.
 
         Arc::new(AhciDriver {
-            inner: SpinMutex::new(AhciProtected {
+            inner: Mutex::new(AhciProtected {
                 ports: [EMPTY; 32],    // Initialize the AHCI ports to an empty slice.
                 hba: VirtAddr::zero(), // Initialize the AHCI HBA address to zero.
             }),

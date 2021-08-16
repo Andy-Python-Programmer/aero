@@ -24,7 +24,7 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::Arc;
 
-use spin::Mutex;
+use crate::utils::Mutex;
 use spin::Once;
 
 use crate::fs::inode::FileType;

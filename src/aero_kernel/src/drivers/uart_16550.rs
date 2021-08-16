@@ -17,11 +17,13 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::fmt::{self, Write};
+use core::fmt;
+use core::fmt::Write;
 
-use spin::{Mutex, MutexGuard, Once};
+use spin::Once;
 
 use crate::utils::io;
+use crate::utils::Mutex;
 
 static COM_1: Once<Mutex<SerialPort>> = Once::new();
 
@@ -125,13 +127,6 @@ impl fmt::Write for SerialPort {
     }
 }
 
-pub fn get_com_1() -> MutexGuard<'static, SerialPort> {
-    COM_1
-        .get()
-        .expect("Attempted to get a reference to the COM 1 port before it was initialized")
-        .lock()
-}
-
 /// Initialize the serial ports if avaliable.
 pub fn init() {
     unsafe {
@@ -152,7 +147,10 @@ pub macro serial_println {
 
 #[doc(hidden)]
 pub fn _serial_print(args: fmt::Arguments) {
-    get_com_1()
-        .write_fmt(args)
-        .expect("Failed to write to the COM1 port");
+    COM_1.get().map(|c| {
+        //
+        c.lock_irq()
+            .write_fmt(args)
+            .expect("failed to write to COM1")
+    });
 }
