@@ -25,7 +25,7 @@ use super::page::*;
 
 use super::addr::PhysAddr;
 
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 pub struct LockedFrameAllocator(Once<Mutex<GlobalFrameAllocator>>);
 

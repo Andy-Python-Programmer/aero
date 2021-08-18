@@ -23,7 +23,9 @@ use intrusive_collections::LinkedList;
 
 use crate::arch;
 use crate::userland::task::{Task, TaskAdapter, TaskState};
-use crate::utils::{downcast, IrqGuard, PerCpu};
+
+use crate::utils::sync::IrqGuard;
+use crate::utils::{downcast, PerCpu};
 
 use super::SchedulerInterface;
 

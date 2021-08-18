@@ -72,6 +72,7 @@ pub fn fetch() -> anyhow::Result<()> {
 
     let mlibc_src_dir = bundled_dir.join("mlibc");
     let gcc_src_dir = bundled_dir.join("gcc");
+    let binutils_src_dir = bundled_dir.join("binutils-gdb");
 
     if !mlibc_src_dir.exists() {
         xshell::cmd!("git clone --depth 1 --branch master https://github.com/Andy-Python-Programmer/mlibc bundled/mlibc").run()?;
@@ -79,6 +80,10 @@ pub fn fetch() -> anyhow::Result<()> {
 
     if !gcc_src_dir.exists() {
         xshell::cmd!("git clone --depth 1 --branch aero https://github.com/Andy-Python-Programmer/gcc bundled/gcc").run()?;
+    }
+
+    if !binutils_src_dir.exists() {
+        xshell::cmd!("git clone --depth 1 --branch aero https://github.com/Andy-Python-Programmer/binutils-gdb bundled/binutils-gdb").run()?;
     }
 
     xshell::cmd!("chmod +x ./tools/setup_userland.sh").run()?;

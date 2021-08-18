@@ -28,7 +28,7 @@ use spin::Once;
 
 use stivale_boot::v2::StivaleFramebufferTag;
 
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]

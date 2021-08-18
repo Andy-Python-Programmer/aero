@@ -24,7 +24,7 @@ use crate::mem::paging::VirtAddr;
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::Once;
 
-use crate::utils::{Mutex, MutexGuard};
+use crate::utils::sync::{Mutex, MutexGuard};
 
 use crate::acpi::madt;
 use crate::utils::io;

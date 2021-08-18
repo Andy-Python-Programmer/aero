@@ -25,7 +25,9 @@ use spin::Once;
 
 use crate::arch::interrupts;
 use crate::mem::paging::*;
-use crate::utils::{IrqGuard, Mutex, VolatileCell};
+
+use crate::utils::sync::{IrqGuard, Mutex};
+use crate::utils::VolatileCell;
 
 use super::pci::*;
 
@@ -829,8 +831,8 @@ impl PciDeviceHandle for AhciDriver {
 
         // Temporary testing...
         if let Some(port) = get_ahci().inner.lock().ports[0].clone() {
-            let buffer = &mut [0u8; 512];
-            port.read(0, buffer);
+            let mut buffer = [0u8; 512];
+            port.read(0, &mut buffer);
             log::info!("Read sector 0: {:?}", buffer);
         }
     }

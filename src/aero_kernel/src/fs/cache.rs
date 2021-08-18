@@ -38,7 +38,7 @@ use lru::LruCache;
 use spin::Once;
 
 use crate::fs::inode::{DirEntry, INodeInterface};
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 pub(super) static INODE_CACHE: Once<Arc<INodeCache>> = Once::new();
 pub(super) static DIR_CACHE: Once<Arc<DirCache>> = Once::new();

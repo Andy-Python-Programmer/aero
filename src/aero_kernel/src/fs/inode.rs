@@ -28,7 +28,8 @@ use alloc::sync::Weak;
 use alloc::vec::Vec;
 use spin::Once;
 
-use crate::utils::{Downcastable, Mutex};
+use crate::utils::sync::Mutex;
+use crate::utils::Downcastable;
 
 use super::cache;
 use super::cache::{DirCacheItem, INodeCacheItem};

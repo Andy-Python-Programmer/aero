@@ -21,7 +21,7 @@ use core::alloc;
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::NonNull;
 
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 use linked_list_allocator::{align_up, Heap};
 
 use crate::mem::paging::*;

@@ -20,7 +20,7 @@
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 use crate::acpi::mcfg;
 use crate::mem::paging::OffsetPageTable;

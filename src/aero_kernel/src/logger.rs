@@ -23,7 +23,7 @@ use log::{Level, LevelFilter, Metadata, Record};
 use spin::Once;
 
 use crate::utils::buffer::RingBuffer;
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 const MAX_LOG_LEVEL_SPACE: usize = 6;
 const DEFAULT_LOG_RING_BUFFER_SIZE: usize = 256;

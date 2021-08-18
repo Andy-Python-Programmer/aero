@@ -25,9 +25,7 @@ use crate::fs::devfs;
 use crate::fs::inode;
 
 use crate::fs::inode::INodeInterface;
-use crate::userland::scheduler;
-use crate::userland::task::Task;
-use crate::utils::Mutex;
+use crate::utils::sync::{BlockQueue, Mutex};
 
 use super::keyboard::KeyCode;
 use super::keyboard::KeyboardListener;
@@ -383,7 +381,12 @@ impl StdinBuffer {
             .resize(self.back_buffer.len() - self.i, 0x00);
         self.front_buffer
             .copy_from_slice(&self.back_buffer[self.i..]);
-        self.i = self.back_buffer.len() - 1;
+        self.i = self.back_buffer.len();
+    }
+
+    #[inline]
+    fn is_complete(&self) -> bool {
+        self.back_buffer.len() > self.i
     }
 }
 
@@ -403,7 +406,7 @@ struct Tty {
     sref: Weak<Self>,
 
     stdin: Mutex<StdinBuffer>,
-    task: Mutex<Arc<Task>>,
+    block_queue: BlockQueue,
 }
 
 impl Tty {
@@ -420,7 +423,7 @@ impl Tty {
                 altgr: false,
                 caps: false,
             }),
-            task: Mutex::new(scheduler::get_scheduler().current_task()),
+            block_queue: BlockQueue::new(),
             stdin: Mutex::new(StdinBuffer::new()),
             sref: sref.clone(),
         })
@@ -430,11 +433,11 @@ impl Tty {
 impl INodeInterface for Tty {
     #[inline]
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        *self.task.lock_irq() = scheduler::get_scheduler().current_task();
-        scheduler::get_scheduler().inner.await_io();
+        self.block_queue
+            .block_on(&self.stdin, |future| future.is_complete());
 
         let mut stdin = self.stdin.lock_irq();
-
+        stdin.swap_buffer();
         stdin.front_buffer.resize(buffer.len(), 0x00);
         buffer.copy_from_slice(&stdin.front_buffer);
         Ok(buffer.len())
@@ -475,12 +478,9 @@ impl KeyboardListener for Tty {
             KeyCode::KEY_ENTER | KeyCode::KEY_KPENTER if !released => {
                 let mut stdin = self.stdin.lock_irq();
                 stdin.back_buffer.push('\n' as u8);
-                stdin.swap_buffer();
 
                 crate::prelude::print!("\n");
-
-                let task = self.task.lock_irq();
-                scheduler::get_scheduler().inner.wake_up(task.clone());
+                self.block_queue.notify_complete();
             }
 
             KeyCode::KEY_BACKSPACE if !released => {}

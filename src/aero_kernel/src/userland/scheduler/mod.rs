@@ -22,7 +22,7 @@ pub mod round_robin;
 
 use alloc::sync::Arc;
 
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 use spin::Once;
 use xmas_elf::ElfFile;

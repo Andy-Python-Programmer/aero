@@ -23,7 +23,7 @@ use core::fmt::Write;
 use spin::Once;
 
 use crate::utils::io;
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 static COM_1: Once<Mutex<SerialPort>> = Once::new();
 

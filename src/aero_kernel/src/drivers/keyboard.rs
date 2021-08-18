@@ -23,7 +23,7 @@ use spin::RwLock;
 use crate::apic;
 
 use crate::utils::io;
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 pub trait KeyboardListener: Send + Sync {
     fn on_key(&self, key: KeyCode, released: bool);

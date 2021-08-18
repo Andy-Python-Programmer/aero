@@ -19,7 +19,7 @@
 
 use crate::prelude::*;
 use crate::utils::io;
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 
 use bitflags::bitflags;
 use lazy_static::lazy_static;

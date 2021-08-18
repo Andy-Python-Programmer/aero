@@ -25,7 +25,7 @@ use alloc::collections::LinkedList;
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
 
-use crate::utils::Mutex;
+use crate::utils::sync::Mutex;
 use xmas_elf::ElfFile;
 
 use super::USERLAND_SHELL;
