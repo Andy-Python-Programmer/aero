@@ -28,14 +28,65 @@ AERO_BUNDLED=$AERO_PATH/bundled
 AERO_CROSS=$AERO_PATH/sysroot/cross
 AERO_TRIPLE=x86_64-aero
 
+export PATH=$AERO_PATH/sysroot/bin:$AERO_CROSS/bin:$PATH
+
 set -x -e
 
 # This function is responsible for building and assembling the mlibc headers.
+function setup_sysroot {
+    meson setup --cross-file $AERO_USERLAND/cross-file.ini \
+        --prefix $AERO_SYSROOT/usr \
+        -Dheaders_only=true \
+        -Dstatic=true \
+        $AERO_SYSROOT_BUILD/mlibc $AERO_BUNDLED/mlibc
+    
+    pushd .
+    cd $AERO_SYSROOT_BUILD/mlibc
+
+    ninja
+    ninja install
+
+    popd
+}
+
+# This function is responsible for building and assembling the mlibc runtime objects.
 function setup_mlibc {
-    if [ ! -d $AERO_SYSROOT/usr/include ]; then # Avoid wasting time to re-install the headers in the prefix location.
-        meson setup --cross-file $AERO_USERLAND/cross-file.ini --prefix $AERO_SYSROOT/usr -Dheaders_only=true -Dstatic=true $AERO_SYSROOT_BUILD/mlibc $AERO_BUNDLED/mlibc
-        meson install -C $AERO_SYSROOT_BUILD/mlibc
-    fi
+    meson setup --cross-file $AERO_USERLAND/cross-file.ini \
+        --prefix $AERO_SYSROOT/usr \
+        -Dstatic=true \
+        -Dheaders_only=false \
+        --reconfigure \
+        $AERO_SYSROOT_BUILD/mlibc $AERO_BUNDLED/mlibc
+
+    pushd .
+    cd $AERO_SYSROOT_BUILD/mlibc
+
+    ninja
+    ninja install
+
+    popd
+}
+
+# This function is responsible for building and assembling host binutils.
+function setup_binutils {
+    mkdir -p $AERO_SYSROOT_BUILD/binutils-gdb
+
+    pushd .
+
+	cd $AERO_SYSROOT_BUILD/binutils-gdb
+
+    # --disable-werror: On recent compilers, binutils 2.26 causes implicit-fallthrough warnings, among others.
+	$AERO_BUNDLED/binutils-gdb/configure \
+        --target=$AERO_TRIPLE \
+        --prefix="$AERO_CROSS" \
+        --with-sysroot=$AERO_SYSROOT \
+        --disable-werror \
+        --disable-gdb
+
+	popd
+
+    make -C $AERO_SYSROOT_BUILD/binutils-gdb -j$(nproc)
+	make -C $AERO_SYSROOT_BUILD/binutils-gdb install
 }
 
 # This function is responsible for building and assembling libgcc.
@@ -63,14 +114,28 @@ function setup_gcc {
 
     # Run the configure script and only enable C and C++ languages and set enable-threads to posix. See the documentation of the
     # configure script in bundled/gcc/configure for more information.
-    $AERO_BUNDLED/gcc/configure --target=$AERO_TRIPLE --prefix="$AERO_CROSS" --with-sysroot=$AERO_SYSROOT --enable-languages=c,c++ --enable-threads=posix
+    $AERO_BUNDLED/gcc/configure --target=$AERO_TRIPLE \
+        --prefix="$AERO_CROSS" \
+        --with-sysroot=$AERO_SYSROOT \
+        --enable-languages=c,c++ \
+        --enable-threads=posix
     popd
 
     # Do the actual compilation of GCC by executing MAKE and compiling libgcc. If you run out of memory, try setting the
     # job number `-j` to an amount lower then 4.
-    make -C $AERO_SYSROOT_BUILD/gcc -j4 all-gcc all-target-libgcc
+    make -C $AERO_SYSROOT_BUILD/gcc -j$(nproc) all-gcc all-target-libgcc
     make -C $AERO_SYSROOT_BUILD/gcc install-gcc install-target-libgcc
 }
 
-setup_mlibc
-setup_gcc
+function setup_all {
+    setup_sysroot
+    setup_binutils
+    setup_gcc
+    setup_mlibc
+}
+
+function setup_test {
+    x86_64-aero-gcc $AERO_PATH/test.c -o $AERO_PATH/test.out
+}
+
+setup_$1

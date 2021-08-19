@@ -246,6 +246,8 @@ fn kernel_main_thread() {
     let mut address_space = mem::AddressSpace::this();
     let mut offset_table = address_space.offset_page_table();
 
+    drivers::pci::pre_init();
+
     modules::init();
     log::info!("Loaded kernel modules");
 

@@ -24,6 +24,8 @@
 
 use core::mem;
 
+use aml::AmlContext;
+
 use crate::mem::paging::{PhysAddr, VirtAddr};
 
 use self::{fadt::Fadt, hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
@@ -151,4 +153,6 @@ pub fn init(rsdp_address: PhysAddr, physical_memory_offset: VirtAddr) {
 
     init_table!(fadt::SIGNATURE => Fadt);
     init_table!(hpet::SIGNATURE => Hpet);
+
+    // let aml_context = AmlContext::new(Box);
 }

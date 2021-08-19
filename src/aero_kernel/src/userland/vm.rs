@@ -123,7 +123,7 @@ impl Mapping {
                 addr_aligned + Size4KiB::SIZE
             );
 
-            self.handle_cow(offset_table, addr_aligned)
+            self.handle_cow(offset_table, addr_aligned, false)
         } else {
             log::error!("    - present page read failed");
 
@@ -203,7 +203,7 @@ impl Mapping {
                 && reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
             {
                 log::trace!("    - private file COW: {:?}", address);
-                unimplemented!()
+                return self.handle_cow(offset_table, address, true);
             }
 
             true
@@ -216,11 +216,16 @@ impl Mapping {
     /// until a write occurs after which a private copy is made for the writing process. A COW page
     /// is recognised because the VMA for the region is marked writable even though the individual page
     /// table entry is not.
-    fn handle_cow(&mut self, offset_table: &mut OffsetPageTable, address: VirtAddr) -> bool {
+    fn handle_cow(
+        &mut self,
+        offset_table: &mut OffsetPageTable,
+        address: VirtAddr,
+        copy: bool,
+    ) -> bool {
         if let TranslateResult::Mapped { flags, .. } = offset_table.translate(address) {
             let page: Page = Page::containing_address(address);
 
-            if !flags.contains(PageTableFlags::ACCESSED) {
+            if !flags.contains(PageTableFlags::BIT_10) || copy {
                 // This page is used by more then one process, so make it a private copy.
                 log::trace!("    - making {:?} into a private copy", page);
 
@@ -243,6 +248,7 @@ impl Mapping {
                         frame,
                         PageTableFlags::PRESENT
                             | PageTableFlags::USER_ACCESSIBLE
+                            | PageTableFlags::BIT_10
                             | self.protocol.into(),
                         &mut FRAME_ALLOCATOR,
                     )

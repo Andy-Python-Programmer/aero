@@ -7,4 +7,10 @@
     "rust-analyzer.checkOnSave.extraArgs": [
         "-Zbuild-std=core,alloc"
     ],
+    "files.associations": {
+        "stdio.h": "c",
+        "unistd.h": "c",
+        "*.inc": "c",
+        "extern-c-redecl5.C": "cpp"
+    },
 }

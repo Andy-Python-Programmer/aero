@@ -87,7 +87,7 @@ pub fn fetch() -> anyhow::Result<()> {
     }
 
     xshell::cmd!("chmod +x ./tools/setup_userland.sh").run()?;
-    xshell::cmd!("./tools/setup_userland.sh").run()?;
+    xshell::cmd!("./tools/setup_userland.sh all").run()?;
 
     Ok(())
 }

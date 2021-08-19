@@ -548,6 +548,10 @@ pub fn register_device_driver(handle: Arc<dyn PciDeviceHandle>) {
     PCI_TABLE.lock().inner.push(PciDevice { handle })
 }
 
+pub fn pre_init() {
+    // TODO: initialize PCI bridge
+}
+
 /// Lookup and initialize all PCI devices.
 pub fn init(offset_table: &mut OffsetPageTable) {
     // Check if the MCFG table is avaliable.
