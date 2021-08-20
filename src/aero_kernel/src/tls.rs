@@ -34,6 +34,7 @@ use alloc::alloc::alloc_zeroed;
 use spin::Once;
 
 use crate::arch::gdt::TASK_STATE_SEGMENT;
+use crate::userland::scheduler;
 use crate::utils::io;
 use crate::utils::linker::LinkerSymbol;
 
@@ -128,9 +129,12 @@ pub fn init() {
 
 #[no_mangle]
 extern "C" fn restore_user_tls() {
-    // FIXME(Andy-Python-Programmer): Actual support for userland TLS. For now
-    // we sanitse the FS base to 0x00.
     unsafe {
-        io::wrmsr(io::IA32_FS_BASE, 0x00);
+        let base = scheduler::get_scheduler()
+            .current_task()
+            .arch_task_mut()
+            .get_fs_base();
+
+        io::wrmsr(io::IA32_FS_BASE, base.as_u64());
     }
 }

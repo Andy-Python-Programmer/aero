@@ -28,6 +28,9 @@ pub mod vm;
 #[rustfmt::skip]
 static USERLAND_SHELL: &[u8] = include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
 
+// #[rustfmt::skip]
+// static USERLAND_SHELL: &[u8] = include_bytes!("../../../../sysroot/debug/nyancat");
+
 pub fn run() {
     let shell_elf = ElfFile::new(USERLAND_SHELL).unwrap();
 

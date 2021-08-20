@@ -8,3 +8,4 @@ pub const SYS_FORK: usize = 6;
 pub const SYS_REBOOT: usize = 7;
 pub const SYS_MMAP: usize = 8;
 pub const SYS_MUNMAP: usize = 9;
+pub const SYS_ARCH_PRCTL: usize = 10;

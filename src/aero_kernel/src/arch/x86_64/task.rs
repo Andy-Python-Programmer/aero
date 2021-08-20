@@ -61,6 +61,7 @@ pub struct ArchTask {
     context_switch_rsp: VirtAddr,
 
     rpl: Ring,
+    fs_base: VirtAddr,
 }
 
 impl ArchTask {
@@ -73,6 +74,7 @@ impl ArchTask {
             // address space here and we also use the kernel privilage level here.
             address_space: AddressSpace::this(),
             rpl: Ring::Ring0,
+            fs_base: VirtAddr::zero(),
         }
     }
 
@@ -119,6 +121,7 @@ impl ArchTask {
             // Since we are creating a kernel task, we set the ring privilage
             // level to ring 0.
             rpl: Ring::Ring0,
+            fs_base: VirtAddr::zero(),
         }
     }
 
@@ -171,6 +174,7 @@ impl ArchTask {
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
             address_space: new_address_space,
             rpl: Ring::Ring3,
+            fs_base: VirtAddr::zero(),
         })
     }
 
@@ -217,6 +221,16 @@ impl ArchTask {
         }
 
         Ok(())
+    }
+
+    #[inline]
+    pub fn get_fs_base(&mut self) -> VirtAddr {
+        self.fs_base
+    }
+
+    #[inline]
+    pub fn set_fs_base(&mut self, base: VirtAddr) {
+        self.fs_base = base;
     }
 }
 

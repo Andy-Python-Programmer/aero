@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::{AeroSyscallError, AeroSyscallResult, MMapFlags, MMapProt};
+use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
 
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
@@ -27,7 +27,36 @@ pub fn exit(status: usize) -> ! {
     scheduler::get_scheduler().inner.exit(status as isize);
 }
 
-pub fn fork() -> AeroSyscallResult {
+const ARCH_SET_GS: usize = 0x1001;
+const ARCH_SET_FS: usize = 0x1002;
+const ARCH_GET_FS: usize = 0x1003;
+const ARCH_GET_GS: usize = 0x1004;
+
+pub fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError> {
+    match command {
+        ARCH_SET_FS => {
+            scheduler::get_scheduler()
+                .current_task()
+                .arch_task_mut()
+                .set_fs_base(VirtAddr::new(address as u64));
+
+            Ok(0x00)
+        }
+
+        ARCH_GET_FS => Ok(scheduler::get_scheduler()
+            .current_task()
+            .arch_task_mut()
+            .get_fs_base()
+            .as_u64() as usize),
+
+        ARCH_SET_GS => unimplemented!(),
+        ARCH_GET_GS => unimplemented!(),
+
+        _ => Err(AeroSyscallError::EINVAL),
+    }
+}
+
+pub fn fork() -> Result<usize, AeroSyscallError> {
     let scheduler = scheduler::get_scheduler();
     let forked = scheduler.current_task().fork();
 
@@ -42,7 +71,7 @@ pub fn mmap(
     flags: usize,
     _fd: usize,
     _offset: usize,
-) -> AeroSyscallResult {
+) -> Result<usize, AeroSyscallError> {
     let address = VirtAddr::new(address as u64);
 
     let protocol = MMapProt::from_bits(protocol).ok_or(AeroSyscallError::EINVAL)?;
@@ -63,7 +92,7 @@ pub fn mmap(
     }
 }
 
-pub fn munmap(address: usize, size: usize) -> AeroSyscallResult {
+pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
     let address = VirtAddr::new(address as u64);
 
     if scheduler::get_scheduler()

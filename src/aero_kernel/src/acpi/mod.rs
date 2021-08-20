@@ -118,6 +118,134 @@ pub struct GenericAddressStructure {
     pub address: u64,
 }
 
+struct AmlHandler;
+
+impl aml::Handler for AmlHandler {
+    fn read_u8(&self, address: usize) -> u8 {
+        log::trace!("AML: Reading byte from {:#x}", address);
+
+        unsafe {
+            (crate::PHYSICAL_MEMORY_OFFSET + address)
+                .as_ptr::<u8>()
+                .read_volatile()
+        }
+    }
+
+    fn read_u16(&self, _address: usize) -> u16 {
+        todo!()
+    }
+
+    fn read_u32(&self, _address: usize) -> u32 {
+        todo!()
+    }
+
+    fn read_u64(&self, _address: usize) -> u64 {
+        todo!()
+    }
+
+    fn write_u8(&mut self, _address: usize, _value: u8) {
+        todo!()
+    }
+
+    fn write_u16(&mut self, _address: usize, _value: u16) {
+        todo!()
+    }
+
+    fn write_u32(&mut self, _address: usize, _value: u32) {
+        todo!()
+    }
+
+    fn write_u64(&mut self, _address: usize, _value: u64) {
+        todo!()
+    }
+
+    fn read_io_u8(&self, _port: u16) -> u8 {
+        todo!()
+    }
+
+    fn read_io_u16(&self, _port: u16) -> u16 {
+        todo!()
+    }
+
+    fn read_io_u32(&self, _port: u16) -> u32 {
+        todo!()
+    }
+
+    fn write_io_u8(&self, _port: u16, _value: u8) {
+        todo!()
+    }
+
+    fn write_io_u16(&self, _port: u16, _value: u16) {
+        todo!()
+    }
+
+    fn write_io_u32(&self, _port: u16, _value: u32) {
+        todo!()
+    }
+
+    fn read_pci_u8(&self, _segment: u16, _bus: u8, _device: u8, _unction: u8, _offset: u16) -> u8 {
+        todo!()
+    }
+
+    fn read_pci_u16(
+        &self,
+        _segment: u16,
+        _bus: u8,
+        _device: u8,
+        _function: u8,
+        _offset: u16,
+    ) -> u16 {
+        todo!()
+    }
+
+    fn read_pci_u32(
+        &self,
+        _segment: u16,
+        _bus: u8,
+        _device: u8,
+        _function: u8,
+        _offset: u16,
+    ) -> u32 {
+        todo!()
+    }
+
+    fn write_pci_u8(
+        &self,
+        _segment: u16,
+        _bus: u8,
+        _device: u8,
+        _function: u8,
+        _offset: u16,
+        _value: u8,
+    ) {
+        todo!()
+    }
+
+    fn write_pci_u16(
+        &self,
+        _segment: u16,
+        _bus: u8,
+        _device: u8,
+        _function: u8,
+        _offset: u16,
+        _value: u16,
+    ) {
+        todo!()
+    }
+
+    fn write_pci_u32(
+        &self,
+        _segment: u16,
+        _bus: u8,
+        _device: u8,
+        _function: u8,
+        _offset: u16,
+        _value: u32,
+    ) {
+        todo!()
+    }
+}
+
 /// Initialize the ACPI tables.
 pub fn init(rsdp_address: PhysAddr, physical_memory_offset: VirtAddr) {
     let rsdp_address = physical_memory_offset + rsdp_address.as_u64();
@@ -154,5 +282,5 @@ pub fn init(rsdp_address: PhysAddr, physical_memory_offset: VirtAddr) {
     init_table!(fadt::SIGNATURE => Fadt);
     init_table!(hpet::SIGNATURE => Hpet);
 
-    // let aml_context = AmlContext::new(Box);
+    let aml_context = AmlContext::new(box AmlHandler, aml::DebugVerbosity::None);
 }

@@ -67,6 +67,18 @@ function setup_mlibc {
     popd
 }
 
+function setup_nyancat {
+    pushd .
+
+	cd $AERO_BUNDLED/nyancat/src
+	make clean
+	CC=$AERO_TRIPLE-gcc make
+	cp nyancat $AERO_SYSROOT_BUILD
+	make clean
+
+	popd
+}
+
 # This function is responsible for building and assembling host binutils.
 function setup_binutils {
     mkdir -p $AERO_SYSROOT_BUILD/binutils-gdb
