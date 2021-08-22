@@ -17,17 +17,22 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use spin::Once;
+
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
+use aml::pci_routing::{PciRoutingTable, Pin};
+
 use crate::utils::sync::Mutex;
 
-use crate::acpi::mcfg;
+use crate::acpi::{self, mcfg};
 use crate::mem::paging::OffsetPageTable;
 use crate::utils::io;
 
 use bit_field::BitField;
 
+static PCI_ROUTER: Once<PciRoutingTable> = Once::new();
 static PCI_TABLE: Mutex<PciTable> = Mutex::new(PciTable::new());
 
 const PCI_CONFIG_ADDRESS_PORT: u16 = 0xCF8;
@@ -468,6 +473,31 @@ impl PciHeader {
         unsafe { self.read(0x0c) }.get_bit(23)
     }
 
+    pub fn pin(&self) -> u8 {
+        unsafe { (self.read(0x3D) >> (0x3D & 0b11) * 8) as u8 }
+    }
+
+    #[allow(unused)]
+    pub fn resolve_irq_mapping(&self) -> Option<u32> {
+        PCI_ROUTER
+            .get()
+            .map(|r| {
+                r.route(
+                    self.device() as _,
+                    self.function() as _,
+                    match self.pin() - 1 {
+                        0 => Pin::IntA,
+                        1 => Pin::IntB,
+                        2 => Pin::IntC,
+                        3 => Pin::IntD,
+                        _ => panic!(),
+                    },
+                    &mut acpi::get_aml_context(),
+                )
+            })
+            .map(|v| v.unwrap().irq)
+    }
+
     pub unsafe fn get_bar(&self, bar: u8) -> Option<Bar> {
         let offset = 0x10 + (bar as u16) * 4;
         let bar = self.read(offset.into());
@@ -548,8 +578,8 @@ pub fn register_device_driver(handle: Arc<dyn PciDeviceHandle>) {
     PCI_TABLE.lock().inner.push(PciDevice { handle })
 }
 
-pub fn pre_init() {
-    // TODO: initialize PCI bridge
+pub fn init_pci_router(pci_router: PciRoutingTable) {
+    PCI_ROUTER.call_once(move || pci_router);
 }
 
 /// Lookup and initialize all PCI devices.

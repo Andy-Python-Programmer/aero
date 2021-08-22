@@ -208,7 +208,7 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     arch::gdt::init(stack_top_addr);
     log::info!("Loaded GDT");
 
-    acpi::init(rsdp_address, unsafe { PHYSICAL_MEMORY_OFFSET });
+    acpi::init(rsdp_address).unwrap();
     log::info!("Loaded ACPI");
 
     time::init();
@@ -245,8 +245,6 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
 fn kernel_main_thread() {
     let mut address_space = mem::AddressSpace::this();
     let mut offset_table = address_space.offset_page_table();
-
-    drivers::pci::pre_init();
 
     modules::init();
     log::info!("Loaded kernel modules");

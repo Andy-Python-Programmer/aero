@@ -21,8 +21,6 @@
 //!
 //! **Notes**: <https://wiki.osdev.org/FADT>
 
-use core::ptr;
-
 use super::sdt::Sdt;
 
 pub const SIGNATURE: &str = "FACP";
@@ -75,10 +73,4 @@ pub struct Fadt {
     reserved2: u8,
 
     pub flags: u32,
-}
-
-impl Fadt {
-    pub fn new(sdt: &'static Sdt) -> Self {
-        unsafe { ptr::read((sdt as *const Sdt) as *const Self) }
-    }
 }

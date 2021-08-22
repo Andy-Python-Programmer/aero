@@ -24,11 +24,17 @@
 
 use core::mem;
 
-use aml::AmlContext;
+use aml::{pci_routing::PciRoutingTable, AmlContext, AmlName};
+use spin::Once;
 
-use crate::mem::paging::{PhysAddr, VirtAddr};
+use crate::{
+    drivers,
+    mem::paging::{PhysAddr, VirtAddr},
+};
 
-use self::{fadt::Fadt, hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
+use crate::utils::sync::{Mutex, MutexGuard};
+
+use self::{hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
 
 pub mod fadt;
 pub mod hpet;
@@ -36,6 +42,8 @@ pub mod madt;
 pub mod mcfg;
 pub mod rsdp;
 pub mod sdt;
+
+static AML_CONTEXT: Once<Mutex<AmlContext>> = Once::new();
 
 enum AcpiHeader {
     Rsdt(&'static Sdt),
@@ -247,8 +255,8 @@ impl aml::Handler for AmlHandler {
 }
 
 /// Initialize the ACPI tables.
-pub fn init(rsdp_address: PhysAddr, physical_memory_offset: VirtAddr) {
-    let rsdp_address = physical_memory_offset + rsdp_address.as_u64();
+pub fn init(rsdp_address: PhysAddr) -> Result<(), aml::AmlError> {
+    let rsdp_address = unsafe { crate::PHYSICAL_MEMORY_OFFSET + rsdp_address.as_u64() };
     let acpi_table = AcpiTable::new(rsdp_address);
 
     macro init_table($sig:path => $ty:ty) {
@@ -279,8 +287,38 @@ pub fn init(rsdp_address: PhysAddr, physical_memory_offset: VirtAddr) {
         }
     }
 
-    init_table!(fadt::SIGNATURE => Fadt);
     init_table!(hpet::SIGNATURE => Hpet);
 
-    let aml_context = AmlContext::new(box AmlHandler, aml::DebugVerbosity::None);
+    let mut aml_context = AmlContext::new(box AmlHandler, aml::DebugVerbosity::None);
+
+    if let Some(fadt) = acpi_table.lookup_entry(fadt::SIGNATURE) {
+        let fadt: &'static fadt::Fadt = unsafe { fadt.as_ptr() };
+
+        // The DSDT table is put inside the FADT table, instead of listing it in another ACPI table. So
+        // we need to extract the DSDT table from the FADT table.
+        let dsdt_stream = unsafe {
+            let addr = crate::PHYSICAL_MEMORY_OFFSET + fadt.dsdt as u64;
+            let sdt = Sdt::from_address(addr.as_u64());
+
+            core::slice::from_raw_parts(sdt.data_address() as *mut u8, sdt.data_len())
+        };
+
+        aml_context.parse_table(dsdt_stream)?;
+    }
+
+    let pci_router =
+        PciRoutingTable::from_prt_path(&AmlName::from_str("\\_SB.PCI0._PRT")?, &mut aml_context)?;
+
+    drivers::pci::init_pci_router(pci_router);
+
+    AML_CONTEXT.call_once(move || Mutex::new(aml_context));
+    Ok(())
+}
+
+/// Returns an immutable reference to the AML context.
+pub fn get_aml_context() -> MutexGuard<'static, AmlContext> {
+    AML_CONTEXT
+        .get()
+        .expect("attempted to get AML context before the ACPI initialization")
+        .lock()
 }
