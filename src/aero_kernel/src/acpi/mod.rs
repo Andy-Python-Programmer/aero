@@ -306,10 +306,10 @@ pub fn init(rsdp_address: PhysAddr) -> Result<(), aml::AmlError> {
         aml_context.parse_table(dsdt_stream)?;
     }
 
-    let pci_router =
-        PciRoutingTable::from_prt_path(&AmlName::from_str("\\_SB.PCI0._PRT")?, &mut aml_context)?;
+    // let pci_router =
+    //     PciRoutingTable::from_prt_path(&AmlName::from_str("\\_SB.PCI0._PRT")?, &mut aml_context)?;
 
-    drivers::pci::init_pci_router(pci_router);
+    // drivers::pci::init_pci_router(pci_router);
 
     AML_CONTEXT.call_once(move || Mutex::new(aml_context));
     Ok(())

@@ -23,7 +23,9 @@ use aero_syscall::AeroSyscallError;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::Arc;
+use stivale_boot::v2::StivaleModuleTag;
 
+use crate::mem::paging::*;
 use crate::utils::sync::Mutex;
 use spin::Once;
 
@@ -107,8 +109,6 @@ impl MountManager {
     }
 }
 
-/// ## Notes
-/// * https://wiki.osdev.org/File_Systems
 pub trait FileSystem: Send + Sync {
     fn root_dir(&self) -> DirCacheItem {
         todo!()
@@ -184,17 +184,122 @@ pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
     Ok(result)
 }
 
+/// Representation of the header of an entry in an archive.
+#[repr(C)]
+struct UstarHeader {
+    name: [u8; 100],
+    mode: [u8; 8],
+    uid: [u8; 8],
+    gid: [u8; 8],
+    size: [u8; 12],
+    mtime: [u8; 12],
+    cksum: [u8; 8],
+    typeflag: [u8; 1],
+    linkname: [u8; 100],
+
+    /* USTAR format */
+    magic: [u8; 6],
+    version: [u8; 2],
+    uname: [u8; 32],
+    gname: [u8; 32],
+    dev_major: [u8; 8],
+    dev_minor: [u8; 8],
+    prefix: [u8; 155],
+}
+
+#[repr(u8)]
+enum UstarFileType {
+    File = 0x30,
+    HardLink = 0x31,
+    SymLink = 0x32,
+    CharDevice = 0x33,
+    BlockDevice = 0x34,
+    Directory = 0x35,
+    Fifo = 0x36,
+}
+
 pub fn root_dir() -> &'static DirCacheItem {
     ROOT_DIR.get().expect("How's this possible?")
 }
 
-pub fn init() -> Result<()> {
+pub fn init(offset_table: &mut OffsetPageTable, modules: &'static StivaleModuleTag) -> Result<()> {
     cache::init();
 
     let filesystem = RamFs::new();
 
     ROOT_FS.call_once(|| filesystem.clone());
     ROOT_DIR.call_once(|| filesystem.root_dir().clone());
+
+    for module in modules.iter() {
+        // Note: Loading initramfs may be slower if running with legacy BIOS since it loads
+        // the archive in 64K chunks and has to switch back to real mode each time.
+        if module.as_str() == "initramfs" {
+            log::info!(
+                "initramfs: unpacking at (address={:#x}, size={:#x})...",
+                module.start,
+                module.size()
+            );
+
+            let start_address = unsafe { crate::PHYSICAL_MEMORY_OFFSET + module.start };
+            let mut ustar_header = unsafe { &mut *start_address.as_mut_ptr::<UstarHeader>() };
+
+            loop {
+                // The magic can either end with a ASCII space character or a NULL byte so,
+                // we check the first 5 bits of the magic instead.
+                if &ustar_header.magic[0..5] != b"ustar" {
+                    break;
+                }
+
+                let path = unsafe { core::str::from_utf8_unchecked(&ustar_header.name) };
+                let file_type = match ustar_header.typeflag[0] {
+                    0x30 => Ok(UstarFileType::File),
+                    0x31 => Ok(UstarFileType::HardLink),
+                    0x32 => Ok(UstarFileType::SymLink),
+                    0x33 => Ok(UstarFileType::CharDevice),
+                    0x34 => Ok(UstarFileType::BlockDevice),
+                    0x35 => Ok(UstarFileType::Directory),
+                    0x36 => Ok(UstarFileType::Fifo),
+                    _ => Err(FileSystemError::NotSupported),
+                }?;
+
+                let size = usize::from_str_radix(
+                    unsafe { core::str::from_utf8_unchecked(&ustar_header.size) },
+                    8,
+                )
+                .unwrap_or(0);
+
+                match file_type {
+                    UstarFileType::File => {}
+                    UstarFileType::Directory => {
+                        // The root directory is automatically created in the constructor of the filesystem.
+                        if path != "./" {
+                            root_dir().inode().mkdir(path)?;
+                        }
+                    }
+
+                    _ => (),
+                }
+
+                // Free the memory allocated for the ustar header.
+                let pointer = ustar_header as *mut UstarHeader;
+                let offset_h = 0x200 + align_up(size as u64, 512) as usize;
+
+                let page_offset =
+                    unsafe { pointer as u64 - crate::PHYSICAL_MEMORY_OFFSET.as_u64() };
+
+                let page: Page<Size2MiB> = Page::containing_address(VirtAddr::new(page_offset));
+
+                offset_table
+                    .unmap(page)
+                    .expect("failed to unmap bootloader allocated memory for ustar header")
+                    .1
+                    .flush();
+
+                // Update ustar header's pointer offset to the new offset.
+                ustar_header = unsafe { &mut *pointer.add(offset_h) };
+            }
+        }
+    }
 
     root_dir().inode().mkdir("dev")?;
     root_dir().inode().mkdir("etc")?;

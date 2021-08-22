@@ -133,15 +133,19 @@ static mut CPU_ID: u64 = 0x00;
 extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     let mmap_tag = boot_info
         .memory_map()
-        .expect("Aero requires the bootloader to provide a non-null memory map tag");
+        .expect("aero requires the bootloader to provide a non-null memory map tag");
 
     let rsdp_tag = boot_info
         .rsdp()
-        .expect("Aero requires the bootloader to provided a non-null rsdp tag");
+        .expect("aero requires the bootloader to provided a non-null rsdp tag");
 
     let framebuffer_tag = boot_info
         .framebuffer()
-        .expect("Aero requires the bootloader to provide a non-null framebuffer tag");
+        .expect("aero requires the bootloader to provide a non-null framebuffer tag");
+
+    let modules_tag = boot_info
+        .modules()
+        .expect("aero requires the bootloader to provide a non-null modules tag");
 
     let rsdp_address = PhysAddr::new(rsdp_tag.rsdp);
 
@@ -214,7 +218,7 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     time::init();
     log::info!("Loaded PIT");
 
-    fs::init().unwrap();
+    fs::init(&mut offset_table, modules_tag).unwrap();
     log::info!("Loaded filesystem");
 
     userland::init();

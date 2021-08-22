@@ -25,7 +25,7 @@ use super::sdt::Sdt;
 
 pub const SIGNATURE: &str = "FACP";
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Clone, Copy, Debug)]
 pub struct Fadt {
     pub header: Sdt,

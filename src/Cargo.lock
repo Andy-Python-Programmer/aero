@@ -360,9 +360,9 @@ dependencies = [
 
 [[package]]
 name = "stivale-boot"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a86abb35a82de67e29c14389c8ddb4eb067b190e9c8b06c43d2256bf7276d7b8"
+checksum = "0f34c9d55480747cc07555801ab9b37c4ec0cd8fbfac111b9ad8a681a3c7cac5"
 dependencies = [
  "bitflags",
 ]

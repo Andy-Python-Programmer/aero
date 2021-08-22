@@ -371,7 +371,7 @@ pub fn io_apic_set_redirect(vec: u8, gsi: u32, flags: u16, status: i32) {
             io_apic_write(io_apic, ioredtbl + 1, (redirect as u64 >> 32) as _);
         }
 
-        log::info!("registered redirect  (vec={}, gsi={})", vec, gsi);
+        log::info!("registered redirect (vec={}, gsi={})", vec, gsi);
     } else {
         log::warn!("unable to register redirect (vec={}, gsi={})", vec, gsi);
     }
