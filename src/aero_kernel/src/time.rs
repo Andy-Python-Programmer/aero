@@ -38,7 +38,6 @@ static UPTIME_SEC: AtomicUsize = AtomicUsize::new(0);
 static UNIX_EPOCH: AtomicUsize = AtomicUsize::new(0);
 
 pub fn tick() {
-    log::debug!("yes");
     let value = UPTIME_RAW.fetch_add(1, Ordering::Relaxed); // Increment uptime raw ticks.
 
     if value % PIT_FREQUENCY_HZ == 0 {
