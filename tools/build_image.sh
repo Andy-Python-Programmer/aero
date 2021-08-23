@@ -54,6 +54,10 @@ if [ -d $AERO_BUILD ]; then
 fi
 
 mkdir $AERO_BUILD
+# Create the sysroot directory if it already does not exist since the sysroot
+# directory is only created when the sysroot is built (which is optional) and is
+# required for building the initramfs gzip archive.
+mkdir -p $AERO_SYSROOT
 dd if=/dev/zero bs=1M count=0 seek=64 of=$AERO_BUILD/aero.img
 
 parted -s $AERO_BUILD/aero.img mklabel gpt
