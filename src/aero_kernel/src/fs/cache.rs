@@ -193,12 +193,14 @@ impl Cacheable<DirCacheKey> for DirEntry {
     }
 }
 
-/// Clears the inode cache. This function is mostly called when cleanup is required. For example
-/// on a reboot or shutdown.
+#[inline]
 pub fn clear_inode_cache() {
-    if let Some(cache) = INODE_CACHE.get() {
-        cache.clear();
-    }
+    INODE_CACHE.get().map(|cache| cache.clear());
+}
+
+#[inline]
+pub fn clear_dir_cache() {
+    DIR_CACHE.get().map(|cache| cache.clear());
 }
 
 pub(super) fn icache() -> &'static Arc<INodeCache> {

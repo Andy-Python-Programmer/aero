@@ -68,26 +68,33 @@ pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, A
         flags.insert(OpenFlags::O_RDONLY);
     }
 
-    if let Some(path) = validate_str(path as *const u8, len) {
-        let path = Path::new(path);
-        let inode = fs::lookup_path(path)?;
+    let path = validate_str(path as *const u8, len).ok_or(AeroSyscallError::EINVAL)?;
 
-        if flags.contains(OpenFlags::O_DIRECTORY) && inode.inode().metadata()?.is_directory() {
-            return Err(AeroSyscallError::ENOTDIR);
-        }
+    let path = Path::new(path);
+    let inode = fs::lookup_path(path)?;
 
-        if flags.contains(OpenFlags::O_TRUNC) {
-            // FIXME(Andy-Python-Programmer): Implement file truncation.
-            unimplemented!()
-        }
-
-        scheduler::get_scheduler()
-            .current_task()
-            .file_table
-            .open_file(inode, flags)?;
-
-        Ok(0)
-    } else {
-        Err(AeroSyscallError::EINVAL)
+    if flags.contains(OpenFlags::O_DIRECTORY) && !inode.inode().metadata()?.is_directory() {
+        return Err(AeroSyscallError::ENOTDIR);
     }
+
+    if flags.contains(OpenFlags::O_TRUNC) {
+        // FIXME(Andy-Python-Programmer): Implement file truncation.
+        unimplemented!()
+    }
+
+    Ok(scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .open_file(inode, flags)?)
+}
+
+pub fn getdents(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    let handle = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    let buffer = validate_slice_mut(buffer as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    Ok(handle.get_dents(buffer)?)
 }

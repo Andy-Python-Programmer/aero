@@ -19,7 +19,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use aero_syscall::OpenFlags;
+use aero_syscall::{OpenFlags, SysDirEntry};
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -64,6 +64,54 @@ impl FileHandle {
         self.offset.fetch_add(new_offset, Ordering::SeqCst);
 
         Ok(new_offset)
+    }
+
+    pub fn get_dents(&self, buffer: &mut [u8]) -> super::Result<usize> {
+        let mut offset = 0x00usize;
+
+        loop {
+            let inode = self
+                .inode
+                .inode()
+                .dirent(self.inode.clone(), self.offset.load(Ordering::SeqCst))?;
+
+            if let Some(entry) = inode {
+                let reclen = core::mem::size_of::<SysDirEntry>() + entry.name().len();
+                let dir_offset = offset + reclen;
+
+                let sysd = SysDirEntry {
+                    inode: entry.inode().metadata()?.id(),
+                    offset: dir_offset,
+                    reclen,
+                    file_type: entry.inode().metadata()?.file_type().into(),
+                    name: [], // will be filled in later
+                };
+
+                if (buffer.len() - offset) < sysd.reclen {
+                    break Ok(dir_offset);
+                }
+
+                self.offset.fetch_add(1, Ordering::SeqCst);
+
+                unsafe {
+                    // Copy the directory entry info into the provided buffer.
+                    buffer.as_mut_ptr().offset(offset as isize).copy_from(
+                        &sysd as *const _ as *const u8,
+                        core::mem::size_of::<SysDirEntry>(),
+                    );
+
+                    // Copy over the name of the inode.
+                    buffer
+                        .as_mut_ptr()
+                        .offset(offset as isize + core::mem::size_of::<SysDirEntry>() as isize)
+                        .copy_from(entry.name().as_ptr(), entry.name().len());
+                }
+
+                offset += sysd.reclen;
+            } else {
+                break Ok(offset);
+            }
+        }
     }
 }
 

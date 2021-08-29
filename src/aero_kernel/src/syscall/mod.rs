@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! System Calls are used to call a kernel service from user land.
+//! System Calls are used to call a kernel service from userland.
 //!
 //! | %rax   | Name                    |
 //! |--------|-------------------------|
@@ -25,9 +25,14 @@
 //! | 1      | write                   |
 //! | 2      | open                    |
 //! | 3      | close                   |
-//! | 60     | exit                    |
-//!
-//! **Notes**: <https://wiki.osdev.org/System_Calls>
+//! | 4      | shutdown                |
+//! | 5      | exit                    |
+//! | 6      | fork                    |
+//! | 7      | reboot                  |
+//! | 8      | mmap                    |
+//! | 9      | munmap                  |
+//! | 10     | arch_prctl              |
+//! | 11     | get_dents               |
 
 use aero_syscall::prelude::*;
 
@@ -98,9 +103,9 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_MMAP => process::mmap(b, c, d, e, f, g),
         SYS_ARCH_PRCTL => process::arch_prctl(b, c),
         SYS_MUNMAP => process::munmap(b, c),
+        SYS_GETDENTS => fs::getdents(b, c, d),
         _ => {
-            log::error!("Invalid syscall: {:#x}", a);
-
+            log::error!("invalid syscall: {:#x}", a);
             Err(AeroSyscallError::ENOSYS)
         }
     };

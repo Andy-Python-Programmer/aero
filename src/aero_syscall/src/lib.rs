@@ -3,6 +3,7 @@
 
 pub mod consts;
 pub mod syscall;
+pub mod writer;
 
 pub use crate::syscall::*;
 
@@ -137,6 +138,22 @@ pub enum AeroSyscallError {
     Unknown = isize::MAX,
 }
 
+#[derive(Debug)]
+pub enum SysFileType {
+    File,
+    Directory,
+    Device,
+}
+
+#[repr(C, packed)]
+pub struct SysDirEntry {
+    pub inode: usize,
+    pub offset: usize,
+    pub reclen: usize,
+    pub file_type: SysFileType,
+    pub name: [u8; 0],
+}
+
 pub type AeroSyscallResult = Result<usize, AeroSyscallError>;
 
 pub fn syscall_result_as_usize(result: AeroSyscallResult) -> usize {
@@ -186,6 +203,18 @@ pub fn sys_read(fd: usize, buf: &mut [u8]) -> usize {
     unsafe {
         syscall3(
             prelude::SYS_READ,
+            fd as usize,
+            buf.as_mut_ptr() as usize,
+            buf.len(),
+        )
+    }
+}
+
+#[inline(always)]
+pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> usize {
+    unsafe {
+        syscall3(
+            prelude::SYS_GETDENTS,
             fd as usize,
             buf.as_mut_ptr() as usize,
             buf.len(),

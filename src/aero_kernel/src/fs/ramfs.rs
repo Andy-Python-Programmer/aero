@@ -140,6 +140,39 @@ impl INodeInterface for LockedRamINode {
         }
     }
 
+    fn dirent(&self, parent: DirCacheItem, index: usize) -> Result<Option<DirCacheItem>> {
+        let this = self.0.read();
+
+        if this.file_type != FileType::Directory {
+            return Err(FileSystemError::NotDirectory);
+        }
+
+        Ok(match index {
+            0x00 => Some(DirEntry::new(
+                parent,
+                // UNWRAP: The inner node value should not be dropped.
+                this.node.upgrade().unwrap().into(),
+                String::from("."),
+            )),
+
+            0x01 => {
+                Some(DirEntry::new(
+                    parent,
+                    // UNWRAP: The inner node value should not be dropped.
+                    this.node.upgrade().unwrap().into(),
+                    String::from(".."),
+                ))
+            }
+
+            // Subtract two because of the "." and ".." entries.
+            _ => this
+                .children
+                .iter()
+                .nth(index - 2)
+                .map(|(name, inode)| DirEntry::new(parent, inode.clone(), name.clone())),
+        })
+    }
+
     fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
         let this = self.0.read();
 

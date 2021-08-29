@@ -108,6 +108,8 @@ pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
 
 pub fn shutdown() -> ! {
     crate::fs::cache::clear_inode_cache();
+    crate::fs::cache::clear_dir_cache();
+
     // TODO
     loop {}
 }

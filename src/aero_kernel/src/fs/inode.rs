@@ -86,6 +86,10 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Ok(())
     }
 
+    fn dirent(&self, _parent: DirCacheItem, _index: usize) -> Result<Option<DirCacheItem>> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Returns a weak reference to the filesystem that this inode belongs to.
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
         None
@@ -109,6 +113,16 @@ pub struct Metadata {
 }
 
 impl Metadata {
+    #[inline]
+    pub fn id(&self) -> usize {
+        self.id
+    }
+
+    #[inline]
+    pub fn file_type(&self) -> FileType {
+        self.file_type
+    }
+
     /// Returns true if the file type of the inode is a directory.
     #[inline]
     pub fn is_directory(&self) -> bool {
@@ -143,6 +157,16 @@ pub enum FileType {
     File,
     Directory,
     Device,
+}
+
+impl From<FileType> for aero_syscall::SysFileType {
+    fn from(file: FileType) -> Self {
+        match file {
+            FileType::File => aero_syscall::SysFileType::File,
+            FileType::Directory => aero_syscall::SysFileType::Directory,
+            FileType::Device => aero_syscall::SysFileType::Device,
+        }
+    }
 }
 
 impl Default for FileType {
@@ -222,6 +246,10 @@ impl DirEntry {
             cache_marker: DIR_CACHE_MARKER.fetch_add(1, Ordering::SeqCst),
             filesystem: Once::new(),
         })
+    }
+
+    pub fn name(&self) -> String {
+        self.data.lock().name.clone()
     }
 
     /// Returns the inner inode cache item of the directory entry cache.
