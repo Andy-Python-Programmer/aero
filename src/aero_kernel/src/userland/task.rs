@@ -17,12 +17,16 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use alloc::string::String;
 use alloc::sync::Arc;
+use spin::RwLock;
 use xmas_elf::ElfFile;
 
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicIsize, AtomicU8, AtomicUsize, Ordering};
 
+use crate::fs::cache::DirCacheItem;
+use crate::fs::{self, FileSystem};
 use crate::mem::paging::*;
 
 use crate::arch::task::ArchTask;
@@ -73,6 +77,32 @@ impl From<u8> for TaskState {
     }
 }
 
+pub struct Cwd {
+    inode: DirCacheItem,
+    filesystem: Arc<dyn FileSystem>,
+}
+
+impl Cwd {
+    #[inline]
+    fn new() -> RwLock<Self> {
+        let root = fs::root_dir().clone();
+        let fs = root.inode().weak_filesystem().unwrap().upgrade().unwrap();
+
+        RwLock::new(Self {
+            inode: root,
+            filesystem: fs,
+        })
+    }
+
+    #[inline]
+    fn fork(&self) -> RwLock<Self> {
+        RwLock::new(Self {
+            inode: self.inode.clone(),
+            filesystem: self.filesystem.clone(),
+        })
+    }
+}
+
 pub struct Task {
     arch_task: UnsafeCell<ArchTask>,
     task_id: TaskId,
@@ -80,6 +110,8 @@ pub struct Task {
 
     pub vm: Arc<Vm>,
     pub file_table: Arc<FileTable>,
+
+    cwd: RwLock<Cwd>,
 
     pub(super) link: intrusive_collections::LinkedListLink,
     pub(super) exit_status: AtomicIsize,
@@ -100,6 +132,8 @@ impl Task {
 
             link: Default::default(),
             exit_status: AtomicIsize::new(0),
+
+            cwd: Cwd::new(),
         })
     }
 
@@ -118,6 +152,8 @@ impl Task {
 
             link: Default::default(),
             exit_status: AtomicIsize::new(0),
+
+            cwd: Cwd::new(),
         })
     }
 
@@ -136,6 +172,8 @@ impl Task {
             state: AtomicU8::new(TaskState::Runnable as _),
             link: Default::default(),
             exit_status: AtomicIsize::new(0),
+
+            cwd: self.cwd.read().fork(),
         });
 
         this.vm.fork_from(self.vm());
@@ -178,6 +216,10 @@ impl Task {
     #[inline]
     pub fn state(&self) -> TaskState {
         self.state.load(Ordering::SeqCst).into()
+    }
+
+    pub fn get_cwd(&self) -> String {
+        self.cwd.read().inode.name()
     }
 
     /// Returns the task ID that was allocated for this task.

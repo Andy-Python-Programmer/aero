@@ -98,3 +98,17 @@ pub fn getdents(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSysc
     let buffer = validate_slice_mut(buffer as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
     Ok(handle.get_dents(buffer)?)
 }
+
+pub fn getcwd(buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    // Invalid value of the size argument is zero and buffer is not a
+    // null pointer.
+    if size == 0x00 && buffer != 0x00 {
+        return Err(AeroSyscallError::EINVAL);
+    }
+
+    let buffer = validate_slice_mut(buffer as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let cwd = scheduler::get_scheduler().current_task().get_cwd();
+
+    buffer[..cwd.len()].copy_from_slice(cwd.as_bytes());
+    Ok(cwd.len())
+}

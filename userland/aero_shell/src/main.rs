@@ -74,11 +74,16 @@ extern "C" fn _start() {
     sys_open("/dev/tty", OpenFlags::O_WRONLY); // device: stdout
     sys_open("/dev/tty", OpenFlags::O_WRONLY); // device: stderr
 
-    sys_write(1, ASCII_INTRO.as_bytes());
-    sys_write(1, b"\n");
+    println!("{}", ASCII_INTRO);
 
     loop {
-        print!("root@aero:/ ");
+        let mut pwd_buffer = [0u8; 1024];
+        sys_getcwd(&mut pwd_buffer);
+
+        let pwd = unsafe { core::str::from_utf8_unchecked(&pwd_buffer) };
+        let pwd = pwd.trim_matches(|c| c == '\0');
+
+        print!("root@aero:{} ", pwd);
 
         let mut buffer = [0u8; 256];
         sys_read(0, &mut buffer);
@@ -89,7 +94,7 @@ extern "C" fn _start() {
             ls(".")
         } else if command.starts_with("\n") {
         } else {
-            sys_write(1, b"invalid command ;)\n");
+            println!("invalid command");
         }
     }
 }

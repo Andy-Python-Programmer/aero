@@ -211,6 +211,11 @@ pub fn sys_read(fd: usize, buf: &mut [u8]) -> usize {
 }
 
 #[inline(always)]
+pub fn sys_getcwd(buf: &mut [u8]) -> usize {
+    unsafe { syscall2(prelude::SYS_GETCWD, buf.as_mut_ptr() as usize, buf.len()) }
+}
+
+#[inline(always)]
 pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> usize {
     unsafe {
         syscall3(
