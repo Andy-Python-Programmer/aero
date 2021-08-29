@@ -222,7 +222,7 @@ pub fn root_dir() -> &'static DirCacheItem {
     ROOT_DIR.get().expect("How's this possible?")
 }
 
-pub fn init(offset_table: &mut OffsetPageTable, modules: &'static StivaleModuleTag) -> Result<()> {
+pub fn init(modules: &'static StivaleModuleTag) -> Result<()> {
     cache::init();
 
     let filesystem = RamFs::new();
@@ -240,18 +240,26 @@ pub fn init(offset_table: &mut OffsetPageTable, modules: &'static StivaleModuleT
                 module.size()
             );
 
-            let start_address = unsafe { crate::PHYSICAL_MEMORY_OFFSET + module.start };
-            let mut ustar_header = unsafe { &mut *start_address.as_mut_ptr::<UstarHeader>() };
+            let stream = unsafe {
+                let addr = crate::PHYSICAL_MEMORY_OFFSET + module.start;
+                core::slice::from_raw_parts::<u8>(addr.as_ptr(), module.size() as usize)
+            };
 
-            loop {
-                // The magic can either end with a ASCII space character or a NULL byte so,
+            let mut archive_index = 0;
+
+            while let Some(header) = stream.get(archive_index..).and_then(|s| {
+                let header = unsafe { &*(s.as_ptr() as *mut UstarHeader) };
+
+                // NOTE: The magic can either end with a ASCII space character or a NULL byte so,
                 // we check the first 5 bits of the magic instead.
-                if &ustar_header.magic[0..5] != b"ustar" {
-                    break;
+                if &header.magic[0..5] != b"ustar" || s.len() < 512 {
+                    None
+                } else {
+                    Some(header)
                 }
-
-                let path = unsafe { core::str::from_utf8_unchecked(&ustar_header.name) };
-                let file_type = match ustar_header.typeflag[0] {
+            }) {
+                let path = unsafe { core::str::from_utf8_unchecked(&header.name) };
+                let file_type = match header.typeflag[0] {
                     0x30 => Ok(UstarFileType::File),
                     0x31 => Ok(UstarFileType::HardLink),
                     0x32 => Ok(UstarFileType::SymLink),
@@ -263,7 +271,7 @@ pub fn init(offset_table: &mut OffsetPageTable, modules: &'static StivaleModuleT
                 }?;
 
                 let size = usize::from_str_radix(
-                    unsafe { core::str::from_utf8_unchecked(&ustar_header.size) },
+                    unsafe { core::str::from_utf8_unchecked(&header.size) },
                     8,
                 )
                 .unwrap_or(0);
@@ -280,23 +288,8 @@ pub fn init(offset_table: &mut OffsetPageTable, modules: &'static StivaleModuleT
                     _ => (),
                 }
 
-                // Free the memory allocated for the ustar header.
-                let pointer = ustar_header as *mut UstarHeader;
-                let offset_h = 0x200 + align_up(size as u64, 512) as usize;
-
-                let page_offset =
-                    unsafe { pointer as u64 - crate::PHYSICAL_MEMORY_OFFSET.as_u64() };
-
-                let page: Page<Size2MiB> = Page::containing_address(VirtAddr::new(page_offset));
-
-                offset_table
-                    .unmap(page)
-                    .expect("failed to unmap bootloader allocated memory for ustar header")
-                    .1
-                    .flush();
-
-                // Update ustar header's pointer offset to the new offset.
-                ustar_header = unsafe { &mut *pointer.add(offset_h) };
+                // TODO: Free the memory allocated for the ustar header.
+                archive_index += 0x200 + align_up(size as u64, 512) as usize;
             }
         }
     }

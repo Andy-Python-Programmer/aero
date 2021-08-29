@@ -188,9 +188,6 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     arch::gdt::init_boot();
     log::info!("Loaded bootstrap GDT");
 
-    interrupts::init();
-    log::info!("Loaded IDT");
-
     drivers::mouse::init();
     log::info!("Loaded PS/2 driver");
 
@@ -212,13 +209,16 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     arch::gdt::init(stack_top_addr);
     log::info!("Loaded GDT");
 
+    interrupts::init();
+    log::info!("Loaded IDT");
+
     acpi::init(rsdp_address).unwrap();
     log::info!("Loaded ACPI");
 
     time::init();
     log::info!("Loaded PIT");
 
-    fs::init(&mut offset_table, modules_tag).unwrap();
+    fs::init(modules_tag).unwrap();
     log::info!("Loaded filesystem");
 
     userland::init();
@@ -265,13 +265,16 @@ fn kernel_main_thread() {
 
 #[no_mangle]
 extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
-    log::debug!("Booting CPU {}", ap_id);
+    log::debug!("booting CPU {}", ap_id);
+
+    arch::gdt::init_boot();
+    log::info!("AP{}: loaded boot GDT", ap_id);
 
     tls::init();
-    log::info!("AP{}: Loaded TLS", ap_id);
+    log::info!("AP{}: loaded TLS", ap_id);
 
     arch::gdt::init(stack_top_addr);
-    log::info!("AP{}: Loaded GDT", ap_id);
+    log::info!("AP{}: loaded GDT", ap_id);
 
     unsafe {
         CPU_ID = ap_id; // Set the local cpu id global to the AP id provided in the AP bootinfo

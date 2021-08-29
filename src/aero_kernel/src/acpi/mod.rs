@@ -24,13 +24,10 @@
 
 use core::mem;
 
-use aml::{pci_routing::PciRoutingTable, AmlContext, AmlName};
+use aml::AmlContext;
 use spin::Once;
 
-use crate::{
-    drivers,
-    mem::paging::{PhysAddr, VirtAddr},
-};
+use crate::mem::paging::{PhysAddr, VirtAddr};
 
 use crate::utils::sync::{Mutex, MutexGuard};
 
@@ -277,7 +274,7 @@ pub fn init(rsdp_address: PhysAddr) -> Result<(), aml::AmlError> {
             // Not a valid MADT table without the local apic address and the flags.
             if header.data_len() < 8 {
                 log::warn!(
-                    "Assertion Failed: header.data_len() < 8 => {}",
+                    "assertion failed: header.data_len() < 8 => {}",
                     header.data_len()
                 );
             } else {
@@ -289,21 +286,21 @@ pub fn init(rsdp_address: PhysAddr) -> Result<(), aml::AmlError> {
 
     init_table!(hpet::SIGNATURE => Hpet);
 
-    let mut aml_context = AmlContext::new(box AmlHandler, aml::DebugVerbosity::None);
+    let aml_context = AmlContext::new(box AmlHandler, aml::DebugVerbosity::None);
 
     if let Some(fadt) = acpi_table.lookup_entry(fadt::SIGNATURE) {
         let fadt: &'static fadt::Fadt = unsafe { fadt.as_ptr() };
 
         // The DSDT table is put inside the FADT table, instead of listing it in another ACPI table. So
         // we need to extract the DSDT table from the FADT table.
-        let dsdt_stream = unsafe {
+        let _dsdt_stream = unsafe {
             let addr = crate::PHYSICAL_MEMORY_OFFSET + fadt.dsdt as u64;
             let sdt = Sdt::from_address(addr.as_u64());
 
             core::slice::from_raw_parts(sdt.data_address() as *mut u8, sdt.data_len())
         };
 
-        aml_context.parse_table(dsdt_stream)?;
+        // aml_context.parse_table(dsdt_stream)?;
     }
 
     // let pci_router =
