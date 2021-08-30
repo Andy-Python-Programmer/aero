@@ -113,6 +113,19 @@ pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
     }
 }
 
+pub fn chdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    let buffer = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let inode = fs::lookup_path(Path::new(buffer))?;
+
+    if !inode.inode().metadata()?.is_directory() {
+        // A component of path is not a directory.
+        return Err(AeroSyscallError::ENOTDIR);
+    }
+
+    scheduler::get_scheduler().current_task().set_cwd(inode);
+    Ok(0x00)
+}
+
 pub fn getcwd(buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
     // Invalid value of the size argument is zero and buffer is not a
     // null pointer.

@@ -210,6 +210,10 @@ pub fn sys_read(fd: usize, buf: &mut [u8]) -> usize {
     }
 }
 
+pub fn sys_chdir(path: &str) -> usize {
+    unsafe { syscall2(prelude::SYS_CHDIR, path.as_ptr() as usize, path.len()) }
+}
+
 #[inline]
 pub fn sys_close(fd: usize) -> usize {
     unsafe { syscall1(prelude::SYS_CLOSE, fd) }

@@ -87,21 +87,42 @@ extern "C" fn _start() {
         print!("root@aero:{} ", pwd);
 
         let mut buffer = [0u8; 256];
-        sys_read(0, &mut buffer);
+        let len = sys_read(0, &mut buffer);
 
-        let command = unsafe { core::str::from_utf8_unchecked(&mut buffer) };
+        let mut command_iter = unsafe { core::str::from_utf8_unchecked(&mut buffer) }.trim()
+            [0..len]
+            .split_whitespace();
 
-        if command.starts_with("ls") {
-            ls(".")
-        } else if command.starts_with("\n") {
-        } else {
-            println!("invalid command");
+        let command = command_iter.next();
+
+        if let Some(command) = command {
+            if command == "ls" {
+                if let Some(dir) = command_iter.next() {
+                    ls(dir)
+                } else {
+                    // By default "ls" will be executed in the current directory.
+                    ls(".")
+                }
+            } else if command == "pwd" {
+                println!("{}", pwd);
+            } else if command == "cd" {
+                if let Some(dir) = command_iter.next() {
+                    sys_chdir(dir);
+                } else {
+                    // By default "cd" changes to the parent directory if no directory is specified.
+                    sys_chdir("..");
+                }
+            } else {
+                println!("invalid command: {}", command);
+            }
         }
     }
 }
 
 #[panic_handler]
-extern "C" fn rust_begin_unwind(_info: &PanicInfo) -> ! {
+extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
+    println!("{}", info);
+
     sys_exit(0x01);
 }
 

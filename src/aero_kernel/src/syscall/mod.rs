@@ -34,6 +34,7 @@
 //! | 10     | arch_prctl              |
 //! | 11     | get_dents               |
 //! | 12     | get_cwd                 |
+//! | 13     | chdir                   |
 
 use aero_syscall::prelude::*;
 
@@ -107,6 +108,7 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_MUNMAP => process::munmap(b, c),
         SYS_GETDENTS => fs::getdents(b, c, d),
         SYS_GETCWD => fs::getcwd(b, c),
+        SYS_CHDIR => fs::chdir(b, c),
         _ => {
             log::error!("invalid syscall: {:#x}", a);
             Err(AeroSyscallError::ENOSYS)

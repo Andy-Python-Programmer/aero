@@ -437,10 +437,14 @@ impl INodeInterface for Tty {
             .block_on(&self.stdin, |future| future.is_complete());
 
         let mut stdin = self.stdin.lock_irq();
+
         stdin.swap_buffer();
+        let size = stdin.front_buffer.len();
+
         stdin.front_buffer.resize(buffer.len(), 0x00);
         buffer.copy_from_slice(&stdin.front_buffer);
-        Ok(buffer.len())
+
+        Ok(size)
     }
 
     #[inline]

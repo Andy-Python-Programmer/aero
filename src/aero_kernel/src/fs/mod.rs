@@ -80,6 +80,7 @@ impl MountManager {
         let current_data = directory.data.lock();
         let mut root_data = root_dir.data.lock();
 
+        root_data.name = current_data.name.clone();
         root_data.parent = current_data.parent.clone();
 
         mem::drop(root_data);

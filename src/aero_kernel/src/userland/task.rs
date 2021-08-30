@@ -228,6 +228,14 @@ impl Task {
         self.task_id
     }
 
+    #[inline]
+    pub fn set_cwd(&self, cwd: DirCacheItem) {
+        let filesystem = cwd.inode().weak_filesystem().unwrap().upgrade().unwrap();
+
+        self.cwd.write().inode = cwd;
+        self.cwd.write().filesystem = filesystem;
+    }
+
     pub(super) fn into_zombie(&self) {}
 }
 

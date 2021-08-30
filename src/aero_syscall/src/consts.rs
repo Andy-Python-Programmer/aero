@@ -11,3 +11,4 @@ pub const SYS_MUNMAP: usize = 9;
 pub const SYS_ARCH_PRCTL: usize = 10;
 pub const SYS_GETDENTS: usize = 11;
 pub const SYS_GETCWD: usize = 12;
+pub const SYS_CHDIR: usize = 13;

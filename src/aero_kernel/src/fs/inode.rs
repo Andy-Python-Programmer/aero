@@ -184,6 +184,7 @@ pub(super) struct DirProtectedData {
     inode: INodeCacheItem,
 }
 
+/// A directory entry is basically the mapping of filename to its inode.
 pub struct DirEntry {
     pub(super) data: Mutex<DirProtectedData>,
     pub(super) filesystem: Once<Weak<dyn FileSystem>>,

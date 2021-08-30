@@ -315,7 +315,7 @@ pub fn ps2_keyboard_init() {
     let lock = PS2_KEYBOARD_STATE.lock_irq();
 
     unsafe {
-        io::outb(0x60, 0xF4); // command: disable scanning
+        io::outb(0x60, 0xF5); // command: disable scanning
 
         if io::inb(0x60) != 0xFA {
             log::warn!("ps2: disable scanning failed, no ACK");
