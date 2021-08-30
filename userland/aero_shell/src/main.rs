@@ -112,8 +112,8 @@ extern "C" fn _start() {
                     // By default "cd" changes to the parent directory if no directory is specified.
                     sys_chdir("..");
                 }
-            } else {
-                println!("invalid command: {}", command);
+            } else if command != "\u{0}" {
+                println!("invalid command: {:?}", command);
             }
         }
     }

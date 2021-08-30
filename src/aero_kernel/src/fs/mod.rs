@@ -169,14 +169,21 @@ pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
         match component {
             // Handle some special cases that might occur in a relative path.
             "." => continue,
-            ".." => {}
+            ".." => {
+                let current = result.data.lock();
+
+                if let Some(parent) = current.parent.clone() {
+                    core::mem::drop(current); // drop the data lock.
+                    result = parent;
+                }
+
+                // Else the entry does not have a parent, ie. the current entry is the root aand
+                // we can't go any further :^)
+            }
 
             _ => {
-                /*
-                 * After we have resolved all of the special cases that might occur in a path, now
-                 * we have to resolve the directory entry itself. For example `a` in `./a/` and since this
-                 * is recursive we resolve the next component also.
-                 */
+                // After we have resolved all of the special cases that might occur in a path, now
+                // we have to resolve the directory entry itself. For example `a` in `./a/`.
                 let cache_entry = inode::fetch_dir_entry(result.clone(), String::from(component));
 
                 if let Some(entry) = cache_entry {
