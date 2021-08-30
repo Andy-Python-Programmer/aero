@@ -99,6 +99,20 @@ pub fn getdents(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSysc
     Ok(handle.get_dents(buffer)?)
 }
 
+pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
+    let res = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .close_file(fd);
+
+    if res {
+        Ok(0x00)
+    } else {
+        // FD isn't a valid open file descriptor.
+        Err(AeroSyscallError::EBADFD)
+    }
+}
+
 pub fn getcwd(buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
     // Invalid value of the size argument is zero and buffer is not a
     // null pointer.

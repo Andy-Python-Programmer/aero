@@ -164,7 +164,7 @@ pub fn syscall_result_as_usize(result: AeroSyscallResult) -> usize {
 }
 
 /// Exits the current process with the provided status.
-#[inline(always)]
+#[inline]
 pub fn sys_exit(status: usize) -> ! {
     unsafe {
         syscall1(prelude::SYS_EXIT, status);
@@ -173,7 +173,7 @@ pub fn sys_exit(status: usize) -> ! {
     unreachable!()
 }
 
-#[inline(always)]
+#[inline]
 pub fn sys_open(path: &str, mode: OpenFlags) -> usize {
     unsafe {
         syscall4(
@@ -186,7 +186,7 @@ pub fn sys_open(path: &str, mode: OpenFlags) -> usize {
     }
 }
 
-#[inline(always)]
+#[inline]
 pub fn sys_write(fd: usize, buf: &[u8]) -> usize {
     unsafe {
         syscall3(
@@ -198,7 +198,7 @@ pub fn sys_write(fd: usize, buf: &[u8]) -> usize {
     }
 }
 
-#[inline(always)]
+#[inline]
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> usize {
     unsafe {
         syscall3(
@@ -210,12 +210,17 @@ pub fn sys_read(fd: usize, buf: &mut [u8]) -> usize {
     }
 }
 
-#[inline(always)]
+#[inline]
+pub fn sys_close(fd: usize) -> usize {
+    unsafe { syscall1(prelude::SYS_CLOSE, fd) }
+}
+
+#[inline]
 pub fn sys_getcwd(buf: &mut [u8]) -> usize {
     unsafe { syscall2(prelude::SYS_GETCWD, buf.as_mut_ptr() as usize, buf.len()) }
 }
 
-#[inline(always)]
+#[inline]
 pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> usize {
     unsafe {
         syscall3(
@@ -227,14 +232,17 @@ pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> usize {
     }
 }
 
+#[inline]
 pub fn sys_fork() -> usize {
     unsafe { syscall0(prelude::SYS_FORK) }
 }
 
+#[inline]
 pub fn sys_munmap(address: usize, size: usize) -> usize {
     unsafe { syscall2(prelude::SYS_MUNMAP, address as usize, size as usize) }
 }
 
+#[inline]
 pub fn sys_mmap(
     address: usize,
     size: usize,

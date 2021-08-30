@@ -99,6 +99,7 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_EXIT => process::exit(b),
         SYS_SHUTDOWN => process::shutdown(),
         SYS_OPEN => fs::open(b, c, d, e),
+        SYS_CLOSE => fs::close(b),
         SYS_WRITE => fs::write(b, c, d),
         SYS_FORK => process::fork(),
         SYS_MMAP => process::mmap(b, c, d, e, f, g),

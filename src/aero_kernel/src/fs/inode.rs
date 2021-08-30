@@ -86,6 +86,8 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Ok(())
     }
 
+    fn close(&self, _flags: OpenFlags) {}
+
     fn dirent(&self, _parent: DirCacheItem, _index: usize) -> Result<Option<DirCacheItem>> {
         Err(FileSystemError::NotSupported)
     }

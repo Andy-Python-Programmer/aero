@@ -165,4 +165,22 @@ impl FileTable {
             Err(FileSystemError::Busy)
         }
     }
+
+    /// Closes a file descriptor, so that its no longer referes to any file
+    /// and can be resued. This function will return false if the provided file
+    /// descriptor index was invalid.
+    pub fn close_file(&self, fd: usize) -> bool {
+        let mut files = self.0.write();
+
+        if let Some(file) = files.get_mut(fd) {
+            if let Some(handle) = file {
+                handle.inode.inode().close(handle.flags);
+                *file = None;
+
+                return true;
+            }
+        }
+
+        false
+    }
 }

@@ -65,6 +65,7 @@ fn ls(path: &str) {
         }
     }
 
+    sys_close(fd);
     println!()
 }
 
