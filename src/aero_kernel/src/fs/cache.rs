@@ -34,6 +34,7 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 
+use alloc::vec::Vec;
 use lru::LruCache;
 use spin::Once;
 
@@ -190,6 +191,40 @@ impl Cacheable<DirCacheKey> for DirEntry {
         } else {
             (0x00, this.name.clone())
         }
+    }
+}
+
+// NOTE: Needs to be implemented inside `DirCacheItem` since the following functions
+// require a reference-counting pointer to the directory item. Annd since we are using
+// Arc which is from core we will need to extract these functions into a trait instead. Oh
+// well...
+pub trait DirCacheImpl {
+    fn absolute_path_str(&self) -> String;
+}
+
+impl DirCacheImpl for DirCacheItem {
+    fn absolute_path_str(&self) -> String {
+        let mut current_entry = Some(self.clone());
+        let mut path_nodes = Vec::new();
+        let mut result = String::new();
+
+        // We need to collect all of the path nodes, reverse them and then join them
+        // with the path separator.
+        while let Some(entry) = current_entry {
+            path_nodes.push(entry.name());
+            current_entry = entry.data.lock().parent.clone();
+        }
+
+        for node in path_nodes.iter().rev() {
+            result.push_str(node);
+
+            // If we are not at the root node, we need to add the path separator.
+            if node != "/" {
+                result.push('/');
+            }
+        }
+
+        result
     }
 }
 

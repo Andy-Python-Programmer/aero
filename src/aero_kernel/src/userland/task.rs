@@ -25,7 +25,7 @@ use xmas_elf::ElfFile;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicIsize, AtomicU8, AtomicUsize, Ordering};
 
-use crate::fs::cache::DirCacheItem;
+use crate::fs::cache::{DirCacheImpl, DirCacheItem};
 use crate::fs::{self, FileSystem};
 use crate::mem::paging::*;
 
@@ -219,7 +219,7 @@ impl Task {
     }
 
     pub fn get_cwd(&self) -> String {
-        self.cwd.read().inode.name()
+        self.cwd.read().inode.absolute_path_str()
     }
 
     /// Returns the task ID that was allocated for this task.
