@@ -26,6 +26,7 @@ use alloc::sync::Arc;
 use stivale_boot::v2::StivaleModuleTag;
 
 use crate::mem::paging::*;
+use crate::userland::scheduler;
 use crate::utils::sync::Mutex;
 use spin::Once;
 
@@ -146,13 +147,22 @@ impl Path {
         unsafe { &*(path as *const str as *const Path) }
     }
 
+    /// Returns true if the path is absolute.
+    pub fn is_absolute(&self) -> bool {
+        self.0.starts_with('/')
+    }
+
     pub fn components(&self) -> impl Iterator<Item = &str> {
         self.0.split("/").filter(|e| *e != "" && *e != ".")
     }
 }
 
 pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
-    let mut result = root_dir().clone();
+    let mut result = if !path.is_absolute() {
+        scheduler::get_scheduler().current_task().get_cwd_dirent()
+    } else {
+        root_dir().clone()
+    };
 
     // Iterate and resolve each component. For example `a`, `b`, and `c` in `a/b/c`.
     for component in path.components() {

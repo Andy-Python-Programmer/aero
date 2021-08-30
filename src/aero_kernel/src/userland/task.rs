@@ -218,14 +218,20 @@ impl Task {
         self.state.load(Ordering::SeqCst).into()
     }
 
-    pub fn get_cwd(&self) -> String {
-        self.cwd.read().inode.absolute_path_str()
-    }
-
     /// Returns the task ID that was allocated for this task.
     #[inline]
     pub fn task_id(&self) -> TaskId {
         self.task_id
+    }
+
+    #[inline]
+    pub fn get_cwd_dirent(&self) -> DirCacheItem {
+        self.cwd.read().inode.clone()
+    }
+
+    #[inline]
+    pub fn get_cwd(&self) -> String {
+        self.cwd.read().inode.absolute_path_str()
     }
 
     #[inline]
