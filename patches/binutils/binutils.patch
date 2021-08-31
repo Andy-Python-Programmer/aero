@@ -1,0 +1,103 @@
+From 08714ccec4e803f6cba4790f4b84fd2810834ae5 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Tue, 31 Aug 2021 11:15:02 +1000
+Subject: [PATCH] targets: add aero target port
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ .vscode/settings.json     | 6 ++++++
+ bfd/config.bfd            | 5 +++++
+ config.sub                | 2 +-
+ gas/configure.tgt         | 1 +
+ ld/configure.tgt          | 4 ++++
+ libiberty/rust-demangle.c | 4 ++++
+ 6 files changed, 21 insertions(+), 1 deletion(-)
+ create mode 100644 .vscode/settings.json
+
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+new file mode 100644
+index 00000000..7a72e53f
+--- /dev/null
++++ b/.vscode/settings.json
+@@ -0,0 +1,6 @@
++{
++    "editor.formatOnSave": false,
++    "files.associations": {
++        "inttypes.h": "c"
++    }
++}
+\ No newline at end of file
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index 50e356d2..4d6d850a 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -729,6 +729,11 @@ case "${targ}" in
+     targ_defvec=i386_elf32_vec
+     targ_selvecs="iamcu_elf32_vec i386_pe_vec i386_pei_vec"
+     ;;
++  x86_64-*-aero*)
++    targ_defvec=x86_64_elf64_vec
++    targ_selvecs=i386_elf32_vec
++    want64=true
++    ;;
+   i[3-7]86-*-interix*)
+     targ_defvec=i386_pei_vec
+     targ_selvecs="i386_pe_vec"
+diff --git a/config.sub b/config.sub
+index 7384e919..e1e5c644 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1704,7 +1704,7 @@ case $os in
+ 	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
+ 	     | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
+ 	     | hiux* | abug | nacl* | netware* | windows* \
+-	     | os9* | macos* | osx* | ios* \
++	     | os9* | macos* | osx* | ios* | aero* \
+ 	     | mpw* | magic* | mmixware* | mon960* | lnews* \
+ 	     | amigaos* | amigados* | msdos* | newsos* | unicos* | aof* \
+ 	     | aos* | aros* | cloudabi* | sortix* | twizzler* \
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index 68ee0468..4bd8ef91 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -221,6 +221,7 @@ case ${generic_target} in
+   i386-*-beos*)				fmt=elf ;;
+   i386-*-elfiamcu)			fmt=elf arch=iamcu ;;
+   i386-*-elf*)				fmt=elf ;;
++  i386-*-aero*)				fmt=elf ;;
+   i386-*-fuchsia*)			fmt=elf ;;
+   i386-*-genode*)			fmt=elf ;;
+   i386-*-bsd*)				fmt=aout em=386bsd ;;
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index d46ed620..4d0ff2a6 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -323,6 +323,10 @@ i[3-7]86-*-linux-*)	targ_emul=elf_i386
+ 			targ64_extra_emuls="elf_x86_64 elf32_x86_64 elf_l1om elf_k1om"
+ 			targ64_extra_libpath="elf_x86_64 elf32_x86_64"
+ 			;;
++x86_64-*-aero*)
++			targ_emul=elf_x86_64
++			targ_extra_emuls=elf_i386
++			;;
+ i[3-7]86-*-redox*)	targ_emul=elf_i386
+ 			targ_extra_emuls=elf_x86_64
+ 			;;
+diff --git a/libiberty/rust-demangle.c b/libiberty/rust-demangle.c
+index 449941b5..20dee408 100644
+--- a/libiberty/rust-demangle.c
++++ b/libiberty/rust-demangle.c
+@@ -32,6 +32,10 @@ If not, see <http://www.gnu.org/licenses/>.  */
+ #include "config.h"
+ #endif
+ 
++#if defined(__aero__)
++#define uint unsigned int
++#endif
++
+ #include "safe-ctype.h"
+ 
+ #include <inttypes.h>
+-- 
+2.25.1
+

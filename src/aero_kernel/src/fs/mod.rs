@@ -315,7 +315,6 @@ pub fn init(modules: &'static StivaleModuleTag) -> Result<()> {
     }
 
     root_dir().inode().mkdir("dev")?;
-    root_dir().inode().mkdir("etc")?;
     root_dir().inode().mkdir("home")?;
     root_dir().inode().mkdir("temp")?;
 

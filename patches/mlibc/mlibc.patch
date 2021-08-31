@@ -1,0 +1,862 @@
+From 015fd40be34d1301492579058e185dbdbf3a8179 Mon Sep 17 00:00:00 2001
+From: unknown <andypythonappdeveloper@gmail.com>
+Date: Sun, 6 Jun 2021 16:37:54 +1000
+Subject: [PATCH] targets: add aero target port
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ .gitignore                                  |   1 +
+ abis/aero/auxv.h                            |  13 ++
+ meson.build                                 |   4 +
+ sysdeps/aero/crt-x86_64/crt0.S              |   8 ++
+ sysdeps/aero/generic/aero.cc                | 116 ++++++++++++++++++
+ sysdeps/aero/generic/entry.cc               |  32 +++++
+ sysdeps/aero/generic/filesystem.cc          |  74 ++++++++++++
+ sysdeps/aero/generic/sockets.cc             |   0
+ sysdeps/aero/generic/thread.cc              |  42 +++++++
+ sysdeps/aero/generic/thread_entry.S         |   8 ++
+ sysdeps/aero/include/abi-bits/abi.h         |   1 +
+ sysdeps/aero/include/abi-bits/auxv.h        |   1 +
+ sysdeps/aero/include/abi-bits/blkcnt_t.h    |   1 +
+ sysdeps/aero/include/abi-bits/blksize_t.h   |   1 +
+ sysdeps/aero/include/abi-bits/dev_t.h       |   1 +
+ sysdeps/aero/include/abi-bits/errno.h       |   1 +
+ sysdeps/aero/include/abi-bits/fcntl.h       |   1 +
+ sysdeps/aero/include/abi-bits/gid_t.h       |   1 +
+ sysdeps/aero/include/abi-bits/in.h          |   1 +
+ sysdeps/aero/include/abi-bits/ino_t.h       |   1 +
+ sysdeps/aero/include/abi-bits/limits.h      |   1 +
+ sysdeps/aero/include/abi-bits/mode_t.h      |   1 +
+ sysdeps/aero/include/abi-bits/nlink_t.h     |   1 +
+ sysdeps/aero/include/abi-bits/pid_t.h       |   1 +
+ sysdeps/aero/include/abi-bits/reboot.h      |   1 +
+ sysdeps/aero/include/abi-bits/resource.h    |   1 +
+ sysdeps/aero/include/abi-bits/seek-whence.h |   1 +
+ sysdeps/aero/include/abi-bits/signal.h      |   1 +
+ sysdeps/aero/include/abi-bits/socket.h      |   1 +
+ sysdeps/aero/include/abi-bits/stat.h        |   1 +
+ sysdeps/aero/include/abi-bits/termios.h     |   1 +
+ sysdeps/aero/include/abi-bits/time.h        |   1 +
+ sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
+ sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
+ sysdeps/aero/include/abi-bits/wait.h        |   1 +
+ sysdeps/aero/include/aero/syscall.h         | 125 ++++++++++++++++++++
+ sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
+ sysdeps/aero/meson.build                    |  60 ++++++++++
+ 38 files changed, 518 insertions(+)
+ create mode 100644 abis/aero/auxv.h
+ create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
+ create mode 100644 sysdeps/aero/generic/aero.cc
+ create mode 100644 sysdeps/aero/generic/entry.cc
+ create mode 100644 sysdeps/aero/generic/filesystem.cc
+ create mode 100644 sysdeps/aero/generic/sockets.cc
+ create mode 100644 sysdeps/aero/generic/thread.cc
+ create mode 100644 sysdeps/aero/generic/thread_entry.S
+ create mode 120000 sysdeps/aero/include/abi-bits/abi.h
+ create mode 120000 sysdeps/aero/include/abi-bits/auxv.h
+ create mode 120000 sysdeps/aero/include/abi-bits/blkcnt_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/blksize_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/dev_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/errno.h
+ create mode 120000 sysdeps/aero/include/abi-bits/fcntl.h
+ create mode 120000 sysdeps/aero/include/abi-bits/gid_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/in.h
+ create mode 120000 sysdeps/aero/include/abi-bits/ino_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/limits.h
+ create mode 120000 sysdeps/aero/include/abi-bits/mode_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/nlink_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/pid_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/reboot.h
+ create mode 120000 sysdeps/aero/include/abi-bits/resource.h
+ create mode 120000 sysdeps/aero/include/abi-bits/seek-whence.h
+ create mode 120000 sysdeps/aero/include/abi-bits/signal.h
+ create mode 120000 sysdeps/aero/include/abi-bits/socket.h
+ create mode 120000 sysdeps/aero/include/abi-bits/stat.h
+ create mode 120000 sysdeps/aero/include/abi-bits/termios.h
+ create mode 120000 sysdeps/aero/include/abi-bits/time.h
+ create mode 120000 sysdeps/aero/include/abi-bits/uid_t.h
+ create mode 120000 sysdeps/aero/include/abi-bits/vm-flags.h
+ create mode 120000 sysdeps/aero/include/abi-bits/wait.h
+ create mode 100644 sysdeps/aero/include/aero/syscall.h
+ create mode 100644 sysdeps/aero/include/mlibc/thread-entry.hpp
+ create mode 100644 sysdeps/aero/meson.build
+
+diff --git a/.gitignore b/.gitignore
+index 1701c90..e6bc85c 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,3 +1,4 @@
+ build
+ subprojects/cxxshim
+ subprojects/frigg
++.vscode
+\ No newline at end of file
+diff --git a/abis/aero/auxv.h b/abis/aero/auxv.h
+new file mode 100644
+index 0000000..59d4d4d
+--- /dev/null
++++ b/abis/aero/auxv.h
+@@ -0,0 +1,13 @@
++#ifndef _ABIBITS_AUXV_H
++#define _ABIBITS_AUXV_H
++
++#define AT_NULL 0
++#define AT_PHDR 3
++#define AT_PHENT 4
++#define AT_PHNUM 5
++#define AT_ENTRY 9
++#define AT_EXECPATH 15
++#define AT_RANDOM 25
++#define AT_EXECFN 31
++
++#endif // _ABIBITS_AUXV_H
+diff --git a/meson.build b/meson.build
+index ae0e7cf..72e25a6 100644
+--- a/meson.build
++++ b/meson.build
+@@ -91,6 +91,10 @@ if host_machine.system() == 'linux'
+ 	rtdl_include_dirs += include_directories('sysdeps/linux/include')
+ 	libc_include_dirs += include_directories('sysdeps/linux/include')
+ 	subdir('sysdeps/linux')
++elif host_machine.system() == 'aero'
++	rtdl_include_dirs += include_directories('sysdeps/aero/include')
++	libc_include_dirs += include_directories('sysdeps/aero/include')
++	subdir('sysdeps/aero')
+ elif host_machine.system() == 'managarm'
+ 	# TODO: Adopt the include_directories() commands from the managarm meson.build.
+ 	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
+diff --git a/sysdeps/aero/crt-x86_64/crt0.S b/sysdeps/aero/crt-x86_64/crt0.S
+new file mode 100644
+index 0000000..190b5a0
+--- /dev/null
++++ b/sysdeps/aero/crt-x86_64/crt0.S
+@@ -0,0 +1,8 @@
++.section .text
++
++.global _start
++_start:
++    mov $main, %rdi
++    call __mlibc_entry
++
++.size _start, . - _start
+diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
+new file mode 100644
+index 0000000..c328f5b
+--- /dev/null
++++ b/sysdeps/aero/generic/aero.cc
+@@ -0,0 +1,116 @@
++#include <aero/syscall.h>
++#include <stddef.h>
++#include <bits/ensure.h>
++#include <abi-bits/pid_t.h>
++#include <mlibc/debug.hpp>
++#include <mlibc/all-sysdeps.hpp>
++#include <mlibc/thread-entry.hpp>
++#include <errno.h>
++
++#define ARCH_SET_GS		0x1001
++#define ARCH_SET_FS		0x1002
++#define ARCH_GET_FS		0x1003
++#define ARCH_GET_GS		0x1004
++
++namespace mlibc {
++int sys_futex_tid() UNIMPLEMENTED
++int sys_futex_wait(int *pointer, int expected) UNIMPLEMENTED
++int sys_futex_wake(int *pointer) UNIMPLEMENTED
++
++int sys_tcb_set(void* pointer) {
++    ssize_t res = syscall(SYS_ARCH_PRCTL, ARCH_SET_FS, (uint64_t)pointer);
++
++    if (res < 0) {
++        return -res;
++    }
++
++    return 0;
++}
++
++int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
++    ssize_t result = syscall(SYS_MMAP, (uint64_t)hint, size, prot, flags, fd, offset);
++
++    if (result < 0)
++        return -result;
++
++    *window = (void*)result;
++    return 0;
++}
++
++int sys_vm_unmap(void* address, size_t size) {
++    return syscall(SYS_MUNMAP, (uint64_t)address, size);
++}
++
++int sys_anon_allocate(size_t size, void **pointer) UNIMPLEMENTED
++int sys_anon_free(void *pointer, size_t size) UNIMPLEMENTED
++
++void sys_libc_panic() {
++	sys_libc_log("libc panic!");
++	__builtin_trap();
++	for(;;);
++}
++
++void sys_libc_log(const char* msg) { }
++
++#ifndef MLIBC_BUILDING_RTDL
++
++void sys_exit(int status) {
++	syscall(SYS_EXIT, status);
++
++	__builtin_unreachable();
++}
++
++pid_t sys_getpid() UNIMPLEMENTED
++pid_t sys_getppid() UNIMPLEMENTED
++
++int sys_clock_get(int clock, time_t *secs, long *nanos) UNIMPLEMENTED
++int sys_getcwd(char *buffer, size_t size) UNIMPLEMENTED
++
++int sys_chdir(const char *path) UNIMPLEMENTED
++int sys_sleep(time_t* sec, long* nanosec) UNIMPLEMENTED
++
++uid_t sys_getuid() UNIMPLEMENTED
++uid_t sys_geteuid() UNIMPLEMENTED
++
++int sys_setuid(uid_t uid) UNIMPLEMENTED
++int sys_seteuid(uid_t euid) UNIMPLEMENTED
++
++gid_t sys_getgid() UNIMPLEMENTED
++gid_t sys_getegid() UNIMPLEMENTED
++
++int sys_setgid(gid_t gid) {
++	mlibc::infoLogger() << "mlibc: sys_setgid is a stub" << frg::endlog;
++	return 0;
++}
++
++int sys_setegid(gid_t egid) {
++	mlibc::infoLogger() << "mlibc: sys_setegid is a stub" << frg::endlog;
++	return 0;
++}
++
++void sys_yield() UNIMPLEMENTED
++
++int sys_clone(void *entry, void *user_arg, void *tcb, pid_t *tid_out) UNIMPLEMENTED
++
++void sys_thread_exit() {
++	__builtin_unreachable();
++}
++
++int sys_waitpid(pid_t pid, int *status, int flags, pid_t *ret_pid) UNIMPLEMENTED
++int sys_fork(pid_t *child) {
++    ssize_t ret = syscall(SYS_FORK);
++
++    if (ret < 0) {
++        return -ret;
++    }
++
++    *child = ret;
++
++    return 0;
++}
++
++int sys_execve(const char *path, char *const argv[], char *const envp[]) UNIMPLEMENTED
++int sys_getentropy(void *buffer, size_t length) UNIMPLEMENTED
++
++#endif
++} // namespace mlibc
+diff --git a/sysdeps/aero/generic/entry.cc b/sysdeps/aero/generic/entry.cc
+new file mode 100644
+index 0000000..265ab56
+--- /dev/null
++++ b/sysdeps/aero/generic/entry.cc
+@@ -0,0 +1,32 @@
++#include <stdint.h>
++#include <stdlib.h>
++#include <bits/ensure.h>
++#include <mlibc/elf/startup.h>
++
++// defined by the POSIX library
++void __mlibc_initLocale();
++
++extern "C" uintptr_t *__dlapi_entrystack();
++
++extern char **environ;
++static mlibc::exec_stack_data __mlibc_stack_data;
++
++struct LibraryGuard {
++	LibraryGuard();
++};
++
++static LibraryGuard guard;
++
++LibraryGuard::LibraryGuard() {
++	__mlibc_initLocale();
++
++	// Parse the exec() stack.
++	mlibc::parse_exec_stack(__dlapi_entrystack(), &__mlibc_stack_data);
++	mlibc::set_startup_data(__mlibc_stack_data.argc, __mlibc_stack_data.argv,
++			__mlibc_stack_data.envp);
++}
++
++extern "C" void __mlibc_entry(int (*main_fn)(int argc, char *argv[], char *env[])) {
++	auto result = main_fn(__mlibc_stack_data.argc, __mlibc_stack_data.argv, environ);
++	exit(result);
++}
+diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
+new file mode 100644
+index 0000000..f9a79d3
+--- /dev/null
++++ b/sysdeps/aero/generic/filesystem.cc
+@@ -0,0 +1,74 @@
++#include <aero/syscall.h>
++
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <errno.h>
++#include <dirent.h>
++#include <limits.h>
++#include <fcntl.h>
++
++#include <mlibc/all-sysdeps.hpp>
++#include <mlibc/debug.hpp>
++
++namespace mlibc {
++int sys_write(int fd, const void* buffer, size_t count, ssize_t* written){
++	long ret = syscall(SYS_WRITE, fd, (uintptr_t)buffer, count);
++
++	if(ret < 0)
++		return -ret;
++
++	*written = ret;
++	return 0;
++}
++
++int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
++	long ret = syscall(SYS_READ, fd, (uintptr_t)buf, count);
++
++	if(ret < 0){
++		*bytes_read = 0;
++		return -ret;
++	}
++
++	*bytes_read = ret;
++	return 0;
++}
++
++int sys_pwrite(int fd, const void* buffer, size_t count, off_t off, ssize_t* written) UNIMPLEMENTED
++int sys_pread(int fd, void *buf, size_t count, off_t off, ssize_t *bytes_read)  UNIMPLEMENTED
++int sys_seek(int fd, off_t offset, int whence, off_t *new_offset)  UNIMPLEMENTED
++
++int sys_open(const char* filename, int flags, int* fd){
++	long ret = syscall(SYS_OPEN, (uintptr_t)filename, flags);
++
++	if(ret < 0)
++		return -ret;
++
++	*fd = ret;
++
++	return 0; 
++}
++
++int sys_close(int fd) UNIMPLEMENTED
++int sys_access(const char* filename, int mode) UNIMPLEMENTED
++int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) UNIMPLEMENTED
++int sys_ioctl(int fd, unsigned long request, void *arg, int *result) UNIMPLEMENTED
++int sys_isatty(int fd)  UNIMPLEMENTED
++int sys_tcgetattr(int fd, struct termios *attr) UNIMPLEMENTED
++int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) UNIMPLEMENTED
++int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) UNIMPLEMENTED
++int sys_mkdir(const char* path) UNIMPLEMENTED
++int sys_rmdir(const char* path) UNIMPLEMENTED
++int sys_link(const char* srcpath, const char* destpath) UNIMPLEMENTED
++int sys_unlink(const char* path) UNIMPLEMENTED
++int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) UNIMPLEMENTED
++int sys_open_dir(const char* path, int* handle) UNIMPLEMENTED
++int sys_rename(const char* path, const char* new_path) UNIMPLEMENTED
++int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) UNIMPLEMENTED
++int sys_dup(int fd, int flags, int* newfd) UNIMPLEMENTED
++int sys_dup2(int fd, int flags, int newfd) UNIMPLEMENTED
++int sys_fcntl(int fd, int request, va_list args, int* result) UNIMPLEMENTED
++int sys_pselect(int nfds, fd_set* readfds, fd_set* writefds,
++				fd_set *exceptfds, const struct timespec* timeout, const sigset_t* sigmask, int *num_events) UNIMPLEMENTED
++int sys_chmod(const char *pathname, mode_t mode) UNIMPLEMENTED
++int sys_pipe(int *fds, int flags) UNIMPLEMENTED
++} // namespace mlibc
+diff --git a/sysdeps/aero/generic/sockets.cc b/sysdeps/aero/generic/sockets.cc
+new file mode 100644
+index 0000000..e69de29
+diff --git a/sysdeps/aero/generic/thread.cc b/sysdeps/aero/generic/thread.cc
+new file mode 100644
+index 0000000..7e73cc6
+--- /dev/null
++++ b/sysdeps/aero/generic/thread.cc
+@@ -0,0 +1,42 @@
++#include <mlibc/thread-entry.hpp>
++#include <mlibc/all-sysdeps.hpp>
++#include <mlibc/tcb.hpp>
++#include <bits/ensure.h>
++#include <sys/mman.h>
++#include <stdint.h>
++#include <stddef.h>
++
++extern "C" void __mlibc_enter_thread(void *entry, void *user_arg, Tcb *tcb) {
++	// Wait until our parent sets up the TID.
++	while(!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
++		mlibc::sys_futex_wait(&tcb->tid, 0);
++
++	if(mlibc::sys_tcb_set(tcb))
++		__ensure(!"sys_tcb_set() failed");
++
++	void *(*func)(void *) = reinterpret_cast<void *(*)(void *)>(entry);
++	auto result = func(user_arg);
++
++	auto self = reinterpret_cast<Tcb *>(tcb);
++
++	self->returnValue = result;
++	__atomic_store_n(&self->didExit, 1, __ATOMIC_RELEASE);
++	mlibc::sys_futex_wake(&self->didExit);
++
++	mlibc::sys_thread_exit();
++}
++
++namespace mlibc {
++    void* prepare_stack(void *entry, void *user_arg, void *tcb) {
++        uintptr_t *sp = reinterpret_cast<uintptr_t *>(reinterpret_cast<uintptr_t>(
++                mmap(nullptr, 0x1000000, 
++                    PROT_READ | PROT_WRITE, 
++                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
++                ) + 0x1000000);
++
++        *--sp = reinterpret_cast<uintptr_t>(tcb);
++        *--sp = reinterpret_cast<uintptr_t>(user_arg);
++        *--sp = reinterpret_cast<uintptr_t>(entry);
++        return sp;
++    }
++} // namespace mlibc
+diff --git a/sysdeps/aero/generic/thread_entry.S b/sysdeps/aero/generic/thread_entry.S
+new file mode 100644
+index 0000000..dd309ed
+--- /dev/null
++++ b/sysdeps/aero/generic/thread_entry.S
+@@ -0,0 +1,8 @@
++.section .text
++.global __mlibc_start_thread
++
++__mlibc_start_thread:
++	pop %rdi
++	pop %rsi
++	pop %rdx
++	call __mlibc_enter_thread
+diff --git a/sysdeps/aero/include/abi-bits/abi.h b/sysdeps/aero/include/abi-bits/abi.h
+new file mode 120000
+index 0000000..c945860
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/abi.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/abi.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/auxv.h b/sysdeps/aero/include/abi-bits/auxv.h
+new file mode 120000
+index 0000000..0f14415
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/auxv.h
+@@ -0,0 +1 @@
++../../../../abis/lemon/auxv.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/blkcnt_t.h b/sysdeps/aero/include/abi-bits/blkcnt_t.h
+new file mode 120000
+index 0000000..e9d9f1b
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/blkcnt_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/blkcnt_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/blksize_t.h b/sysdeps/aero/include/abi-bits/blksize_t.h
+new file mode 120000
+index 0000000..c6dfb6e
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/blksize_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/blksize_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/dev_t.h b/sysdeps/aero/include/abi-bits/dev_t.h
+new file mode 120000
+index 0000000..0c1143b
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/dev_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/dev_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/errno.h b/sysdeps/aero/include/abi-bits/errno.h
+new file mode 120000
+index 0000000..589859f
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/errno.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/errno.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/fcntl.h b/sysdeps/aero/include/abi-bits/fcntl.h
+new file mode 120000
+index 0000000..ea5323a
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/fcntl.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/fcntl.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/gid_t.h b/sysdeps/aero/include/abi-bits/gid_t.h
+new file mode 120000
+index 0000000..6a77218
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/gid_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/gid_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/in.h b/sysdeps/aero/include/abi-bits/in.h
+new file mode 120000
+index 0000000..b58c683
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/in.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/in.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/ino_t.h b/sysdeps/aero/include/abi-bits/ino_t.h
+new file mode 120000
+index 0000000..10d644e
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/ino_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/ino_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/limits.h b/sysdeps/aero/include/abi-bits/limits.h
+new file mode 120000
+index 0000000..1aa5894
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/limits.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/limits.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/mode_t.h b/sysdeps/aero/include/abi-bits/mode_t.h
+new file mode 120000
+index 0000000..29d7733
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/mode_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/mode_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/nlink_t.h b/sysdeps/aero/include/abi-bits/nlink_t.h
+new file mode 120000
+index 0000000..7618c27
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/nlink_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/nlink_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/pid_t.h b/sysdeps/aero/include/abi-bits/pid_t.h
+new file mode 120000
+index 0000000..3fd26a7
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/pid_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/pid_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/reboot.h b/sysdeps/aero/include/abi-bits/reboot.h
+new file mode 120000
+index 0000000..ecc3ddb
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/reboot.h
+@@ -0,0 +1 @@
++../../../../abis/linux/x86_64/reboot.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/resource.h b/sysdeps/aero/include/abi-bits/resource.h
+new file mode 120000
+index 0000000..3e59c75
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/resource.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/resource.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/seek-whence.h b/sysdeps/aero/include/abi-bits/seek-whence.h
+new file mode 120000
+index 0000000..3bd41ef
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/seek-whence.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/seek-whence.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/signal.h b/sysdeps/aero/include/abi-bits/signal.h
+new file mode 120000
+index 0000000..b20e511
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/signal.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/signal.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/socket.h b/sysdeps/aero/include/abi-bits/socket.h
+new file mode 120000
+index 0000000..0e1d6be
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/socket.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/socket.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/stat.h b/sysdeps/aero/include/abi-bits/stat.h
+new file mode 120000
+index 0000000..82642c3
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/stat.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/stat.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/termios.h b/sysdeps/aero/include/abi-bits/termios.h
+new file mode 120000
+index 0000000..cfcfe76
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/termios.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/termios.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/time.h b/sysdeps/aero/include/abi-bits/time.h
+new file mode 120000
+index 0000000..97f3d52
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/time.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/time.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/uid_t.h b/sysdeps/aero/include/abi-bits/uid_t.h
+new file mode 120000
+index 0000000..1113eba
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/uid_t.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/uid_t.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/vm-flags.h b/sysdeps/aero/include/abi-bits/vm-flags.h
+new file mode 120000
+index 0000000..f1a985e
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/vm-flags.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/vm-flags.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/abi-bits/wait.h b/sysdeps/aero/include/abi-bits/wait.h
+new file mode 120000
+index 0000000..6d911c7
+--- /dev/null
++++ b/sysdeps/aero/include/abi-bits/wait.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/wait.h
+\ No newline at end of file
+diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
+new file mode 100644
+index 0000000..2ae0ff9
+--- /dev/null
++++ b/sysdeps/aero/include/aero/syscall.h
+@@ -0,0 +1,125 @@
++#ifndef SYSCALL_H
++#define SYSCALL_H
++
++#include <stdint.h>
++#include <bits/ensure.h>
++
++#define SYS_READ        0
++#define SYS_WRITE       1
++#define SYS_OPEN        2
++#define SYS_CLOSE       3
++#define SYS_SHUTDOWN    4
++#define SYS_EXIT        5
++#define SYS_FORK        6
++#define SYS_REBOOT      7
++#define SYS_MMAP        8
++#define SYS_MUNMAP      9
++#define SYS_ARCH_PRCTL  10
++
++// Invalid syscall used to trigger a log error in the kernel (as a hint)
++// so, that we can implement the syscall in the kernel.
++#define UNIMPLEMENTED   { syscall(314); __ensure(!"UNIMPLEMENTED function was called"); __builtin_unreachable(); }
++
++#ifdef __cplusplus
++extern "C"
++{
++#endif
++
++    __attribute__((always_inline)) static inline long syscalln0(uint64_t call)
++    {
++        volatile long ret;
++        asm volatile("syscall"
++                     : "=a"(ret)
++                     : "a"(call));
++        return ret;
++    }
++
++    __attribute__((always_inline)) static long syscalln1(uint64_t call, uint64_t arg0)
++    {
++        volatile long ret;
++        asm volatile("syscall"
++                     : "=a"(ret)
++                     : "a"(call), "D"(arg0)
++                     : "memory");
++        return ret;
++    }
++
++    __attribute__((always_inline)) static long syscalln2(uint64_t call, uint64_t arg0, uint64_t arg1)
++    {
++        volatile long ret;
++        asm volatile("syscall"
++                     : "=a"(ret)
++                     : "a"(call), "D"(arg0), "S"(arg1)
++                     : "memory");
++        return ret;
++    }
++
++    __attribute__((always_inline)) static long syscalln3(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2)
++    {
++        volatile long ret;
++        asm volatile("syscall"
++                     : "=a"(ret)
++                     : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2)
++                     : "memory");
++        return ret;
++    }
++
++    __attribute__((always_inline)) static long syscalln4(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3)
++    {
++        volatile long ret;
++        register uint64_t arg3r asm("r10") = arg3;
++        asm volatile("syscall"
++                     : "=a"(ret)
++                     : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "r"(arg3r)
++                     : "memory");
++        return ret;
++    }
++
++    __attribute__((always_inline)) static long syscalln5(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
++    {
++        volatile long ret;
++        register uint64_t arg3r asm("r10") = arg3;
++        register uint64_t arg4r asm("r9") = arg4;
++        asm volatile("syscall"
++                     : "=a"(ret)
++                     : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "r"(arg3r), "r"(arg4r)
++                     : "memory");
++        return ret;
++    }
++
++    __attribute__((always_inline)) static long syscalln6(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
++    {
++        volatile long ret;
++        register uint64_t arg3r asm("r10") = arg3;
++        register uint64_t arg4r asm("r9") = arg4;
++        register uint64_t arg5r asm("r8") = arg5;
++        asm volatile("syscall"
++                     : "=a"(ret)
++                     : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "r"(arg3r), "r"(arg4r), "r"(arg5r)
++                     : "memory");
++        return ret;
++    }
++
++#ifdef __cplusplus
++}
++__attribute__((always_inline)) static inline long _syscall(uint64_t call) { return syscalln0(call); }
++__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0) { return syscalln1(call, arg0); }
++__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1) { return syscalln2(call, arg0, arg1); }
++__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2) { return syscalln3(call, arg0, arg1, arg2); }
++__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3) { return syscalln4(call, arg0, arg1, arg2, arg3); }
++__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4) { return syscalln5(call, arg0, arg1, arg2, arg3, arg4); }
++__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) { return syscalln6(call, arg0, arg1, arg2, arg3, arg4, arg5); }
++
++template <typename... T>
++__attribute__((always_inline)) static inline long syscall(uint64_t call, T... args)
++{
++    return _syscall(call, (uint64_t)(args)...);
++}
++#else
++#define GET_SYSCALL(a0, a1, a2, a3, a4, a5, a6, name, ...) name
++#define syscall(...)                                                                                      \
++    GET_SYSCALL(__VA_ARGS__, syscalln6, syscalln5, syscalln4, syscalln3, syscalln2, syscalln1, syscalln0) \
++    (__VA_ARGS__)
++#endif
++
++#endif // SYSCALL_H
+diff --git a/sysdeps/aero/include/mlibc/thread-entry.hpp b/sysdeps/aero/include/mlibc/thread-entry.hpp
+new file mode 100644
+index 0000000..2dd88a6
+--- /dev/null
++++ b/sysdeps/aero/include/mlibc/thread-entry.hpp
+@@ -0,0 +1,10 @@
++#pragma once
++
++#include <mlibc/tcb.hpp>
++
++extern "C" void __mlibc_start_thread(void);
++extern "C" void __mlibc_enter_thread(void *entry, void *user_arg, Tcb *tcb);
++
++namespace mlibc {
++	void *prepare_stack(void *entry, void *user_arg, void *tcb);
++}
+diff --git a/sysdeps/aero/meson.build b/sysdeps/aero/meson.build
+new file mode 100644
+index 0000000..d3dbb22
+--- /dev/null
++++ b/sysdeps/aero/meson.build
+@@ -0,0 +1,60 @@
++if not static
++	rtdl_sources += files(
++		'generic/aero.cc',
++		'generic/filesystem.cc',
++	)
++endif
++
++libc_sources += files(
++	'generic/aero.cc',
++	'generic/entry.cc',
++	'generic/thread_entry.S',
++	'generic/thread.cc',
++	'generic/filesystem.cc',
++	'generic/sockets.cc',
++)
++
++if not no_headers
++	install_headers(
++		'include/abi-bits/abi.h',
++		'include/abi-bits/auxv.h',
++		'include/abi-bits/seek-whence.h',
++		'include/abi-bits/vm-flags.h',
++		'include/abi-bits/errno.h',
++		'include/abi-bits/fcntl.h',
++		'include/abi-bits/in.h',
++		'include/abi-bits/resource.h',
++		'include/abi-bits/signal.h',
++		'include/abi-bits/stat.h',
++		'include/abi-bits/socket.h',
++		'include/abi-bits/termios.h',
++		'include/abi-bits/time.h',
++		'include/abi-bits/blkcnt_t.h',
++		'include/abi-bits/blksize_t.h',
++		'include/abi-bits/dev_t.h',
++		'include/abi-bits/gid_t.h',
++		'include/abi-bits/ino_t.h',
++		'include/abi-bits/mode_t.h',
++		'include/abi-bits/nlink_t.h',
++		'include/abi-bits/pid_t.h',
++		'include/abi-bits/uid_t.h',
++		'include/abi-bits/wait.h',
++		'include/abi-bits/limits.h',
++		subdir: 'abi-bits'
++	)
++	install_headers(
++		'include/aero/syscall.h',
++		subdir: 'aero'
++	)
++endif
++
++if not headers_only
++	crt = custom_target('crt0',
++		build_by_default: true,
++		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
++		input: 'crt-x86_64/crt0.S',
++		output: 'crt0.o',
++		install: true,
++		install_dir: get_option('libdir')
++	)
++endif
+-- 
+2.25.1
+

@@ -1,0 +1,168 @@
+sources:
+  - name: binutils
+    subdir: 'bundled'
+    git: 'git://sourceware.org/git/binutils-gdb.git'
+    tag: 'binutils-2_37'
+    version: '2.37'
+    patch-path-strip: 1
+  
+  - name: gcc
+    subdir: 'bundled'
+    git: 'git://gcc.gnu.org/git/gcc.git'
+    tag: 'releases/gcc-11.2.0'
+    patch-path-strip: 1
+    version: '11.2.0'
+    regenerate:
+      # download_prerequisites should probably move to some "post_checkout" step.
+      - args: ['./contrib/download_prerequisites']
+        workdir: '@THIS_SOURCE_DIR@'
+      - args: ['autoconf']
+        workdir: '@THIS_SOURCE_DIR@/gcc'
+      - args: ['autoconf']
+
+  - name: mlibc
+    subdir: 'bundled'
+    url: 'https://github.com/managarm/mlibc/archive/8050f6a698e261e4f9440bb2f80752e9678d04be.tar.gz'
+    format: 'tar.gz'
+    extract_path: 'mlibc-8050f6a698e261e4f9440bb2f80752e9678d04be'
+    patch-path-strip: 1
+    version: '12.rolling'
+
+tools:
+  - name: host-binutils
+    from_source: binutils
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+        - '--target=x86_64-aero'
+        - '--with-sysroot=@SYSROOT_DIR@'
+        # On recent compilers, binutils 2.26 causes implicit-fallthrough warnings, among others.
+        - '--disable-werror'
+        - '--enable-targets=x86_64-elf,x86_64-pe'
+        # -g blows up the binary size.
+        - 'CFLAGS=-pipe'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+
+  - name: host-gcc
+    from_source: gcc
+    revision: 2
+    tools_required:
+      - tool: host-binutils
+        recursive: true
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+        - '--target=x86_64-aero'
+        - '--with-sysroot=@SYSROOT_DIR@'
+        - '--enable-languages=c,c++'
+        # -g blows up GCC's binary size.
+        - 'CFLAGS=-pipe'
+        - 'CXXFLAGS=-pipe'
+    stages:
+      - name: compiler
+        pkgs_required:
+         - mlibc-headers
+        compile:
+          - args: ['make', '-j@PARALLELISM@', 'all-gcc']
+        install:
+          - args: ['make', 'install-gcc']
+          # GCC does *not* look for target-prefixed LD/AS.
+          # Instead, it searches a list of prefix directories. Link AS/LD to make it happy.
+          - args: ['mkdir', '-p', '@PREFIX@/x86_64-aero/bin']
+          - args: ['ln', '-sf', '../../../host-binutils/x86_64-aero/bin/as',
+                               '@PREFIX@/x86_64-aero/bin/as']
+          - args: ['ln', '-sf', '../../../host-binutils/x86_64-aero/bin/ld',
+                               '@PREFIX@/x86_64-aero/bin/ld']
+      - name: libgcc
+        tools_required:
+          - tool: host-gcc
+            stage_dependencies: [compiler]
+        pkgs_required:
+          - mlibc
+        compile:
+          - args: ['make', '-j@PARALLELISM@', 'all-target-libgcc']
+        install:
+          - args: ['make', 'install-strip-target-libgcc']
+
+packages:
+  - name: mlibc-headers
+    from_source: mlibc
+    implict_package: true
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '-Dheaders_only=true'
+        - '-Ddisable_iconv_option=true'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: mlibc
+    from_source: mlibc
+    tools_required:
+      - tool: host-gcc
+        stage_dependencies: [compiler]
+    implict_package: true
+    pkgs_required:
+      - mlibc-headers
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Dmlibc_no_headers=true'
+        - '-Ddisable_iconv_option=true'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: binutils
+    from_source: binutils
+    tools_required:
+      - host-gcc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--target=x86_64-aero'
+        - '--with-sysroot=/'
+        - '--disable-nls'
+        # On recent compilers, binutils 2.26 causes implicit-fallthrough warnings, among others.
+        - '--disable-werror'
+        - '--disable-gdb'
+        # -g blows up the binary size.
+        - 'CFLAGS=-pipe'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+tasks:
+  - name: sysroot
+    pkgs_required:
+      - binutils
+    args:
+      - '@SOURCE_ROOT@/make-iso.sh'
+      - '@BUILD_ROOT@'
+      - '@SOURCE_ROOT@'
+      - '@SYSROOT_DIR@'
+    workdir: '@BUILD_ROOT@'
