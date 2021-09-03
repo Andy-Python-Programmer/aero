@@ -27,9 +27,11 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 
+use alloc::vec::Vec;
 use spin::RwLock;
 
 use crate::utils::downcast;
+use crate::utils::sync::Mutex;
 
 use super::cache;
 use super::cache::{CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem};
@@ -110,6 +112,18 @@ impl LockedRamINode {
 }
 
 impl INodeInterface for LockedRamINode {
+    fn touch(&self, parent: DirCacheItem, name: &str) -> Result<DirCacheItem> {
+        Ok(DirEntry::new(
+            parent,
+            self.make_inode(
+                name,
+                FileType::File,
+                FileContents::Content(Mutex::new(Vec::new())),
+            )?,
+            String::from(name),
+        ))
+    }
+
     #[inline]
     fn mkdir(&self, name: &str) -> Result<INodeCacheItem> {
         self.make_inode(name, FileType::Directory, FileContents::None)

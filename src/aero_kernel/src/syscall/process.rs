@@ -23,7 +23,7 @@ use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 
 pub fn exit(status: usize) -> ! {
-    log::trace!("Exiting the current process with status: {}", status);
+    log::trace!("exiting the current process with status: {}", status);
     scheduler::get_scheduler().inner.exit(status as isize);
 }
 

@@ -25,7 +25,6 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use stivale_boot::v2::StivaleModuleTag;
 
-use crate::mem::paging::*;
 use crate::userland::scheduler;
 use crate::utils::sync::Mutex;
 use spin::Once;
@@ -117,7 +116,7 @@ pub trait FileSystem: Send + Sync {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FileSystemError {
     NotSupported,
     EntryExists,
@@ -157,24 +156,29 @@ impl Path {
     }
 }
 
-pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
-    let mut result = if !path.is_absolute() {
-        scheduler::get_scheduler().current_task().get_cwd_dirent()
-    } else {
-        root_dir().clone()
-    };
+#[derive(Debug, PartialEq)]
+pub enum LookupMode {
+    None,
+    /// Creates the file if it does not exist.
+    Create,
+}
 
+pub fn lookup_path_with(
+    mut cwd: DirCacheItem,
+    path: &Path,
+    mode: LookupMode,
+) -> Result<DirCacheItem> {
     // Iterate and resolve each component. For example `a`, `b`, and `c` in `a/b/c`.
-    for component in path.components() {
+    for (i, component) in path.components().enumerate() {
         match component {
             // Handle some special cases that might occur in a relative path.
             "." => continue,
             ".." => {
-                let current = result.data.lock();
+                let current = cwd.data.lock();
 
                 if let Some(parent) = current.parent.clone() {
                     core::mem::drop(current); // drop the data lock.
-                    result = parent;
+                    cwd = parent;
                 }
 
                 // Else the entry does not have a parent, ie. the current entry is the root aand
@@ -184,58 +188,46 @@ pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
             _ => {
                 // After we have resolved all of the special cases that might occur in a path, now
                 // we have to resolve the directory entry itself. For example `a` in `./a/`.
-                let cache_entry = inode::fetch_dir_entry(result.clone(), String::from(component));
+                let cache_entry = inode::fetch_dir_entry(cwd.clone(), String::from(component));
 
                 if let Some(entry) = cache_entry {
-                    result = entry;
+                    cwd = entry;
                 } else {
-                    result = result.inode().lookup(result.clone(), component)?;
+                    match cwd.inode().lookup(cwd.clone(), component) {
+                        Ok(entry) => cwd = entry,
+
+                        Err(err)
+                            if err == FileSystemError::EntryNotFound
+                                && i == path.components().count() - 1
+                                && mode == LookupMode::Create =>
+                        {
+                            cwd.inode().touch(cwd.clone(), component)?;
+                        }
+
+                        Err(err) => return Err(err),
+                    }
                 }
 
-                if result.inode().metadata()?.file_type == FileType::Directory {
-                    if let Ok(mount_point) = MOUNT_MANAGER.find_mount(result.clone()) {
-                        result = mount_point.root_entry;
+                if cwd.inode().metadata()?.file_type == FileType::Directory {
+                    if let Ok(mount_point) = MOUNT_MANAGER.find_mount(cwd.clone()) {
+                        cwd = mount_point.root_entry;
                     }
                 }
             }
         }
     }
 
-    Ok(result)
+    Ok(cwd)
 }
 
-/// Representation of the header of an entry in an archive.
-#[repr(C)]
-struct UstarHeader {
-    name: [u8; 100],
-    mode: [u8; 8],
-    uid: [u8; 8],
-    gid: [u8; 8],
-    size: [u8; 12],
-    mtime: [u8; 12],
-    cksum: [u8; 8],
-    typeflag: [u8; 1],
-    linkname: [u8; 100],
+pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
+    let cwd = if !path.is_absolute() {
+        scheduler::get_scheduler().current_task().get_cwd_dirent()
+    } else {
+        root_dir().clone()
+    };
 
-    /* USTAR format */
-    magic: [u8; 6],
-    version: [u8; 2],
-    uname: [u8; 32],
-    gname: [u8; 32],
-    dev_major: [u8; 8],
-    dev_minor: [u8; 8],
-    prefix: [u8; 155],
-}
-
-#[repr(u8)]
-enum UstarFileType {
-    File = 0x30,
-    HardLink = 0x31,
-    SymLink = 0x32,
-    CharDevice = 0x33,
-    BlockDevice = 0x34,
-    Directory = 0x35,
-    Fifo = 0x36,
+    lookup_path_with(cwd, path, LookupMode::None)
 }
 
 pub fn root_dir() -> &'static DirCacheItem {
@@ -265,51 +257,39 @@ pub fn init(modules: &'static StivaleModuleTag) -> Result<()> {
                 core::slice::from_raw_parts::<u8>(addr.as_ptr(), module.size() as usize)
             };
 
-            let mut archive_index = 0;
+            let reader = cpio::CpioNewcReader::new(stream);
 
-            while let Some(header) = stream.get(archive_index..).and_then(|s| {
-                let header = unsafe { &*(s.as_ptr() as *mut UstarHeader) };
+            for item in reader {
+                let item = item.or(Err(FileSystemError::EntryNotFound))?;
+                let path = Path::new(item.name);
 
-                // NOTE: The magic can either end with a ASCII space character or a NULL byte so,
-                // we check the first 5 bits of the magic instead.
-                if &header.magic[0..5] != b"ustar" || s.len() < 512 {
-                    None
-                } else {
-                    Some(header)
+                let is_directory = item.metadata.mode & 0o170000 == 0o040000;
+                let is_file = item.metadata.mode & 0o170000 == 0o100000;
+
+                if item.name == "." {
+                    // We do not want to create the root directory. Oh well since, its
+                    // already created :^)
+                    continue;
                 }
-            }) {
-                let path = unsafe { core::str::from_utf8_unchecked(&header.name) };
-                let file_type = match header.typeflag[0] {
-                    0x30 => Ok(UstarFileType::File),
-                    0x31 => Ok(UstarFileType::HardLink),
-                    0x32 => Ok(UstarFileType::SymLink),
-                    0x33 => Ok(UstarFileType::CharDevice),
-                    0x34 => Ok(UstarFileType::BlockDevice),
-                    0x35 => Ok(UstarFileType::Directory),
-                    0x36 => Ok(UstarFileType::Fifo),
-                    _ => Err(FileSystemError::NotSupported),
-                }?;
 
-                let size = usize::from_str_radix(
-                    unsafe { core::str::from_utf8_unchecked(&header.size) },
-                    8,
-                )
-                .unwrap_or(0);
+                // This is a directory.
+                let mut root = root_dir().clone();
 
-                match file_type {
-                    UstarFileType::File => {}
-                    UstarFileType::Directory => {
-                        // The root directory is automatically created in the constructor of the filesystem.
-                        if path != "./" {
-                            root_dir().inode().mkdir(path)?;
+                if is_directory {
+                    for component in path.components() {
+                        match root.inode().lookup(root.clone(), component) {
+                            Err(err) if err == FileSystemError::EntryNotFound => {
+                                root.inode().mkdir(component)?;
+                                root = root.inode().lookup(root.clone(), component)?;
+                            }
+
+                            Err(err) => return Err(err),
+                            Ok(res) => root = res,
                         }
                     }
-
-                    _ => (),
+                } else if is_file {
+                    lookup_path_with(root, path, LookupMode::Create)?;
                 }
-
-                // TODO: Free the memory allocated for the ustar header.
-                archive_index += 0x200 + align_up(size as u64, 512) as usize;
             }
         }
     }

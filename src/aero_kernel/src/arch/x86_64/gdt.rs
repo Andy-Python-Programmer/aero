@@ -262,7 +262,7 @@ impl GdtEntry {
 
     fn set_raw<T>(&mut self, value: T) {
         unsafe {
-            (self as *mut _ as *mut T).write(value);
+            *(self as *mut _ as *mut T) = value;
         }
     }
 }
@@ -299,7 +299,7 @@ impl Tss {
             ist: [0; 7],
             reserved3: 0x00,
             reserved4: 0x00,
-            iomap_base: 0xFFFF,
+            iomap_base: 0x00,
             kernel_fs: 0x00,
         }
     }
@@ -370,6 +370,16 @@ pub fn init(stack_top: VirtAddr) {
 
 #[inline(always)]
 unsafe fn load_cs(selector: SegmentSelector) {
+    /*
+     * NOTE: We cannot directly move into CS since x86 requires the IP
+     * and CS set at the same time. To do this, we need push the new segment
+     * selector and return value onto the stack and far return to reload CS and
+     * continue execution.
+     *
+     * We also cannot use a far call or a far jump since we would only be
+     * able to jump to 32-bit instruction pointers. Only Intel supports for
+     * 64-bit far calls/jumps in long-mode, AMD does not.
+     */
     asm!(
         "push {selector}",
         "lea {tmp}, [1f + rip]",

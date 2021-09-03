@@ -66,6 +66,11 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
+    /// Creates a new file with the provoded `name` in the filesystem.
+    fn touch(&self, _parent: DirCacheItem, _name: &str) -> Result<DirCacheItem> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Creates a new dev inode with the provided `name` and the device `marker` in
     /// the filesystem.
     ///

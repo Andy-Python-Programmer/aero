@@ -58,7 +58,7 @@ mkdir $AERO_BUILD
 # directory is only created when the sysroot is built (which is optional) and is
 # required for building the initramfs gzip archive.
 mkdir -p $AERO_SYSROOT
-dd if=/dev/zero bs=1M count=0 seek=64 of=$AERO_BUILD/aero.img
+dd if=/dev/zero bs=2M count=0 seek=64 of=$AERO_BUILD/aero.img
 
 parted -s $AERO_BUILD/aero.img mklabel gpt
 parted -s $AERO_BUILD/aero.img mkpart primary 2048s 100%
@@ -79,9 +79,8 @@ else
     sudo mount `cat loopback_dev`p1 $AERO_BUILD/mnt
 fi
 
-pushd .
-cd $AERO_SYSROOT
-tar -zcf "$AERO_BUILD"/initramfs.tar.gz .
+pushd $AERO_SYSROOT
+find . | cpio -H newc -o >$AERO_BUILD/initramfs.cpio
 popd
 
 sudo mkdir $AERO_BUILD/mnt/boot
@@ -92,7 +91,7 @@ else
     sudo cp $AERO_KERNEL_TARGET/release/aero_kernel $AERO_BUILD/mnt/boot/aero.elf
 fi
 
-sudo cp $AERO_BUILD/initramfs.tar.gz $AERO_BUILD/mnt/
+sudo cp $AERO_BUILD/initramfs.cpio $AERO_BUILD/mnt/
 sudo cp $AERO_SRC/.cargo/limine.cfg $AERO_BUILD/mnt/
 sudo cp $AERO_BUNDLED/limine/limine.sys $AERO_BUILD/mnt/boot/
 
