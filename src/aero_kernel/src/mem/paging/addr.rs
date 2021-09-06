@@ -62,7 +62,7 @@ pub struct VirtAddrNotValid(u64);
 impl VirtAddr {
     /// Creates a new canonical virtual address.
     #[inline]
-    pub fn new(addr: u64) -> VirtAddr {
+    pub const fn new(addr: u64) -> VirtAddr {
         VirtAddr(addr)
     }
 

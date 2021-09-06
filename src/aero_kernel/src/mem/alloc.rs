@@ -69,7 +69,7 @@ impl LockedHeap {
                 let heap_start = VirtAddr::new(heap_top as _);
                 let heap_end = heap_start + size - 1u64;
 
-                let heap_start_page = Page::containing_address(heap_start);
+                let heap_start_page: Page = Page::containing_address(heap_start);
                 let heap_end_page = Page::containing_address(heap_end);
 
                 Page::range_inclusive(heap_start_page, heap_end_page)

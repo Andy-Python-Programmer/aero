@@ -128,6 +128,8 @@ static STIVALE_HDR: StivaleHeader = StivaleHeader::new()
     .stack(&STACK.0[STACK_SIZE - 4096] as *const u8)
     .tags((&FRAMEBUFFER_TAG as *const StivaleFramebufferHeaderTag).cast());
 
+const IO_VIRTUAL_BASE: VirtAddr = VirtAddr::new(0xFFFFFFFF80200000 - 0x100000000); // KERNEL_VIRTUAL_BASE - 4GB
+
 #[thread_local]
 static mut CPU_ID: u64 = 0x00;
 

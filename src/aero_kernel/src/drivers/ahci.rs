@@ -23,10 +23,9 @@ use alloc::vec::Vec;
 use bit_field::BitField;
 use spin::Once;
 
-use crate::arch::interrupts;
-use crate::mem::paging::*;
+use crate::mem::{paging::*, AddressSpace};
 
-use crate::utils::sync::{IrqGuard, Mutex};
+use crate::utils::sync::Mutex;
 use crate::utils::VolatileCell;
 
 use super::pci::*;
@@ -171,13 +170,22 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
-    pub struct HbaCmdHeaderFlags: u16 {
+    struct HbaCmdHeaderFlags: u16 {
         const A = 1 << 5; // ATAPI
         const W = 1 << 6; // Write
         const P = 1 << 7; // Prefetchable
         const R = 1 << 8; // Reset
         const B = 1 << 9; // Bist
         const C = 1 << 10; // Clear Busy upon R_OK
+    }
+}
+
+impl HbaCmdHeaderFlags {
+    /// Sets the length of the command FIS. The HBA uses this field to know the
+    /// length of the FIS it shall send to the device.
+    #[inline]
+    fn set_command_fis_size(&mut self, size: usize) {
+        self.bits.set_bits(0..=4, size as _);
     }
 }
 
@@ -213,8 +221,8 @@ impl DmaRequest {
             let huge = size > 0x1000; // Check if we want to allocate a huge page?
             let data_size = core::cmp::min(size, 0x2000);
 
-            let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-                .expect("Failed to allocate frame for DMA request");
+            let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+                .expect("failed to allocate frame for DMA request");
 
             buffer.push(DmaBuffer {
                 start: frame.start_address(),
@@ -275,7 +283,7 @@ impl DmaRequest {
 }
 
 #[allow(unused)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
 enum AtaCommand {
     AtaCommandWriteDma = 0xCA,
@@ -325,7 +333,7 @@ enum AtaCommand {
 }
 
 #[repr(C)]
-pub struct HbaMemory {
+struct HbaMemory {
     host_capability: VolatileCell<HbaCapabilities>,
     global_host_control: VolatileCell<HbaHostCont>,
     interrupt_status: VolatileCell<u32>,
@@ -342,7 +350,7 @@ pub struct HbaMemory {
 }
 
 #[repr(C)]
-pub struct FisRegH2D {
+struct FisRegH2D {
     fis_type: VolatileCell<FisType>,
     flags: VolatileCell<u8>,
     command: VolatileCell<AtaCommand>,
@@ -365,8 +373,28 @@ pub struct FisRegH2D {
     _reserved: [u8; 4],
 }
 
+impl FisRegH2D {
+    fn set_lba(&mut self, lba: usize) {
+        debug_assert!(lba < 1 << 48, "LBA is limited to 48 bits");
+
+        self.lba0.set(lba as _);
+        self.lba1.set((lba >> 8) as _);
+        self.lba2.set((lba >> 16) as _);
+        self.lba3.set((lba >> 24) as _);
+        self.lba4.set((lba >> 32) as _);
+        self.lba5.set((lba >> 40) as _);
+    }
+
+    fn set_command(&mut self, yes: bool) {
+        let mut old_flags = self.flags.get();
+        old_flags.set_bit(7, yes);
+
+        self.flags.set(old_flags);
+    }
+}
+
 #[repr(C)]
-pub struct HbaCmdTbl {
+struct HbaCmdTbl {
     cfis: [u8; 64],
     acmd: [u8; 16],
     _reserved: [u8; 48],
@@ -385,15 +413,38 @@ impl HbaCmdTbl {
 }
 
 #[repr(C)]
-pub struct HbaPrdtEntry {
+struct HbaPrdtEntry {
     dba: VolatileCell<PhysAddr>,
     _reserved: u32,
     flags: VolatileCell<u32>,
 }
 
+impl HbaPrdtEntry {
+    /// Sets the data byte count that indicates the length in bytes of the data block.
+    #[inline]
+    fn set_data_byte_count(&mut self, count: usize) {
+        let mut old_flags = self.flags.get();
+        old_flags.set_bits(0..21, count as _);
+
+        self.flags.set(old_flags);
+    }
+
+    /// Sets the interrupt on completion bit which indicates that hardware should
+    /// assert an interrupt when the data block for this entry has transferred. The
+    /// HBA shall set the PxIS.DPS bit after completing the data transfer and if enabled,
+    /// generate an interrupt.
+    #[inline]
+    fn set_interrupt_on_completion(&mut self, yes: bool) {
+        let mut old_flags = self.flags.get();
+        old_flags.set_bit(31, yes);
+
+        self.flags.set(old_flags);
+    }
+}
+
 #[repr(u8)]
 #[derive(Copy, Clone)]
-pub enum FisType {
+enum FisType {
     RegH2D = 0x27,
 }
 
@@ -479,46 +530,71 @@ impl HbaPort {
         let clb_addr = clb_mapped + core::mem::size_of::<HbaCmdHeader>() * index;
 
         // Cast it as [`HbaCmdHeader`] and return a mutable reference to it.
-        unsafe { &mut *(clb_addr).as_mut_ptr::<HbaCmdHeader>() }
+        unsafe { &mut *(clb_addr.as_mut_ptr::<HbaCmdHeader>()) }
     }
 
     /// This function is responsible for allocating space for command lists,
     /// tables, etc.. for a given this instance of HBA port.
-    fn start(&mut self) {
+    fn start(&mut self, offset_table: &mut OffsetPageTable) -> Result<(), MapToError<Size4KiB>> {
         self.stop_cmd(); // Stop the command engine before starting the port
 
-        // Allocate area for for the command list.
-        let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-            .expect("Failed to allocate space for the command list");
+        /*
+         * size = sizeof(CTB) * 32 == 4KiB * 2 (so we need to allocate
+         * two 4KiB size frames).
+         *
+         * We cannot directly allocate a huge page for the command list, because then
+         * we will end up wasting 0x1fe000 KiB of memory.
+         *
+         * TODO(Andy-Python-Programmer): We should find a chunk of memory that is the size of
+         * 2 contiguous 4KiB sized frames. We should also make the current frame allocator (which
+         * is a bump allocator) to be a buddy allocator instead which will be a much smarter approach
+         * to this issue since, it keeps track of so called "buddies" of different sizes. Which then
+         * we can have a buddy sized 2KiB :^).
+         */
+        let frame_low: PhysFrame =
+            unsafe { FRAME_ALLOCATOR.allocate_frame() }.ok_or(MapToError::FrameAllocationFailed)?;
 
-        self.clb.set(frame.start_address());
+        let frame_high: PhysFrame =
+            unsafe { FRAME_ALLOCATOR.allocate_frame() }.ok_or(MapToError::FrameAllocationFailed)?;
 
-        // Allocate area for FISs.
-        let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-            .expect("Failed to allocate space for the FISs");
+        let low_page: Page =
+            Page::containing_address(crate::IO_VIRTUAL_BASE + frame_low.start_address().as_u64());
 
-        // Set the address that received FISes will be copied to.
-        self.fb.set(frame.start_address());
+        let high_page: Page =
+            Page::containing_address(crate::IO_VIRTUAL_BASE + frame_high.start_address().as_u64());
+
+        let flags = PageTableFlags::PRESENT
+            | PageTableFlags::WRITABLE
+            | PageTableFlags::WRITE_THROUGH
+            | PageTableFlags::NO_CACHE;
+
+        unsafe { offset_table.map_to(low_page, frame_low, flags, &mut FRAME_ALLOCATOR) }?.flush();
+        unsafe { offset_table.map_to(high_page, frame_high, flags, &mut FRAME_ALLOCATOR) }?.flush();
 
         for i in 0..32 {
-            let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-                .expect("Here is a nickel kid, go and buy your self a real computer");
-
             let command_header = self.cmd_header_at(i);
 
             // 8 prdt entries per command table
             // 256 bytes per command table, 64 + 16 + 48 + 16 * 8
             command_header.prdtl.set(8);
             command_header.prdbc.set(0);
-            command_header.ctb.set(frame.start_address());
+
+            if i < 16 {
+                command_header.ctb.set(frame_low.start_address() + 256 * i);
+            } else {
+                command_header.ctb.set(frame_high.start_address() + 256 * i);
+            }
         }
 
+        self.ie.set(HbaPortIE::all());
         self.start_cmd(); // Start the command engine...
+
+        Ok(())
     }
 
     fn start_cmd(&mut self) {
         while self.cmd.get().contains(HbaPortCmd::CR) {
-            interrupts::pause();
+            core::hint::spin_loop();
         }
 
         let value = self.cmd.get() | (HbaPortCmd::FRE | HbaPortCmd::ST);
@@ -532,11 +608,15 @@ impl HbaPort {
         self.cmd.set(cmd);
 
         while self.cmd.get().intersects(HbaPortCmd::FR | HbaPortCmd::CR) {
-            interrupts::pause();
+            core::hint::spin_loop();
         }
     }
 
-    fn probe(&mut self, port: usize) -> bool {
+    fn probe(
+        &mut self,
+        offset_table: &mut OffsetPageTable,
+        port: usize,
+    ) -> Result<bool, MapToError<Size4KiB>> {
         let status = self.ssts.get();
 
         let ipm = status.interface_power_management();
@@ -545,13 +625,13 @@ impl HbaPort {
         // Check if the port is active and is present. If thats the case
         // we can start the AHCI port.
         if let (HbaPortDd::PresentAndE, HbaPortIpm::Active) = (dd, ipm) {
-            log::trace!("Enabling AHCI port {}", port);
+            log::trace!("enabling AHCI port {}", port);
 
-            self.start();
-            true
+            self.start(offset_table)?;
+            Ok(true)
         } else {
             // Else we can't enable the port.
-            false
+            Ok(false)
         }
     }
 
@@ -566,6 +646,8 @@ impl HbaPort {
         let header = self.cmd_header_at(slot);
         let mut flags = header.flags.get();
 
+        header._reserved.fill(00);
+
         if command == AtaCommand::AtaCommandWriteDmaExt || command == AtaCommand::AtaCommandWriteDma
         {
             flags.insert(HbaCmdHeaderFlags::W); // If its a write command add the write flag.
@@ -574,59 +656,60 @@ impl HbaPort {
         }
 
         flags.insert(HbaCmdHeaderFlags::P | HbaCmdHeaderFlags::C);
-        flags
-            .bits
-            .set_bits(0..=4, (core::mem::size_of::<FisRegH2D>() / 4) as u16);
+        flags.set_command_fis_size(core::mem::size_of::<FisRegH2D>() / 4);
 
         header.flags.set(flags); // Update command header flags.
 
         let length = ((count - 1) >> 4) + 1;
         header.prdtl.set(length as _); // Update the number of PRD entries.
 
-        let command_table_addr =
-            unsafe { crate::PHYSICAL_MEMORY_OFFSET + header.ctb.get().as_u64() };
-
+        let command_table_addr = crate::IO_VIRTUAL_BASE + header.ctb.get().as_u64();
         let command_table = unsafe { &mut *(command_table_addr).as_mut_ptr::<HbaCmdTbl>() };
 
         for pri in 0..length {
             let prdt = command_table.prdt_entry_mut(pri);
 
             prdt.dba.set(buffer[pri].start);
-            prdt.flags.set(
-                *prdt
-                    .flags
-                    .get()
-                    .set_bits(0..=21, (buffer[pri].data_size - 1) as _),
-            );
-
-            // TODO: Set interrupt on completion...
+            prdt.set_data_byte_count(buffer[pri].data_size - 1);
+            prdt.set_interrupt_on_completion(pri == length - 1);
         }
 
         let fis = command_table.cfis_as_h2d_mut();
 
-        fis.fis_type.set(FisType::RegH2D);
-        fis.flags.set(0x00);
+        fis.control.set(0x00);
+        fis.icc.set(0x00);
         fis.featurel.set(0x00);
         fis.featureh.set(0x00);
-        fis.lba0.set(sector as u8);
-        fis.lba1.set((sector >> 8) as u8);
-        fis.lba2.set((sector >> 16) as u8);
-        fis.lba3.set((sector >> 24) as u8);
-        fis.lba4.set((sector >> 32) as u8);
-        fis.lba5.set((sector >> 40) as u8);
-        fis.device.set(1 << 6);
-        fis.count.set(count as _);
-        fis.icc.set(0x00);
-        fis.control.set(0x00);
+        fis._reserved.fill(0x00);
 
-        fis.flags.set(*fis.flags.get().set_bit(7, true));
+        fis.fis_type.set(FisType::RegH2D);
+        fis.device.set(1 << 6);
+        fis.command.set(command);
+        fis.count.set(count as _);
+
+        fis.set_lba(sector);
+        fis.set_command(true);
 
         // Issue the command!
         self.ci.set(1 << slot);
 
+        let mut spin = 100;
+
+        // Make sure the port is not busy.
+        while self.tfd.get() & 0x80 | 0x08 == 1 && spin > 0 {
+            core::hint::spin_loop();
+            spin -= 1;
+        }
+
+        if spin == 0 {
+            log::warn!("ahci: port hung");
+            return;
+        }
+
         // Wait for the command to complete.
-        loop {
-            if self.ci.get() & (1 << slot) == 0 {
+        while self.ci.get() & (1 << slot) == 1 {
+            if self.is.get().contains(HbaPortIS::TFES) {
+                log::warn!("ahci: disk error (serr={:#x})", self.serr.get());
                 break;
             }
         }
@@ -720,8 +803,6 @@ impl AhciPort {
 
         // Run request and wait for it to complete.
         while offset < request.count {
-            let _guard = IrqGuard::new(); // We do not want to be interrupted while running the request.
-
             offset = self.inner.lock().run_request(request.clone(), offset);
         }
 
@@ -753,7 +834,10 @@ impl AhciProtected {
         unsafe { &mut *(self.hba.as_u64() as *mut HbaMemory) }
     }
 
-    fn start_hba(&mut self) {
+    fn start_hba(
+        &mut self,
+        offset_table: &mut OffsetPageTable,
+    ) -> Result<(), MapToError<Size4KiB>> {
         let mut hba = self.hba_mem();
         let current_flags = hba.global_host_control.get();
 
@@ -765,7 +849,7 @@ impl AhciProtected {
             if pi.get_bit(i) {
                 let port = hba.port_mut(i);
 
-                if port.probe(i) {
+                if port.probe(offset_table, i)? {
                     // Get the address of the HBA port.
                     let address = VirtAddr::new(port as *const _ as _);
 
@@ -783,6 +867,8 @@ impl AhciProtected {
                 }
             }
         }
+
+        Ok(())
     }
 
     /// This function is responsible for enabling bus mastering and add AHCI
@@ -793,6 +879,9 @@ impl AhciProtected {
 
     /// This function is responsible for initializing and starting the AHCI driver.
     fn start_driver(&mut self, header: &PciHeader) -> Result<(), MapToError<Size4KiB>> {
+        let mut address_space = AddressSpace::this();
+        let mut offset_table = address_space.offset_page_table();
+
         let abar = unsafe { header.get_bar(5).expect("Failed to get ABAR") };
 
         let (abar_address, _) = match abar {
@@ -801,9 +890,22 @@ impl AhciProtected {
             Bar::IO { .. } => panic!("ABAR is in port space o_O"),
         };
 
-        self.hba = unsafe { crate::PHYSICAL_MEMORY_OFFSET + abar_address }; // Update the HBA address.
+        self.hba = crate::IO_VIRTUAL_BASE + abar_address; // Update the HBA address.
 
-        self.start_hba();
+        unsafe {
+            offset_table.map_to(
+                Page::containing_address(self.hba),
+                PhysFrame::containing_address(PhysAddr::new(abar_address)),
+                PageTableFlags::PRESENT
+                    | PageTableFlags::NO_CACHE
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::WRITE_THROUGH,
+                &mut FRAME_ALLOCATOR,
+            )
+        }?
+        .flush();
+
+        self.start_hba(&mut offset_table)?;
         self.enable_interrupts(header);
 
         Ok(())
@@ -831,8 +933,8 @@ impl PciDeviceHandle for AhciDriver {
 
         // Temporary testing...
         if let Some(port) = get_ahci().inner.lock().ports[0].clone() {
-            let mut buffer = [0u8; 512];
-            port.read(0, &mut buffer);
+            let buffer = &mut [0u8; 512];
+            port.read(0, buffer);
             log::info!("Read sector 0: {:?}", buffer);
         }
     }

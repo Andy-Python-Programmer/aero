@@ -50,16 +50,26 @@ impl LockedFrameAllocator {
             None
         }
     }
+
+    fn allocate_frame_inner<S: PageSize>(&self) -> Option<PhysFrame<S>> {
+        self.0
+            .get()
+            .map(|m| m.lock().allocate_frame_inner::<S>())
+            .unwrap_or(None)
+    }
 }
 
 unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
     #[track_caller]
     fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
-        if let Some(ref mut allocator) = self.0.get() {
-            allocator.lock().allocate_frame()
-        } else {
-            None
-        }
+        self.allocate_frame_inner::<Size4KiB>()
+    }
+}
+
+unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
+    #[track_caller]
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size2MiB>> {
+        self.allocate_frame_inner::<Size2MiB>()
     }
 }
 
@@ -90,23 +100,37 @@ impl GlobalFrameAllocator {
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
-    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+    fn usable_frames<S>(&self) -> impl Iterator<Item = PhysFrame<S>>
+    where
+        S: PageSize,
+    {
         let regions = self.memory_map.iter();
         let usable_regions =
             regions.filter(|r| r.entry_type() == StivaleMemoryMapEntryType::Usable);
         let addr_ranges = usable_regions.map(|r| r.base..r.end_address());
-        let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
+        let frame_addresses = addr_ranges.flat_map(|r| r.step_by(S::SIZE as usize));
 
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
+    }
+
+    fn allocate_frame_inner<S: PageSize>(&mut self) -> Option<PhysFrame<S>> {
+        let frame = self.usable_frames::<S>().nth(self.next);
+        self.next += 1;
+
+        frame
     }
 }
 
 unsafe impl FrameAllocator<Size4KiB> for GlobalFrameAllocator {
     #[track_caller]
-    fn allocate_frame(&mut self) -> Option<PhysFrame> {
-        let frame = self.usable_frames().nth(self.next);
-        self.next += 1;
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
+        self.allocate_frame_inner::<Size4KiB>()
+    }
+}
 
-        frame
+unsafe impl FrameAllocator<Size2MiB> for GlobalFrameAllocator {
+    #[track_caller]
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size2MiB>> {
+        self.allocate_frame_inner::<Size2MiB>()
     }
 }

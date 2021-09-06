@@ -99,7 +99,7 @@ impl Mapping {
                 addr_aligned + Size4KiB::SIZE
             );
 
-            let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+            let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
                 .expect("Failed to allocate frame for userland mapping");
 
             unsafe {
@@ -163,7 +163,7 @@ impl Mapping {
                     offset
                 );
 
-                let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+                let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
                     .expect("failed to allocate frame for a private file read");
 
                 unsafe {
