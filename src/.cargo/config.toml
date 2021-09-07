@@ -4,3 +4,4 @@ build-std-features = ["compiler-builtins-mem"]
 
 [build]
 target = "./.cargo/x86_64-aero_os.json"
+rustflags = ["-Cforce-frame-pointers=yes"]

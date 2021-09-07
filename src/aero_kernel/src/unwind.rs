@@ -17,112 +17,92 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-// use core::mem;
 use core::panic::PanicInfo;
 
-// use xmas_elf::sections::{SectionData, ShType};
-// use xmas_elf::symbol_table::Entry;
-// use xmas_elf::ElfFile;
+use xmas_elf::sections::{SectionData, ShType};
+use xmas_elf::symbol_table::Entry;
+use xmas_elf::ElfFile;
 
 use crate::{logger, rendy};
 
 use crate::arch::interrupts;
-// use crate::PHYSICAL_MEMORY_OFFSET;
 
 pub fn unwind_stack_trace() {
-    // let unwind_info = UNWIND_INFO
-    //     .get()
-    //     .expect("Failed to retrieve the unwind information");
+    let unwind_info = crate::UNWIND_INFO
+        .get()
+        .expect("failed to retrieve the unwind information");
 
-    // let kernel_slice: &[u8] = unsafe {
-    //     core::slice::from_raw_parts(
-    //         (unwind_info.kernel_base + PHYSICAL_MEMORY_OFFSET.as_u64()).as_ptr(),
-    //         unwind_info.kernel_size,
-    //     )
-    // };
+    let kernel_slice: &[u8] = unsafe {
+        core::slice::from_raw_parts(
+            (crate::PHYSICAL_MEMORY_OFFSET + unwind_info.kernel_start).as_ptr(),
+            unwind_info.kernel_size as usize,
+        )
+    };
 
-    // let kernel_elf = ElfFile::new(kernel_slice).expect("Invalid kernel slice");
-    // let mut symbol_table = None;
+    let kernel_elf = ElfFile::new(kernel_slice).expect("Invalid kernel slice");
+    let mut symbol_table = None;
 
-    // for section in kernel_elf.section_iter() {
-    //     if section.get_type() == Ok(ShType::SymTab) {
-    //         let section_data = section
-    //             .get_data(&kernel_elf)
-    //             .expect("Failed to get kernel section data information");
+    for section in kernel_elf.section_iter() {
+        if section.get_type() == Ok(ShType::SymTab) {
+            let section_data = section
+                .get_data(&kernel_elf)
+                .expect("Failed to get kernel section data information");
 
-    //         if let SectionData::SymbolTable64(symtab) = section_data {
-    //             symbol_table = Some(symtab);
-    //         }
-    //     }
-    // }
+            if let SectionData::SymbolTable64(symtab) = section_data {
+                symbol_table = Some(symtab);
+            }
+        }
+    }
 
-    // let symbol_table = symbol_table.unwrap();
+    let symbol_table = symbol_table.unwrap();
+    let mut rbp: usize;
 
-    // let mut rbp: usize;
+    unsafe {
+        asm!("mov {}, rbp", out(reg) rbp);
+    }
 
-    // unsafe {
-    //     asm!("mov {}, rbp", out(reg) rbp);
-    // }
+    // Make sure the RBP is not NULL. If it is then we cannot do the stack unwinding/tracing
+    // as no frame pointers were emmited in this build. This should only occur if you
+    // set the field `eliminate-frame-pointer` in the target file to true or manually resetting
+    // the RBP to prevent backtrace to avoid address leaks (for example when jumping to userland).
+    // If thats the case we return (resumes the parent function).
+    if rbp == 0x00 {
+        log::trace!("<empty backtrace>");
+        return;
+    }
 
-    // /*
-    //  * Make sure rbp is not NULL. If it is then we cannot do the stack unwinding/tracing
-    //  * as no frame pointers were emmited in this build. This should only occur if you
-    //  * set the field `eliminate-frame-pointer` in the target file to true. If thats the case
-    //  * we return (resumes the parent function).
-    //  */
-    // if rbp == 0 {
-    //     log::error!("Frame pointers were not emmited in this build");
-    //     log::error!("Unable to unwind the stack");
+    log::trace!("{:━^80}", " BACKTRACE ");
 
-    //     return;
-    // }
+    for depth in 0..64 {
+        if let Some(rip_rbp) = rbp.checked_add(core::mem::size_of::<usize>()) {
+            let rip = unsafe { *(rip_rbp as *const usize) };
 
-    // log::error!("Stack backtrace:");
+            if rip == 0 {
+                break;
+            }
 
-    // let mut depth = 0;
+            unsafe {
+                rbp = *(rbp as *const usize);
+            }
 
-    // /*
-    //  * The iteration goes up till the maximum of 64 frames.
-    //  */
-    // for _ in 0..64 {
-    //     if let Some(rip_rbp) = rbp.checked_add(mem::size_of::<usize>()) {
-    //         let rip = unsafe { *(rip_rbp as *const usize) };
+            for data in symbol_table {
+                let st_value = data.value() as usize;
+                let st_size = data.size() as usize;
 
-    //         /*
-    //          * Check if the RIP register is 0 and that means that we are done with the
-    //          * stack trace so break out of the loop.
-    //          */
-    //         if rip == 0 {
-    //             break;
-    //         }
+                if rip >= st_value && rip < (st_value + st_size) {
+                    let mangled_name = data.get_name(&kernel_elf).unwrap_or("<unknown>");
+                    let demangled_name = rustc_demangle::demangle(mangled_name);
 
-    //         unsafe {
-    //             rbp = *(rbp as *const usize);
-    //         }
-
-    //         for data in symbol_table {
-    //             let st_value = data.value() as usize;
-    //             let st_size = data.size() as usize;
-
-    //             if rip >= st_value && rip < (st_value + st_size) {
-    //                 let mangled_name = data.get_name(&kernel_elf).expect("Oh No!");
-    //                 let demangled_name = rustc_demangle::demangle(mangled_name);
-
-    //                 log::error!("\t{}:    {:#x} - {}", depth, rip, demangled_name);
-    //             }
-    //         }
-
-    //         depth += 1;
-    //     } else {
-    //         /*
-    //          * If the checked addition fails that means the RBP has overflowed. So just break
-    //          * out.
-    //          */
-    //         log::error!("RBP overflowed => {:#x}", rbp);
-
-    //         break;
-    //     }
-    // }
+                    // 1. Print the frame index
+                    log::trace!("{:>2}: 0x{:016x} - {}", depth, rip, demangled_name);
+                    log::trace!("    at <unknown>");
+                }
+            }
+        } else {
+            // RBP has been overflowed...
+            break;
+        }
+    }
 }
 
 #[panic_handler]

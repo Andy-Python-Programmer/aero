@@ -99,6 +99,8 @@ struct P2Align12<T>(T);
 
 const STACK_SIZE: usize = 4096 * 16;
 
+static UNWIND_INFO: spin::Once<&StivaleKernelFileV2Tag> = spin::Once::new();
+
 /// We need to tell the stivale bootloader where we want our stack to be.
 /// We are going to allocate our stack as an uninitialised array in .bss.
 static STACK: P2Align12<[u8; STACK_SIZE]> = P2Align12([0; STACK_SIZE]);
@@ -147,6 +149,10 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
         .modules()
         .expect("aero requires the bootloader to provide a non-null modules tag");
 
+    let kernel_info = boot_info
+        .kernel_file_v2()
+        .expect("aero requires the bootloader to provode a non-null kernel info V2 tag");
+
     let rsdp_address = PhysAddr::new(rsdp_tag.rsdp);
 
     // Note: STACK_SIZE - 1 points to the last u8 in the array, i.e.
@@ -171,6 +177,13 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     } else {
         unsafe { PHYSICAL_MEMORY_OFFSET = VirtAddr::new(0xffff800000000000) }
     }
+
+    UNWIND_INFO.call_once(move || unsafe {
+        let addr = (kernel_info as *const StivaleKernelFileV2Tag) as u64;
+        let new_addr = self::PHYSICAL_MEMORY_OFFSET + addr;
+
+        &*new_addr.as_mut_ptr::<StivaleKernelFileV2Tag>()
+    });
 
     arch::init_cpu();
 

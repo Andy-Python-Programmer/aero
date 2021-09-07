@@ -55,10 +55,16 @@ impl log::Log for AeroLogger {
             let mut log_ring = LOG_RING_BUFFER.get().unwrap().lock_irq();
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
-            log!("[ ");
-            log!("{}", level);
+            match record.level() {
+                Level::Error => crate::prelude::serial_print!("\x1b[1;41m"), // bold red
+                Level::Warn => crate::prelude::serial_print!("\x1b[1;43m"),  // bold yellow
+                Level::Info => crate::prelude::serial_print!("\x1b[1;42m"),  // bold green
+                Level::Debug => crate::prelude::serial_print!("\x1b[1;44m"), // bold blue
+                Level::Trace => crate::prelude::serial_print!("\x1b[1;45m"), // bold magenta
+            }
 
-            log_ln!("{: <1$}]        {args}", "", spaces, args = record.args());
+            log!("  {}{: <2$} ", level, "", spaces);
+            log_ln!("\x1b[0;0m      {}", record.args());
         }
     }
 
