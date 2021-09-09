@@ -23,11 +23,17 @@ use xmas_elf::sections::{SectionData, ShType};
 use xmas_elf::symbol_table::Entry;
 use xmas_elf::ElfFile;
 
+use crate::mem::paging::{Translate, VirtAddr};
+use crate::mem::AddressSpace;
+
 use crate::{logger, rendy};
 
 use crate::arch::interrupts;
 
 pub fn unwind_stack_trace() {
+    let mut address_space = AddressSpace::this();
+    let offset_table = address_space.offset_page_table();
+
     let unwind_info = crate::UNWIND_INFO
         .get()
         .expect("failed to retrieve the unwind information");
@@ -75,6 +81,14 @@ pub fn unwind_stack_trace() {
 
     for depth in 0..64 {
         if let Some(rip_rbp) = rbp.checked_add(core::mem::size_of::<usize>()) {
+            if offset_table
+                .translate_addr(VirtAddr::new(rip_rbp as u64))
+                .is_none()
+            {
+                log::trace!("{:>2}: <guard page>", depth);
+                break;
+            }
+
             let rip = unsafe { *(rip_rbp as *const usize) };
 
             if rip == 0 {
@@ -95,7 +109,6 @@ pub fn unwind_stack_trace() {
 
                     // 1. Print the frame index
                     log::trace!("{:>2}: 0x{:016x} - {}", depth, rip, demangled_name);
-                    log::trace!("    at <unknown>");
                 }
             }
         } else {
