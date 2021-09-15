@@ -218,17 +218,17 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     mem::alloc::init_heap(&mut offset_table).expect("Failed to initialize the heap.");
     log::info!("Loaded heap");
 
-    tls::init();
-    log::info!("Loaded TLS");
-
-    arch::gdt::init(stack_top_addr);
-    log::info!("Loaded GDT");
-
     interrupts::init();
     log::info!("Loaded IDT");
 
     acpi::init(rsdp_address).unwrap();
     log::info!("Loaded ACPI");
+
+    tls::init();
+    log::info!("Loaded TLS");
+
+    arch::gdt::init(stack_top_addr);
+    log::info!("Loaded GDT");
 
     time::init();
     log::info!("Loaded PIT");

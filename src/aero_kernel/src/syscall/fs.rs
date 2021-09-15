@@ -126,6 +126,28 @@ pub fn chdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
+pub fn mkdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    let path_str = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let (parent, base) = Path::new(path_str)
+        .parent_and_basename()
+        .ok_or(AeroSyscallError::EEXIST)?;
+
+    let parent_inode = fs::lookup_path(parent)?.inode();
+
+    if !parent_inode.metadata()?.is_directory() {
+        // A component of path is not a directory.
+        return Err(AeroSyscallError::ENOTDIR);
+    }
+
+    if ["", ".", ".."].contains(&path_str) {
+        // Cannot create a directory with a name of "", ".", or "..".
+        return Err(AeroSyscallError::EEXIST);
+    }
+
+    parent_inode.mkdir(base)?;
+    Ok(0x00)
+}
+
 pub fn getcwd(buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
     // Invalid value of the size argument is zero and buffer is not a
     // null pointer.

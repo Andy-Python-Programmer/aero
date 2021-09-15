@@ -246,6 +246,10 @@ pub fn sys_munmap(address: usize, size: usize) -> usize {
     unsafe { syscall2(prelude::SYS_MUNMAP, address as usize, size as usize) }
 }
 
+pub fn sys_mkdir(path: &str) -> usize {
+    unsafe { syscall2(prelude::SYS_MKDIR, path.as_ptr() as usize, path.len()) }
+}
+
 #[inline]
 pub fn sys_mmap(
     address: usize,

@@ -146,13 +146,37 @@ impl Path {
         unsafe { &*(path as *const str as *const Path) }
     }
 
-    /// Returns true if the path is absolute.
+    /// Returns [`true`] if the path is absolute.
     pub fn is_absolute(&self) -> bool {
         self.0.starts_with('/')
     }
 
+    /// Returns an iterator over the components of the path.
     pub fn components(&self) -> impl Iterator<Item = &str> {
         self.0.split("/").filter(|e| *e != "" && *e != ".")
+    }
+
+    /// Helper function that returns the parent path and the base name
+    /// of the path. Returns [`None`] if the path terminates in a root
+    /// prefix.
+    pub fn parent_and_basename(&self) -> Option<(&Self, &str)> {
+        if &self.0 == "/" {
+            return None;
+        }
+
+        if let Some(slash_index) = self.0.rfind('/') {
+            let parent_dir = if slash_index == 0 {
+                Path::new("/")
+            } else {
+                Path::new(&self.0[..slash_index])
+            };
+
+            let basename = &self.0[(slash_index + 1)..];
+            Some((parent_dir, basename))
+        } else {
+            // A relative path without any slashes.
+            Some((Path::new(""), &self.0))
+        }
     }
 }
 

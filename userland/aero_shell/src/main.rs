@@ -105,6 +105,12 @@ extern "C" fn _start() {
                 }
             } else if command == "pwd" {
                 println!("{}", pwd);
+            } else if command == "mkdir" {
+                if let Some(dir) = command_iter.next() {
+                    sys_mkdir(dir);
+                } else {
+                    println!("mkdir: missing operand")
+                }
             } else if command == "cd" {
                 if let Some(dir) = command_iter.next() {
                     sys_chdir(dir);
