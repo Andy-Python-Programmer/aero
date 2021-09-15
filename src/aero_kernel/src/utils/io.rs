@@ -59,18 +59,19 @@ pub const IA32_X2APIC_LVT_ERROR: u32 = 0x837;
 pub const IA32_X2APIC_TPR: u32 = 0x808;
 
 /// Wrapper function to the `outb` assembly instruction used to do the
-/// low level port output.
+/// 8-bit low level port output.
 #[inline]
 pub unsafe fn outb(port: u16, value: u8) {
     asm!(
        "out dx, al",
        in("dx") port,
        in("al") value,
+       options(preserves_flags, nomem, nostack)
     );
 }
 
 /// Wrapper function to the `inb` assembly instruction used to do the
-/// low level port input.
+/// 8-bit low level port input.
 #[inline]
 pub unsafe fn inb(port: u16) -> u8 {
     let ret: u8;
@@ -79,9 +80,22 @@ pub unsafe fn inb(port: u16) -> u8 {
         "in al, dx",
         in("dx") port,
         out("al") ret,
+        options(preserves_flags, nomem, nostack)
     );
 
     ret
+}
+
+/// Wrapper function to the `outw` assembly instruction used to do the
+/// 16-bit low level port output.
+#[inline]
+pub unsafe fn outw(port: u16, value: u16) {
+    asm!(
+        "out dx, eax",
+        in("dx") port,
+        in("eax") value,
+        options(preserves_flags, nomem, nostack)
+    );
 }
 
 /// Wrapper function to the `outl` assembly instruction used to do the
@@ -92,11 +106,12 @@ pub unsafe fn outl(port: u16, value: u32) {
         "out dx, eax",
         in("dx") port,
         in("eax") value,
+        options(preserves_flags, nomem, nostack)
     );
 }
 
 /// Wrapper function to the `inl` assembly instruction used to do the
-/// low level port input.
+/// 32-bit low level port input.
 #[inline]
 pub unsafe fn inl(port: u16) -> u32 {
     let ret: u32;
@@ -105,6 +120,23 @@ pub unsafe fn inl(port: u16) -> u32 {
         "in eax, dx",
         in("dx") port,
         out("eax") ret,
+        options(preserves_flags, nomem, nostack)
+    );
+
+    ret
+}
+
+/// Wrapper function to the `inw` assembly instruction used to do the
+/// 16-bit low level port input.
+#[inline]
+pub unsafe fn inw(port: u16) -> u16 {
+    let ret: u16;
+
+    asm!(
+        "in eax, dx",
+        out("eax") ret,
+        in("dx") port,
+        options(preserves_flags, nomem, nostack)
     );
 
     ret

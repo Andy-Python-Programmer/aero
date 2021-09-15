@@ -379,6 +379,13 @@ impl Vendor {
             _ => Self::Unknown(id),
         }
     }
+
+    pub fn is_valid(&self) -> bool {
+        match self {
+            Self::Unknown(id) => *id != 0xFFFF,
+            _ => true,
+        }
+    }
 }
 
 pub struct PciHeader(u32);
@@ -410,71 +417,82 @@ impl PciHeader {
         self.0.get_bits(0..3) as u8
     }
 
-    unsafe fn read(&self, offset: u32) -> u32 {
+    unsafe fn read<T>(&self, offset: u32) -> u32 {
         let bus = self.bus() as u32;
         let device = self.device() as u32;
         let func = self.function() as u32;
         let address = (bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000;
 
         io::outl(PCI_CONFIG_ADDRESS_PORT, address);
-        io::inl(PCI_CONFIG_DATA_PORT)
-    }
 
-    unsafe fn write(&self, offset: u32, value: u32) {
-        let bus = self.bus() as u32;
-        let device = self.device() as u32;
-        let func = self.function() as u32;
-        let address = (bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000;
-
-        io::outl(PCI_CONFIG_ADDRESS_PORT, address);
-        io::outl(PCI_CONFIG_DATA_PORT, value);
-    }
-
-    pub unsafe fn get_vendor_id(&self) -> u32 {
-        let id = self.read(0x00);
-
-        id.get_bits(0..16)
-    }
-
-    /// This function is responsible for enabling bus masterning on this device. This
-    /// allows the AHCI to perform DMA.
-    #[inline]
-    pub fn enable_bus_mastering(&self) {
-        // Read the Command Register from the device's PCI Configuration Space, set bit 2
-        // (bus mastering bit) and write the modified Command Register. Some BISOs do enable
-        // bus mastering by default so, we need to check for that.
-        let command = unsafe { self.read(0x04) };
-
-        if (command & (1 << 2)) == 0 {
-            unsafe { self.write(0x04, command | (1 << 2)) }
+        match core::mem::size_of::<T>() {
+            1 => io::inb(PCI_CONFIG_DATA_PORT) as u32, // u8
+            2 => io::inw(PCI_CONFIG_DATA_PORT) as u32, // u16
+            4 => io::inl(PCI_CONFIG_DATA_PORT),        // u32
+            width => unreachable!("unknown PCI read width: `{}`", width),
         }
     }
 
-    #[allow(unused)]
-    pub unsafe fn get_interface_id(&self) -> u32 {
-        let id = self.read(0x08);
+    unsafe fn write<T>(&self, offset: u32, value: u32) {
+        let bus = self.bus() as u32;
+        let device = self.device() as u32;
+        let func = self.function() as u32;
+        let address = (bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000;
 
-        id.get_bits(8..16)
+        io::outl(PCI_CONFIG_ADDRESS_PORT, address);
+
+        match core::mem::size_of::<T>() {
+            1 => io::outb(PCI_CONFIG_DATA_PORT, value as u8), // u8
+            2 => io::outw(PCI_CONFIG_DATA_PORT, value as u16), // u16
+            4 => io::outl(PCI_CONFIG_DATA_PORT, value),       // u32
+            width => unreachable!("unknown PCI write width: `{}`", width),
+        }
     }
 
+    /// Enables response to memory accesses on the primary interface that address a device
+    /// that resides behind the bridge in both the memory mapped I/O and prefetchable memory
+    /// ranges or targets a location within the bridge itself.
+    pub fn enable_mmio(&self) {
+        // Read the Command Register from the device's PCI Configuration Space, set bit 1
+        // (MMIO bit) and write the modified Command Register.
+        let command = unsafe { self.read::<u16>(0x04) };
+
+        unsafe { self.write::<u16>(0x04, command | (1 << 1)) }
+    }
+
+    /// Enable the bridge to operate as a master on the primary interface for memory and I/O
+    /// transactions forwarded from the secondary interface. This allows the PCI device to perform
+    /// DMA.
+    #[inline]
+    pub fn enable_bus_mastering(&self) {
+        // Read the Command Register from the device's PCI Configuration Space, set bit 2
+        // (bus mastering bit) and write the modified Command Register. Note that some BISOs do
+        // enable bus mastering by default.
+        let command = unsafe { self.read::<u16>(0x04) };
+
+        unsafe { self.write::<u16>(0x04, command | (1 << 2)) }
+    }
+
+    /// Returns the value stored in the PCI vendor ID register which is used to identify
+    /// the manufacturer of the PCI device.
     #[inline]
     pub fn get_vendor(&self) -> Vendor {
-        Vendor::new(unsafe { self.get_vendor_id() })
+        unsafe { Vendor::new(self.read::<u16>(0x00)) }
     }
 
     pub unsafe fn get_device(&self) -> DeviceType {
-        let id = self.read(0x08);
+        let id = self.read::<u32>(0x08);
 
         DeviceType::new(id.get_bits(24..32), id.get_bits(16..24))
     }
 
     #[inline]
     pub fn has_multiple_functions(&self) -> bool {
-        unsafe { self.read(0x0c) }.get_bit(23)
+        unsafe { self.read::<u32>(0x0c) }.get_bit(23)
     }
 
     pub fn pin(&self) -> u8 {
-        unsafe { (self.read(0x3D) >> (0x3D & 0b11) * 8) as u8 }
+        unsafe { (self.read::<u32>(0x3D) >> (0x3D & 0b11) * 8) as u8 }
     }
 
     #[allow(unused)]
@@ -498,27 +516,41 @@ impl PciHeader {
             .map(|v| v.unwrap().irq)
     }
 
-    pub unsafe fn get_bar(&self, bar: u8) -> Option<Bar> {
-        let offset = 0x10 + (bar as u16) * 4;
-        let bar = self.read(offset.into());
+    /// Returnes the value stored in the PCI header type register which is used to
+    /// indicate layout for bytes,of the device’s configuration space.
+    pub fn get_header_type(&self) -> u8 {
+        unsafe { self.read::<u8>(0x0E) as _ }
+    }
 
+    /// Returns the value stored in the bar of the provided slot. Returns [`None`] if the
+    /// bar is empty.
+    pub fn get_bar(&self, bar: u8) -> Option<Bar> {
+        debug_assert!(self.get_header_type() & 0b01111111 == 0); // Ensure header type == 0
+        debug_assert!(bar <= 5); // Make sure the bar is valid.
+
+        let offset = 0x10 + (bar as u16) * 4;
+        let bar = unsafe { self.read::<u32>(offset.into()) };
+
+        // bit 0:true  - the BAR is in memory
+        // bit 0:false - the BAR is in I/O
         if !bar.get_bit(0) {
             let prefetchable = bar.get_bit(3);
             let address = bar.get_bits(4..32) << 4;
 
-            self.write(offset.into(), 0xFFFFFFFF);
+            let size = unsafe {
+                self.write::<u32>(offset.into(), 0xffffffff);
+                let mut readback = self.read::<u32>(offset.into());
+                self.write::<u32>(offset.into(), address);
 
-            let mut readback = self.read(offset.into());
+                // If the entire readback value is zero, the BAR is not implemented, so we
+                // return `None`.
+                if readback == 0x0 {
+                    return None;
+                }
 
-            self.write(offset.into(), address);
-
-            if readback == 0x0 {
-                return None;
-            }
-
-            readback.set_bits(0..4, 0);
-
-            let size = 1 << readback.trailing_zeros();
+                readback.set_bits(0..4, 0);
+                1 << readback.trailing_zeros()
+            };
 
             match bar.get_bits(1..3) {
                 0b00 => Some(Bar::Memory32 {
@@ -531,7 +563,12 @@ impl PciHeader {
                     let address = {
                         let mut address = address as u64;
 
-                        address.set_bits(32..64, self.read((offset + 4).into()) as u64);
+                        // Get the upper 32 bits of the address.
+                        address.set_bits(
+                            32..64,
+                            unsafe { self.read::<u32>((offset + 4).into()) }.into(),
+                        );
+
                         address
                     };
 
@@ -607,7 +644,7 @@ pub fn init(offset_table: &mut OffsetPageTable) {
                 let device = PciHeader::new(bus, device, function);
 
                 unsafe {
-                    if device.get_vendor_id() == 0xFFFF {
+                    if !device.get_vendor().is_valid() {
                         // Device does not exist.
                         continue;
                     }
