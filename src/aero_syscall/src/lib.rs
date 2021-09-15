@@ -154,6 +154,8 @@ pub struct SysDirEntry {
     pub name: [u8; 0],
 }
 
+pub const AT_FDCWD: isize = -100;
+
 pub type AeroSyscallResult = Result<usize, AeroSyscallError>;
 
 pub fn syscall_result_as_usize(result: AeroSyscallResult) -> usize {
@@ -246,8 +248,21 @@ pub fn sys_munmap(address: usize, size: usize) -> usize {
     unsafe { syscall2(prelude::SYS_MUNMAP, address as usize, size as usize) }
 }
 
+#[inline]
 pub fn sys_mkdir(path: &str) -> usize {
     unsafe { syscall2(prelude::SYS_MKDIR, path.as_ptr() as usize, path.len()) }
+}
+
+#[inline]
+pub fn sys_mkdirat(dfd: isize, path: &str) -> usize {
+    unsafe {
+        syscall3(
+            prelude::SYS_MKDIR_AT,
+            dfd as usize,
+            path.as_ptr() as usize,
+            path.len(),
+        )
+    }
 }
 
 #[inline]

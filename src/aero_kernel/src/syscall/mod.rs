@@ -36,6 +36,7 @@
 //! | 12     | get_cwd                 |
 //! | 13     | chdir                   |
 //! | 14     | mkdir                   |
+//! | 15     | mkdirat                 |
 
 use aero_syscall::prelude::*;
 
@@ -97,20 +98,22 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
     }
 
     let result = match a {
-        SYS_READ => fs::read(b, c, d),
         SYS_EXIT => process::exit(b),
         SYS_SHUTDOWN => process::shutdown(),
-        SYS_OPEN => fs::open(b, c, d, e),
-        SYS_CLOSE => fs::close(b),
-        SYS_WRITE => fs::write(b, c, d),
         SYS_FORK => process::fork(),
         SYS_MMAP => process::mmap(b, c, d, e, f, g),
         SYS_ARCH_PRCTL => process::arch_prctl(b, c),
         SYS_MUNMAP => process::munmap(b, c),
+
+        SYS_READ => fs::read(b, c, d),
+        SYS_OPEN => fs::open(b, c, d, e),
+        SYS_CLOSE => fs::close(b),
+        SYS_WRITE => fs::write(b, c, d),
         SYS_GETDENTS => fs::getdents(b, c, d),
         SYS_GETCWD => fs::getcwd(b, c),
         SYS_CHDIR => fs::chdir(b, c),
         SYS_MKDIR => fs::mkdir(b, c),
+        SYS_MKDIR_AT => fs::mkdirat(b, c, d),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);

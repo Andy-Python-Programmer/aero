@@ -126,13 +126,34 @@ pub fn chdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
-pub fn mkdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
+pub fn mkdirat(dfd: usize, path: usize, size: usize) -> Result<usize, AeroSyscallError> {
     let path_str = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
-    let (parent, base) = Path::new(path_str)
-        .parent_and_basename()
-        .ok_or(AeroSyscallError::EEXIST)?;
+    let path = Path::new(path_str);
 
-    let parent_inode = fs::lookup_path(parent)?.inode();
+    // NOTE: If the pathname given in pathname is relative, then it is interpreted
+    // relative to the directory referred to by the file descriptor (rather than relative
+    // to the current working directory of the calling task, as is done by mkdir() for a
+    // relative pathname).
+    let (parent_inode, child) = if path.is_absolute() {
+        let (path, child) = path.parent_and_basename().ok_or(AeroSyscallError::EEXIST)?;
+        (fs::lookup_path(path)?.inode(), child)
+    } else {
+        // If pathname is relative and fd is the special value AT_FDCWD, then
+        // pathname is interpreted relative to the current working directory of the
+        // calling task.
+        if dfd as isize == aero_syscall::AT_FDCWD {
+            let cwd = scheduler::get_scheduler().current_task().get_cwd_dirent();
+            (cwd.inode(), path.as_str())
+        } else {
+            let handle = scheduler::get_scheduler()
+                .current_task()
+                .file_table
+                .get_handle(dfd)
+                .ok_or(AeroSyscallError::EBADFD)?;
+
+            (handle.inode(), path.as_str())
+        }
+    };
 
     if !parent_inode.metadata()?.is_directory() {
         // A component of path is not a directory.
@@ -144,8 +165,13 @@ pub fn mkdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
         return Err(AeroSyscallError::EEXIST);
     }
 
-    parent_inode.mkdir(base)?;
+    parent_inode.mkdir(child)?;
     Ok(0x00)
+}
+
+#[inline]
+pub fn mkdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    mkdirat(aero_syscall::AT_FDCWD as _, path, size)
 }
 
 pub fn getcwd(buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {

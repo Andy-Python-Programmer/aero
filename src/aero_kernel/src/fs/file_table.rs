@@ -26,7 +26,7 @@ use alloc::vec::Vec;
 
 use spin::RwLock;
 
-use super::cache::DirCacheItem;
+use super::cache::{DirCacheItem, INodeCacheItem};
 use super::FileSystemError;
 
 pub struct FileHandle {
@@ -64,6 +64,11 @@ impl FileHandle {
         self.offset.fetch_add(new_offset, Ordering::SeqCst);
 
         Ok(new_offset)
+    }
+
+    #[inline]
+    pub fn inode(&self) -> INodeCacheItem {
+        self.inode.inode()
     }
 
     pub fn get_dents(&self, buffer: &mut [u8]) -> super::Result<usize> {

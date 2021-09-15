@@ -130,7 +130,7 @@ impl Metadata {
         self.file_type
     }
 
-    /// Returns true if the file type of the inode is a directory.
+    /// Returns [`true`] if the file type of the inode is a directory.
     #[inline]
     pub fn is_directory(&self) -> bool {
         self.file_type == FileType::Directory
@@ -260,7 +260,7 @@ impl DirEntry {
         self.data.lock().name.clone()
     }
 
-    /// Returns the inner inode cache item of the directory entry cache.
+    /// Returns the inner cached inode item of the directory entry.
     pub fn inode(&self) -> INodeCacheItem {
         self.data.lock().inode.clone()
     }
