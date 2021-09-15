@@ -48,7 +48,10 @@ impl LockedHeap {
     /// Returns a pointer to newly-allocated memory, or null to indicate
     /// allocation failure.
     unsafe fn allocate(&self, layout: alloc::Layout) -> Result<NonNull<u8>, ()> {
-        let mut heap = self.0.lock();
+        // SAFETY: We we need to be careful to not cause a deadlock as the interrupt
+        // handlers utilize the heap and might interrupt an in-progress allocation. So, we
+        // lock the interrupts during the allocation.
+        let mut heap = self.0.lock_irq();
 
         heap.allocate_first_fit(layout).or_else(|_| {
             let heap_top = heap.top();
@@ -133,8 +136,11 @@ unsafe impl GlobalAlloc for LockedHeap {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        // SAFETY: We we need to be careful to not cause a deadlock as the interrupt
+        // handlers utilize the heap and might interrupt an in-progress de-allocation. So, we
+        // lock the interrupts during the de-allocation.
         self.0
-            .lock()
+            .lock_irq()
             .deallocate(NonNull::new_unchecked(ptr), layout)
     }
 }
