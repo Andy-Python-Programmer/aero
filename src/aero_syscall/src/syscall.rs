@@ -1,24 +1,28 @@
 macro define_syscall_fns($(pub fn $sys_fn:ident($a:ident $(,$b:ident $(,$c:ident $(,$d:ident $(,$e:ident $(,$f:ident $(,$g:ident)?)?)?)?)?)?) -> usize;)+) {
     $(
-        pub unsafe fn $sys_fn(mut $a: usize, $($b: usize, $($c: usize, $($d: usize, $($e: usize, $($f: usize, $($g: usize)?)?)?)?)?)?) -> usize {
+        pub fn $sys_fn(mut $a: usize, $($b: usize, $($c: usize, $($d: usize, $($e: usize, $($f: usize, $($g: usize)?)?)?)?)?)?) -> usize {
             if $crate::syscall::supports_syscall_sysret() {
-                asm!(
-                    "syscall",
-                    inout("rax") $a,
-                    $(in("rdi") $b, $(in("rsi") $c, $(in("rdx") $d, $(in("r10") $e, $(in("r8") $f,)?)?)?)?)?
-                    out("rcx") _,
-                    out("r11") _,
-                    options(nostack),
-                );
+                unsafe {
+                    asm!(
+                        "syscall",
+                        inout("rax") $a,
+                        $(in("rdi") $b, $(in("rsi") $c, $(in("rdx") $d, $(in("r10") $e, $(in("r8") $f,)?)?)?)?)?
+                        out("rcx") _,
+                        out("r11") _,
+                        options(nostack),
+                    );
+             }
             } else {
-                asm!(
-                    "int 0x80",
-                    inout("rax") $a,
-                    $(in("rdi") $b, $(in("rsi") $c, $(in("rdx") $d, $(in("r10") $e, $(in("r8") $f, $(in("r9") $g,)?)?)?)?)?)?
-                    out("rcx") _,
-                    out("r11") _,
-                    options(nostack),
-                );
+                unsafe {
+                    asm!(
+                        "int 0x80",
+                        inout("rax") $a,
+                        $(in("rdi") $b, $(in("rsi") $c, $(in("rdx") $d, $(in("r10") $e, $(in("r8") $f, $(in("r9") $g,)?)?)?)?)?)?
+                        out("rcx") _,
+                        out("r11") _,
+                        options(nostack),
+                    );
+                }
             }
 
             $a

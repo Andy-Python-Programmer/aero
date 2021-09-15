@@ -33,12 +33,12 @@ _______ _______ ______ _______    _______ ______
 |_|   |_|_______)_|   |_\_____/    \_____(______/ 
 ";
 
-fn ls(path: &str) {
-    let fd = aero_syscall::sys_open(path, OpenFlags::O_DIRECTORY);
+fn ls(path: &str) -> Result<(), AeroSyscallError> {
+    let fd = aero_syscall::sys_open(path, OpenFlags::O_DIRECTORY)?;
     let mut buffer = [0u8; 1024];
 
     loop {
-        let size = aero_syscall::sys_getdents(fd, &mut buffer);
+        let size = aero_syscall::sys_getdents(fd, &mut buffer)?;
 
         if size == 0x00 {
             break;
@@ -65,21 +65,22 @@ fn ls(path: &str) {
         }
     }
 
-    sys_close(fd);
-    println!()
+    sys_close(fd)?;
+    println!();
+
+    Ok(())
 }
 
-#[no_mangle]
-extern "C" fn _start() {
-    sys_open("/dev/tty", OpenFlags::O_RDONLY); // device: stdin
-    sys_open("/dev/tty", OpenFlags::O_WRONLY); // device: stdout
-    sys_open("/dev/tty", OpenFlags::O_WRONLY); // device: stderr
+fn main() -> Result<(), AeroSyscallError> {
+    sys_open("/dev/tty", OpenFlags::O_RDONLY)?; // device: stdin
+    sys_open("/dev/tty", OpenFlags::O_WRONLY)?; // device: stdout
+    sys_open("/dev/tty", OpenFlags::O_WRONLY)?; // device: stderr
 
     println!("{}", ASCII_INTRO);
 
     loop {
         let mut pwd_buffer = [0u8; 1024];
-        sys_getcwd(&mut pwd_buffer);
+        sys_getcwd(&mut pwd_buffer)?;
 
         let pwd = unsafe { core::str::from_utf8_unchecked(&pwd_buffer) };
         let pwd = pwd.trim_matches(|c| c == '\0');
@@ -87,7 +88,7 @@ extern "C" fn _start() {
         print!("root@aero:{} ", pwd);
 
         let mut buffer = [0u8; 256];
-        let len = sys_read(0, &mut buffer);
+        let len = sys_read(0, &mut buffer)?;
 
         let mut command_iter = unsafe { core::str::from_utf8_unchecked(&mut buffer) }.trim()
             [0..len]
@@ -98,25 +99,25 @@ extern "C" fn _start() {
         if let Some(command) = command {
             if command == "ls" {
                 if let Some(dir) = command_iter.next() {
-                    ls(dir)
+                    ls(dir)?
                 } else {
                     // By default "ls" will be executed in the current directory.
-                    ls(".")
+                    ls(".")?
                 }
             } else if command == "pwd" {
                 println!("{}", pwd);
             } else if command == "mkdir" {
                 if let Some(dir) = command_iter.next() {
-                    sys_mkdir(dir);
+                    sys_mkdir(dir)?;
                 } else {
                     println!("mkdir: missing operand")
                 }
             } else if command == "cd" {
                 if let Some(dir) = command_iter.next() {
-                    sys_chdir(dir);
+                    sys_chdir(dir)?;
                 } else {
                     // By default "cd" changes to the parent directory if no directory is specified.
-                    sys_chdir("..");
+                    sys_chdir("..")?;
                 }
             } else if command != "\u{0}" {
                 println!("invalid command: {:?}", command);
@@ -125,10 +126,14 @@ extern "C" fn _start() {
     }
 }
 
+#[no_mangle]
+extern "C" fn _start() {
+    main().expect("fatal: init shell exited")
+}
+
 #[panic_handler]
 extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     println!("{}", info);
-
     sys_exit(0x01);
 }
 

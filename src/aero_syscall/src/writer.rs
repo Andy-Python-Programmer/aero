@@ -4,7 +4,7 @@ struct Writer;
 
 impl core::fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        crate::sys_write(1, s.as_bytes());
+        crate::sys_write(1, s.as_bytes()).expect("stdout: failed to write to the standard output");
         Ok(())
     }
 }

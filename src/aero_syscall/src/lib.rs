@@ -11,7 +11,7 @@ pub mod prelude {
     pub use crate::consts::*;
     pub use crate::syscall::*;
 
-    pub use crate::{AeroSyscallError, AeroSyscallResult};
+    pub use crate::AeroSyscallError;
 }
 
 bitflags::bitflags! {
@@ -156,113 +156,125 @@ pub struct SysDirEntry {
 
 pub const AT_FDCWD: isize = -100;
 
-pub type AeroSyscallResult = Result<usize, AeroSyscallError>;
-
-pub fn syscall_result_as_usize(result: AeroSyscallResult) -> usize {
+pub fn syscall_result_as_usize(result: Result<usize, AeroSyscallError>) -> usize {
     match result {
         Ok(value) => value as _,
         Err(error) => -(error as isize) as _,
     }
 }
 
+/// Inner helper function that converts the syscall result value into the
+/// Rust [`Result`] type.
+fn isize_as_syscall_result(value: isize) -> Result<usize, AeroSyscallError> {
+    if value >= 0 {
+        Ok(value as usize)
+    } else {
+        let err: AeroSyscallError = unsafe { core::mem::transmute((-value) as u64) };
+        Err(err)
+    }
+}
+
 /// Exits the current process with the provided status.
 #[inline]
 pub fn sys_exit(status: usize) -> ! {
-    unsafe {
-        syscall1(prelude::SYS_EXIT, status);
-    }
-
+    syscall1(prelude::SYS_EXIT, status);
     unreachable!()
 }
 
 #[inline]
-pub fn sys_open(path: &str, mode: OpenFlags) -> usize {
-    unsafe {
-        syscall4(
-            prelude::SYS_OPEN,
-            0x00,
-            path.as_ptr() as usize,
-            path.len(),
-            mode.bits(),
-        )
-    }
+pub fn sys_open(path: &str, mode: OpenFlags) -> Result<usize, AeroSyscallError> {
+    let value = syscall4(
+        prelude::SYS_OPEN,
+        0x00,
+        path.as_ptr() as usize,
+        path.len(),
+        mode.bits(),
+    );
+
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
-pub fn sys_write(fd: usize, buf: &[u8]) -> usize {
-    unsafe {
-        syscall3(
-            prelude::SYS_WRITE,
-            fd as usize,
-            buf.as_ptr() as usize,
-            buf.len(),
-        )
-    }
+pub fn sys_write(fd: usize, buf: &[u8]) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_WRITE,
+        fd as usize,
+        buf.as_ptr() as usize,
+        buf.len(),
+    );
+
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
-pub fn sys_read(fd: usize, buf: &mut [u8]) -> usize {
-    unsafe {
-        syscall3(
-            prelude::SYS_READ,
-            fd as usize,
-            buf.as_mut_ptr() as usize,
-            buf.len(),
-        )
-    }
+pub fn sys_read(fd: usize, buf: &mut [u8]) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_READ,
+        fd as usize,
+        buf.as_mut_ptr() as usize,
+        buf.len(),
+    );
+
+    isize_as_syscall_result(value as _)
 }
 
-pub fn sys_chdir(path: &str) -> usize {
-    unsafe { syscall2(prelude::SYS_CHDIR, path.as_ptr() as usize, path.len()) }
-}
-
-#[inline]
-pub fn sys_close(fd: usize) -> usize {
-    unsafe { syscall1(prelude::SYS_CLOSE, fd) }
+pub fn sys_chdir(path: &str) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_CHDIR, path.as_ptr() as usize, path.len());
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
-pub fn sys_getcwd(buf: &mut [u8]) -> usize {
-    unsafe { syscall2(prelude::SYS_GETCWD, buf.as_mut_ptr() as usize, buf.len()) }
+pub fn sys_close(fd: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall1(prelude::SYS_CLOSE, fd);
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
-pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> usize {
-    unsafe {
-        syscall3(
-            prelude::SYS_GETDENTS,
-            fd as usize,
-            buf.as_mut_ptr() as usize,
-            buf.len(),
-        )
-    }
+pub fn sys_getcwd(buf: &mut [u8]) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_GETCWD, buf.as_mut_ptr() as usize, buf.len());
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
-pub fn sys_fork() -> usize {
-    unsafe { syscall0(prelude::SYS_FORK) }
+pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_GETDENTS,
+        fd as usize,
+        buf.as_mut_ptr() as usize,
+        buf.len(),
+    );
+
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
-pub fn sys_munmap(address: usize, size: usize) -> usize {
-    unsafe { syscall2(prelude::SYS_MUNMAP, address as usize, size as usize) }
+pub fn sys_fork() -> Result<usize, AeroSyscallError> {
+    let value = syscall0(prelude::SYS_FORK);
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
-pub fn sys_mkdir(path: &str) -> usize {
-    unsafe { syscall2(prelude::SYS_MKDIR, path.as_ptr() as usize, path.len()) }
+pub fn sys_munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_MUNMAP, address as usize, size as usize);
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
-pub fn sys_mkdirat(dfd: isize, path: &str) -> usize {
-    unsafe {
-        syscall3(
-            prelude::SYS_MKDIR_AT,
-            dfd as usize,
-            path.as_ptr() as usize,
-            path.len(),
-        )
-    }
+pub fn sys_mkdir(path: &str) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_MKDIR, path.as_ptr() as usize, path.len());
+    isize_as_syscall_result(value as _)
+}
+
+#[inline]
+pub fn sys_mkdirat(dfd: isize, path: &str) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_MKDIR_AT,
+        dfd as usize,
+        path.as_ptr() as usize,
+        path.len(),
+    );
+
+    isize_as_syscall_result(value as _)
 }
 
 #[inline]
@@ -273,16 +285,16 @@ pub fn sys_mmap(
     flags: MMapFlags,
     fd: usize,
     offset: usize,
-) -> usize {
-    unsafe {
-        syscall6(
-            prelude::SYS_MMAP,
-            address,
-            size,
-            protocol.bits(),
-            flags.bits(),
-            fd,
-            offset,
-        )
-    }
+) -> Result<usize, AeroSyscallError> {
+    let value = syscall6(
+        prelude::SYS_MMAP,
+        address,
+        size,
+        protocol.bits(),
+        flags.bits(),
+        fd,
+        offset,
+    );
+
+    isize_as_syscall_result(value as _)
 }
