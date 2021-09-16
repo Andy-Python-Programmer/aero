@@ -114,6 +114,7 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_CHDIR => fs::chdir(b, c),
         SYS_MKDIR => fs::mkdir(b, c),
         SYS_MKDIR_AT => fs::mkdirat(b, c, d),
+        SYS_RMDIR => fs::rmdir(b, c),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);

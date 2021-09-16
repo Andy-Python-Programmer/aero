@@ -14,3 +14,4 @@ pub const SYS_GETCWD: usize = 12;
 pub const SYS_CHDIR: usize = 13;
 pub const SYS_MKDIR: usize = 14;
 pub const SYS_MKDIR_AT: usize = 15;
+pub const SYS_RMDIR: usize = 16;

@@ -11,7 +11,6 @@ dependencies = [
  "bit_field",
  "bitflags",
  "cfg-if",
- "cpio",
  "font8x8",
  "hashbrown 0.11.2",
  "intrusive-collections",
@@ -98,11 +97,6 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
-
-[[package]]
-name = "cpio"
-version = "0.1.0"
-source = "git+https://github.com/rcore-os/cpio#dc1daa90738122d32d4037028ac561eb3593db93"
 
 [[package]]
 name = "crossbeam-channel"

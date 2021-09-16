@@ -29,6 +29,8 @@ use core::borrow::Borrow;
 use core::fmt::Debug;
 use core::hash::Hash;
 use core::ops;
+use core::sync::atomic::AtomicBool;
+use core::sync::atomic::Ordering;
 
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -44,6 +46,100 @@ use crate::utils::sync::Mutex;
 pub(super) static INODE_CACHE: Once<Arc<INodeCache>> = Once::new();
 pub(super) static DIR_CACHE: Once<Arc<DirCache>> = Once::new();
 
+// NOTE: We require a custom wrapper around [`Arc`] and [`Weak`] since we need to be able
+// to move the cache item from the used list to the unused list when the cache item is dropped.
+// This would require us to implement a custom drop handler implementation.
+pub struct CacheArc<T: CacheDropper>(Arc<T>);
+
+impl<T: CacheDropper> CacheArc<T> {
+    /// Constructs a new `CacheArc<T>`.
+    #[inline]
+    pub fn new(data: T) -> Self {
+        Self(Arc::new(data))
+    }
+
+    pub fn downgrade(&self) -> CacheWeak<T> {
+        CacheWeak(Arc::downgrade(&self.0))
+    }
+}
+
+impl<T: CacheDropper> core::ops::Deref for CacheArc<T> {
+    type Target = Arc<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: CacheDropper> Clone for CacheArc<T> {
+    /// Makes a clone of the `CacheArc<T>` pointer.
+    ///
+    /// This creates another pointer to the same allocation, increasing the
+    /// strong reference count.
+    #[inline]
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T: CacheDropper> Drop for CacheArc<T> {
+    /// Drops the `ArcCache`.
+    ///
+    /// This will decrement the strong reference count. If the strong reference
+    /// count reaches zero then the only other references (if any) are
+    /// [`CacheWeak`], so we `drop` the inner value.
+    fn drop(&mut self) {
+        let strong_count = Arc::strong_count(&self.0);
+
+        if strong_count == 1 {
+            self.drop_this(self.0.clone());
+        }
+    }
+}
+
+impl<T: CacheDropper> From<Arc<T>> for CacheArc<T> {
+    /// Converts an `Arc<T>` into a `CacheArc<T>`.
+    fn from(data: Arc<T>) -> Self {
+        Self(data)
+    }
+}
+
+pub struct CacheWeak<T: CacheDropper>(Weak<T>);
+
+impl<T: CacheDropper> CacheWeak<T> {
+    /// Constructs a new `Weak<T>`, without allocating any memory.
+    /// Calling [`upgrade`] on the return value always gives [`None`].
+    pub fn new() -> Self {
+        Self(Weak::new())
+    }
+
+    /// Attempts to upgrade the Weak pointer to an Arc, delaying dropping of the inner
+    /// value if successful.
+    ///
+    /// Returns [`None`] if the inner value has since been dropped.
+    pub fn upgrade(&self) -> Option<CacheArc<T>> {
+        Some(self.0.upgrade()?.into())
+    }
+}
+
+impl<T: CacheDropper> Clone for CacheWeak<T> {
+    /// Makes a clone of the `CacheWeak<T>` pointer.
+    #[inline]
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T: CacheDropper> Default for CacheWeak<T> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+
+pub trait CacheDropper {
+    fn drop_this(&self, this: Arc<Self>);
+}
+
 pub trait CacheKey: Hash + Ord + Borrow<Self> + Debug {}
 
 impl<T> CacheKey for T where T: Hash + Ord + Borrow<Self> + Debug {}
@@ -55,17 +151,38 @@ pub trait Cacheable<K: CacheKey>: Sized {
 /// Structure representing a cache item in the cache index. See the documentation of [CacheIndex]
 /// and the fields of this struct for more information.
 pub struct CacheItem<K: CacheKey, V: Cacheable<K>> {
-    #[allow(unused)]
     cache: Weak<Cache<K, V>>,
     value: V,
+    used: AtomicBool,
 }
 
 impl<K: CacheKey, V: Cacheable<K>> CacheItem<K, V> {
-    pub fn new(cache: &Weak<Cache<K, V>>, value: V) -> Arc<Self> {
-        Arc::new(Self {
+    /// Constructs a new `CacheItem<K, V>`.
+    #[inline]
+    pub fn new(cache: &Weak<Cache<K, V>>, value: V) -> CacheArc<Self> {
+        CacheArc::new(Self {
             cache: cache.clone(),
             value,
+            used: AtomicBool::new(false),
         })
+    }
+
+    /// Returns if the cache-item is used.
+    #[inline]
+    pub fn is_used(&self) -> bool {
+        self.used.load(Ordering::SeqCst)
+    }
+
+    /// Marks the cache-item as unused.
+    #[inline]
+    fn mark_unused(&self) {
+        self.used.store(false, Ordering::SeqCst);
+    }
+
+    /// Marks the cache-item as used.
+    #[inline]
+    fn mark_used(&self) {
+        self.used.store(true, Ordering::SeqCst);
     }
 }
 
@@ -91,14 +208,12 @@ struct CacheIndex<K: CacheKey, V: Cacheable<K>> {
 /// the cache index (protected by a mutex) and a weak self reference to itself.
 pub struct Cache<K: CacheKey, V: Cacheable<K>> {
     index: Mutex<CacheIndex<K, V>>,
-
-    #[allow(unused)]
     self_ref: Weak<Cache<K, V>>,
 }
 
 impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
     /// Creates a new cache with the provided that holds at most `capacity` items.
-    pub fn new(capacity: usize) -> Arc<Self> {
+    pub(super) fn new(capacity: usize) -> Arc<Self> {
         Arc::new_cyclic(|this| Cache::<K, V> {
             index: Mutex::new(CacheIndex {
                 unused: LruCache::new(capacity),
@@ -108,15 +223,14 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
         })
     }
 
-    /// This function is responsible for clearning the used and unused.
-    pub fn clear(&self) {
+    pub(super) fn clear(&self) {
         let mut index_mut = self.index.lock();
 
         index_mut.unused.clear();
         index_mut.used.clear();
     }
 
-    pub fn make_item_cached(&self, value: V) -> Arc<CacheItem<K, V>> {
+    pub(super) fn make_item_cached(&self, value: V) -> CacheArc<CacheItem<K, V>> {
         let item = CacheItem::<K, V>::new(&self.self_ref, value);
 
         self.index
@@ -124,37 +238,84 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
             .used
             .insert(item.cache_key(), Arc::downgrade(&item));
 
+        item.mark_used();
         item
     }
 
-    pub fn make_item_no_cache(&self, value: V) -> Arc<CacheItem<K, V>> {
+    pub(super) fn make_item_no_cache(&self, value: V) -> CacheArc<CacheItem<K, V>> {
         CacheItem::<K, V>::new(&Weak::default(), value)
     }
 
-    pub fn get(&self, key: K) -> Option<Arc<CacheItem<K, V>>> {
+    pub(super) fn get(&self, key: K) -> Option<CacheArc<CacheItem<K, V>>> {
         let mut index = self.index.lock();
 
         if let Some(entry) = index.used.get(&key) {
-            return entry.clone().upgrade();
+            Some(CacheArc::from(entry.upgrade()?))
         } else if let Some(entry) = index.unused.pop(&key) {
-            return Some(entry.clone());
+            entry.mark_used();
+            index.used.insert(key, Arc::downgrade(&entry));
+
+            Some(entry.into())
         } else {
             None
+        }
+    }
+
+    pub fn log(&self) {
+        log::debug!("Cache:");
+
+        log::debug!("\t Used entries:    {}", self.index.lock().used.len());
+        for item in self.index.lock().used.iter() {
+            log::debug!("\t\t {:?} -> {:?}", item.0, item.1.strong_count());
+        }
+
+        log::debug!("\t Un-used entries: {}", self.index.lock().unused.len());
+        for item in self.index.lock().unused.iter() {
+            log::debug!("\t\t {:?} -> {:?}", item.0, Arc::strong_count(item.1));
+        }
+    }
+
+    /// Removes the item with the provided `key` from the cache.
+    pub(super) fn remove(&self, key: &K) {
+        let mut index = self.index.lock();
+
+        if index.used.remove(key).is_none() {
+            index.unused.pop(key);
+        }
+    }
+
+    fn mark_item_unused(&self, item: CacheArc<CacheItem<K, V>>) {
+        let mut this = self.index.lock();
+        let key = item.cache_key();
+
+        if this.used.remove(&key).is_some() {
+            this.unused.put(key, item.0.clone());
+        }
+    }
+}
+
+impl<K: CacheKey, T: Cacheable<K>> CacheDropper for CacheItem<K, T> {
+    fn drop_this(&self, this: Arc<Self>) {
+        if let Some(cache) = self.cache.upgrade() {
+            if self.is_used() {
+                self.mark_unused();
+                cache.mark_item_unused(this.into());
+            }
         }
     }
 }
 
 pub type INodeCacheKey = (usize, usize);
 pub type INodeCache = Cache<INodeCacheKey, CachedINode>;
-pub type INodeCacheItem = Arc<CacheItem<INodeCacheKey, CachedINode>>;
-pub type INodeCacheWeakItem = Weak<CacheItem<INodeCacheKey, CachedINode>>;
+pub type INodeCacheItem = CacheArc<CacheItem<INodeCacheKey, CachedINode>>;
+pub type INodeCacheWeakItem = CacheWeak<CacheItem<INodeCacheKey, CachedINode>>;
 
 /// The cache key for the directory entry cache used to get the cache item. The cache key
 /// is the tuple of the parent's cache marker (akin [usize]) and the name of the directory entry
 /// (akin [String]).
 pub type DirCacheKey = (usize, String);
 pub type DirCache = Cache<DirCacheKey, DirEntry>;
-pub type DirCacheItem = Arc<CacheItem<DirCacheKey, DirEntry>>;
+pub type DirCacheItem = CacheArc<CacheItem<DirCacheKey, DirEntry>>;
 
 pub struct CachedINode(Arc<dyn INodeInterface>);
 
@@ -194,10 +355,6 @@ impl Cacheable<DirCacheKey> for DirEntry {
     }
 }
 
-// NOTE: Needs to be implemented inside `DirCacheItem` since the following functions
-// require a reference-counting pointer to the directory item. Annd since we are using
-// Arc which is from core we will need to extract these functions into a trait instead. Oh
-// well...
 pub trait DirCacheImpl {
     fn absolute_path_str(&self) -> String;
 }
@@ -238,13 +395,13 @@ pub fn clear_dir_cache() {
     DIR_CACHE.get().map(|cache| cache.clear());
 }
 
-pub(super) fn icache() -> &'static Arc<INodeCache> {
+pub fn icache() -> &'static Arc<INodeCache> {
     INODE_CACHE
         .get()
         .expect("`icache` was invoked before it was initialized")
 }
 
-pub(super) fn dcache() -> &'static Arc<DirCache> {
+pub fn dcache() -> &'static Arc<DirCache> {
     DIR_CACHE
         .get()
         .expect("`dcache` was invoked before it was initialized")

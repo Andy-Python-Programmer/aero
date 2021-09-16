@@ -32,6 +32,7 @@ use crate::utils::sync::Mutex;
 use crate::utils::Downcastable;
 
 use super::cache;
+use super::cache::Cacheable;
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::devfs::DevINode;
 use super::{FileSystem, FileSystemError, Result};
@@ -63,6 +64,10 @@ pub trait INodeInterface: Send + Sync + Downcastable {
 
     /// Creates a new directory with the provided `name` in the filesystem.
     fn mkdir(&self, _name: &str) -> Result<INodeCacheItem> {
+        Err(FileSystemError::NotSupported)
+    }
+
+    fn rmdir(&self, _name: &str) -> Result<()> {
         Err(FileSystemError::NotSupported)
     }
 
@@ -263,6 +268,12 @@ impl DirEntry {
     /// Returns the inner cached inode item of the directory entry.
     pub fn inode(&self) -> INodeCacheItem {
         self.data.lock().inode.clone()
+    }
+
+    /// Drops the directory entry from the cache.
+    pub fn drop_from_cache(&self) {
+        cache::dcache().remove(&self.cache_key());
+        cache::icache().remove(&self.inode().cache_key());
     }
 }
 

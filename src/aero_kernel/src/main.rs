@@ -147,10 +147,6 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
         .framebuffer()
         .expect("aero requires the bootloader to provide a non-null framebuffer tag");
 
-    let modules_tag = boot_info
-        .modules()
-        .expect("aero requires the bootloader to provide a non-null modules tag");
-
     let kernel_info = boot_info
         .kernel_file_v2()
         .expect("aero requires the bootloader to provode a non-null kernel info V2 tag");
@@ -233,7 +229,7 @@ extern "C" fn kernel_main(boot_info: &'static StivaleStruct) -> ! {
     time::init();
     log::info!("Loaded PIT");
 
-    fs::init(modules_tag).unwrap();
+    fs::init().unwrap();
     log::info!("Loaded filesystem");
 
     userland::init();

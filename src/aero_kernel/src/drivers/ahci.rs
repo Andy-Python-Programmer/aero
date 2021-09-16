@@ -882,7 +882,7 @@ impl AhciProtected {
         let mut address_space = AddressSpace::this();
         let mut offset_table = address_space.offset_page_table();
 
-        let abar = unsafe { header.get_bar(5).expect("Failed to get ABAR") };
+        let abar = header.get_bar(5).expect("Failed to get ABAR");
 
         let (abar_address, _) = match abar {
             Bar::Memory32 { address, size, .. } => (address as u64, size as u64),

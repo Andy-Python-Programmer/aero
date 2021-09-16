@@ -175,13 +175,11 @@ fn isize_as_syscall_result(value: isize) -> Result<usize, AeroSyscallError> {
 }
 
 /// Exits the current process with the provided status.
-#[inline]
 pub fn sys_exit(status: usize) -> ! {
     syscall1(prelude::SYS_EXIT, status);
     unreachable!()
 }
 
-#[inline]
 pub fn sys_open(path: &str, mode: OpenFlags) -> Result<usize, AeroSyscallError> {
     let value = syscall4(
         prelude::SYS_OPEN,
@@ -194,7 +192,6 @@ pub fn sys_open(path: &str, mode: OpenFlags) -> Result<usize, AeroSyscallError> 
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_write(fd: usize, buf: &[u8]) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_WRITE,
@@ -206,7 +203,6 @@ pub fn sys_write(fd: usize, buf: &[u8]) -> Result<usize, AeroSyscallError> {
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_READ,
@@ -223,19 +219,16 @@ pub fn sys_chdir(path: &str) -> Result<usize, AeroSyscallError> {
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_close(fd: usize) -> Result<usize, AeroSyscallError> {
     let value = syscall1(prelude::SYS_CLOSE, fd);
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_getcwd(buf: &mut [u8]) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_GETCWD, buf.as_mut_ptr() as usize, buf.len());
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_GETDENTS,
@@ -247,25 +240,21 @@ pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> Result<usize, AeroSyscallError
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_fork() -> Result<usize, AeroSyscallError> {
     let value = syscall0(prelude::SYS_FORK);
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_MUNMAP, address as usize, size as usize);
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_mkdir(path: &str) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_MKDIR, path.as_ptr() as usize, path.len());
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
 pub fn sys_mkdirat(dfd: isize, path: &str) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_MKDIR_AT,
@@ -277,7 +266,16 @@ pub fn sys_mkdirat(dfd: isize, path: &str) -> Result<usize, AeroSyscallError> {
     isize_as_syscall_result(value as _)
 }
 
-#[inline]
+pub fn sys_rmdir(path: &str) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_RMDIR, path.as_ptr() as usize, path.len());
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_shutdown() -> ! {
+    syscall0(prelude::SYS_SHUTDOWN);
+    unreachable!()
+}
+
 pub fn sys_mmap(
     address: usize,
     size: usize,

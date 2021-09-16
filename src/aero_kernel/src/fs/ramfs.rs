@@ -33,7 +33,7 @@ use spin::RwLock;
 use crate::utils::downcast;
 use crate::utils::sync::Mutex;
 
-use super::cache;
+use super::cache::{self, CacheWeak};
 use super::cache::{CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem};
 use super::devfs::DevINode;
 use super::inode::{DirEntry, FileType, INodeInterface};
@@ -99,7 +99,7 @@ impl LockedRamINode {
             .expect("Failed to downcast cached inode on creation")
             .init(
                 &this.node,
-                &Arc::downgrade(&inode_cached),
+                &inode_cached.downgrade(),
                 &this.filesystem,
                 file_type,
             );
@@ -267,8 +267,8 @@ impl RamFs {
         downcast::<dyn INodeInterface, LockedRamINode>(root_cached.inner())
             .expect("cannot downcast inode to ram inode")
             .init(
-                &Arc::downgrade(&ramfs.root_inode),
-                &Arc::downgrade(&root_cached),
+                &ramfs.root_inode.downgrade(),
+                &&root_cached.downgrade(),
                 &Arc::downgrade(&ramfs),
                 FileType::Directory,
             );
@@ -278,8 +278,8 @@ impl RamFs {
 
     fn allocate_inode(&self, file_type: FileType, contents: FileContents) -> Arc<LockedRamINode> {
         Arc::new(LockedRamINode::new(RamINode {
-            parent: Weak::default(),
-            node: Weak::default(),
+            parent: CacheWeak::new(),
+            node: CacheWeak::new(),
             filesystem: Weak::default(),
             children: BTreeMap::new(),
             id: self.next_id.fetch_add(1, Ordering::SeqCst),

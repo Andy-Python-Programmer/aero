@@ -24,7 +24,6 @@ lru = "0.6.5"
 stivale-boot = "0.2.3"
 intrusive-collections = "0.9.2"
 aml = "0.15.0"
-cpio = { git = "https://github.com/rcore-os/cpio" }
 
 [dependencies.font8x8]
 version = "0.3.1"

@@ -135,7 +135,7 @@ pub fn mkdirat(dfd: usize, path: usize, size: usize) -> Result<usize, AeroSyscal
     // to the current working directory of the calling task, as is done by mkdir() for a
     // relative pathname).
     let (parent_inode, child) = if path.is_absolute() {
-        let (path, child) = path.parent_and_basename().ok_or(AeroSyscallError::EEXIST)?;
+        let (path, child) = path.parent_and_basename();
         (fs::lookup_path(path)?.inode(), child)
     } else {
         // If pathname is relative and fd is the special value AT_FDCWD, then
@@ -172,6 +172,24 @@ pub fn mkdirat(dfd: usize, path: usize, size: usize) -> Result<usize, AeroSyscal
 #[inline]
 pub fn mkdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
     mkdirat(aero_syscall::AT_FDCWD as _, path, size)
+}
+
+pub fn rmdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
+    let path_str = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let path = Path::new(path_str);
+
+    let (_, child) = path.parent_and_basename();
+    let inode = fs::lookup_path(path)?;
+
+    if !inode.inode().metadata()?.is_directory() {
+        // ENOTDIR: A component used as a directory in pathname, is not in fact,
+        // a directory.
+        return Err(AeroSyscallError::ENOTDIR);
+    }
+
+    inode.inode().rmdir(child)?;
+    inode.drop_from_cache();
+    Ok(0x00)
 }
 
 pub fn getcwd(buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {

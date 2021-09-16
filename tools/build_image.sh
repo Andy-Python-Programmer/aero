@@ -79,10 +79,6 @@ else
     sudo mount `cat loopback_dev`p1 $AERO_BUILD/mnt
 fi
 
-pushd $AERO_SYSROOT
-find . | cpio -H newc -o >$AERO_BUILD/initramfs.cpio
-popd
-
 sudo mkdir $AERO_BUILD/mnt/boot
 
 if [[ -z "${RELEASE}" ]]; then
@@ -91,7 +87,6 @@ else
     sudo cp $AERO_KERNEL_TARGET/release/aero_kernel $AERO_BUILD/mnt/boot/aero.elf
 fi
 
-sudo cp $AERO_BUILD/initramfs.cpio $AERO_BUILD/mnt/
 sudo cp $AERO_SRC/.cargo/limine.cfg $AERO_BUILD/mnt/
 sudo cp $AERO_BUNDLED/limine/limine.sys $AERO_BUILD/mnt/boot/
 

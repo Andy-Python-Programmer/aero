@@ -165,13 +165,8 @@ impl Path {
     }
 
     /// Helper function that returns the parent path and the base name
-    /// of the path. Returns [`None`] if the path terminates in a root
-    /// prefix.
-    pub fn parent_and_basename(&self) -> Option<(&Self, &str)> {
-        if &self.0 == "/" {
-            return None;
-        }
-
+    /// of the path.
+    pub fn parent_and_basename(&self) -> (&Self, &str) {
         if let Some(slash_index) = self.0.rfind('/') {
             let parent_dir = if slash_index == 0 {
                 Path::new("/")
@@ -180,10 +175,10 @@ impl Path {
             };
 
             let basename = &self.0[(slash_index + 1)..];
-            Some((parent_dir, basename))
+            (parent_dir, basename)
         } else {
             // A relative path without any slashes.
-            Some((Path::new(""), &self.0))
+            (Path::new(""), &self.0)
         }
     }
 }
@@ -266,65 +261,13 @@ pub fn root_dir() -> &'static DirCacheItem {
     ROOT_DIR.get().expect("How's this possible?")
 }
 
-pub fn init(modules: &'static StivaleModuleTag) -> Result<()> {
+pub fn init() -> Result<()> {
     cache::init();
 
     let filesystem = RamFs::new();
 
     ROOT_FS.call_once(|| filesystem.clone());
     ROOT_DIR.call_once(|| filesystem.root_dir().clone());
-
-    for module in modules.iter() {
-        // Note: Loading initramfs may be slower if running with legacy BIOS since it loads
-        // the archive in 64K chunks and has to switch back to real mode each time.
-        if module.as_str() == "initramfs" {
-            log::info!(
-                "initramfs: unpacking at (address={:#x}, size={:#x})...",
-                module.start,
-                module.size()
-            );
-
-            let stream = unsafe {
-                let addr = crate::PHYSICAL_MEMORY_OFFSET + module.start;
-                core::slice::from_raw_parts::<u8>(addr.as_ptr(), module.size() as usize)
-            };
-
-            let reader = cpio::CpioNewcReader::new(stream);
-
-            for item in reader {
-                let item = item.or(Err(FileSystemError::EntryNotFound))?;
-                let path = Path::new(item.name);
-
-                let is_directory = item.metadata.mode & 0o170000 == 0o040000;
-                let is_file = item.metadata.mode & 0o170000 == 0o100000;
-
-                if item.name == "." {
-                    // We do not want to create the root directory. Oh well since, its
-                    // already created :^)
-                    continue;
-                }
-
-                // This is a directory.
-                let mut root = root_dir().clone();
-
-                if is_directory {
-                    for component in path.components() {
-                        match root.inode().lookup(root.clone(), component) {
-                            Err(err) if err == FileSystemError::EntryNotFound => {
-                                root.inode().mkdir(component)?;
-                                root = root.inode().lookup(root.clone(), component)?;
-                            }
-
-                            Err(err) => return Err(err),
-                            Ok(res) => root = res,
-                        }
-                    }
-                } else if is_file {
-                    lookup_path_with(root, path, LookupMode::Create)?;
-                }
-            }
-        }
-    }
 
     root_dir().inode().mkdir("dev")?;
     root_dir().inode().mkdir("home")?;

@@ -71,13 +71,16 @@ fn ls(path: &str) -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
-fn main() -> Result<(), AeroSyscallError> {
+fn init() -> Result<(), AeroSyscallError> {
     sys_open("/dev/tty", OpenFlags::O_RDONLY)?; // device: stdin
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?; // device: stdout
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?; // device: stderr
 
     println!("{}", ASCII_INTRO);
+    Ok(())
+}
 
+fn main() -> Result<(), AeroSyscallError> {
     loop {
         let mut pwd_buffer = [0u8; 1024];
         sys_getcwd(&mut pwd_buffer)?;
@@ -112,6 +115,12 @@ fn main() -> Result<(), AeroSyscallError> {
                 } else {
                     println!("mkdir: missing operand")
                 }
+            } else if command == "rmdir" {
+                if let Some(dir) = command_iter.next() {
+                    sys_rmdir(dir)?;
+                } else {
+                    println!("rmdir: missing operand")
+                }
             } else if command == "cd" {
                 if let Some(dir) = command_iter.next() {
                     sys_chdir(dir)?;
@@ -119,6 +128,8 @@ fn main() -> Result<(), AeroSyscallError> {
                     // By default "cd" changes to the parent directory if no directory is specified.
                     sys_chdir("..")?;
                 }
+            } else if command == "shutdown" {
+                sys_shutdown();
             } else if command != "\u{0}" {
                 println!("invalid command: {:?}", command);
             }
@@ -128,7 +139,13 @@ fn main() -> Result<(), AeroSyscallError> {
 
 #[no_mangle]
 extern "C" fn _start() {
-    main().expect("fatal: init shell exited")
+    init().expect("shell: failed to initialize IO file descriptors");
+
+    loop {
+        if let Err(err) = main() {
+            println!("error: {:?}", err);
+        }
+    }
 }
 
 #[panic_handler]
