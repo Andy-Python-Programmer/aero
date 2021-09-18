@@ -30,8 +30,9 @@ use crate::AERO_SYSTEM_ALLOCATOR;
 use super::paging::FRAME_ALLOCATOR;
 use super::AddressSpace;
 
-const HEAP_MAX_SIZE: usize = 128 * 1024 * 1024;
-const HEAP_START: usize = 0xFFFFFFFF80200000 - HEAP_MAX_SIZE;
+const HEAP_MAX_SIZE: usize = 128 * 1024 * 1024; // 128 GiB
+const HEAP_START: usize = 0xfffff80000000000;
+const HEAP_END: usize = HEAP_START + HEAP_MAX_SIZE;
 
 pub struct LockedHeap(Mutex<Heap>);
 
@@ -57,11 +58,9 @@ impl LockedHeap {
             let heap_top = heap.top();
             let size = align_up(layout.size(), 0x1000);
 
-            let max_mem = HEAP_START + HEAP_MAX_SIZE;
-
             // Check if our heap has not increased beyond the maximum allowed size.
-            if heap_top + size > max_mem {
-                panic!("The heap size has increased more then {}", max_mem)
+            if heap_top + size > HEAP_END {
+                panic!("The heap size has increased more then {:#x}", HEAP_END)
             }
 
             // Else we just have to extend the heap.

@@ -29,6 +29,7 @@ use spin::RwLock;
 
 use crate::apic;
 use crate::apic::ApicType;
+use crate::arch::controlregs;
 use crate::arch::interrupts;
 
 use crate::apic::IoApicHeader;
@@ -79,17 +80,12 @@ impl Madt {
                         continue;
                     }
 
-                    let kernel_cr3: u64;
-
-                    unsafe {
-                        asm!("mov {}, cr3", out(reg) kernel_cr3, options(nomem));
-                    }
-
+                    let page_table = controlregs::read_cr3_raw();
                     let stack_top = unsafe {
                         let layout = Layout::from_size_align_unchecked(4096 * 16, 4096);
                         let raw = alloc_zeroed(layout);
 
-                        raw.offset(4096 * 16)
+                        raw.add(layout.size())
                     };
 
                     let mode = if paging::level_5_paging_enabled() {
@@ -100,7 +96,7 @@ impl Madt {
 
                     unsafe {
                         smp_prepare_launch(
-                            kernel_cr3,
+                            page_table,
                             stack_top as u64,
                             local_apic.apic_id as u64,
                             mode,

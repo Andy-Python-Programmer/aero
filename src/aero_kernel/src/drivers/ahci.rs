@@ -874,6 +874,7 @@ impl AhciProtected {
     /// This function is responsible for enabling bus mastering and add AHCI
     /// IRQ handler.
     fn enable_interrupts(&mut self, header: &PciHeader) {
+        header.enable_mmio();
         header.enable_bus_mastering();
     }
 

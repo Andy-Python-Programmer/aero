@@ -30,7 +30,6 @@ use core::mem;
 
 use crate::mem::paging::VirtAddr;
 
-use crate::mem::pti::{PTI_CPU_STACK, PTI_STACK_SIZE};
 use crate::utils::io;
 
 bitflags::bitflags! {
@@ -343,9 +342,6 @@ pub fn init(stack_top: VirtAddr) {
         GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
         GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
 
-        let init_stack_addr = PTI_CPU_STACK.as_ptr() as usize + PTI_STACK_SIZE;
-
-        TASK_STATE_SEGMENT.rsp[0] = init_stack_addr as _;
         TASK_STATE_SEGMENT.rsp[0] = stack_top.as_u64();
 
         let gdt_descriptor = GdtDescriptor::new(

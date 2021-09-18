@@ -77,15 +77,13 @@ impl AcpiTable {
         // SAFTEY: Already would have caused UB if the RSDP address was
         // anyhow invalid.
         let sdt = unsafe { Sdt::from_address(sdt_address) };
-
-        let sdt_signature = &sdt.signature;
         let sdt_data_len = sdt.data_len();
 
-        let (header, entry_count) = match sdt_signature {
+        let (header, entry_count) = match &sdt.signature {
             sdt::RSDT_SIGNATURE => (AcpiHeader::Rsdt(sdt), sdt_data_len / mem::size_of::<u32>()),
-            sdt::XSDT_SIGNATURE => (AcpiHeader::Xsdt(sdt), sdt_data_len / mem::size_of::<u64>()),
+            sdt::XSDT_SIGNATURE => (AcpiHeader::Xsdt(sdt), sdt_data_len / mem::size_of::<u32>()),
 
-            _ => panic!("Invalid ACPI header signature: {:?}", sdt_signature),
+            signature => panic!("acpi: invalid ACPI header signature: {:?}", signature),
         };
 
         Self {

@@ -137,7 +137,7 @@ pub fn init() {
 }
 
 pub macro serial_print($($arg:tt)*) {
-    crate::drivers::uart_16550::_serial_print(format_args!($($arg)*));
+    crate::drivers::uart_16550::_serial_print(format_args!($($arg)*))
 }
 
 pub macro serial_println {

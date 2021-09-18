@@ -22,7 +22,142 @@ pub mod gdt;
 pub mod interrupts;
 pub mod task;
 
+use crate::acpi;
+use crate::apic;
+use crate::mem::alloc;
+use crate::mem::paging;
+
+use crate::mem::paging::{PhysAddr, VirtAddr};
+
+use crate::drivers;
+use crate::logger;
+use crate::rendy;
+use crate::tls;
 use crate::utils::io;
+
+use stivale_boot::v2::*;
+
+#[repr(C, align(4096))]
+struct P2Align12<T>(T);
+
+const STACK_SIZE: usize = 4096 * 16;
+
+/// We need to tell the stivale bootloader where we want our stack to be.
+/// We are going to allocate our stack as an uninitialised array in .bss.
+static STACK: P2Align12<[u8; STACK_SIZE]> = P2Align12([0; STACK_SIZE]);
+
+/// We are now going to define a framebuffer header tag. This tag tells the bootloader that
+/// we want a graphical framebuffer instead of a CGA-compatible text mode. Omitting this tag will
+/// make the bootloader default to text mode, if available.
+static FRAMEBUFFER_TAG: StivaleFramebufferHeaderTag = StivaleFramebufferHeaderTag::new()
+    .framebuffer_bpp(24)
+    .next((&PAGING_TAG as *const Stivale5LevelPagingHeaderTag).cast());
+
+/// We are now going to define a level 5 paging header tag. This tag tells the bootloader to
+/// enable the LEVEL_5_PAGING bit in the Cr4 register. This is not possible to implement in the kernel
+/// as we can only enable it in protected mode.
+static PAGING_TAG: Stivale5LevelPagingHeaderTag = Stivale5LevelPagingHeaderTag::new();
+
+/// The stivale2 specification says we need to define a "header structure".
+/// This structure needs to reside in the .stivale2hdr ELF section in order
+/// for the bootloader to find it. We use the #[linker_section] and #[used] macros to
+/// tell the compiler to put the following structure in said section.
+#[link_section = ".stivale2hdr"]
+#[no_mangle]
+#[used]
+static STIVALE_HDR: StivaleHeader = StivaleHeader::new()
+    .stack(&STACK.0[STACK_SIZE - 4096] as *const u8)
+    .tags((&FRAMEBUFFER_TAG as *const StivaleFramebufferHeaderTag).cast());
+
+#[no_mangle]
+extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
+    let mmap_tag = boot_info
+        .memory_map()
+        .expect("aero requires the bootloader to provide a non-null memory map tag");
+
+    let rsdp_tag = boot_info
+        .rsdp()
+        .expect("aero requires the bootloader to provided a non-null rsdp tag");
+
+    let framebuffer_tag = boot_info
+        .framebuffer()
+        .expect("aero requires the bootloader to provide a non-null framebuffer tag");
+
+    let kernel_info = boot_info
+        .kernel_file_v2()
+        .expect("aero requires the bootloader to provode a non-null kernel info V2 tag");
+
+    let rsdp_address = PhysAddr::new(rsdp_tag.rsdp);
+
+    // NOTE: STACK_SIZE - 1 points to the last u8 in the array, i.e. it is
+    // guaranteed to be at an address with its least significant bit being a 1
+    // and it never has an alignment greater than 1. STACK_SIZE - 4096 points
+    // to the last u8 in STACK, that is aligned to 4096.
+    let stack_top_addr = VirtAddr::new((&STACK.0[STACK_SIZE - 4096] as *const u8) as _);
+
+    unsafe {
+        interrupts::disable_interrupts();
+    }
+
+    if paging::level_5_paging_enabled() {
+        unsafe {
+            crate::PHYSICAL_MEMORY_OFFSET = VirtAddr::new(0xff00000000000000);
+        }
+    } else {
+        unsafe {
+            crate::PHYSICAL_MEMORY_OFFSET = VirtAddr::new(0xffff800000000000);
+        }
+    }
+
+    crate::UNWIND_INFO.call_once(move || unsafe {
+        let addr = (kernel_info as *const StivaleKernelFileV2Tag) as u64;
+        let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
+
+        &*new_addr.as_mut_ptr::<StivaleKernelFileV2Tag>()
+    });
+
+    // Initialize the CPU specific features.
+    init_cpu();
+
+    // We initialize the COM ports before doing anything else.
+    //
+    // This will help printing panics and logs before or when the debug renderer
+    // is initialized and if serial output is avaliable.
+    drivers::uart_16550::init();
+    logger::init();
+
+    rendy::init(framebuffer_tag);
+
+    gdt::init_boot();
+    log::info!("loaded bootstrap GDT");
+
+    let mut offset_table = paging::init(mmap_tag).unwrap();
+    log::info!("loaded paging");
+
+    alloc::init_heap(&mut offset_table).expect("failed to initialize the kernel heap");
+    log::info!("loaded heap");
+
+    interrupts::init();
+    log::info!("loaded IDT");
+
+    tls::init();
+    log::info!("loaded TLS");
+
+    gdt::init(stack_top_addr);
+    log::info!("loaded GDT");
+
+    let apic_type = apic::init();
+    log::info!(
+        "Loaded local apic (x2apic={})",
+        apic_type.supports_x2_apic()
+    );
+
+    acpi::init(rsdp_address).unwrap();
+    log::info!("Loaded ACPI");
+
+    // Initialize the non-arch specific parts of the kernel.
+    crate::aero_main();
+}
 
 pub fn init_cpu() {
     unsafe {
