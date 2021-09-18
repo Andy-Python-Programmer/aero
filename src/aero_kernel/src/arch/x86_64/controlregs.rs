@@ -87,6 +87,48 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    /// Configuration flags of the [`Cr0`] register.
+    pub struct Cr0Flags: u64 {
+        /// Enables protected mode.
+        const PROTECTED_MODE_ENABLE = 1;
+        /// Enables monitoring of the coprocessor, typical for x87 instructions.
+        ///
+        /// Controls (together with the [`TASK_SWITCHED`](Cr0Flags::TASK_SWITCHED)
+        /// flag) whether a `wait` or `fwait` instruction should cause an `#NE` exception.
+        const MONITOR_COPROCESSOR = 1 << 1;
+        /// Force all x87 and MMX instructions to cause an `#NE` exception.
+        const EMULATE_COPROCESSOR = 1 << 2;
+        /// Automatically set to 1 on _hardware_ task switch.
+        ///
+        /// This flags allows lazily saving x87/MMX/SSE instructions on hardware context switches.
+        const TASK_SWITCHED = 1 << 3;
+        /// Indicates support of 387DX math coprocessor instructions.
+        ///
+        /// Always set on all recent x86 processors, cannot be cleared.
+        const EXTENSION_TYPE = 1 << 4;
+        /// Enables the native (internal) error reporting mechanism for x87 FPU errors.
+        const NUMERIC_ERROR = 1 << 5;
+        /// Controls whether supervisor-level writes to read-only pages are inhibited.
+        ///
+        /// When set, it is not possible to write to read-only pages from ring 0.
+        const WRITE_PROTECT = 1 << 16;
+        /// Enables automatic usermode alignment checking if [`RFlags::ALIGNMENT_CHECK`] is also set.
+        const ALIGNMENT_MASK = 1 << 18;
+        /// Ignored, should always be unset.
+        ///
+        /// Must be unset if [`CACHE_DISABLE`](Cr0Flags::CACHE_DISABLE) is unset.
+        /// Older CPUs used this to control write-back/write-through cache strategy.
+        const NOT_WRITE_THROUGH = 1 << 29;
+        /// Disables some processor caches, specifics are model-dependent.
+        const CACHE_DISABLE = 1 << 30;
+        /// Enables paging.
+        ///
+        /// If this bit is set, [`PROTECTED_MODE_ENABLE`](Cr0Flags::PROTECTED_MODE_ENABLE) must be set.
+        const PAGING = 1 << 31;
+    }
+}
+
+bitflags::bitflags! {
     /// The RFLAGS register.
     pub struct RFlags: u64 {
         /// Processor feature identification flag.
@@ -148,7 +190,7 @@ pub fn read_rflags() -> RFlags {
     let value: u64;
 
     unsafe {
-        asm!("pushf; pop {}", out(reg) value);
+        asm!("pushf; pop {}", out(reg) value, options(nomem, preserves_flags));
     }
 
     RFlags::from_bits_truncate(value)
@@ -160,7 +202,7 @@ pub fn read_cr4() -> Cr4Flags {
     let value: u64;
 
     unsafe {
-        asm!("mov {}, cr4", out(reg) value, options(nostack));
+        asm!("mov {}, cr4", out(reg) value, options(nomem, nostack, preserves_flags));
     }
 
     Cr4Flags::from_bits_truncate(value) // Get the flags from the bits.
@@ -171,10 +213,41 @@ pub fn read_cr3_raw() -> u64 {
     let value: u64;
 
     unsafe {
-        asm!("mov {}, cr3", out(reg) value, options(nomem));
+        asm!("mov {}, cr3", out(reg) value, options(nomem, nostack, preserves_flags));
     }
 
     value
+}
+
+/// Read the current set of CR0 flags.
+pub fn read_cr0() -> Cr0Flags {
+    let value: u64;
+
+    unsafe {
+        asm!("mov {}, cr0", out(reg) value, options(nomem, nostack, preserves_flags));
+    }
+
+    Cr0Flags::from_bits_truncate(value) // Get the flags from the bits.
+}
+
+/// Write the given set of CR4 flags.
+///
+/// ## Safety
+/// - This function does not preserve the current value of the CR4 flags and
+/// reserved fields.
+/// - Its possible to violate memory safety by swapping CR4 flags.
+pub unsafe fn write_cr4(value: Cr4Flags) {
+    asm!("mov cr4, {}", in(reg) value.bits(), options(nostack, preserves_flags));
+}
+
+/// Write the given set of CR0 flags.
+///
+/// ## Safety
+/// - This function does not preserve the current value of the CR0 flags and
+/// reserved fields.
+/// - Its possible to violate memory safety by swapping CR0 flags.
+pub unsafe fn write_cr0(value: Cr0Flags) {
+    asm!("mov cr0, {}", in(reg) value.bits(), options(nostack, preserves_flags));
 }
 
 /// Read the current P4 table address from the CR3 register.
@@ -195,11 +268,8 @@ pub fn read_cr2() -> VirtAddr {
     let value: u64;
 
     unsafe {
-        asm!("mov {}, cr2", out(reg) value, options(nomem));
+        asm!("mov {}, cr2", out(reg) value, options(nomem, nostack, preserves_flags));
 
-        // Do not perform address checks on the address stored in the
-        // CR2 control register as we want the address to be accurate and
-        // not tranucated in the [`VirtAddr::new`] function.
         VirtAddr::new(value)
     }
 }

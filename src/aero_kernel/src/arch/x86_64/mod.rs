@@ -35,6 +35,7 @@ use crate::rendy;
 use crate::tls;
 use crate::utils::io;
 
+use raw_cpuid::CpuId;
 use stivale_boot::v2::*;
 
 #[repr(C, align(4096))]
@@ -140,12 +141,6 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     interrupts::init();
     log::info!("loaded IDT");
 
-    tls::init();
-    log::info!("loaded TLS");
-
-    gdt::init(stack_top_addr);
-    log::info!("loaded GDT");
-
     let apic_type = apic::init();
     log::info!(
         "Loaded local apic (x2apic={})",
@@ -155,6 +150,12 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     acpi::init(rsdp_address).unwrap();
     log::info!("Loaded ACPI");
 
+    tls::init();
+    log::info!("loaded TLS");
+
+    gdt::init(stack_top_addr);
+    log::info!("loaded GDT");
+
     // Initialize the non-arch specific parts of the kernel.
     crate::aero_main();
 }
@@ -163,5 +164,30 @@ pub fn init_cpu() {
     unsafe {
         // Enable the no-execute page protection feature.
         io::wrmsr(io::IA32_EFER, io::rdmsr(io::IA32_EFER) | 1 << 11);
+
+        // Check if SSE is supported. SSE support is a requirement for running Aero.
+        let has_sse = CpuId::new()
+            .get_feature_info()
+            .map_or(false, |i| i.has_sse());
+
+        assert!(has_sse);
+
+        {
+            let mut cr0 = controlregs::read_cr0();
+
+            cr0.remove(controlregs::Cr0Flags::EMULATE_COPROCESSOR);
+            cr0.insert(controlregs::Cr0Flags::MONITOR_COPROCESSOR);
+
+            controlregs::write_cr0(cr0);
+        }
+
+        {
+            let mut cr4 = controlregs::read_cr4();
+
+            cr4.insert(controlregs::Cr4Flags::OSFXSR);
+            cr4.insert(controlregs::Cr4Flags::OSXMMEXCPT_ENABLE);
+
+            controlregs::write_cr4(cr4);
+        }
     }
 }
