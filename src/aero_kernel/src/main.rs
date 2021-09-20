@@ -57,6 +57,7 @@ extern crate alloc;
 mod acpi;
 mod apic;
 mod arch;
+mod cmdline;
 mod drivers;
 mod fs;
 mod logger;
@@ -152,11 +153,12 @@ fn kernel_main_thread() {
     drivers::pci::init(&mut offset_table);
     log::info!("loaded PCI driver");
 
+    rendy::clear_screen();
+    logger::set_rendy_debug(false);
+
     userland::run();
 
-    loop {
-        unsafe { interrupts::halt() }
-    }
+    unreachable!()
 }
 
 #[no_mangle]

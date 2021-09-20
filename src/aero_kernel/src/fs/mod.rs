@@ -23,7 +23,6 @@ use aero_syscall::AeroSyscallError;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::Arc;
-use stivale_boot::v2::StivaleModuleTag;
 
 use crate::userland::scheduler;
 use crate::utils::sync::Mutex;

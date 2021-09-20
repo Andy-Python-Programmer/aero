@@ -18,6 +18,7 @@
  */
 
 use core::fmt::Write;
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use log::{Level, LevelFilter, Metadata, Record};
 use spin::Once;
@@ -31,6 +32,8 @@ const DEFAULT_LOG_RING_BUFFER_SIZE: usize = 256;
 static LOG_RING_BUFFER: Once<Mutex<RingBuffer<[u8; DEFAULT_LOG_RING_BUFFER_SIZE]>>> = Once::new();
 static LOGGER: AeroLogger = AeroLogger;
 
+static RENDY_DEBUG: AtomicBool = AtomicBool::new(false);
+
 struct AeroLogger;
 
 impl log::Log for AeroLogger {
@@ -42,13 +45,16 @@ impl log::Log for AeroLogger {
         if self.enabled(record.metadata()) {
             let level = record.level();
             let spaces = MAX_LOG_LEVEL_SPACE - level.as_str().len();
+            let rendy_dbg = RENDY_DEBUG.load(Ordering::Relaxed);
 
             macro log($($arg:tt)*) {
                 $crate::prelude::serial_print!("{}", format_args!($($arg)*));
+                if rendy_dbg { $crate::prelude::print!("{}", format_args!($($arg)*)); }
             }
 
             macro log_ln($($arg:tt)*) {
                 $crate::prelude::serial_println!("{}", format_args!($($arg)*));
+                if rendy_dbg { $crate::prelude::println!("{}", format_args!($($arg)*)); }
             }
 
             // Append the log message to the log ring buffer.
@@ -79,8 +85,11 @@ pub unsafe fn force_unlock() {
     LOG_RING_BUFFER.get().map(|l| l.force_unlock());
 }
 
-/// Initialize the global logger instance and the logger ring
-/// buffer.
+#[inline]
+pub fn set_rendy_debug(yes: bool) {
+    RENDY_DEBUG.store(yes, Ordering::SeqCst);
+}
+
 pub fn init() {
     LOG_RING_BUFFER.call_once(|| Mutex::new(RingBuffer::new([0; DEFAULT_LOG_RING_BUFFER_SIZE])));
 

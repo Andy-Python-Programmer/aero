@@ -24,6 +24,8 @@ pub mod task;
 
 use crate::acpi;
 use crate::apic;
+use crate::cmdline;
+use crate::mem;
 use crate::mem::alloc;
 use crate::mem::paging;
 
@@ -128,6 +130,17 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     logger::init();
 
     rendy::init(framebuffer_tag);
+
+    // Parse the kernel command line.
+    let command_line: &'static _ = boot_info.command_line().map_or("", |cmd| unsafe {
+        // SAFETY: The bootloader has provided a pointer that points to a valid C
+        // string with a NULL terminator of size less than `usize::MAX`, whose content
+        // remain valid and has a static lifetime.
+        mem::c_str_as_str(cmd.command_line as *const u8)
+    });
+
+    let command_line = cmdline::parse(command_line);
+    logger::set_rendy_debug(command_line.rendy_debug);
 
     gdt::init_boot();
     log::info!("loaded bootstrap GDT");

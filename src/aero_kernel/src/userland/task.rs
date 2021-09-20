@@ -181,7 +181,6 @@ impl Task {
         this
     }
 
-    #[inline]
     pub fn exec(&self, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
         let vm = self.vm();
 
