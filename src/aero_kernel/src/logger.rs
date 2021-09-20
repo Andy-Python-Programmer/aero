@@ -81,8 +81,14 @@ impl log::Log for AeroLogger {
 ///
 /// ## Saftey
 /// This method is not memory safe and should be only used when absolutely necessary.
+#[inline]
 pub unsafe fn force_unlock() {
     LOG_RING_BUFFER.get().map(|l| l.force_unlock());
+}
+
+#[inline]
+pub fn enabled_rendy_debug() -> bool {
+    RENDY_DEBUG.load(Ordering::SeqCst)
 }
 
 #[inline]

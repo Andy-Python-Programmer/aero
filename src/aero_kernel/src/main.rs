@@ -153,8 +153,10 @@ fn kernel_main_thread() {
     drivers::pci::init(&mut offset_table);
     log::info!("loaded PCI driver");
 
-    rendy::clear_screen();
-    logger::set_rendy_debug(false);
+    if logger::enabled_rendy_debug() {
+        rendy::clear_screen();
+        logger::set_rendy_debug(false);
+    }
 
     userland::run();
 
