@@ -83,7 +83,7 @@ impl GlobalFrameAllocator {
     fn new(memory_map: &'static StivaleMemoryMapTag) -> Self {
         Self {
             memory_map,
-            next: 0,
+            next: 1,
         }
     }
 

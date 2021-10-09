@@ -155,7 +155,7 @@ fn alloc_error_handler(layout: alloc::Layout) -> ! {
 
 /// Initialize the heap at the [HEAP_START].
 pub fn init_heap(offset_table: &mut OffsetPageTable) -> Result<(), MapToError<Size4KiB>> {
-    let frame = unsafe {
+    let frame: PhysFrame = unsafe {
         FRAME_ALLOCATOR
             .allocate_frame()
             .ok_or(MapToError::FrameAllocationFailed)?

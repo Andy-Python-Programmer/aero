@@ -102,13 +102,9 @@ const IO_VIRTUAL_BASE: VirtAddr = VirtAddr::new(0xffffff0000000000);
 static mut CPU_ID: u64 = 0x00;
 
 fn aero_main() -> ! {
-    /*
-     * NOTE: In this function we only want to initialize essential serivces, including
-     * the task scheduler. Rest of the initializing (including kernel modules) should go
-     * into the kernel main thread function instead.
-     *
-     * First of all make sure interrupts are disabled.
-     */
+    // NOTE: In this function we only want to initialize essential serivces, including
+    // the task scheduler. Rest of the initializing (including kernel modules) should go
+    // into the kernel main thread function instead.
     drivers::mouse::init();
     log::info!("loaded PS/2 driver");
 
@@ -125,10 +121,8 @@ fn aero_main() -> ! {
 
     log::info!("initialized kernel");
 
-    /*
-     * Now that all of the essential initialization is done we are going to schedule
-     * the kernel main thread.
-     */
+    // Now that all of the essential initialization is done we are going to schedule
+    // the kernel main thread.
     let init = Task::new_kernel(kernel_main_thread, true);
     scheduler::get_scheduler().register_task(init);
 
