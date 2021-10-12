@@ -326,6 +326,17 @@ impl PhysAddr {
         PhysAddr(align_down(self.0, align.into()))
     }
 
+    /// Aligns the physical address upwards to the given alignment.
+    ///
+    /// See the `align_up` function for more information.
+    #[inline]
+    pub fn align_up<U>(self, align: U) -> Self
+    where
+        U: Into<u64>,
+    {
+        PhysAddr(align_up(self.0, align.into()))
+    }
+
     /// Checks whether the physical address has the demanded alignment.
     #[inline]
     pub fn is_aligned<U>(self, align: U) -> bool

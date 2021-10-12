@@ -76,6 +76,8 @@ pub fn level_5_paging_enabled() -> bool {
 /// Initialize paging.
 pub fn init(
     memory_regions: &'static StivaleMemoryMapTag,
+    kernel_base: PhysAddr,
+    kernel_end: PhysAddr,
 ) -> Result<OffsetPageTable<'static>, MapToError<Size4KiB>> {
     let memory_regions = unsafe {
         let addr = (memory_regions as *const StivaleMemoryMapTag) as u64;
@@ -88,7 +90,7 @@ pub fn init(
     let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };
 
     unsafe {
-        FRAME_ALLOCATOR.init(memory_regions);
+        FRAME_ALLOCATOR.init(memory_regions, kernel_base, kernel_end);
     }
 
     Ok(offset_table)

@@ -144,7 +144,7 @@ impl DebugRendy {
             '\n' => self.new_line(),
             '\r' => self.carriage_return(),
             _ => {
-                let char = font8x8::BASIC_FONTS.get(char).unwrap();
+                let char = font8x8::BASIC_FONTS.get(char).unwrap_or([0; 8]);
 
                 if self.x_pos >= self.width() {
                     self.new_line();

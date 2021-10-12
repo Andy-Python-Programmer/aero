@@ -39,6 +39,7 @@ use crate::utils::io;
 
 use raw_cpuid::CpuId;
 use stivale_boot::v2::*;
+use xmas_elf::sections::ShType;
 
 #[repr(C, align(4096))]
 struct P2Align12<T>(T);
@@ -76,19 +77,19 @@ static STIVALE_HDR: StivaleHeader = StivaleHeader::new()
 extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     let mmap_tag = boot_info
         .memory_map()
-        .expect("aero requires the bootloader to provide a non-null memory map tag");
+        .expect("stivale2: aero requires the bootloader to provide a non-null memory map tag");
 
     let rsdp_tag = boot_info
         .rsdp()
-        .expect("aero requires the bootloader to provided a non-null rsdp tag");
+        .expect("stivale2: aero requires the bootloader to provided a non-null rsdp tag");
 
     let framebuffer_tag = boot_info
         .framebuffer()
-        .expect("aero requires the bootloader to provide a non-null framebuffer tag");
+        .expect("stivale2: aero requires the bootloader to provide a non-null framebuffer tag");
 
     let kernel_info = boot_info
         .kernel_file_v2()
-        .expect("aero requires the bootloader to provode a non-null kernel info V2 tag");
+        .expect("stivale2: aero requires the bootloader to provode a non-null kernel info V2 tag");
 
     let rsdp_address = PhysAddr::new(rsdp_tag.rsdp);
 
@@ -131,6 +132,45 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
 
     rendy::init(framebuffer_tag);
 
+    let (kernel_base, kernel_end) = {
+        let kernel_slice: &[u8] = unsafe {
+            core::slice::from_raw_parts(
+                (crate::PHYSICAL_MEMORY_OFFSET + kernel_info.kernel_start).as_ptr(),
+                kernel_info.kernel_size as usize,
+            )
+        };
+
+        let kernel_elf =
+            xmas_elf::ElfFile::new(kernel_slice).expect("stivale2: invalid kernel slice");
+
+        let mut kernel_start = None;
+        let mut kernel_end = 0x00;
+
+        for section in kernel_elf.section_iter() {
+            let is_null = section
+                .get_type()
+                .map_or(true, |section| section == ShType::Null);
+
+            if section.address() != 0x00 && !is_null {
+                if kernel_start.is_none() {
+                    kernel_start = Some(section.address());
+                }
+
+                kernel_end = section.address() + section.size();
+            }
+        }
+
+        (
+            // NOTE: Higher half offset starts at address 0xffffffff80000000 and the aero kernel
+            // is placed 2MiB above the higher half offset (2MiB above 0x00 in physical memory).
+            //
+            // So, the kernel base address will be 2MiB. However, we do currently dynamically figure
+            // the offset out since when we add support for KALSR its more easier to implement.
+            PhysAddr::new(kernel_start.expect("mem: kernel top not found") - 0xFFFFFFFF80000000),
+            PhysAddr::new(kernel_end - 0xFFFFFFFF80000000),
+        )
+    };
+
     // Parse the kernel command line.
     let command_line: &'static _ = boot_info.command_line().map_or("", |cmd| unsafe {
         // SAFETY: The bootloader has provided a pointer that points to a valid C
@@ -145,7 +185,7 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     gdt::init_boot();
     log::info!("loaded bootstrap GDT");
 
-    let mut offset_table = paging::init(mmap_tag).unwrap();
+    let mut offset_table = paging::init(mmap_tag, kernel_base, kernel_end).unwrap();
     log::info!("loaded paging");
 
     alloc::init_heap(&mut offset_table).expect("failed to initialize the kernel heap");
