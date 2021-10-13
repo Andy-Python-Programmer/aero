@@ -82,7 +82,7 @@ pub fn install_device(device: Arc<dyn Device>) -> Result<()> {
         .inode()
         .make_dev_inode(device_name, device_marker)?;
 
-    log::debug!("Installed device `{}`", device_name);
+    log::debug!("installed device `{}`", device_name);
 
     Ok(())
 }

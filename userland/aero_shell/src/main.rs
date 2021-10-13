@@ -128,6 +128,16 @@ fn main() -> Result<(), AeroSyscallError> {
                     // By default "cd" changes to the parent directory if no directory is specified.
                     sys_chdir("..")?;
                 }
+            } else if command == "cat" {
+                if let Some(file) = command_iter.next() {
+                    let fd = sys_open(file, OpenFlags::O_RDONLY)?;
+                    let out = [0u8; 256];
+                    let length = sys_read(fd, &mut buffer)?;
+
+                    let contents = &unsafe { core::str::from_utf8_unchecked(&out) }[..length];
+                    print!("{}", contents);
+                    sys_close(fd)?;
+                }
             } else if command == "shutdown" {
                 sys_shutdown();
             } else if command != "\u{0}" {

@@ -1,2 +1,2 @@
 [alias]
-aero = "run --manifest-path ./aero_build/Cargo.toml --"
+aero = "run --release --manifest-path ./aero_build/Cargo.toml --"
