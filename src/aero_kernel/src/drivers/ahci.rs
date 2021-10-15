@@ -198,10 +198,6 @@ struct DmaBuffer {
     start: PhysAddr,
     /// The data size of the DMA buffer.
     data_size: usize,
-
-    /// True if the sector size is greator then 4KiB and we need
-    /// to allocate a huge page for it.
-    huge: bool,
 }
 
 struct DmaRequest {
@@ -218,19 +214,16 @@ impl DmaRequest {
         let mut buffer = Vec::<DmaBuffer>::new();
 
         while size > 0 {
-            let huge = size > 0x1000; // Check if we want to allocate a huge page?
             let data_size = core::cmp::min(size, 0x2000);
+            let ordering = if size > 0x1000 {
+                BuddyOrdering::Size8KiB
+            } else {
+                BuddyOrdering::Size4KiB
+            };
 
-            let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-                .expect("failed to allocate frame for DMA request");
+            let start = pmm_alloc(ordering);
 
-            buffer.push(DmaBuffer {
-                start: frame.start_address(),
-                data_size,
-
-                huge,
-            });
-
+            buffer.push(DmaBuffer { start, data_size });
             size -= data_size; // Subtract the data size from the total size.
         }
 
@@ -541,35 +534,25 @@ impl HbaPort {
         /*
          * size = sizeof(CTB) * 32 == 4KiB * 2 (so we need to allocate
          * two 4KiB size frames).
-         *
-         * We cannot directly allocate a huge page for the command list, because then
-         * we will end up wasting 0x1fe000 KiB of memory.
-         *
-         * TODO(Andy-Python-Programmer): We should find a chunk of memory that is the size of
-         * 2 contiguous 4KiB sized frames. We should also make the current frame allocator (which
-         * is a bump allocator) to be a buddy allocator instead which will be a much smarter approach
-         * to this issue since, it keeps track of so called "buddies" of different sizes. Which then
-         * we can have a buddy sized 2KiB :^).
          */
-        let frame_low: PhysFrame =
-            unsafe { FRAME_ALLOCATOR.allocate_frame() }.ok_or(MapToError::FrameAllocationFailed)?;
+        let frame_addr = pmm_alloc(BuddyOrdering::Size8KiB);
+        let page_addr = crate::IO_VIRTUAL_BASE + frame_addr.as_u64();
 
-        let frame_high: PhysFrame =
-            unsafe { FRAME_ALLOCATOR.allocate_frame() }.ok_or(MapToError::FrameAllocationFailed)?;
-
-        let low_page: Page =
-            Page::containing_address(crate::IO_VIRTUAL_BASE + frame_low.start_address().as_u64());
-
-        let high_page: Page =
-            Page::containing_address(crate::IO_VIRTUAL_BASE + frame_high.start_address().as_u64());
-
-        let flags = PageTableFlags::PRESENT
-            | PageTableFlags::WRITABLE
-            | PageTableFlags::WRITE_THROUGH
-            | PageTableFlags::NO_CACHE;
-
-        unsafe { offset_table.map_to(low_page, frame_low, flags, &mut FRAME_ALLOCATOR) }?.flush();
-        unsafe { offset_table.map_to(high_page, frame_high, flags, &mut FRAME_ALLOCATOR) }?.flush();
+        for size in (0..0x2000u64).step_by(0x1000) {
+            unsafe {
+                offset_table
+                    .map_to(
+                        Page::<Size4KiB>::containing_address(page_addr + size),
+                        PhysFrame::<Size4KiB>::containing_address(frame_addr + size),
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::WRITABLE
+                            | PageTableFlags::WRITE_THROUGH
+                            | PageTableFlags::NO_CACHE,
+                        &mut FRAME_ALLOCATOR,
+                    )?
+                    .flush();
+            }
+        }
 
         for i in 0..32 {
             let command_header = self.cmd_header_at(i);
@@ -578,12 +561,9 @@ impl HbaPort {
             // 256 bytes per command table, 64 + 16 + 48 + 16 * 8
             command_header.prdtl.set(8);
             command_header.prdbc.set(0);
-
-            if i < 16 {
-                command_header.ctb.set(frame_low.start_address() + 256 * i);
-            } else {
-                command_header.ctb.set(frame_high.start_address() + 256 * i);
-            }
+            command_header.ctb.set(PhysAddr::new(
+                (frame_addr.as_u64() as usize + 256 * i) as u64,
+            ));
         }
 
         self.ie.set(HbaPortIE::all());
@@ -625,7 +605,7 @@ impl HbaPort {
         // Check if the port is active and is present. If thats the case
         // we can start the AHCI port.
         if let (HbaPortDd::PresentAndE, HbaPortIpm::Active) = (dd, ipm) {
-            log::trace!("enabling AHCI port {}", port);
+            log::trace!("ahci: enabling port {}", port);
 
             self.start(offset_table)?;
             Ok(true)
@@ -645,8 +625,6 @@ impl HbaPort {
     ) {
         let header = self.cmd_header_at(slot);
         let mut flags = header.flags.get();
-
-        header._reserved.fill(00);
 
         if command == AtaCommand::AtaCommandWriteDmaExt || command == AtaCommand::AtaCommandWriteDma
         {
@@ -843,6 +821,16 @@ impl AhciProtected {
 
         hba.global_host_control.set(current_flags | HbaHostCont::IE); // Enable Interrupts
 
+        let version = hba.version.get();
+        let major_version = version >> 16 & 0xffff;
+        let minor_version = version & 0xffff;
+
+        log::info!(
+            "ahci: controller version {}.{}",
+            major_version,
+            minor_version
+        );
+
         let pi = hba.ports_implemented.get();
 
         for i in 0..32 {
@@ -928,7 +916,7 @@ impl PciDeviceHandle for AhciDriver {
     }
 
     fn start(&self, header: &PciHeader, _offset_table: &mut OffsetPageTable) {
-        log::info!("Starting AHCI driver...");
+        log::info!("ahci: starting driver...");
 
         get_ahci().inner.lock_irq().start_driver(header).unwrap(); // Start and initialize the AHCI controller.
 

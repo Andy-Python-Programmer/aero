@@ -137,6 +137,8 @@ fn main() -> Result<(), AeroSyscallError> {
                     let contents = &unsafe { core::str::from_utf8_unchecked(&out) }[..length];
                     print!("{}", contents);
                     sys_close(fd)?;
+                } else {
+                    println!("cat: missing operand")
                 }
             } else if command == "shutdown" {
                 sys_shutdown();

@@ -19,6 +19,7 @@
 
 use bit_field::BitField;
 use spin::Once;
+use stivale_boot::v2::StivaleMemoryMapEntry;
 use stivale_boot::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapIter, StivaleMemoryMapTag};
 
 use super::mapper::*;
@@ -26,17 +27,12 @@ use super::page::*;
 
 use super::addr::PhysAddr;
 
+use crate::mem::paging::align_up;
 use crate::utils::sync::Mutex;
 
-// TODO: There might be a case where prealloc runs out of memory even if
-// the memory map length < 256. We need to find a better solution rather then
-// just extending the capacity. Like a bootstrap allocator that is used by the buddy
-// allocator to allocate space for its buddies.
-const PREALLOC_CAPACITY: usize = 4096 * 256;
 const BUDDY_BITS: u64 = (core::mem::size_of::<usize>() * 8) as u64;
 
-static BUDDY_SIZE: [u64; 2] = [Size4KiB::SIZE, Size2MiB::SIZE];
-static PREALLOC: Mutex<PreAlloc> = Mutex::new(PreAlloc::new());
+static BUDDY_SIZE: [u64; 3] = [Size4KiB::SIZE, Size4KiB::SIZE * 2, Size2MiB::SIZE];
 
 pub struct LockedFrameAllocator(Once<Mutex<GlobalFrameAllocator>>);
 
@@ -170,42 +166,63 @@ impl Iterator for RangeMemoryIter {
     }
 }
 
-/// Prealloc is used as the bootstrap allocator used to allocate the buddies
-/// map for the global frame allocator. Its just a simple bump allocator.
-#[repr(align(4096))]
-struct PreAlloc {
-    space: [u8; PREALLOC_CAPACITY],
-    next: usize,
+#[derive(Copy, Clone)]
+#[repr(usize)]
+pub enum BuddyOrdering {
+    Size4KiB = 0,
+    Size8KiB = 1,
 }
 
-impl PreAlloc {
-    /// Constructs a new prealloc bump allocator.
-    const fn new() -> Self {
-        Self {
-            space: [0; PREALLOC_CAPACITY],
-            next: 0x00,
+pub fn pmm_alloc(ordering: BuddyOrdering) -> PhysAddr {
+    let ordering = ordering as usize;
+    debug_assert!(ordering <= BUDDY_SIZE.len());
+
+    unsafe {
+        super::FRAME_ALLOCATOR
+            .0
+            .get()
+            .map(|m| m.lock().allocate_frame_inner(ordering).map(|f| f))
+            .expect("pmm: out of memory")
+            .expect("pmm: frame allocator not initialized")
+    }
+}
+
+#[derive(Debug)]
+struct MemoryRange {
+    addr: PhysAddr,
+    size: u64,
+}
+
+struct BootAllocator {
+    memory_ranges: &'static mut [MemoryRange],
+}
+
+impl BootAllocator {
+    fn new(memory_ranges: &'static mut [MemoryRange]) -> Self {
+        Self { memory_ranges }
+    }
+
+    fn allocate(&mut self, size: usize) -> *mut u8 {
+        let size = align_up(size as u64, Size4KiB::SIZE);
+
+        for range in self.memory_ranges.iter_mut() {
+            if range.size >= size {
+                let addr = range.addr;
+
+                range.addr += size;
+                range.size -= size;
+
+                return unsafe { crate::PHYSICAL_MEMORY_OFFSET + addr.as_u64() }.as_mut_ptr();
+            }
         }
+
+        unreachable!("pmm: bootstrap allocator is out of memory")
     }
-}
-
-/// Allocates chunk of memory with the provided `size` and return a pointer
-/// to it.
-fn prealloc(size: usize) -> *mut u8 {
-    let mut this = PREALLOC.lock();
-
-    if this.next + size > PREALLOC_CAPACITY {
-        panic!("prealloc: out of memory")
-    }
-
-    let ptr = unsafe { this.space.as_mut_ptr().offset(this.next as isize) };
-    this.next += size;
-
-    ptr
 }
 
 pub struct GlobalFrameAllocator {
-    buddies: [&'static mut [u64]; 2],
-    free: [usize; 2],
+    buddies: [&'static mut [u64]; 3],
+    free: [usize; 3],
 
     base: PhysAddr,
     end: PhysAddr,
@@ -223,6 +240,41 @@ impl GlobalFrameAllocator {
             .next()
             .expect("stivale2: unexpected end of the memory map");
 
+        // Find a memory map entry that is big enough to fit all of the items in
+        // range memory iter.
+        let requested_size = core::mem::size_of::<MemoryRange>() as u64 * memory_map.entries_len;
+        let mut region = None;
+
+        for i in 0..memory_map.entries_len {
+            let entry = &memory_map.as_slice()[i as usize];
+
+            if entry.length >= requested_size && entry.base > kernel_end.as_u64() {
+                // Found a big enough memory map entry.
+                //
+                // SAFETY: Its safe for us to mutate the memory map entry & life is ment to be
+                // unsafe. We use the power of holy transmutes here.
+                let entry_mut = unsafe { &mut *(entry as *const _ as *mut StivaleMemoryMapEntry) };
+                let base = entry_mut.base;
+
+                entry_mut.base += requested_size;
+                entry_mut.length -= requested_size;
+
+                region = Some(PhysAddr::new(base));
+
+                break;
+            }
+        }
+
+        let ranges = unsafe {
+            let phys_addr = region.expect("stivale2: out of memory").as_u64();
+            let virt_addr = crate::PHYSICAL_MEMORY_OFFSET + phys_addr;
+
+            core::slice::from_raw_parts_mut::<MemoryRange>(
+                virt_addr.as_mut_ptr(),
+                requested_size as usize,
+            )
+        };
+
         let range_iter = RangeMemoryIter {
             iter,
 
@@ -233,25 +285,28 @@ impl GlobalFrameAllocator {
             cursor_end: PhysAddr::new(cursor.base + cursor.length),
         };
 
-        // We hardcode the max memory map entries to 256. Only macs have a shitload of
-        // memory map entries > 256. Apple momemnt :^)
-        let mut ranges = [(PhysAddr::new(0x00), 0x00); 256];
+        // Lets goo! Now lets initialize the bootstrap allocator so we can initialize
+        // our efficient buddy allocator. We need a seperate allocator since some computers
+        // such as Macs have a shitload of memory map entries so, we cannt assume the amount
+        // of maximum mmap entries and allocate space for it on the stack instead. God damn it.
         let mut i = 0;
 
         for (addr, size) in range_iter {
-            ranges[i] = (addr, size);
+            ranges[i] = MemoryRange { addr, size };
             i += 1;
         }
 
-        let base = ranges[0].0;
-        let end = ranges[i - 1].0 + ranges[i - 1].1;
+        let base = ranges[0].addr;
+        let end = ranges[i - 1].addr + ranges[i - 1].size;
+
+        let mut bootstrapper = BootAllocator::new(&mut ranges[..i]);
 
         let mut this = Self {
             base,
             end,
 
-            buddies: [&mut [], &mut []],
-            free: [0; 2],
+            buddies: [&mut [], &mut [], &mut []],
+            free: [0; 3],
         };
 
         let size = this.end - this.base;
@@ -261,15 +316,15 @@ impl GlobalFrameAllocator {
             let chunk = ((size / bsize) + BUDDY_BITS - 1) / BUDDY_BITS;
             let chunk_size = chunk * 8;
 
-            let chunk_ptr = prealloc(chunk_size as usize) as *mut u64;
+            let chunk_ptr = bootstrapper.allocate(chunk_size as usize) as *mut u64;
             let chunk_slice = unsafe { core::slice::from_raw_parts_mut(chunk_ptr, chunk as usize) };
 
             chunk_slice.fill(0x00);
             this.buddies[i] = chunk_slice;
         }
 
-        for &(base, length) in ranges[..i].iter() {
-            this.insert_range(base, base + length);
+        for region in bootstrapper.memory_ranges.iter() {
+            this.insert_range(region.addr, region.addr + region.size);
         }
 
         this
