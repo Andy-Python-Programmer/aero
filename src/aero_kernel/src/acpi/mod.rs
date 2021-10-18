@@ -22,8 +22,6 @@
 //!
 //! **Notes**: <https://wiki.osdev.org/ACPI>
 
-use core::mem;
-
 use aml::AmlContext;
 use spin::Once;
 
@@ -31,7 +29,7 @@ use crate::mem::paging::{PhysAddr, VirtAddr};
 
 use crate::utils::sync::{Mutex, MutexGuard};
 
-use self::{hpet::Hpet, madt::Madt, mcfg::Mcfg, rsdp::Rsdp, sdt::Sdt};
+use self::{hpet::Hpet, madt::Madt, mcfg::Mcfg, sdt::Sdt};
 
 pub mod fadt;
 pub mod hpet;
@@ -43,71 +41,43 @@ pub mod sdt;
 static AML_CONTEXT: Once<Mutex<AmlContext>> = Once::new();
 
 enum AcpiHeader {
-    Rsdt(&'static Sdt),
-    Xsdt(&'static Sdt),
-}
-
-impl AcpiHeader {
-    fn as_sdt(&self) -> &'static Sdt {
-        match self {
-            AcpiHeader::Rsdt(rsdt) => rsdt,
-            AcpiHeader::Xsdt(xsdt) => xsdt,
-        }
-    }
-
-    /// The data address of this header's data.
-    fn data_address(&self) -> usize {
-        self.as_sdt().data_address()
-    }
+    Rsdt(&'static rsdp::Rsdt<u32>),
+    Xsdt(&'static rsdp::Rsdt<u64>),
 }
 
 pub struct AcpiTable {
     header: AcpiHeader,
-    entry_count: usize,
 }
 
 impl AcpiTable {
-    /// Create a new ACPI table from the RSDP address.
     fn new(rsdp_address: VirtAddr) -> Self {
-        // SAFTEY: Safe to cast the RSDP address to the RSDP struct as the
-        // address is verified by the bootloader.
-        let rsdp = unsafe { &*(rsdp_address.as_u64() as *const Rsdp) };
-        let sdt_address = rsdp.get_sdt_address() as u64;
+        match rsdp::find_rsdt_address(rsdp_address) {
+            rsdp::RsdtAddress::Xsdt(xsdt_addr) => {
+                let xsdt = rsdp::Rsdt::<u64>::new(xsdt_addr);
+                let header = AcpiHeader::Xsdt(xsdt);
 
-        // SAFTEY: Already would have caused UB if the RSDP address was
-        // anyhow invalid.
-        let sdt = unsafe { Sdt::from_address(sdt_address) };
-        let sdt_data_len = sdt.data_len();
+                log::debug!("Found XSDT at {:#x}", xsdt_addr);
 
-        let (header, entry_count) = match &sdt.signature {
-            sdt::RSDT_SIGNATURE => (AcpiHeader::Rsdt(sdt), sdt_data_len / mem::size_of::<u32>()),
-            sdt::XSDT_SIGNATURE => (AcpiHeader::Xsdt(sdt), sdt_data_len / mem::size_of::<u32>()),
+                Self { header }
+            }
 
-            signature => panic!("acpi: invalid ACPI header signature: {:?}", signature),
-        };
+            rsdp::RsdtAddress::Rsdt(rsdt_addr) => {
+                let rsdt = rsdp::Rsdt::<u32>::new(rsdt_addr);
+                let header = AcpiHeader::Rsdt(rsdt);
 
-        Self {
-            header,
-            entry_count,
+                log::debug!("Found RSDT at {:#x}", rsdt_addr);
+
+                Self { header }
+            }
         }
     }
 
     /// Lookup ACPI table entry with the provided signature.
     fn lookup_entry(&self, signature: &str) -> Option<&'static Sdt> {
-        let header_data_address = self.header.data_address() as *const u32;
-
-        for i in 0..self.entry_count {
-            // SAFTEY: Item address is valid as we are looping under the entry count and
-            // the data address.
-            let item_address = unsafe { *(header_data_address.add(i)) } as u64;
-            let item = unsafe { Sdt::from_address(item_address) };
-
-            if item.signature == signature.as_bytes() {
-                return Some(item);
-            }
+        match self.header {
+            AcpiHeader::Rsdt(rsdt) => rsdt.lookup_entry(signature),
+            AcpiHeader::Xsdt(xsdt) => xsdt.lookup_entry(signature),
         }
-
-        None
     }
 }
 
@@ -293,7 +263,7 @@ pub fn init(rsdp_address: PhysAddr) -> Result<(), aml::AmlError> {
         // we need to extract the DSDT table from the FADT table.
         let _dsdt_stream = unsafe {
             let addr = crate::PHYSICAL_MEMORY_OFFSET + fadt.dsdt as u64;
-            let sdt = Sdt::from_address(addr.as_u64());
+            let sdt = Sdt::from_address(addr);
 
             core::slice::from_raw_parts(sdt.data_address() as *mut u8, sdt.data_len())
         };

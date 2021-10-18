@@ -19,28 +19,39 @@
 
 use core::mem;
 
-pub(super) const XSDT_SIGNATURE: &[u8; 4] = b"XSDT";
-pub(super) const RSDT_SIGNATURE: &[u8; 4] = b"RSDT";
+use crate::mem::paging::VirtAddr;
 
-#[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-pub struct Sdt {
-    pub signature: [u8; 4],
-    pub length: u32,
-    pub revision: u8,
-    pub checksum: u8,
-    pub oem_id: [u8; 6],
-    pub oem_table_id: [u8; 8],
-    pub oem_revision: u32,
-    pub creator_id: u32,
-    pub creator_revision: u32,
+pub(super) struct Sdt {
+    pub(super) signature: [u8; 4],
+    pub(super) length: u32,
+    pub(super) revision: u8,
+    pub(super) checksum: u8,
+    pub(super) oem_id: [u8; 6],
+    pub(super) oem_table_id: [u8; 8],
+    pub(super) oem_revision: u32,
+    pub(super) creator_id: u32,
+    pub(super) creator_revision: u32,
 }
 
 impl Sdt {
+    pub fn is_valid(&self) -> bool {
+        unsafe {
+            let sptr = self as *const _ as *const u8;
+            let size = self.length as usize;
+
+            super::rsdp::validate_checksum(sptr, size)
+        }
+    }
+
+    pub fn signature(&self) -> &[u8] {
+        &self.signature as &[u8]
+    }
+
     /// Get SDT from its address.
     #[inline]
-    pub unsafe fn from_address(address: u64) -> &'static Self {
-        &*(address as *const Self)
+    pub unsafe fn from_address(address: VirtAddr) -> &'static Self {
+        &*(address.as_mut_ptr::<Self>())
     }
 
     /// Get the address of this tables data.
