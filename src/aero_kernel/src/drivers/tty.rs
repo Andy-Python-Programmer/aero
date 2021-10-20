@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
@@ -237,8 +238,8 @@ impl devfs::Device for Tty {
     }
 
     #[inline]
-    fn device_name(&self) -> &str {
-        "tty"
+    fn device_name(&self) -> String {
+        String::from("tty")
     }
 
     #[inline]

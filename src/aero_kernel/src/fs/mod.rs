@@ -33,6 +33,7 @@ use crate::fs::inode::FileType;
 use self::cache::Cacheable;
 use self::{cache::DirCacheItem, ramfs::RamFs};
 
+pub mod block;
 pub mod cache;
 pub mod devfs;
 pub mod file_table;
@@ -275,5 +276,9 @@ pub fn init() -> Result<()> {
     devfs::init()?;
     log::info!("Installed devfs");
 
+    Ok(())
+}
+
+pub fn launch() -> Result<()> {
     Ok(())
 }

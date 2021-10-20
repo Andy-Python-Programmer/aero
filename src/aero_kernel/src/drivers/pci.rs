@@ -38,6 +38,16 @@ static PCI_TABLE: Mutex<PciTable> = Mutex::new(PciTable::new());
 const PCI_CONFIG_ADDRESS_PORT: u16 = 0xCF8;
 const PCI_CONFIG_DATA_PORT: u16 = 0xCFC;
 
+bitflags::bitflags! {
+    pub struct ProgramInterface: u8 {
+        const PRIMARY_PCI_NATIVE   = 0b00000001;
+        const PRIMARY_CAN_SWITCH   = 0b00000010;
+        const SECONDARY_PCI_NATIVE = 0b00000100;
+        const SECONDARY_CAN_SWITCH = 0b00001000;
+        const DMA_CAPABLE          = 0b10000000;
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum Bar {
     Memory32 {
@@ -402,17 +412,14 @@ impl PciHeader {
         Self(result)
     }
 
-    #[inline]
     pub fn bus(&self) -> u8 {
         self.0.get_bits(8..16) as u8
     }
 
-    #[inline]
     pub fn device(&self) -> u8 {
         self.0.get_bits(3..8) as u8
     }
 
-    #[inline]
     pub fn function(&self) -> u8 {
         self.0.get_bits(0..3) as u8
     }
@@ -463,7 +470,6 @@ impl PciHeader {
     /// Enable the bridge to operate as a master on the primary interface for memory and I/O
     /// transactions forwarded from the secondary interface. This allows the PCI device to perform
     /// DMA.
-    #[inline]
     pub fn enable_bus_mastering(&self) {
         // Read the Command Register from the device's PCI Configuration Space, set bit 2
         // (bus mastering bit) and write the modified Command Register. Note that some BISOs do
@@ -475,7 +481,6 @@ impl PciHeader {
 
     /// Returns the value stored in the PCI vendor ID register which is used to identify
     /// the manufacturer of the PCI device.
-    #[inline]
     pub fn get_vendor(&self) -> Vendor {
         unsafe { Vendor::new(self.read::<u16>(0x00)) }
     }
@@ -486,7 +491,6 @@ impl PciHeader {
         DeviceType::new(id.get_bits(24..32), id.get_bits(16..24))
     }
 
-    #[inline]
     pub fn has_multiple_functions(&self) -> bool {
         unsafe { self.read::<u32>(0x0c) }.get_bit(23)
     }
@@ -519,13 +523,13 @@ impl PciHeader {
     /// Returnes the value stored in the PCI header type register which is used to
     /// indicate layout for bytes,of the device’s configuration space.
     pub fn get_header_type(&self) -> u8 {
-        unsafe { self.read::<u8>(0x0E) as _ }
+        unsafe { self.read::<u8>(0x0E) as u8 & 0b01111111 }
     }
 
     /// Returns the value stored in the bar of the provided slot. Returns [`None`] if the
     /// bar is empty.
     pub fn get_bar(&self, bar: u8) -> Option<Bar> {
-        debug_assert!(self.get_header_type() & 0b01111111 == 0); // Ensure header type == 0
+        debug_assert!(self.get_header_type() == 0); // Ensure header type == 0
         debug_assert!(bar <= 5); // Make sure the bar is valid.
 
         let offset = 0x10 + (bar as u16) * 4;
@@ -584,6 +588,35 @@ impl PciHeader {
         } else {
             Some(Bar::IO(bar.get_bits(2..32)))
         }
+    }
+
+    // NOTE: The Base Address registers are optional registers used to map internal
+    // (device-specific) registers into Memory or I/O Spaces. Refer to the PCI Local Bus
+    // Specification for a detailed discussion of base address registers.
+
+    pub fn base_address0(&self) -> u32 {
+        unsafe { self.read::<u32>(0x10) }
+    }
+
+    pub fn base_address1(&self) -> u32 {
+        unsafe { self.read::<u32>(0x14) }
+    }
+
+    pub fn base_address2(&self) -> u32 {
+        unsafe { self.read::<u32>(0x18) }
+    }
+
+    pub fn base_address3(&self) -> u32 {
+        unsafe { self.read::<u32>(0x1C) }
+    }
+
+    pub fn base_address4(&self) -> u32 {
+        unsafe { self.read::<u32>(0x20) }
+    }
+
+    pub fn program_interface(&self) -> ProgramInterface {
+        let bits = unsafe { self.read::<u8>(0x09) };
+        ProgramInterface::from_bits_truncate(bits as u8)
     }
 }
 

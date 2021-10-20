@@ -23,6 +23,7 @@ use core::mem;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::collections::BTreeMap;
+use alloc::string::String;
 use alloc::sync::Arc;
 
 use spin::{Once, RwLock};
@@ -56,7 +57,7 @@ pub trait Device: Send + Sync {
 
     /// Returns the device name of this device. (See the documentation of this trait for more
     /// information.)
-    fn device_name(&self) -> &str;
+    fn device_name(&self) -> String;
     fn inode(&self) -> Arc<dyn INodeInterface>;
 }
 
@@ -80,7 +81,7 @@ pub fn install_device(device: Arc<dyn Device>) -> Result<()> {
     DEV_FILESYSTEM
         .root_dir()
         .inode()
-        .make_dev_inode(device_name, device_marker)?;
+        .make_dev_inode(&device_name, device_marker)?;
 
     log::debug!("installed device `{}`", device_name);
 
@@ -153,8 +154,8 @@ impl Device for DevNull {
     }
 
     #[inline]
-    fn device_name(&self) -> &str {
-        "null"
+    fn device_name(&self) -> String {
+        String::from("null")
     }
 
     fn inode(&self) -> Arc<dyn INodeInterface> {

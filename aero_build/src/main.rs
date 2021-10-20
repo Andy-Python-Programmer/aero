@@ -136,8 +136,6 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
     // - Set the amount of memory to 512MiB.
     // - Set serial port to qemu stdio.
     let mut command = xshell::cmd!("qemu-system-x86_64{qemu_suffix}")
-        .arg("-machine")
-        .arg("type=q35")
         .arg("-cpu")
         .arg("qemu64,+la57")
         .arg("-smp")
@@ -153,7 +151,11 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
     if bios == Bios::Uefi {
         // FIXME: A simple workaround since xshell moves the value command when we
         // invoke the `arg` function.
-        command = command.arg("-bios").arg("bundled/ovmf/OVMF-pure-efi.fd");
+        command = command
+            .arg("-bios")
+            .arg("bundled/ovmf/OVMF-pure-efi.fd")
+            .arg("-machine")
+            .arg("type=q35");
     }
 
     command.run()?;

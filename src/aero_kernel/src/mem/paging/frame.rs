@@ -178,12 +178,21 @@ pub fn pmm_alloc(ordering: BuddyOrdering) -> PhysAddr {
     debug_assert!(ordering <= BUDDY_SIZE.len());
 
     unsafe {
-        super::FRAME_ALLOCATOR
+        let addr = super::FRAME_ALLOCATOR
             .0
             .get()
             .map(|m| m.lock().allocate_frame_inner(ordering).map(|f| f))
             .expect("pmm: out of memory")
-            .expect("pmm: frame allocator not initialized")
+            .expect("pmm: frame allocator not initialized");
+
+        let virt = crate::PHYSICAL_MEMORY_OFFSET + addr.as_u64();
+        let fill_size = BUDDY_SIZE[ordering] as usize;
+        let slice = core::slice::from_raw_parts_mut(virt.as_mut_ptr::<u8>(), fill_size);
+
+        // We always zero out memory for security reasons.
+        slice.fill(0x00);
+
+        addr
     }
 }
 

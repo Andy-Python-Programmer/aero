@@ -26,9 +26,9 @@ use spin::Once;
 use crate::mem::{paging::*, AddressSpace};
 
 use crate::utils::sync::Mutex;
-use crate::utils::VolatileCell;
+use crate::utils::{CeilDiv, VolatileCell};
 
-use super::pci::*;
+use crate::drivers::pci::*;
 
 static DRIVER: Once<Arc<AhciDriver>> = Once::new();
 
@@ -193,16 +193,30 @@ enum DmaCommand {
     Read,
 }
 
-struct DmaBuffer {
+pub struct DmaBuffer {
     /// The start address of the DMA buffer.
     start: PhysAddr,
     /// The data size of the DMA buffer.
     data_size: usize,
 }
 
-struct DmaRequest {
+impl DmaBuffer {
+    pub fn sectors(&self) -> usize {
+        self.data_size.ceil_div(512)
+    }
+
+    pub fn start(&self) -> PhysAddr {
+        self.start
+    }
+
+    pub fn data_size(&self) -> usize {
+        self.data_size
+    }
+}
+
+pub struct DmaRequest {
     sector: usize,
-    count: usize,
+    pub count: usize,
     buffer: Vec<DmaBuffer>,
     command: DmaCommand,
 }
@@ -235,8 +249,12 @@ impl DmaRequest {
         }
     }
 
+    pub fn sector(&self) -> usize {
+        self.sector
+    }
+
     /// Copys the data from the DMA buffer into the given buffer.
-    fn copy_into(&self, into: &mut [u8]) {
+    pub fn copy_into(&self, into: &mut [u8]) {
         let mut offset = 0x00; // Keep track of the offset
         let mut remaning = into.len(); // Keep track of the remaining data
 
@@ -256,7 +274,7 @@ impl DmaRequest {
         }
     }
 
-    fn into_command(&self) -> AtaCommand {
+    pub fn into_command(&self) -> AtaCommand {
         let lba48 = self.sector > 0x0FFF_FFFF;
 
         match self.command {
@@ -270,7 +288,7 @@ impl DmaRequest {
         }
     }
 
-    fn at_offset(&self, offset: usize) -> &[DmaBuffer] {
+    pub fn at_offset(&self, offset: usize) -> &[DmaBuffer] {
         &self.buffer[offset / 16..]
     }
 }
@@ -278,7 +296,7 @@ impl DmaRequest {
 #[allow(unused)]
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
-enum AtaCommand {
+pub enum AtaCommand {
     AtaCommandWriteDma = 0xCA,
     AtaCommandWriteDmaQueued = 0xCC,
     AtaCommandWriteMultiple = 0xC5,
@@ -323,6 +341,22 @@ enum AtaCommand {
     AtaCommandSetFeaturesEnableServiceInt = 0x5E,
     AtaCommandSetFeaturesDisableReleaseInt = 0xDD,
     AtaCommandSetFeaturesDisableServiceInt = 0xDE,
+}
+
+impl AtaCommand {
+    pub fn is_lba48(&self) -> bool {
+        match self {
+            AtaCommand::AtaCommandReadDmaExt | AtaCommand::AtaCommandWriteDmaExt => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_write(&self) -> bool {
+        match self {
+            AtaCommand::AtaCommandWriteDmaExt | AtaCommand::AtaCommandWriteDma => true,
+            _ => false,
+        }
+    }
 }
 
 #[repr(C)]

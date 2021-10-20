@@ -178,3 +178,59 @@ pub fn delay(cycles: usize) {
         }
     }
 }
+
+pub trait InOut {
+    unsafe fn port_in(port: u16) -> Self;
+    unsafe fn port_out(port: u16, value: Self);
+}
+
+impl InOut for u8 {
+    unsafe fn port_in(port: u16) -> u8 {
+        inb(port)
+    }
+
+    unsafe fn port_out(port: u16, value: u8) {
+        outb(port, value);
+    }
+}
+
+impl InOut for u16 {
+    unsafe fn port_in(port: u16) -> u16 {
+        inw(port)
+    }
+
+    unsafe fn port_out(port: u16, value: u16) {
+        outw(port, value);
+    }
+}
+
+impl InOut for u32 {
+    unsafe fn port_in(port: u16) -> u32 {
+        inl(port)
+    }
+
+    unsafe fn port_out(port: u16, value: u32) {
+        outl(port, value);
+    }
+}
+
+// based :^)
+
+#[derive(Copy, Clone)]
+pub struct BasedPort {
+    base: u16,
+}
+
+impl BasedPort {
+    pub fn new(base: u16) -> BasedPort {
+        BasedPort { base }
+    }
+
+    pub fn read_offset<V: InOut>(&self, offset: u16) -> V {
+        unsafe { V::port_in(self.base + offset) }
+    }
+
+    pub fn write_offset<V: InOut>(&mut self, offset: u16, value: V) {
+        unsafe { V::port_out(self.base + offset, value) }
+    }
+}

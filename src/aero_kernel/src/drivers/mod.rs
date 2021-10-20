@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod ahci;
+pub mod block;
 pub mod keyboard;
 pub mod mouse;
 pub mod pci;

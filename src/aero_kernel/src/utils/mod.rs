@@ -290,3 +290,19 @@ impl<'a> StackHelper<'a> {
         &mut *(*self.ptr as *mut T)
     }
 }
+
+pub trait CeilDiv {
+    fn ceil_div(self, d: Self) -> Self;
+}
+
+macro_rules! ceil_div_impl {
+    ($($t:ty)*) => ($(
+        impl CeilDiv for $t {
+            fn ceil_div(self, d: $t) -> $t {
+                (self + d - 1) / d
+            }
+        }
+    )*)
+}
+
+ceil_div_impl!(u8 i8 u16 i16 u32 i32 u64 i64 usize isize u128 i128);
