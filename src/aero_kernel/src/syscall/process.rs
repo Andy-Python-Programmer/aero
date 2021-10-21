@@ -20,8 +20,11 @@
 use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
 
 use crate::fs;
+use crate::fs::Path;
+
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
+use crate::utils::validate_str;
 
 pub fn exit(status: usize) -> ! {
     log::trace!("exiting the current process with status: {}", status);
@@ -63,6 +66,27 @@ pub fn fork() -> Result<usize, AeroSyscallError> {
 
     scheduler.register_task(forked.clone());
     Ok(forked.task_id().as_usize())
+}
+
+pub fn exec(
+    path: usize,
+    path_size: usize,
+    _args: usize,
+    _args_size: usize,
+    _envs: usize,
+    _envs_size: usize,
+) -> Result<usize, AeroSyscallError> {
+    let path = validate_str(path as *const u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path = Path::new(path);
+
+    let executable = fs::lookup_path(path)?;
+
+    scheduler::get_scheduler()
+        .current_task()
+        .exec(executable)
+        .expect("task: failed to exec task");
+
+    unreachable!()
 }
 
 pub fn mmap(

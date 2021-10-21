@@ -20,7 +20,7 @@
 use alloc::alloc::alloc_zeroed;
 
 use aero_syscall::{MMapFlags, MMapProt};
-use xmas_elf::{header, ElfFile};
+use xmas_elf::ElfFile;
 
 use core::{alloc::Layout, ptr::Unique};
 

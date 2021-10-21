@@ -98,6 +98,7 @@ interrupt_error_stack!(
 
             if !signal && stack.stack.iret.is_user() {
                 log::debug!("SIGSEGV");
+            } else if !signal {
             } else {
                 return;
             }

@@ -287,11 +287,27 @@ pub fn launch() -> Result<()> {
         include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
 
     root_dir().inode().mkdir("bin")?;
+    root_dir().inode().mkdir("lib")?;
 
     let bin = lookup_path(Path::new("/bin"))?;
     let shell = bin.inode().touch(bin.clone(), "sh")?;
 
     shell.inode().write_at(0x00, SHELL)?;
+
+    // Add some more files if the sysroot feature is enabled.
+    #[cfg(feature = "sysroot")]
+    {
+        let lib = lookup_path(Path::new("/lib"))?;
+
+        static LD: &[u8] = include_bytes!("../../../../sysroot/system-root/usr/bin/ld");
+        static LD_SO: &[u8] = include_bytes!("../../../../sysroot/system-root/usr/lib/ld.so");
+
+        let ld = bin.inode().touch(bin.clone(), "ld")?;
+        let ldso = lib.inode().touch(lib.clone(), "ld.so")?;
+
+        ld.inode().write_at(0x00, LD)?;
+        ldso.inode().write_at(0x00, LD_SO)?;
+    }
 
     Ok(())
 }

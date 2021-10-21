@@ -143,7 +143,7 @@ fn main() -> Result<(), AeroSyscallError> {
             } else if command == "shutdown" {
                 sys_shutdown();
             } else if command != "\u{0}" {
-                println!("invalid command: {:?}", command);
+                sys_exec(command)?;
             }
         }
     }

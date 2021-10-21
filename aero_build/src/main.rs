@@ -97,7 +97,7 @@ fn build_kernel(target: Option<String>, build_type: BuildType) -> anyhow::Result
     // Use the provided target, or else use the default target.
     let target = target.unwrap_or(String::from("x86_64-aero_os"));
     let mut command = xshell::cmd!(
-        "{CARGO} build --package aero_kernel --target ./.cargo/{target}.json --message-format=json"
+        "{CARGO} build --package aero_kernel --target ./.cargo/{target}.json --message-format=json --features=sysroot"
     );
 
     if build_type == BuildType::Release {

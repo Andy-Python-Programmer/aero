@@ -6,6 +6,7 @@ edition = "2018"
 
 [features]
 round-robin = []
+sysroot = []
 
 default = ["round-robin"]
 
