@@ -280,5 +280,18 @@ pub fn init() -> Result<()> {
 }
 
 pub fn launch() -> Result<()> {
+    // This is temporary and will be removed when we have support for
+    // ext2 filesystem and fat32 filesystem to make it functional for both
+    // UEFI and BIOS.
+    static SHELL: &[u8] =
+        include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
+
+    root_dir().inode().mkdir("bin")?;
+
+    let bin = lookup_path(Path::new("/bin"))?;
+    let shell = bin.inode().touch(bin.clone(), "sh")?;
+
+    shell.inode().write_at(0x00, SHELL)?;
+
     Ok(())
 }

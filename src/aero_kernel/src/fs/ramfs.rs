@@ -142,7 +142,17 @@ impl INodeInterface for LockedRamINode {
         let this = self.0.read();
 
         match &this.contents {
-            FileContents::Content(_) => todo!(),
+            FileContents::Content(vec) => {
+                let mut vec = vec.lock();
+
+                if vec.len() < offset + buffer.len() {
+                    vec.resize(offset + buffer.len(), 0);
+                }
+
+                vec.as_mut_slice()[offset..offset + buffer.len()].copy_from_slice(buffer);
+                Ok(buffer.len())
+            }
+
             FileContents::Device(dev) => {
                 let device = dev.clone();
                 drop(this);
@@ -191,7 +201,15 @@ impl INodeInterface for LockedRamINode {
         let this = self.0.read();
 
         match &this.contents {
-            FileContents::Content(_) => todo!(),
+            FileContents::Content(vec) => {
+                let vec = vec.lock();
+
+                let ret = core::cmp::min(buffer.len(), vec.len() - offset);
+                buffer.copy_from_slice(&vec.as_slice()[offset..offset + ret]);
+
+                Ok(ret)
+            }
+
             FileContents::Device(device) => {
                 let device = device.clone();
                 drop(this);

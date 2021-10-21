@@ -179,8 +179,6 @@ impl ArchTask {
     }
 
     pub fn exec(&mut self, vm: &Vm, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
-        header::sanity_check(executable).expect("Failed sanity check"); // Sanity check the provided ELF executable
-
         let address_space = if self.rpl == Ring::Ring0 {
             // If the kernel task wants to execute an executable, then we have to
             // create a new address space for it as we cannot use the kernel's address space

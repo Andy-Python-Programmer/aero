@@ -22,10 +22,9 @@ pub mod round_robin;
 
 use alloc::sync::Arc;
 
-use crate::utils::sync::Mutex;
+use crate::{fs::cache::DirCacheItem, utils::sync::Mutex};
 
 use spin::Once;
-use xmas_elf::ElfFile;
 
 use crate::utils::Downcastable;
 
@@ -102,7 +101,7 @@ impl Scheduler {
     }
 
     #[inline]
-    pub fn exec(&self, executable: &ElfFile) {
+    pub fn exec(&self, executable: DirCacheItem) {
         self.inner.current_task().exec(executable).unwrap();
     }
 

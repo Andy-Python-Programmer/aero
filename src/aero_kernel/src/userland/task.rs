@@ -20,7 +20,6 @@
 use alloc::string::String;
 use alloc::sync::Arc;
 use spin::RwLock;
-use xmas_elf::ElfFile;
 
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicIsize, AtomicU8, AtomicUsize, Ordering};
@@ -181,13 +180,13 @@ impl Task {
         this
     }
 
-    pub fn exec(&self, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
+    pub fn exec(&self, executable: DirCacheItem) -> Result<(), MapToError<Size4KiB>> {
         let vm = self.vm();
 
         vm.clear();
-        vm.load_bin(executable);
+        let executable = vm.load_bin(executable);
 
-        self.arch_task_mut().exec(vm, executable)
+        self.arch_task_mut().exec(vm, &executable)
     }
 
     #[inline]

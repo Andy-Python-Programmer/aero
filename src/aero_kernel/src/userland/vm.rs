@@ -17,18 +17,20 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::alloc::Layout;
+
 use aero_syscall::{MMapFlags, MMapProt};
 
+use alloc::alloc::alloc_zeroed;
 use alloc::collections::linked_list::CursorMut;
 use alloc::collections::LinkedList;
 
+use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
 
 use crate::utils::sync::Mutex;
 use xmas_elf::ElfFile;
-
-use super::USERLAND_SHELL;
 
 impl From<MMapProt> for PageTableFlags {
     fn from(e: MMapProt) -> Self {
@@ -57,15 +59,13 @@ enum UnmapResult {
 #[derive(Clone)]
 pub struct MMapFile {
     offset: usize,
-    // FIXME(Andy-Python-Programmer): Use an actual filesystem file instead of
-    // directly storing the bytes.
-    file: &'static [u8],
+    file: DirCacheItem,
     size: usize,
 }
 
 impl MMapFile {
     #[inline]
-    fn new(file: &'static [u8], offset: usize, size: usize) -> Self {
+    fn new(file: DirCacheItem, offset: usize, size: usize) -> Self {
         Self { file, offset, size }
     }
 }
@@ -166,8 +166,23 @@ impl Mapping {
                 let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
                     .expect("failed to allocate frame for a private file read");
 
+                let size_align = Size4KiB::SIZE as usize;
+
+                let buffer = unsafe {
+                    let layout = Layout::from_size_align_unchecked(size_align, 4096);
+                    let raw = alloc_zeroed(layout);
+
+                    core::slice::from_raw_parts_mut(raw, size_align)
+                };
+
+                mmap_file
+                    .file
+                    .inode()
+                    .read_at(offset as usize, buffer)
+                    .unwrap();
+
                 unsafe {
-                    (mmap_file.file.as_ptr()).offset(offset as isize).copy_to(
+                    buffer.as_ptr().copy_to(
                         (crate::PHYSICAL_MEMORY_OFFSET + frame.start_address().as_u64())
                             .as_mut_ptr(),
                         size as usize,
@@ -482,7 +497,7 @@ impl VmProtected {
         protocol: MMapProt,
         flags: MMapFlags,
         offset: usize,
-        file: Option<&'static [u8]>,
+        file: Option<DirCacheItem>,
     ) -> Option<VirtAddr> {
         // Offset is required to be a multiple of page size.
         if (offset as u64 & Size4KiB::SIZE - 1) != 0 {
@@ -580,13 +595,26 @@ impl VmProtected {
         success
     }
 
-    fn load_bin(&mut self, bin: &ElfFile) {
-        log::debug!("entry point: {:#x}", bin.header.pt2.entry_point());
-        log::debug!("entry point type: {:?}", bin.header.pt2.type_().as_type());
+    fn load_bin(&mut self, bin: DirCacheItem) -> ElfFile<'static> {
+        let size_align = Size4KiB::SIZE as usize;
 
-        for header in bin.program_iter() {
-            xmas_elf::program::sanity_check(header, bin).expect("Failed header sanity check");
+        let buffer = unsafe {
+            let layout = Layout::from_size_align_unchecked(size_align, 4096);
+            let raw = alloc_zeroed(layout);
 
+            core::slice::from_raw_parts_mut(raw, size_align)
+        };
+
+        bin.inode()
+            .read_at(0, buffer)
+            .expect("load_bin: failed to read provided binary file");
+
+        let elf = ElfFile::new(buffer).unwrap();
+
+        log::debug!("entry point: {:#x}", elf.header.pt2.entry_point());
+        log::debug!("entry point type: {:?}", elf.header.pt2.type_().as_type());
+
+        for header in elf.program_iter() {
             let header_type = header
                 .get_type()
                 .expect("Failed to get program header type");
@@ -625,7 +653,7 @@ impl VmProtected {
                         prot,
                         MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED,
                         file_offset as usize,
-                        Some(USERLAND_SHELL),
+                        Some(bin.clone()),
                     )
                     .expect("Failed to memory map ELF header")
                     + align_up(len, Size4KiB::SIZE);
@@ -646,6 +674,8 @@ impl VmProtected {
             } else if header_type == xmas_elf::program::Type::Interp {
             }
         }
+
+        elf
     }
 
     fn fork_from(&mut self, parent: &Vm) {
@@ -693,7 +723,7 @@ impl Vm {
 
     /// Mapping the provided `bin` file into the VM.
     #[inline]
-    pub(super) fn load_bin(&self, bin: &ElfFile) {
+    pub(super) fn load_bin(&self, bin: DirCacheItem) -> ElfFile {
         self.inner.lock().load_bin(bin)
     }
 

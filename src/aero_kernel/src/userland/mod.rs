@@ -17,7 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use xmas_elf::ElfFile;
+use crate::fs;
+use crate::fs::Path;
 
 use crate::syscall;
 
@@ -25,16 +26,12 @@ pub mod scheduler;
 pub mod task;
 pub mod vm;
 
-#[rustfmt::skip]
-static USERLAND_SHELL: &[u8] = include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
+pub fn run() -> fs::Result<()> {
+    let shell_path = Path::new("/bin/sh");
+    let shell_inode = fs::lookup_path(shell_path)?;
 
-// #[rustfmt::skip]
-// static USERLAND_SHELL: &[u8] = include_bytes!("../../../../sysroot/build/nyancat");
-
-pub fn run() {
-    let shell_elf = ElfFile::new(USERLAND_SHELL).unwrap();
-
-    scheduler::get_scheduler().exec(&shell_elf);
+    scheduler::get_scheduler().exec(shell_inode);
+    Ok(())
 }
 
 pub fn init_ap() {
