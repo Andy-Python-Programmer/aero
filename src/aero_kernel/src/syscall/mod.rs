@@ -37,7 +37,9 @@
 //! | 13     | chdir                   |
 //! | 14     | mkdir                   |
 //! | 15     | mkdirat                 |
-//! | 16     | exec                    |
+//! | 16     | rmdir                   |
+//! | 17     | exec                    |
+//! | 18     | log                     |
 
 use aero_syscall::prelude::*;
 
@@ -105,6 +107,8 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_MMAP => process::mmap(b, c, d, e, f, g),
         SYS_ARCH_PRCTL => process::arch_prctl(b, c),
         SYS_MUNMAP => process::munmap(b, c),
+        SYS_EXEC => process::exec(b, c, d, e, f, g),
+        SYS_LOG => process::log(b, c),
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),
@@ -116,7 +120,6 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_MKDIR => fs::mkdir(b, c),
         SYS_MKDIR_AT => fs::mkdirat(b, c, d),
         SYS_RMDIR => fs::rmdir(b, c),
-        SYS_EXEC => process::exec(b, c, d, e, f, g),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);

@@ -89,6 +89,13 @@ pub fn exec(
     unreachable!()
 }
 
+pub fn log(msg_start: usize, msg_size: usize) -> Result<usize, AeroSyscallError> {
+    let message = validate_str(msg_start as *const u8, msg_size).ok_or(AeroSyscallError::EINVAL)?;
+    log::debug!("{}", message);
+
+    Ok(0x00)
+}
+
 pub fn mmap(
     address: usize,
     size: usize,

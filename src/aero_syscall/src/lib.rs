@@ -255,6 +255,11 @@ pub fn sys_mkdir(path: &str) -> Result<usize, AeroSyscallError> {
     isize_as_syscall_result(value as _)
 }
 
+pub fn sys_log(message: &str) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_LOG, message.as_ptr() as usize, message.len());
+    isize_as_syscall_result(value as _)
+}
+
 pub fn sys_mkdirat(dfd: isize, path: &str) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_MKDIR_AT,

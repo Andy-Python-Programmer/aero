@@ -16,3 +16,4 @@ pub const SYS_MKDIR: usize = 14;
 pub const SYS_MKDIR_AT: usize = 15;
 pub const SYS_RMDIR: usize = 16;
 pub const SYS_EXEC: usize = 17;
+pub const SYS_LOG: usize = 18;
