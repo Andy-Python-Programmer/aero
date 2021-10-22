@@ -89,15 +89,20 @@ fn extract_build_artifact(output: &str) -> anyhow::Result<Option<PathBuf>> {
 
 /// Builds the kernel with the provided target and returns the executable
 /// path, or an error if the build failed.
-fn build_kernel(target: Option<String>, build_type: BuildType) -> anyhow::Result<PathBuf> {
+fn build_kernel(
+    target: Option<String>,
+    build_type: BuildType,
+    features: Vec<String>,
+) -> anyhow::Result<PathBuf> {
     println!("INFO: Building kernel");
 
     let _p = xshell::pushd("src");
 
     // Use the provided target, or else use the default target.
     let target = target.unwrap_or(String::from("x86_64-aero_os"));
+    let features = features.join(",");
     let mut command = xshell::cmd!(
-        "{CARGO} build --package aero_kernel --target ./.cargo/{target}.json --message-format=json --features=sysroot"
+        "{CARGO} build --package aero_kernel --target ./.cargo/{target}.json --message-format=json --features={features}"
     );
 
     if build_type == BuildType::Release {
@@ -243,6 +248,9 @@ enum AeroBuildCommand {
         #[structopt(short, long)]
         xserver: bool,
 
+        #[structopt(short, long)]
+        features: Vec<String>,
+
         /// Extra command line arguments to pass to the `emulator`.
         #[structopt(last = true)]
         qemu_args: Vec<String>,
@@ -257,6 +265,9 @@ enum AeroBuildCommand {
         /// this option should be set to false.
         #[structopt(short, long)]
         release: bool,
+
+        #[structopt(short, long)]
+        features: Vec<String>,
 
         /// Assembles the image with the provided BIOS. Possible options are
         /// `efi` and `legacy`. By default its set to `legacy`.
@@ -318,6 +329,7 @@ fn main() -> anyhow::Result<()> {
                 target,
                 xserver,
                 release,
+                features,
                 bios,
             } => {
                 let bios = Bios::from(bios);
@@ -337,7 +349,7 @@ fn main() -> anyhow::Result<()> {
                 bundled::download_ovmf_prebuilt()?;
 
                 build_userland()?;
-                build_kernel(target, build_type)?;
+                build_kernel(target, build_type, features)?;
 
                 bundled::package_files(bios, build_type)?;
 
@@ -349,6 +361,7 @@ fn main() -> anyhow::Result<()> {
             AeroBuildCommand::Build {
                 target,
                 bios,
+                features,
                 release,
             } => {
                 let bios = Bios::from(bios);
@@ -368,7 +381,7 @@ fn main() -> anyhow::Result<()> {
                 bundled::download_ovmf_prebuilt()?;
 
                 build_userland()?;
-                build_kernel(target, build_type)?;
+                build_kernel(target, build_type, features)?;
                 bundled::package_files(bios, build_type)?;
 
                 println!("Build took {:?}", now.elapsed());
