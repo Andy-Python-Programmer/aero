@@ -30,7 +30,7 @@ pub fn run() -> fs::Result<()> {
     let shell_path = Path::new("/bin/sh");
     let shell_inode = fs::lookup_path(shell_path)?;
 
-    scheduler::get_scheduler().exec(shell_inode);
+    scheduler::get_scheduler().exec(shell_inode, None, None);
     Ok(())
 }
 

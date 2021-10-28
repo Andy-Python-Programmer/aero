@@ -174,7 +174,6 @@ fn isize_as_syscall_result(value: isize) -> Result<usize, AeroSyscallError> {
     }
 }
 
-/// Exits the current process with the provided status.
 pub fn sys_exit(status: usize) -> ! {
     syscall1(prelude::SYS_EXIT, status);
     unreachable!()

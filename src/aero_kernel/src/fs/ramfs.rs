@@ -204,10 +204,10 @@ impl INodeInterface for LockedRamINode {
             FileContents::Content(vec) => {
                 let vec = vec.lock();
 
-                let ret = core::cmp::min(buffer.len(), vec.len() - offset);
-                buffer.copy_from_slice(&vec.as_slice()[offset..offset + ret]);
+                let size = core::cmp::min(buffer.len(), vec.len() - offset);
+                buffer.copy_from_slice(&vec.as_slice()[offset..offset + size]);
 
-                Ok(ret)
+                Ok(size)
             }
 
             FileContents::Device(device) => {

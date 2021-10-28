@@ -20,7 +20,7 @@
 use alloc::{alloc::alloc_zeroed, sync::Arc};
 use core::{alloc::Layout, any::Any, cell::UnsafeCell, mem, ptr::Unique};
 
-use crate::apic::get_cpu_count;
+use crate::{apic::get_cpu_count, mem::paging::align_down};
 
 pub mod buffer;
 pub mod io;
@@ -271,6 +271,13 @@ impl<T> PerCpu<T> {
     }
 }
 
+pub fn slice_into_bytes<T: Sized>(slice: &[T]) -> &[u8] {
+    let data = slice.as_ptr() as *const u8;
+    let size = slice.len() * core::mem::size_of::<T>();
+
+    unsafe { core::slice::from_raw_parts(data, size) }
+}
+
 pub struct StackHelper<'a> {
     ptr: &'a mut u64,
 }
@@ -288,6 +295,30 @@ impl<'a> StackHelper<'a> {
         self.skip_by(core::mem::size_of::<T>() as u64);
 
         &mut *(*self.ptr as *mut T)
+    }
+
+    pub fn top(&self) -> u64 {
+        *self.ptr
+    }
+
+    pub unsafe fn write_slice<T: Sized>(&mut self, slice: &[T]) {
+        self.write_bytes(slice_into_bytes(slice));
+    }
+
+    pub fn align_down(&mut self) {
+        *self.ptr = align_down(*self.ptr, 16);
+    }
+
+    pub unsafe fn write<T: Sized>(&mut self, value: T) {
+        self.skip_by(core::mem::size_of::<T>() as u64);
+
+        (*self.ptr as *mut T).write(value);
+    }
+
+    pub unsafe fn write_bytes(&mut self, bytes: &[u8]) {
+        self.skip_by(bytes.len() as u64);
+
+        (*self.ptr as *mut u8).copy_from(bytes.as_ptr(), bytes.len());
     }
 }
 

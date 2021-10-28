@@ -297,15 +297,22 @@ pub fn launch() -> Result<()> {
     // Add some more files if the sysroot feature is enabled.
     #[cfg(feature = "sysroot")]
     {
+        macro_rules! include_bin {
+            ($name:expr => $path:expr) => {{
+                let file = bin.inode().touch(bin.clone(), $name)?;
+
+                static BYTES: &[u8] = include_bytes!($path);
+                file.inode().write_at(0x00, BYTES)?;
+            }};
+        }
+
         let lib = lookup_path(Path::new("/lib"))?;
 
-        static LD: &[u8] = include_bytes!("../../../../sysroot/system-root/usr/bin/ld");
+        include_bin!("ld" => "../../../../sysroot/system-root/usr/bin/ld");
+
         static LD_SO: &[u8] = include_bytes!("../../../../sysroot/system-root/usr/lib/ld.so");
 
-        let ld = bin.inode().touch(bin.clone(), "ld")?;
         let ldso = lib.inode().touch(lib.clone(), "ld.so")?;
-
-        ld.inode().write_at(0x00, LD)?;
         ldso.inode().write_at(0x00, LD_SO)?;
     }
 

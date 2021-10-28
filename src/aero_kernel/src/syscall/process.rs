@@ -71,19 +71,32 @@ pub fn fork() -> Result<usize, AeroSyscallError> {
 pub fn exec(
     path: usize,
     path_size: usize,
-    _args: usize,
-    _args_size: usize,
-    _envs: usize,
-    _envs_size: usize,
+    args: usize,
+    argc: usize,
+    envs: usize,
+    envc: usize,
 ) -> Result<usize, AeroSyscallError> {
     let path = validate_str(path as *const u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
     let path = Path::new(path);
 
     let executable = fs::lookup_path(path)?;
 
+    // NOTE: Neither args nor envs should be used after this point, the kernel
+    // now has owned copies in args and environment variables.
+    let argv = if argc > 0 {
+        Some(super::exec_args_from_slice(args, argc))
+    } else {
+        None
+    };
+    let envv = if envc > 0 {
+        Some(super::exec_args_from_slice(envs, envc))
+    } else {
+        None
+    };
+
     scheduler::get_scheduler()
         .current_task()
-        .exec(executable)
+        .exec(executable, argv, envv)
         .expect("task: failed to exec task");
 
     unreachable!()

@@ -22,7 +22,8 @@ pub mod round_robin;
 
 use alloc::sync::Arc;
 
-use crate::{fs::cache::DirCacheItem, utils::sync::Mutex};
+use crate::utils::sync::Mutex;
+use crate::{fs::cache::DirCacheItem, syscall::ExecArgs};
 
 use spin::Once;
 
@@ -101,8 +102,11 @@ impl Scheduler {
     }
 
     #[inline]
-    pub fn exec(&self, executable: DirCacheItem) {
-        self.inner.current_task().exec(executable).unwrap();
+    pub fn exec(&self, executable: DirCacheItem, argv: Option<ExecArgs>, envv: Option<ExecArgs>) {
+        self.inner
+            .current_task()
+            .exec(executable, argv, envv)
+            .unwrap();
     }
 
     #[inline]

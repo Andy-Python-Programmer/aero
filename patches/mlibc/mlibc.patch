@@ -1,4 +1,4 @@
-From 015fd40be34d1301492579058e185dbdbf3a8179 Mon Sep 17 00:00:00 2001
+From 3e8e7b3fa302e36bc34dcbd84b6e90da324de42d Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -8,12 +8,13 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  .gitignore                                  |   1 +
  abis/aero/auxv.h                            |  13 ++
  meson.build                                 |   4 +
+ options/rtdl/generic/main.cpp               |   8 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 ++
- sysdeps/aero/generic/aero.cc                | 116 ++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 123 ++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++++
- sysdeps/aero/generic/filesystem.cc          |  74 ++++++++++++
+ sysdeps/aero/generic/filesystem.cc          |  74 +++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
- sysdeps/aero/generic/thread.cc              |  42 +++++++
+ sysdeps/aero/generic/thread.cc              |  42 ++++++
  sysdeps/aero/generic/thread_entry.S         |   8 ++
  sysdeps/aero/include/abi-bits/abi.h         |   1 +
  sysdeps/aero/include/abi-bits/auxv.h        |   1 +
@@ -40,10 +41,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 125 ++++++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 137 ++++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
- sysdeps/aero/meson.build                    |  60 ++++++++++
- 38 files changed, 518 insertions(+)
+ sysdeps/aero/meson.build                    |  60 +++++++++
+ 39 files changed, 540 insertions(+), 5 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -125,6 +126,43 @@ index ae0e7cf..72e25a6 100644
  elif host_machine.system() == 'managarm'
  	# TODO: Adopt the include_directories() commands from the managarm meson.build.
  	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
+diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
+index 1521779..b974215 100644
+--- a/options/rtdl/generic/main.cpp
++++ b/options/rtdl/generic/main.cpp
+@@ -118,9 +118,10 @@ extern "C" [[gnu::alias("dl_debug_state"), gnu::visibility("default")]] void _dl
+ [[ gnu::visibility("default") ]] DebugInterface *_dl_debug_addr = &globalDebugInterface;
+ 
+ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
+-	if(logEntryExit)
+-		mlibc::infoLogger() << "Entering ld.so" << frg::endlog;
++	mlibc::infoLogger() << "Entering ld.so" << frg::endlog;
++	mlibc::infoLogger() << "Setting entry stack" << frg::endlog;
+ 	entryStack = entry_stack;
++	// mlibc::infoLogger() << "Runtime TLS address: " << &runtimeTlsMap << frg::endlog;
+ 	runtimeTlsMap.initialize();
+ 
+ 	void *phdr_pointer = 0;
+@@ -134,11 +135,9 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
+ #ifndef MLIBC_STATIC_BUILD
+ 	auto ldso_base = reinterpret_cast<uintptr_t>(_DYNAMIC)
+ 			- reinterpret_cast<uintptr_t>(_GLOBAL_OFFSET_TABLE_[0]);
+-	if(logStartup) {
+ 		mlibc::infoLogger() << "ldso: Own base address is: 0x"
+ 				<< frg::hex_fmt(ldso_base) << frg::endlog;
+ 		mlibc::infoLogger() << "ldso: Own dynamic section is at: " << _DYNAMIC << frg::endlog;
+-	}
+ 
+ // on aarch64 these lines corrupt unrelated GOT entries (entries for ld.so functions)
+ #ifdef __x86_64__
+@@ -211,7 +210,6 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
+ 	__ensure(phdr_pointer);
+ 	__ensure(entry_pointer);
+ 
+-	if(logStartup)
+ 		mlibc::infoLogger() << "ldso: Executable PHDRs are at " << phdr_pointer
+ 				<< frg::endlog;
+ 
 diff --git a/sysdeps/aero/crt-x86_64/crt0.S b/sysdeps/aero/crt-x86_64/crt0.S
 new file mode 100644
 index 0000000..190b5a0
@@ -141,10 +179,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..c328f5b
+index 0000000..558a260
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,123 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -160,9 +198,9 @@ index 0000000..c328f5b
 +#define ARCH_GET_GS		0x1004
 +
 +namespace mlibc {
-+int sys_futex_tid() UNIMPLEMENTED
-+int sys_futex_wait(int *pointer, int expected) UNIMPLEMENTED
-+int sys_futex_wake(int *pointer) UNIMPLEMENTED
++int sys_futex_tid() UNIMPLEMENTED("sys_futex_tid")
++int sys_futex_wait(int *pointer, int expected) UNIMPLEMENTED("sys_futex_wait")
++int sys_futex_wake(int *pointer) UNIMPLEMENTED("sys_futex_wake")
 +
 +int sys_tcb_set(void* pointer) {
 +    ssize_t res = syscall(SYS_ARCH_PRCTL, ARCH_SET_FS, (uint64_t)pointer);
@@ -188,8 +226,13 @@ index 0000000..c328f5b
 +    return syscall(SYS_MUNMAP, (uint64_t)address, size);
 +}
 +
-+int sys_anon_allocate(size_t size, void **pointer) UNIMPLEMENTED
-+int sys_anon_free(void *pointer, size_t size) UNIMPLEMENTED
++int sys_anon_allocate(size_t size, void **pointer) {
++    return sys_vm_map(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0, pointer);
++}
++
++int sys_anon_free(void *pointer, size_t size) {
++    return sys_vm_unmap(pointer, size);
++}
 +
 +void sys_libc_panic() {
 +	sys_libc_log("libc panic!");
@@ -197,7 +240,9 @@ index 0000000..c328f5b
 +	for(;;);
 +}
 +
-+void sys_libc_log(const char* msg) { }
++void sys_libc_log(const char* msg) {
++    syscalln2(SYS_LOG, (unsigned long long)msg, strlen(msg));
++}
 +
 +#ifndef MLIBC_BUILDING_RTDL
 +
@@ -207,23 +252,23 @@ index 0000000..c328f5b
 +	__builtin_unreachable();
 +}
 +
-+pid_t sys_getpid() UNIMPLEMENTED
-+pid_t sys_getppid() UNIMPLEMENTED
++pid_t sys_getpid() UNIMPLEMENTED("sys_getpid")
++pid_t sys_getppid() UNIMPLEMENTED("sys_getppid")
 +
-+int sys_clock_get(int clock, time_t *secs, long *nanos) UNIMPLEMENTED
-+int sys_getcwd(char *buffer, size_t size) UNIMPLEMENTED
++int sys_clock_get(int clock, time_t *secs, long *nanos) UNIMPLEMENTED("sys_clock_get")
++int sys_getcwd(char *buffer, size_t size) UNIMPLEMENTED("sys_getcwd")
 +
-+int sys_chdir(const char *path) UNIMPLEMENTED
-+int sys_sleep(time_t* sec, long* nanosec) UNIMPLEMENTED
++int sys_chdir(const char *path) UNIMPLEMENTED("sys_chdir")
++int sys_sleep(time_t* sec, long* nanosec) UNIMPLEMENTED("sys_sleep")
 +
-+uid_t sys_getuid() UNIMPLEMENTED
-+uid_t sys_geteuid() UNIMPLEMENTED
++uid_t sys_getuid() UNIMPLEMENTED("sys_getuid")
++uid_t sys_geteuid() UNIMPLEMENTED("sys_geteuid")
 +
-+int sys_setuid(uid_t uid) UNIMPLEMENTED
-+int sys_seteuid(uid_t euid) UNIMPLEMENTED
++int sys_setuid(uid_t uid) UNIMPLEMENTED("sys_setuid")
++int sys_seteuid(uid_t euid) UNIMPLEMENTED("sys_seteuid")
 +
-+gid_t sys_getgid() UNIMPLEMENTED
-+gid_t sys_getegid() UNIMPLEMENTED
++gid_t sys_getgid() UNIMPLEMENTED("sys_getgid")
++gid_t sys_getegid() UNIMPLEMENTED("sys_getegid")
 +
 +int sys_setgid(gid_t gid) {
 +	mlibc::infoLogger() << "mlibc: sys_setgid is a stub" << frg::endlog;
@@ -235,15 +280,15 @@ index 0000000..c328f5b
 +	return 0;
 +}
 +
-+void sys_yield() UNIMPLEMENTED
++void sys_yield() UNIMPLEMENTED("sys_yield")
 +
-+int sys_clone(void *entry, void *user_arg, void *tcb, pid_t *tid_out) UNIMPLEMENTED
++int sys_clone(void *entry, void *user_arg, void *tcb, pid_t *tid_out) UNIMPLEMENTED("sys_clone")
 +
 +void sys_thread_exit() {
 +	__builtin_unreachable();
 +}
 +
-+int sys_waitpid(pid_t pid, int *status, int flags, pid_t *ret_pid) UNIMPLEMENTED
++int sys_waitpid(pid_t pid, int *status, int flags, pid_t *ret_pid) UNIMPLEMENTED("sys_waitpid")
 +int sys_fork(pid_t *child) {
 +    ssize_t ret = syscall(SYS_FORK);
 +
@@ -256,8 +301,8 @@ index 0000000..c328f5b
 +    return 0;
 +}
 +
-+int sys_execve(const char *path, char *const argv[], char *const envp[]) UNIMPLEMENTED
-+int sys_getentropy(void *buffer, size_t length) UNIMPLEMENTED
++int sys_execve(const char *path, char *const argv[], char *const envp[]) UNIMPLEMENTED("sys_execve")
++int sys_getentropy(void *buffer, size_t length) UNIMPLEMENTED("sys_getentropy")
 +
 +#endif
 +} // namespace mlibc
@@ -301,7 +346,7 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..f9a79d3
+index 0000000..e14c155
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
 @@ -0,0 +1,74 @@
@@ -318,7 +363,7 @@ index 0000000..f9a79d3
 +#include <mlibc/debug.hpp>
 +
 +namespace mlibc {
-+int sys_write(int fd, const void* buffer, size_t count, ssize_t* written){
++int sys_write(int fd, const void* buffer, size_t count, ssize_t* written) {
 +	long ret = syscall(SYS_WRITE, fd, (uintptr_t)buffer, count);
 +
 +	if(ret < 0)
@@ -340,9 +385,9 @@ index 0000000..f9a79d3
 +	return 0;
 +}
 +
-+int sys_pwrite(int fd, const void* buffer, size_t count, off_t off, ssize_t* written) UNIMPLEMENTED
-+int sys_pread(int fd, void *buf, size_t count, off_t off, ssize_t *bytes_read)  UNIMPLEMENTED
-+int sys_seek(int fd, off_t offset, int whence, off_t *new_offset)  UNIMPLEMENTED
++int sys_pwrite(int fd, const void* buffer, size_t count, off_t off, ssize_t* written) UNIMPLEMENTED("sys_pwrite")
++int sys_pread(int fd, void *buf, size_t count, off_t off, ssize_t *bytes_read)  UNIMPLEMENTED("sys_pread")
++int sys_seek(int fd, off_t offset, int whence, off_t *new_offset)  UNIMPLEMENTED("sys_seek")
 +
 +int sys_open(const char* filename, int flags, int* fd){
 +	long ret = syscall(SYS_OPEN, (uintptr_t)filename, flags);
@@ -355,29 +400,29 @@ index 0000000..f9a79d3
 +	return 0; 
 +}
 +
-+int sys_close(int fd) UNIMPLEMENTED
-+int sys_access(const char* filename, int mode) UNIMPLEMENTED
-+int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) UNIMPLEMENTED
-+int sys_ioctl(int fd, unsigned long request, void *arg, int *result) UNIMPLEMENTED
-+int sys_isatty(int fd)  UNIMPLEMENTED
-+int sys_tcgetattr(int fd, struct termios *attr) UNIMPLEMENTED
-+int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) UNIMPLEMENTED
-+int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) UNIMPLEMENTED
-+int sys_mkdir(const char* path) UNIMPLEMENTED
-+int sys_rmdir(const char* path) UNIMPLEMENTED
-+int sys_link(const char* srcpath, const char* destpath) UNIMPLEMENTED
-+int sys_unlink(const char* path) UNIMPLEMENTED
-+int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) UNIMPLEMENTED
-+int sys_open_dir(const char* path, int* handle) UNIMPLEMENTED
-+int sys_rename(const char* path, const char* new_path) UNIMPLEMENTED
-+int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) UNIMPLEMENTED
-+int sys_dup(int fd, int flags, int* newfd) UNIMPLEMENTED
-+int sys_dup2(int fd, int flags, int newfd) UNIMPLEMENTED
-+int sys_fcntl(int fd, int request, va_list args, int* result) UNIMPLEMENTED
++int sys_close(int fd) UNIMPLEMENTED("sys_close")
++int sys_access(const char* filename, int mode) UNIMPLEMENTED("sys_access")
++int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) UNIMPLEMENTED("sys_stat")
++int sys_ioctl(int fd, unsigned long request, void *arg, int *result) UNIMPLEMENTED("sys_ioctl")
++int sys_isatty(int fd)  UNIMPLEMENTED("sys_isatty")
++int sys_tcgetattr(int fd, struct termios *attr) UNIMPLEMENTED("sys_tcgetattr")
++int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) UNIMPLEMENTED("sys_tcsetattr")
++int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) UNIMPLEMENTED("sys_poll")
++int sys_mkdir(const char* path) UNIMPLEMENTED("sys_mkdir")
++int sys_rmdir(const char* path) UNIMPLEMENTED("sys_rmdir")
++int sys_link(const char* srcpath, const char* destpath) UNIMPLEMENTED("sys_link")
++int sys_unlink(const char* path) UNIMPLEMENTED("sys_unlink")
++int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) UNIMPLEMENTED("sys_read_entries")
++int sys_open_dir(const char* path, int* handle) UNIMPLEMENTED("sys_open_dir")
++int sys_rename(const char* path, const char* new_path) UNIMPLEMENTED("sys_rename")
++int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) UNIMPLEMENTED("sys_readlink")
++int sys_dup(int fd, int flags, int* newfd) UNIMPLEMENTED("sys_dup")
++int sys_dup2(int fd, int flags, int newfd) UNIMPLEMENTED("sys_dup2")
++int sys_fcntl(int fd, int request, va_list args, int* result) UNIMPLEMENTED("sys_fcntl")
 +int sys_pselect(int nfds, fd_set* readfds, fd_set* writefds,
-+				fd_set *exceptfds, const struct timespec* timeout, const sigset_t* sigmask, int *num_events) UNIMPLEMENTED
-+int sys_chmod(const char *pathname, mode_t mode) UNIMPLEMENTED
-+int sys_pipe(int *fds, int flags) UNIMPLEMENTED
++				fd_set *exceptfds, const struct timespec* timeout, const sigset_t* sigmask, int *num_events) UNIMPLEMENTED("sys_pselect")
++int sys_chmod(const char *pathname, mode_t mode) UNIMPLEMENTED("sys_chmod")
++int sys_pipe(int *fds, int flags) UNIMPLEMENTED("sys_pipe")
 +} // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cc b/sysdeps/aero/generic/sockets.cc
 new file mode 100644
@@ -646,10 +691,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..2ae0ff9
+index 0000000..4875361
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,125 @@
+@@ -0,0 +1,137 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -667,10 +712,22 @@ index 0000000..2ae0ff9
 +#define SYS_MMAP        8
 +#define SYS_MUNMAP      9
 +#define SYS_ARCH_PRCTL  10
++#define SYS_GETDENTS    11
++#define SYS_GETCWD      12
++#define SYS_CHDIR       13
++#define SYS_MKDIR       14
++#define SYS_MKDIR_AT    15
++#define SYS_RMDIR       16
++#define SYS_EXEC        17
++#define SYS_LOG         18
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.
-+#define UNIMPLEMENTED   { syscall(314); __ensure(!"UNIMPLEMENTED function was called"); __builtin_unreachable(); }
++#define UNIMPLEMENTED(FUNCTION_NAME)  { \
++    syscall(314, FUNCTION_NAME, strlen(FUNCTION_NAME)); \
++    __ensure(!"UNIMPLEMENTED function was called"); \
++    __builtin_unreachable(); \
++}
 +
 +#ifdef __cplusplus
 +extern "C"

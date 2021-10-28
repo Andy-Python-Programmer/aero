@@ -25,12 +25,15 @@ use alloc::alloc::alloc_zeroed;
 use alloc::collections::linked_list::CursorMut;
 use alloc::collections::LinkedList;
 
+use xmas_elf::header;
+use xmas_elf::ElfFile;
+
+use crate::fs;
 use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
 
 use crate::utils::sync::Mutex;
-use xmas_elf::ElfFile;
 
 impl From<MMapProt> for PageTableFlags {
     fn from(e: MMapProt) -> Self {
@@ -54,6 +57,13 @@ enum UnmapResult {
     Full,
     Start,
     End,
+}
+
+pub struct LoadedBinary<'header> {
+    pub elf: ElfFile<'header>,
+
+    pub entry_point: VirtAddr,
+    pub base_addr: VirtAddr,
 }
 
 #[derive(Clone)]
@@ -595,11 +605,11 @@ impl VmProtected {
         success
     }
 
-    fn load_bin(&mut self, bin: DirCacheItem) -> ElfFile<'static> {
+    fn load_bin(&mut self, bin: DirCacheItem) -> LoadedBinary<'static> {
         let size_align = Size4KiB::SIZE as usize;
 
         let buffer = unsafe {
-            let layout = Layout::from_size_align_unchecked(size_align, 4096);
+            let layout = Layout::from_size_align_unchecked(size_align, size_align);
             let raw = alloc_zeroed(layout);
 
             core::slice::from_raw_parts_mut(raw, size_align)
@@ -611,8 +621,20 @@ impl VmProtected {
 
         let elf = ElfFile::new(buffer).unwrap();
 
-        log::debug!("entry point: {:#x}", elf.header.pt2.entry_point());
+        let load_offset = VirtAddr::new(
+            if elf.header.pt2.type_().as_type() == header::Type::SharedObject {
+                0x7500_0000_0000u64
+            } else {
+                0u64
+            },
+        );
+
+        let mut entry_point = load_offset + elf.header.pt2.entry_point();
+
+        log::debug!("entry point: {:#x}", entry_point);
         log::debug!("entry point type: {:?}", elf.header.pt2.type_().as_type());
+
+        let mut base_addr = VirtAddr::zero();
 
         for header in elf.program_iter() {
             let header_type = header
@@ -622,12 +644,19 @@ impl VmProtected {
             let header_flags = header.flags();
 
             if header_type == xmas_elf::program::Type::Load {
-                let virtual_start = VirtAddr::new(header.virtual_addr()).align_down(Size4KiB::SIZE);
+                let virtual_start = VirtAddr::new(header.virtual_addr()).align_down(Size4KiB::SIZE)
+                    + load_offset.as_u64();
+
+                if base_addr == VirtAddr::zero() {
+                    base_addr = virtual_start;
+                }
 
                 let virtual_end = VirtAddr::new(header.virtual_addr() + header.mem_size())
-                    .align_up(Size4KiB::SIZE);
+                    .align_up(Size4KiB::SIZE)
+                    + load_offset.as_u64();
 
-                let virtual_fend = VirtAddr::new(header.virtual_addr() + header.file_size());
+                let virtual_fend = VirtAddr::new(header.virtual_addr() + header.file_size())
+                    + load_offset.as_u64();
 
                 let len = virtual_fend - virtual_start;
                 let file_offset = align_down(header.offset(), Size4KiB::SIZE);
@@ -655,7 +684,7 @@ impl VmProtected {
                         file_offset as usize,
                         Some(bin.clone()),
                     )
-                    .expect("Failed to memory map ELF header")
+                    .expect("load_bin: failed to memory map ELF header")
                     + align_up(len, Size4KiB::SIZE);
 
                 if virtual_fend < virtual_end {
@@ -672,10 +701,19 @@ impl VmProtected {
                 }
             } else if header_type == xmas_elf::program::Type::Tls {
             } else if header_type == xmas_elf::program::Type::Interp {
+                let ld = fs::lookup_path(fs::Path::new("/lib/ld.so")).unwrap();
+
+                let res = self.load_bin(ld);
+                entry_point = res.entry_point;
             }
         }
 
-        elf
+        LoadedBinary {
+            elf,
+            entry_point,
+
+            base_addr,
+        }
     }
 
     fn fork_from(&mut self, parent: &Vm) {
@@ -723,7 +761,7 @@ impl Vm {
 
     /// Mapping the provided `bin` file into the VM.
     #[inline]
-    pub(super) fn load_bin(&self, bin: DirCacheItem) -> ElfFile {
+    pub(super) fn load_bin(&self, bin: DirCacheItem) -> LoadedBinary {
         self.inner.lock().load_bin(bin)
     }
 

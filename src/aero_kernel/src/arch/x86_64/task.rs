@@ -20,13 +20,14 @@
 use alloc::alloc::alloc_zeroed;
 
 use aero_syscall::{MMapFlags, MMapProt};
-use xmas_elf::ElfFile;
+use alloc::vec::Vec;
 
-use core::{alloc::Layout, ptr::Unique};
+use core::alloc::Layout;
+use core::ptr::Unique;
 
 use crate::mem::paging::*;
-use crate::syscall::{RegistersFrame, SyscallFrame};
-use crate::userland::vm::Vm;
+use crate::syscall::{ExecArgs, RegistersFrame, SyscallFrame};
+use crate::userland::vm::{LoadedBinary, Vm};
 use crate::utils::StackHelper;
 
 use super::controlregs;
@@ -53,6 +54,16 @@ struct Context {
     rbx: u64,
     rflags: u64,
     rip: u64,
+}
+
+#[repr(u64)]
+#[derive(Debug, Copy, Clone)]
+pub enum AuxvType {
+    AtNull = 0,
+    AtPhdr = 3,
+    AtPhEnt = 4,
+    AtPhNum = 5,
+    AtEntry = 9,
 }
 
 pub struct ArchTask {
@@ -178,7 +189,14 @@ impl ArchTask {
         })
     }
 
-    pub fn exec(&mut self, vm: &Vm, executable: &ElfFile) -> Result<(), MapToError<Size4KiB>> {
+    pub fn exec(
+        &mut self,
+        vm: &Vm,
+        loaded_binary: LoadedBinary,
+
+        argv: Option<ExecArgs>,
+        envv: Option<ExecArgs>,
+    ) -> Result<(), MapToError<Size4KiB>> {
         let address_space = if self.rpl == Ring::Ring0 {
             // If the kernel task wants to execute an executable, then we have to
             // create a new address space for it as we cannot use the kernel's address space
@@ -190,7 +208,7 @@ impl ArchTask {
             // page entries.
             //
             // TODO: deallocate the user address space's page entries.
-            AddressSpace::this()
+            AddressSpace::new()?
         };
 
         // mmap the userland stack...
@@ -208,14 +226,69 @@ impl ArchTask {
         self.context = Unique::dangling();
         self.address_space = address_space; // Update the address space reference
 
+        self.fs_base = VirtAddr::zero();
+
         extern "C" {
             fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
         }
 
-        let entry_point = VirtAddr::new(executable.header.pt2.entry_point());
+        let mut stack_addr = 0x8000_0000_0000;
+        let mut stack = StackHelper::new(&mut stack_addr);
+
+        let mut envp = Vec::new();
+        let mut argp = Vec::new();
+
+        envv.map(|envv| envp = envv.push_into_stack(&mut stack));
+        argv.map(|argv| argp = argv.push_into_stack(&mut stack));
+
+        stack.align_down();
+
+        let size = envp.len() + 1 + argp.len() + 1 + 1;
+
+        if size % 2 == 1 {
+            unsafe {
+                stack.write(0u64);
+            }
+        }
+
+        let p2_header = loaded_binary.elf.header.pt2;
 
         unsafe {
-            jump_userland_exec(VirtAddr::new(0x8000_0000_0000), entry_point, 0x200);
+            let hdr: [(AuxvType, usize); 4] = [
+                (
+                    AuxvType::AtPhdr,
+                    (p2_header.ph_offset() + loaded_binary.base_addr.as_u64()) as usize,
+                ),
+                (AuxvType::AtPhEnt, p2_header.ph_entry_size() as usize),
+                (AuxvType::AtPhNum, p2_header.ph_count() as usize),
+                (AuxvType::AtEntry, p2_header.entry_point() as usize),
+            ];
+
+            stack.write(0usize); // Make it 16 bytes aligned
+            stack.write(AuxvType::AtNull);
+            stack.write(hdr);
+        }
+
+        // struct ExecStackData {
+        //     argc: isize,
+        //     argv: *const *const u8,
+        //     envv: *const *const u8,
+        // }
+        unsafe {
+            stack.write(0u64);
+            stack.write_slice(envp.as_slice());
+            stack.write(0u64);
+            stack.write_slice(argp.as_slice());
+            stack.write(argp.len());
+        }
+
+        core::mem::drop(envp);
+        core::mem::drop(argp);
+
+        assert_eq!(stack.top() % 16, 0);
+
+        unsafe {
+            jump_userland_exec(VirtAddr::new(stack.top()), loaded_binary.entry_point, 0x200);
         }
 
         Ok(())

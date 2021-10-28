@@ -19,6 +19,7 @@
 
 use alloc::string::String;
 use alloc::sync::Arc;
+
 use spin::RwLock;
 
 use core::cell::UnsafeCell;
@@ -30,6 +31,7 @@ use crate::mem::paging::*;
 
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
+use crate::syscall::ExecArgs;
 
 use intrusive_collections::{intrusive_adapter, LinkedListLink};
 
@@ -180,13 +182,19 @@ impl Task {
         this
     }
 
-    pub fn exec(&self, executable: DirCacheItem) -> Result<(), MapToError<Size4KiB>> {
+    pub fn exec(
+        &self,
+        executable: DirCacheItem,
+
+        argv: Option<ExecArgs>,
+        envv: Option<ExecArgs>,
+    ) -> Result<(), MapToError<Size4KiB>> {
         let vm = self.vm();
 
         vm.clear();
-        let executable = vm.load_bin(executable);
+        let loaded_binary = vm.load_bin(executable);
 
-        self.arch_task_mut().exec(vm, &executable)
+        self.arch_task_mut().exec(vm, loaded_binary, argv, envv)
     }
 
     #[inline]

@@ -41,11 +41,16 @@
 //! | 17     | exec                    |
 //! | 18     | log                     |
 
+use core::mem::MaybeUninit;
+
 use aero_syscall::prelude::*;
 
 pub mod fs;
 pub mod process;
 pub mod time;
+
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 pub use fs::*;
 pub use process::*;
@@ -54,7 +59,55 @@ pub use time::*;
 use crate::arch::interrupts::interrupt_stack;
 use crate::arch::{gdt::GdtEntryType, interrupts};
 
-use crate::utils::io;
+use crate::utils::{io, StackHelper};
+
+pub struct ExecArgs {
+    inner: Vec<Box<[u8]>>,
+}
+
+impl ExecArgs {
+    pub fn push_into_stack(&self, stack: &mut StackHelper) -> Vec<u64> {
+        let mut tops = Vec::with_capacity(self.inner.len());
+
+        for slice in self.inner.iter() {
+            unsafe {
+                stack.write(0u8);
+                stack.write_bytes(slice);
+            }
+
+            tops.push(stack.top());
+        }
+
+        tops
+    }
+}
+
+pub fn exec_args_from_slice(args: usize, size: usize) -> ExecArgs {
+    // NOTE: Arguments must be moved into kernel space before we utilize them.
+    //
+    // struct SliceReference {
+    //    ptr: *const usize,
+    //    len: usize,
+    // }
+    let data = args as *const [usize; 2];
+    let slice = unsafe { core::slice::from_raw_parts(data, size) };
+
+    let mut result = Vec::new();
+
+    for inner in slice {
+        let mut boxed = Box::new_uninit_slice(inner[1]);
+        let ptr = inner[0] as *const MaybeUninit<u8>;
+
+        unsafe {
+            boxed.as_mut_ptr().copy_from(ptr, inner[1]);
+
+            let inner_slice = boxed.assume_init();
+            result.push(inner_slice);
+        }
+    }
+
+    ExecArgs { inner: result }
+}
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -86,7 +139,7 @@ pub struct RegistersFrame {
 }
 
 #[no_mangle]
-extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFrame) {
+extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame) {
     let a = stack.rax as usize;
     let b = stack.rdi as usize;
     let c = stack.rsi as usize;
@@ -109,6 +162,9 @@ extern "C" fn __inner_syscall(_sys: &mut SyscallFrame, stack: &mut RegistersFram
         SYS_MUNMAP => process::munmap(b, c),
         SYS_EXEC => process::exec(b, c, d, e, f, g),
         SYS_LOG => process::log(b, c),
+        0x13A => {
+            panic!("RIP={}", sys.rip);
+        }
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),

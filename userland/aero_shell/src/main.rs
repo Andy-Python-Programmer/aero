@@ -142,6 +142,23 @@ fn main() -> Result<(), AeroSyscallError> {
                 }
             } else if command == "shutdown" {
                 sys_shutdown();
+            } else if command == "malloc" {
+                if let Some(size) = command_iter.next() {
+                    let size = size.parse::<usize>().expect("malloc: invalid operand type");
+                    let address = sys_mmap(
+                        0,
+                        size,
+                        MMapProt::PROT_READ | MMapProt::PROT_WRITE,
+                        MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_PRIVATE,
+                        0,
+                        0,
+                    )?;
+
+                    println!(
+                        "malloc: allocated {}B of memory at address {:#x}",
+                        size, address
+                    );
+                }
             } else if command != "\u{0}" {
                 sys_exec(command)?;
             }

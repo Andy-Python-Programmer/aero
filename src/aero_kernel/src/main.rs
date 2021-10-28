@@ -155,7 +155,7 @@ fn kernel_main_thread() {
         logger::set_rendy_debug(false);
     }
 
-    userland::run();
+    userland::run().unwrap();
 
     unreachable!()
 }
