@@ -130,8 +130,6 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     drivers::uart_16550::init();
     logger::init();
 
-    rendy::init(framebuffer_tag);
-
     let (kernel_base, kernel_end) = {
         let kernel_slice: &[u8] = unsafe {
             core::slice::from_raw_parts(
@@ -190,6 +188,8 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
 
     alloc::init_heap(&mut offset_table).expect("failed to initialize the kernel heap");
     log::info!("loaded heap");
+
+    rendy::init(framebuffer_tag);
 
     interrupts::init();
     log::info!("loaded IDT");

@@ -21,6 +21,10 @@ pub mod alloc;
 pub mod paging;
 pub mod pti;
 
+use core::alloc::Layout;
+
+use ::alloc::boxed::Box;
+
 use crate::mem::paging::*;
 
 use self::paging::{active_level_4_table, FRAME_ALLOCATOR};
@@ -115,6 +119,18 @@ impl AddressSpace {
     pub fn offset_page_table(&mut self) -> OffsetPageTable {
         unsafe { OffsetPageTable::new(self.page_table(), PHYSICAL_MEMORY_OFFSET) }
     }
+}
+
+pub fn alloc_boxed_buffer<T>(size: usize) -> Box<[T]> {
+    if size == 0 {
+        return <Box<[T]>>::default();
+    }
+
+    let layout = unsafe { Layout::from_size_align_unchecked(size, 8) };
+    let ptr = unsafe { ::alloc::alloc::alloc_zeroed(layout) as *mut T };
+    let slice_ptr = core::ptr::slice_from_raw_parts_mut(ptr, size);
+
+    unsafe { Box::from_raw(slice_ptr) }
 }
 
 /// Creates a Rust string from the provided C string.

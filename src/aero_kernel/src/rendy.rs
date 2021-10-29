@@ -22,49 +22,74 @@ use core::fmt::Write;
 use core::fmt;
 use core::u8;
 
-use font8x8::UnicodeFonts;
+use alloc::boxed::Box;
 
 use spin::Once;
+
+use crate::mem;
 
 use stivale_boot::v2::StivaleFramebufferTag;
 
 use crate::utils::sync::Mutex;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
-pub struct Color(u32);
+static FONT: &[u8] = include_bytes!("../../font.bin");
 
-impl Color {
-    pub const WHITE: Self = Self::from_hex(0xFFFFFF);
-    pub const BLACK: Self = Self::from_hex(0x000000);
+// This is an example of how the rendered screen will look like:
+//
+// ```text
+// -----------------------------------------------------|
+//                         YPAD                         |
+// -----------------------------------------------------|
+//  MARGIN | XPAD |        DATA         | XPAD | MARGIN |
+// -----------------------------------------------------|
+//  MARGIN | XPAD |        DATA         | XPAD | MARGIN |
+// -----------------------------------------------------|
+//                         YPAD                         |
+// -----------------------------------------------------|
+// ```
 
-    #[inline(always)]
-    pub const fn from_hex(hex: u32) -> Self {
-        Self(hex)
-    }
+const DEFAULT_FONT_WIDTH: usize = 8;
+const DEFAULT_FONT_HEIGHT: usize = 16;
 
-    #[inline(always)]
-    pub const fn inner(&self) -> u32 {
-        self.0
-    }
+const DEFAULT_MARGIN: usize = 64 / 2;
+
+/// The amount of VGA font glyphs.
+const VGA_FONT_GLYPHS: usize = 256;
+
+/// Constant describing the number of columns padded at the left
+/// and right of the screen.
+const X_PAD: usize = 1;
+
+const DEFAULT_BACKGROUND: u32 = u32::MAX;
+const DWORD_SIZE: usize = core::mem::size_of::<u32>();
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+struct Character {
+    char: char,
+    fg: u32,
+    bg: u32,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct QueueCharacter {
+    char: Character,
+    x: usize,
+    y: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ColorCode(Color, Color);
+pub struct ColorCode(u32, u32);
 
 impl ColorCode {
-    #[inline(always)]
-    pub fn new(foreground: Color, background: Color) -> ColorCode {
+    pub fn new(foreground: u32, background: u32) -> ColorCode {
         ColorCode(foreground, background)
     }
 
-    #[inline(always)]
-    pub fn get_foreground(&self) -> Color {
+    pub fn get_foreground(&self) -> u32 {
         self.0
     }
 
-    #[inline(always)]
-    pub fn get_background(&self) -> Color {
+    pub fn get_background(&self) -> u32 {
         self.1
     }
 }
@@ -104,119 +129,388 @@ pub struct FrameBufferInfo {
     pub stride: usize,
 }
 
-/// Debug renderer used by the kernel and the bootloader to log messages to the
-/// framebuffer queried from the BIOS or UEFI firmware.
 pub struct DebugRendy {
     /// The raw framebuffer pointer queried from the BIOS or UEFI firmware represented
     /// as a [u8] slice.
-    buffer: u64,
+    buffer: &'static mut [u32],
     info: FrameBufferInfo,
+
     x_pos: usize,
     y_pos: usize,
+
+    old_x_pos: usize,
+    old_y_pos: usize,
+
+    rows: usize,
+    cols: usize,
+
     color: ColorCode,
+
+    queue: Box<[QueueCharacter]>,
+    grid: Box<[Character]>,
+    map: Box<[Option<*mut QueueCharacter>]>,
+
+    vga_font_bool: Box<[bool]>,
+
+    queue_cursor: usize,
+
+    glyph_width: usize,
+    glyph_height: usize,
+
+    offset_x: usize,
+    offset_y: usize,
 }
 
 impl DebugRendy {
     /// Create a new debug renderer with the default foreground color set to white and
     /// background color set to black.
-    ///
-    /// **Note**: The debug renderer should **not** be used after GUI has started. Use the
-    /// respective VGA functions instead.
-    #[inline]
-    pub fn new(buffer: u64, info: FrameBufferInfo) -> Self {
-        Self {
+    pub fn new(buffer: &'static mut [u32], info: FrameBufferInfo) -> Self {
+        let glyph_width = DEFAULT_FONT_WIDTH;
+        let glyph_height = DEFAULT_FONT_HEIGHT;
+
+        let offset_x =
+            DEFAULT_MARGIN + ((info.horizontal_resolution - DEFAULT_MARGIN * 2) % glyph_width) / 2;
+
+        let offset_y =
+            DEFAULT_MARGIN + ((info.horizontal_resolution - DEFAULT_MARGIN * 2) % glyph_height) / 2;
+
+        let cols = (info.horizontal_resolution - DEFAULT_MARGIN * 2) / glyph_width;
+        let rows = (info.vertical_resolution - DEFAULT_MARGIN * 2) / glyph_height;
+
+        let grid_size = rows * cols * core::mem::size_of::<Character>();
+        let grid = mem::alloc_boxed_buffer::<Character>(grid_size);
+
+        let queue_size = rows * cols * core::mem::size_of::<QueueCharacter>();
+        let queue = mem::alloc_boxed_buffer::<QueueCharacter>(queue_size);
+
+        let map_size = rows * cols * core::mem::size_of::<*const QueueCharacter>();
+        let map = mem::alloc_boxed_buffer::<Option<*mut QueueCharacter>>(map_size);
+
+        let vga_font_bool_size = VGA_FONT_GLYPHS
+            * DEFAULT_FONT_HEIGHT
+            * DEFAULT_FONT_WIDTH
+            * core::mem::size_of::<bool>();
+
+        let mut vga_font_bool = mem::alloc_boxed_buffer::<bool>(vga_font_bool_size);
+
+        for i in 0..VGA_FONT_GLYPHS {
+            // Each glyph is a bitmap:
+            let glyph = &FONT[i * DEFAULT_FONT_HEIGHT] as *const u8;
+
+            for y in 0..DEFAULT_FONT_HEIGHT {
+                // NOTE: the characters in VGA fonts are always one byte wide.
+                // 9 dot wide fonts have 8 dots and one empty column, except
+                // characters 0xC0-0xDF replicate column 9.
+                for x in 0..8 {
+                    let offset =
+                        i * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH + y * DEFAULT_FONT_WIDTH + x;
+
+                    unsafe {
+                        if (*glyph.offset(y as isize) & (0x80 >> x)) != 0 {
+                            vga_font_bool[offset] = true;
+                        } else {
+                            vga_font_bool[offset] = false;
+                        }
+                    }
+                }
+
+                // Fill columns above 8 like VGA Line Graphics Mode does:
+                for x in 8..DEFAULT_FONT_WIDTH {
+                    let offset =
+                        i * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH + y * DEFAULT_FONT_WIDTH + x;
+
+                    if i >= 0xC0 && i <= 0xDF {
+                        unsafe {
+                            vga_font_bool[offset] = (*glyph.offset(y as isize) & 1) != 0;
+                        }
+                    } else {
+                        vga_font_bool[offset] = false;
+                    }
+                }
+            }
+        }
+
+        let mut this = Self {
             buffer,
             info,
+
             x_pos: 0,
             y_pos: 0,
-            color: ColorCode::new(Color::WHITE, Color::BLACK),
+
+            old_x_pos: 0,
+            old_y_pos: 0,
+
+            rows,
+            cols,
+
+            color: ColorCode::new(u32::MAX, u32::MIN),
+
+            queue,
+            grid,
+            map,
+
+            glyph_height,
+            glyph_width,
+
+            offset_x,
+            offset_y,
+
+            vga_font_bool,
+
+            queue_cursor: 0,
+        };
+
+        this.generate_canvas();
+
+        this.clear();
+        this.double_buffer_flush();
+
+        this
+    }
+
+    fn generate_canvas(&mut self) {
+        let width = self.info.horizontal_resolution;
+        let height = self.info.vertical_resolution;
+
+        for y in 0..height {
+            for x in 0..width {
+                self.plot_pixel(x, y, DEFAULT_BACKGROUND);
+            }
         }
     }
 
-    pub fn write_string(&mut self, string: &str) {
+    /// Plots a pixel at the given coordinates with the provided colour.
+    fn plot_pixel(&mut self, x: usize, y: usize, colour: u32) {
+        if x >= self.info.horizontal_resolution || y >= self.info.vertical_resolution {
+            return;
+        }
+
+        let offset = x + (self.info.stride / DWORD_SIZE) * y;
+        self.buffer[offset] = colour;
+    }
+
+    fn push_to_queue(&mut self, char: &Character, x: usize, y: usize) {
+        if x >= self.cols || y >= self.rows {
+            return;
+        }
+
+        let i = y * self.cols + x;
+        let item = self.map[i];
+
+        if item.is_none() {
+            if &self.grid[i] == char {
+                return;
+            }
+
+            let queue = &mut self.queue[self.queue_cursor];
+            self.queue_cursor += 1;
+
+            queue.x = x;
+            queue.y = y;
+
+            self.map[i] = Some(queue as *mut _);
+        }
+
+        let item = self.map[i];
+
+        unsafe {
+            (&mut *item.unwrap()).char = *char;
+        }
+    }
+
+    fn clear(&mut self) {
+        let char = Character {
+            char: ' ',
+            fg: self.color.get_foreground(),
+            bg: self.color.get_background(),
+        };
+
+        for i in 0..self.rows * self.cols {
+            self.push_to_queue(&char, i % self.cols, i / self.cols);
+        }
+
+        self.x_pos = X_PAD;
+        self.y_pos = 0;
+    }
+
+    fn write_string(&mut self, string: &str) {
         for char in string.chars() {
             self.write_character(char)
         }
+
+        self.double_buffer_flush();
     }
 
-    pub fn write_character(&mut self, char: char) {
+    fn draw_cursor(&mut self) {
+        let i = self.x_pos + self.y_pos * self.cols;
+        let mut char;
+
+        if self.map[i].is_some() {
+            unsafe {
+                char = (&mut *self.map[i].unwrap()).char;
+            }
+        } else {
+            char = self.grid[i];
+        }
+
+        let temp = char.fg;
+        char.fg = char.bg;
+        char.bg = temp;
+
+        self.plot_char(self.x_pos, self.y_pos, char);
+
+        if self.map[i].is_some() {
+            unsafe {
+                self.grid[i] = (&mut *self.map[i].unwrap()).char;
+            }
+
+            self.map[i] = None;
+        }
+    }
+
+    fn plot_char(&mut self, x: usize, y: usize, char: Character) {
+        if x >= self.cols || y >= self.rows {
+            return;
+        }
+
+        let x = self.offset_x + x * self.glyph_width;
+        let y = self.offset_y + y * self.glyph_height;
+
+        let glyph = unsafe {
+            self.vga_font_bool
+                .as_ptr()
+                .add(char.char as usize * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH)
+        };
+
+        // naming: fx,fy for font coordinates, gx,gy for glyph coordinates
+        for gy in 0..self.glyph_height {
+            let fb_line = unsafe {
+                self.buffer
+                    .as_mut_ptr()
+                    .add(x + (y + gy) * (self.info.stride / 4))
+            };
+
+            for fx in 0..DEFAULT_FONT_WIDTH {
+                let draw = unsafe { *glyph.add(gy * DEFAULT_FONT_WIDTH + fx) };
+
+                let bg = char.bg;
+                let fg = char.fg;
+
+                unsafe {
+                    if draw {
+                        *fb_line.add(fx) = fg;
+                    } else {
+                        *fb_line.add(fx) = bg;
+                    }
+                }
+            }
+        }
+    }
+
+    fn double_buffer_flush(&mut self) {
+        self.draw_cursor();
+
+        for i in 0..self.queue_cursor {
+            let queue = self.queue[i].clone();
+            let offset = queue.y * self.cols + queue.x;
+
+            if self.map[offset].is_none() {
+                continue;
+            }
+
+            self.plot_char(queue.x, queue.y, queue.char);
+
+            self.grid[offset] = queue.char;
+            self.map[offset] = None;
+        }
+
+        if self.old_x_pos != self.x_pos || self.old_y_pos != self.y_pos {
+            self.plot_char(
+                self.old_x_pos,
+                self.old_y_pos,
+                self.grid[self.old_x_pos + self.old_y_pos * self.cols],
+            );
+        }
+
+        self.old_x_pos = self.x_pos;
+        self.old_y_pos = self.y_pos;
+
+        self.queue_cursor = 0;
+    }
+
+    fn raw_put_char(&mut self, char: char) {
+        let char = Character {
+            char,
+            fg: self.color.get_foreground(),
+            bg: self.color.get_background(),
+        };
+
+        self.push_to_queue(&char, self.x_pos, self.y_pos);
+        self.x_pos += 1;
+
+        if self.x_pos == self.cols - X_PAD {
+            self.x_pos = X_PAD;
+            self.y_pos += 1;
+        }
+
+        if self.y_pos == self.rows {
+            self.x_pos = X_PAD;
+            self.y_pos -= 1;
+            self.scroll();
+        }
+    }
+
+    fn newline(&mut self) {
+        if self.y_pos == self.rows - 1 {
+            self.x_pos = X_PAD;
+            self.scroll();
+        } else {
+            self.y_pos += 1;
+            self.x_pos = X_PAD;
+        }
+    }
+
+    fn write_character(&mut self, char: char) {
         match char {
-            '\n' => self.new_line(),
-            '\r' => self.carriage_return(),
+            '\n' => self.newline(),
+            '\r' => {}
+
             _ => {
-                let char = font8x8::BASIC_FONTS.get(char).unwrap_or([0; 8]);
-
-                if self.x_pos >= self.width() {
-                    self.new_line();
-                }
-
-                if self.y_pos >= (self.height() - 16) {
-                    self.clear_screen()
-                }
-
-                self.put_bytes(&char);
+                self.raw_put_char(char);
             }
         }
     }
 
-    pub fn put_bytes(&mut self, bytes: &[u8]) {
-        for (y, byte) in bytes.iter().enumerate() {
-            for (x, bit) in (0..8).enumerate() {
-                let background = *byte & (1 << bit) == 0;
+    fn scroll(&mut self) {
+        for i in X_PAD * self.cols..self.rows * self.cols {
+            let queue = self.map[i];
+            let res;
 
-                if background {
-                    self.put_pixel(self.x_pos + x, self.y_pos + y, self.color.get_background());
-                } else {
-                    self.put_pixel(self.x_pos + x, self.y_pos + y, self.color.get_foreground());
+            if let Some(char) = queue {
+                unsafe {
+                    res = (*char).char;
                 }
+            } else {
+                res = self.grid[i];
             }
+
+            self.push_to_queue(
+                &res,
+                (i - self.cols) % self.cols,
+                (i - self.cols) / self.cols,
+            );
         }
 
-        self.x_pos += 8;
-    }
+        // Clear the last line of the screen.
+        let empty = Character {
+            char: ' ',
+            fg: self.color.get_foreground(),
+            bg: self.color.get_background(),
+        };
 
-    pub fn put_pixel(&mut self, x: usize, y: usize, color: Color) {
-        // SAFTEY: Safe as we are 100% sure the x, y will be correct.
-        unsafe {
-            *((self.buffer as usize + (x * (self.info.bytes_per_pixel / 8) + y * self.info.stride))
-                as *mut u32) = color.inner();
+        for i in ((self.rows - 1) * self.cols)..self.rows * self.cols {
+            self.push_to_queue(&empty, i % self.cols, i / self.cols);
         }
-    }
-
-    pub fn clear_screen(&mut self) {
-        self.x_pos = 0;
-        self.y_pos = 0;
-
-        unsafe {
-            core::slice::from_raw_parts_mut(self.buffer as *mut u8, self.info.byte_len).fill(0x00);
-        }
-    }
-
-    fn new_line(&mut self) {
-        self.y_pos += 16;
-
-        self.carriage_return()
-    }
-
-    #[inline(always)]
-    fn carriage_return(&mut self) {
-        self.x_pos = 0;
-    }
-
-    #[inline(always)]
-    #[allow(unused)]
-    pub fn set_color_code(&mut self, color: ColorCode) {
-        self.color = color;
-    }
-
-    #[inline(always)]
-    pub fn width(&self) -> usize {
-        self.info.horizontal_resolution
-    }
-
-    #[inline(always)]
-    pub fn height(&self) -> usize {
-        self.info.vertical_resolution
     }
 }
 
@@ -276,7 +570,7 @@ pub fn _print(args: fmt::Arguments) {
 }
 
 pub fn clear_screen() {
-    DEBUG_RENDY.get().map(|l| l.lock_irq().clear_screen());
+    DEBUG_RENDY.get().map(|l| l.lock_irq().clear());
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.
@@ -297,10 +591,17 @@ pub fn init(framebuffer_tag: &'static StivaleFramebufferTag) {
         stride: framebuffer_tag.framebuffer_pitch as usize,
     };
 
-    let rendy = DebugRendy::new(
-        unsafe { crate::PHYSICAL_MEMORY_OFFSET + framebuffer_tag.framebuffer_addr }.as_u64(),
-        framebuffer_info,
-    );
+    let framebuffer_addr =
+        unsafe { crate::PHYSICAL_MEMORY_OFFSET + framebuffer_tag.framebuffer_addr };
+
+    let framebuffer = unsafe {
+        core::slice::from_raw_parts_mut::<u32>(
+            framebuffer_addr.as_mut_ptr(),
+            framebuffer_info.byte_len,
+        )
+    };
+
+    let rendy = DebugRendy::new(framebuffer, framebuffer_info);
 
     DEBUG_RENDY.call_once(|| Mutex::new(rendy));
 }

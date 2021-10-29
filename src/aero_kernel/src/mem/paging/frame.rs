@@ -171,6 +171,7 @@ impl Iterator for RangeMemoryIter {
 pub enum BuddyOrdering {
     Size4KiB = 0,
     Size8KiB = 1,
+    Size2MiB = 2,
 }
 
 pub fn pmm_alloc(ordering: BuddyOrdering) -> PhysAddr {
