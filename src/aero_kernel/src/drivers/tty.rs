@@ -141,7 +141,6 @@ struct StdinBuffer {
 }
 
 impl StdinBuffer {
-    #[inline]
     fn new() -> Self {
         Self {
             back_buffer: Vec::new(),
@@ -150,7 +149,6 @@ impl StdinBuffer {
         }
     }
 
-    #[inline]
     fn swap_buffer(&mut self) {
         self.front_buffer
             .resize(self.back_buffer.len() - self.i, 0x00);
@@ -159,7 +157,6 @@ impl StdinBuffer {
         self.i = self.back_buffer.len();
     }
 
-    #[inline]
     fn is_complete(&self) -> bool {
         self.back_buffer.len() > self.i
     }
@@ -185,7 +182,6 @@ struct Tty {
 }
 
 impl Tty {
-    #[inline]
     fn new() -> Arc<Self> {
         Arc::new_cyclic(|sref| Self {
             device_id: devfs::alloc_device_marker(),
@@ -206,7 +202,6 @@ impl Tty {
 }
 
 impl INodeInterface for Tty {
-    #[inline]
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         self.block_queue
             .block_on(&self.stdin, |future| future.is_complete());
@@ -222,7 +217,6 @@ impl INodeInterface for Tty {
         Ok(size)
     }
 
-    #[inline]
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
         unsafe {
             crate::prelude::print!("{}", core::str::from_utf8_unchecked(buffer));
@@ -232,17 +226,14 @@ impl INodeInterface for Tty {
 }
 
 impl devfs::Device for Tty {
-    #[inline]
     fn device_marker(&self) -> usize {
         self.device_id
     }
 
-    #[inline]
     fn device_name(&self) -> String {
         String::from("tty")
     }
 
-    #[inline]
     fn inode(&self) -> Arc<dyn inode::INodeInterface> {
         self.sref.upgrade().unwrap()
     }

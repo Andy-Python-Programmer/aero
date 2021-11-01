@@ -71,6 +71,19 @@ fn ls(path: &str) -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
+fn cat(file: &str) -> Result<(), AeroSyscallError> {
+    let fd = sys_open(file, OpenFlags::O_RDONLY)?;
+    let mut out = [1u8; 256];
+    let length = sys_read(fd, &mut out)?;
+
+    let contents = &unsafe { core::str::from_utf8_unchecked(&out) }[..length];
+    print!("{}", contents);
+
+    sys_close(fd)?;
+
+    Ok(())
+}
+
 fn init() -> Result<(), AeroSyscallError> {
     sys_open("/dev/tty", OpenFlags::O_RDONLY)?; // device: stdin
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?; // device: stdout
@@ -130,13 +143,7 @@ fn main() -> Result<(), AeroSyscallError> {
                 }
             } else if command == "cat" {
                 if let Some(file) = command_iter.next() {
-                    let fd = sys_open(file, OpenFlags::O_RDONLY)?;
-                    let out = [0u8; 256];
-                    let length = sys_read(fd, &mut buffer)?;
-
-                    let contents = &unsafe { core::str::from_utf8_unchecked(&out) }[..length];
-                    print!("{}", contents);
-                    sys_close(fd)?;
+                    cat(file)?;
                 } else {
                     println!("cat: missing operand")
                 }
@@ -159,6 +166,8 @@ fn main() -> Result<(), AeroSyscallError> {
                         size, address
                     );
                 }
+            } else if command == "dmsg" {
+                cat("/dev/kmsg")?;
             } else if command != "\u{0}" {
                 sys_exec(command)?;
             }

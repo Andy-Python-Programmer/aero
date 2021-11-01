@@ -30,6 +30,7 @@ use spin::{Once, RwLock};
 
 use crate::fs::lookup_path;
 use crate::fs::Path;
+use crate::logger;
 
 use super::cache::DirCacheItem;
 use super::inode::INodeInterface;
@@ -122,38 +123,31 @@ impl INodeInterface for DevINode {
 struct DevFs(Arc<RamFs>);
 
 impl DevFs {
-    #[inline]
     fn new() -> Arc<Self> {
         Arc::new(Self(RamFs::new()))
     }
 }
 
 impl FileSystem for DevFs {
-    #[inline]
     fn root_dir(&self) -> DirCacheItem {
         self.0.root_dir()
     }
 }
 
-static DEV_NULL: Once<Arc<DevNull>> = Once::new();
-
 /// Implementation of the null device (akin `/dev/null`).
 struct DevNull(usize);
 
 impl DevNull {
-    #[inline]
     fn new() -> Arc<Self> {
         Arc::new(Self(alloc_device_marker()))
     }
 }
 
 impl Device for DevNull {
-    #[inline]
     fn device_marker(&self) -> usize {
         self.0
     }
 
-    #[inline]
     fn device_name(&self) -> String {
         String::from("null")
     }
@@ -173,6 +167,46 @@ impl INodeInterface for DevNull {
     }
 }
 
+struct DevKmsg(usize);
+
+impl DevKmsg {
+    fn new() -> Arc<Self> {
+        Arc::new(Self(alloc_device_marker()))
+    }
+}
+
+impl Device for DevKmsg {
+    fn device_marker(&self) -> usize {
+        self.0
+    }
+
+    fn device_name(&self) -> String {
+        String::from("kmsg")
+    }
+
+    fn inode(&self) -> Arc<dyn INodeInterface> {
+        DEV_KMSG.get().expect("device not initialized").clone()
+    }
+}
+
+impl INodeInterface for DevKmsg {
+    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
+        let buf = logger::get_log_buffer();
+
+        let size = core::cmp::min(buffer.len(), buf.len() - offset);
+        buffer.copy_from_slice(&buf.as_bytes()[offset..offset + size]);
+
+        Ok(size)
+    }
+
+    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
+        Ok(0x00)
+    }
+}
+
+static DEV_NULL: Once<Arc<DevNull>> = Once::new();
+static DEV_KMSG: Once<Arc<DevKmsg>> = Once::new();
+
 /// Initializes the dev filesystem. (See the module-level documentation for more information).
 pub(super) fn init() -> Result<()> {
     lazy_static::initialize(&DEV_FILESYSTEM);
@@ -182,8 +216,10 @@ pub(super) fn init() -> Result<()> {
 
     {
         let null = DEV_NULL.call_once(|| DevNull::new());
+        let kmsg = DEV_KMSG.call_once(|| DevKmsg::new());
 
         install_device(null.clone())?;
+        install_device(kmsg.clone())?;
     }
 
     Ok(())

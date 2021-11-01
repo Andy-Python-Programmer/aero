@@ -46,11 +46,43 @@ impl<S: AsRef<[u8]> + AsMut<[u8]>> RingBuffer<S> {
         self.position = 0;
 
         for item in self.storage.as_mut().iter_mut() {
-            /*
-             * Set the item to `0xff` (non-leading UTF-8 code unit).
-             */
+            // Set the item to `0xff` (non-leading UTF-8 code unit).
             *item = 0xff;
         }
+    }
+
+    fn rotate(&mut self) {
+        self.storage.as_mut().rotate_left(self.position);
+        self.position = 0;
+    }
+
+    /// Extracts the contents of the ring buffer as a string slice, excluding any
+    /// partially overwritten UTF-8 code unit sequences at the beginning.
+    ///
+    /// Extraction rotates the contents of the ring buffer such that all of its
+    /// contents becomes contiguous in memory.
+    ///
+    /// This function takes O(n) time where n is buffer length.
+    pub fn extract(&mut self) -> &str {
+        self.rotate();
+
+        let is_utf8_leader = |byte: u8| -> bool {
+            byte & 0b10000000 == 0b00000000
+                || byte & 0b11100000 == 0b11000000
+                || byte & 0b11110000 == 0b11100000
+                || byte & 0b11111000 == 0b11110000
+        };
+
+        let buffer = self.storage.as_mut();
+
+        for i in 0..buffer.len() {
+            // Chop off any non-leading UTF-8 code units at the start.
+            if is_utf8_leader(buffer[i]) {
+                return unsafe { core::str::from_utf8_unchecked(&buffer[i..]) };
+            }
+        }
+
+        return "";
     }
 
     /// Appends the provided byte to the ring buffer.

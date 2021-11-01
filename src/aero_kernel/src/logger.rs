@@ -20,6 +20,7 @@
 use core::fmt::Write;
 use core::sync::atomic::{AtomicBool, Ordering};
 
+use alloc::string::String;
 use log::{Level, LevelFilter, Metadata, Record};
 use spin::Once;
 
@@ -84,6 +85,14 @@ impl log::Log for AeroLogger {
 #[inline]
 pub unsafe fn force_unlock() {
     LOG_RING_BUFFER.get().map(|l| l.force_unlock());
+}
+
+pub fn get_log_buffer<'a>() -> String {
+    LOG_RING_BUFFER
+        .get()
+        .map(|l| String::from(l.lock_irq().extract()))
+        .expect("log: attempted to get the log ring buffer before it was initialized")
+        .clone()
 }
 
 #[inline]
