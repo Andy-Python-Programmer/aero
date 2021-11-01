@@ -253,7 +253,7 @@ impl KeyboardListener for Tty {
                 self.block_queue.notify_complete();
             }
 
-            KeyCode::KEY_BACKSPACE if !released => {}
+            KeyCode::KEY_BACKSPACE if !released => crate::rendy::backspace(),
 
             KeyCode::KEY_LEFTSHIFT => state.lshift = !released,
             KeyCode::KEY_RIGHTSHIFT => state.rshift = !released,

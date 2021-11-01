@@ -512,6 +512,24 @@ impl DebugRendy {
             self.push_to_queue(&empty, i % self.cols, i / self.cols);
         }
     }
+
+    fn backspace(&mut self) {
+        let empty = Character {
+            char: ' ',
+            fg: self.color.get_foreground(),
+            bg: self.color.get_background(),
+        };
+
+        if self.x_pos == 0 {
+            self.y_pos -= 1;
+            self.x_pos = self.cols - 1;
+        } else {
+            self.x_pos -= 1;
+        }
+
+        self.push_to_queue(&empty, self.x_pos, self.y_pos);
+        self.double_buffer_flush();
+    }
 }
 
 impl fmt::Write for DebugRendy {
@@ -571,6 +589,10 @@ pub fn _print(args: fmt::Arguments) {
 
 pub fn clear_screen() {
     DEBUG_RENDY.get().map(|l| l.lock_irq().clear());
+}
+
+pub fn backspace() {
+    DEBUG_RENDY.get().map(|l| l.lock_irq().backspace());
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.
