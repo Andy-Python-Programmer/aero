@@ -99,6 +99,8 @@ pub fn unwind_stack_trace() {
                 rbp = *(rbp as *const usize);
             }
 
+            let mut name = None;
+
             for data in symbol_table {
                 let st_value = data.value() as usize;
                 let st_size = data.size() as usize;
@@ -107,9 +109,14 @@ pub fn unwind_stack_trace() {
                     let mangled_name = data.get_name(&kernel_elf).unwrap_or("<unknown>");
                     let demangled_name = rustc_demangle::demangle(mangled_name);
 
-                    // 1. Print the frame index
-                    log::trace!("{:>2}: 0x{:016x} - {}", depth, rip, demangled_name);
+                    name = Some(demangled_name);
                 }
+            }
+
+            if let Some(name) = name {
+                log::trace!("{:>2}: 0x{:016x} - {}", depth, rip, name);
+            } else {
+                log::trace!("{:>2}: 0x{:016x} - <unknown>", depth, rip);
             }
         } else {
             // RBP has been overflowed...
