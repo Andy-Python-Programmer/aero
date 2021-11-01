@@ -28,6 +28,7 @@ use crate::userland::scheduler;
 macro interrupt_exception(fn $name:ident() => $message:expr) {
     super::interrupt_error_stack!(
         fn $name(stack: &mut InterruptErrorStack) {
+            $crate::unwind::prepare_panic();
             log::error!("EXCEPTION: {}\n\nStack: {:#x?}", $message, stack);
 
             if stack.stack.iret.is_user() {
@@ -104,6 +105,8 @@ interrupt_error_stack!(
             }
         }
 
+        unwind::prepare_panic();
+
         log::error!(
             "EXCEPTION: Page Fault\n\nAccessed Address: {:?}\nError: {:?}\nStack: {:#x?}",
             accessed_address,
@@ -114,8 +117,6 @@ interrupt_error_stack!(
         unwind::unwind_stack_trace();
 
         unsafe {
-            super::disable_interrupts();
-
             loop {
                 super::halt();
             }

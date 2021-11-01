@@ -26,9 +26,32 @@ use xmas_elf::ElfFile;
 use crate::mem::paging::{Translate, VirtAddr};
 use crate::mem::AddressSpace;
 
-use crate::{logger, rendy};
+use crate::logger;
+use crate::rendy;
 
 use crate::arch::interrupts;
+
+pub fn prepare_panic() {
+    // Disable interrupts as we do not want to be interrupted while
+    // we are unwinding the stack.
+    unsafe {
+        interrupts::disable_interrupts();
+    }
+
+    // Force unlock rendy and the logger ring buffer to prevent deadlock while
+    // unwinding.
+    unsafe {
+        rendy::force_unlock();
+        logger::force_unlock();
+    }
+
+    // Clear the screen if the rendy is initialized and enable
+    // rendy debug in logger.
+    if rendy::is_initialized() {
+        rendy::clear_screen();
+        logger::set_rendy_debug(true);
+    }
+}
 
 pub fn unwind_stack_trace() {
     let mut address_space = AddressSpace::this();
@@ -36,7 +59,7 @@ pub fn unwind_stack_trace() {
 
     let unwind_info = crate::UNWIND_INFO
         .get()
-        .expect("failed to retrieve the unwind information");
+        .expect("unwind: failed to retrieve the unwind information");
 
     let kernel_slice: &[u8] = unsafe {
         core::slice::from_raw_parts(
@@ -45,7 +68,7 @@ pub fn unwind_stack_trace() {
         )
     };
 
-    let kernel_elf = ElfFile::new(kernel_slice).expect("Invalid kernel slice");
+    let kernel_elf = ElfFile::new(kernel_slice).expect("unwind: invalid kernel slice");
     let mut symbol_table = None;
 
     for section in kernel_elf.section_iter() {
@@ -127,26 +150,10 @@ pub fn unwind_stack_trace() {
 
 #[panic_handler]
 extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
-    // Disable interrupts as we do not want to be interrupted while
-    // we are unwinding the stack.
-    unsafe {
-        interrupts::disable_interrupts();
-    }
-
-    // Force unlock rendy and the logger ring buffer to prevent deadlock while
-    // unwinding.
-    unsafe {
-        rendy::force_unlock();
-        logger::force_unlock();
-    }
+    prepare_panic();
 
     let deafult_panic = &format_args!("");
     let panic_message = info.message().unwrap_or(deafult_panic);
-
-    // Clear the screen if the debug renderer is initialized.
-    if rendy::is_initialized() {
-        rendy::clear_screen();
-    }
 
     let cpu_id = unsafe { crate::CPU_ID }; // Get the CPU ID where this panic happened.
     log::error!("cpu '{}' panicked at '{}'", cpu_id, panic_message);

@@ -71,7 +71,9 @@ impl log::Log for AeroLogger {
             }
 
             log!("  {}{: <2$} ", level, "", spaces);
-            log_ln!("\x1b[0;0m      {}", record.args());
+            crate::prelude::serial_print!("\x1b[0;0m");
+
+            log_ln!("      {}", record.args());
         }
     }
 
