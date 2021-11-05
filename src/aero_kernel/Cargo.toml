@@ -26,11 +26,6 @@ stivale-boot = "0.2.3"
 intrusive-collections = "0.9.2"
 aml = "0.15.0"
 
-[dependencies.font8x8]
-version = "0.3.1"
-default-features = false
-features = ["unicode"]
-
 [dependencies.lazy_static]
 version = "1.4.0"
 features = ["spin_no_std"]

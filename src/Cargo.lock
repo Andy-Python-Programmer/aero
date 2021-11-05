@@ -11,7 +11,6 @@ dependencies = [
  "bit_field",
  "bitflags",
  "cfg-if",
- "font8x8",
  "hashbrown 0.11.2",
  "intrusive-collections",
  "lazy_static",
@@ -147,12 +146,6 @@ name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
-
-[[package]]
-name = "font8x8"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "875488b8711a968268c7cf5d139578713097ca4635a76044e8fe8eedf831d07e"
 
 [[package]]
 name = "getrandom"

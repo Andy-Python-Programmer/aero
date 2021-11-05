@@ -155,7 +155,7 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     let deafult_panic = &format_args!("");
     let panic_message = info.message().unwrap_or(deafult_panic);
 
-    let cpu_id = unsafe { crate::CPU_ID }; // Get the CPU ID where this panic happened.
+    let cpu_id = 8; // Get the CPU ID where this panic happened.
     log::error!("cpu '{}' panicked at '{}'", cpu_id, panic_message);
 
     // Print the panic location if it is available.

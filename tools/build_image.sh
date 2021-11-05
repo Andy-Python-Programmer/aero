@@ -89,6 +89,7 @@ fi
 
 sudo cp $AERO_SRC/.cargo/limine.cfg $AERO_BUILD/mnt/
 sudo cp $AERO_BUNDLED/limine/limine.sys $AERO_BUILD/mnt/boot/
+sudo cp $AERO_SRC/.cargo/term_background.bmp $AERO_BUILD/mnt/boot/
 
 if [ "$efi" ]; then
     sudo mkdir -p $AERO_BUILD/mnt/EFI/BOOT/

@@ -26,7 +26,9 @@ use alloc::boxed::Box;
 
 use spin::Once;
 
+use crate::cmdline::CommandLine;
 use crate::mem;
+use crate::mem::paging::align_up;
 
 use stivale_boot::v2::StivaleFramebufferTag;
 
@@ -60,6 +62,7 @@ const VGA_FONT_GLYPHS: usize = 256;
 /// and right of the screen.
 const X_PAD: usize = 1;
 
+const MARGIN_GRADIENT: usize = 4;
 const DEFAULT_BACKGROUND: u32 = u32::MAX;
 const DWORD_SIZE: usize = core::mem::size_of::<u32>();
 
@@ -107,10 +110,9 @@ pub enum PixelFormat {
     U8,
 }
 
-/// Describes the layout and pixel format of a framebuffer.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FrameBufferInfo {
+pub struct RendyInfo {
     /// The total size in bytes.
     pub byte_len: usize,
     /// The width in pixels.
@@ -129,11 +131,70 @@ pub struct FrameBufferInfo {
     pub stride: usize,
 }
 
-pub struct DebugRendy {
+#[repr(C, packed)]
+struct BmpHeader {
+    bf_signature: [u8; 2],
+    bf_size: u32,
+    reserved: u32,
+    bf_offset: u32,
+
+    bi_size: u32,
+    bi_width: u32,
+    bi_height: u32,
+    bi_planes: u16,
+    bi_bpp: u16,
+    bi_compression: u32,
+    bi_image_size: u32,
+    bi_xcount: u32,
+    bi_ycount: u32,
+    bi_clr_used: u32,
+    bi_clr_important: u32,
+    red_mask: u32,
+    green_mask: u32,
+    blue_mask: u32,
+}
+
+#[derive(Debug)]
+struct Image {
+    image: Box<[u8]>,
+
+    img_width: usize,
+    img_height: usize,
+    bpp: usize,
+    pitch: usize,
+}
+
+fn parse_bmp_image(data: &[u8]) -> Image {
+    let header: &BmpHeader =
+        unsafe { core::mem::transmute(data as *const [u8] as *const u8 as *const BmpHeader) };
+
+    // Check if the BMP image has the correct signature (ie. "BM").
+    assert!(&header.bf_signature == b"BM");
+
+    // We do not support BPP lower then 8.
+    assert!(header.bi_bpp % 8 == 0);
+
+    let mut image = mem::alloc_boxed_buffer::<u8>(header.bf_size as usize);
+    let bytes = image.len();
+
+    (&mut image[..bytes - header.bf_offset as usize])
+        .copy_from_slice(&data[header.bf_offset as usize..header.bf_size as usize]);
+
+    Image {
+        image,
+
+        img_width: header.bi_width as usize,
+        img_height: header.bi_height as usize,
+        bpp: header.bi_bpp as usize,
+        pitch: align_up((header.bi_width * header.bi_bpp as u32) as u64, 32) as usize / 8,
+    }
+}
+
+struct DebugRendy<'this> {
     /// The raw framebuffer pointer queried from the BIOS or UEFI firmware represented
     /// as a [u8] slice.
-    buffer: &'static mut [u32],
-    info: FrameBufferInfo,
+    buffer: &'this mut [u32],
+    info: RendyInfo,
 
     x_pos: usize,
     y_pos: usize,
@@ -161,10 +222,15 @@ pub struct DebugRendy {
     offset_y: usize,
 }
 
-impl DebugRendy {
+impl<'this> DebugRendy<'this> {
     /// Create a new debug renderer with the default foreground color set to white and
     /// background color set to black.
-    pub fn new(buffer: &'static mut [u32], info: FrameBufferInfo) -> Self {
+    pub fn new(
+        buffer: &'this mut [u32],
+        info: RendyInfo,
+
+        term_background: Option<&'this [u8]>,
+    ) -> Self {
         let glyph_width = DEFAULT_FONT_WIDTH;
         let glyph_height = DEFAULT_FONT_HEIGHT;
 
@@ -260,7 +326,8 @@ impl DebugRendy {
             queue_cursor: 0,
         };
 
-        this.generate_canvas();
+        let image = term_background.map(|a| parse_bmp_image(a));
+        this.generate_canvas(image);
 
         this.clear();
         this.double_buffer_flush();
@@ -268,13 +335,115 @@ impl DebugRendy {
         this
     }
 
-    fn generate_canvas(&mut self) {
+    fn genloop(
+        &mut self,
+        image: &Image,
+        xstart: usize,
+        xend: usize,
+        ystart: usize,
+        yend: usize,
+        blender: fn(x: usize, y: usize, origin: u32) -> usize,
+    ) {
+        let img_width = image.img_width;
+        let img_height = image.img_height;
+        let img_pitch = image.pitch;
+
         let width = self.info.horizontal_resolution;
         let height = self.info.vertical_resolution;
 
-        for y in 0..height {
-            for x in 0..width {
-                self.plot_pixel(x, y, DEFAULT_BACKGROUND);
+        let colsize = image.bpp / 8;
+
+        // Tiled Image:
+        // for y in ystart..yend {
+        //     let image_y = y % img_height;
+        //     let mut image_x = xstart % img_width;
+        //     let off = img_pitch * (img_height - 1 - image_y);
+        //     let fb_off = self.info.stride / 4 * y;
+
+        //     for x in xstart..xend {
+        //         let img_pixel =
+        //             unsafe { (image.image.as_ptr()).add(image_x * colsize + off) as *const u32 };
+
+        //         let i = blender(x, y, unsafe { *img_pixel });
+
+        //         unsafe {
+        //             *self.buffer.as_mut_ptr().add(fb_off + x) = i as u32;
+        //         }
+
+        //         if image_x == img_width {
+        //             image_x = 0;
+        //         }
+
+        //         image_x += 1;
+        //     }
+        // }
+
+        // Stretched Image:
+        //
+        // So you can set x = xstart * ratio, and increment by ratio at each iteration.
+        let int_to_fixedp6 = |v| v * 64;
+        let fixedp6_to_int = |v| v / 64;
+
+        for y in ystart..yend {
+            let img_y = (y * img_height) / height; // calculate Y with full precision
+            let off = img_pitch * (img_height - 1 - img_y);
+            let fb_off = self.info.stride / 4 * y;
+
+            let ratio = int_to_fixedp6(img_width) / width;
+            let mut img_x = ratio * xstart;
+
+            for x in xstart..xend {
+                let img_pixel = unsafe {
+                    (image.image.as_ptr()).add(fixedp6_to_int(img_x) * colsize + off) as *const u32
+                };
+
+                let i = blender(x, y, unsafe { *img_pixel });
+
+                unsafe {
+                    *self.buffer.as_mut_ptr().add(fb_off + x) = i as u32;
+                }
+
+                img_x += ratio;
+            }
+        }
+    }
+
+    fn loop_external(
+        &mut self,
+        image: &Image,
+        xstart: usize,
+        xend: usize,
+        ystart: usize,
+        yend: usize,
+    ) {
+        self.genloop(&image, xstart, xend, ystart, yend, |_, __, c| c as usize)
+    }
+
+    fn generate_canvas(&mut self, image: Option<Image>) {
+        let width = self.info.horizontal_resolution;
+        let height = self.info.vertical_resolution;
+
+        if let Some(image) = image {
+            let frame_height = height / 2 - (self.glyph_height * self.rows) / 2;
+            let frame_width = width / 2 - (self.glyph_width * self.cols) / 2;
+
+            let frame_height_end = frame_height + self.glyph_height * self.rows;
+            let frame_width_end = frame_width + self.glyph_width * self.cols;
+
+            let fheight = frame_height - MARGIN_GRADIENT;
+            let fheight_end = frame_height_end + MARGIN_GRADIENT;
+            let fwidth = frame_width - MARGIN_GRADIENT;
+            let fwidth_end = frame_width_end + MARGIN_GRADIENT;
+
+            self.loop_external(&image, 0, width, 0, fheight);
+            self.loop_external(&image, 0, width, fheight_end, height);
+            self.loop_external(&image, 0, fwidth, fheight, fheight_end);
+            self.loop_external(&image, fwidth_end, width, fheight, fheight_end);
+        } else {
+            for y in 0..height {
+                for x in 0..width {
+                    self.plot_pixel(x, y, DEFAULT_BACKGROUND);
+                }
             }
         }
     }
@@ -532,7 +701,7 @@ impl DebugRendy {
     }
 }
 
-impl fmt::Write for DebugRendy {
+impl<'this> fmt::Write for DebugRendy<'this> {
     fn write_str(&mut self, string: &str) -> fmt::Result {
         self.write_string(string);
 
@@ -540,8 +709,8 @@ impl fmt::Write for DebugRendy {
     }
 }
 
-unsafe impl Send for DebugRendy {}
-unsafe impl Sync for DebugRendy {}
+unsafe impl<'this> Send for DebugRendy<'this> {}
+unsafe impl<'this> Sync for DebugRendy<'this> {}
 
 static DEBUG_RENDY: Once<Mutex<DebugRendy>> = Once::new();
 
@@ -603,8 +772,8 @@ pub unsafe fn force_unlock() {
     DEBUG_RENDY.get().map(|l| l.force_unlock());
 }
 
-pub fn init(framebuffer_tag: &'static StivaleFramebufferTag) {
-    let framebuffer_info = FrameBufferInfo {
+pub fn init(framebuffer_tag: &'static StivaleFramebufferTag, cmdline: &CommandLine) {
+    let framebuffer_info = RendyInfo {
         byte_len: framebuffer_tag.size(),
         bytes_per_pixel: framebuffer_tag.framebuffer_bpp as usize,
         horizontal_resolution: framebuffer_tag.framebuffer_width as usize,
@@ -623,7 +792,7 @@ pub fn init(framebuffer_tag: &'static StivaleFramebufferTag) {
         )
     };
 
-    let rendy = DebugRendy::new(framebuffer, framebuffer_info);
+    let rendy = DebugRendy::new(framebuffer, framebuffer_info, cmdline.term_background);
 
     DEBUG_RENDY.call_once(|| Mutex::new(rendy));
 }

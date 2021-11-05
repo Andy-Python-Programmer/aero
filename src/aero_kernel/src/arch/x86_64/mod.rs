@@ -91,6 +91,10 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
         .kernel_file_v2()
         .expect("stivale2: aero requires the bootloader to provode a non-null kernel info V2 tag");
 
+    let modules = boot_info
+        .modules()
+        .expect("stivale2: aero requires the bootloader to provode a non-null kernel modules tag");
+
     let rsdp_address = PhysAddr::new(rsdp_tag.rsdp);
 
     // NOTE: STACK_SIZE - 1 points to the last u8 in the array, i.e. it is
@@ -177,7 +181,7 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
         mem::c_str_as_str(cmd.command_line as *const u8)
     });
 
-    let command_line = cmdline::parse(command_line);
+    let command_line = cmdline::parse(command_line, modules);
     logger::set_rendy_debug(command_line.rendy_debug);
 
     gdt::init_boot();
@@ -189,7 +193,7 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     alloc::init_heap(&mut offset_table).expect("failed to initialize the kernel heap");
     log::info!("loaded heap");
 
-    rendy::init(framebuffer_tag);
+    rendy::init(framebuffer_tag, &command_line);
 
     interrupts::init();
     log::info!("loaded IDT");
