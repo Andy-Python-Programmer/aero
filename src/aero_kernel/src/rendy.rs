@@ -63,7 +63,7 @@ const VGA_FONT_GLYPHS: usize = 256;
 const X_PAD: usize = 1;
 
 const MARGIN_GRADIENT: usize = 4;
-const DEFAULT_BACKGROUND: u32 = u32::MAX;
+const DEFAULT_BACKGROUND: u32 = u32::MIN;
 const DWORD_SIZE: usize = core::mem::size_of::<u32>();
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -309,7 +309,7 @@ impl<'this> DebugRendy<'this> {
             rows,
             cols,
 
-            color: ColorCode::new(u32::MAX, u32::MIN),
+            color: ColorCode::new(0xaaaaaa, u32::MIN),
 
             queue,
             grid,
