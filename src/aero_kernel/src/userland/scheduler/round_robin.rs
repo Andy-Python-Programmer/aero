@@ -106,6 +106,7 @@ impl RoundRobin {
     }
 
     fn sweep_dead(&self) {
+        let _guard = IrqGuard::new();
         let queue = self.queue.get_mut();
 
         if let Some(task) = queue.dead.pop_front() {
@@ -115,6 +116,7 @@ impl RoundRobin {
     }
 
     fn schedule_next_task(&self) {
+        let guard = IrqGuard::new();
         let queue = self.queue.get_mut();
 
         // Switch to the next runnable task in the runnable queue, and put
@@ -127,10 +129,12 @@ impl RoundRobin {
             }
 
             queue.current_task = Some(task.clone());
+            core::mem::drop(guard);
             arch::task::arch_task_spinup(queue.preempt_task.arch_task_mut(), task.arch_task());
         } else {
             if let Some(current) = queue.current_task.as_ref() {
                 if current.state() == TaskState::Runnable {
+                    core::mem::drop(guard);
                     arch::task::arch_task_spinup(
                         queue.preempt_task.arch_task_mut(),
                         current.arch_task(),
@@ -138,6 +142,7 @@ impl RoundRobin {
                 }
             } else {
                 queue.current_task = None;
+                core::mem::drop(guard);
                 arch::task::arch_task_spinup(
                     queue.preempt_task.arch_task_mut(),
                     queue.idle_task.arch_task(),
