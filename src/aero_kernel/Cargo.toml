@@ -22,7 +22,7 @@ cfg-if = "1.0.0"
 hashbrown = "0.11.2"
 rustc-demangle = "0.1.20"
 lru = "0.6.5"
-stivale-boot = "0.2.3"
+stivale-boot = "0.2.6"
 intrusive-collections = "0.9.2"
 aml = "0.15.0"
 
