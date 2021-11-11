@@ -256,8 +256,14 @@ impl KeyboardListener for Tty {
             KeyCode::KEY_BACKSPACE if !released => {
                 let mut stdin = self.stdin.lock_irq();
 
-                if stdin.back_buffer.pop().is_some() {
-                    crate::rendy::backspace();
+                // We cannot backspace if the backbuffer is empty
+                // and we do not want to remove any lines commited
+                // by "\n".
+                if let Some(last) = stdin.back_buffer.last() {
+                    if *last as char != '\n' {
+                        let _ = stdin.back_buffer.pop();
+                        crate::rendy::backspace();
+                    }
                 }
             }
 
