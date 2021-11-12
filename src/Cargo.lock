@@ -10,7 +10,6 @@ dependencies = [
  "aml",
  "bit_field",
  "bitflags",
- "cfg-if",
  "hashbrown 0.11.2",
  "intrusive-collections",
  "lazy_static",

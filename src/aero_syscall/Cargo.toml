@@ -2,7 +2,7 @@
 name = "aero_syscall"
 version = "0.1.0"
 authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 bitflags = "1.2.1"
