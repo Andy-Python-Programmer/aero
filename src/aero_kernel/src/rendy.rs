@@ -66,6 +66,9 @@ const MARGIN_GRADIENT: usize = 4;
 const DEFAULT_BACKGROUND: u32 = u32::MIN;
 const DWORD_SIZE: usize = core::mem::size_of::<u32>();
 
+const DEFAULT_TEXT_BACKGROUND: u32 = u32::MIN;
+const DEFAULT_TEXT_FOREGROUND: u32 = 0xaaaaaa;
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 struct Character {
     char: char,
@@ -309,7 +312,7 @@ impl<'this> DebugRendy<'this> {
             rows,
             cols,
 
-            color: ColorCode::new(0xaaaaaa, u32::MIN),
+            color: ColorCode::new(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND),
 
             queue,
             grid,
@@ -762,6 +765,25 @@ pub fn clear_screen() {
 
 pub fn backspace() {
     DEBUG_RENDY.get().map(|l| l.lock_irq().backspace());
+}
+
+pub fn set_text_color(fg: u32, bg: u32) {
+    DEBUG_RENDY
+        .get()
+        .map(|l| l.lock_irq().color = ColorCode::new(fg, bg));
+}
+
+pub fn set_text_fg(fg: u32) {
+    DEBUG_RENDY.get().map(|l| l.lock_irq().color.0 = fg);
+}
+
+pub fn set_text_bg(bg: u32) {
+    DEBUG_RENDY.get().map(|l| l.lock_irq().color.1 = bg);
+}
+
+/// Resets the text foreground and background to their default values.
+pub fn reset_default() {
+    set_text_color(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.

@@ -170,6 +170,7 @@ struct TtyState {
     lalt: bool,
     altgr: bool,
     caps: bool,
+    parser: vte::Parser,
 }
 
 struct Tty {
@@ -193,6 +194,7 @@ impl Tty {
                 lalt: false,
                 altgr: false,
                 caps: false,
+                parser: vte::Parser::new(),
             }),
             block_queue: BlockQueue::new(),
             stdin: Mutex::new(StdinBuffer::new()),
@@ -218,10 +220,14 @@ impl INodeInterface for Tty {
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
-        unsafe {
-            crate::prelude::print!("{}", core::str::from_utf8_unchecked(buffer));
-            Ok(buffer.len())
+        let mut state = self.state.lock_irq();
+        let mut performer = AnsiEscape;
+
+        for character in buffer.iter() {
+            state.parser.advance(&mut performer, *character);
         }
+
+        Ok(buffer.len())
     }
 }
 
@@ -299,10 +305,151 @@ impl KeyboardListener for Tty {
                     unsafe { core::char::from_u32_unchecked((map[key as usize] & 0xff) as _) };
 
                 self.stdin.lock_irq().back_buffer.push(character as u8);
-                crate::prelude::print!("{}", character);
+
+                let mut performer = AnsiEscape;
+                state.parser.advance(&mut performer, character as u8);
             }
 
             _ => {}
+        }
+    }
+}
+
+enum ParsedColor {
+    Unknown,
+    Foreground(u16),
+    Background(u16),
+}
+
+const SGR_FOREGROUND_OFFSET_1: u16 = 30;
+const SGR_BACKGROUND_OFFSET_1: u16 = 40;
+const SGR_FOREGROUND_OFFSET_2: u16 = 90;
+const SGR_BACKGROUND_OFFSET_2: u16 = 100;
+
+const ANSI_COLORS: &[u32; 8] = &[
+    0x00000000, // black
+    0x00aa0000, // red
+    0x0000aa00, // green
+    0x00aa5500, // brown
+    0x000000aa, // blue
+    0x00aa00aa, // magenta
+    0x0000aaaa, // cyan
+    0x00aaaaaa, // grey
+];
+
+const ANSI_BRIGHT_COLORS: &[u32; 8] = &[
+    0x00555555, // black
+    0x00ff5555, // red
+    0x0055ff55, // green
+    0x00ffff55, // brown
+    0x005555ff, // blue
+    0x00ff55ff, // magenta
+    0x0055ffff, // cyan
+    0x00ffffff, // grey
+];
+
+fn sgr_parse_color(code: u16) -> ParsedColor {
+    if code >= 30 && code <= 37 {
+        ParsedColor::Foreground(code - SGR_FOREGROUND_OFFSET_1)
+    } else if code >= 40 && code <= 47 {
+        ParsedColor::Background(code - SGR_BACKGROUND_OFFSET_1)
+    } else if code >= 90 && code <= 97 {
+        ParsedColor::Foreground(code - SGR_FOREGROUND_OFFSET_2)
+    } else if code >= 100 && code <= 107 {
+        ParsedColor::Foreground(code - SGR_BACKGROUND_OFFSET_2)
+    } else {
+        ParsedColor::Unknown
+    }
+}
+
+struct AnsiEscape;
+
+impl vte::Perform for AnsiEscape {
+    fn print(&mut self, char: char) {
+        crate::prelude::print!("{}", char);
+    }
+
+    fn execute(&mut self, byte: u8) {
+        let char = byte as char;
+
+        if char == '\n' || char == '\t' {
+            crate::prelude::print!("{}", char);
+        }
+    }
+
+    fn csi_dispatch(
+        &mut self,
+        params: &vte::Params,
+        _intermediates: &[u8],
+        ignore: bool,
+        action: char,
+    ) {
+        if ignore {
+            return;
+        }
+
+        match action {
+            // Sets colors and style of the characters following this code.
+            'm' => {
+                let piter = params.iter();
+
+                let mut bright = false;
+
+                for param in piter {
+                    if !param.is_empty() {
+                        let p1 = param[0];
+
+                        match p1 {
+                            // Reset or normal. All attributes off.
+                            0 => {
+                                bright = false;
+                                // TODO: Turn off dim.
+
+                                crate::rendy::reset_default();
+                            }
+
+                            // Bold or increased intensity:
+                            1 => {
+                                bright = true;
+                                // TODO: Turn off dim.
+                            }
+
+                            // Faint, decreased intensity, or dim.
+                            2 => {
+                                // TODO: Turn on dim.
+                                bright = false;
+                            }
+
+                            _ => match sgr_parse_color(p1) {
+                                ParsedColor::Foreground(color) => {
+                                    let ccode = if bright {
+                                        ANSI_BRIGHT_COLORS[color as usize]
+                                    } else {
+                                        ANSI_COLORS[color as usize]
+                                    };
+
+                                    crate::rendy::set_text_fg(ccode);
+                                }
+
+                                ParsedColor::Background(color) => {
+                                    let ccode = if bright {
+                                        ANSI_BRIGHT_COLORS[color as usize]
+                                    } else {
+                                        ANSI_COLORS[color as usize]
+                                    };
+
+                                    crate::rendy::set_text_bg(ccode);
+                                }
+
+                                // Nothing :^)
+                                ParsedColor::Unknown => {}
+                            },
+                        }
+                    }
+                }
+            }
+
+            _ => log::debug!("unknown action: {}", action),
         }
     }
 }
