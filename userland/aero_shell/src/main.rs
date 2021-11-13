@@ -101,7 +101,9 @@ fn main() -> Result<(), AeroSyscallError> {
         let pwd = unsafe { core::str::from_utf8_unchecked(&pwd_buffer) };
         let pwd = pwd.trim_matches(|c| c == '\0');
 
-        print!("\x1b[1;32mroot@aero:{}\x1b[0m ", pwd);
+        print!("\x1b[1;32mroot@aero\x1b[0m");
+        print!(":");
+        print!("\x1b[1;34m{}\x1b[0m ", pwd);
 
         let mut buffer = [0u8; 256];
         let len = sys_read(0, &mut buffer)?;
