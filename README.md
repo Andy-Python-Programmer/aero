@@ -29,6 +29,7 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 - Modern UEFI bootloader
 - ACPI support (ioapic, lapic)
 - Symmetric Multiprocessing (SMP)
+- On-demand paging
 
 # Roadmap
 
