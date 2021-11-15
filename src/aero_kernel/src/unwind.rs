@@ -48,7 +48,7 @@ pub fn prepare_panic() {
     // Clear the screen if the rendy is initialized and enable
     // rendy debug in logger.
     if rendy::is_initialized() {
-        rendy::clear_screen();
+        rendy::clear_screen(true);
         logger::set_rendy_debug(true);
     }
 }

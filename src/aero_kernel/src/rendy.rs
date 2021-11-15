@@ -332,7 +332,7 @@ impl<'this> DebugRendy<'this> {
         let image = term_background.map(|a| parse_bmp_image(a));
         this.generate_canvas(image);
 
-        this.clear();
+        this.clear(true);
         this.double_buffer_flush();
 
         this
@@ -490,7 +490,7 @@ impl<'this> DebugRendy<'this> {
         }
     }
 
-    fn clear(&mut self) {
+    fn clear(&mut self, mv: bool) {
         let char = Character {
             char: ' ',
             fg: self.color.get_foreground(),
@@ -501,8 +501,10 @@ impl<'this> DebugRendy<'this> {
             self.push_to_queue(&char, i % self.cols, i / self.cols);
         }
 
-        self.x_pos = X_PAD;
-        self.y_pos = 0;
+        if mv {
+            self.x_pos = X_PAD;
+            self.y_pos = 0;
+        }
     }
 
     fn write_string(&mut self, string: &str) {
@@ -766,8 +768,10 @@ pub fn _print(args: fmt::Arguments) {
     DEBUG_RENDY.get().map(|l| l.lock_irq().write_fmt(args));
 }
 
-pub fn clear_screen() {
-    DEBUG_RENDY.get().map(|l| l.lock_irq().clear());
+/// Clears the screen and if `mv` is set to true, resets the
+/// cursor position to `0`.
+pub fn clear_screen(mv: bool) {
+    DEBUG_RENDY.get().map(|l| l.lock_irq().clear(mv));
 }
 
 pub fn backspace() {

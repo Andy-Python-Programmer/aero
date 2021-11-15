@@ -151,7 +151,7 @@ fn kernel_main_thread() {
     fs::launch().unwrap();
 
     if logger::enabled_rendy_debug() {
-        rendy::clear_screen();
+        rendy::clear_screen(true);
         logger::set_rendy_debug(false);
     }
 

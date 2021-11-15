@@ -415,6 +415,29 @@ impl vte::Perform for AnsiEscape {
                 crate::rendy::set_cursor_position(x, y);
             }
 
+            // Clears parts of the screen.
+            'J' => {
+                let mut iter = params.iter();
+
+                // If `n` is missing, it defaults to 0.
+                let n = iter.next().unwrap_or(&[0])[0] as usize;
+
+                match n {
+                    // If `n` is 0 (or missing), clear from cursor to end of screen.
+                    0 => unimplemented!(),
+                    1 => unimplemented!(),
+
+                    // If `n` is 2 or 3, clear the entire screen.
+                    //
+                    // TODO(Andy-Python-Programmer): When we support scrollback buffer, if `n` is
+                    // 3, clear the entire scrollback buffer as well.
+                    2 | 3 => crate::rendy::clear_screen(false),
+
+                    // Unknown value, do nothing.
+                    _ => {}
+                }
+            }
+
             // Sets colors and style of the characters following this code.
             'm' => {
                 let piter = params.iter();
