@@ -168,6 +168,8 @@ fn main() -> Result<(), AeroSyscallError> {
                         size, address
                     );
                 }
+            } else if command == "clear" {
+                print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
             } else if command == "dmsg" {
                 cat("/dev/kmsg")?;
             } else if command != "\u{0}" {

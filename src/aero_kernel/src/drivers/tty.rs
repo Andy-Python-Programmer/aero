@@ -389,6 +389,32 @@ impl vte::Perform for AnsiEscape {
         }
 
         match action {
+            // Moves the cursor to row `n`, column `m`. The values are
+            // 1-based, and default to 1 (top left corner) if omitted.
+            'H' | 'f' => {
+                let mut iter = params.iter();
+
+                let x = iter.next().unwrap_or(&[1])[0] as usize;
+                let y = iter.next().unwrap_or(&[1])[0] as usize;
+
+                let mut x = if x != 0 { x - 1 } else { x };
+                let mut y = if y != 0 { y - 1 } else { y };
+
+                let (rows, cols) = crate::rendy::get_term_info();
+
+                // Make sure the provided coordinates are valid.
+                if x >= cols {
+                    x = cols - 1;
+                }
+
+                if y >= rows {
+                    y = rows - 1;
+                }
+
+                // Move the cursor to the position.
+                crate::rendy::set_cursor_position(x, y);
+            }
+
             // Sets colors and style of the characters following this code.
             'm' => {
                 let piter = params.iter();

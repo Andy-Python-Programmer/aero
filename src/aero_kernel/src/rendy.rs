@@ -702,6 +702,13 @@ impl<'this> DebugRendy<'this> {
         self.push_to_queue(&empty, self.x_pos, self.y_pos);
         self.double_buffer_flush();
     }
+
+    fn set_cursor_position(&mut self, x: usize, y: usize) {
+        assert!(x <= self.cols && y <= self.rows);
+
+        self.x_pos = X_PAD + x;
+        self.y_pos = y;
+    }
 }
 
 impl<'this> fmt::Write for DebugRendy<'this> {
@@ -784,6 +791,28 @@ pub fn set_text_bg(bg: u32) {
 /// Resets the text foreground and background to their default values.
 pub fn reset_default() {
     set_text_color(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
+}
+
+/// Sets the cursor position to the provided `x` and `y` coordinates.
+///
+/// ## Panics
+/// * If the provided `x` position is greator then the amount of columns.
+/// * If the provided `y` position is greator then the amount of rows.
+pub fn set_cursor_position(x: usize, y: usize) {
+    DEBUG_RENDY
+        .get()
+        .map(|l| l.lock_irq().set_cursor_position(x, y));
+}
+
+/// Returns a tuple of the amount of `(rows, columns)` in the terminal.
+///
+/// ## Panics
+/// Attempted to get the terminal info before the terminal was initialized.
+pub fn get_term_info() -> (usize, usize) {
+    DEBUG_RENDY.get().map(|l| {
+        let lock = l.lock_irq();
+        (lock.rows, lock.cols)
+    }).expect("get_term_info: attepted to get the terminal information before the terminal was initialized")
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.
