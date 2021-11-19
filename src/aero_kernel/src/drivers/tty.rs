@@ -137,7 +137,8 @@ const CTRL_ALT_MAP: &[u16; 128] = &[
 struct StdinBuffer {
     back_buffer: Vec<u8>,
     front_buffer: Vec<u8>,
-    i: usize,
+
+    cursor: usize,
 }
 
 impl StdinBuffer {
@@ -145,20 +146,25 @@ impl StdinBuffer {
         Self {
             back_buffer: Vec::new(),
             front_buffer: Vec::new(),
-            i: 0,
+
+            cursor: 0,
         }
     }
 
     fn swap_buffer(&mut self) {
+        self.front_buffer.resize(self.back_buffer.len(), 0x00);
         self.front_buffer
-            .resize(self.back_buffer.len() - self.i, 0x00);
-        self.front_buffer
-            .copy_from_slice(&self.back_buffer[self.i..]);
-        self.i = self.back_buffer.len();
+            .copy_from_slice(self.back_buffer.as_slice());
+
+        self.back_buffer.clear();
     }
 
     fn is_complete(&self) -> bool {
-        self.back_buffer.len() > self.i
+        self.back_buffer.len() > 0
+    }
+
+    fn advance_cursor(&mut self) {
+        self.cursor += 1;
     }
 }
 
@@ -253,7 +259,9 @@ impl KeyboardListener for Tty {
             KeyCode::KEY_CAPSLOCK if !released => state.caps = !state.caps,
             KeyCode::KEY_ENTER | KeyCode::KEY_KPENTER if !released => {
                 let mut stdin = self.stdin.lock_irq();
+
                 stdin.back_buffer.push('\n' as u8);
+                stdin.cursor = 0;
 
                 crate::prelude::print!("\n");
                 self.block_queue.notify_complete();
@@ -265,11 +273,10 @@ impl KeyboardListener for Tty {
                 // We cannot backspace if the backbuffer is empty
                 // and we do not want to remove any lines commited
                 // by "\n".
-                if let Some(last) = stdin.back_buffer.last() {
-                    if *last as char != '\n' {
-                        let _ = stdin.back_buffer.pop();
-                        crate::rendy::backspace();
-                    }
+                if stdin.back_buffer.pop().is_some() {
+                    crate::rendy::backspace();
+
+                    stdin.cursor -= 1;
                 }
             }
 
@@ -281,6 +288,36 @@ impl KeyboardListener for Tty {
 
             KeyCode::KEY_LEFTALT => state.lalt = !released,
             KeyCode::KEY_RIGHTALT => state.altgr = !released,
+
+            KeyCode::KEY_LEFT if !released => {
+                let mut stdin = self.stdin.lock_irq();
+
+                // We are at the start of the input so, we cannot shift
+                // the cursor to the left anymore.
+                if stdin.cursor == 0 {
+                    return;
+                }
+
+                let (x, y) = crate::rendy::get_cursor_position();
+                crate::rendy::set_cursor_position(x - 1, y);
+
+                stdin.cursor -= 1;
+            }
+
+            KeyCode::KEY_RIGHT if !released => {
+                let mut stdin = self.stdin.lock_irq();
+
+                // We are at the end of the input so, we cannot shift
+                // the cursor to the right anymore.
+                if stdin.cursor == stdin.back_buffer.len() {
+                    return;
+                }
+
+                let (x, y) = crate::rendy::get_cursor_position();
+                crate::rendy::set_cursor_position(x + 1, y);
+
+                stdin.advance_cursor();
+            }
 
             _ if !released => {
                 let mut shift = state.lshift || state.rshift;
@@ -304,7 +341,12 @@ impl KeyboardListener for Tty {
                 let character =
                     unsafe { core::char::from_u32_unchecked((map[key as usize] & 0xff) as _) };
 
-                self.stdin.lock_irq().back_buffer.push(character as u8);
+                {
+                    let mut stdin = self.stdin.lock_irq();
+
+                    stdin.back_buffer.push(character as u8);
+                    stdin.advance_cursor();
+                }
 
                 let mut performer = AnsiEscape;
                 state.parser.advance(&mut performer, character as u8);

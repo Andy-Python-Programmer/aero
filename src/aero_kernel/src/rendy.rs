@@ -710,6 +710,7 @@ impl<'this> DebugRendy<'this> {
 
         self.x_pos = X_PAD + x;
         self.y_pos = y;
+        self.double_buffer_flush();
     }
 }
 
@@ -757,8 +758,7 @@ pub macro dbg {
     },
 }
 
-/// Return [true] if the debug renderer is initialized.
-#[inline]
+/// Return true if the terminal is initialized.
 pub fn is_initialized() -> bool {
     DEBUG_RENDY.get().is_some()
 }
@@ -795,6 +795,20 @@ pub fn set_text_bg(bg: u32) {
 /// Resets the text foreground and background to their default values.
 pub fn reset_default() {
     set_text_color(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
+}
+
+/// Gets the cursor position as a tuple `(x, y)`.
+///
+/// ## Notes
+/// The return'ed cursor position will not have `X` and `Y` padding applied.
+///
+/// ## Panics
+/// Attempted to get the cursor position before the terminal was initialized.
+pub fn get_cursor_position() -> (usize, usize) {
+    DEBUG_RENDY.get().map(|l| {
+        let lock = l.lock_irq();
+        (lock.x_pos-X_PAD, lock.y_pos)
+    }).expect("get_cursor_position: attepted to get the cursor position before the terminal was initialized")
 }
 
 /// Sets the cursor position to the provided `x` and `y` coordinates.

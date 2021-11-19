@@ -173,7 +173,9 @@ fn main() -> Result<(), AeroSyscallError> {
             } else if command == "dmsg" {
                 cat("/dev/kmsg")?;
             } else if command != "\u{0}" {
-                sys_exec(command)?;
+                if sys_exec(command).is_err() {
+                    println!("{}: command not found", command);
+                }
             }
         }
     }
