@@ -122,6 +122,11 @@ pub fn get_scheduler() -> &'static Scheduler {
         .expect("Attempted to get the scheduler before it was initialized")
 }
 
+/// Returns true if the task scheduler has been initiaized.
+pub fn is_initialized() -> bool {
+    SCHEDULER.get().is_some()
+}
+
 /// Initialize the scheduler.
 #[inline]
 pub fn init() {
