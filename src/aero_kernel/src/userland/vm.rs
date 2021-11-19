@@ -176,13 +176,12 @@ impl Mapping {
                 let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
                     .expect("failed to allocate frame for a private file read");
 
-                let size_align = Size4KiB::SIZE as usize;
-
                 let buffer = unsafe {
-                    let layout = Layout::from_size_align_unchecked(size_align, 4096);
-                    let raw = alloc_zeroed(layout);
+                    let phys = frame.start_address().as_u64();
+                    let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
+                    let ptr = virt.as_mut_ptr::<u8>();
 
-                    core::slice::from_raw_parts_mut(raw, size_align)
+                    core::slice::from_raw_parts_mut(ptr, 4096)
                 };
 
                 mmap_file
@@ -190,14 +189,6 @@ impl Mapping {
                     .inode()
                     .read_at(offset as usize, buffer)
                     .unwrap();
-
-                unsafe {
-                    buffer.as_ptr().copy_to(
-                        (crate::PHYSICAL_MEMORY_OFFSET + frame.start_address().as_u64())
-                            .as_mut_ptr(),
-                        size as usize,
-                    );
-                }
 
                 let mut flags = PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE
@@ -422,7 +413,7 @@ impl VmProtected {
 
             result
         } else {
-            log::trace!("mapping not found for address: {:#x}", accessed_address,);
+            log::trace!("mapping not found for address: {:#x}", accessed_address);
 
             // Else the mapping does not exist, so return false.
             false
