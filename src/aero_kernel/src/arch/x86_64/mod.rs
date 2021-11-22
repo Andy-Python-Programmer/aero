@@ -187,7 +187,6 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     });
 
     let command_line = cmdline::parse(command_line, modules);
-    logger::set_rendy_debug(command_line.rendy_debug);
 
     gdt::init_boot();
     log::info!("loaded bootstrap GDT");
@@ -199,6 +198,7 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     log::info!("loaded heap");
 
     rendy::init(framebuffer_tag, &command_line);
+    logger::set_rendy_debug(command_line.rendy_debug);
 
     interrupts::init();
     log::info!("loaded IDT");
