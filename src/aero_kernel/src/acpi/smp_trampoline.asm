@@ -46,18 +46,21 @@ smp_prepare_trampoline:
 
 ; This function is responsible for preparing the SMP trampoline 
 ; structure.
-smp_prepare_launch:
-    mov byte [0x510], 0                     ; Info: AP Ready Flag 
-    mov qword [0x520], kernel_ap_startup    ; Info: Entry point
 
-    mov qword [0x540], rdi                  ; Param: Page Table
-    mov qword [0x550], rsi                  ; Param: Stack Top
-    mov qword [0x560], rdx                  ; Param: AP ID
-    mov dword [0x570], ecx                  ; Param: Mode
+; The SMP trampoline cannot be larger then a page size so we just
+; use 0x2500 + OFFSET to store the AP info.
+smp_prepare_launch:
+    mov byte [0x2510], 0                     ; Info: AP Ready Flag 
+    mov qword [0x2520], kernel_ap_startup    ; Info: Entry point
+
+    mov qword [0x2540], rdi                  ; Param: Page Table
+    mov qword [0x2550], rsi                  ; Param: Stack Top
+    mov qword [0x2560], rdx                  ; Param: AP ID
+    mov dword [0x2570], ecx                  ; Param: Mode
 
     ret
 
 smp_check_ap_flag:
     xor rax, rax
-    mov al, byte [0x510]
+    mov al, byte [0x2510]
     ret
