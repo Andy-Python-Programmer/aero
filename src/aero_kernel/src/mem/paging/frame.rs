@@ -44,19 +44,9 @@ impl LockedFrameAllocator {
     }
 
     /// Initializes the inner locked global frame allocator.
-    pub(super) fn init(
-        &self,
-        memory_map: &'static StivaleMemoryMapTag,
-        kernel_base: PhysAddr,
-        kernel_end: PhysAddr,
-    ) {
-        self.0.call_once(|| {
-            Mutex::new(GlobalFrameAllocator::new(
-                memory_map,
-                kernel_base,
-                kernel_end,
-            ))
-        });
+    pub(super) fn init(&self, memory_map: &'static StivaleMemoryMapTag) {
+        self.0
+            .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
     }
 }
 
@@ -88,51 +78,15 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
     }
 }
 
-pub struct RangeMemoryIter {
+struct RangeMemoryIter {
     iter: StivaleMemoryMapIter<'static>,
-
-    kernel_base: PhysAddr,
-    kernel_end: PhysAddr,
 
     cursor_base: PhysAddr,
     cursor_end: PhysAddr,
 }
 
-impl RangeMemoryIter {
-    /// Helper function that returns [`true`] if the provided range intersects
-    /// between the current cursor base and the cursor end addresses.
-    fn intersects_in_range(&self, base: PhysAddr, end: PhysAddr) -> bool {
-        (self.cursor_base <= end && self.cursor_end <= end)
-            && (base <= self.cursor_base && base <= self.cursor_end)
-    }
-
-    fn cursor_align_up(&mut self) -> PhysAddr {
-        if self.cursor_base < self.kernel_base {
-            self.cursor_base = self.kernel_base;
-        }
-
-        if self.intersects_in_range(self.kernel_base, self.kernel_end) {
-            self.kernel_end
-        } else {
-            self.cursor_base
-        }
-    }
-
-    fn cursor_align_down(&self) -> Option<PhysAddr> {
-        if self.cursor_base >= self.cursor_end {
-            return None;
-        }
-
-        if self.kernel_end < self.cursor_end && self.kernel_base >= self.cursor_base {
-            Some(self.kernel_base)
-        } else {
-            Some(self.cursor_end)
-        }
-    }
-}
-
 impl Iterator for RangeMemoryIter {
-    type Item = (PhysAddr, u64);
+    type Item = MemoryRange;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.cursor_base >= self.cursor_end {
@@ -153,16 +107,21 @@ impl Iterator for RangeMemoryIter {
             }
         }
 
-        self.cursor_base = self.cursor_align_up().align_up(Size4KiB::SIZE);
+        let mut typee = MemoryRangeType::Usable;
 
-        if let Some(end) = self.cursor_align_down() {
-            let range = Some((self.cursor_base, end - self.cursor_base));
-
-            self.cursor_base = end.align_up(Size4KiB::SIZE);
-            range
-        } else {
-            self.next()
+        if (CONVENTIONAL_MEM_START..CONVENTIONAL_MEM_END).contains(&self.cursor_base) {
+            self.cursor_base = CONVENTIONAL_MEM_END;
+            typee = MemoryRangeType::Conventional;
         }
+
+        let range = MemoryRange {
+            addr: self.cursor_base,
+            size: self.cursor_end - self.cursor_base,
+            typee,
+        };
+
+        self.cursor_base = self.cursor_end.align_up(Size4KiB::SIZE);
+        Some(range)
     }
 }
 
@@ -201,6 +160,13 @@ pub fn pmm_alloc(ordering: BuddyOrdering) -> PhysAddr {
 struct MemoryRange {
     addr: PhysAddr,
     size: u64,
+    typee: MemoryRangeType,
+}
+
+#[derive(Debug, PartialEq)]
+enum MemoryRangeType {
+    Usable,
+    Conventional,
 }
 
 struct BootAllocator {
@@ -215,7 +181,11 @@ impl BootAllocator {
     fn allocate(&mut self, size: usize) -> *mut u8 {
         let size = align_up(size as u64, Size4KiB::SIZE);
 
-        for range in self.memory_ranges.iter_mut() {
+        for range in self.memory_ranges.iter_mut().rev() {
+            if range.typee == MemoryRangeType::Conventional {
+                continue;
+            }
+
             if range.size >= size {
                 let addr = range.addr;
 
@@ -230,6 +200,13 @@ impl BootAllocator {
     }
 }
 
+const CONVENTIONAL_MEM_START: PhysAddr = unsafe { PhysAddr::new_unchecked(0x00) };
+
+// NOTE: Even though conventional memory is till `0x100000` (which is 4KiB * 256), we only
+// reserve the first 4 4KiB pages (as conventional memory) which is mainly used to startup
+// the APs.
+const CONVENTIONAL_MEM_END: PhysAddr = unsafe { PhysAddr::new_unchecked(Size4KiB::SIZE * 4) };
+
 pub struct GlobalFrameAllocator {
     buddies: [&'static mut [u64]; 3],
     free: [usize; 3],
@@ -240,11 +217,7 @@ pub struct GlobalFrameAllocator {
 
 impl GlobalFrameAllocator {
     /// Create a new global frame allocator from the memory map provided by the bootloader.
-    fn new(
-        memory_map: &'static StivaleMemoryMapTag,
-        kernel_base: PhysAddr,
-        kernel_end: PhysAddr,
-    ) -> Self {
+    fn new(memory_map: &'static StivaleMemoryMapTag) -> Self {
         let mut iter = memory_map.iter();
         let cursor = iter
             .next()
@@ -258,7 +231,7 @@ impl GlobalFrameAllocator {
         for i in 0..memory_map.entries_len {
             let entry = &memory_map.as_slice()[i as usize];
 
-            if entry.length >= requested_size && entry.base > kernel_end.as_u64() {
+            if entry.length >= requested_size && entry.base > CONVENTIONAL_MEM_END.as_u64() {
                 // Found a big enough memory map entry.
                 //
                 // SAFETY: Its safe for us to mutate the memory map entry & life is ment to be
@@ -288,9 +261,6 @@ impl GlobalFrameAllocator {
         let range_iter = RangeMemoryIter {
             iter,
 
-            kernel_base,
-            kernel_end,
-
             cursor_base: PhysAddr::new(cursor.base),
             cursor_end: PhysAddr::new(cursor.base + cursor.length),
         };
@@ -301,8 +271,8 @@ impl GlobalFrameAllocator {
         // of maximum mmap entries and allocate space for it on the stack instead. God damn it.
         let mut i = 0;
 
-        for (addr, size) in range_iter {
-            ranges[i] = MemoryRange { addr, size };
+        for range in range_iter {
+            ranges[i] = range;
             i += 1;
         }
 
@@ -334,7 +304,9 @@ impl GlobalFrameAllocator {
         }
 
         for region in bootstrapper.memory_ranges.iter() {
-            this.insert_range(region.addr, region.addr + region.size);
+            if region.typee == MemoryRangeType::Usable {
+                this.insert_range(region.addr, region.addr + region.size);
+            }
         }
 
         this

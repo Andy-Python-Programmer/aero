@@ -297,20 +297,22 @@ impl PhysAddr {
     /// Creates a new physical address.
     ///
     /// ## Panics
-    ///
     /// This function panics if a bit in the range 52 to 64 is set.
-    #[inline]
     pub fn new(addr: u64) -> PhysAddr {
         assert_eq!(
             addr.get_bits(52..64),
             0,
             "physical addresses must not have any bits in the range 52 to 64 set"
         );
+
+        unsafe { PhysAddr::new_unchecked(addr) }
+    }
+
+    pub const unsafe fn new_unchecked(addr: u64) -> PhysAddr {
         PhysAddr(addr)
     }
 
     /// Converts the address to an `u64`.
-    #[inline]
     pub const fn as_u64(self) -> u64 {
         self.0
     }
@@ -318,7 +320,6 @@ impl PhysAddr {
     /// Aligns the physical address downwards to the given alignment.
     ///
     /// See the `align_down` function for more information.
-    #[inline]
     pub fn align_down<U>(self, align: U) -> Self
     where
         U: Into<u64>,
@@ -329,7 +330,6 @@ impl PhysAddr {
     /// Aligns the physical address upwards to the given alignment.
     ///
     /// See the `align_up` function for more information.
-    #[inline]
     pub fn align_up<U>(self, align: U) -> Self
     where
         U: Into<u64>,
@@ -338,7 +338,6 @@ impl PhysAddr {
     }
 
     /// Checks whether the physical address has the demanded alignment.
-    #[inline]
     pub fn is_aligned<U>(self, align: U) -> bool
     where
         U: Into<u64>,
@@ -356,35 +355,30 @@ impl fmt::Debug for PhysAddr {
 }
 
 impl fmt::Binary for PhysAddr {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Binary::fmt(&self.0, f)
     }
 }
 
 impl fmt::LowerHex for PhysAddr {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::LowerHex::fmt(&self.0, f)
     }
 }
 
 impl fmt::Octal for PhysAddr {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Octal::fmt(&self.0, f)
     }
 }
 
 impl fmt::UpperHex for PhysAddr {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::UpperHex::fmt(&self.0, f)
     }
 }
 
 impl fmt::Pointer for PhysAddr {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Pointer::fmt(&(self.0 as *const ()), f)
     }
@@ -392,14 +386,12 @@ impl fmt::Pointer for PhysAddr {
 
 impl Add<u64> for PhysAddr {
     type Output = Self;
-    #[inline]
     fn add(self, rhs: u64) -> Self::Output {
         PhysAddr::new(self.0 + rhs)
     }
 }
 
 impl AddAssign<u64> for PhysAddr {
-    #[inline]
     fn add_assign(&mut self, rhs: u64) {
         *self = *self + rhs;
     }
@@ -408,7 +400,6 @@ impl AddAssign<u64> for PhysAddr {
 #[cfg(target_pointer_width = "64")]
 impl Add<usize> for PhysAddr {
     type Output = Self;
-    #[inline]
     fn add(self, rhs: usize) -> Self::Output {
         self + rhs as u64
     }
@@ -416,7 +407,6 @@ impl Add<usize> for PhysAddr {
 
 #[cfg(target_pointer_width = "64")]
 impl AddAssign<usize> for PhysAddr {
-    #[inline]
     fn add_assign(&mut self, rhs: usize) {
         self.add_assign(rhs as u64)
     }
@@ -424,14 +414,12 @@ impl AddAssign<usize> for PhysAddr {
 
 impl Sub<u64> for PhysAddr {
     type Output = Self;
-    #[inline]
     fn sub(self, rhs: u64) -> Self::Output {
         PhysAddr::new(self.0.checked_sub(rhs).unwrap())
     }
 }
 
 impl SubAssign<u64> for PhysAddr {
-    #[inline]
     fn sub_assign(&mut self, rhs: u64) {
         *self = *self - rhs;
     }
@@ -448,7 +436,6 @@ impl Sub<usize> for PhysAddr {
 
 #[cfg(target_pointer_width = "64")]
 impl SubAssign<usize> for PhysAddr {
-    #[inline]
     fn sub_assign(&mut self, rhs: usize) {
         self.sub_assign(rhs as u64)
     }
@@ -456,7 +443,6 @@ impl SubAssign<usize> for PhysAddr {
 
 impl Sub<PhysAddr> for PhysAddr {
     type Output = u64;
-    #[inline]
     fn sub(self, rhs: PhysAddr) -> Self::Output {
         self.as_u64().checked_sub(rhs.as_u64()).unwrap()
     }
