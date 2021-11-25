@@ -129,19 +129,7 @@ unsafe impl GlobalAlloc for LockedHeap {
         // necessary and sufficient.
         debug_assert!(layout.size() < usize::MAX - (layout.align() - 1));
 
-        // TODO: The linked list allocator is fucked up so make a slab allocato
-        // and dont use that crate brrrrrrrr.
-        if layout.size() < Size4KiB::SIZE as usize {
-            let frame = pmm_alloc(BuddyOrdering::Size4KiB);
-            let virt = crate::PHYSICAL_MEMORY_OFFSET + frame.as_u64();
-
-            virt.as_mut_ptr()
-        } else {
-            let frame = pmm_alloc(BuddyOrdering::Size2MiB);
-            let virt = crate::PHYSICAL_MEMORY_OFFSET + frame.as_u64();
-
-            virt.as_mut_ptr()
-        }
+        self.allocate(layout).unwrap().as_ptr()
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {

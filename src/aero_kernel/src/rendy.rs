@@ -252,7 +252,7 @@ impl<'this> DebugRendy<'this> {
         let queue_size = rows * cols * core::mem::size_of::<QueueCharacter>();
         let queue = mem::alloc_boxed_buffer::<QueueCharacter>(queue_size);
 
-        let map_size = rows * cols * core::mem::size_of::<*const QueueCharacter>();
+        let map_size = rows * cols * core::mem::size_of::<Option<*const QueueCharacter>>();
         let map = mem::alloc_boxed_buffer::<Option<*mut QueueCharacter>>(map_size);
 
         let vga_font_bool_size = VGA_FONT_GLYPHS

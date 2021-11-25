@@ -1,2 +1,5 @@
 [workspace]
 members = ["aero_kernel", "aero_syscall"]
+
+[profile.release]
+debug = true
