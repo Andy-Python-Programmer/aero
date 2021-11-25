@@ -231,6 +231,11 @@ impl GlobalFrameAllocator {
         for i in 0..memory_map.entries_len {
             let entry = &memory_map.as_slice()[i as usize];
 
+            // Make sure that the memory map entry is marked as usable.
+            if entry.entry_type != StivaleMemoryMapEntryType::Usable {
+                continue;
+            }
+
             if entry.length >= requested_size && entry.base > CONVENTIONAL_MEM_END.as_u64() {
                 // Found a big enough memory map entry.
                 //

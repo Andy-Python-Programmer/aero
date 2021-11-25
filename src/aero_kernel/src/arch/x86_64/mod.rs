@@ -39,7 +39,6 @@ use crate::utils::io;
 
 use raw_cpuid::CpuId;
 use stivale_boot::v2::*;
-use xmas_elf::sections::ShType;
 
 #[repr(C, align(4096))]
 struct P2Align12<T>(T);
