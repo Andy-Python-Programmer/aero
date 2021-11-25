@@ -175,6 +175,8 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     tls::init();
     log::info!("loaded TLS");
 
+    crate::unwind::set_panic_hook_ready(true);
+
     gdt::init(stack_top_addr);
     log::info!("loaded GDT");
 

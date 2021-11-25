@@ -8,6 +8,11 @@ edition = "2021"
 round-robin = []
 sysroot = []
 
+# `kmemleak` provides a way of detecting possible 
+# kernel memory leaks in a way similar to a tracing
+# garbage collector.
+kmemleak = []
+
 default = ["round-robin"]
 
 [dependencies]

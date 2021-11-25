@@ -111,6 +111,97 @@ impl LockedHeap {
     }
 }
 
+#[cfg(feature = "kmemleak")]
+mod kmemleak {
+    use core::alloc::Layout;
+    use core::sync::atomic::{AtomicBool, Ordering};
+
+    use crate::utils::sync::Mutex;
+    use hashbrown::HashMap;
+    use spin::Once;
+
+    pub static MEM_LEAK_CATCHER: MemoryLeakCatcher = MemoryLeakCatcher::new_uninit();
+
+    pub struct MemoryLeakCatcher {
+        alloc: Once<Mutex<HashMap<usize, Layout>>>,
+        initialized: AtomicBool,
+    }
+
+    impl MemoryLeakCatcher {
+        /// Creates a new uninitialized instance of the kernel memory
+        /// leak catcher.
+        const fn new_uninit() -> Self {
+            Self {
+                alloc: Once::new(),
+                initialized: AtomicBool::new(false),
+            }
+        }
+
+        fn disable(&self) {
+            self.initialized.store(false, Ordering::SeqCst);
+        }
+
+        fn enable(&self) {
+            self.initialized.store(true, Ordering::SeqCst);
+        }
+
+        fn is_initialized(&self) -> bool {
+            self.initialized.load(Ordering::SeqCst)
+        }
+
+        pub fn init(&self) {
+            self.alloc.call_once(|| Mutex::new(HashMap::new()));
+            self.enable();
+        }
+
+        pub fn track_caller(&self, ptr: *mut u8, layout: Layout) {
+            let init = self.is_initialized();
+
+            if !init {
+                return;
+            }
+
+            self.disable();
+
+            self.alloc
+                .get()
+                .expect("track_caller: leak catcher not initialized")
+                .lock()
+                .insert(ptr as usize, layout);
+
+            self.enable();
+        }
+
+        pub fn unref(&self, ptr: *mut u8) {
+            let init = self.is_initialized();
+
+            if !init {
+                return;
+            }
+
+            self.disable();
+
+            let mut alloc = self
+                .alloc
+                .get()
+                .expect("unref: leak catcher not initialized")
+                .lock();
+
+            let double_free = alloc.remove(&(ptr as usize));
+
+            // If the allocation was not found, then we have a double free. Oh well!
+            if double_free.is_none() {
+                panic!(
+                    "attempted to double-free pointer at address: {:#x}",
+                    ptr as usize
+                );
+            }
+
+            self.enable();
+        }
+    }
+}
+
 unsafe impl GlobalAlloc for LockedHeap {
     unsafe fn alloc(&self, layout: alloc::Layout) -> *mut u8 {
         debug_assert!(layout.align().is_power_of_two());
@@ -129,13 +220,21 @@ unsafe impl GlobalAlloc for LockedHeap {
         // necessary and sufficient.
         debug_assert!(layout.size() < usize::MAX - (layout.align() - 1));
 
-        self.allocate(layout).unwrap().as_ptr()
+        let ptr = self.allocate(layout).unwrap().as_ptr();
+
+        #[cfg(feature = "kmemleak")]
+        kmemleak::MEM_LEAK_CATCHER.track_caller(ptr, layout);
+
+        ptr
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         // SAFETY: We we need to be careful to not cause a deadlock as the interrupt
         // handlers utilize the heap and might interrupt an in-progress de-allocation. So, we
         // lock the interrupts during the de-allocation.
+        #[cfg(feature = "kmemleak")]
+        kmemleak::MEM_LEAK_CATCHER.unref(ptr);
+
         // self.0
         //     .lock_irq()
         //     .deallocate(NonNull::new_unchecked(ptr), layout)
@@ -172,6 +271,9 @@ pub fn init_heap(offset_table: &mut OffsetPageTable) -> Result<(), MapToError<Si
     unsafe {
         AERO_SYSTEM_ALLOCATOR.init(HEAP_START, 4096);
     }
+
+    #[cfg(feature = "kmemleak")]
+    kmemleak::MEM_LEAK_CATCHER.init();
 
     Ok(())
 }

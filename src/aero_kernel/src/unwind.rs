@@ -19,6 +19,8 @@
 
 use core::panic::PanicInfo;
 
+use core::sync::atomic::{AtomicBool, Ordering};
+
 use xmas_elf::sections::{SectionData, ShType};
 use xmas_elf::symbol_table::Entry;
 use xmas_elf::ElfFile;
@@ -30,6 +32,12 @@ use crate::logger;
 use crate::rendy;
 
 use crate::arch::interrupts;
+
+static PANIC_HOOK_READY: AtomicBool = AtomicBool::new(false);
+
+pub fn set_panic_hook_ready(yes: bool) {
+    PANIC_HOOK_READY.store(yes, Ordering::SeqCst);
+}
 
 pub fn prepare_panic() {
     // Disable interrupts as we do not want to be interrupted while
@@ -155,7 +163,14 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     let deafult_panic = &format_args!("");
     let panic_message = info.message().unwrap_or(deafult_panic);
 
-    let cpu_id = unsafe { crate::CPU_ID }; // Get the CPU ID where this panic happened.
+    // Get the CPU ID where this panic happened and if PANIC_HOOK_READY is false
+    // then we cannot get the CPU where this panic happened.
+    let cpu_id = if PANIC_HOOK_READY.load(Ordering::SeqCst) {
+        unsafe { crate::CPU_ID }
+    } else {
+        0x00
+    };
+
     log::error!("cpu '{}' panicked at '{}'", cpu_id, panic_message);
 
     // Print the panic location if it is available.
