@@ -7,6 +7,7 @@ pub struct CommandLine {
     /// By default, the kernel logs are not redirected.
     pub rendy_debug: bool,
     pub term_background: Option<&'static [u8]>,
+    pub theme_background: u32,
 }
 
 impl CommandLine {
@@ -14,6 +15,7 @@ impl CommandLine {
         Self {
             rendy_debug: false,
             term_background: None,
+            theme_background: 0x50000000,
         }
     }
 }
@@ -23,7 +25,31 @@ fn resolve_module(modules: &'static StivaleModuleTag, name: &str) -> &'static [u
         .iter()
         .find(|m| m.as_str() == name)
         .map(|m| unsafe { core::slice::from_raw_parts(m.start as *const u8, m.size() as usize) })
-        .expect("invalid operand")
+        .expect("resolve_module: invalid operand")
+}
+
+fn parse_number(mut string: &str, default: usize) -> usize {
+    let is_hex = string.starts_with("0x");
+    let is_octal = string.starts_with("0o");
+
+    if is_hex {
+        string = string.trim_start_matches("0x");
+        usize::from_str_radix(string, 16)
+    } else if is_octal {
+        string = string.trim_start_matches("0o");
+        usize::from_str_radix(string, 8)
+    } else {
+        usize::from_str_radix(string, 10)
+    }
+    .unwrap_or_else(|error| {
+        log::warn!(
+            "parse_number: invalid operand {}, defaulting to {}",
+            error,
+            default
+        );
+
+        default
+    })
 }
 
 pub fn parse(cmdline: &str, modules: &'static StivaleModuleTag) -> CommandLine {
@@ -47,6 +73,11 @@ pub fn parse(cmdline: &str, modules: &'static StivaleModuleTag) -> CommandLine {
                         match name {
                             "--term-background" => {
                                 result.term_background = Some(resolve_module(modules, value))
+                            }
+
+                            "--theme-background" => {
+                                let theme_bg = parse_number(value, 0x50000000);
+                                result.theme_background = theme_bg as u32;
                             }
 
                             _ => bail(argument),

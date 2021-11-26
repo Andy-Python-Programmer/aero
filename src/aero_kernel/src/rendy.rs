@@ -63,10 +63,9 @@ const VGA_FONT_GLYPHS: usize = 256;
 const X_PAD: usize = 1;
 
 const MARGIN_GRADIENT: usize = 4;
-const DEFAULT_BACKGROUND: u32 = u32::MIN;
 const DWORD_SIZE: usize = core::mem::size_of::<u32>();
 
-const DEFAULT_TEXT_BACKGROUND: u32 = u32::MIN;
+const DEFAULT_TEXT_BACKGROUND: u32 = u32::MAX;
 const DEFAULT_TEXT_FOREGROUND: u32 = 0xaaaaaa;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -209,10 +208,12 @@ struct DebugRendy<'this> {
     cols: usize,
 
     color: ColorCode,
+    theme_background: u32,
 
     queue: Box<[QueueCharacter]>,
     grid: Box<[Character]>,
     map: Box<[Option<*mut QueueCharacter>]>,
+    bg_canvas: Box<[u32]>,
 
     vga_font_bool: Box<[bool]>,
 
@@ -228,12 +229,10 @@ struct DebugRendy<'this> {
 impl<'this> DebugRendy<'this> {
     /// Create a new debug renderer with the default foreground color set to white and
     /// background color set to black.
-    pub fn new(
-        buffer: &'this mut [u32],
-        info: RendyInfo,
+    pub fn new(buffer: &'this mut [u32], info: RendyInfo, cmdline: &CommandLine) -> Self {
+        let width = info.horizontal_resolution;
+        let height = info.vertical_resolution;
 
-        term_background: Option<&'this [u8]>,
-    ) -> Self {
         let glyph_width = DEFAULT_FONT_WIDTH;
         let glyph_height = DEFAULT_FONT_HEIGHT;
 
@@ -254,6 +253,9 @@ impl<'this> DebugRendy<'this> {
 
         let map_size = rows * cols * core::mem::size_of::<Option<*const QueueCharacter>>();
         let map = mem::alloc_boxed_buffer::<Option<*mut QueueCharacter>>(map_size);
+
+        let bg_canvas_size = width * height * core::mem::size_of::<u32>();
+        let bg_canvas = mem::alloc_boxed_buffer::<u32>(bg_canvas_size);
 
         let vga_font_bool_size = VGA_FONT_GLYPHS
             * DEFAULT_FONT_HEIGHT
@@ -312,11 +314,13 @@ impl<'this> DebugRendy<'this> {
             rows,
             cols,
 
+            theme_background: cmdline.theme_background,
             color: ColorCode::new(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND),
 
             queue,
             grid,
             map,
+            bg_canvas,
 
             glyph_height,
             glyph_width,
@@ -329,7 +333,7 @@ impl<'this> DebugRendy<'this> {
             queue_cursor: 0,
         };
 
-        let image = term_background.map(|a| parse_bmp_image(a));
+        let image = cmdline.term_background.map(|a| parse_bmp_image(a));
         this.generate_canvas(image);
 
         this.clear(true);
@@ -338,15 +342,17 @@ impl<'this> DebugRendy<'this> {
         this
     }
 
-    fn genloop(
+    fn genloop<F>(
         &mut self,
         image: &Image,
         xstart: usize,
         xend: usize,
         ystart: usize,
         yend: usize,
-        blender: fn(x: usize, y: usize, origin: u32) -> usize,
-    ) {
+        blender: F,
+    ) where
+        F: Fn(usize, usize, u32) -> usize,
+    {
         let img_width = image.img_width;
         let img_height = image.img_height;
         let img_pitch = image.pitch;
@@ -388,9 +394,11 @@ impl<'this> DebugRendy<'this> {
         let fixedp6_to_int = |v| v / 64;
 
         for y in ystart..yend {
-            let img_y = (y * img_height) / height; // calculate Y with full precision
+            let img_y = (y * img_height) / height; // Calculate Y with full precision :)
             let off = img_pitch * (img_height - 1 - img_y);
+
             let fb_off = self.info.stride / 4 * y;
+            let canvas_off = width * y;
 
             let ratio = int_to_fixedp6(img_width) / width;
             let mut img_x = ratio * xstart;
@@ -404,6 +412,7 @@ impl<'this> DebugRendy<'this> {
 
                 unsafe {
                     *self.buffer.as_mut_ptr().add(fb_off + x) = i as u32;
+                    self.bg_canvas[canvas_off + x] = i as u32;
                 }
 
                 img_x += ratio;
@@ -419,7 +428,34 @@ impl<'this> DebugRendy<'this> {
         ystart: usize,
         yend: usize,
     ) {
-        self.genloop(&image, xstart, xend, ystart, yend, |_, __, c| c as usize)
+        self.genloop(image, xstart, xend, ystart, yend, |_, __, c| c as usize)
+    }
+
+    fn loop_internal(
+        &mut self,
+        image: &Image,
+        xstart: usize,
+        xend: usize,
+        ystart: usize,
+        yend: usize,
+    ) {
+        let color_blend = |fg: u32, bg: u32| {
+            let alpha = 255 - (fg >> 24) as u8 as u32;
+            let inv_alpha = (fg >> 24) as u8 as u32 + 1;
+
+            let r = (alpha * (fg >> 16) as u8 as u32 + inv_alpha * (bg >> 16) as u8 as u32) / 256;
+            let g = (alpha * (fg >> 8) as u8 as u32 + inv_alpha * (bg >> 8) as u8 as u32) / 256;
+            let b = (alpha * fg as u8 as u32 + inv_alpha * bg as u8 as u32) / 256;
+
+            (0 << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF)
+        };
+
+        let theme_background = self.theme_background;
+
+        self.genloop(image, xstart, xend, ystart, yend, |_, __, c| {
+            let blend = color_blend(theme_background, c) as usize;
+            blend
+        })
     }
 
     fn generate_canvas(&mut self, image: Option<Image>) {
@@ -442,10 +478,19 @@ impl<'this> DebugRendy<'this> {
             self.loop_external(&image, 0, width, fheight_end, height);
             self.loop_external(&image, 0, fwidth, fheight, fheight_end);
             self.loop_external(&image, fwidth_end, width, fheight, fheight_end);
+
+            self.loop_internal(
+                &image,
+                frame_width,
+                frame_width_end,
+                frame_height,
+                frame_height_end,
+            );
         } else {
             for y in 0..height {
                 for x in 0..width {
-                    self.plot_pixel(x, y, DEFAULT_BACKGROUND);
+                    self.bg_canvas[y * width + x] = self.theme_background;
+                    self.plot_pixel(x, y, self.theme_background);
                 }
             }
         }
@@ -556,7 +601,7 @@ impl<'this> DebugRendy<'this> {
                 .add(char.char as usize * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH)
         };
 
-        // naming: fx,fy for font coordinates, gx,gy for glyph coordinates
+        // naming: fx, fy for font coordinates and gx, gy for glyph coordinates
         for gy in 0..self.glyph_height {
             let fb_line = unsafe {
                 self.buffer
@@ -564,10 +609,21 @@ impl<'this> DebugRendy<'this> {
                     .add(x + (y + gy) * (self.info.stride / 4))
             };
 
+            let canvas_line = unsafe {
+                self.bg_canvas
+                    .as_mut_ptr()
+                    .add(x + (y + gy) * self.info.horizontal_resolution)
+            };
+
             for fx in 0..DEFAULT_FONT_WIDTH {
                 let draw = unsafe { *glyph.add(gy * DEFAULT_FONT_WIDTH + fx) };
 
-                let bg = char.bg;
+                let bg = if char.bg == u32::MAX {
+                    unsafe { *canvas_line.add(fx) }
+                } else {
+                    char.bg
+                };
+
                 let fg = char.fg;
 
                 unsafe {
@@ -861,7 +917,7 @@ pub fn init(framebuffer_tag: &'static StivaleFramebufferTag, cmdline: &CommandLi
         )
     };
 
-    let rendy = DebugRendy::new(framebuffer, framebuffer_info, cmdline.term_background);
+    let rendy = DebugRendy::new(framebuffer, framebuffer_info, cmdline);
 
     DEBUG_RENDY.call_once(|| Mutex::new(rendy));
 }
