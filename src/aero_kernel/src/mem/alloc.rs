@@ -235,9 +235,9 @@ unsafe impl GlobalAlloc for LockedHeap {
         #[cfg(feature = "kmemleak")]
         kmemleak::MEM_LEAK_CATCHER.unref(ptr);
 
-        // self.0
-        //     .lock_irq()
-        //     .deallocate(NonNull::new_unchecked(ptr), layout)
+        self.0
+            .lock_irq()
+            .deallocate(NonNull::new_unchecked(ptr), layout)
     }
 }
 
