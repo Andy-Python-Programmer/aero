@@ -146,7 +146,7 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
         .arg("-smp")
         .arg("1")
         .arg("-m")
-        .arg("512M")
+        .arg("1G")
         .arg("-serial")
         .arg("stdio")
         .arg("-drive")

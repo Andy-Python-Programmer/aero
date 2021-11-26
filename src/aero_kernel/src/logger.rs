@@ -28,7 +28,7 @@ use crate::utils::buffer::RingBuffer;
 use crate::utils::sync::Mutex;
 
 const MAX_LOG_LEVEL_SPACE: usize = 6;
-const DEFAULT_LOG_RING_BUFFER_SIZE: usize = 256;
+const DEFAULT_LOG_RING_BUFFER_SIZE: usize = 4096;
 
 static LOG_RING_BUFFER: Once<Mutex<RingBuffer<[u8; DEFAULT_LOG_RING_BUFFER_SIZE]>>> = Once::new();
 static LOGGER: AeroLogger = AeroLogger;

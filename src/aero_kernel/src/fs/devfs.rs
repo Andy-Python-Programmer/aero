@@ -193,8 +193,8 @@ impl INodeInterface for DevKmsg {
     fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
         let buf = logger::get_log_buffer();
 
-        let size = core::cmp::min(buffer.len(), buf.len() - offset);
-        buffer.copy_from_slice(&buf.as_bytes()[offset..offset + size]);
+        let size = core::cmp::min(buffer.len(), buf.len());
+        buffer[..size].copy_from_slice(&buf.as_bytes()[offset..offset + size]);
 
         Ok(size)
     }

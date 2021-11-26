@@ -84,6 +84,47 @@ fn cat(file: &str) -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
+fn dmsg() -> Result<(), AeroSyscallError> {
+    let fd = sys_open("/dev/kmsg", OpenFlags::O_RDONLY)?;
+    let mut out = [1u8; 4096];
+    let length = sys_read(fd, &mut out)?;
+
+    let contents = &unsafe { core::str::from_utf8_unchecked(&out) }[..length];
+
+    for log in contents.split("\n") {
+        let mut iter = log.split(" ");
+
+        if let Some(info) = iter.next() {
+            if !info.starts_with("[") {
+                continue;
+            }
+
+            let level = &info[1..][..info.len() - 2];
+            let color = match level {
+                "ERROR" => "\x1b[1;31m",
+                "WARN" => "\x1b[1;33m",
+                "INFO" => "\x1b[1;32m",
+                "DEBUG" => "\x1b[1;34m",
+                "TRACE" => "\x1b[1;35m",
+                _ => continue,
+            };
+
+            print!("{}{}\x1b[0m", color, level);
+            print!(": ");
+
+            for rest in iter {
+                print!("{} ", rest);
+            }
+
+            println!();
+        }
+    }
+
+    sys_close(fd)?;
+
+    Ok(())
+}
+
 fn init() -> Result<(), AeroSyscallError> {
     sys_open("/dev/tty", OpenFlags::O_RDONLY)?; // device: stdin
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?; // device: stdout
@@ -171,7 +212,7 @@ fn main() -> Result<(), AeroSyscallError> {
             } else if command == "clear" {
                 print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
             } else if command == "dmsg" {
-                cat("/dev/kmsg")?;
+                dmsg()?;
             } else if command != "\u{0}" {
                 if sys_exec(command).is_err() {
                     println!("{}: command not found", command);
