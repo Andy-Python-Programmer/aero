@@ -341,6 +341,11 @@ impl KeyboardListener for Tty {
                 let character =
                     unsafe { core::char::from_u32_unchecked((map[key as usize] & 0xff) as _) };
 
+                // Check if the character is actually printable printable.
+                if !(0x20..0x7e).contains(&(character as u32)) {
+                    return;
+                }
+
                 {
                     let mut stdin = self.stdin.lock_irq();
 
