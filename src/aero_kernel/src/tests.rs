@@ -17,9 +17,33 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#[cfg(test)]
-pub(crate) fn test_runner(tests: &[&dyn Fn()]) {
+pub struct Test {
+    pub test_fn: fn(),
+    pub path: &'static str,
+}
+
+pub(crate) fn test_runner(tests: &[&Test]) {
+    crate::rendy::clear_screen(true);
+    crate::logger::set_rendy_debug(true);
+
+    log::info!("running {} tests", tests.len());
+
+    let mut passed = 0usize;
+
     for test in tests {
-        test();
+        (test.test_fn)();
+        log::info!("test {} ... ok", test.path);
+
+        passed += 1;
+    }
+
+    log::info!("");
+    log::info!(
+        "test result: ok. {} passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        passed
+    );
+
+    loop {
+        unsafe { crate::interrupts::halt() }
     }
 }

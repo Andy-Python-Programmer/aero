@@ -92,17 +92,23 @@ pub fn fetch() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn package_files(bios: Bios, mode: BuildType) -> anyhow::Result<()> {
+pub fn package_files(bios: Bios, mode: BuildType, path: PathBuf) -> anyhow::Result<()> {
     xshell::cmd!("chmod +x ./tools/build_image.sh").run()?;
 
     match (bios, mode) {
-        (Bios::Legacy, BuildType::Debug) => xshell::cmd!("./tools/build_image.sh -b").run()?,
+        (Bios::Legacy, BuildType::Debug) => xshell::cmd!("./tools/build_image.sh -b")
+            .env("AERO_KERNEL_PATH", path.as_os_str().to_str().unwrap())
+            .run()?,
         (Bios::Legacy, BuildType::Release) => xshell::cmd!("./tools/build_image.sh -b")
+            .env("AERO_KERNEL_PATH", path.as_os_str().to_str().unwrap())
             .env("RELEASE", "1")
             .run()?,
 
-        (Bios::Uefi, BuildType::Debug) => xshell::cmd!("./tools/build_image.sh -e").run()?,
+        (Bios::Uefi, BuildType::Debug) => xshell::cmd!("./tools/build_image.sh -e")
+            .env("AERO_KERNEL_PATH", path.as_os_str().to_str().unwrap())
+            .run()?,
         (Bios::Uefi, BuildType::Release) => xshell::cmd!("./tools/build_image.sh -e")
+            .env("AERO_KERNEL_PATH", path.as_os_str().to_str().unwrap())
             .env("RELEASE", "1")
             .run()?,
     }

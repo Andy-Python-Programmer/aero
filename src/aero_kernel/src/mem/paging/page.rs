@@ -418,7 +418,7 @@ impl<S: PageSize> fmt::Debug for PhysFrameRangeInclusive<S> {
 mod tests {
     use super::*;
 
-    #[test]
+    #[aero_test::test]
     pub fn test_page_ranges() {
         let page_size = Size4KiB::SIZE;
         let number = 1000;
@@ -426,15 +426,6 @@ mod tests {
         let start_addr = VirtAddr::new(0xdead_beaf);
         let start: Page = Page::containing_address(start_addr);
         let end = start + number;
-
-        let mut range = Page::range(start, end);
-        for i in 0..number {
-            assert_eq!(
-                range.next(),
-                Some(Page::containing_address(start_addr + page_size * i))
-            );
-        }
-        assert_eq!(range.next(), None);
 
         let mut range_inclusive = Page::range_inclusive(start, end);
         for i in 0..=number {

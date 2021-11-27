@@ -129,6 +129,59 @@ fn build_kernel(
     }
 }
 
+/// Extracts the test built executable from output of `cargo test --no-run`.
+fn extract_build_test_artifact(output: &str) -> anyhow::Result<Option<PathBuf>> {
+    let json = json::parse(&output)?;
+
+    // Get the executable path from the provided json output from
+    // cargo.
+    if let Some(executable) = json["executable"].as_str() {
+        Ok(Some(PathBuf::from(executable)))
+    } else {
+        Ok(None)
+    }
+}
+
+fn build_test_kernel(
+    target: Option<String>,
+    build_type: BuildType,
+    features: Vec<String>,
+) -> anyhow::Result<PathBuf> {
+    println!("INFO: Building kernel");
+
+    let _p = xshell::pushd("src");
+
+    // Use the provided target, or else use the default target.
+    let target = target.unwrap_or(String::from("x86_64-aero_os"));
+    let features = features.join(",");
+    let mut command = xshell::cmd!(
+        "{CARGO} test --package aero_kernel --no-run --target ./.cargo/{target}.json --message-format=json --features={features}"
+    );
+
+    if build_type == BuildType::Release {
+        // FIXME: A simple workaround since xshell moves the value command when we
+        // invoke the `arg` function.
+        command = command.arg("--release");
+    }
+
+    let executable = command
+        .read()?
+        .lines()
+        .map(extract_build_test_artifact)
+        .take_while(Result::is_ok)
+        .map(Result::unwrap)
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .next();
+
+    if let Some(executable) = executable {
+        Ok(executable)
+    } else {
+        // Error out if cargo did not provide us the build artifact.
+        anyhow::bail!("no build atrifact found");
+    }
+}
+
 fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> {
     // Calculate the qemu executable suffix.
     let qemu_suffix = if xserver && is_wsl() { "" } else { ".exe" };
@@ -275,6 +328,34 @@ enum AeroBuildCommand {
         bios: Option<String>,
     },
 
+    Test {
+        /// Sets the target triple to the provided `target`.
+        #[structopt(long)]
+        target: Option<String>,
+
+        /// If set, the the `emulator` executable will run in the linux subsystem
+        /// and the user is required to launch an xserver in order to run the `emulator`.
+        /// If using WSLG, the `xserver` argument must be set to true. On the other hand
+        /// if you have the `emulator` installed in the windows subsystem, then set this
+        /// argument to false (set by default).
+        ///
+        /// Note: On Linux, the `xserver` argument is ignored.
+        #[structopt(short, long)]
+        xserver: bool,
+
+        #[structopt(short, long)]
+        features: Vec<String>,
+
+        /// Assembles the image with the provided BIOS. Possible options are
+        /// `efi` and `legacy`. By default its set to `legacy`.
+        #[structopt(long)]
+        bios: Option<String>,
+
+        /// Extra command line arguments to pass to the `emulator`.
+        #[structopt(last = true)]
+        qemu_args: Vec<String>,
+    },
+
     /// Updates all of the build artifacts.
     Update,
 
@@ -349,12 +430,40 @@ fn main() -> anyhow::Result<()> {
                 bundled::download_ovmf_prebuilt()?;
 
                 build_userland()?;
-                build_kernel(target, build_type, features)?;
+                let path = build_kernel(target, build_type, features)?;
 
-                bundled::package_files(bios, build_type)?;
+                bundled::package_files(bios, build_type, path)?;
 
                 println!("Build took {:?}", now.elapsed());
 
+                run_qemu(qemu_args, xserver, bios)?;
+            }
+
+            AeroBuildCommand::Test {
+                target,
+                features,
+                bios,
+                xserver,
+                qemu_args,
+            } => {
+                let bios = Bios::from(bios);
+
+                let build_type = BuildType::Debug;
+
+                xshell::mkdir_p(BUNDLED_DIR)?;
+
+                // Get the current time. This is will be used to caclulate the build time
+                // after the build is finished.
+                let now = Instant::now();
+
+                bundled::download_ovmf_prebuilt()?;
+
+                build_userland()?;
+
+                let path = build_test_kernel(target, build_type, features)?;
+                bundled::package_files(bios, build_type, path)?;
+
+                println!("Build took {:?}", now.elapsed());
                 run_qemu(qemu_args, xserver, bios)?;
             }
 
@@ -381,8 +490,8 @@ fn main() -> anyhow::Result<()> {
                 bundled::download_ovmf_prebuilt()?;
 
                 build_userland()?;
-                build_kernel(target, build_type, features)?;
-                bundled::package_files(bios, build_type)?;
+                let path = build_kernel(target, build_type, features)?;
+                bundled::package_files(bios, build_type, path)?;
 
                 println!("Build took {:?}", now.elapsed());
             }

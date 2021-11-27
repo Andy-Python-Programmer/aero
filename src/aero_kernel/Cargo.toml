@@ -46,5 +46,8 @@ features = ["const_mut_refs"]
 [dependencies.aero_syscall]
 path = "../aero_syscall/"
 
+[dev-dependencies.aero_test]
+path = "../aero_test/"
+
 [build-dependencies]
 nasm-rs = { version = "0.2", features = ["parallel"] }

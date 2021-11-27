@@ -51,6 +51,7 @@
 #![test_runner(crate::tests::test_runner)]
 #![no_std]
 #![no_main]
+#![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
@@ -65,6 +66,7 @@ mod mem;
 mod modules;
 mod rendy;
 mod syscall;
+#[cfg(test)]
 mod tests;
 mod time;
 mod tls;
@@ -120,6 +122,9 @@ fn aero_main() -> ! {
     apic::mark_bsp_ready(true);
 
     log::info!("initialized kernel");
+
+    #[cfg(test)]
+    test_main();
 
     // Now that all of the essential initialization is done we are going to schedule
     // the kernel main thread.

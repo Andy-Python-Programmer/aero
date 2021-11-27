@@ -24,7 +24,6 @@ AERO_BUILD=$AERO_PATH/build
 AERO_BUNDLED=$AERO_PATH/bundled
 AERO_SYSROOT=$AERO_PATH/sysroot/aero
 AERO_SRC=$AERO_PATH/src
-AERO_KERNEL_TARGET=$AERO_PATH/src/target/x86_64-aero_os
 
 set -x -e
 
@@ -80,12 +79,7 @@ else
 fi
 
 sudo mkdir $AERO_BUILD/mnt/boot
-
-if [[ -z "${RELEASE}" ]]; then
-    sudo cp $AERO_KERNEL_TARGET/debug/aero_kernel $AERO_BUILD/mnt/boot/aero.elf
-else
-    sudo cp $AERO_KERNEL_TARGET/release/aero_kernel $AERO_BUILD/mnt/boot/aero.elf
-fi
+sudo cp "${AERO_KERNEL_PATH}" $AERO_BUILD/mnt/boot/aero.elf
 
 sudo cp $AERO_SRC/.cargo/limine.cfg $AERO_BUILD/mnt/
 sudo cp $AERO_BUNDLED/limine/limine.sys $AERO_BUILD/mnt/boot/

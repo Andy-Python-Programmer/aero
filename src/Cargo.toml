@@ -1,5 +1,5 @@
 [workspace]
-members = ["aero_kernel", "aero_syscall"]
+members = ["aero_kernel", "aero_syscall", "aero_test"]
 
 [profile.release]
 debug = true
