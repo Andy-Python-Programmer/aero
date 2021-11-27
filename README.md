@@ -31,10 +31,6 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 - Symmetric Multiprocessing (SMP)
 - On-demand paging
 
-# Roadmap
-
-Check out [ROADMAP.md](ROADMAP.md) for this month's roadmap.
-
 # How to Build and Run Aero
 
 Please make sure you have a **unix-like** host system before building 
