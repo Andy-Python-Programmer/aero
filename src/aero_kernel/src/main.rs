@@ -123,9 +123,6 @@ fn aero_main() -> ! {
 
     log::info!("initialized kernel");
 
-    #[cfg(test)]
-    test_main();
-
     // Now that all of the essential initialization is done we are going to schedule
     // the kernel main thread.
     let init = Task::new_kernel(kernel_main_thread, true);
@@ -154,6 +151,9 @@ fn kernel_main_thread() {
 
     fs::block::launch().unwrap();
     fs::launch().unwrap();
+
+    #[cfg(test)]
+    test_main();
 
     if logger::enabled_rendy_debug() {
         rendy::clear_screen(true);
