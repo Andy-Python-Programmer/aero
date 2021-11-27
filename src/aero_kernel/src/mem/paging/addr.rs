@@ -474,3 +474,27 @@ pub fn align_up(addr: u64, align: u64) -> u64 {
         (addr | align_mask) + 1
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[aero_test::test]
+    pub fn test_align_up() {
+        // align 1
+        assert_eq!(align_up(0, 1), 0);
+        assert_eq!(align_up(1234, 1), 1234);
+        assert_eq!(align_up(0xffff_ffff_ffff_ffff, 1), 0xffff_ffff_ffff_ffff);
+
+        // align 2
+        assert_eq!(align_up(0, 2), 0);
+        assert_eq!(align_up(1233, 2), 1234);
+        assert_eq!(align_up(0xffff_ffff_ffff_fffe, 2), 0xffff_ffff_ffff_fffe);
+
+        // address 0
+        assert_eq!(align_up(0, 128), 0);
+        assert_eq!(align_up(0, 1), 0);
+        assert_eq!(align_up(0, 2), 0);
+        assert_eq!(align_up(0, 0x8000_0000_0000_0000), 0);
+    }
+}
