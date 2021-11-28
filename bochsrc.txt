@@ -1,5 +1,5 @@
 display_library: x, options="gui_debug"
-megs:            128
+megs:            1000
 magic_break: enabled=1
 romimage:        file=/usr/share/bochs/BIOS-bochs-latest
 vgaromimage:     file=/usr/share/bochs/VGABIOS-lgpl-latest

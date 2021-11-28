@@ -66,11 +66,11 @@ pub fn parse(cmdline: &str, modules: &'static StivaleModuleTag) -> CommandLine {
                         let value = pair.next().expect("missing operand");
 
                         match name {
-                            "--term-background" => {
+                            "term-background" => {
                                 result.term_background = Some(resolve_module(modules, value))
                             }
 
-                            "--theme-background" => {
+                            "theme-background" => {
                                 let theme_bg = parse_number(value).unwrap_or_else(|e| {
                                     log::warn!(
                                         "parse_number: invalid operand {}, defaulting to {}",

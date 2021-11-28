@@ -160,6 +160,7 @@ pub fn launch() -> Result<()> {
         let mbr = Mbr::new();
 
         block.read(0, mbr.bytes_mut());
+        log::debug!("{:?}", mbr.bytes_mut());
 
         if mbr.is_valid() {
             log::info!("{}: found MBR partition", block.name());
