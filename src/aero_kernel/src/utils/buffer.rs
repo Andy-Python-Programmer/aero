@@ -101,3 +101,29 @@ impl<S: AsRef<[u8]> + AsMut<[u8]>> Write for RingBuffer<S> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[aero_test::test]
+    fn partially_overwritten_buffer() {
+        let mut buf = RingBuffer::new([0u8; 16]);
+        write!(buf, "\nfirst\n").unwrap();
+        write!(buf, "second\n").unwrap();
+        write!(buf, "third\n").unwrap();
+
+        assert_eq!(buf.extract(), "st\nsecond\nthird\n");
+    }
+
+    #[aero_test::test]
+    fn clear_buffer() {
+        let mut buf = RingBuffer::new([0u8; 5]);
+        write!(buf, "hello").unwrap();
+
+        assert_eq!(buf.extract(), "hello");
+        buf.clear_buffer();
+
+        assert_eq!(buf.extract(), "");
+    }
+}

@@ -1,4 +1,8 @@
+use core::num::ParseIntError;
+
 use stivale_boot::v2::StivaleModuleTag;
+
+use crate::rendy;
 
 pub struct CommandLine {
     /// If set, then the kernel logs will be redirected onto the framebuffer until
@@ -11,11 +15,11 @@ pub struct CommandLine {
 }
 
 impl CommandLine {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             rendy_debug: false,
             term_background: None,
-            theme_background: 0x50000000,
+            theme_background: rendy::DEFAULT_THEME_BACKGROUND,
         }
     }
 }
@@ -28,7 +32,7 @@ fn resolve_module(modules: &'static StivaleModuleTag, name: &str) -> &'static [u
         .expect("resolve_module: invalid operand")
 }
 
-fn parse_number(mut string: &str, default: usize) -> usize {
+fn parse_number(mut string: &str) -> Result<usize, ParseIntError> {
     let is_hex = string.starts_with("0x");
     let is_octal = string.starts_with("0o");
 
@@ -41,15 +45,6 @@ fn parse_number(mut string: &str, default: usize) -> usize {
     } else {
         usize::from_str_radix(string, 10)
     }
-    .unwrap_or_else(|error| {
-        log::warn!(
-            "parse_number: invalid operand {}, defaulting to {}",
-            error,
-            default
-        );
-
-        default
-    })
 }
 
 pub fn parse(cmdline: &str, modules: &'static StivaleModuleTag) -> CommandLine {
@@ -76,7 +71,16 @@ pub fn parse(cmdline: &str, modules: &'static StivaleModuleTag) -> CommandLine {
                             }
 
                             "--theme-background" => {
-                                let theme_bg = parse_number(value, 0x50000000);
+                                let theme_bg = parse_number(value).unwrap_or_else(|e| {
+                                    log::warn!(
+                                        "parse_number: invalid operand {}, defaulting to {}",
+                                        e,
+                                        rendy::DEFAULT_THEME_BACKGROUND
+                                    );
+
+                                    rendy::DEFAULT_THEME_BACKGROUND as usize
+                                });
+
                                 result.theme_background = theme_bg as u32;
                             }
 
@@ -91,4 +95,20 @@ pub fn parse(cmdline: &str, modules: &'static StivaleModuleTag) -> CommandLine {
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[aero_test::test]
+    fn number_parser_test() {
+        assert_eq!(parse_number("0xdeadbeef").unwrap(), 0xdeadbeef);
+        assert_eq!(parse_number("0o546").unwrap(), 0o546);
+        assert_eq!(parse_number("123").unwrap(), 123);
+
+        assert!(parse_number("invalid").is_err());
+        assert!(parse_number("0xinvalid").is_err());
+        assert!(parse_number("0oinvalid").is_err());
+    }
 }

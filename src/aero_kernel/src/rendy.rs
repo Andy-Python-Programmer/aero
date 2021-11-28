@@ -68,6 +68,8 @@ const DWORD_SIZE: usize = core::mem::size_of::<u32>();
 const DEFAULT_TEXT_BACKGROUND: u32 = u32::MAX;
 const DEFAULT_TEXT_FOREGROUND: u32 = 0xaaaaaa;
 
+pub const DEFAULT_THEME_BACKGROUND: u32 = 0x50000000;
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 struct Character {
     char: char,
