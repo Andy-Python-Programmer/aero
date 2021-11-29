@@ -204,9 +204,6 @@ pub fn init() {
 
         IDT[49].set_function(super::irq::lapic_error);
 
-        IDT[0x80].set_flags(IDTFlags::PRESENT | IDTFlags::RING_3 | IDTFlags::INTERRUPT);
-        IDT[0x80].set_offset(8, crate::syscall::syscall_interrupt_handler as usize);
-
         IDT[IPI_ABORT as usize].set_function(super::ipi::abort);
         IDT[IPI_RESCHEDULE as usize].set_function(super::ipi::reschedule);
 

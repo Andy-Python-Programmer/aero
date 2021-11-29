@@ -54,11 +54,10 @@ use alloc::vec::Vec;
 
 pub use fs::*;
 pub use process::*;
+use raw_cpuid::CpuId;
 pub use time::*;
 
-use crate::arch::interrupts::interrupt_stack;
 use crate::arch::{gdt::GdtEntryType, interrupts};
-
 use crate::utils::{io, StackHelper};
 
 pub struct ExecArgs {
@@ -186,43 +185,36 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
     stack.rax = aero_syscall::syscall_result_as_usize(result) as _;
 }
 
-interrupt_stack!(
-    pub unsafe fn syscall_interrupt_handler(stack: &mut InterruptStack) {
-        if supports_syscall_sysret() {
-            // If the current CPU suppots syscall instruction then print
-            // a warning as in this case use of deperecated `int 0x80`
-            // interrupt.
-            log::warn!("Use of deperecated `int 0x80` interrupt");
-        }
-
-        unimplemented!()
-    }
-);
 extern "C" {
     fn syscall_handler();
 }
 
 pub fn init() {
+    // Check if syscall is supported as it is a required CPU feature for aero to run.
+    let has_syscall = CpuId::new()
+        .get_extended_processor_and_feature_identifiers()
+        .map_or(false, |i| i.has_syscall_sysret());
+
+    assert!(has_syscall);
+
     unsafe {
         /*
          * Enable support for `syscall` and `sysret` instructions if the current
          * CPU supports them and the target pointer width is 64.
          */
-        #[cfg(target_pointer_width = "64")]
-        if supports_syscall_sysret() {
-            let syscall_base = GdtEntryType::KERNEL_CODE << 3;
-            let sysret_base = (GdtEntryType::USER_CODE32_UNUSED << 3) | 3;
+        let syscall_base = GdtEntryType::KERNEL_CODE << 3;
+        let sysret_base = (GdtEntryType::USER_CODE32_UNUSED << 3) | 3;
 
-            let star_hi = syscall_base as u32 | ((sysret_base as u32) << 16);
+        let star_hi = syscall_base as u32 | ((sysret_base as u32) << 16);
 
-            io::wrmsr(io::IA32_STAR, (star_hi as u64) << 32);
-            io::wrmsr(io::IA32_LSTAR, syscall_handler as u64);
+        io::wrmsr(io::IA32_STAR, (star_hi as u64) << 32);
+        io::wrmsr(io::IA32_LSTAR, syscall_handler as u64);
 
-            // Clear the trap flag and enable interrupts.
-            io::wrmsr(io::IA32_FMASK, 0x300);
+        // Clear the trap flag and enable interrupts.
+        io::wrmsr(io::IA32_FMASK, 0x300);
 
-            let efer = io::rdmsr(io::IA32_EFER);
-            io::wrmsr(io::IA32_EFER, efer | 1);
-        }
+        // Set the EFER.SCE bit to enable the syscall feature
+        let efer = io::rdmsr(io::IA32_EFER);
+        io::wrmsr(io::IA32_EFER, efer | 1);
     }
 }
