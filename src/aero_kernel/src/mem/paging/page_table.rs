@@ -24,7 +24,7 @@ use core::ops::{Index, IndexMut};
 
 use super::addr::PhysAddr;
 use super::page::{PageSize, PhysFrame, Size4KiB};
-use super::MapToError;
+use super::{FrameAllocator, MapToError, FRAME_ALLOCATOR};
 
 use bitflags::bitflags;
 
@@ -47,6 +47,11 @@ pub struct PageTableEntry {
 
 impl PageTableEntry {
     const ADDRESS_MASK: u64 = 0x000f_ffff_ffff_f000;
+    // We use the unused flag bits in the page table entry for the
+    // page table entry counter.
+    const COUNTER_MASK: u64 = 0x7ff0_0000_0000_0000;
+    const COUNTER_SHIFT: u64 = 52;
+    const FLAGS_MASK: u64 = 0x80000000000001ff;
 
     /// Creates an unused page table entry.
     pub const fn new() -> Self {
@@ -60,7 +65,6 @@ impl PageTableEntry {
 
     /// Sets this entry to zero.
     pub fn set_unused(&mut self) {
-        self.unref_vm_frame();
         self.entry = 0;
     }
 
@@ -78,11 +82,11 @@ impl PageTableEntry {
 
                 if count == 0 {
                     // No references to this frame, deallocate it.
-                    // unsafe {
-                    //     FRAME_ALLOCATOR.deallocate_frame(
-                    //         PhysFrame::<Size4KiB>::containing_address(self.addr()),
-                    //     );
-                    // }
+                    unsafe {
+                        FRAME_ALLOCATOR.deallocate_frame(
+                            PhysFrame::<Size4KiB>::containing_address(self.addr()),
+                        );
+                    }
 
                     return true;
                 }
@@ -103,6 +107,31 @@ impl PageTableEntry {
     /// Returns the physical address mapped by this entry, might be zero.
     pub fn addr(&self) -> PhysAddr {
         PhysAddr::new(self.entry & Self::ADDRESS_MASK)
+    }
+
+    /// Returns the unused flag bits in the page table entry for the
+    /// page table entry counter.
+    pub fn get_entry_count(&self) -> u64 {
+        (self.entry & Self::COUNTER_MASK) >> Self::COUNTER_SHIFT
+    }
+
+    /// Sets the page table entry counter to the given `count`.
+    pub fn set_entry_count(&mut self, count: u64) {
+        self.entry = (self.entry & !Self::COUNTER_MASK) | (count << Self::COUNTER_SHIFT);
+    }
+
+    /// Increments the page table entry counter by one.
+    pub fn inc_entry_count(&mut self) {
+        let entry_count = self.get_entry_count();
+        self.set_entry_count(entry_count + 1);
+    }
+
+    /// Decrements the page table entry counter by one.
+    pub fn dec_entry_count(&mut self) {
+        let entry_count = self.get_entry_count();
+        assert!(entry_count != 0);
+
+        self.set_entry_count(entry_count - 1);
     }
 
     /// Returns the physical frame mapped by this entry.
@@ -132,7 +161,10 @@ impl PageTableEntry {
             self.unref_vm_frame();
         }
 
-        self.entry = (addr.as_u64()) | flags.bits();
+        self.entry &= !Self::ADDRESS_MASK;
+        self.entry |= addr.as_u64();
+
+        self.set_flags(flags);
 
         if ref_pp {
             self.ref_vm_frame();
@@ -147,7 +179,8 @@ impl PageTableEntry {
 
     /// Sets the flags of this entry.
     pub fn set_flags(&mut self, flags: PageTableFlags) {
-        self.entry = self.addr().as_u64() | flags.bits();
+        self.entry &= !Self::FLAGS_MASK;
+        self.entry |= flags.bits();
     }
 }
 

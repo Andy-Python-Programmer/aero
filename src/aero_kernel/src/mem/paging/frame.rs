@@ -609,13 +609,13 @@ mod tests {
         // the frame should be deallocated.
         assert_eq!(vm_frame.ref_count(), 0);
 
-        // unsafe {
-        //     assert!(FRAME_ALLOCATOR
-        //         .0
-        //         .get()
-        //         .unwrap()
-        //         .lock()
-        //         .is_free(frame.start_address(), 0));
-        // }
+        unsafe {
+            assert!(FRAME_ALLOCATOR
+                .0
+                .get()
+                .unwrap()
+                .lock()
+                .is_free(frame.start_address(), 0));
+        }
     }
 }

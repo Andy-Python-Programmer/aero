@@ -421,46 +421,54 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
     where
         A: FrameAllocator<Size4KiB> + ?Sized,
     {
-        let p2;
+        let mut is_alloc_4 = false;
+
+        let p4;
 
         if self.level_5_paging_enabled {
             let p5 = &mut self.page_table;
-            let p4 = self.page_table_walker.create_next_table(
+            let (alloc, yes) = self.page_table_walker.create_next_table(
                 &mut p5[page.p5_index()],
                 parent_table_flags,
                 allocator,
             )?;
-            let p3 = self.page_table_walker.create_next_table(
-                &mut p4[page.p4_index()],
-                parent_table_flags,
-                allocator,
-            )?;
 
-            p2 = self.page_table_walker.create_next_table(
-                &mut p3[page.p3_index()],
-                parent_table_flags,
-                allocator,
-            )?;
+            p4 = yes;
+            is_alloc_4 = alloc;
         } else {
-            let p4 = &mut self.page_table;
-            let p3 = self.page_table_walker.create_next_table(
-                &mut p4[page.p4_index()],
-                parent_table_flags,
-                allocator,
-            )?;
-
-            p2 = self.page_table_walker.create_next_table(
-                &mut p3[page.p3_index()],
-                parent_table_flags,
-                allocator,
-            )?;
+            p4 = &mut self.page_table;
         }
+
+        let (is_alloc_3, p3) = self.page_table_walker.create_next_table(
+            &mut p4[page.p4_index()],
+            parent_table_flags,
+            allocator,
+        )?;
+
+        let (is_alloc_2, p2) = self.page_table_walker.create_next_table(
+            &mut p3[page.p3_index()],
+            parent_table_flags,
+            allocator,
+        )?;
 
         if !p2[page.p2_index()].is_unused() {
             return Err(MapToError::PageAlreadyMapped(frame));
         }
 
         p2[page.p2_index()].set_addr(frame.start_address(), flags | PageTableFlags::HUGE_PAGE);
+
+        if is_alloc_2 {
+            p3[page.p3_index()].inc_entry_count();
+        }
+
+        if is_alloc_3 {
+            p4[page.p4_index()].inc_entry_count();
+        }
+
+        if is_alloc_4 {
+            let p5 = &mut self.page_table;
+            p5[page.p5_index()].inc_entry_count();
+        }
 
         Ok(MapperFlush::new(page))
     }
@@ -478,29 +486,35 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
     {
         let p4;
 
+        let mut is_alloc_4 = false;
+
         if self.level_5_paging_enabled {
             let p5 = &mut self.page_table;
-
-            p4 = self.page_table_walker.create_next_table(
+            let (alloc, yes) = self.page_table_walker.create_next_table(
                 &mut p5[page.p5_index()],
                 parent_table_flags,
                 allocator,
             )?;
+
+            p4 = yes;
+            is_alloc_4 = alloc;
         } else {
             p4 = &mut self.page_table;
         }
 
-        let p3 = self.page_table_walker.create_next_table(
+        let (is_alloc_3, p3) = self.page_table_walker.create_next_table(
             &mut p4[page.p4_index()],
             parent_table_flags,
             allocator,
         )?;
-        let p2 = self.page_table_walker.create_next_table(
+
+        let (is_alloc_2, p2) = self.page_table_walker.create_next_table(
             &mut p3[page.p3_index()],
             parent_table_flags,
             allocator,
         )?;
-        let p1 = self.page_table_walker.create_next_table(
+
+        let (is_alloc_1, p1) = self.page_table_walker.create_next_table(
             &mut p2[page.p2_index()],
             parent_table_flags,
             allocator,
@@ -511,6 +525,23 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
         }
 
         p1[page.p1_index()].set_frame(frame, flags);
+
+        if is_alloc_1 {
+            p2[page.p2_index()].inc_entry_count();
+        }
+
+        if is_alloc_2 {
+            p3[page.p3_index()].inc_entry_count();
+        }
+
+        if is_alloc_3 {
+            p4[page.p4_index()].inc_entry_count();
+        }
+
+        if is_alloc_4 {
+            let p5 = &mut self.page_table;
+            p5[page.p5_index()].inc_entry_count();
+        }
 
         Ok(MapperFlush::new(page))
     }
@@ -568,7 +599,17 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size2MiB> for MappedPageTable<'a, P> {
         let frame = PhysFrame::from_start_address(p2_entry.addr())
             .map_err(|AddressNotAligned| UnmapError::InvalidFrameAddress(p2_entry.addr()))?;
 
+        p2_entry.unref_vm_frame();
         p2_entry.set_unused();
+
+        let p3_entry = &mut p3[page.p3_index()];
+        p3_entry.dec_entry_count();
+
+        if p3_entry.get_entry_count() == 0 {
+            p3_entry.unref_vm_frame();
+            p3_entry.set_unused();
+        }
+
         Ok((frame, MapperFlush::new(page)))
     }
 
@@ -679,7 +720,17 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size4KiB> for MappedPageTable<'a, P> {
             FrameError::HugeFrame => UnmapError::ParentEntryHugePage,
         })?;
 
+        p1_entry.unref_vm_frame();
         p1_entry.set_unused();
+
+        let p2_entry = &mut p2[page.p2_index()];
+        p2_entry.dec_entry_count();
+
+        if p2_entry.get_entry_count() == 0 {
+            p2_entry.unref_vm_frame();
+            p2_entry.set_unused();
+        }
+
         Ok((frame, MapperFlush::new(page)))
     }
 
@@ -885,7 +936,7 @@ impl<P: PageTableFrameMapping> PageTableWalker<P> {
         entry: &'b mut PageTableEntry,
         insert_flags: PageTableFlags,
         allocator: &mut A,
-    ) -> Result<&'b mut PageTable, PageTableCreateError>
+    ) -> Result<(bool, &'b mut PageTable), PageTableCreateError>
     where
         A: FrameAllocator<Size4KiB> + ?Sized,
     {
@@ -918,7 +969,8 @@ impl<P: PageTableFrameMapping> PageTableWalker<P> {
         if created {
             page_table.zero();
         }
-        Ok(page_table)
+
+        Ok((created, page_table))
     }
 }
 
