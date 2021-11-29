@@ -77,7 +77,13 @@ impl PageTableEntry {
                 let count = vm_frame.ref_count();
 
                 if count == 0 {
-                    // TODO: The ref count has been dropped to 0, so we can free the frame.
+                    // No references to this frame, deallocate it.
+                    // unsafe {
+                    //     FRAME_ALLOCATOR.deallocate_frame(
+                    //         PhysFrame::<Size4KiB>::containing_address(self.addr()),
+                    //     );
+                    // }
+
                     return true;
                 }
             }

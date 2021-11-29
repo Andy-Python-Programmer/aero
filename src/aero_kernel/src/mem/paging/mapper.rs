@@ -39,6 +39,7 @@ use super::{
 pub unsafe trait FrameAllocator<S: PageSize> {
     /// Allocate a frame of the appropriate size and return it if possible.
     fn allocate_frame(&mut self) -> Option<PhysFrame<S>>;
+    fn deallocate_frame(&mut self, frame: PhysFrame<S>);
 }
 
 /// An empty convencience trait that requires the `Mapper` trait for all page sizes.

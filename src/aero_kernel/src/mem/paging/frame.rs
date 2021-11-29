@@ -52,7 +52,6 @@ impl LockedFrameAllocator {
 }
 
 unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
-    #[track_caller]
     fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
         self.0
             .get()
@@ -63,10 +62,16 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
             })
             .unwrap_or(None)
     }
+
+    fn deallocate_frame(&mut self, frame: PhysFrame<Size4KiB>) {
+        self.0
+            .get()
+            .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 0))
+            .unwrap_or(());
+    }
 }
 
 unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
-    #[track_caller]
     fn allocate_frame(&mut self) -> Option<PhysFrame<Size2MiB>> {
         self.0
             .get()
@@ -76,6 +81,13 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
                     .map(|f| PhysFrame::containing_address(f))
             })
             .unwrap_or(None)
+    }
+
+    fn deallocate_frame(&mut self, frame: PhysFrame<Size2MiB>) {
+        self.0
+            .get()
+            .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 1))
+            .unwrap_or(());
     }
 }
 
@@ -370,6 +382,14 @@ impl GlobalFrameAllocator {
         change
     }
 
+    #[cfg(test)]
+    fn is_free(&self, address: PhysAddr, ordering: usize) -> bool {
+        let (byte, bit) = self.get_byte_bit(address, ordering);
+
+        let chunk = &self.buddies[ordering][byte as usize];
+        (*chunk).get_bit(bit as usize)
+    }
+
     /// Inserts the provided memory range.
     fn insert_range(&mut self, base: PhysAddr, end: PhysAddr) {
         let mut remaning = end - base;
@@ -411,6 +431,55 @@ impl GlobalFrameAllocator {
         }
 
         None
+    }
+
+    fn clear_bit(&mut self, addr: PhysAddr, ordering: usize) -> bool {
+        if addr < self.base {
+            return false;
+        }
+
+        let (byte, bit) = self.get_byte_bit(addr, ordering);
+        let chunk = &mut self.buddies[ordering][byte as usize];
+
+        let change = (*chunk).get_bit(bit as usize) == true;
+
+        if change {
+            (*chunk).set_bit(bit as usize, false);
+
+            self.free[ordering] -= 1;
+        }
+
+        change
+    }
+
+    fn get_buddy(&self, addr: PhysAddr, ordering: usize) -> PhysAddr {
+        let size = BUDDY_SIZE[ordering];
+        let base = addr.align_down(size * 2);
+
+        if base == addr {
+            addr + size
+        } else {
+            base
+        }
+    }
+
+    fn deallocate_frame_inner(&mut self, mut addr: PhysAddr, mut ordering: usize) {
+        while ordering < BUDDY_SIZE.len() {
+            if ordering < BUDDY_SIZE.len() - 1 {
+                let buddy = self.get_buddy(addr, ordering);
+
+                if self.clear_bit(buddy, ordering) {
+                    addr = core::cmp::min(addr, buddy);
+                    ordering += 1;
+                } else {
+                    self.set_bit(addr, ordering);
+                    break;
+                }
+            } else {
+                self.set_bit(addr, ordering);
+                break;
+            }
+        }
     }
 
     fn allocate_frame_inner(&mut self, ordering: usize) -> Option<PhysAddr> {
@@ -518,6 +587,15 @@ mod tests {
         // The frame is not mapped yet, so the ref count should be 0.
         assert_eq!(vm_frame.ref_count(), 0);
 
+        unsafe {
+            assert!(!FRAME_ALLOCATOR
+                .0
+                .get()
+                .unwrap()
+                .lock()
+                .is_free(frame.start_address(), 0));
+        }
+
         unsafe { offset_table.map_to(page, frame, PageTableFlags::PRESENT, &mut FRAME_ALLOCATOR) }
             .unwrap()
             .flush();
@@ -530,5 +608,14 @@ mod tests {
         // We just unmapped the frame from `0xcafebabe` so the ref count should be 0 and
         // the frame should be deallocated.
         assert_eq!(vm_frame.ref_count(), 0);
+
+        // unsafe {
+        //     assert!(FRAME_ALLOCATOR
+        //         .0
+        //         .get()
+        //         .unwrap()
+        //         .lock()
+        //         .is_free(frame.start_address(), 0));
+        // }
     }
 }
