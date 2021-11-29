@@ -110,7 +110,6 @@ pub enum MappedFrame {
 
 impl MappedFrame {
     /// Returns the start address of the frame.
-    #[allow(unused)]
     pub const fn start_address(&self) -> PhysAddr {
         match self {
             MappedFrame::Size4KiB(frame) => frame.start_address,

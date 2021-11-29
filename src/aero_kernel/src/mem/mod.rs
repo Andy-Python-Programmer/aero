@@ -45,6 +45,8 @@ impl AddressSpace {
                 .ok_or(MapToError::FrameAllocationFailed)?;
 
             let phys_addr = frame.start_address();
+            phys_addr.as_vm_frame().unwrap().inc_ref_count();
+
             let virt_addr = PHYSICAL_MEMORY_OFFSET + phys_addr.as_u64();
 
             let page_table: *mut PageTable = virt_addr.as_mut_ptr();

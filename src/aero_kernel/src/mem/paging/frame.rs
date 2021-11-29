@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use alloc::vec::Vec;
 use bit_field::BitField;
 use spin::Once;
 use stivale_boot::v2::StivaleMemoryMapEntry;
@@ -207,6 +208,8 @@ const CONVENTIONAL_MEM_START: PhysAddr = unsafe { PhysAddr::new_unchecked(0x00) 
 // the APs.
 const CONVENTIONAL_MEM_END: PhysAddr = unsafe { PhysAddr::new_unchecked(Size4KiB::SIZE * 4) };
 
+static VM_FRAMES: Once<Vec<VmFrame>> = Once::new();
+
 pub struct GlobalFrameAllocator {
     buddies: [&'static mut [u64]; 3],
     free: [usize; 3],
@@ -315,6 +318,10 @@ impl GlobalFrameAllocator {
         }
 
         this
+    }
+
+    fn frame_count(&self) -> usize {
+        (self.end.as_u64() / Size4KiB::SIZE) as usize
     }
 
     /// Find the perfect buddy ordering for the provided address range.
@@ -434,5 +441,94 @@ impl GlobalFrameAllocator {
         }
 
         None
+    }
+}
+
+pub fn init_vm_frames() {
+    VM_FRAMES.call_once(|| {
+        let frame_count = unsafe {
+            super::FRAME_ALLOCATOR
+                .0
+                .get()
+                .unwrap()
+                .lock_irq()
+                .frame_count()
+        };
+
+        let mut frames = Vec::<VmFrame>::new();
+        frames.resize_with(frame_count, VmFrame::new);
+
+        frames
+    });
+}
+
+pub fn get_vm_frames() -> Option<&'static Vec<VmFrame>> {
+    VM_FRAMES.get()
+}
+
+struct VmFrameInner {
+    use_count: usize,
+}
+
+pub struct VmFrame {
+    lock: Mutex<VmFrameInner>,
+}
+
+impl VmFrame {
+    fn new() -> Self {
+        Self {
+            lock: Mutex::new(VmFrameInner { use_count: 0 }),
+        }
+    }
+
+    pub fn dec_ref_count(&self) {
+        let mut this = self.lock.lock();
+
+        if this.use_count > 0 {
+            this.use_count -= 1;
+        }
+    }
+
+    pub fn inc_ref_count(&self) {
+        self.lock.lock().use_count += 1;
+    }
+
+    pub fn ref_count(&self) -> usize {
+        self.lock.lock().use_count
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::*;
+    use super::*;
+
+    use crate::mem::AddressSpace;
+
+    #[aero_test::test]
+    fn vm_frame_ref_count() {
+        let mut address_space = AddressSpace::this();
+        let mut offset_table = address_space.offset_page_table();
+
+        let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
+        let page = Page::<Size4KiB>::containing_address(VirtAddr::new(0xcafebabedeadbeef));
+
+        let vm_frame = frame.start_address().as_vm_frame().unwrap();
+
+        // The frame is not mapped yet, so the ref count should be 0.
+        assert_eq!(vm_frame.ref_count(), 0);
+
+        unsafe { offset_table.map_to(page, frame, PageTableFlags::PRESENT, &mut FRAME_ALLOCATOR) }
+            .unwrap()
+            .flush();
+
+        // We just mapped the frame to `0xcafebabe` so the ref count should be 1.
+        assert_eq!(vm_frame.ref_count(), 1);
+
+        unsafe { offset_table.unmap(page) }.unwrap().1.flush();
+
+        // We just unmapped the frame from `0xcafebabe` so the ref count should be 0 and
+        // the frame should be deallocated.
+        assert_eq!(vm_frame.ref_count(), 0);
     }
 }

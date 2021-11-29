@@ -46,34 +46,57 @@ pub struct PageTableEntry {
 }
 
 impl PageTableEntry {
+    const ADDRESS_MASK: u64 = 0x000f_ffff_ffff_f000;
+
     /// Creates an unused page table entry.
-    #[inline]
     pub const fn new() -> Self {
         PageTableEntry { entry: 0 }
     }
 
     /// Returns whether this entry is zero.
-    #[inline]
     pub const fn is_unused(&self) -> bool {
         self.entry == 0
     }
 
     /// Sets this entry to zero.
-    #[inline]
     pub fn set_unused(&mut self) {
+        self.unref_vm_frame();
         self.entry = 0;
     }
 
     /// Returns the flags of this entry.
-    #[inline]
     pub const fn flags(&self) -> PageTableFlags {
         PageTableFlags::from_bits_truncate(self.entry)
     }
 
+    pub fn unref_vm_frame(&self) -> bool {
+        if self.addr() != PhysAddr::new(0x00) {
+            if let Some(vm_frame) = self.addr().as_vm_frame() {
+                vm_frame.dec_ref_count();
+
+                let count = vm_frame.ref_count();
+
+                if count == 0 {
+                    // TODO: The ref count has been dropped to 0, so we can free the frame.
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn ref_vm_frame(&self) {
+        if self.addr() != PhysAddr::new(0x00) {
+            if let Some(vm_frame) = self.addr().as_vm_frame() {
+                vm_frame.inc_ref_count();
+            }
+        }
+    }
+
     /// Returns the physical address mapped by this entry, might be zero.
-    #[inline]
     pub fn addr(&self) -> PhysAddr {
-        PhysAddr::new(self.entry & 0x000f_ffff_ffff_f000)
+        PhysAddr::new(self.entry & Self::ADDRESS_MASK)
     }
 
     /// Returns the physical frame mapped by this entry.
@@ -83,7 +106,6 @@ impl PageTableEntry {
     /// - `FrameError::FrameNotPresent` if the entry doesn't have the `PRESENT` flag set.
     /// - `FrameError::HugeFrame` if the entry has the `HUGE_PAGE` flag set (for huge pages the
     ///    `addr` function must be used)
-    #[inline]
     pub fn frame(&self) -> Result<PhysFrame, FrameError> {
         if !self.flags().contains(PageTableFlags::PRESENT) {
             Err(FrameError::FrameNotPresent)
@@ -95,21 +117,29 @@ impl PageTableEntry {
     }
 
     /// Map the entry to the specified physical address with the specified flags.
-    #[inline]
     pub fn set_addr(&mut self, addr: PhysAddr, flags: PageTableFlags) {
         assert!(addr.is_aligned(Size4KiB::SIZE));
+
+        let ref_pp = self.addr() != addr;
+
+        if ref_pp {
+            self.unref_vm_frame();
+        }
+
         self.entry = (addr.as_u64()) | flags.bits();
+
+        if ref_pp {
+            self.ref_vm_frame();
+        }
     }
 
     /// Map the entry to the specified physical frame with the specified flags.
-    #[inline]
     pub fn set_frame(&mut self, frame: PhysFrame, flags: PageTableFlags) {
         assert!(!flags.contains(PageTableFlags::HUGE_PAGE));
         self.set_addr(frame.start_address(), flags)
     }
 
     /// Sets the flags of this entry.
-    #[inline]
     pub fn set_flags(&mut self, flags: PageTableFlags) {
         self.entry = self.addr().as_u64() | flags.bits();
     }

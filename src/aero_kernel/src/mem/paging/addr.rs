@@ -24,6 +24,8 @@ use core::iter::Step;
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 use super::page_table::{PageOffset, PageTableIndex};
+use super::{PageSize, Size4KiB, VmFrame};
+
 use bit_field::BitField;
 
 /// A 64-bit virtual memory address.
@@ -306,6 +308,22 @@ impl PhysAddr {
         );
 
         unsafe { PhysAddr::new_unchecked(addr) }
+    }
+
+    pub fn as_vm_frame(&self) -> Option<&'static VmFrame> {
+        let frames = super::get_vm_frames();
+
+        if let Some(frames) = frames {
+            let index = (self.align_down(Size4KiB::SIZE).as_u64() / Size4KiB::SIZE) as usize;
+
+            if index >= frames.len() {
+                return None;
+            }
+
+            Some(&frames[index])
+        } else {
+            None
+        }
     }
 
     pub const unsafe fn new_unchecked(addr: u64) -> PhysAddr {

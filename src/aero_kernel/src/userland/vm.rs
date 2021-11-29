@@ -238,39 +238,41 @@ impl Mapping {
         address: VirtAddr,
         copy: bool,
     ) -> bool {
-        if let TranslateResult::Mapped { flags, .. } = offset_table.translate(address) {
-            let page: Page = Page::containing_address(address);
+        if let TranslateResult::Mapped { frame, .. } = offset_table.translate(address) {
+            let addr = frame.start_address();
+            let page: Page<Size4KiB> = Page::containing_address(address);
 
-            if !flags.contains(PageTableFlags::BIT_10) || copy {
-                // This page is used by more then one process, so make it a private copy.
-                log::trace!("    - making {:?} into a private copy", page);
+            if let Some(vm_frame) = addr.as_vm_frame() {
+                if vm_frame.ref_count() > 1 || copy {
+                    // This page is used by more then one process, so make it a private copy.
+                    log::trace!("    - making {:?} into a private copy", page);
 
-                let frame =
-                    unsafe { FRAME_ALLOCATOR.allocate_frame() }.expect("frame allocation failed");
+                    let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+                        .expect("frame allocation failed");
 
-                unsafe {
-                    address.as_ptr::<u8>().copy_to(
-                        (crate::PHYSICAL_MEMORY_OFFSET + frame.start_address().as_u64())
-                            .as_mut_ptr(),
-                        Size4KiB::SIZE as _,
-                    );
+                    unsafe {
+                        address.as_ptr::<u8>().copy_to(
+                            (crate::PHYSICAL_MEMORY_OFFSET + frame.start_address().as_u64())
+                                .as_mut_ptr(),
+                            Size4KiB::SIZE as _,
+                        );
+                    }
+
+                    offset_table.unmap(page).expect("unmap faild").1.flush();
+
+                    unsafe {
+                        offset_table.map_to(
+                            page,
+                            frame,
+                            PageTableFlags::PRESENT
+                                | PageTableFlags::USER_ACCESSIBLE
+                                | self.protocol.into(),
+                            &mut FRAME_ALLOCATOR,
+                        )
+                    }
+                    .expect("page mapping failed")
+                    .flush();
                 }
-
-                offset_table.unmap(page).expect("unmap faild").1.flush();
-
-                unsafe {
-                    offset_table.map_to(
-                        page,
-                        frame,
-                        PageTableFlags::PRESENT
-                            | PageTableFlags::USER_ACCESSIBLE
-                            | PageTableFlags::BIT_10
-                            | self.protocol.into(),
-                        &mut FRAME_ALLOCATOR,
-                    )
-                }
-                .expect("page mapping failed")
-                .flush();
             } else {
                 // This page is used by only one process, so make it writable.
                 log::trace!("    - making {:?} writable", page);

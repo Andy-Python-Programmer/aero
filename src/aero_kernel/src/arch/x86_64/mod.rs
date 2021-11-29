@@ -157,6 +157,8 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     alloc::init_heap(&mut offset_table).expect("failed to initialize the kernel heap");
     log::info!("loaded heap");
 
+    paging::init_vm_frames();
+
     rendy::init(framebuffer_tag, &command_line);
     logger::set_rendy_debug(command_line.rendy_debug);
 
