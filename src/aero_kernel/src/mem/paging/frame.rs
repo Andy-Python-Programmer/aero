@@ -580,7 +580,7 @@ mod tests {
         let mut offset_table = address_space.offset_page_table();
 
         let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
-        let page = Page::<Size4KiB>::containing_address(VirtAddr::new(0xcafebabedeadbeef));
+        let page = Page::<Size4KiB>::containing_address(VirtAddr::new(0xcafebabedea));
 
         let vm_frame = frame.start_address().as_vm_frame().unwrap();
 
