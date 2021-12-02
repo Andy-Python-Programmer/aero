@@ -24,8 +24,6 @@ jobs:
       run: sudo apt-get install -y nasm meson ninja-build
     - name: Run build
       run: cargo aero build --release
-    - name: Build Docs
-      run: cargo aero web
     
   deploy_docs:
     needs: [ build ]
@@ -33,6 +31,8 @@ jobs:
     if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
 
     steps:
+    - name: Build Docs
+      run: cargo aero web
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
@@ -43,3 +43,15 @@ jobs:
       with:
         name: Aero
         path: ./build/aero.img
+
+  run_tests:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install QEMU x86
+      run: sudo apt update && sudo apt install qemu-system-x86
+    - name: Qemu Version
+      run: qemu-system-x86_64 --version
+    - name: Run tests
+      run: cargo aero test --features=ci --bios uefi -- -display none -device isa-debug-exit,iobase=0xf4,iosize=0x04
