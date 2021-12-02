@@ -11,7 +11,6 @@ env:
 
 jobs:
   build:
- 
     runs-on: ubuntu-latest
 
     steps:
@@ -45,13 +44,19 @@ jobs:
         publish_dir: ./web/build/
 
   run_tests:
-    needs: [ build ]
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install QEMU x86
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly
+    - name: Install dependencies
+      run: sudo apt-get install -y nasm meson ninja-build
+    - name: Install QEMU x86_64
       run: sudo apt update && sudo apt install qemu-system-x86
     - name: Qemu Version
       run: qemu-system-x86_64 --version
     - name: Run tests
-      run: cargo aero test --features=ci --bios uefi -- -display none -device isa-debug-exit,iobase=0xf4,iosize=0x04
+      run: RUST_BACKTRACE=1 cargo aero test --features=ci --bios uefi -- -display none -device isa-debug-exit,iobase=0xf4,iosize=0x04

@@ -186,8 +186,19 @@ fn build_test_kernel(
 }
 
 fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> {
-    // Calculate the qemu executable suffix.
-    let qemu_suffix = if xserver && is_wsl() { "" } else { ".exe" };
+    // Find the qemu executable suffix.
+    //
+    // 1. If `xserver` is enabled and is_wsl() then the suffix = ""
+    // 2. If is_wsl() and `xserver` is disabled then the suffix = ".exe"
+    // 3. Else the suffix = ""
+    let qemu_suffix = if xserver && is_wsl() {
+        ""
+    } else if is_wsl() {
+        ".exe"
+    } else {
+        ""
+    };
+
     let qemu_exec = format!("qemu-system-x86_64{}", qemu_suffix);
 
     // Run the qemu executable. With the following default settings:
