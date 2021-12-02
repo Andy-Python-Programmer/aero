@@ -156,6 +156,9 @@ pub fn unwind_stack_trace() {
     }
 }
 
+#[cfg(feature = "ci")]
+use crate::emu;
+
 #[panic_handler]
 extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     prepare_panic();
@@ -183,6 +186,10 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
 
     unwind_stack_trace();
 
+    #[cfg(feature = "ci")]
+    emu::exit_qemu(emu::ExitStatus::Success);
+
+    #[cfg(not(feature = "ci"))]
     unsafe {
         // Go into a halt loop to to save power.
         loop {

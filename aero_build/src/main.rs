@@ -33,6 +33,8 @@
 #[cfg(target_family = "windows")]
 compile_error!("aero does not support compilation on non-unix like systems");
 
+const MAGIC_EXIT_STATUS_CODE_SUCCESS: i32 = 0x21;
+
 use fs_extra::dir;
 use fs_extra::dir::CopyOptions;
 
@@ -42,6 +44,7 @@ use std::env;
 use std::fs;
 
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::Instant;
 
 /// The cargo executable. This constant uses the `CARGO` environment variable to
@@ -185,6 +188,7 @@ fn build_test_kernel(
 fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> {
     // Calculate the qemu executable suffix.
     let qemu_suffix = if xserver && is_wsl() { "" } else { ".exe" };
+    let qemu_exec = format!("qemu-system-x86_64{}", qemu_suffix);
 
     // Run the qemu executable. With the following default settings:
     //
@@ -193,7 +197,8 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
     // - Set the number of CPUs to 4.
     // - Set the amount of memory to 512MiB.
     // - Set serial port to qemu stdio.
-    let mut command = xshell::cmd!("qemu-system-x86_64{qemu_suffix}")
+    let mut command = Command::new(qemu_exec);
+    let mut command = command
         .arg("-cpu")
         .arg("qemu64,+la57")
         .arg("-smp")
@@ -207,8 +212,6 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
         .args(argv);
 
     if bios == Bios::Uefi {
-        // FIXME: A simple workaround since xshell moves the value command when we
-        // invoke the `arg` function.
         command = command
             .arg("-bios")
             .arg("bundled/ovmf/OVMF-pure-efi.fd")
@@ -216,7 +219,10 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
             .arg("type=q35");
     }
 
-    command.run()?;
+    let status = command.status()?;
+    let status_code = status.code().unwrap_or(1);
+
+    assert!(status_code == 0 || status_code == MAGIC_EXIT_STATUS_CODE_SUCCESS);
 
     Ok(())
 }

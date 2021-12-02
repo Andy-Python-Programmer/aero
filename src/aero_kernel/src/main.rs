@@ -60,6 +60,8 @@ mod apic;
 mod arch;
 mod cmdline;
 mod drivers;
+#[cfg(feature = "ci")]
+mod emu;
 mod fs;
 mod logger;
 mod mem;

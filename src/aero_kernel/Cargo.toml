@@ -8,6 +8,11 @@ edition = "2021"
 round-robin = []
 sysroot = []
 
+# `ci` exits qemu with a success status code if the tests have 
+# been completed successfully or a error status code if one of the
+# tests failed (or panicked).
+ci = []
+
 # `kmemleak` provides a way of detecting possible 
 # kernel memory leaks in a way similar to a tracing
 # garbage collector.

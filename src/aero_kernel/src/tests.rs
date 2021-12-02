@@ -17,6 +17,9 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#[cfg(feature = "ci")]
+use crate::emu;
+
 pub struct Test {
     pub test_fn: fn(),
     pub path: &'static str,
@@ -43,7 +46,12 @@ pub(crate) fn test_runner(tests: &[&Test]) {
         passed
     );
 
+    #[cfg(feature = "ci")]
+    emu::exit_qemu(emu::ExitStatus::Success);
+
     loop {
-        unsafe { crate::interrupts::halt() }
+        unsafe {
+            crate::arch::interrupts::halt();
+        }
     }
 }
