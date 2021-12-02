@@ -24,6 +24,13 @@ jobs:
       run: sudo apt-get install -y nasm meson ninja-build
     - name: Run build
       run: cargo aero build --release
+    - name: Build Docs
+      run: cargo aero web
+    - name: Uploading image as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: Aero
+        path: ./build/aero.img
     
   deploy_docs:
     needs: [ build ]
@@ -31,18 +38,11 @@ jobs:
     if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
 
     steps:
-    - name: Build Docs
-      run: cargo aero web
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./web/build/
-    - name: Uploading image as artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: Aero
-        path: ./build/aero.img
 
   run_tests:
     needs: [ build ]
