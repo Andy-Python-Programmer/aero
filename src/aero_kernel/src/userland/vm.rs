@@ -181,7 +181,7 @@ impl Mapping {
                     let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
                     let ptr = virt.as_mut_ptr::<u8>();
 
-                    core::slice::from_raw_parts_mut(ptr, 4096)
+                    core::slice::from_raw_parts_mut(ptr, size as usize)
                 };
 
                 mmap_file
