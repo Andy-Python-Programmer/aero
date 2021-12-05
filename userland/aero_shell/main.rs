@@ -78,7 +78,6 @@ fn cat(file: &str) -> Result<(), AeroSyscallError> {
 
     let contents = &unsafe { core::str::from_utf8_unchecked(&out) }[..length];
     print!("{}", contents);
-    
 
     sys_close(fd)?;
 
