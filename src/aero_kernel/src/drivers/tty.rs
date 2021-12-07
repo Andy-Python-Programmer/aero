@@ -222,7 +222,7 @@ impl INodeInterface for Tty {
         stdin.front_buffer.resize(buffer.len(), 0x00);
         buffer.copy_from_slice(&stdin.front_buffer);
 
-        Ok(size)
+        Ok(core::cmp::min(buffer.len(), stdin.front_buffer.len()))
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
