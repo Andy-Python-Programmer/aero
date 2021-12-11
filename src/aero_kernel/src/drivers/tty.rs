@@ -216,13 +216,14 @@ impl INodeInterface for Tty {
 
         let mut stdin = self.stdin.lock_irq();
 
+        // record the back buffer size before swapping
+        let back_len = stdin.back_buffer.len();
         stdin.swap_buffer();
-        let size = stdin.front_buffer.len();
 
         stdin.front_buffer.resize(buffer.len(), 0x00);
         buffer.copy_from_slice(&stdin.front_buffer);
 
-        Ok(core::cmp::min(buffer.len(), stdin.front_buffer.len()))
+        Ok(core::cmp::min(buffer.len(), back_len))
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
