@@ -21,6 +21,8 @@
 #![no_std]
 #![no_main]
 
+mod consts;
+
 use aero_syscall::*;
 use core::panic::PanicInfo;
 
@@ -213,6 +215,8 @@ fn main() -> Result<(), AeroSyscallError> {
                 print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
             } else if command == "dmsg" {
                 dmsg()?;
+            } else if command == "uwufetch" {
+                print!("{}", consts::UWU_FETCH);
             } else if command != "\u{0}" {
                 if sys_exec(command).is_err() {
                     println!("{}: command not found", command);

@@ -396,20 +396,6 @@ const ANSI_BRIGHT_COLORS: &[u32; 8] = &[
     0x00ffffff, // grey
 ];
 
-fn sgr_parse_color(code: u16) -> ParsedColor {
-    if code >= 30 && code <= 37 {
-        ParsedColor::Foreground(code - SGR_FOREGROUND_OFFSET_1)
-    } else if code >= 40 && code <= 47 {
-        ParsedColor::Background(code - SGR_BACKGROUND_OFFSET_1)
-    } else if code >= 90 && code <= 97 {
-        ParsedColor::Foreground(code - SGR_FOREGROUND_OFFSET_2)
-    } else if code >= 100 && code <= 107 {
-        ParsedColor::Foreground(code - SGR_BACKGROUND_OFFSET_2)
-    } else {
-        ParsedColor::Unknown
-    }
-}
-
 struct AnsiEscape;
 
 impl vte::Perform for AnsiEscape {
@@ -488,11 +474,11 @@ impl vte::Perform for AnsiEscape {
 
             // Sets colors and style of the characters following this code.
             'm' => {
-                let piter = params.iter();
+                let mut piter = params.iter();
 
                 let mut bright = false;
 
-                for param in piter {
+                while let Some(param) = piter.next() {
                     if !param.is_empty() {
                         let p1 = param[0];
 
@@ -517,30 +503,86 @@ impl vte::Perform for AnsiEscape {
                                 bright = false;
                             }
 
-                            _ => match sgr_parse_color(p1) {
-                                ParsedColor::Foreground(color) => {
-                                    let ccode = if bright {
-                                        ANSI_BRIGHT_COLORS[color as usize]
-                                    } else {
-                                        ANSI_COLORS[color as usize]
-                                    };
+                            code => {
+                                let parsed_color = if code >= 30 && code <= 37 {
+                                    ParsedColor::Foreground(code - SGR_FOREGROUND_OFFSET_1)
+                                } else if code >= 40 && code <= 47 {
+                                    ParsedColor::Background(code - SGR_BACKGROUND_OFFSET_1)
+                                } else if code >= 90 && code <= 97 {
+                                    ParsedColor::Foreground(code - SGR_FOREGROUND_OFFSET_2)
+                                } else if code >= 100 && code <= 107 {
+                                    ParsedColor::Foreground(code - SGR_BACKGROUND_OFFSET_2)
+                                } else {
+                                    ParsedColor::Unknown
+                                };
 
-                                    crate::rendy::set_text_fg(ccode);
+                                match parsed_color {
+                                    ParsedColor::Foreground(color) => {
+                                        let ccode = if bright {
+                                            ANSI_BRIGHT_COLORS[color as usize]
+                                        } else {
+                                            ANSI_COLORS[color as usize]
+                                        };
+
+                                        crate::rendy::set_text_fg(ccode);
+                                    }
+
+                                    ParsedColor::Background(color) => {
+                                        let ccode = if bright {
+                                            ANSI_BRIGHT_COLORS[color as usize]
+                                        } else {
+                                            ANSI_COLORS[color as usize]
+                                        };
+
+                                        crate::rendy::set_text_bg(ccode);
+                                    }
+
+                                    ParsedColor::Unknown => {
+                                        let parse_rgb =
+                                            |setter: fn(u32), piter: &mut vte::ParamsIter| {
+                                                let r = piter.next().unwrap_or(&[0])[0];
+                                                let g = piter.next().unwrap_or(&[0])[0];
+                                                let b = piter.next().unwrap_or(&[0])[0];
+
+                                                let color =
+                                                    (r as u32) << 16 | (g as u32) << 8 | b as u32;
+
+                                                setter(color);
+                                            };
+
+                                        let run_special_parser =
+                                            |setter: fn(u32), piter: &mut vte::ParamsIter| {
+                                                if let Some(arg_typee) = piter.next() {
+                                                    let p1 = arg_typee[0];
+
+                                                    match p1 {
+                                                        5 => todo!(),
+
+                                                        // A 24-bit RGB color, as specified by ISO-8613-3.
+                                                        2 => parse_rgb(setter, piter),
+
+                                                        _ => (),
+                                                    }
+                                                }
+                                            };
+
+                                        // Background
+                                        if code == 48 {
+                                            run_special_parser(
+                                                crate::rendy::set_text_bg,
+                                                &mut piter,
+                                            );
+                                        }
+                                        // Foreground
+                                        else if code == 38 {
+                                            run_special_parser(
+                                                crate::rendy::set_text_fg,
+                                                &mut piter,
+                                            );
+                                        }
+                                    }
                                 }
-
-                                ParsedColor::Background(color) => {
-                                    let ccode = if bright {
-                                        ANSI_BRIGHT_COLORS[color as usize]
-                                    } else {
-                                        ANSI_COLORS[color as usize]
-                                    };
-
-                                    crate::rendy::set_text_bg(ccode);
-                                }
-
-                                // Nothing :^)
-                                ParsedColor::Unknown => {}
-                            },
+                            }
                         }
                     }
                 }
