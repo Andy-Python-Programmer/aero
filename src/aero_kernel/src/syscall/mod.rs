@@ -161,6 +161,8 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_MUNMAP => process::munmap(b, c),
         SYS_EXEC => process::exec(b, c, d, e, f, g),
         SYS_LOG => process::log(b, c),
+        SYS_UNAME => process::uname(b),
+
         0x13A => {
             panic!("RIP={}", sys.rip);
         }

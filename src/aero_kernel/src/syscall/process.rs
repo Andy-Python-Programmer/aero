@@ -60,6 +60,34 @@ pub fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallEr
     }
 }
 
+pub fn uname(buffer: usize) -> Result<usize, AeroSyscallError> {
+    fn init_array(fixed: &mut [u8; 65], init: &'static str) {
+        let init_bytes = init.as_bytes();
+        let len = init.len();
+
+        fixed[..len].copy_from_slice(init_bytes)
+    }
+
+    // TODO: Safety checks!
+    let struc = unsafe { &mut *(buffer as *mut aero_syscall::Utsname) };
+
+    init_array(&mut struc.name, "Aero");
+    init_array(&mut struc.nodename, "unknown");
+    init_array(&mut struc.version, env!("CARGO_PKG_VERSION"));
+    init_array(
+        &mut struc.release,
+        concat!(env!("CARGO_PKG_VERSION"), "-aero"),
+    );
+
+    #[cfg(target_arch = "x86_64")]
+    init_array(&mut struc.machine, "x86_64");
+
+    #[cfg(not(target_arch = "x86_64"))]
+    init_array(&mut struc.machine, "unknown");
+
+    Ok(0x00)
+}
+
 pub fn fork() -> Result<usize, AeroSyscallError> {
     let scheduler = scheduler::get_scheduler();
     let forked = scheduler.current_task().fork();

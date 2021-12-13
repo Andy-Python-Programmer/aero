@@ -86,6 +86,69 @@ fn cat(file: &str) -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
+fn uwufetch() -> Result<(), AeroSyscallError> {
+    const BLACK: &str = "\x1b[1;40m";
+    const RED: &str = "\x1b[1;41m";
+    const GREEN: &str = "\x1b[1;42m";
+    const YELLOW: &str = "\x1b[1;43m";
+    const BLUE: &str = "\x1b[1;44m";
+    const MAGENTA: &str = "\x1b[1;45m";
+    const CYAN: &str = "\x1b[1;46m";
+    const WHITE: &str = "\x1b[1;47m";
+
+    const BLACK_DEFAULT: &str = "\x1b[0;40m";
+    const RED_DEFAULT: &str = "\x1b[0;41m";
+    const GREEN_DEFAULT: &str = "\x1b[0;42m";
+    const YELLOW_DEFAULT: &str = "\x1b[0;43m";
+    const BLUE_DEFAULT: &str = "\x1b[0;44m";
+    const MAGENTA_DEFAULT: &str = "\x1b[0;45m";
+    const CYAN_DEFAULT: &str = "\x1b[0;46m";
+    const WHITE_DEFAULT: &str = "\x1b[0;47m";
+
+    const MAGENTA_FG: &str = "\x1b[1;35m";
+    const RESET: &str = "\x1b[0m";
+
+    let mut struc = Utsname::default();
+    sys_uname(&mut struc)?;
+
+    for (i, line) in consts::UWU_FETCH.lines().enumerate() {
+        if i < 3 {
+            println!("{}", line);
+        } else if i == 4 {
+            println!(
+                "{}  {}OS{}: {} ({})",
+                line,
+                MAGENTA_FG,
+                RESET,
+                struc.name(),
+                struc.machine()
+            );
+        } else if i == 6 {
+            println!(
+                "{}  {}  {}  {}  {}  {}  {}  {}  {}",
+                line, BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+            );
+        } else if i == 7 {
+            println!(
+                "{}  {}  {}  {}  {}  {}  {}  {}  {}",
+                line,
+                BLACK_DEFAULT,
+                RED_DEFAULT,
+                GREEN_DEFAULT,
+                YELLOW_DEFAULT,
+                BLUE_DEFAULT,
+                MAGENTA_DEFAULT,
+                CYAN_DEFAULT,
+                WHITE_DEFAULT
+            );
+        } else {
+            println!("{}", line);
+        }
+    }
+
+    Ok(())
+}
+
 fn dmsg() -> Result<(), AeroSyscallError> {
     let fd = sys_open("/dev/kmsg", OpenFlags::O_RDONLY)?;
     let mut out = [1u8; 4096];
@@ -216,7 +279,19 @@ fn main() -> Result<(), AeroSyscallError> {
             } else if command == "dmsg" {
                 dmsg()?;
             } else if command == "uwufetch" {
-                print!("{}", consts::UWU_FETCH);
+                uwufetch()?;
+            } else if command == "uname" {
+                let mut struc = Utsname::default();
+
+                sys_uname(&mut struc)?;
+                println!(
+                    "{} {} {} {} {}",
+                    struc.name(),
+                    struc.nodename(),
+                    struc.release(),
+                    struc.version(),
+                    struc.machine()
+                );
             } else if command != "\u{0}" {
                 if sys_exec(command).is_err() {
                     println!("{}: command not found", command);

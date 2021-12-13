@@ -154,6 +154,49 @@ pub struct SysDirEntry {
     pub name: [u8; 0],
 }
 
+#[repr(C)]
+pub struct Utsname {
+    pub name: [u8; 65],
+    pub nodename: [u8; 65],
+    pub release: [u8; 65],
+    pub version: [u8; 65],
+    pub machine: [u8; 65],
+}
+
+impl Utsname {
+    pub fn name(&self) -> &str {
+        unsafe { core::str::from_utf8_unchecked(&self.name) }
+    }
+
+    pub fn nodename(&self) -> &str {
+        unsafe { core::str::from_utf8_unchecked(&self.nodename) }
+    }
+
+    pub fn release(&self) -> &str {
+        unsafe { core::str::from_utf8_unchecked(&self.release) }
+    }
+
+    pub fn version(&self) -> &str {
+        unsafe { core::str::from_utf8_unchecked(&self.version) }
+    }
+
+    pub fn machine(&self) -> &str {
+        unsafe { core::str::from_utf8_unchecked(&self.machine) }
+    }
+}
+
+impl Default for Utsname {
+    fn default() -> Self {
+        Self {
+            name: [0; 65],
+            nodename: [0; 65],
+            release: [0; 65],
+            version: [0; 65],
+            machine: [0; 65],
+        }
+    }
+}
+
 pub const AT_FDCWD: isize = -100;
 
 pub fn syscall_result_as_usize(result: Result<usize, AeroSyscallError>) -> usize {
@@ -286,6 +329,11 @@ pub fn sys_exec(path: &str) -> Result<usize, AeroSyscallError> {
 
 pub fn sys_rmdir(path: &str) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_RMDIR, path.as_ptr() as usize, path.len());
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_uname(struc: &mut Utsname) -> Result<usize, AeroSyscallError> {
+    let value = syscall1(prelude::SYS_UNAME, struc as *mut Utsname as usize);
     isize_as_syscall_result(value as _)
 }
 
