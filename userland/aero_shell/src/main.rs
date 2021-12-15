@@ -150,9 +150,11 @@ fn list_directory(path: &str) -> Result<(), AeroSyscallError> {
 }
 
 fn cat_file(path: Option<&str>) -> Result<(), AeroSyscallError> {
+    // On the `None` arm we default to 0 to take input from stdin.
+    // This is the behaviour of `cat` that comes with any modern Linux distro.
     let fd = match path {
         Some(path) => sys_open(path, OpenFlags::O_RDONLY)?,
-        None => 1,
+        None => 0,
     };
 
     let mut buffer = [0; 1024];
