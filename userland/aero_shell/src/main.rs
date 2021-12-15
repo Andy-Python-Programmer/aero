@@ -169,7 +169,7 @@ fn cat_file(path: Option<&str>) -> Result<(), AeroSyscallError> {
         print!("{}", contents);
     }
 
-    if fd != 1 {
+    if fd != 0 {
         sys_close(fd)?;
     }
 
