@@ -3,7 +3,6 @@
 
 pub mod consts;
 pub mod syscall;
-pub mod writer;
 
 pub use crate::syscall::*;
 
