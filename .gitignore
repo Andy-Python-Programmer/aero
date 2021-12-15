@@ -2,6 +2,9 @@
 *.img
 *.log
 
+# We aren't providing a library, so we can ignore that one :)
+Cargo.lock
+
 target
 build
 bundled

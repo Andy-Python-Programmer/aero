@@ -17,22 +17,17 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(lang_items, asm)]
-#![no_std]
-#![no_main]
-
 mod consts;
 
 use aero_syscall::*;
-use core::panic::PanicInfo;
 
 const ASCII_INTRO: &str = r"
-_______ _______ ______ _______    _______ ______ 
+_______ _______ ______ _______    _______ ______
 (_______|_______|_____ (_______)  (_______) _____)
- _______ _____   _____) )     _    _     ( (____  
-|  ___  |  ___) |  __  / |   | |  | |   | \____ \ 
+ _______ _____   _____) )     _    _     ( (____
+|  ___  |  ___) |  __  / |   | |  | |   | \____ \
 | |   | | |_____| |  \ \ |___| |  | |___| |____) )
-|_|   |_|_______)_|   |_\_____/    \_____(______/ 
+|_|   |_|_______)_|   |_\_____/    \_____(______/
 ";
 
 fn ls(path: &str) -> Result<(), AeroSyscallError> {
@@ -190,16 +185,7 @@ fn dmsg() -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
-fn init() -> Result<(), AeroSyscallError> {
-    sys_open("/dev/tty", OpenFlags::O_RDONLY)?; // device: stdin
-    sys_open("/dev/tty", OpenFlags::O_WRONLY)?; // device: stdout
-    sys_open("/dev/tty", OpenFlags::O_WRONLY)?; // device: stderr
-
-    println!("{}", ASCII_INTRO);
-    Ok(())
-}
-
-fn main() -> Result<(), AeroSyscallError> {
+fn shell() -> Result<(), AeroSyscallError> {
     loop {
         let mut pwd_buffer = [0u8; 1024];
         sys_getcwd(&mut pwd_buffer)?;
@@ -293,36 +279,28 @@ fn main() -> Result<(), AeroSyscallError> {
                     struc.machine()
                 );
             } else if command != "\u{0}" {
-                if sys_exec(command).is_err() {
-                    println!("{}: command not found", command);
+                let pid = sys_fork()?;
+
+                if pid == 0 {
+                    if sys_exec(command).is_err() {
+                        println!("{}: command not found", command);
+                    }
+                } else {
+                    // Wait for the child
                 }
             }
         }
     }
 }
 
-#[no_mangle]
-extern "C" fn _start() {
-    init().expect("shell: failed to initialize IO file descriptors");
+fn main() {
+    sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
+    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stdout");
+    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stderr");
 
-    loop {
-        if let Err(err) = main() {
-            println!("error: {:?}", err);
-        }
+    println!("{}", ASCII_INTRO);
+
+    if let Err(error) = shell() {
+        println!("error: {:?}", error);
     }
 }
-
-#[panic_handler]
-extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
-    println!("{}", info);
-    sys_exit(0x01);
-}
-
-#[allow(non_snake_case)]
-#[no_mangle]
-extern "C" fn _Unwind_Resume() -> ! {
-    loop {}
-}
-
-#[lang = "eh_personality"]
-extern "C" fn eh_personality() {}
