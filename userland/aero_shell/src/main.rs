@@ -57,58 +57,56 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     let cmd_string = unsafe { core::str::from_utf8_unchecked(&cmd_buffer[0..cmd_length]).trim() };
 
     let mut args = cmd_string.split_whitespace();
-    let cmd = args.next();
 
-    match cmd {
-        Some("ls") => list_directory(args.next().unwrap_or("."))?,
-        Some("pwd") => println!("{}", pwd),
-        Some("cd") => {
-            sys_chdir(args.next().unwrap_or(".."))?;
-        }
-        Some("mkdir") => match args.next() {
-            Some(path) => {
-                sys_mkdir(path)?;
+    if let Some(cmd) = args.next() {
+        match cmd {
+            "ls" => list_directory(args.next().unwrap_or("."))?,
+            "pwd" => println!("{}", pwd),
+            "cd" => {
+                sys_chdir(args.next().unwrap_or(".."))?;
             }
-            None => println!("mkdir: missing operand"),
-        },
-        Some("rmdir") => match args.next() {
-            Some(path) => {
-                sys_rmdir(path)?;
-            }
-            None => println!("rmdir: missing operand"),
-        },
-        Some("exit") => match args.next() {
-            Some(status) => match status.parse::<usize>() {
-                Ok(exit_code) => sys_exit(exit_code),
-                Err(_) => println!("exit: invalid operand"),
-            },
-            None => sys_exit(0),
-        },
-        Some("cat") => cat_file(args.next())?,
-        Some("clear") => print!("{esc}[2J{esc}[1;1H", esc = 27 as char),
-        Some("dmsg") => print_kernel_log()?,
-        Some("uwufetch") => uwufetch()?,
-        Some("uname") => uname()?,
-        Some("history") => {
-            for entry in history.iter() {
-                println!("{}", entry);
-            }
-        }
-        Some(cmd) => {
-            let child = sys_fork()?;
-
-            if child == 0 {
-                if sys_exec(cmd).is_err() {
-                    println!("{}: command not found", cmd);
+            "mkdir" => match args.next() {
+                Some(path) => {
+                    sys_mkdir(path)?;
                 }
-            } else {
-                // Wait for the child
+                None => println!("mkdir: missing operand"),
+            },
+            "rmdir" => match args.next() {
+                Some(path) => {
+                    sys_rmdir(path)?;
+                }
+                None => println!("rmdir: missing operand"),
+            },
+            "exit" => match args.next() {
+                Some(status) => match status.parse::<usize>() {
+                    Ok(exit_code) => sys_exit(exit_code),
+                    Err(_) => println!("exit: invalid operand"),
+                },
+                None => sys_exit(0),
+            },
+            "cat" => cat_file(args.next())?,
+            "clear" => print!("{esc}[2J{esc}[1;1H", esc = 27 as char),
+            "dmsg" => print_kernel_log()?,
+            "uwufetch" => uwufetch()?,
+            "uname" => uname()?,
+            "history" => {
+                for entry in history.iter() {
+                    println!("{}", entry);
+                }
+            }
+            _ => {
+                let child = sys_fork()?;
+
+                if child == 0 {
+                    if sys_exec(cmd).is_err() {
+                        println!("{}: command not found", cmd);
+                    }
+                } else {
+                    // Wait for the child
+                }
             }
         }
-        None => {}
-    }
 
-    if cmd.is_some() {
         history.push(cmd_string.to_string());
     }
 
