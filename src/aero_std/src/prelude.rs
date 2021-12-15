@@ -19,5 +19,16 @@
 
 pub mod rust_2021 {
     pub use crate::{dbg, print, println};
+
+    pub use alloc::{
+        borrow::ToOwned,
+        boxed::Box,
+        format,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+
     pub use core::prelude::rust_2021::*;
+    pub use core::prelude::v1::*;
 }

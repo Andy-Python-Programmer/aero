@@ -17,11 +17,13 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(prelude_import)]
+#![feature(alloc_error_handler, prelude_import)]
 #![no_std]
 
 extern crate aero_rt;
+extern crate alloc;
 
+pub mod heap;
 pub mod io;
 pub mod prelude;
 
@@ -60,4 +62,9 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     println!("{}", info);
 
     aero_syscall::sys_exit(42);
+}
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("Failed allocating memory with layout: {:?}", layout)
 }
