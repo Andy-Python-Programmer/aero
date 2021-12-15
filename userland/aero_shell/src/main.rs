@@ -294,6 +294,10 @@ fn shell() -> Result<(), AeroSyscallError> {
 }
 
 fn main() {
+    sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
+    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stdout");
+    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stderr");
+
     println!("{}", ASCII_INTRO);
 
     if let Err(error) = shell() {

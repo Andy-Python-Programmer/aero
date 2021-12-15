@@ -28,10 +28,6 @@ unsafe extern "C" fn _start(argc: isize, argv: *const *const u8) -> ! {
         fn main(_: isize, _: *const *const u8) -> isize;
     }
 
-    sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
-    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stdout");
-    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stderr");
-
     let exit_code = main(argc, argv);
 
     sys_exit(exit_code as usize);
