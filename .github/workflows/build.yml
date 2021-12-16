@@ -30,15 +30,10 @@ jobs:
       with:
         name: Aero
         path: ./build/aero.img
-    
-  deploy_docs:
-    needs: [ build ]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
 
-    steps:
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./web/build/
