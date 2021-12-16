@@ -264,7 +264,7 @@ impl KeyboardListener for Tty {
                 stdin.back_buffer.push('\n' as u8);
                 stdin.cursor = 0;
 
-                crate::prelude::print!("\n");
+                crate::rendy::print!("\n");
                 self.block_queue.notify_complete();
             }
 
@@ -400,14 +400,14 @@ struct AnsiEscape;
 
 impl vte::Perform for AnsiEscape {
     fn print(&mut self, char: char) {
-        crate::prelude::print!("{}", char);
+        crate::rendy::print!("{}", char);
     }
 
     fn execute(&mut self, byte: u8) {
         let char = byte as char;
 
         if char == '\n' || char == '\t' {
-            crate::prelude::print!("{}", char);
+            crate::rendy::print!("{}", char);
         }
     }
 

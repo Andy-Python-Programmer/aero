@@ -1,5 +1,5 @@
 #![no_std]
-#![feature(asm, decl_macro)]
+#![feature(decl_macro)]
 
 pub mod consts;
 pub mod syscall;

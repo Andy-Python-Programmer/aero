@@ -29,7 +29,6 @@
 #![feature(
     custom_test_frameworks,
     core_intrinsics,
-    asm,
     alloc_error_handler,
     lang_items,
     panic_info_message,
@@ -45,13 +44,27 @@
     const_fn_fn_ptr_basics,
     arc_new_cyclic,
     step_trait,
-    const_btree_new
+    const_btree_new,
+    prelude_import
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]
 #![no_main]
 #![reexport_test_harness_main = "test_main"]
+
+mod prelude {
+    pub mod rust_2021 {
+        // Since asm is used almost all over the kernel, its a better idea
+        // to add it to the prelude.
+        pub use core::arch::asm;
+        pub use core::prelude::rust_2021::*;
+        pub use core::prelude::v1::*;
+    }
+}
+
+#[prelude_import]
+pub use prelude::rust_2021::*;
 
 extern crate alloc;
 
@@ -75,9 +88,7 @@ mod tls;
 mod unwind;
 mod userland;
 mod utils;
-mod prelude {
-    pub use crate::drivers::uart_16550::{serial_print, serial_println};
-    pub use crate::rendy::{print, println};
+mod prelude_old {
     pub use crate::utils::{
         const_unsafe, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
         push_preserved, push_scratch,

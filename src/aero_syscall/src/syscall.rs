@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 macro define_syscall_fns($(pub fn $sys_fn:ident($a:ident $(,$b:ident $(,$c:ident $(,$d:ident $(,$e:ident $(,$f:ident $(,$g:ident)?)?)?)?)?)?) -> usize;)+) {
     $(
         pub fn $sys_fn(mut $a: usize, $($b: usize, $($c: usize, $($d: usize, $($e: usize, $($f: usize, $($g: usize)?)?)?)?)?)?) -> usize {

@@ -233,15 +233,15 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
             inner(&mut *stack);
         }
 
-        $crate::prelude::intel_fn!(
+        $crate::utils::intel_fn!(
             pub extern "asm" fn $name() {
                 // Move rax into code's place and put code in last instead to be
                 // compatible with interrupt stack.
                 "xchg [rsp], rax\n",
 
-                $crate::prelude::push_scratch!(),
-                $crate::prelude::push_preserved!(),
-                $crate::prelude::push_fs!(),
+                $crate::utils::push_scratch!(),
+                $crate::utils::push_preserved!(),
+                $crate::utils::push_fs!(),
 
                 // Push the error code.
                 "push rax\n",
@@ -258,9 +258,9 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
                 // Pop the error code.
                 "add rsp, 8\n",
 
-                $crate::prelude::pop_fs!(),
-                $crate::prelude::pop_preserved!(),
-                $crate::prelude::pop_scratch!(),
+                $crate::utils::pop_fs!(),
+                $crate::utils::pop_preserved!(),
+                $crate::utils::pop_scratch!(),
 
                 "iretq\n",
             }
@@ -288,9 +288,9 @@ pub macro interrupt_stack(pub unsafe fn $name:ident($stack:ident: &mut Interrupt
             pub extern "asm" fn $name() {
                 "push rax\n",
 
-                $crate::prelude::push_scratch!(),
-                $crate::prelude::push_preserved!(),
-                $crate::prelude::push_fs!(),
+                $crate::utils::push_scratch!(),
+                $crate::utils::push_preserved!(),
+                $crate::utils::push_fs!(),
 
                 "call restore_kernel_fs_base\n",
                 "call map_pti\n",
@@ -300,9 +300,9 @@ pub macro interrupt_stack(pub unsafe fn $name:ident($stack:ident: &mut Interrupt
 
                 "call unmap_pti\n",
 
-                $crate::prelude::pop_fs!(),
-                $crate::prelude::pop_preserved!(),
-                $crate::prelude::pop_scratch!(),
+                $crate::utils::pop_fs!(),
+                $crate::utils::pop_preserved!(),
+                $crate::utils::pop_scratch!(),
 
                 "iretq\n",
             }
@@ -324,7 +324,7 @@ pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
             pub extern "asm" fn $name() {
                 "push rax\n",
 
-                $crate::prelude::push_scratch!(),
+                $crate::utils::push_scratch!(),
 
                 "call restore_kernel_fs_base\n",
                 "call map_pti\n",
@@ -334,7 +334,7 @@ pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
 
                 "call unmap_pti\n",
 
-                $crate::prelude::pop_scratch!(),
+                $crate::utils::pop_scratch!(),
 
                 "iretq\n",
             }

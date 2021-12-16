@@ -144,7 +144,7 @@ pub macro pop_fs() {
 }
 
 pub macro intel_asm($($code:expr,)+) {
-    global_asm!(concat!($($code),+,));
+   core::arch::global_asm!(concat!($($code),+,));
 }
 
 pub macro const_unsafe($($vis:vis const $name:ident: $ty:ty = $value:expr;)*) {

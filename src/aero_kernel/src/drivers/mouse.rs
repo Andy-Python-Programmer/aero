@@ -17,7 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::prelude::*;
 use crate::utils::io;
 use crate::utils::sync::Mutex;
 
@@ -141,15 +140,15 @@ impl Mouse {
 
     fn process_collected_packet(&self) {
         if self.state.is_left_button_pressed() {
-            println!("Left mouse button pressed")
+            log::debug!("Left mouse button pressed")
         }
 
         if self.state.is_middle_button_pressed() {
-            println!("Middle mouse button pressed")
+            log::debug!("Middle mouse button pressed")
         }
 
         if self.state.is_right_button_pressed() {
-            println!("Right mouse button pressed")
+            log::debug!("Right mouse button pressed")
         }
 
         self.draw_mouse_pointer();

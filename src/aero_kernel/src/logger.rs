@@ -44,18 +44,20 @@ impl log::Log for AeroLogger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
+            use crate::drivers::uart_16550::*;
+
             let level = record.level();
             let spaces = MAX_LOG_LEVEL_SPACE - level.as_str().len();
             let rendy_dbg = RENDY_DEBUG.load(Ordering::Relaxed);
 
             macro log($($arg:tt)*) {
-                $crate::prelude::serial_print!("{}", format_args!($($arg)*));
-                if rendy_dbg { $crate::prelude::print!("{}", format_args!($($arg)*)); }
+                $crate::drivers::uart_16550::serial_print!("{}", format_args!($($arg)*));
+                if rendy_dbg { $crate::rendy::print!("{}", format_args!($($arg)*)); }
             }
 
             macro log_ln($($arg:tt)*) {
-                $crate::prelude::serial_println!("{}", format_args!($($arg)*));
-                if rendy_dbg { $crate::prelude::println!("{}", format_args!($($arg)*)); }
+                serial_println!("{}", format_args!($($arg)*));
+                if rendy_dbg { $crate::rendy::println!("{}", format_args!($($arg)*)); }
             }
 
             // Append the log message to the log ring buffer.
@@ -63,15 +65,15 @@ impl log::Log for AeroLogger {
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
             match record.level() {
-                Level::Error => crate::prelude::serial_print!("\x1b[1;41m"), // bold red
-                Level::Warn => crate::prelude::serial_print!("\x1b[1;43m"),  // bold yellow
-                Level::Info => crate::prelude::serial_print!("\x1b[1;42m"),  // bold green
-                Level::Debug => crate::prelude::serial_print!("\x1b[1;44m"), // bold blue
-                Level::Trace => crate::prelude::serial_print!("\x1b[1;45m"), // bold magenta
+                Level::Error => serial_print!("\x1b[1;41m"), // bold red
+                Level::Warn => serial_print!("\x1b[1;43m"),  // bold yellow
+                Level::Info => serial_print!("\x1b[1;42m"),  // bold green
+                Level::Debug => serial_print!("\x1b[1;44m"), // bold blue
+                Level::Trace => serial_print!("\x1b[1;45m"), // bold magenta
             }
 
             log!("  {}{: <2$} ", level, "", spaces);
-            crate::prelude::serial_print!("\x1b[0;0m");
+            crate::drivers::uart_16550::serial_print!("\x1b[0;0m");
 
             log_ln!("      {}", record.args());
         }
