@@ -40,6 +40,8 @@
 //! | 16     | rmdir                   |
 //! | 17     | exec                    |
 //! | 18     | log                     |
+//! | 19     | uname                   |
+//! | 20     | waitpid                 |
 
 use core::mem::MaybeUninit;
 
