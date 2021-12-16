@@ -272,24 +272,26 @@ impl Mapping {
                     }
                     .expect("page mapping failed")
                     .flush();
+                } else {
+                    // This page is used by only one process, so make it writable.
+                    log::trace!("    - making {:?} writable", page);
+
+                    unsafe {
+                        offset_table.update_flags(
+                            page,
+                            PageTableFlags::PRESENT
+                                | PageTableFlags::USER_ACCESSIBLE
+                                | self.protocol.into(),
+                        )
+                    }
+                    .expect("failed to update page table flags")
+                    .flush();
                 }
+
+                true
             } else {
-                // This page is used by only one process, so make it writable.
-                log::trace!("    - making {:?} writable", page);
-
-                unsafe {
-                    offset_table.update_flags(
-                        page,
-                        PageTableFlags::PRESENT
-                            | PageTableFlags::USER_ACCESSIBLE
-                            | self.protocol.into(),
-                    )
-                }
-                .expect("failed to update page table flags")
-                .flush();
+                false
             }
-
-            true
         } else {
             false
         }
