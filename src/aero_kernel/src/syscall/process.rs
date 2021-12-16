@@ -27,7 +27,15 @@ use crate::userland::scheduler;
 use crate::utils::validate_str;
 
 pub fn exit(status: usize) -> ! {
-    log::trace!("exiting the current process with status: {}", status);
+    log::trace!(
+        "exiting the process (pid={pid}) with status: {status}",
+        pid = scheduler::get_scheduler()
+            .current_task()
+            .task_id()
+            .as_usize(),
+        status = status
+    );
+
     scheduler::get_scheduler().inner.exit(status as isize);
 }
 
@@ -135,6 +143,13 @@ pub fn log(msg_start: usize, msg_size: usize) -> Result<usize, AeroSyscallError>
     log::debug!("{}", message);
 
     Ok(0x00)
+}
+
+pub fn waitpid(pid: usize, status: usize, _flags: usize) -> Result<usize, AeroSyscallError> {
+    let current_task = scheduler::get_scheduler().current_task();
+    let status = unsafe { &mut *(status as *mut u32) };
+
+    Ok(current_task.waitpid(pid, status)?)
 }
 
 pub fn mmap(

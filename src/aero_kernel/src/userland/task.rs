@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::AeroSyscallError;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 
@@ -103,12 +104,14 @@ impl Cwd {
 
 struct Zombies {
     list: Mutex<LinkedList<SchedTaskAdapter>>,
+    block: BlockQueue,
 }
 
 impl Zombies {
     fn new() -> Self {
         Self {
             list: Mutex::new(Default::default()),
+            block: BlockQueue::new(),
         }
     }
 
@@ -121,6 +124,38 @@ impl Zombies {
         log::debug!("making process a zombie: (pid={:?})", zombie.task_id());
 
         list.push_back(zombie);
+        self.block.notify_complete();
+    }
+
+    fn waitpid(&self, pid: usize, status: &mut u32) -> usize {
+        let mut captured = (TaskId(0), 0);
+
+        self.block.block_on(&self.list, |l| {
+            let mut cursor = l.front_mut();
+
+            while let Some(t) = cursor.get() {
+                if t.task_id().as_usize() == pid {
+                    captured = (t.task_id(), t.exit_status());
+                    cursor.remove();
+
+                    return true;
+                } else {
+                    cursor.move_next();
+                }
+            }
+
+            false
+        });
+
+        let (tid, st) = captured;
+
+        // WIFEXITED: The child process has been terminated normally by
+        // either calling sys_exit() or returning from the main function.
+        *status = 0x200;
+        // The lower 8-bits are used to store the exit status.
+        *status |= st as u32 & 0xff;
+
+        tid.as_usize()
     }
 }
 
@@ -279,6 +314,14 @@ impl Task {
 
         child.set_parent(Some(self.this()));
         children.push_back(child);
+    }
+
+    fn exit_status(&self) -> isize {
+        self.exit_status.load(Ordering::SeqCst)
+    }
+
+    pub fn waitpid(&self, pid: usize, status: &mut u32) -> Result<usize, AeroSyscallError> {
+        Ok(self.zombies.waitpid(pid, status))
     }
 
     pub fn exec(

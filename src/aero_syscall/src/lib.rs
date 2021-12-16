@@ -341,6 +341,17 @@ pub fn sys_shutdown() -> ! {
     unreachable!()
 }
 
+pub fn sys_waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_WAITPID,
+        pid as usize,
+        status as *mut u32 as usize,
+        flags,
+    );
+
+    isize_as_syscall_result(value as _)
+}
+
 pub fn sys_mmap(
     address: usize,
     size: usize,

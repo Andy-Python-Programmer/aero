@@ -34,7 +34,6 @@
     panic_info_message,
     thread_local,
     decl_macro,
-    global_asm,
     ptr_internals,
     const_fn_trait_bound,
     linked_list_cursors,
@@ -88,12 +87,6 @@ mod tls;
 mod unwind;
 mod userland;
 mod utils;
-mod prelude_old {
-    pub use crate::utils::{
-        const_unsafe, intel_asm, intel_fn, pop_fs, pop_preserved, pop_scratch, push_fs,
-        push_preserved, push_scratch,
-    };
-}
 
 use stivale_boot::v2::*;
 

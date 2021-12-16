@@ -18,3 +18,4 @@ pub const SYS_RMDIR: usize = 16;
 pub const SYS_EXEC: usize = 17;
 pub const SYS_LOG: usize = 18;
 pub const SYS_UNAME: usize = 19;
+pub const SYS_WAITPID: usize = 20;

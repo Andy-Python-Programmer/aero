@@ -59,7 +59,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     let mut args = cmd_string.split_whitespace();
 
     if let Some(cmd) = args.next() {
-        history.push(cmd_string.to_string());
+        // history.push(cmd_string.to_string());
 
         match cmd {
             "ls" => list_directory(args.next().unwrap_or("."))?,
@@ -105,7 +105,10 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     }
                 } else {
                     // Wait for the child
-                    loop {}
+                    let mut status = 0;
+                    sys_waitpid(child, &mut status, 0)?;
+
+                    println!("back to parent. say vola");
                 }
             }
         }
