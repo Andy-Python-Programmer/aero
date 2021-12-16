@@ -32,9 +32,9 @@ use crate::mem::paging::*;
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
 use crate::syscall::ExecArgs;
-use crate::utils::sync::Mutex;
+use crate::utils::sync::{BlockQueue, Mutex};
 
-use intrusive_collections::{intrusive_adapter, LinkedListLink};
+use intrusive_collections::{intrusive_adapter, LinkedList, LinkedListLink};
 
 use super::vm::Vm;
 
@@ -77,7 +77,7 @@ impl From<u8> for TaskState {
     }
 }
 
-pub struct Cwd {
+struct Cwd {
     inode: DirCacheItem,
     filesystem: Arc<dyn FileSystem>,
 }
@@ -101,6 +101,29 @@ impl Cwd {
     }
 }
 
+struct Zombies {
+    list: Mutex<LinkedList<SchedTaskAdapter>>,
+}
+
+impl Zombies {
+    fn new() -> Self {
+        Self {
+            list: Mutex::new(Default::default()),
+        }
+    }
+
+    fn add_zombie(&self, zombie: Arc<Task>) {
+        assert_eq!(zombie.link.is_linked(), false);
+        assert_eq!(zombie.state(), TaskState::Zombie);
+
+        let mut list = self.list.lock();
+
+        log::debug!("making process a zombie: (pid={:?})", zombie.task_id());
+
+        list.push_back(zombie);
+    }
+}
+
 pub struct Task {
     sref: Weak<Task>,
 
@@ -116,6 +139,8 @@ pub struct Task {
 
     parent: Mutex<Option<Arc<Task>>>,
     children: Mutex<intrusive_collections::LinkedList<TaskAdapter>>,
+
+    zombies: Zombies,
 
     pub(super) link: intrusive_collections::LinkedListLink,
     pub(super) clink: intrusive_collections::LinkedListLink,
@@ -137,6 +162,7 @@ impl Task {
 
         Arc::new_cyclic(|sref| Self {
             sref: sref.clone(),
+            zombies: Zombies::new(),
 
             arch_task: UnsafeCell::new(ArchTask::new_idle()),
             file_table: Arc::new(FileTable::new()),
@@ -165,6 +191,7 @@ impl Task {
 
         Arc::new_cyclic(|sref| Self {
             sref: sref.clone(),
+            zombies: Zombies::new(),
 
             arch_task: UnsafeCell::new(ArchTask::new_kernel(
                 VirtAddr::new(entry_point as u64),
@@ -200,6 +227,7 @@ impl Task {
 
         let this = Arc::new_cyclic(|sref| Self {
             sref: sref.clone(),
+            zombies: Zombies::new(),
 
             arch_task,
             file_table: self.file_table.clone(),
@@ -233,6 +261,17 @@ impl Task {
 
     fn set_parent(&self, parent: Option<Arc<Task>>) {
         *self.parent.lock() = parent;
+    }
+
+    fn remove_child(&self, child: &Task) {
+        let mut children = self.children.lock();
+
+        if child.clink.is_linked() {
+            let mut cursor = unsafe { children.cursor_mut_from_ptr(child) };
+
+            child.set_parent(None);
+            cursor.remove();
+        }
     }
 
     fn add_child(&self, child: Arc<Task>) {
@@ -299,7 +338,22 @@ impl Task {
         self.cwd.write().filesystem = filesystem;
     }
 
-    pub(super) fn into_zombie(&self) {}
+    fn get_parent(&self) -> Option<Arc<Task>> {
+        let parent = self.parent.lock();
+        parent.clone()
+    }
+
+    pub(super) fn into_zombie(&self) {
+        // TODO: Deallocate the task's resources.
+
+        if let Some(parent) = self.get_parent() {
+            parent.remove_child(self);
+            parent.zombies.add_zombie(self.this());
+
+            // TODO: If the parent process is the process leader then
+            // signal SIGCHLD to the parent process.
+        }
+    }
 }
 
 unsafe impl Sync for Task {}
