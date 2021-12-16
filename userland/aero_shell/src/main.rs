@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Aero Project Developers.
+* Copyright (C) 2021 The Aero Project Developers.
  *
  * This file is part of The Aero Project.
  *
@@ -17,273 +17,91 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod consts;
-
 use aero_syscall::*;
 
-const ASCII_INTRO: &str = r"
-_______ _______ ______ _______    _______ ______
-(_______|_______|_____ (_______)  (_______) _____)
- _______ _____   _____) )     _    _     ( (____
-|  ___  |  ___) |  __  / |   | |  | |   | \____ \
-| |   | | |_____| |  \ \ |___| |  | |___| |____) )
-|_|   |_|_______)_|   |_\_____/    \_____(______/
-";
+const HOSTNAME: &str = "root@aero";
+const MAGENTA_FG: &str = "\x1b[1;35m";
+const RESET: &str = "\x1b[0m";
+const UWUFETCH_LOGO: &str = r#"
+    ,---,
+   '  .' \
+  /  ;    '.
+ :  :       \
+ :  |   /\   \
+ |  :  ' ;.   :
+ |  |  ;/  \   \
+ '  :  | \  \ ,'
+ |  |  '  '--'
+ |  :  :
+ |  | ,'
+ `--''
+"#;
 
-fn ls(path: &str) -> Result<(), AeroSyscallError> {
-    let fd = aero_syscall::sys_open(path, OpenFlags::O_DIRECTORY)?;
-    let mut buffer = [0u8; 1024];
+fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
+    let mut pwd_buffer = [0; 1024];
+    let mut cmd_buffer = [0; 1024];
 
-    loop {
-        let size = aero_syscall::sys_getdents(fd, &mut buffer)?;
+    let pwd_length = sys_getcwd(&mut pwd_buffer)?;
+    let pwd = unsafe { core::str::from_utf8_unchecked(&pwd_buffer[0..pwd_length]) };
 
-        if size == 0x00 {
-            break;
-        }
+    let mut hostname_split = HOSTNAME.splitn(2, '@');
+    let username = hostname_split.next().unwrap_or("root");
+    let hostname = hostname_split.next().unwrap_or("aero");
 
-        let mut offset = 0x00;
+    print!(
+        "\x1b[1;32m{}@{}\x1b[0m:\x1b[1;34m{}\x1b[0m ",
+        username, hostname, pwd
+    );
 
-        loop {
-            let dptr = unsafe { buffer.as_ptr().add(offset) as *const SysDirEntry };
-            let dentry = unsafe { dptr.read_unaligned() };
+    let cmd_length = sys_read(0, &mut cmd_buffer)?;
+    let cmd_string = unsafe { core::str::from_utf8_unchecked(&cmd_buffer[0..cmd_length]).trim() };
 
-            let name_start = offset + core::mem::size_of::<SysDirEntry>();
-            let name_end = offset + dentry.reclen;
+    let mut args = cmd_string.split_whitespace();
 
-            let name = unsafe { core::str::from_utf8_unchecked(&buffer[name_start..name_end]) };
+    if let Some(cmd) = args.next() {
+        history.push(cmd_string.to_string());
 
-            print!("{} ", name);
-
-            offset += dentry.reclen;
-
-            if offset as usize >= size {
-                break;
+        match cmd {
+            "ls" => list_directory(args.next().unwrap_or("."))?,
+            "pwd" => println!("{}", pwd),
+            "cd" => {
+                sys_chdir(args.next().unwrap_or(".."))?;
             }
-        }
-    }
-
-    sys_close(fd)?;
-    println!();
-
-    Ok(())
-}
-
-fn cat(file: &str) -> Result<(), AeroSyscallError> {
-    let fd = sys_open(file, OpenFlags::O_RDONLY)?;
-    let mut out = [1u8; 256];
-    let length = sys_read(fd, &mut out)?;
-
-    let contents = &unsafe { core::str::from_utf8_unchecked(&out) }[..length];
-    print!("{}", contents);
-
-    sys_close(fd)?;
-
-    Ok(())
-}
-
-fn uwufetch() -> Result<(), AeroSyscallError> {
-    const BLACK: &str = "\x1b[1;40m";
-    const RED: &str = "\x1b[1;41m";
-    const GREEN: &str = "\x1b[1;42m";
-    const YELLOW: &str = "\x1b[1;43m";
-    const BLUE: &str = "\x1b[1;44m";
-    const MAGENTA: &str = "\x1b[1;45m";
-    const CYAN: &str = "\x1b[1;46m";
-    const WHITE: &str = "\x1b[1;47m";
-
-    const BLACK_DEFAULT: &str = "\x1b[0;40m";
-    const RED_DEFAULT: &str = "\x1b[0;41m";
-    const GREEN_DEFAULT: &str = "\x1b[0;42m";
-    const YELLOW_DEFAULT: &str = "\x1b[0;43m";
-    const BLUE_DEFAULT: &str = "\x1b[0;44m";
-    const MAGENTA_DEFAULT: &str = "\x1b[0;45m";
-    const CYAN_DEFAULT: &str = "\x1b[0;46m";
-    const WHITE_DEFAULT: &str = "\x1b[0;47m";
-
-    const MAGENTA_FG: &str = "\x1b[1;35m";
-    const RESET: &str = "\x1b[0m";
-
-    let mut struc = Utsname::default();
-    sys_uname(&mut struc)?;
-
-    for (i, line) in consts::UWU_FETCH.lines().enumerate() {
-        if i < 3 {
-            println!("{}", line);
-        } else if i == 4 {
-            println!(
-                "{}  {}OS{}: {} ({})",
-                line,
-                MAGENTA_FG,
-                RESET,
-                struc.name(),
-                struc.machine()
-            );
-        } else if i == 6 {
-            println!(
-                "{}  {}  {}  {}  {}  {}  {}  {}  {}",
-                line, BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
-            );
-        } else if i == 7 {
-            println!(
-                "{}  {}  {}  {}  {}  {}  {}  {}  {}",
-                line,
-                BLACK_DEFAULT,
-                RED_DEFAULT,
-                GREEN_DEFAULT,
-                YELLOW_DEFAULT,
-                BLUE_DEFAULT,
-                MAGENTA_DEFAULT,
-                CYAN_DEFAULT,
-                WHITE_DEFAULT
-            );
-        } else {
-            println!("{}", line);
-        }
-    }
-
-    Ok(())
-}
-
-fn dmsg() -> Result<(), AeroSyscallError> {
-    let fd = sys_open("/dev/kmsg", OpenFlags::O_RDONLY)?;
-    let mut out = [1u8; 4096];
-    let length = sys_read(fd, &mut out)?;
-
-    let contents = &unsafe { core::str::from_utf8_unchecked(&out) }[..length];
-
-    for log in contents.split("\n") {
-        let mut iter = log.split(" ");
-
-        if let Some(info) = iter.next() {
-            if !info.starts_with("[") {
-                continue;
+            "mkdir" => match args.next() {
+                Some(path) => {
+                    sys_mkdir(path)?;
+                }
+                None => println!("mkdir: missing operand"),
+            },
+            "rmdir" => match args.next() {
+                Some(path) => {
+                    sys_rmdir(path)?;
+                }
+                None => println!("rmdir: missing operand"),
+            },
+            "exit" => match args.next() {
+                Some(status) => match status.parse::<usize>() {
+                    Ok(exit_code) => sys_exit(exit_code),
+                    Err(_) => println!("exit: invalid operand"),
+                },
+                None => sys_exit(0),
+            },
+            "cat" => cat_file(args.next())?,
+            "clear" => print!("{esc}[2J{esc}[1;1H", esc = 27 as char),
+            "dmsg" => print_kernel_log()?,
+            "uwufetch" => uwufetch()?,
+            "uname" => uname()?,
+            "history" => {
+                for entry in history.iter() {
+                    println!("{}", entry);
+                }
             }
+            _ => {
+                let child = sys_fork()?;
 
-            let level = &info[1..][..info.len() - 2];
-            let color = match level {
-                "ERROR" => "\x1b[1;31m",
-                "WARN" => "\x1b[1;33m",
-                "INFO" => "\x1b[1;32m",
-                "DEBUG" => "\x1b[1;34m",
-                "TRACE" => "\x1b[1;35m",
-                _ => continue,
-            };
-
-            print!("{}{}\x1b[0m", color, level);
-            print!(": ");
-
-            for rest in iter {
-                print!("{} ", rest);
-            }
-
-            println!();
-        }
-    }
-
-    sys_close(fd)?;
-
-    Ok(())
-}
-
-fn shell() -> Result<(), AeroSyscallError> {
-    loop {
-        let mut pwd_buffer = [0u8; 1024];
-        sys_getcwd(&mut pwd_buffer)?;
-
-        let pwd = unsafe { core::str::from_utf8_unchecked(&pwd_buffer) };
-        let pwd = pwd.trim_matches(|c| c == '\0');
-
-        print!("\x1b[1;32mroot@aero\x1b[0m");
-        print!(":");
-        print!("\x1b[1;34m{}\x1b[0m ", pwd);
-
-        let mut buffer = [0u8; 256];
-        let len = sys_read(0, &mut buffer)?;
-
-        let mut command_iter = unsafe { core::str::from_utf8_unchecked(&mut buffer) }.trim()
-            [0..len]
-            .split_whitespace();
-
-        let command = command_iter.next();
-
-        if let Some(command) = command {
-            if command == "ls" {
-                if let Some(dir) = command_iter.next() {
-                    ls(dir)?
-                } else {
-                    // By default "ls" will be executed in the current directory.
-                    ls(".")?
-                }
-            } else if command == "pwd" {
-                println!("{}", pwd);
-            } else if command == "mkdir" {
-                if let Some(dir) = command_iter.next() {
-                    sys_mkdir(dir)?;
-                } else {
-                    println!("mkdir: missing operand")
-                }
-            } else if command == "rmdir" {
-                if let Some(dir) = command_iter.next() {
-                    sys_rmdir(dir)?;
-                } else {
-                    println!("rmdir: missing operand")
-                }
-            } else if command == "cd" {
-                if let Some(dir) = command_iter.next() {
-                    sys_chdir(dir)?;
-                } else {
-                    // By default "cd" changes to the parent directory if no directory is specified.
-                    sys_chdir("..")?;
-                }
-            } else if command == "cat" {
-                if let Some(file) = command_iter.next() {
-                    cat(file)?;
-                } else {
-                    println!("cat: missing operand")
-                }
-            } else if command == "shutdown" {
-                sys_shutdown();
-            } else if command == "malloc" {
-                if let Some(size) = command_iter.next() {
-                    let size = size.parse::<usize>().expect("malloc: invalid operand type");
-                    let address = sys_mmap(
-                        0,
-                        size,
-                        MMapProt::PROT_READ | MMapProt::PROT_WRITE,
-                        MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_PRIVATE,
-                        0,
-                        0,
-                    )?;
-
-                    println!(
-                        "malloc: allocated {}B of memory at address {:#x}",
-                        size, address
-                    );
-                }
-            } else if command == "clear" {
-                print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
-            } else if command == "dmsg" {
-                dmsg()?;
-            } else if command == "uwufetch" {
-                uwufetch()?;
-            } else if command == "uname" {
-                let mut struc = Utsname::default();
-
-                sys_uname(&mut struc)?;
-                println!(
-                    "{} {} {} {} {}",
-                    struc.name(),
-                    struc.nodename(),
-                    struc.release(),
-                    struc.version(),
-                    struc.machine()
-                );
-            } else if command != "\u{0}" {
-                let pid = sys_fork()?;
-
-                if pid == 0 {
-                    if sys_exec(command).is_err() {
-                        println!("{}: command not found", command);
+                if child == 0 {
+                    if sys_exec(cmd).is_err() {
+                        println!("{}: command not found", cmd);
                     }
                 } else {
                     // Wait for the child
@@ -291,6 +109,130 @@ fn shell() -> Result<(), AeroSyscallError> {
             }
         }
     }
+
+    Ok(())
+}
+
+fn list_directory(path: &str) -> Result<(), AeroSyscallError> {
+    let dir_fd = sys_open(path, OpenFlags::O_DIRECTORY)?;
+
+    loop {
+        let mut offset = 0;
+        let mut dir_ents_buffer = [0; 1024];
+
+        let size = sys_getdents(dir_fd, &mut dir_ents_buffer)?;
+
+        if size == 0 {
+            break;
+        }
+
+        while offset < size {
+            let dir_entry =
+                unsafe { &*(dir_ents_buffer.as_ptr().add(offset) as *const SysDirEntry) };
+
+            let name_start = offset + core::mem::size_of::<SysDirEntry>();
+            let name_end = offset + dir_entry.reclen;
+
+            let name =
+                unsafe { core::str::from_utf8_unchecked(&dir_ents_buffer[name_start..name_end]) };
+
+            offset += dir_entry.reclen;
+
+            print!("{} ", name);
+        }
+    }
+
+    println!();
+
+    Ok(())
+}
+
+fn cat_file(path: Option<&str>) -> Result<(), AeroSyscallError> {
+    // On the `None` arm we default to 0 to take input from stdin.
+    // This is the behaviour of `cat` that comes with any modern Linux distro.
+    let fd = match path {
+        Some(path) => sys_open(path, OpenFlags::O_RDONLY)?,
+        None => 0,
+    };
+
+    let mut buffer = [0; 1024];
+
+    loop {
+        let length = sys_read(fd, &mut buffer)?;
+
+        if length == 0 {
+            break;
+        }
+
+        let contents = unsafe { core::str::from_utf8_unchecked(&buffer[0..length]) };
+
+        print!("{}", contents);
+    }
+
+    if fd != 0 {
+        sys_close(fd)?;
+    }
+
+    Ok(())
+}
+
+fn print_kernel_log() -> Result<(), AeroSyscallError> {
+    // dmsg is just a wrapper around `cat /dev/kmsg`
+    // TODO: Add colored output back :^)
+
+    cat_file(Some("/dev/kmsg"))
+}
+
+fn uwufetch() -> Result<(), AeroSyscallError> {
+    let print_prefix = |prefix| {
+        print!("{}{}{}: ", MAGENTA_FG, prefix, RESET);
+    };
+
+    for (i, line) in UWUFETCH_LOGO.lines().skip(1).enumerate() {
+        print!(" {}{:<19}{}", MAGENTA_FG, line, RESET);
+
+        if i == 1 {
+            println!("{}", HOSTNAME);
+        } else if i == 2 {
+            println!("{}", "-".repeat(HOSTNAME.len()));
+        } else if i == 3 {
+            print_prefix("OS");
+            println!("Aero");
+        } else if i == 4 {
+            let mut uname_info = Utsname::default();
+
+            sys_uname(&mut uname_info)?;
+
+            print_prefix("Kernel");
+            println!(
+                "{} {} ({})",
+                uname_info.name(),
+                uname_info.version(),
+                uname_info.machine()
+            );
+        } else {
+            println!();
+        }
+    }
+
+    Ok(())
+}
+
+fn uname() -> Result<(), AeroSyscallError> {
+    let mut uname_info = Utsname::default();
+
+    sys_uname(&mut uname_info)?;
+
+    println!(
+        "{} {} {} {} {}",
+        uname_info.name(),
+        uname_info.nodename(),
+        uname_info.release(),
+        uname_info.version(),
+        uname_info.machine()
+    );
+
+    Ok(())
 }
 
 fn main() {
@@ -298,9 +240,11 @@ fn main() {
     sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stdout");
     sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stderr");
 
-    println!("{}", ASCII_INTRO);
+    let mut history = vec![];
 
-    if let Err(error) = shell() {
-        println!("error: {:?}", error);
+    loop {
+        if let Err(error) = repl(&mut history) {
+            println!("error: {:?}", error);
+        }
     }
 }
