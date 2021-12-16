@@ -18,7 +18,7 @@
  */
 
 use alloc::string::String;
-use alloc::sync::Arc;
+use alloc::sync::{Arc, Weak};
 
 use spin::RwLock;
 
@@ -32,6 +32,7 @@ use crate::mem::paging::*;
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
 use crate::syscall::ExecArgs;
+use crate::utils::sync::Mutex;
 
 use intrusive_collections::{intrusive_adapter, LinkedListLink};
 
@@ -42,7 +43,6 @@ use super::vm::Vm;
 pub struct TaskId(usize);
 
 impl TaskId {
-    #[inline]
     pub(super) const fn new(pid: usize) -> Self {
         Self(pid)
     }
@@ -54,7 +54,6 @@ impl TaskId {
         Self::new(NEXT_PID.fetch_add(1, Ordering::AcqRel))
     }
 
-    #[inline]
     pub fn as_usize(&self) -> usize {
         self.0
     }
@@ -84,7 +83,6 @@ pub struct Cwd {
 }
 
 impl Cwd {
-    #[inline]
     fn new() -> RwLock<Self> {
         let root = fs::root_dir().clone();
         let fs = root.inode().weak_filesystem().unwrap().upgrade().unwrap();
@@ -95,7 +93,6 @@ impl Cwd {
         })
     }
 
-    #[inline]
     fn fork(&self) -> RwLock<Self> {
         RwLock::new(Self {
             inode: self.inode.clone(),
@@ -105,16 +102,29 @@ impl Cwd {
 }
 
 pub struct Task {
+    sref: Weak<Task>,
+
     arch_task: UnsafeCell<ArchTask>,
-    task_id: TaskId,
     state: AtomicU8,
+
+    // Note: Aero implementes the threads and as standard processes. This
+    // means that when a new process is created its TID == PID and when a new
+    // thread is created then the PID of the thread will be the process leader's
+    // PID and the TID will be uniquely generated.
+    pid: TaskId,
+    tid: TaskId,
+
+    parent: Mutex<Option<Arc<Task>>>,
+    children: Mutex<intrusive_collections::LinkedList<TaskAdapter>>,
+
+    pub(super) link: intrusive_collections::LinkedListLink,
+    pub(super) clink: intrusive_collections::LinkedListLink,
 
     pub vm: Arc<Vm>,
     pub file_table: Arc<FileTable>,
 
     cwd: RwLock<Cwd>,
 
-    pub(super) link: intrusive_collections::LinkedListLink,
     pub(super) exit_status: AtomicIsize,
 }
 
@@ -122,37 +132,58 @@ impl Task {
     /// Creates a per-cpu idle task. An idle task is a special *kernel* process
     /// which is executed when there are no runnable taskes in the scheduler's
     /// queue.
-    #[inline]
     pub fn new_idle() -> Arc<Task> {
-        Arc::new(Self {
+        let pid = TaskId::allocate();
+
+        Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+
             arch_task: UnsafeCell::new(ArchTask::new_idle()),
             file_table: Arc::new(FileTable::new()),
-            task_id: TaskId::allocate(),
+
+            tid: pid.clone(),
+            pid,
+
             vm: Arc::new(Vm::new()),
             state: AtomicU8::new(TaskState::Runnable as _),
 
             link: Default::default(),
+            clink: Default::default(),
+
             exit_status: AtomicIsize::new(0),
+
+            children: Mutex::new(Default::default()),
+            parent: Mutex::new(None),
 
             cwd: Cwd::new(),
         })
     }
 
     /// Allocates a new kernel task pointing at the provided entry point function.
-    #[inline]
     pub fn new_kernel(entry_point: fn(), enable_interrupts: bool) -> Arc<Self> {
-        Arc::new(Self {
+        let pid = TaskId::allocate();
+
+        Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+
             arch_task: UnsafeCell::new(ArchTask::new_kernel(
                 VirtAddr::new(entry_point as u64),
                 enable_interrupts,
             )),
-            task_id: TaskId::allocate(),
             file_table: Arc::new(FileTable::new()),
             vm: Arc::new(Vm::new()),
             state: AtomicU8::new(TaskState::Runnable as _),
 
+            tid: pid.clone(),
+            pid,
+
             link: Default::default(),
+            clink: Default::default(),
+
             exit_status: AtomicIsize::new(0),
+
+            children: Mutex::new(Default::default()),
+            parent: Mutex::new(None),
 
             cwd: Cwd::new(),
         })
@@ -165,21 +196,50 @@ impl Task {
                 .expect("failed to fork arch task"),
         );
 
-        let this = Arc::new(Self {
+        let pid = TaskId::allocate();
+
+        let this = Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+
             arch_task,
-            task_id: TaskId::allocate(),
             file_table: self.file_table.clone(),
             vm: Arc::new(Vm::new()),
             state: AtomicU8::new(TaskState::Runnable as _),
+
             link: Default::default(),
+            clink: Default::default(),
+
             exit_status: AtomicIsize::new(0),
+
+            tid: pid.clone(),
+            pid,
+
+            children: Mutex::new(Default::default()),
+            parent: Mutex::new(None),
 
             cwd: self.cwd.read().fork(),
         });
 
+        self.add_child(this.clone());
+
         this.vm.fork_from(self.vm());
         this.vm.log();
         this
+    }
+
+    fn this(&self) -> Arc<Self> {
+        self.sref.upgrade().unwrap()
+    }
+
+    fn set_parent(&self, parent: Option<Arc<Task>>) {
+        *self.parent.lock() = parent;
+    }
+
+    fn add_child(&self, child: Arc<Task>) {
+        let mut children = self.children.lock();
+
+        child.set_parent(Some(self.this()));
+        children.push_back(child);
     }
 
     pub fn exec(
@@ -197,50 +257,41 @@ impl Task {
         self.arch_task_mut().exec(vm, loaded_binary, argv, envv)
     }
 
-    #[inline]
     pub fn vm(&self) -> &Arc<Vm> {
         &self.vm
     }
 
     /// Returns a immutable reference to the inner [ArchTask] structure.
-    #[inline]
     pub fn arch_task(&self) -> &ArchTask {
         unsafe { &(*self.arch_task.get()) }
     }
 
     /// Returns a mutable reference to the inner [ArchTask] structure.
-    #[inline]
     pub fn arch_task_mut(&self) -> &mut ArchTask {
         unsafe { &mut (*self.arch_task.get()) }
     }
 
-    #[inline]
     pub(super) fn update_state(&self, state: TaskState) {
         self.state.store(state as _, Ordering::SeqCst);
     }
 
-    #[inline]
     pub fn state(&self) -> TaskState {
         self.state.load(Ordering::SeqCst).into()
     }
 
     /// Returns the task ID that was allocated for this task.
-    #[inline]
     pub fn task_id(&self) -> TaskId {
-        self.task_id
+        self.pid
     }
 
-    #[inline]
     pub fn get_cwd_dirent(&self) -> DirCacheItem {
         self.cwd.read().inode.clone()
     }
 
-    #[inline]
     pub fn get_cwd(&self) -> String {
         self.cwd.read().inode.absolute_path_str()
     }
 
-    #[inline]
     pub fn set_cwd(&self, cwd: DirCacheItem) {
         let filesystem = cwd.inode().weak_filesystem().unwrap().upgrade().unwrap();
 
@@ -255,4 +306,5 @@ unsafe impl Sync for Task {}
 
 // Create a new intrustive adapter for the [Task] struct as the tasks are stored as a linked
 // list in the scheduler.
-intrusive_collections::intrusive_adapter!(pub TaskAdapter = Arc<Task> : Task { link: LinkedListLink });
+intrusive_collections::intrusive_adapter!(pub SchedTaskAdapter = Arc<Task> : Task { link: LinkedListLink });
+intrusive_collections::intrusive_adapter!(pub TaskAdapter = Arc<Task> : Task { clink: LinkedListLink });

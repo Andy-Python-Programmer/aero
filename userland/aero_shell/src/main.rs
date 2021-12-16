@@ -105,6 +105,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     }
                 } else {
                     // Wait for the child
+                    loop {}
                 }
             }
         }

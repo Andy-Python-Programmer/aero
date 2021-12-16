@@ -22,7 +22,7 @@ use alloc::sync::Arc;
 use intrusive_collections::LinkedList;
 
 use crate::arch;
-use crate::userland::task::{Task, TaskAdapter, TaskState};
+use crate::userland::task::{SchedTaskAdapter, Task, TaskState};
 
 use crate::utils::sync::IrqGuard;
 use crate::utils::{downcast, PerCpu};
@@ -39,9 +39,9 @@ struct TaskQueue {
     preempt_task: Arc<Task>,
     current_task: Option<Arc<Task>>,
 
-    runnable: LinkedList<TaskAdapter>,
-    dead: LinkedList<TaskAdapter>,
-    awaiting: LinkedList<TaskAdapter>,
+    runnable: LinkedList<SchedTaskAdapter>,
+    dead: LinkedList<SchedTaskAdapter>,
+    awaiting: LinkedList<SchedTaskAdapter>,
 }
 
 impl TaskQueue {
@@ -53,9 +53,9 @@ impl TaskQueue {
             preempt_task: Task::new_kernel(preempter, false),
             current_task: None,
 
-            runnable: LinkedList::new(TaskAdapter::new()),
-            dead: LinkedList::new(TaskAdapter::new()),
-            awaiting: LinkedList::new(TaskAdapter::new()),
+            runnable: LinkedList::new(SchedTaskAdapter::new()),
+            dead: LinkedList::new(SchedTaskAdapter::new()),
+            awaiting: LinkedList::new(SchedTaskAdapter::new()),
         }
     }
 
