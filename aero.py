@@ -9,17 +9,17 @@ import subprocess
 import sys
 import tarfile
 
+
 # Make sure requests is installed
 try:
-    import libarchive
     import requests
 except ImportError:
     print('Please install required libraires using the following command:')
-    print(' - python3 -m pip install requests python-libarchive')
+    print(' - python3 -m pip install requests')
 
     sys.exit(0)
 
-import libarchive
+
 import requests
 
 
