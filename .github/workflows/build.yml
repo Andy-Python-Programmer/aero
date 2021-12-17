@@ -22,14 +22,14 @@ jobs:
     - name: Install dependencies
       run: sudo apt-get install -y nasm meson ninja-build
     - name: Run build
-      run: cargo aero build --release
+      run: ./aero.py --release
     - name: Build Docs
-      run: cargo aero web
+      run: ./aero.py --document
     - name: Uploading image as artifact
       uses: actions/upload-artifact@v2
       with:
         name: Aero
-        path: ./build/aero.img
+        path: ./build/aero.iso
 
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
@@ -51,7 +51,7 @@ jobs:
       run: sudo apt-get install -y nasm meson ninja-build
     - name: Install QEMU x86_64
       run: sudo apt update && sudo apt install qemu-system-x86
-    - name: Qemu Version
+    - name: Print QEMU version
       run: qemu-system-x86_64 --version
     - name: Run tests
-      run: RUST_BACKTRACE=1 cargo aero test --features=ci --bios uefi -- -display none -device isa-debug-exit,iobase=0xf4,iosize=0x04
+      run: RUST_BACKTRACE=1 ./aero.py --test --features=ci --bios uefi -- -display none -device isa-debug-exit,iobase=0xf4,iosize=0x04
