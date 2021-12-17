@@ -55,6 +55,11 @@ def parse_args():
 
     check_test = parser.add_mutually_exclusive_group()
 
+    check_test.add_argument('--clean',
+                            default=False,
+                            action='store_true',
+                            help='removes the build artifacts')
+
     check_test.add_argument('--check',
                             default=False,
                             action='store_true',
@@ -336,7 +341,16 @@ def main():
 
     download_bundled()
 
-    if args.document:
+    if args.clean:
+        src_target = os.path.join('src', 'target', args.target)
+        userland_target = os.path.join('userland', 'target')
+
+        if os.path.exists(src_target):
+            shutil.rmtree(src_target)
+
+        if os.path.exists(userland_target):
+            shutil.rmtree(userland_target)
+    elif args.document:
         build_kernel(args)
 
         generate_docs(args)
