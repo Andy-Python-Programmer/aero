@@ -85,7 +85,7 @@ def parse_args():
 
     parser.add_argument('remaining',
                         nargs=argparse.REMAINDER,
-                        help='additional arguments to pass as the kernel command line')
+                        help='additional arguments to pass as the emulator')
 
     return parser.parse_args()
 
@@ -241,15 +241,6 @@ def prepare_iso(args, kernel_bin, user_bins):
     with open(os.path.join(iso_root, 'limine.cfg'), 'w') as limine_cfg:
         limine_cfg.write(LIMINE_TEMPLATE)
 
-        cmdline = args.remaining
-
-        if '--' in cmdline:
-            cmdline.remove('--')
-
-        if cmdline:
-            cmdline = ' '.join(cmdline)
-            limine_cfg.write(f'CMDLINE={cmdline}\n')
-
     code, _, xorriso_stderr = run_command([
         'xorriso', '-as', 'mkisofs', '-b', 'limine-cd.bin', '-no-emul-boot', '-boot-load-size', '4',
         '-boot-info-table', '--efi-boot', 'limine-eltorito-efi.bin', '-efi-boot-part',
@@ -295,6 +286,14 @@ def run_in_emulator(args, iso_path):
 
     if args.bios == 'uefi':
         qemu_args += ['-bios', 'bundled/ovmf/OVMF-pure-efi.fd']
+
+    cmdline = args.remaining
+
+    if '--' in cmdline:
+        cmdline.remove('--')
+
+    if cmdline:
+        qemu_args += cmdline
 
     try:
         run_command(['qemu-system-x86_64', *qemu_args])
