@@ -285,7 +285,21 @@ def prepare_iso(args, kernel_bin, user_bins):
 
 
 def run_in_emulator(args, iso_path):
-    pass
+    qemu_args = ['-cdrom', iso_path,
+                 '-cpu', 'qemu64,+la57' if args.la57 else 'qemu64',
+                 '-qmp', 'unix:build/qmp-sock,server,nowait',
+                 '-M', 'q35',
+                 '-m', '2G',
+                 '-smp', '1',
+                 '-serial', 'stdio']
+
+    if args.bios == 'uefi':
+        qemu_args += ['-bios', 'bundled/ovmf/OVMF-pure-efi.fd']
+
+    try:
+        run_command(['qemu-system-x86_64', *qemu_args])
+    except KeyboardInterrupt:
+        pass
 
 
 def main():
