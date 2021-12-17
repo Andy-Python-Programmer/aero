@@ -91,7 +91,9 @@ interrupt_error_stack!(
         // its not mapped. So we handle the page fault if the accessed address is less then the
         // MAX userland address and we only signal kill the process if its trying to access
         // a non-mapped memory region while in RPL_3.
-        if accessed_address.as_u64() < 0x8000_0000_0000 && scheduler::is_initialized() {
+        let userland_last_address = super::super::task::userland_last_address();
+
+        if accessed_address < userland_last_address && scheduler::is_initialized() {
             let signal = scheduler::get_scheduler()
                 .current_task()
                 .vm

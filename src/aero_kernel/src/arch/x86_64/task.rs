@@ -66,6 +66,35 @@ pub enum AuxvType {
     AtEntry = 9,
 }
 
+/// Returns the first address outside the user range.
+///
+/// ## Notes
+/// * On Intel CPUs, if a SYSCALL instruction is at the highest canonical address, then
+/// that syscall will enter the kernel with a non-canonical return address, and SYSRET will
+/// explode dangerously. We avoid this particular problem by preventing anything from
+/// being mapped at the maximum canonical address.
+///
+/// * On AMD CPUs in the Ryzen family, there's a nasty bug in which the CPUs malfunction if they
+/// execute code from the highest canonical page. They'll speculate right off the end of the canonical
+/// space and bad things happen. This is worked around in the same way as the Intel problem.
+pub fn userland_last_address() -> VirtAddr {
+    // Reference: https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/page_64.h#L61
+    static CACHED: spin::Once<VirtAddr> = spin::Once::new();
+
+    *CACHED.call_once(|| {
+        let virtual_mask_shift: u64;
+        let la57 = crate::mem::paging::level_5_paging_enabled();
+
+        if la57 {
+            virtual_mask_shift = 56;
+        } else {
+            virtual_mask_shift = 47;
+        }
+
+        VirtAddr::new((1u64 << virtual_mask_shift) - Size4KiB::SIZE)
+    })
+}
+
 pub struct ArchTask {
     context: Unique<Context>,
     address_space: AddressSpace,
