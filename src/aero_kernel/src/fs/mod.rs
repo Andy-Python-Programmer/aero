@@ -283,8 +283,14 @@ pub fn launch() -> Result<()> {
     // This is temporary and will be removed when we have support for
     // ext2 filesystem and fat32 filesystem to make it functional for both
     // UEFI and BIOS.
+
+    #[cfg(debug_assertions)]
     static SHELL: &[u8] =
         include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
+
+    #[cfg(not(debug_assertions))]
+    static SHELL: &[u8] =
+        include_bytes!("../../../../userland/target/x86_64-unknown-none/release/aero_shell");
 
     root_dir().inode().mkdir("bin")?;
     root_dir().inode().mkdir("lib")?;
