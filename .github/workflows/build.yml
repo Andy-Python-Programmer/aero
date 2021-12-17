@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: sudo apt-get install -y nasm meson ninja-build
     - name: Build the kernel and userland
-      run: ./aero.py --release
+      run: ./aero.py --release --no-run
     - name: Build kernel documentation
       run: ./aero.py --document
     - name: Upload built image as artifact

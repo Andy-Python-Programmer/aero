@@ -75,6 +75,11 @@ def parse_args():
                         action='store_true',
                         help='builds the kernel and userland in release mode')
 
+    parser.add_argument('--no-run',
+                        default=False,
+                        action='store_true',
+                        help='doesn\'t run the built image in emulator when applicable')
+
     parser.add_argument('--bios',
                         type=str,
                         default='legacy',
@@ -349,7 +354,8 @@ def main():
         kernel_bin = kernel_bin[0]
         iso_path = prepare_iso(args, kernel_bin, user_bins)
 
-        run_in_emulator(args, iso_path)
+        if not args.no_run:
+            run_in_emulator(args, iso_path)
 
 
 if __name__ == '__main__':
