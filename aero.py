@@ -116,7 +116,8 @@ def download_bundled():
                 file.write(response.content)
 
     if not os.path.exists(limine_path):
-        run_command(['git', 'clone', '--branch', 'latest-binary', '--depth', '1', LIMINE_URL, limine_path])
+        run_command(['git', 'clone', '--branch', 'latest-binary',
+                    '--depth', '1', LIMINE_URL, limine_path])
 
 
 def extract_artifacts(stdout):
@@ -135,7 +136,9 @@ def extract_artifacts(stdout):
 
 def build_kernel(args):
     command = 'build'
-    cmd_args = ['--package', 'aero_kernel', '--target', f'.cargo/{args.target}.json']
+    cmd_args = ['--package', 'aero_kernel',
+                '--target', f'.cargo/{args.target}.json',
+                '--message-format=json']
 
     if args.release:
         cmd_args += ['--release']
@@ -149,13 +152,9 @@ def build_kernel(args):
     if args.features:
         cmd_args += ['--features', ','.join(args.features)]
 
-    code, _, _ = run_command(['cargo', command, *cmd_args], cwd='src')
-
-    if args.check or code != 0:
-        return None
-
-    _, stdout, _ = run_command(['cargo', command, *cmd_args, '--message-format=json'],
-                               cwd='src', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _, stdout, _ = run_command(['cargo', command, *cmd_args],
+                               cwd='src',
+                               stdout=subprocess.PIPE)
 
     bins = extract_artifacts(stdout)
 
@@ -167,7 +166,7 @@ def build_kernel(args):
 
 def build_userland(args):
     command = 'build'
-    cmd_args = []
+    cmd_args = ['--message-format=json']
 
     if args.release:
         cmd_args += ['--release']
@@ -182,13 +181,9 @@ def build_userland(args):
     # elif args.check:
     #     command = 'check'
 
-    code, _, _ = run_command(['cargo', command, *cmd_args], cwd='userland')
-
-    if args.check or code != 0:
-        return None
-
-    _, stdout, _ = run_command(['cargo', command, *cmd_args, '--message-format=json'],
-                               cwd='userland', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _, stdout, _ = run_command(['cargo', command, *cmd_args],
+                               cwd='userland',
+                               stdout=subprocess.PIPE)
 
     return extract_artifacts(stdout)
 
@@ -229,8 +224,10 @@ def prepare_iso(args, kernel_bin, user_bins):
                                     cwd=initramfs_root,
                                     stdout=subprocess.PIPE)
 
-    files_without_dot = filter(lambda x: x != '.', find_output.decode('utf-8').splitlines())
-    files_without_prefix = map(lambda x: x.removeprefix('./'), files_without_dot)
+    files_without_dot = filter(
+        lambda x: x != '.', find_output.decode('utf-8').splitlines())
+    files_without_prefix = map(
+        lambda x: x.removeprefix('./'), files_without_dot)
     files = list(files_without_prefix)
 
     with open(os.path.join(iso_root, 'initramfs.cpio'), 'wb') as initramfs:
@@ -238,6 +235,7 @@ def prepare_iso(args, kernel_bin, user_bins):
         code, _, _ = run_command(['cpio', '-o', '-v'],
                                  cwd=initramfs_root,
                                  stdout=initramfs,
+                                 stderr=subprocess.PIPE,
                                  input=cpio_input.encode('utf-8'))
 
     with open(os.path.join(iso_root, 'limine.cfg'), 'w') as limine_cfg:
@@ -295,13 +293,17 @@ def main():
 
     download_bundled()
 
-    kernel_bin = build_kernel(args)
     user_bins = build_userland(args)
+
+    if not user_bins:
+        return
+
+    kernel_bin = build_kernel(args)
 
     if args.check:
         return
 
-    if not kernel_bin or not user_bins:
+    if not kernel_bin:
         return
 
     iso_path = prepare_iso(args, kernel_bin, user_bins)
