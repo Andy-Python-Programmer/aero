@@ -58,6 +58,11 @@ def parse_args():
                             action='store_true',
                             help='runs the aero test suite')
 
+    check_test.add_argument('--document',
+                            default=False,
+                            action='store_true',
+                            help='generates the documentation for the aero kernel')
+
     parser.add_argument('--release',
                         default=False,
                         action='store_true',
@@ -98,13 +103,13 @@ def run_command(args, **kwargs):
 
 def download_bundled():
     if not os.path.exists(BUNDLED_DIR):
-        os.mkdir(BUNDLED_DIR)
+        os.makedirs(BUNDLED_DIR)
 
     ovmf_path = os.path.join(BUNDLED_DIR, 'ovmf')
     limine_path = os.path.join(BUNDLED_DIR, 'limine')
 
     if not os.path.exists(ovmf_path):
-        os.mkdir(ovmf_path)
+        os.makedirs(ovmf_path)
 
     for ovmf_file in OVMF_FILES:
         file_path = os.path.join(ovmf_path, ovmf_file)
@@ -148,6 +153,8 @@ def build_kernel(args):
         cmd_args += ['--no-run']
     elif args.check:
         command = 'check'
+    elif args.document:
+        command = 'doc'
 
     if args.features:
         cmd_args += ['--features', ','.join(args.features)]
@@ -188,6 +195,17 @@ def build_userland(args):
     return extract_artifacts(stdout)
 
 
+def generate_docs(args):
+    doc_dir = os.path.join('src', 'target', args.target, 'doc')
+    out_dir = os.path.join(BUILD_DIR, 'web')
+
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+
+    shutil.copytree('web', out_dir, dirs_exist_ok=True)
+    shutil.copytree(doc_dir, out_dir, dirs_exist_ok=True)
+
+
 def remove_prefix(string: str, prefix: str):
     if string.startswith(prefix):
         return string[len(prefix):]
@@ -197,7 +215,7 @@ def remove_prefix(string: str, prefix: str):
 
 def prepare_iso(args, kernel_bin, user_bins):
     if not os.path.exists(BUILD_DIR):
-        os.mkdir(BUILD_DIR)
+        os.makedirs(BUILD_DIR)
 
     iso_path = os.path.join(BUILD_DIR, 'aero.iso')
     iso_root = os.path.join(BUILD_DIR, 'iso_root')
@@ -206,7 +224,7 @@ def prepare_iso(args, kernel_bin, user_bins):
     if os.path.exists(iso_root):
         shutil.rmtree(iso_root)
 
-    os.mkdir(iso_root)
+    os.makedirs(iso_root)
 
     shutil.copy(kernel_bin, os.path.join(iso_root, 'aero.elf'))
     shutil.copy(os.path.join(limine_path, 'limine.sys'), iso_root)
@@ -219,8 +237,8 @@ def prepare_iso(args, kernel_bin, user_bins):
     if os.path.exists(initramfs_root):
         shutil.rmtree(initramfs_root)
 
-    os.mkdir(initramfs_root)
-    os.mkdir(initramfs_bin)
+    os.makedirs(initramfs_root)
+    os.makedirs(initramfs_bin)
 
     for file in user_bins:
         bin_name = os.path.basename(file)
@@ -313,22 +331,24 @@ def main():
 
     download_bundled()
 
-    user_bins = build_userland(args)
+    if args.document:
+        build_kernel(args)
 
-    if not user_bins:
-        return
+        generate_docs(args)
+    else:
+        user_bins = build_userland(args)
 
-    kernel_bin = build_kernel(args)
+        if not user_bins:
+            return
 
-    if args.check:
-        return
+        kernel_bin = build_kernel(args)
 
-    if not kernel_bin:
-        return
+        if not kernel_bin or args.check:
+            return
 
-    iso_path = prepare_iso(args, kernel_bin, user_bins)
+        iso_path = prepare_iso(args, kernel_bin, user_bins)
 
-    run_in_emulator(args, iso_path)
+        run_in_emulator(args, iso_path)
 
 
 if __name__ == '__main__':
