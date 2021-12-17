@@ -42,6 +42,13 @@ MODULE_STRING=initramfs
 """
 
 
+def remove_prefix(string: str, prefix: str):
+    if string.startswith(prefix):
+        return string[len(prefix):]
+    else:
+        return string[:]
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="utility used to build aero kernel and userland")
@@ -139,11 +146,24 @@ def extract_artifacts(stdout):
     return result
 
 
+def build_cargo_workspace(cwd, command, args):
+    code, _, _ = run_command(['cargo', command, *args], cwd=cwd)
+
+    if code != 0:
+        return None
+
+    _, stdout, _ = run_command(['cargo', command, *args, '--message-format=json'],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL,
+                               cwd=cwd)
+
+    return extract_artifacts(stdout)
+
+
 def build_kernel(args):
     command = 'build'
     cmd_args = ['--package', 'aero_kernel',
-                '--target', f'.cargo/{args.target}.json',
-                '--message-format=json']
+                '--target', f'.cargo/{args.target}.json']
 
     if args.release:
         cmd_args += ['--release']
@@ -159,21 +179,12 @@ def build_kernel(args):
     if args.features:
         cmd_args += ['--features', ','.join(args.features)]
 
-    _, stdout, _ = run_command(['cargo', command, *cmd_args],
-                               cwd='src',
-                               stdout=subprocess.PIPE)
-
-    bins = extract_artifacts(stdout)
-
-    if bins:
-        return bins[0]
-
-    return None
+    return build_cargo_workspace('src', command, cmd_args)
 
 
 def build_userland(args):
     command = 'build'
-    cmd_args = ['--message-format=json']
+    cmd_args = []
 
     if args.release:
         cmd_args += ['--release']
@@ -188,11 +199,7 @@ def build_userland(args):
     # elif args.check:
     #     command = 'check'
 
-    _, stdout, _ = run_command(['cargo', command, *cmd_args],
-                               cwd='userland',
-                               stdout=subprocess.PIPE)
-
-    return extract_artifacts(stdout)
+    return build_cargo_workspace('userland', command, cmd_args)
 
 
 def generate_docs(args):
@@ -204,13 +211,6 @@ def generate_docs(args):
 
     shutil.copytree('web', out_dir, dirs_exist_ok=True)
     shutil.copytree(doc_dir, out_dir, dirs_exist_ok=True)
-
-
-def remove_prefix(string: str, prefix: str):
-    if string.startswith(prefix):
-        return string[len(prefix):]
-    else:
-        return string[:]
 
 
 def prepare_iso(args, kernel_bin, user_bins):
@@ -346,6 +346,7 @@ def main():
         if not kernel_bin or args.check:
             return
 
+        kernel_bin = kernel_bin[0]
         iso_path = prepare_iso(args, kernel_bin, user_bins)
 
         run_in_emulator(args, iso_path)

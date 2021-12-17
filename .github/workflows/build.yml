@@ -1,4 +1,4 @@
-name: Build
+name: Aero
 
 on:
   push:
@@ -21,22 +21,21 @@ jobs:
         toolchain: nightly
     - name: Install dependencies
       run: sudo apt-get install -y nasm meson ninja-build
-    - name: Run build
+    - name: Build the kernel and userland
       run: ./aero.py --release
-    - name: Build Docs
+    - name: Build kernel documentation
       run: ./aero.py --document
-    - name: Uploading image as artifact
+    - name: Upload built image as artifact
       uses: actions/upload-artifact@v2
       with:
         name: Aero
         path: ./build/aero.iso
-
-    - name: Deploy
+    - name: Deploy documentation
       uses: peaceiris/actions-gh-pages@v3
       if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./web/build/
+        publish_dir: ./build/web/
 
   run_tests:
     runs-on: ubuntu-latest
@@ -48,9 +47,7 @@ jobs:
         profile: minimal
         toolchain: nightly
     - name: Install dependencies
-      run: sudo apt-get install -y nasm meson ninja-build
-    - name: Install QEMU x86_64
-      run: sudo apt update && sudo apt install qemu-system-x86
+      run: sudo apt-get install -y nasm meson ninja-build qemu-system-x86
     - name: Print QEMU version
       run: qemu-system-x86_64 --version
     - name: Run tests
