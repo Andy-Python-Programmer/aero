@@ -188,6 +188,13 @@ def build_userland(args):
     return extract_artifacts(stdout)
 
 
+def remove_prefix(string: str, prefix: str):
+    if string.startswith(prefix):
+        return string[len(prefix):]
+    else:
+        return string[:]
+
+
 def prepare_iso(args, kernel_bin, user_bins):
     if not os.path.exists(BUILD_DIR):
         os.mkdir(BUILD_DIR)
@@ -227,7 +234,7 @@ def prepare_iso(args, kernel_bin, user_bins):
     files_without_dot = filter(
         lambda x: x != '.', find_output.decode('utf-8').splitlines())
     files_without_prefix = map(
-        lambda x: x.removeprefix('./'), files_without_dot)
+        lambda x: remove_prefix(x, './'), files_without_dot)
     files = list(files_without_prefix)
 
     with open(os.path.join(iso_root, 'initramfs.cpio'), 'wb') as initramfs:
