@@ -220,6 +220,8 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
         .arg("stdio")
         .arg("-drive")
         .arg("format=raw,file=build/aero.img")
+        .arg("-qmp")
+        .arg("unix:qmp-sock,server,nowait")
         .args(argv);
 
     if bios == Bios::Uefi {
