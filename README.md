@@ -46,6 +46,7 @@ Before building Aero, you need the following things installed:
 - `ninja`
 - `parted`
 - `meson`
+- `python3`
 
 ## Hardware
 
@@ -65,41 +66,57 @@ $ git clone https://github.com/Andy-Python-Programmer/aero
 $ cd aero
 ```
 
-## What is `aero_build`?
-`aero_build` is a small binary that is used to orchestrate the tooling in the Aero repository. 
-It is used to build docs, run tests, and compile Aero. It is the now preferred way to build Aero and 
-it replaces the old makefiles from before.
-
 ## Building Aero
 
 **Note:** Building Aero will require a relatively large amount of storage space. You
 may want to have upwards of 10 or 15 gigabytes available.
 
-To build Aero, run `cargo aero build`. This command will build the bootloader, kernel and 
-userland. The build system builds the respective packages at the following stages:
+Aero uses a custom build system, that wraps `cargo` and takes care of building the kernel and
+userland for you. It also builds the initramfs and disk image for you.
 
-1. First we clone the the bootloader prebuilt binaries (`limine`) which is responsible for loading the kernel binary
-from the disk.
+The main command we will focus on is `./aero.py`. The source code can be found in the
+root of the repository and, as the file name states, it is written in Python.
 
-2. Next we build userland (`userland/*`), the first task that it does it to clone and install 
-the GCC Aero target and mlibc which can take from 20 minutes to an hour.
+By default if you run `./aero.py` without any arguments it will build the kernel and userland
+in debug mode and run it in QEMU. You can configure the behavior of the build system though.
+If you want to, you can use the `--help` option to read a brief description of what it can do.
 
-3. Then we build the kernel (`aero_kernel`). Since the kernel is central component of an operating
-system (where the magic happens), it can take from 2 minutes to 5 minutes to compile.
+The build system acknowledges few different build modes, which cannot be used together
+and they are: `--clean`, `--check`, `--test` and `--document`.
 
-After the build system has finished building all of the *subsystems* of Aero, next it assembles/packages
-all of the generated binaries into an `aero.iso` file located in the `build/` directory.
+- `--clean` option will clean all the build outputs.
+- `--check` will build the kernel and userland using cargo's `check` command,
+  this build mode will not produce a disk image, if you want one without actually
+  running Aero in the emulator read ahead
+- `--test` will run the built-in Aero test suite
+- `--document` will generate web-based docs using cargo's `doc` command
+
+Each of these modes can be used with additional flags, that will alter the behavior in different
+ways, some of them will not work for some of these modes - for example: the `--la57` option
+will not have any effect when you are simply checking or documenting the build.
+
+- `--release` toggles the release build flag when calling cargo, that will produce
+  both smaller and faster binaries, useful for deployment
+- `--no-run` prevents from running the built disk image in the emulator
+- `--bios` lets you choose the firmware the emulator will use when booting Aero,
+  currently supported values are: `legacy` and `uefi`
+- `--features` accepts a single comma-separated list of kernel crate features, please
+  keep in mind that there cannot be spaces in between the values
+- `--target` lets you override the target architecture for which the kernel is built,
+  currently the default value is `x86_64-aero_os`
+- `--la57` tells the emulator to use 5 level paging, if it supports it
+
+The built disk image is stored in the `build` directory under the name `aero.iso`. Both the
+disk root and initramfs root are preserved in case you want to inspect them manually.
 
 ## Running Aero in an emulator
 
-After the build system has done building Aero we can straight away run the generated `aero.iso` file an emulator! 
-This can be done using the `cargo aero run` command (which by default uses Qemu as the emulator and can be configured). 
-This command automatically builds Aero and then runs it in the specified emulator. This means that you can straight away
-run `cargo aero run` instead of running `cargo aero build` before!
+If you haven't used the `--no-run` option and you aren't using the `--check` or `--document` build
+mode, the build system will run Aero in the emulator for you.
 
 ## Nightly Images
 
-Want to give Aero a shot, without building it! You can go to the [latest job](https://github.com/Andy-Python-Programmer/aero/actions/workflows/build.yml?query=is%3Asuccess+branch%3Amaster) and download the latest nightly image (`aero.img`), under artifacts.
+Want to give Aero a shot, without building it! You can go to the [latest job](https://github.com/Andy-Python-Programmer/aero/actions/workflows/build.yml?query=is%3Asuccess+branch%3Amaster) and download the latest nightly image (`aero.iso`), under artifacts.
 
 # Contributing
 

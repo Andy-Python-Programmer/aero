@@ -283,16 +283,25 @@ pub fn launch() -> Result<()> {
     // This is temporary and will be removed when we have support for
     // ext2 filesystem and fat32 filesystem to make it functional for both
     // UEFI and BIOS.
-    static SHELL: &[u8] =
-        include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
 
-    root_dir().inode().mkdir("bin")?;
-    root_dir().inode().mkdir("lib")?;
+    #[cfg(not(doc))]
+    {
+        #[cfg(debug_assertions)]
+        static SHELL: &[u8] =
+            include_bytes!("../../../../userland/target/x86_64-unknown-none/debug/aero_shell");
 
-    let bin = lookup_path(Path::new("/bin"))?;
-    let shell = bin.inode().touch(bin.clone(), "sh")?;
+        #[cfg(not(debug_assertions))]
+        static SHELL: &[u8] =
+            include_bytes!("../../../../userland/target/x86_64-unknown-none/release/aero_shell");
 
-    shell.inode().write_at(0x00, SHELL)?;
+        root_dir().inode().mkdir("bin")?;
+        root_dir().inode().mkdir("lib")?;
+
+        let bin = lookup_path(Path::new("/bin"))?;
+        let shell = bin.inode().touch(bin.clone(), "sh")?;
+
+        shell.inode().write_at(0x00, SHELL)?;
+    }
 
     // Add some more files if the sysroot feature is enabled.
     #[cfg(feature = "sysroot")]
