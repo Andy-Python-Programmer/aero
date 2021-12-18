@@ -37,6 +37,11 @@ VERBOSE=yes
 :aero
 PROTOCOL=stivale2
 KERNEL_PATH=boot:///aero.elf
+CMDLINE=term-background=background theme-background=0x50000000
+
+MODULE_PATH=boot:///term_background.bmp
+MODULE_STRING=background
+
 MODULE_PATH=boot:///initramfs.cpio
 MODULE_STRING=initramfs
 """
@@ -237,6 +242,7 @@ def prepare_iso(args, kernel_bin, user_bins):
     os.makedirs(iso_root)
 
     shutil.copy(kernel_bin, os.path.join(iso_root, 'aero.elf'))
+    shutil.copy(os.path.join('src', '.cargo', 'term_background.bmp'), iso_root)
     shutil.copy(os.path.join(limine_path, 'limine.sys'), iso_root)
     shutil.copy(os.path.join(limine_path, 'limine-cd.bin'), iso_root)
     shutil.copy(os.path.join(limine_path, 'limine-eltorito-efi.bin'), iso_root)
