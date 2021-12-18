@@ -211,7 +211,7 @@ fn run_qemu(argv: Vec<String>, xserver: bool, bios: Bios) -> anyhow::Result<()> 
     let mut command = Command::new(qemu_exec);
     let mut command = command
         .arg("-cpu")
-        .arg("qemu64,+la57")
+        .arg("qemu64")
         .arg("-smp")
         .arg("1")
         .arg("-m")
