@@ -151,6 +151,10 @@ impl VirtAddr {
     pub const fn p5_index(self) -> PageTableIndex {
         PageTableIndex::new_truncate((self.0 >> 12 >> 9 >> 9 >> 9 >> 9) as u16)
     }
+
+    pub const fn const_sub_u64(self, other: u64) -> VirtAddr {
+        VirtAddr(self.0 - other)
+    }
 }
 
 impl fmt::Debug for VirtAddr {

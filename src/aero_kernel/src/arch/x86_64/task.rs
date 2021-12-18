@@ -95,6 +95,12 @@ pub fn userland_last_address() -> VirtAddr {
     })
 }
 
+const USERLAND_STACK_SIZE: u64 = 0x64000;
+
+//(1 << 47) - (Size4KiB::SIZE * 2)
+const USERLAND_STACK_TOP: VirtAddr = VirtAddr::new(0x7fffffffe000);
+const USERLAND_STACK_BOTTOM: VirtAddr = USERLAND_STACK_TOP.const_sub_u64(USERLAND_STACK_SIZE);
+
 pub struct ArchTask {
     context: Unique<Context>,
     address_space: AddressSpace,
@@ -242,8 +248,8 @@ impl ArchTask {
 
         // mmap the userland stack...
         vm.mmap(
-            VirtAddr::new(0x8000_0000_0000 - 0x64000),
-            0x64000,
+            USERLAND_STACK_BOTTOM,
+            USERLAND_STACK_SIZE as usize,
             MMapProt::PROT_WRITE | MMapProt::PROT_READ,
             MMapFlags::MAP_FIXED | MMapFlags::MAP_PRIVATE | MMapFlags::MAP_ANONYOMUS,
         );
@@ -261,7 +267,7 @@ impl ArchTask {
             fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
         }
 
-        let mut stack_addr = 0x8000_0000_0000;
+        let mut stack_addr = USERLAND_STACK_TOP.as_u64();
         let mut stack = StackHelper::new(&mut stack_addr);
 
         let mut envp = Vec::new();
