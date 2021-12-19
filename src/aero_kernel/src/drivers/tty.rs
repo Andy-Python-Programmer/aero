@@ -36,6 +36,17 @@ lazy_static::lazy_static! {
     static ref TTY: Arc<Tty> = Tty::new();
 }
 
+static TERMIOS: Mutex<aero_syscall::Termios> = Mutex::new(aero_syscall::Termios {
+    c_iflag: 0,
+    c_oflag: 0,
+    c_cflag: 0,
+    c_lflag: aero_syscall::TermiosLFlag::ECHO,
+    c_line: 0,
+    c_cc: [0; 32],
+    c_ispeed: 0,
+    c_ospeed: 0,
+});
+
 // From the linux kernel: https://github.com/torvalds/linux/blob/master/drivers/tty/vt/defkeymap.c_shipped
 const PLAIN_MAP: &[u16; 128] = &[
     0xf200, 0xf01b, 0xf031, 0xf032, 0xf033, 0xf034, 0xf035, 0xf036, 0xf037, 0xf038, 0xf039, 0xf030,
@@ -177,6 +188,7 @@ struct TtyState {
     lalt: bool,
     altgr: bool,
     caps: bool,
+
     parser: vte::Parser,
 }
 
@@ -201,6 +213,7 @@ impl Tty {
                 lalt: false,
                 altgr: false,
                 caps: false,
+
                 parser: vte::Parser::new(),
             }),
             block_queue: BlockQueue::new(),
@@ -242,7 +255,7 @@ impl INodeInterface for Tty {
         match command {
             aero_syscall::TIOCGWINSZ => {
                 let winsize = VirtAddr::new(arg as u64);
-                let winsize = unsafe { &mut *(winsize.as_mut_ptr() as *mut aero_syscall::WinSize) };
+                let winsize = unsafe { &mut *(winsize.as_mut_ptr::<aero_syscall::WinSize>()) };
 
                 let (rows, cols) = crate::rendy::get_rows_cols();
 
@@ -254,6 +267,58 @@ impl INodeInterface for Tty {
                 winsize.ws_xpixel = xpixel as u16;
                 winsize.ws_ypixel = ypixel as u16;
 
+                Ok(0x00)
+            }
+
+            aero_syscall::TCGETS => {
+                let termios = VirtAddr::new(arg as u64);
+                let termios = unsafe {
+                    core::slice::from_raw_parts_mut(
+                        termios.as_mut_ptr::<u8>(),
+                        core::mem::size_of::<aero_syscall::Termios>(),
+                    )
+                };
+
+                let lock = TERMIOS.lock_irq();
+                let this = &*lock;
+
+                let this = unsafe {
+                    core::slice::from_raw_parts(
+                        this as *const aero_syscall::Termios as *const u8,
+                        core::mem::size_of::<aero_syscall::Termios>(),
+                    )
+                };
+
+                termios.copy_from_slice(this);
+                Ok(0x00)
+            }
+
+            aero_syscall::TCSETSF => {
+                // Allow the output buffer to drain, discard pending input.
+                let mut stdin = self.stdin.lock_irq();
+                stdin.back_buffer.clear();
+                stdin.cursor = 0;
+                core::mem::drop(stdin);
+
+                let termios = VirtAddr::new(arg as u64);
+                let termios = unsafe {
+                    core::slice::from_raw_parts(
+                        termios.as_mut_ptr::<u8>(),
+                        core::mem::size_of::<aero_syscall::Termios>(),
+                    )
+                };
+
+                let mut lock = TERMIOS.lock_irq();
+                let this = &mut *lock;
+
+                let this = unsafe {
+                    core::slice::from_raw_parts_mut(
+                        this as *mut aero_syscall::Termios as *mut u8,
+                        core::mem::size_of::<aero_syscall::Termios>(),
+                    )
+                };
+
+                this.copy_from_slice(termios);
                 Ok(0x00)
             }
 
@@ -288,7 +353,7 @@ impl KeyboardListener for Tty {
                 stdin.back_buffer.push('\n' as u8);
                 stdin.cursor = 0;
 
-                crate::rendy::print!("\n");
+                print_char('\n');
                 self.block_queue.notify_complete();
             }
 
@@ -420,18 +485,26 @@ const ANSI_BRIGHT_COLORS: &[u32; 8] = &[
     0x00ffffff, // grey
 ];
 
+fn print_char(char: char) {
+    let lock = TERMIOS.lock_irq();
+
+    if lock.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
+        crate::rendy::print!("{}", char);
+    }
+}
+
 struct AnsiEscape;
 
 impl vte::Perform for AnsiEscape {
     fn print(&mut self, char: char) {
-        crate::rendy::print!("{}", char);
+        print_char(char);
     }
 
     fn execute(&mut self, byte: u8) {
         let char = byte as char;
 
         if char == '\n' || char == '\t' {
-            crate::rendy::print!("{}", char);
+            print_char(char);
         }
     }
 

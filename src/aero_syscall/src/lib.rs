@@ -197,6 +197,8 @@ impl Default for Utsname {
 }
 
 pub const TIOCGWINSZ: usize = 0x5413;
+pub const TCGETS: usize = 0x5401;
+pub const TCSETSF: usize = 0x5404;
 
 #[derive(Default)]
 #[repr(C)]
@@ -205,6 +207,31 @@ pub struct WinSize {
     pub ws_col: u16,
     pub ws_xpixel: u16,
     pub ws_ypixel: u16,
+}
+
+bitflags::bitflags! {
+    #[derive(Default)]
+    pub struct TermiosLFlag: u32 {
+        const ECHO   = 0000010; // Enable echo
+        const ECHOE  = 0000020; // Echo erase character as error-correcting backspace
+        const ECHOK  = 0000040; // Echo kill
+        const ECHONL = 0000100; // Echo NL
+        const NOFLSH = 0000200; // Disable flush after interrupt or quit
+        const TOSTOP = 0000400; // Send SIGTTOU for background output
+    }
+}
+
+#[derive(Debug, Default)]
+#[repr(C)]
+pub struct Termios {
+    pub c_iflag: u32,
+    pub c_oflag: u32,
+    pub c_cflag: u32,
+    pub c_lflag: TermiosLFlag,
+    pub c_line: u8,
+    pub c_cc: [u8; 32],
+    pub c_ispeed: u32,
+    pub c_ospeed: u32,
 }
 
 pub const AT_FDCWD: isize = -100;

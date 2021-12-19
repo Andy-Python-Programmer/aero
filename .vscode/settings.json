@@ -11,6 +11,8 @@
         "stdio.h": "c",
         "unistd.h": "c",
         "*.inc": "c",
-        "extern-c-redecl5.C": "cpp"
+        "extern-c-redecl5.C": "cpp",
+        "termios.h": "c",
+        "termios-c_iflag.h": "c"
     },
 }
