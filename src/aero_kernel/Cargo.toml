@@ -8,12 +8,12 @@ edition = "2021"
 round-robin = []
 sysroot = []
 
-# `ci` exits qemu with a success status code if the tests have 
+# `ci` exits qemu with a success status code if the tests have
 # been completed successfully or a error status code if one of the
 # tests failed (or panicked).
 ci = []
 
-# `kmemleak` provides a way of detecting possible 
+# `kmemleak` provides a way of detecting possible
 # kernel memory leaks in a way similar to a tracing
 # garbage collector.
 kmemleak = []
@@ -50,6 +50,9 @@ features = ["const_mut_refs"]
 
 [dependencies.aero_syscall]
 path = "../aero_syscall/"
+
+[dependencies.cpio_reader]
+git = "https://github.com/czapek1337/cpio_reader"
 
 [dev-dependencies.aero_test]
 path = "../aero_test/"

@@ -259,7 +259,7 @@ def prepare_iso(args, kernel_bin, user_bins):
     for file in user_bins:
         bin_name = os.path.basename(file)
 
-        shutil.copy(file, os.path.join(initramfs_bin, f'{bin_name}.elf'))
+        shutil.copy(file, os.path.join(initramfs_bin, bin_name))
 
     _, find_output, _ = run_command(['find', '.', '-type', 'f'],
                                     cwd=initramfs_root,
@@ -338,6 +338,7 @@ def run_in_emulator(args, iso_path):
 
     run_command(['qemu-system-x86_64', *qemu_args])
 
+
 def main():
     args = parse_args()
 
@@ -372,6 +373,7 @@ def main():
 
         if not args.no_run:
             run_in_emulator(args, iso_path)
+
 
 if __name__ == '__main__':
     try:
