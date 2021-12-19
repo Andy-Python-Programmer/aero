@@ -855,6 +855,38 @@ pub fn reset_default() {
     set_text_color(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
 }
 
+/// Returns the terminal's resolution in the form of a `(horizontal_resolution, vertical_resolution)`
+/// tuple.
+///
+/// # Panics
+/// Attempted to get the resolution before the terminal was initialized.
+pub fn get_resolution() -> (usize, usize) {
+    DEBUG_RENDY
+        .get()
+        .map(|l| {
+            let this = l.lock_irq();
+
+            (
+                this.info.horizontal_resolution,
+                this.info.vertical_resolution,
+            )
+        })
+        .expect(
+            "get_resolution: attempted to get the resolution before the terminal was initialized",
+        )
+}
+
+/// Returns the terminal's rows and columns in the form of a `(rows, columns)` tuple.
+pub fn get_rows_cols() -> (usize, usize) {
+    DEBUG_RENDY
+        .get()
+        .map(|l| {
+            let this = l.lock_irq();
+            (this.rows, this.cols)
+        })
+        .expect("get_rows_cols: attempted to get the rows,cols before the terminal was initialized")
+}
+
 /// Gets the cursor position as a tuple `(x, y)`.
 ///
 /// ## Notes

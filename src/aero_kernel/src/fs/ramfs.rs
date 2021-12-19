@@ -250,6 +250,20 @@ impl INodeInterface for LockedRamINode {
         })
     }
 
+    fn ioctl(&self, _command: usize, _arg: usize) -> Result<usize> {
+        let this = self.0.read();
+
+        match &this.contents {
+            FileContents::Device(dev) => {
+                let device = dev.clone();
+                drop(this);
+
+                device.ioctl(_command, _arg)
+            }
+            _ => Err(FileSystemError::NotSupported),
+        }
+    }
+
     fn lookup(&self, dir: DirCacheItem, name: &str) -> Result<DirCacheItem> {
         let this = self.0.read();
         let child = this

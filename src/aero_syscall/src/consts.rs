@@ -19,3 +19,4 @@ pub const SYS_EXEC: usize = 17;
 pub const SYS_LOG: usize = 18;
 pub const SYS_UNAME: usize = 19;
 pub const SYS_WAITPID: usize = 20;
+pub const SYS_IOCTL: usize = 21;

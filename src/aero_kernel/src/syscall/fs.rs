@@ -205,3 +205,13 @@ pub fn getcwd(buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
     buffer[..cwd.len()].copy_from_slice(cwd.as_bytes());
     Ok(cwd.len())
 }
+
+pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSyscallError> {
+    let handle = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    Ok(handle.inode().ioctl(command, argument)?)
+}

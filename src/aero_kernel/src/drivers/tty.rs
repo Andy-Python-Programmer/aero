@@ -26,6 +26,7 @@ use crate::fs::devfs;
 use crate::fs::inode;
 
 use crate::fs::inode::INodeInterface;
+use crate::mem::paging::VirtAddr;
 use crate::utils::sync::{BlockQueue, Mutex};
 
 use super::keyboard::KeyCode;
@@ -235,6 +236,29 @@ impl INodeInterface for Tty {
         }
 
         Ok(buffer.len())
+    }
+
+    fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
+        match command {
+            aero_syscall::TIOCGWINSZ => {
+                let winsize = VirtAddr::new(arg as u64);
+                let winsize = unsafe { &mut *(winsize.as_mut_ptr() as *mut aero_syscall::WinSize) };
+
+                let (rows, cols) = crate::rendy::get_rows_cols();
+
+                winsize.ws_row = rows as u16;
+                winsize.ws_col = cols as u16;
+
+                let (xpixel, ypixel) = crate::rendy::get_resolution();
+
+                winsize.ws_xpixel = xpixel as u16;
+                winsize.ws_ypixel = ypixel as u16;
+
+                Ok(0x00)
+            }
+
+            _ => Err(fs::FileSystemError::NotSupported),
+        }
     }
 }
 

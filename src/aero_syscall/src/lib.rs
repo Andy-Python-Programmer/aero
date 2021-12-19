@@ -196,6 +196,17 @@ impl Default for Utsname {
     }
 }
 
+pub const TIOCGWINSZ: usize = 0x5413;
+
+#[derive(Default)]
+#[repr(C)]
+pub struct WinSize {
+    pub ws_row: u16,
+    pub ws_col: u16,
+    pub ws_xpixel: u16,
+    pub ws_ypixel: u16,
+}
+
 pub const AT_FDCWD: isize = -100;
 
 pub fn syscall_result_as_usize(result: Result<usize, AeroSyscallError>) -> usize {
@@ -349,6 +360,11 @@ pub fn sys_waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize, 
         flags,
     );
 
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_ioctl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(prelude::SYS_IOCTL, fd as usize, command, arg);
     isize_as_syscall_result(value as _)
 }
 

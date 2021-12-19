@@ -11,6 +11,7 @@ dependencies = [
  "aml",
  "bit_field",
  "bitflags",
+ "cpio_reader",
  "hashbrown",
  "intrusive-collections",
  "lazy_static",
@@ -99,6 +100,14 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "cpio_reader"
+version = "0.1.0"
+source = "git+https://github.com/czapek1337/cpio_reader#9e3a58b24320f03036303b355e9cb976f429a883"
+dependencies = [
+ "bitflags",
+]
 
 [[package]]
 name = "crossbeam-channel"

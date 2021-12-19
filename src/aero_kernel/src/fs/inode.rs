@@ -110,6 +110,10 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
         None
     }
+
+    fn ioctl(&self, _command: usize, _arg: usize) -> Result<usize> {
+        Err(FileSystemError::NotSupported)
+    }
 }
 
 /// Structure representing the curcial, characteristics of an inode. The metadata

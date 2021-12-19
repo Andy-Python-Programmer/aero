@@ -116,6 +116,10 @@ impl INodeInterface for DevINode {
     fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
         self.0.inode().read_at(offset, buffer)
     }
+
+    fn ioctl(&self, command: usize, arg: usize) -> Result<usize> {
+        self.0.inode().ioctl(command, arg)
+    }
 }
 
 /// Implementation of dev filesystem. (See the module-level documentation for more

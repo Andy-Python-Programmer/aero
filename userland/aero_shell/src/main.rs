@@ -59,7 +59,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     let mut args = cmd_string.split_whitespace();
 
     if let Some(cmd) = args.next() {
-        // history.push(cmd_string.to_string());
+        history.push(cmd_string.to_string());
 
         match cmd {
             "ls" => list_directory(args.next().unwrap_or("."))?,
@@ -203,6 +203,16 @@ fn uwufetch() -> Result<(), AeroSyscallError> {
             print_prefix("OS");
             println!("Aero");
         } else if i == 4 {
+            let tty_fd = sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
+
+            let mut resolution = WinSize::default();
+            sys_ioctl(tty_fd, TIOCGWINSZ, &mut resolution as *mut _ as usize)?;
+
+            sys_close(tty_fd)?;
+
+            print_prefix("Resolution");
+            println!("{}x{}", resolution.ws_xpixel, resolution.ws_ypixel);
+        } else if i == 5 {
             let mut uname_info = Utsname::default();
 
             sys_uname(&mut uname_info)?;
