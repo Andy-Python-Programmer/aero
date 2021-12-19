@@ -138,6 +138,11 @@ impl INodeInterface for LockedRamINode {
         )
     }
 
+    #[inline]
+    fn make_ramfs_inode(&self, name: &str, buffer: &'static [u8]) -> Result<INodeCacheItem> {
+        self.make_inode(name, FileType::File, FileContents::StaticContent(buffer))
+    }
+
     fn write_at(&self, offset: usize, buffer: &[u8]) -> Result<usize> {
         let this = self.0.read();
 
@@ -152,6 +157,8 @@ impl INodeInterface for LockedRamINode {
                 vec.as_mut_slice()[offset..offset + buffer.len()].copy_from_slice(buffer);
                 Ok(buffer.len())
             }
+
+            FileContents::StaticContent(_) => Err(FileSystemError::NotSupported),
 
             FileContents::Device(dev) => {
                 let device = dev.clone();
@@ -210,6 +217,13 @@ impl INodeInterface for LockedRamINode {
                 Ok(size)
             }
 
+            FileContents::StaticContent(static_buffer) => {
+                let size = core::cmp::min(buffer.len(), static_buffer.len() - offset);
+                buffer.copy_from_slice(&static_buffer[offset..offset + size]);
+
+                Ok(size)
+            }
+
             FileContents::Device(device) => {
                 let device = device.clone();
                 drop(this);
@@ -229,6 +243,7 @@ impl INodeInterface for LockedRamINode {
             file_type: this.file_type,
             size: match &this.contents {
                 FileContents::Content(bytes) => bytes.lock().len(), // Temporary value dropped and lock is unlocked!
+                FileContents::StaticContent(bytes) => bytes.len(),
                 _ => 0x00,
             },
             children_len: this.children.len(),

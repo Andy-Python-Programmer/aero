@@ -128,6 +128,13 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
         &*new_addr.as_mut_ptr::<StivaleKernelFileV2Tag>()
     });
 
+    crate::INITRD_MODULE.call_once(move || {
+        modules
+            .iter()
+            .find(|module| module.as_str() == "initramfs")
+            .unwrap()
+    });
+
     // Initialize the CPU specific features.
     init_cpu();
 

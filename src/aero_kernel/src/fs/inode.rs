@@ -87,6 +87,10 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
+    fn make_ramfs_inode(&self, _name: &str, _buffer: &'static [u8]) -> Result<INodeCacheItem> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Looks up the directory entry in the filesystem.
     fn lookup(&self, _dir: DirCacheItem, _name: &str) -> Result<DirCacheItem> {
         Err(FileSystemError::NotSupported)
@@ -148,6 +152,10 @@ pub enum FileContents {
     /// This variant expresses a *normal file* (akin: A file that actually stores data
     /// in bytes) and is protected by a spin lock.
     Content(Mutex<Vec<u8>>),
+
+    /// This variant is similar to the one above, except it's read only
+    /// and is backed by a static byte buffer
+    StaticContent(&'static [u8]),
 
     /// If the file type of the inode is [FileType::Device], in that case this variant
     /// is used.

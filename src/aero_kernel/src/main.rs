@@ -103,6 +103,7 @@ static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::new_uninit();
 
 static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
 static UNWIND_INFO: spin::Once<&StivaleKernelFileV2Tag> = spin::Once::new();
+static INITRD_MODULE: spin::Once<&StivaleModule> = spin::Once::new();
 
 const IO_VIRTUAL_BASE: VirtAddr = VirtAddr::new(0xffffff0000000000);
 
@@ -156,7 +157,6 @@ fn kernel_main_thread() {
     log::info!("loaded PCI driver");
 
     fs::block::launch().unwrap();
-    fs::launch().unwrap();
 
     #[cfg(test)]
     test_main();
