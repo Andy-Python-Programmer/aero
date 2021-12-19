@@ -27,10 +27,10 @@ pub mod task;
 pub mod vm;
 
 pub fn run() -> fs::Result<()> {
-    let shell_path = Path::new("/bin/aero_shell");
-    let shell_inode = fs::lookup_path(shell_path)?;
+    let init_path = Path::new("/bin/aero_init");
+    let init_inode = fs::lookup_path(init_path)?;
 
-    scheduler::get_scheduler().exec(shell_inode, None, None);
+    scheduler::get_scheduler().exec(init_inode, None, None);
     Ok(())
 }
 
