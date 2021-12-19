@@ -336,11 +336,7 @@ def run_in_emulator(args, iso_path):
     if cmdline:
         qemu_args += cmdline
 
-    try:
-        run_command(['qemu-system-x86_64', *qemu_args])
-    except KeyboardInterrupt:
-        pass
-
+    run_command(['qemu-system-x86_64', *qemu_args])
 
 def main():
     args = parse_args()
@@ -377,6 +373,8 @@ def main():
         if not args.no_run:
             run_in_emulator(args, iso_path)
 
-
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
