@@ -41,7 +41,6 @@ const UWUFETCH_LOGO: &str = r#"
 
 fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     let mut pwd_buffer = [0; 1024];
-    let mut cmd_buffer = [0; 1024];
 
     let pwd_length = sys_getcwd(&mut pwd_buffer)?;
     let pwd = unsafe { core::str::from_utf8_unchecked(&pwd_buffer[0..pwd_length]) };
@@ -50,14 +49,12 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     let username = hostname_split.next().unwrap_or("root");
     let hostname = hostname_split.next().unwrap_or("aero");
 
-    print!(
+    let prefix = format!(
         "\x1b[1;32m{}@{}\x1b[0m:\x1b[1;34m{}\x1b[0m ",
         username, hostname, pwd
     );
 
-    let cmd_length = sys_read(0, &mut cmd_buffer)?;
-    let cmd_string = unsafe { core::str::from_utf8_unchecked(&cmd_buffer[0..cmd_length]).trim() };
-
+    let cmd_string = readline::readline(&prefix, history)?;
     let mut args = cmd_string.split_whitespace();
 
     if let Some(cmd) = args.next() {
@@ -98,9 +95,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     println!("{}", entry);
                 }
             }
-            "uwutest" => {
-                let _ = readline::readline()?;
-            }
+
             _ => {
                 let child = sys_fork()?;
 
