@@ -107,13 +107,12 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 if child == 0 {
                     if sys_exec(cmd).is_err() {
                         println!("{}: command not found", cmd);
+                        sys_exit(1);
                     }
                 } else {
                     // Wait for the child
                     let mut status = 0;
                     sys_waitpid(child, &mut status, 0)?;
-
-                    println!("back to parent. say vola");
                 }
             }
         }
