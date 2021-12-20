@@ -148,7 +148,7 @@ const CTRL_ALT_MAP: &[u16; 128] = &[
 
 struct StdinBuffer {
     back_buffer: Vec<u8>,
-    front_buffer: Vec<u8>,
+    front_buffer: Vec<u8>, // more like a queue
 
     cursor: usize,
 }
@@ -164,15 +164,13 @@ impl StdinBuffer {
     }
 
     fn swap_buffer(&mut self) {
-        self.front_buffer.resize(self.back_buffer.len(), 0x00);
-        self.front_buffer
-            .copy_from_slice(self.back_buffer.as_slice());
-
-        self.back_buffer.clear();
+        for c in self.back_buffer.drain(..) {
+            self.front_buffer.push(c);
+        }
     }
 
     fn is_complete(&self) -> bool {
-        self.back_buffer.len() > 0
+        self.back_buffer.len() > 0 || self.front_buffer.len() > 0
     }
 
     fn advance_cursor(&mut self) {
@@ -231,11 +229,18 @@ impl INodeInterface for Tty {
         let mut stdin = self.stdin.lock_irq();
 
         // record the back buffer size before swapping
-        let back_len = stdin.back_buffer.len();
         stdin.swap_buffer();
+        let back_len = stdin.front_buffer.len();
 
-        stdin.front_buffer.resize(buffer.len(), 0x00);
-        buffer.copy_from_slice(&stdin.front_buffer);
+        if buffer.len() > stdin.front_buffer.len() {
+            for (i, c) in stdin.front_buffer.drain(..).enumerate() {
+                buffer[i] = c;
+            }
+        } else {
+            for (i, c) in stdin.front_buffer.drain(..buffer.len()).enumerate() {
+                buffer[i] = c;
+            }
+        }
 
         Ok(core::cmp::min(buffer.len(), back_len))
     }
@@ -344,6 +349,98 @@ impl devfs::Device for Tty {
 impl KeyboardListener for Tty {
     fn on_key(&self, key: KeyCode, released: bool) {
         let mut state = self.state.lock();
+        let termios = TERMIOS.lock_irq();
+
+        let lchar = || {
+            let mut shift = state.lshift || state.rshift;
+            let ctrl = state.lctrl || state.rctrl;
+
+            if state.caps && state.caps {
+                shift = !shift;
+            }
+
+            let map = match (shift, ctrl, state.lalt, state.altgr) {
+                (false, false, false, false) => PLAIN_MAP,
+                (true, false, false, false) => SHIFT_MAP,
+                (false, true, false, false) => CTRL_MAP,
+                (false, false, true, false) => ALT_MAP,
+                (false, false, false, true) => ALTGR_MAP,
+                (true, true, false, false) => SHIFT_CTRL_MAP,
+                (false, true, true, false) => CTRL_ALT_MAP,
+                _ => PLAIN_MAP,
+            };
+
+            let character =
+                unsafe { core::char::from_u32_unchecked((map[key as usize] & 0xff) as _) };
+
+            // Check if the character is actually printable printable.
+            if !(0x20..0x7e).contains(&(character as u32)) {
+                return;
+            }
+
+            {
+                let mut stdin = self.stdin.lock_irq();
+
+                stdin.back_buffer.push(character as u8);
+                stdin.advance_cursor();
+            }
+
+            if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
+                crate::rendy::print!("{}", character);
+            }
+        };
+
+        let backspace = || {
+            let mut stdin = self.stdin.lock_irq();
+
+            // We cannot backspace if the backbuffer is empty
+            // and we do not want to remove any lines commited
+            // by "\n".
+            if stdin.back_buffer.pop().is_some() {
+                if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
+                    crate::rendy::backspace();
+                    stdin.cursor -= 1;
+                }
+            }
+        };
+
+        let push_str = |k: &str| {
+            // TODO: decckm
+            let mut stdin = self.stdin.lock_irq();
+
+            for each in k.bytes() {
+                stdin.back_buffer.push(each);
+            }
+        };
+
+        if !termios.c_lflag.contains(aero_syscall::TermiosLFlag::ICANON) && !released {
+            match key {
+                KeyCode::KEY_BACKSPACE if !released => backspace(),
+                KeyCode::KEY_CAPSLOCK if !released => state.caps = !state.caps,
+
+                KeyCode::KEY_LEFTSHIFT => state.lshift = !released,
+                KeyCode::KEY_RIGHTSHIFT => state.rshift = !released,
+
+                KeyCode::KEY_LEFTCTRL => state.lctrl = !released,
+                KeyCode::KEY_RIGHTCTRL => state.rctrl = !released,
+
+                KeyCode::KEY_LEFTALT => state.lalt = !released,
+                KeyCode::KEY_RIGHTALT => state.altgr = !released,
+                KeyCode::KEY_ENTER => push_str("\n"),
+
+                KeyCode::KEY_UP => push_str("\x1b[A"),
+                KeyCode::KEY_LEFT => push_str("\x1b[D"),
+                KeyCode::KEY_DOWN => push_str("\x1b[B"),
+                KeyCode::KEY_RIGHT => push_str("\x1b[C"),
+
+                _ if !released => lchar(),
+                _ => {}
+            }
+
+            self.stdin.lock_irq().cursor = 0;
+            self.block_queue.notify_complete();
+            return;
+        }
 
         match key {
             KeyCode::KEY_CAPSLOCK if !released => state.caps = !state.caps,
@@ -353,22 +450,14 @@ impl KeyboardListener for Tty {
                 stdin.back_buffer.push('\n' as u8);
                 stdin.cursor = 0;
 
-                print_char('\n');
+                if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
+                    crate::rendy::print!("\n");
+                }
+
                 self.block_queue.notify_complete();
             }
 
-            KeyCode::KEY_BACKSPACE if !released => {
-                let mut stdin = self.stdin.lock_irq();
-
-                // We cannot backspace if the backbuffer is empty
-                // and we do not want to remove any lines commited
-                // by "\n".
-                if stdin.back_buffer.pop().is_some() {
-                    crate::rendy::backspace();
-
-                    stdin.cursor -= 1;
-                }
-            }
+            KeyCode::KEY_BACKSPACE if !released => backspace(),
 
             KeyCode::KEY_LEFTSHIFT => state.lshift = !released,
             KeyCode::KEY_RIGHTSHIFT => state.rshift = !released,
@@ -409,43 +498,7 @@ impl KeyboardListener for Tty {
                 stdin.advance_cursor();
             }
 
-            _ if !released => {
-                let mut shift = state.lshift || state.rshift;
-                let ctrl = state.lctrl || state.rctrl;
-
-                if state.caps && state.caps {
-                    shift = !shift;
-                }
-
-                let map = match (shift, ctrl, state.lalt, state.altgr) {
-                    (false, false, false, false) => PLAIN_MAP,
-                    (true, false, false, false) => SHIFT_MAP,
-                    (false, true, false, false) => CTRL_MAP,
-                    (false, false, true, false) => ALT_MAP,
-                    (false, false, false, true) => ALTGR_MAP,
-                    (true, true, false, false) => SHIFT_CTRL_MAP,
-                    (false, true, true, false) => CTRL_ALT_MAP,
-                    _ => PLAIN_MAP,
-                };
-
-                let character =
-                    unsafe { core::char::from_u32_unchecked((map[key as usize] & 0xff) as _) };
-
-                // Check if the character is actually printable printable.
-                if !(0x20..0x7e).contains(&(character as u32)) {
-                    return;
-                }
-
-                {
-                    let mut stdin = self.stdin.lock_irq();
-
-                    stdin.back_buffer.push(character as u8);
-                    stdin.advance_cursor();
-                }
-
-                let mut performer = AnsiEscape;
-                state.parser.advance(&mut performer, character as u8);
-            }
+            _ if !released => lchar(),
 
             _ => {}
         }
@@ -485,26 +538,18 @@ const ANSI_BRIGHT_COLORS: &[u32; 8] = &[
     0x00ffffff, // grey
 ];
 
-fn print_char(char: char) {
-    let lock = TERMIOS.lock_irq();
-
-    if lock.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
-        crate::rendy::print!("{}", char);
-    }
-}
-
 struct AnsiEscape;
 
 impl vte::Perform for AnsiEscape {
     fn print(&mut self, char: char) {
-        print_char(char);
+        crate::rendy::print!("{}", char);
     }
 
     fn execute(&mut self, byte: u8) {
         let char = byte as char;
 
         if char == '\n' || char == '\t' {
-            print_char(char);
+            crate::rendy::print!("{}", char);
         }
     }
 

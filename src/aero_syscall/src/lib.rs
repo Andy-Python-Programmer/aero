@@ -218,10 +218,11 @@ bitflags::bitflags! {
         const ECHONL = 0000100; // Echo NL
         const NOFLSH = 0000200; // Disable flush after interrupt or quit
         const TOSTOP = 0000400; // Send SIGTTOU for background output
+        const ICANON = 0000002; // Canonical input (erase and kill processing)
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 #[repr(C)]
 pub struct Termios {
     pub c_iflag: u32,

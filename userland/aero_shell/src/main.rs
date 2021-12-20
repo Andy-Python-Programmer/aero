@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod readline;
+
 use aero_syscall::*;
 
 const HOSTNAME: &str = "root@aero";
@@ -97,15 +99,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 }
             }
             "uwutest" => {
-                let tty_fd = sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
-                let mut termios = Termios::default();
-                sys_ioctl(tty_fd, TCGETS, &mut termios as *mut _ as usize)?;
-
-                println!("{:#?}", termios);
-
-                termios.c_lflag.remove(TermiosLFlag::ECHO);
-                sys_ioctl(tty_fd, TCSETSF, &termios as *const _ as usize)?;
-                sys_close(tty_fd)?;
+                let _ = readline::readline()?;
             }
             _ => {
                 let child = sys_fork()?;
