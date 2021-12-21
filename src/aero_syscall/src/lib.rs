@@ -421,3 +421,67 @@ pub fn sys_getpid() -> Result<usize, AeroSyscallError> {
     let value = syscall0(prelude::SYS_GETPID);
     isize_as_syscall_result(value as _)
 }
+
+// Sockets
+pub fn sys_socket(domain: usize, typee: usize, protocol: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(prelude::SYS_SOCKET, domain, typee, protocol);
+    isize_as_syscall_result(value as _)
+}
+
+/// Structure describing a generic socket address.
+pub struct SocketAddr {
+    /// POSIX.1g specifies this type name for the `sa_family' member.
+    pub sa_family: u16,
+    /// Address data
+    pub sa_data: [u8; 14],
+}
+
+pub fn sys_connect(
+    sockfd: usize,
+    sockaddr: &SocketAddr,
+    socklen: u32,
+) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_CONNECT,
+        sockfd,
+        sockaddr as *const SocketAddr as usize,
+        socklen as usize,
+    );
+
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_bind(
+    sockfd: usize,
+    sockaddr: &SocketAddr,
+    socklen: u32,
+) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_BIND,
+        sockfd,
+        sockaddr as *const SocketAddr as usize,
+        socklen as usize,
+    );
+
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_listen(sockfd: usize, backlog: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_LISTEN, sockfd, backlog);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_accept(
+    sockfd: usize,
+    sockaddr: &SocketAddr,
+    socklen: u32,
+) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_ACCEPT,
+        sockfd,
+        sockaddr as *const SocketAddr as usize,
+        socklen as usize,
+    );
+
+    isize_as_syscall_result(value as _)
+}

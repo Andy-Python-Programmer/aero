@@ -21,3 +21,9 @@ pub const SYS_UNAME: usize = 19;
 pub const SYS_WAITPID: usize = 20;
 pub const SYS_IOCTL: usize = 21;
 pub const SYS_GETPID: usize = 22;
+
+pub const SYS_SOCKET: usize = 23;
+pub const SYS_CONNECT: usize = 24;
+pub const SYS_BIND: usize = 25;
+pub const SYS_LISTEN: usize = 26;
+pub const SYS_ACCEPT: usize = 27;
