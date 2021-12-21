@@ -101,6 +101,7 @@ packages:
         - '--prefix=/usr'
         - '-Dheaders_only=true'
         - '-Ddisable_iconv_option=true'
+        - '-Dbuildtype=debug'
         - '@THIS_SOURCE_DIR@'
     build:
       - args: ['ninja']
@@ -123,9 +124,9 @@ packages:
         - '@SOURCE_ROOT@/userland/cross-file.ini'
         - '--prefix=/usr'
         - '--libdir=lib'
-        - '--buildtype=debugoptimized'
         - '-Dmlibc_no_headers=true'
         - '-Ddisable_iconv_option=true'
+        - '-Dbuildtype=debug'
         - '@THIS_SOURCE_DIR@'
     build:
       - args: ['ninja']
