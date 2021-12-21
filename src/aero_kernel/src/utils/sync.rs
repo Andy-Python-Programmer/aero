@@ -58,7 +58,7 @@ impl BlockQueue {
             .iter()
             .enumerate()
             .find_map(|(id, this)| {
-                if this.task_id() == task.task_id() {
+                if this.pid() == task.pid() {
                     Some(id)
                 } else {
                     None

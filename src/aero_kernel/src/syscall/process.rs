@@ -29,10 +29,7 @@ use crate::utils::validate_str;
 pub fn exit(status: usize) -> ! {
     log::trace!(
         "exiting the process (pid={pid}) with status: {status}",
-        pid = scheduler::get_scheduler()
-            .current_task()
-            .task_id()
-            .as_usize(),
+        pid = scheduler::get_scheduler().current_task().pid().as_usize(),
         status = status
     );
 
@@ -101,7 +98,7 @@ pub fn fork() -> Result<usize, AeroSyscallError> {
     let forked = scheduler.current_task().fork();
 
     scheduler.register_task(forked.clone());
-    Ok(forked.task_id().as_usize())
+    Ok(forked.pid().as_usize())
 }
 
 pub fn exec(
@@ -192,6 +189,10 @@ pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
     } else {
         Err(AeroSyscallError::EFAULT)
     }
+}
+
+pub fn getpid() -> Result<usize, AeroSyscallError> {
+    Ok(scheduler::get_scheduler().current_task().pid().as_usize())
 }
 
 pub fn shutdown() -> ! {

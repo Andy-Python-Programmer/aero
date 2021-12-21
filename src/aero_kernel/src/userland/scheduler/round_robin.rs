@@ -123,7 +123,7 @@ impl RoundRobin {
         // the preempted task back into the runnable queue.
         if let Some(task) = queue.runnable.pop_front() {
             if let Some(current_task) = queue.current_task.clone() {
-                if !current_task.link.is_linked() && current_task.task_id() != task.task_id() {
+                if !current_task.link.is_linked() && current_task.pid() != task.pid() {
                     queue.push_runnable(current_task);
                 }
             }

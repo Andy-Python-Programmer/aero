@@ -416,3 +416,8 @@ pub fn sys_mmap(
 
     isize_as_syscall_result(value as _)
 }
+
+pub fn sys_getpid() -> Result<usize, AeroSyscallError> {
+    let value = syscall0(prelude::SYS_GETPID);
+    isize_as_syscall_result(value as _)
+}

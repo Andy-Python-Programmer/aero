@@ -42,6 +42,8 @@
 //! | 18     | log                     |
 //! | 19     | uname                   |
 //! | 20     | waitpid                 |
+//! | 21     | ioctl                   |
+//! | 22     | get_pid                 |
 
 use core::mem::MaybeUninit;
 
@@ -165,6 +167,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_LOG => process::log(b, c),
         SYS_UNAME => process::uname(b),
         SYS_WAITPID => process::waitpid(b, c, d),
+        SYS_GETPID => process::getpid(),
 
         0x13A => {
             panic!("RIP={}", sys.rip);

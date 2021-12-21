@@ -121,7 +121,7 @@ impl Zombies {
 
         let mut list = self.list.lock();
 
-        log::debug!("making process a zombie: (pid={:?})", zombie.task_id());
+        log::debug!("making process a zombie: (pid={:?})", zombie.pid());
 
         list.push_back(zombie);
         self.block.notify_complete();
@@ -134,8 +134,8 @@ impl Zombies {
             let mut cursor = l.front_mut();
 
             while let Some(t) = cursor.get() {
-                if t.task_id().as_usize() == pid {
-                    captured = (t.task_id(), t.exit_status());
+                if t.pid().as_usize() == pid {
+                    captured = (t.pid(), t.exit_status());
                     cursor.remove();
 
                     return true;
@@ -361,8 +361,8 @@ impl Task {
         self.state.load(Ordering::SeqCst).into()
     }
 
-    /// Returns the task ID that was allocated for this task.
-    pub fn task_id(&self) -> TaskId {
+    /// Returns the PID ID that was allocated for this task.
+    pub fn pid(&self) -> TaskId {
         self.pid
     }
 

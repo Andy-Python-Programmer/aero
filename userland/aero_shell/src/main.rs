@@ -101,6 +101,9 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
             "uwutest" => {
                 let _ = readline::readline()?;
             }
+            "pid" => {
+                println!("{}", sys_getpid()?);
+            }
             _ => {
                 let child = sys_fork()?;
 
