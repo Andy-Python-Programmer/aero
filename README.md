@@ -69,7 +69,7 @@ $ cd aero
 ## Building Aero
 
 **Note:** Building Aero will require a relatively large amount of storage space. You
-may want to have upwards of 10 or 15 gigabytes available.
+may want to have upwards of 10 or 15 gigabytes available if building with full sysroot.
 
 Aero uses a custom build system, that wraps `cargo` and takes care of building the kernel and
 userland for you. It also builds the initramfs and disk image for you.
@@ -90,6 +90,8 @@ and they are: `--clean`, `--check`, `--test` and `--document`.
   running Aero in the emulator read ahead
 - `--test` will run the built-in Aero test suite
 - `--document` will generate web-based docs using cargo's `doc` command
+- `--sysroot` will build the full userland sysroot. If not passed, then the sysroot will only contain 
+the aero_shell and the init binaries
 
 Each of these modes can be used with additional flags, that will alter the behavior in different
 ways, some of them will not work for some of these modes - for example: the `--la57` option

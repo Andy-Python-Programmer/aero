@@ -9,18 +9,21 @@ import subprocess
 import sys
 import tarfile
 
+from typing import List
+
 
 # Make sure requests is installed
 try:
     import requests
+    import xbstrap
 except ImportError:
     print('Please install required libraires using the following command:')
-    print(' - python3 -m pip install requests')
+    print(' - python3 -m pip install requests xbstrap')
 
     sys.exit(0)
 
-
 import requests
+import xbstrap
 
 
 OVMF_URL = 'https://github.com/rust-osdev/ovmf-prebuilt/releases/latest/download'
@@ -28,6 +31,7 @@ LIMINE_URL = 'https://github.com/limine-bootloader/limine'
 
 BUILD_DIR = 'build'
 BUNDLED_DIR = 'bundled'
+SYSROOT_DIR = 'sysroot'
 OVMF_FILES = ['OVMF-pure-efi.fd']
 
 LIMINE_TEMPLATE = """
@@ -109,6 +113,11 @@ def parse_args():
                         default=False,
                         action='store_true',
                         help='run emulator with 5 level paging support')
+
+    parser.add_argument('--sysroot',
+                        default=False,
+                        action='store_true',
+                        help='build the full userland sysroot. If disabled, then the sysroot will only contain the aero_shell and the init binaries')
 
     parser.add_argument('remaining',
                         nargs=argparse.REMAINDER,
@@ -197,6 +206,46 @@ def build_kernel(args):
     return build_cargo_workspace('src', command, cmd_args)
 
 
+# Helper function for symlink since os.symlink uses path
+# relative to the destination directory.
+def symlink_rel(src, dst):
+    rel_path_src = os.path.relpath(src, os.path.dirname(dst))
+    os.symlink(rel_path_src, dst)
+
+
+def build_userland_sysroot(args):
+    if not os.path.exists(SYSROOT_DIR):
+        os.mkdir(SYSROOT_DIR)
+
+    blink = os.path.join(SYSROOT_DIR, 'bootstrap.link')
+
+    if not os.path.islink(blink):
+        # symlink the bootstrap.yml file in the src root to sysroot/bootstrap.link
+        symlink_rel('bootstrap.yml', blink)
+
+    os.chdir(SYSROOT_DIR)
+
+    args = {
+        "update": True,
+        "all": True,
+        "dry_run": False,
+        "check": False,
+        "recursive": False,
+        "paranoid": False,
+        "reset": False,
+        "hard_reset": False,
+        "only_wanted": False,
+        "keep_going": False,
+
+        "progress_file": None,  # file that receives machine-ready progress notifications
+        "reconfigure": False,
+        "rebuild": False
+    }
+
+    namespace = argparse.Namespace(**args)
+    xbstrap.do_install(namespace)
+
+
 def build_userland(args):
     command = 'build'
     cmd_args = []
@@ -248,28 +297,53 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join(limine_path, 'limine-eltorito-efi.bin'), iso_root)
 
     initramfs_root = os.path.join(BUILD_DIR, 'initramfs_root')
+
     initramfs_bin = os.path.join(initramfs_root, 'bin')
+    initramfs_lib = os.path.join(initramfs_root, 'lib')
 
     if os.path.exists(initramfs_root):
         shutil.rmtree(initramfs_root)
 
     os.makedirs(initramfs_root)
     os.makedirs(initramfs_bin)
+    os.makedirs(initramfs_lib)
+
+    def find(path) -> List[str]:
+        _, find_output, _ = run_command(['find', '.', '-type', 'f'],
+                                        cwd=path,
+                                        stdout=subprocess.PIPE)
+
+        files_without_dot = filter(
+            lambda x: x != '.', find_output.decode('utf-8').splitlines())
+        files_without_prefix = map(
+            lambda x: remove_prefix(x, './'), files_without_dot)
+        files = list(files_without_prefix)
+
+        return files
+
+    def cp(src, dest):
+        files = find(src)
+
+        for line in files:
+            file = os.path.join(src, line)
+            dest_file = os.path.join(dest, line)
+
+            os.makedirs(os.path.dirname(dest_file), exist_ok=True)
+            shutil.copy(file, dest)
+
+    if os.path.exists(SYSROOT_DIR):
+        bin_src = os.path.join(SYSROOT_DIR, 'system-root/usr/bin')
+        lib_src = os.path.join(SYSROOT_DIR, 'system-root/usr/lib')
+
+        cp(bin_src, initramfs_bin)
+        cp(lib_src, initramfs_lib)
 
     for file in user_bins:
         bin_name = os.path.basename(file)
 
         shutil.copy(file, os.path.join(initramfs_bin, bin_name))
 
-    _, find_output, _ = run_command(['find', '.', '-type', 'f'],
-                                    cwd=initramfs_root,
-                                    stdout=subprocess.PIPE)
-
-    files_without_dot = filter(
-        lambda x: x != '.', find_output.decode('utf-8').splitlines())
-    files_without_prefix = map(
-        lambda x: remove_prefix(x, './'), files_without_dot)
-    files = list(files_without_prefix)
+    files = find(initramfs_root)
 
     with open(os.path.join(iso_root, 'initramfs.cpio'), 'wb') as initramfs:
         cpio_input = '\n'.join(files)
@@ -353,6 +427,8 @@ def main():
 
         if os.path.exists(userland_target):
             shutil.rmtree(userland_target)
+    elif args.sysroot:
+        build_userland_sysroot(args)
     elif args.document:
         build_kernel(args)
 
