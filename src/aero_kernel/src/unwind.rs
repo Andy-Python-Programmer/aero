@@ -108,7 +108,7 @@ pub fn unwind_stack_trace() {
         return;
     }
 
-    log::trace!("{:━^80}", " BACKTRACE ");
+    log::trace!("{:-^80}", " BACKTRACE ");
 
     for depth in 0..64 {
         if let Some(rip_rbp) = rbp.checked_add(core::mem::size_of::<usize>()) {
