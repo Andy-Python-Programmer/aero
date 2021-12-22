@@ -213,8 +213,43 @@ impl Mapping {
             } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
                 && !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
             {
+                // We are writing to private file mapping so copy the content of the page.
                 log::trace!("    - private file C: {:?}", address);
-                unimplemented!()
+
+                // // addr_aligned, p.page().to_virt(), bytes, self.prot
+                let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+                    .expect("failed to allocate frame for a private file write");
+
+                let buffer = unsafe {
+                    let phys = frame.start_address().as_u64();
+                    let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
+                    let ptr = virt.as_mut_ptr::<u8>();
+
+                    core::slice::from_raw_parts_mut(ptr, size as usize)
+                };
+
+                mmap_file
+                    .file
+                    .inode()
+                    .read_at(offset as usize, buffer)
+                    .unwrap();
+
+                let flags = PageTableFlags::PRESENT
+                    | PageTableFlags::USER_ACCESSIBLE
+                    | self.protocol.into();
+
+                unsafe {
+                    offset_table.map_to(
+                        Page::containing_address(address),
+                        frame,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::USER_ACCESSIBLE
+                            | self.protocol.into(),
+                        &mut FRAME_ALLOCATOR,
+                    )
+                }
+                .expect("failed to map allocated frame for private file read")
+                .flush();
             } else if reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
                 && reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
             {
