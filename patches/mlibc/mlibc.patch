@@ -1,4 +1,4 @@
-From 04a3f6590e02379544c1fd0e8678a04d185cff8b Mon Sep 17 00:00:00 2001
+From 97eb1ba09c3e4263e1eb621b53e6e4c5f313a69b Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -12,7 +12,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/crt-x86_64/crt0.S              |   8 ++
  sysdeps/aero/generic/aero.cc                | 123 ++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++++
- sysdeps/aero/generic/filesystem.cc          |  83 +++++++++++
+ sysdeps/aero/generic/filesystem.cc          |  91 ++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  42 ++++++
  sysdeps/aero/generic/thread_entry.S         |   8 ++
@@ -44,7 +44,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/aero/syscall.h         | 147 ++++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 559 insertions(+), 5 deletions(-)
+ 39 files changed, 567 insertions(+), 5 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -346,10 +346,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..e7df428
+index 0000000..04278b7
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,91 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -409,7 +409,15 @@ index 0000000..e7df428
 +	return 0; 
 +}
 +
-+int sys_close(int fd) UNIMPLEMENTED("sys_close")
++int sys_close(int fd) {
++	long ret = syscall(SYS_CLOSE, fd);
++
++	if(ret < 0)
++		return -ret;
++
++	return 0;
++}
++
 +int sys_access(const char* filename, int mode) UNIMPLEMENTED("sys_access")
 +int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) UNIMPLEMENTED("sys_stat")
 +int sys_ioctl(int fd, unsigned long request, void *arg, int *result) UNIMPLEMENTED("sys_ioctl")
