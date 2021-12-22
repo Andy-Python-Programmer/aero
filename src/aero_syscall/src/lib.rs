@@ -199,17 +199,17 @@ impl Default for Utsname {
 #[repr(usize)]
 #[derive(Debug)]
 pub enum SeekWhence {
-    SeekSet = 1,
-    SeekCur = 2,
-    SeekEnd = 3,
+    SeekCur = 1,
+    SeekEnd = 2,
+    SeekSet = 3,
 }
 
 impl From<usize> for SeekWhence {
     fn from(x: usize) -> Self {
         match x {
-            1 => SeekWhence::SeekSet,
-            2 => SeekWhence::SeekCur,
-            3 => SeekWhence::SeekEnd,
+            1 => SeekWhence::SeekCur,
+            2 => SeekWhence::SeekEnd,
+            3 => SeekWhence::SeekSet,
             _ => panic!("invalid seek_whence: {}", x),
         }
     }
