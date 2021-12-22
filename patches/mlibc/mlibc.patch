@@ -1,4 +1,4 @@
-From 5e87b2932145620154c27710ca15391d2b2dfb97 Mon Sep 17 00:00:00 2001
+From 6053d1c75a94a6bb398857af8f2cd5e298a27fa8 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -8,7 +8,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  .gitignore                                  |   1 +
  abis/aero/auxv.h                            |  13 ++
  meson.build                                 |   4 +
- options/rtdl/generic/main.cpp               |   8 +-
+ options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 ++
  sysdeps/aero/generic/aero.cc                | 127 +++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++++
@@ -44,7 +44,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/aero/syscall.h         | 148 ++++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 572 insertions(+), 5 deletions(-)
+ 39 files changed, 573 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -127,7 +127,7 @@ index 55e9070..8b3f4ba 100644
  	# TODO: Adopt the include_directories() commands from the managarm meson.build.
  	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
-index 1521779..b974215 100644
+index 1521779..5d145bf 100644
 --- a/options/rtdl/generic/main.cpp
 +++ b/options/rtdl/generic/main.cpp
 @@ -118,9 +118,10 @@ extern "C" [[gnu::alias("dl_debug_state"), gnu::visibility("default")]] void _dl
@@ -163,6 +163,16 @@ index 1521779..b974215 100644
  		mlibc::infoLogger() << "ldso: Executable PHDRs are at " << phdr_pointer
  				<< frg::endlog;
  
+@@ -267,8 +265,7 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
+ 	globalDebugInterface.state = 0;
+ 	dl_debug_state();
+ 
+-	if(logEntryExit)
+-		mlibc::infoLogger() << "Leaving ld.so, jump to "
++	mlibc::infoLogger() << "Leaving ld.so, jump to "
+ 				<< (void *)executableSO->entry << frg::endlog;
+ 	return executableSO->entry;
+ }
 diff --git a/sysdeps/aero/crt-x86_64/crt0.S b/sysdeps/aero/crt-x86_64/crt0.S
 new file mode 100644
 index 0000000..190b5a0
