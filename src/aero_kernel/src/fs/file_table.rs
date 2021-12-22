@@ -27,6 +27,7 @@ use alloc::vec::Vec;
 use spin::RwLock;
 
 use super::cache::{DirCacheItem, INodeCacheItem};
+use super::inode::FileType;
 use super::FileSystemError;
 
 pub struct FileHandle {
@@ -55,6 +56,41 @@ impl FileHandle {
         self.offset.fetch_add(new_offset, Ordering::SeqCst);
 
         Ok(new_offset)
+    }
+
+    pub fn seek(&self, off: isize, whence: aero_syscall::SeekWhence) -> super::Result<usize> {
+        let meta = self
+            .inode
+            .inode()
+            .metadata()
+            .ok()
+            .ok_or(FileSystemError::IsPipe)?;
+
+        if meta.file_type() == FileType::File {
+            match whence {
+                aero_syscall::SeekWhence::SeekSet => {
+                    self.offset.store(off as usize, Ordering::SeqCst);
+                }
+
+                aero_syscall::SeekWhence::SeekCur => {
+                    let mut offset = self.offset.load(Ordering::SeqCst) as isize;
+                    offset += off;
+
+                    self.offset.store(offset as usize, Ordering::SeqCst);
+                }
+
+                aero_syscall::SeekWhence::SeekEnd => {
+                    let mut offset = meta.size as isize;
+                    offset += off;
+
+                    self.offset.store(offset as usize, Ordering::SeqCst);
+                }
+            }
+
+            Ok(self.offset.load(Ordering::SeqCst))
+        } else {
+            Err(FileSystemError::IsPipe)
+        }
     }
 
     pub fn write(&self, buffer: &[u8]) -> super::Result<usize> {

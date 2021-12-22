@@ -215,3 +215,13 @@ pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSy
 
     Ok(handle.inode().ioctl(command, argument)?)
 }
+
+pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, AeroSyscallError> {
+    let handle = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    Ok(handle.seek(offset as isize, aero_syscall::SeekWhence::from(whence))?)
+}

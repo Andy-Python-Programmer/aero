@@ -196,6 +196,25 @@ impl Default for Utsname {
     }
 }
 
+#[repr(usize)]
+#[derive(Debug)]
+pub enum SeekWhence {
+    SeekSet = 1,
+    SeekCur = 2,
+    SeekEnd = 3,
+}
+
+impl From<usize> for SeekWhence {
+    fn from(x: usize) -> Self {
+        match x {
+            1 => SeekWhence::SeekSet,
+            2 => SeekWhence::SeekCur,
+            3 => SeekWhence::SeekEnd,
+            _ => panic!("invalid seek_whence: {}", x),
+        }
+    }
+}
+
 pub const TIOCGWINSZ: usize = 0x5413;
 pub const TCGETS: usize = 0x5401;
 pub const TCSETSF: usize = 0x5404;

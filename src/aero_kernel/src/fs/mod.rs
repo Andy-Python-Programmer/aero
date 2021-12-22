@@ -124,6 +124,7 @@ pub enum FileSystemError {
     EntryNotFound,
     Busy,
     NotDirectory,
+    IsPipe,
 }
 
 impl From<FileSystemError> for AeroSyscallError {
@@ -134,6 +135,7 @@ impl From<FileSystemError> for AeroSyscallError {
             FileSystemError::EntryNotFound => AeroSyscallError::ENOENT,
             FileSystemError::Busy => AeroSyscallError::EBUSY,
             FileSystemError::NotDirectory => AeroSyscallError::ENOTDIR,
+            FileSystemError::IsPipe => AeroSyscallError::ESPIPE,
         }
     }
 }

@@ -175,7 +175,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
             };
 
             panic!("Unimplemented syscall: {}", syscall_name);
-        },
+        }
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),
@@ -188,6 +188,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_MKDIR_AT => fs::mkdirat(b, c, d),
         SYS_RMDIR => fs::rmdir(b, c),
         SYS_IOCTL => fs::ioctl(b, c, d),
+        SYS_SEEK => fs::seek(b, c, d),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);

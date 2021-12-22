@@ -1,4 +1,4 @@
-From 3e8e7b3fa302e36bc34dcbd84b6e90da324de42d Mon Sep 17 00:00:00 2001
+From 04a3f6590e02379544c1fd0e8678a04d185cff8b Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -10,9 +10,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  meson.build                                 |   4 +
  options/rtdl/generic/main.cpp               |   8 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 ++
- sysdeps/aero/generic/aero.cc                | 123 ++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 123 ++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++++
- sysdeps/aero/generic/filesystem.cc          |  74 +++++++++++
+ sysdeps/aero/generic/filesystem.cc          |  83 +++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  42 ++++++
  sysdeps/aero/generic/thread_entry.S         |   8 ++
@@ -41,10 +41,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 137 ++++++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 147 ++++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
- sysdeps/aero/meson.build                    |  60 +++++++++
- 39 files changed, 540 insertions(+), 5 deletions(-)
+ sysdeps/aero/meson.build                    |  60 ++++++++
+ 39 files changed, 559 insertions(+), 5 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -112,10 +112,10 @@ index 0000000..59d4d4d
 +
 +#endif // _ABIBITS_AUXV_H
 diff --git a/meson.build b/meson.build
-index ae0e7cf..72e25a6 100644
+index 55e9070..8b3f4ba 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -91,6 +91,10 @@ if host_machine.system() == 'linux'
+@@ -94,6 +94,10 @@ if host_machine.system() == 'linux'
  	rtdl_include_dirs += include_directories('sysdeps/linux/include')
  	libc_include_dirs += include_directories('sysdeps/linux/include')
  	subdir('sysdeps/linux')
@@ -346,10 +346,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..e14c155
+index 0000000..e7df428
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,83 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -387,7 +387,16 @@ index 0000000..e14c155
 +
 +int sys_pwrite(int fd, const void* buffer, size_t count, off_t off, ssize_t* written) UNIMPLEMENTED("sys_pwrite")
 +int sys_pread(int fd, void *buf, size_t count, off_t off, ssize_t *bytes_read)  UNIMPLEMENTED("sys_pread")
-+int sys_seek(int fd, off_t offset, int whence, off_t *new_offset)  UNIMPLEMENTED("sys_seek")
++
++int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
++	long ret = syscall(SYS_SEEK, (uint64_t)fd, (uint64_t)offset, (uint64_t)whence);
++
++	if(ret < 0)
++		return -ret;
++
++	*new_offset = ret;
++	return 0;
++}
 +
 +int sys_open(const char* filename, int flags, int* fd){
 +	long ret = syscall(SYS_OPEN, 0, (uintptr_t)filename, strlen(filename), flags);
@@ -691,10 +700,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..4875361
+index 0000000..eea6b8e
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,137 @@
+@@ -0,0 +1,147 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -720,6 +729,16 @@ index 0000000..4875361
 +#define SYS_RMDIR       16
 +#define SYS_EXEC        17
 +#define SYS_LOG         18
++#define SYS_UNAME       19
++#define SYS_WAITPID     20
++#define SYS_IOCTL       21
++#define SYS_GETPID      22
++#define SYS_SOCKET      23
++#define SYS_CONNECT     24
++#define SYS_BIND        25
++#define SYS_LISTEN      26
++#define SYS_ACCEPT      27
++#define SYS_SEEK        28
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.
