@@ -43,7 +43,14 @@
 //! | 19     | uname                   |
 //! | 20     | waitpid                 |
 //! | 21     | ioctl                   |
-//! | 22     | get_pid                 |
+//! | 22     | getpid                  |
+//! | 23     | socket                  |
+//! | 24     | connect                 |
+//! | 25     | bind                    |
+//! | 26     | listen                  |
+//! | 27     | accept                  |
+//! | 28     | seek                    |
+//! | 29     | gettid                  |
 
 use core::mem::MaybeUninit;
 
@@ -168,6 +175,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_UNAME => process::uname(b),
         SYS_WAITPID => process::waitpid(b, c, d),
         SYS_GETPID => process::getpid(),
+        SYS_GETTID => process::gettid(),
 
         0x13A => {
             let syscall_name = unsafe {

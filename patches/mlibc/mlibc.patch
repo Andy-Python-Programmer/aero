@@ -1,4 +1,4 @@
-From 97eb1ba09c3e4263e1eb621b53e6e4c5f313a69b Mon Sep 17 00:00:00 2001
+From 5e87b2932145620154c27710ca15391d2b2dfb97 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -10,7 +10,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  meson.build                                 |   4 +
  options/rtdl/generic/main.cpp               |   8 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 ++
- sysdeps/aero/generic/aero.cc                | 123 ++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 127 +++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++++
  sysdeps/aero/generic/filesystem.cc          |  91 ++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
@@ -41,10 +41,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 147 ++++++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 148 ++++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 567 insertions(+), 5 deletions(-)
+ 39 files changed, 572 insertions(+), 5 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -179,10 +179,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..558a260
+index 0000000..1a7342d
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,123 @@
+@@ -0,0 +1,127 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -198,7 +198,11 @@ index 0000000..558a260
 +#define ARCH_GET_GS		0x1004
 +
 +namespace mlibc {
-+int sys_futex_tid() UNIMPLEMENTED("sys_futex_tid")
++int sys_futex_tid() {
++    // SAFETY: gettid does not return any errors (ie. the call is always successful).
++    return syscall(SYS_GETTID);
++}
++
 +int sys_futex_wait(int *pointer, int expected) UNIMPLEMENTED("sys_futex_wait")
 +int sys_futex_wake(int *pointer) UNIMPLEMENTED("sys_futex_wake")
 +
@@ -708,10 +712,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..eea6b8e
+index 0000000..0c26a63
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,147 @@
+@@ -0,0 +1,148 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -747,6 +751,7 @@ index 0000000..eea6b8e
 +#define SYS_LISTEN      26
 +#define SYS_ACCEPT      27
 +#define SYS_SEEK        28
++#define SYS_GETTID      29
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.

@@ -195,6 +195,10 @@ pub fn getpid() -> Result<usize, AeroSyscallError> {
     Ok(scheduler::get_scheduler().current_task().pid().as_usize())
 }
 
+pub fn gettid() -> Result<usize, AeroSyscallError> {
+    Ok(scheduler::get_scheduler().current_task().tid().as_usize())
+}
+
 pub fn shutdown() -> ! {
     fs::cache::dcache().log();
 

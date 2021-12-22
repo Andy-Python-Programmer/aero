@@ -366,6 +366,10 @@ impl Task {
         self.pid
     }
 
+    pub fn tid(&self) -> TaskId {
+        self.tid
+    }
+
     pub fn get_cwd_dirent(&self) -> DirCacheItem {
         self.cwd.read().inode.clone()
     }

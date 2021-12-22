@@ -27,3 +27,4 @@ pub const SYS_BIND: usize = 25;
 pub const SYS_LISTEN: usize = 26;
 pub const SYS_ACCEPT: usize = 27;
 pub const SYS_SEEK: usize = 28;
+pub const SYS_GETTID: usize = 29;
