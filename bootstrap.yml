@@ -134,6 +134,36 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: coreutils
+    source:
+      subdir: 'bundled'
+      url: 'https://ftp.gnu.org/gnu/coreutils/coreutils-8.32.tar.xz'
+      format: 'tar.xz'
+      extract_path: 'coreutils-8.32'
+      patch-path-strip: 3
+    tools_required:
+      - host-gcc
+    configure:
+      # Huge hack: coreutils does not compile the build-machine binary make-prime-list
+      # using the build-machine compiler. Hence, build and invoke the binary manually here.
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+      - args: ['make', 'src/make-prime-list']
+      - args: |
+          ./src/make-prime-list 5000 > @THIS_SOURCE_DIR@/src/primes.h
+      - args: ['make', 'clean']
+      # No compile coreutils for the correct target.
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - 'CFLAGS=-DSLOW_BUT_NO_HACKS -Wno-error'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: binutils
     from_source: binutils
     tools_required:
@@ -161,6 +191,7 @@ tasks:
   - name: sysroot
     pkgs_required:
       - binutils
+      - coreutils
     args:
       - '@SOURCE_ROOT@/make-iso.sh'
       - '@BUILD_ROOT@'
