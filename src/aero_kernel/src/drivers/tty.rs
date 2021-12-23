@@ -609,7 +609,21 @@ impl vte::Perform for AnsiEscape {
 
                 match n {
                     // If `n` is 0 (or missing), clear from cursor to end of screen.
-                    0 => unimplemented!(),
+                    0 => {
+                        let (x, y) = crate::rendy::get_cursor_position();
+                        let (term_rows, term_cols) = crate::rendy::get_rows_cols();
+
+                        let rows_remaining = term_rows - (y + 1);
+                        let cols_diff = term_cols - (x + 1);
+                        let to_clear = rows_remaining * term_cols + cols_diff;
+
+                        for i in 0..to_clear {
+                            crate::rendy::print!(" ");
+                        }
+
+                        crate::rendy::set_cursor_position(x, y);
+                    }
+
                     1 => unimplemented!(),
 
                     // If `n` is 2 or 3, clear the entire screen.

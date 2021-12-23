@@ -26,7 +26,7 @@ const CLOCK_TYPE_MONOTONIC: usize = 1;
 
 pub fn sleep(timespec: usize) -> Result<usize, AeroSyscallError> {
     let timespec = VirtAddr::new(timespec as u64);
-    let timespec = unsafe { &*(timespec.as_mut_ptr::<aero_syscall::TimeSpec>()) };
+    let _timespec = unsafe { &*(timespec.as_mut_ptr::<aero_syscall::TimeSpec>()) };
 
     Ok(0x00)
 }

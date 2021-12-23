@@ -234,10 +234,6 @@ impl Mapping {
                     .read_at(offset as usize, buffer)
                     .unwrap();
 
-                let flags = PageTableFlags::PRESENT
-                    | PageTableFlags::USER_ACCESSIBLE
-                    | self.protocol.into();
-
                 unsafe {
                     offset_table.map_to(
                         Page::containing_address(address),
