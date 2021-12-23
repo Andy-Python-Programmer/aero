@@ -1,0 +1,42 @@
+From 040f0506e6ba7093bd12a7c89fb90f99a67ad33d Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Thu, 23 Dec 2021 12:17:11 +1100
+Subject: [PATCH] targets: add aero target port
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ .vscode/settings.json | 6 ++++++
+ src/nyancat.c         | 2 --
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+ create mode 100644 .vscode/settings.json
+
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+new file mode 100644
+index 0000000..b5431d3
+--- /dev/null
++++ b/.vscode/settings.json
+@@ -0,0 +1,6 @@
++{
++    "editor.formatOnSave": false,
++    "files.associations": {
++        "termios.h": "c"
++    },
++}
+\ No newline at end of file
+diff --git a/src/nyancat.c b/src/nyancat.c
+index 537225c..af77e5b 100644
+--- a/src/nyancat.c
++++ b/src/nyancat.c
+@@ -67,9 +67,7 @@
+ 
+ #include <sys/ioctl.h>
+ 
+-#ifndef TIOCGWINSZ
+ #include <termios.h>
+-#endif
+ 
+ #ifdef ECHO
+ #undef ECHO
+-- 
+2.25.1
+

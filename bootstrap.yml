@@ -134,6 +134,27 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: nyancat
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/klange/nyancat.git'
+      tag: '1.5.2'
+      version: '1.5.2'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+        environ:
+          CC: "x86_64-aero-gcc"
+      - args: ['mkdir', '-pv', '@THIS_COLLECT_DIR@/usr/bin']
+      - args: ['mkdir', '-pv', '@THIS_COLLECT_DIR@/usr/share/man/man1']
+      - args: ['cp', '-v', '@THIS_BUILD_DIR@/src/nyancat', '@THIS_COLLECT_DIR@/usr/bin']
+      - args: ['cp', '-v', '@THIS_BUILD_DIR@/nyancat.1', '@THIS_COLLECT_DIR@/usr/share/man/man1']
+
   - name: coreutils
     source:
       subdir: 'bundled'
@@ -192,6 +213,7 @@ tasks:
     pkgs_required:
       - binutils
       - coreutils
+      - nyancat
     args:
       - '@SOURCE_ROOT@/make-iso.sh'
       - '@BUILD_ROOT@'
