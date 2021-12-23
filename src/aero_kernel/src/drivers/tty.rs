@@ -538,6 +538,10 @@ const ANSI_BRIGHT_COLORS: &[u32; 8] = &[
     0x00ffffff, // grey
 ];
 
+fn fixed_to_rgb(fixed: u16) -> u32 {
+    fixed as u32
+}
+
 struct AnsiEscape;
 
 impl vte::Perform for AnsiEscape {
@@ -617,7 +621,7 @@ impl vte::Perform for AnsiEscape {
                         let cols_diff = term_cols - (x + 1);
                         let to_clear = rows_remaining * term_cols + cols_diff;
 
-                        for i in 0..to_clear {
+                        for _ in 0..to_clear {
                             crate::rendy::print!(" ");
                         }
 
@@ -676,7 +680,7 @@ impl vte::Perform for AnsiEscape {
                                 } else if code >= 90 && code <= 97 {
                                     ParsedColor::Foreground(code - SGR_FOREGROUND_OFFSET_2)
                                 } else if code >= 100 && code <= 107 {
-                                    ParsedColor::Foreground(code - SGR_BACKGROUND_OFFSET_2)
+                                    ParsedColor::Background(code - SGR_BACKGROUND_OFFSET_2)
                                 } else {
                                     ParsedColor::Unknown
                                 };
@@ -715,13 +719,30 @@ impl vte::Perform for AnsiEscape {
                                                 setter(color);
                                             };
 
+                                        let parse_fixed =
+                                            |setter: fn(u32), piter: &mut vte::ParamsIter| {
+                                                let fixed = piter.next().unwrap_or(&[0])[0];
+                                                let color = fixed_to_rgb(fixed);
+
+                                                setter(color);
+                                            };
+
                                         let run_special_parser =
                                             |setter: fn(u32), piter: &mut vte::ParamsIter| {
                                                 if let Some(arg_typee) = piter.next() {
                                                     let p1 = arg_typee[0];
 
                                                     match p1 {
-                                                        5 => todo!(),
+                                                        // A colour number from 0 to 255, for use in 256-colour terminal
+                                                        // environments.
+                                                        //
+                                                        // - Colours 0 to 7 are the `Black` to `White` variants respectively.
+                                                        // - Colours 8 to 15 are brighter versions of the eight colours above.
+                                                        // - Colours 16 to 231 contain several palettes of bright colours,
+                                                        // - Colours 232 to 255 are shades of grey from black to white.
+                                                        //
+                                                        // [cc]: https://upload.wikimedia.org/wikipedia/commons/1/15/Xterm_256color_chart.svg
+                                                        5 => parse_fixed(setter, piter),
 
                                                         // A 24-bit RGB color, as specified by ISO-8613-3.
                                                         2 => parse_rgb(setter, piter),
