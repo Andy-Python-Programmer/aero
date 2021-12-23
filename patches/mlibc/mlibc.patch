@@ -1,4 +1,4 @@
-From 6053d1c75a94a6bb398857af8f2cd5e298a27fa8 Mon Sep 17 00:00:00 2001
+From 5e830b0ca46df7e4c12ddcf88d91ae5e7b5e70c5 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -12,7 +12,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/crt-x86_64/crt0.S              |   8 ++
  sysdeps/aero/generic/aero.cc                | 127 +++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++++
- sysdeps/aero/generic/filesystem.cc          |  91 ++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 103 ++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  42 ++++++
  sysdeps/aero/generic/thread_entry.S         |   8 ++
@@ -44,7 +44,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/aero/syscall.h         | 148 ++++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 573 insertions(+), 7 deletions(-)
+ 39 files changed, 585 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -360,14 +360,16 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..04278b7
+index 0000000..71b5863
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,103 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
 +#include <sys/stat.h>
++#include <sys/ioctl.h>
++
 +#include <errno.h>
 +#include <dirent.h>
 +#include <limits.h>
@@ -435,7 +437,17 @@ index 0000000..04278b7
 +int sys_access(const char* filename, int mode) UNIMPLEMENTED("sys_access")
 +int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) UNIMPLEMENTED("sys_stat")
 +int sys_ioctl(int fd, unsigned long request, void *arg, int *result) UNIMPLEMENTED("sys_ioctl")
-+int sys_isatty(int fd)  UNIMPLEMENTED("sys_isatty")
++
++int sys_isatty(int fd) {
++	// The easiest way to check if a file descriptor is a TTY is to
++	// do an ioctl of TIOCGWINSZ on it and see if it succeeds :^)
++	struct winsize ws;
++	long ret = syscall(SYS_IOCTL, fd, TIOCGWINSZ, (uintptr_t)&ws);
++
++	if (!ret) return 0;
++	return 1;
++}
++
 +int sys_tcgetattr(int fd, struct termios *attr) UNIMPLEMENTED("sys_tcgetattr")
 +int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) UNIMPLEMENTED("sys_tcsetattr")
 +int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) UNIMPLEMENTED("sys_poll")
