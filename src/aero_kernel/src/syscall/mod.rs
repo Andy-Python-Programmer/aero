@@ -51,6 +51,8 @@
 //! | 27     | accept                  |
 //! | 28     | seek                    |
 //! | 29     | gettid                  |
+//! | 30     | gettime                 |
+//! | 31     | sleep                   |
 
 use core::mem::MaybeUninit;
 
@@ -199,6 +201,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_SEEK => fs::seek(b, c, d),
 
         SYS_GETTIME => time::gettime(b, c),
+        SYS_SLEEP => time::sleep(b),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);
