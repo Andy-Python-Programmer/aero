@@ -1,4 +1,4 @@
-From 5e830b0ca46df7e4c12ddcf88d91ae5e7b5e70c5 Mon Sep 17 00:00:00 2001
+From 62aab48cd6720cd54664d6ea618f5ae42f120fef Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -10,9 +10,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  meson.build                                 |   4 +
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 ++
- sysdeps/aero/generic/aero.cc                | 127 +++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 140 ++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++++
- sysdeps/aero/generic/filesystem.cc          | 103 ++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 113 +++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  42 ++++++
  sysdeps/aero/generic/thread_entry.S         |   8 ++
@@ -41,10 +41,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 148 ++++++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 149 ++++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 585 insertions(+), 7 deletions(-)
+ 39 files changed, 609 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -189,10 +189,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..1a7342d
+index 0000000..e364cb2
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,140 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -269,7 +269,20 @@ index 0000000..1a7342d
 +pid_t sys_getpid() UNIMPLEMENTED("sys_getpid")
 +pid_t sys_getppid() UNIMPLEMENTED("sys_getppid")
 +
-+int sys_clock_get(int clock, time_t *secs, long *nanos) UNIMPLEMENTED("sys_clock_get")
++int sys_clock_get(int clock, time_t *secs, long *nanos) {
++    struct timespec ts;
++    long ret = syscall(SYS_GETTIME, clock, &ts);
++
++    if (ret < 0) {
++        return -ret;
++    }
++
++    *secs = ts.tv_sec;
++    *nanos = ts.tv_nsec;
++
++    return 0;
++}
++
 +int sys_getcwd(char *buffer, size_t size) UNIMPLEMENTED("sys_getcwd")
 +
 +int sys_chdir(const char *path) UNIMPLEMENTED("sys_chdir")
@@ -360,10 +373,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..71b5863
+index 0000000..94db192
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,103 @@
+@@ -0,0 +1,113 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -436,7 +449,17 @@ index 0000000..71b5863
 +
 +int sys_access(const char* filename, int mode) UNIMPLEMENTED("sys_access")
 +int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) UNIMPLEMENTED("sys_stat")
-+int sys_ioctl(int fd, unsigned long request, void *arg, int *result) UNIMPLEMENTED("sys_ioctl")
++
++int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
++	long ret = syscall(SYS_IOCTL, (uint64_t)fd, request, (uintptr_t)arg);
++	
++	if (ret < 0) {
++		return -ret;
++	}
++
++	*result = ret;
++	return 0;
++}
 +
 +int sys_isatty(int fd) {
 +	// The easiest way to check if a file descriptor is a TTY is to
@@ -734,10 +757,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..0c26a63
+index 0000000..23d3898
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,148 @@
+@@ -0,0 +1,149 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -774,6 +797,7 @@ index 0000000..0c26a63
 +#define SYS_ACCEPT      27
 +#define SYS_SEEK        28
 +#define SYS_GETTID      29
++#define SYS_GETTIME     30
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.

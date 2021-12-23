@@ -99,6 +99,10 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
         .modules()
         .expect("stivale2: aero requires the bootloader to provode a non-null kernel modules tag");
 
+    let epoch = boot_info
+        .epoch()
+        .expect("stivale2: aero expects the bootloader to provide a non-null epoch tag");
+
     let rsdp_address = PhysAddr::new(rsdp_tag.rsdp);
 
     // NOTE: STACK_SIZE - 1 points to the last u8 in the array, i.e. it is
@@ -126,6 +130,13 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
         let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
 
         &*new_addr.as_mut_ptr::<StivaleKernelFileV2Tag>()
+    });
+
+    crate::time::EPOCH_TAG.call_once(move || unsafe {
+        let addr = (epoch as *const StivaleEpochTag) as u64;
+        let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
+
+        &*new_addr.as_mut_ptr::<StivaleEpochTag>()
     });
 
     crate::INITRD_MODULE.call_once(move || {

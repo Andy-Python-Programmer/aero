@@ -591,6 +591,15 @@ impl vte::Perform for AnsiEscape {
                 crate::rendy::set_cursor_position(x, y);
             }
 
+            'l' | 'h' => match params.iter().next() {
+                Some([25]) => {
+                    // Disable the cursor if action == 'l` and enable it if action
+                    // == 'h'.
+                }
+
+                _ => {}
+            },
+
             // Clears parts of the screen.
             'J' => {
                 let mut iter = params.iter();

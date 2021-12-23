@@ -198,6 +198,8 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_IOCTL => fs::ioctl(b, c, d),
         SYS_SEEK => fs::seek(b, c, d),
 
+        SYS_GETTIME => time::gettime(b, c),
+
         _ => {
             log::error!("invalid syscall: {:#x}", a);
             Err(AeroSyscallError::ENOSYS)

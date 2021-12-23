@@ -25,9 +25,13 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::TimeSpec;
+use stivale_boot::v2::StivaleEpochTag;
+
 use crate::apic;
 use crate::userland::scheduler;
 use crate::utils::io;
+use crate::utils::sync::Mutex;
 
 const PIT_FREQUENCY_HZ: usize = 1000;
 const SCHED_TIMESLICE_MS: usize = 15;
@@ -35,14 +39,38 @@ const SCHED_TIMESLICE_MS: usize = 15;
 static SCHED_TICKS: AtomicUsize = AtomicUsize::new(0);
 static UPTIME_RAW: AtomicUsize = AtomicUsize::new(0);
 static UPTIME_SEC: AtomicUsize = AtomicUsize::new(0);
-static UNIX_EPOCH: AtomicUsize = AtomicUsize::new(0);
+
+pub static EPOCH_TAG: spin::Once<&'static StivaleEpochTag> = spin::Once::new();
+pub static REALTIME_CLOCK: Mutex<aero_syscall::TimeSpec> = Mutex::new(aero_syscall::TimeSpec {
+    tv_sec: 0,
+    tv_nsec: 0,
+});
 
 pub fn tick() {
+    {
+        let interval = aero_syscall::TimeSpec {
+            tv_sec: 0,
+            tv_nsec: (1000000000 / PIT_FREQUENCY_HZ) as isize,
+        };
+
+        let mut this = REALTIME_CLOCK.lock();
+
+        if this.tv_nsec + interval.tv_nsec > 999999999 {
+            let diff = (this.tv_nsec + interval.tv_nsec) - 1000000000;
+
+            this.tv_nsec = diff;
+            this.tv_sec += 1;
+        } else {
+            this.tv_nsec += interval.tv_nsec
+        }
+
+        this.tv_sec += interval.tv_sec;
+    }
+
     let value = UPTIME_RAW.fetch_add(1, Ordering::Relaxed); // Increment uptime raw ticks.
 
     if value % PIT_FREQUENCY_HZ == 0 {
         UPTIME_SEC.fetch_add(1, Ordering::Relaxed); // Increment uptime seconds
-        UNIX_EPOCH.fetch_add(1, Ordering::Relaxed); // Increment unix epoch
     }
 
     let value = SCHED_TICKS.fetch_add(1, Ordering::Relaxed); // Increment scheduler ticks.
@@ -57,9 +85,18 @@ pub fn tick() {
     }
 }
 
+pub fn get_realtime_clock() -> TimeSpec {
+    REALTIME_CLOCK.lock().clone()
+}
+
 /// This function is responsible for initializing the PIT chip and setting
 /// up the IRQ.
 pub fn init() {
+    REALTIME_CLOCK.lock().tv_sec = EPOCH_TAG
+        .get()
+        .expect("failed to initialize realtime clock")
+        .epoch as isize;
+
     let mut x = 1193182 / PIT_FREQUENCY_HZ;
 
     if (1193182 % PIT_FREQUENCY_HZ) > (PIT_FREQUENCY_HZ / 2) {

@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2021 The Aero Project Developers.
+ *
+ * This file is part of The Aero Project.
+ *
+ * Aero is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Aero is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Aero. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 pub const SYS_READ: usize = 0;
 pub const SYS_WRITE: usize = 1;
 pub const SYS_OPEN: usize = 2;
@@ -28,3 +47,4 @@ pub const SYS_LISTEN: usize = 26;
 pub const SYS_ACCEPT: usize = 27;
 pub const SYS_SEEK: usize = 28;
 pub const SYS_GETTID: usize = 29;
+pub const SYS_GETTIME: usize = 30;
