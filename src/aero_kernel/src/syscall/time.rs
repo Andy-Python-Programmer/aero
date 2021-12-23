@@ -19,6 +19,7 @@
 
 use aero_syscall::AeroSyscallError;
 
+use crate::utils::CeilDiv;
 use crate::{mem::paging::VirtAddr, userland::scheduler};
 
 const CLOCK_TYPE_REALTIME: usize = 0;
@@ -27,7 +28,7 @@ const CLOCK_TYPE_MONOTONIC: usize = 1;
 pub fn sleep(timespec: usize) -> Result<usize, AeroSyscallError> {
     let timespec = VirtAddr::new(timespec as u64);
     let timespec = unsafe { &*(timespec.as_mut_ptr::<aero_syscall::TimeSpec>()) };
-    let duration = (timespec.tv_nsec + timespec.tv_sec) as usize;
+    let duration = (timespec.tv_nsec as usize).ceil_div(1000000000) + timespec.tv_sec as usize;
 
     scheduler::get_scheduler().inner.sleep(Some(duration));
 
