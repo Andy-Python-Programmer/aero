@@ -42,11 +42,11 @@ struct TaskQueue {
     runnable: LinkedList<SchedTaskAdapter>,
     dead: LinkedList<SchedTaskAdapter>,
     awaiting: LinkedList<SchedTaskAdapter>,
+    deadline_awaiting: LinkedList<SchedTaskAdapter>,
 }
 
 impl TaskQueue {
     /// Creates a new task queue with no taskes by default.
-    #[inline]
     fn new() -> Self {
         Self {
             idle_task: Task::new_idle(),
@@ -56,10 +56,10 @@ impl TaskQueue {
             runnable: LinkedList::new(SchedTaskAdapter::new()),
             dead: LinkedList::new(SchedTaskAdapter::new()),
             awaiting: LinkedList::new(SchedTaskAdapter::new()),
+            deadline_awaiting: LinkedList::new(SchedTaskAdapter::new()),
         }
     }
 
-    #[inline]
     fn push_runnable(&mut self, task: Arc<Task>) {
         debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
 
@@ -67,12 +67,20 @@ impl TaskQueue {
         self.runnable.push_back(task);
     }
 
-    #[inline]
     fn push_dead(&mut self, task: Arc<Task>) {
         debug_assert_eq!(task.state(), TaskState::Runnable);
         debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
 
         self.dead.push_back(task);
+    }
+
+    fn push_deadline_awaiting(&mut self, task: Arc<Task>, duration: usize) {
+        debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
+
+        task.update_state(TaskState::AwaitingIo);
+        task.set_sleep_duration(crate::time::get_uptime_ticks() + duration);
+
+        self.deadline_awaiting.push_back(task);
     }
 
     fn push_awaiting(&mut self, task: Arc<Task>) {
@@ -115,9 +123,35 @@ impl RoundRobin {
         }
     }
 
+    fn schedule_check_deadline(&self) {
+        let _guard = IrqGuard::new();
+        let queue = self.queue.get_mut();
+
+        let time = crate::time::get_uptime_ticks();
+
+        let mut cursor = queue.deadline_awaiting.front_mut();
+
+        while let Some(task) = cursor.get() {
+            if task.load_sleep_duration() <= time {
+                let ptr = cursor.remove().unwrap();
+
+                assert_eq!(ptr.link.is_linked(), false);
+
+                ptr.update_state(TaskState::Runnable);
+                ptr.set_sleep_duration(0);
+
+                queue.runnable.push_back(ptr);
+            } else {
+                cursor.move_next();
+            }
+        }
+    }
+
     fn schedule_next_task(&self) {
         let guard = IrqGuard::new();
         let queue = self.queue.get_mut();
+
+        self.schedule_check_deadline();
 
         // Switch to the next runnable task in the runnable queue, and put
         // the preempted task back into the runnable queue.
@@ -181,6 +215,29 @@ impl SchedulerInterface for RoundRobin {
                 queue.push_runnable(task);
             }
         }
+    }
+
+    fn sleep(&self, duration: Option<usize>) {
+        let _guard = IrqGuard::new();
+        let queue = self.queue.get_mut();
+
+        let task = queue
+            .current_task
+            .as_ref()
+            .expect("IDLE task should not await for anything")
+            .clone();
+
+        // TODO: Make sure the task has no pending IO.
+
+        if let Some(duration) = duration {
+            queue.push_deadline_awaiting(task, duration);
+        } else {
+            queue.push_awaiting(task);
+        }
+
+        self.preempt();
+
+        // TODO: Check for signal interrupts.
     }
 
     fn preempt(&self) {

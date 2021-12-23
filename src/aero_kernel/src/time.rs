@@ -46,6 +46,10 @@ pub static REALTIME_CLOCK: Mutex<aero_syscall::TimeSpec> = Mutex::new(aero_sysca
     tv_nsec: 0,
 });
 
+pub fn get_uptime_ticks() -> usize {
+    UPTIME_SEC.load(Ordering::SeqCst)
+}
+
 pub fn tick() {
     {
         let interval = aero_syscall::TimeSpec {

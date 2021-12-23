@@ -104,6 +104,15 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
             "pid" => {
                 println!("{}", sys_getpid()?);
             }
+            "sleep" => {
+                let duration = args.next().unwrap_or("0").parse::<usize>().unwrap_or(0);
+                let timespec = TimeSpec {
+                    tv_sec: duration as isize,
+                    tv_nsec: 0,
+                };
+
+                sys_sleep(&timespec)?;
+            }
             _ => {
                 let child = sys_fork()?;
 

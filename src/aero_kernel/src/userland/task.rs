@@ -177,6 +177,8 @@ pub struct Task {
 
     zombies: Zombies,
 
+    sleep_duration: AtomicUsize,
+
     pub(super) link: intrusive_collections::LinkedListLink,
     pub(super) clink: intrusive_collections::LinkedListLink,
 
@@ -211,6 +213,7 @@ impl Task {
             link: Default::default(),
             clink: Default::default(),
 
+            sleep_duration: AtomicUsize::new(0),
             exit_status: AtomicIsize::new(0),
 
             children: Mutex::new(Default::default()),
@@ -242,6 +245,7 @@ impl Task {
             link: Default::default(),
             clink: Default::default(),
 
+            sleep_duration: AtomicUsize::new(0),
             exit_status: AtomicIsize::new(0),
 
             children: Mutex::new(Default::default()),
@@ -272,6 +276,7 @@ impl Task {
             link: Default::default(),
             clink: Default::default(),
 
+            sleep_duration: AtomicUsize::new(0),
             exit_status: AtomicIsize::new(0),
 
             tid: pid.clone(),
@@ -318,6 +323,14 @@ impl Task {
 
     fn exit_status(&self) -> isize {
         self.exit_status.load(Ordering::SeqCst)
+    }
+
+    pub fn set_sleep_duration(&self, duration: usize) {
+        self.sleep_duration.store(duration, Ordering::SeqCst);
+    }
+
+    pub fn load_sleep_duration(&self) -> usize {
+        self.sleep_duration.load(Ordering::SeqCst)
     }
 
     pub fn waitpid(&self, pid: usize, status: &mut u32) -> Result<usize, AeroSyscallError> {
