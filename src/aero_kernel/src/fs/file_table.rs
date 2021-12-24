@@ -39,7 +39,6 @@ pub struct FileHandle {
 
 impl FileHandle {
     /// Creates a new file handle.
-    #[inline]
     pub fn new(fd: usize, inode: DirCacheItem, flags: OpenFlags) -> Self {
         Self {
             fd,
@@ -102,12 +101,11 @@ impl FileHandle {
         Ok(new_offset)
     }
 
-    #[inline]
     pub fn inode(&self) -> INodeCacheItem {
         self.inode.inode()
     }
 
-    pub fn get_dents(&self, buffer: &mut [u8]) -> super::Result<usize> {
+    pub fn get_dents(&self, mut buffer: &mut [u8]) -> super::Result<usize> {
         let mut offset = 0x00usize;
 
         loop {
@@ -128,27 +126,30 @@ impl FileHandle {
                     name: [], // will be filled in later
                 };
 
-                if (buffer.len() - offset) < sysd.reclen {
-                    break Ok(dir_offset);
+                if buffer.len() < sysd.reclen {
+                    break Ok(offset);
                 }
 
                 self.offset.fetch_add(1, Ordering::SeqCst);
 
                 unsafe {
+                    let sysd_ref = &mut *(buffer.as_mut_ptr() as *mut SysDirEntry);
+
                     // Copy the directory entry info into the provided buffer.
-                    buffer.as_mut_ptr().offset(offset as isize).copy_from(
+                    buffer.as_mut_ptr().copy_from(
                         &sysd as *const _ as *const u8,
                         core::mem::size_of::<SysDirEntry>(),
                     );
 
                     // Copy over the name of the inode.
-                    buffer
+                    sysd_ref
+                        .name
                         .as_mut_ptr()
-                        .offset(offset as isize + core::mem::size_of::<SysDirEntry>() as isize)
                         .copy_from(entry.name().as_ptr(), entry.name().len());
                 }
 
                 offset += sysd.reclen;
+                buffer = &mut buffer[sysd.reclen..];
             } else {
                 break Ok(offset);
             }
