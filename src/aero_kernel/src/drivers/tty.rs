@@ -599,6 +599,7 @@ impl vte::Perform for AnsiEscape {
                 Some([25]) => {
                     // Disable the cursor if action == 'l` and enable it if action
                     // == 'h'.
+                    crate::rendy::set_cursor_visibility(action == 'h')
                 }
 
                 _ => {}

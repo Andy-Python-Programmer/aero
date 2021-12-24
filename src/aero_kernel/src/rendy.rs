@@ -226,6 +226,8 @@ struct DebugRendy<'this> {
 
     offset_x: usize,
     offset_y: usize,
+
+    cursor_visibility: bool,
 }
 
 impl<'this> DebugRendy<'this> {
@@ -333,6 +335,7 @@ impl<'this> DebugRendy<'this> {
             vga_font_bool,
 
             queue_cursor: 0,
+            cursor_visibility: true,
         };
 
         let image = cmdline.term_background.map(|a| parse_bmp_image(a));
@@ -640,7 +643,9 @@ impl<'this> DebugRendy<'this> {
     }
 
     fn double_buffer_flush(&mut self) {
-        self.draw_cursor();
+        if self.cursor_visibility {
+            self.draw_cursor();
+        }
 
         for i in 0..self.queue_cursor {
             let queue = self.queue[i].clone();
@@ -910,6 +915,12 @@ pub fn set_cursor_position(x: usize, y: usize) {
     DEBUG_RENDY
         .get()
         .map(|l| l.lock_irq().set_cursor_position(x, y));
+}
+
+pub fn set_cursor_visibility(yes: bool) {
+    DEBUG_RENDY
+        .get()
+        .map(|l| l.lock_irq().cursor_visibility = yes);
 }
 
 /// Returns a tuple of the amount of `(rows, columns)` in the terminal.
