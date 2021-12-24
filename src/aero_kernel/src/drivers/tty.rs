@@ -554,6 +554,9 @@ impl vte::Perform for AnsiEscape {
 
         if char == '\n' || char == '\t' {
             crate::rendy::print!("{}", char);
+        } else if char == '\r' {
+            let (_, y) = crate::rendy::get_cursor_position();
+            crate::rendy::set_cursor_position(0, y)
         }
     }
 
