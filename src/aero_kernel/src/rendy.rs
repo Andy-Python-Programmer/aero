@@ -60,7 +60,7 @@ const VGA_FONT_GLYPHS: usize = 256;
 
 /// Constant describing the number of columns padded at the left
 /// and right of the screen.
-const X_PAD: usize = 1;
+pub const X_PAD: usize = 1;
 
 const MARGIN_GRADIENT: usize = 4;
 const DWORD_SIZE: usize = core::mem::size_of::<u32>();

@@ -265,7 +265,7 @@ impl INodeInterface for Tty {
                 let (rows, cols) = crate::rendy::get_rows_cols();
 
                 winsize.ws_row = rows as u16;
-                winsize.ws_col = cols as u16;
+                winsize.ws_col = (cols as u16) - (crate::rendy::X_PAD * 2) as u16;
 
                 let (xpixel, ypixel) = crate::rendy::get_resolution();
 
