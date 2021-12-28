@@ -396,15 +396,15 @@ pub fn sys_mkdirat(dfd: isize, path: &str) -> Result<usize, AeroSyscallError> {
     isize_as_syscall_result(value as _)
 }
 
-pub fn sys_exec(path: &str) -> Result<usize, AeroSyscallError> {
+pub fn sys_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
     let value = syscall6(
         prelude::SYS_EXEC,
         path.as_ptr() as usize,
         path.len(),
-        0,
-        0,
-        0,
-        0,
+        argv.as_ptr() as usize,
+        argv.len(),
+        envv.as_ptr() as usize,
+        envv.len(),
     );
 
     isize_as_syscall_result(value as _)

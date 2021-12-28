@@ -117,7 +117,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 let child = sys_fork()?;
 
                 if child == 0 {
-                    if sys_exec(cmd).is_err() {
+                    if sys_exec(cmd, &[cmd], &[]).is_err() {
                         println!("{}: command not found", cmd);
                         sys_exit(1);
                     }

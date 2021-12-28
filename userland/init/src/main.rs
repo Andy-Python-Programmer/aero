@@ -23,7 +23,7 @@ fn init_main() -> Result<(), AeroSyscallError> {
     let shell_pid = sys_fork()?;
 
     if shell_pid == 0 {
-        sys_exec("/bin/aero_shell")?;
+        sys_exec("/bin/aero_shell", &["/bin/aero_shell"], &[])?;
     } else {
         let mut shell_exit_code = 0;
 
