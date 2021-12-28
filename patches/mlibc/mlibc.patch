@@ -1,4 +1,4 @@
-From b26f3fb724b09667e948565661ed79045d1b2a1c Mon Sep 17 00:00:00 2001
+From f767fbc1cfc0f7d41ab65d6a58d4c62bb2a47031 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -8,15 +8,13 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  .gitignore                                  |   1 +
  abis/aero/auxv.h                            |  13 ++
  meson.build                                 |   4 +
- options/rtdl/generic/linker.cpp             |  13 +-
  options/rtdl/generic/main.cpp               |  11 +-
- options/rtdl/include/mlibc/rtdl-sysdeps.hpp |   1 +
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 164 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 154 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 ++++
  sysdeps/aero/generic/filesystem.cc          | 113 ++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
- sysdeps/aero/generic/thread.cc              |  42 +++++
+ sysdeps/aero/generic/thread.cc              |  42 ++++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
  sysdeps/aero/include/abi-bits/abi.h         |   1 +
  sysdeps/aero/include/abi-bits/auxv.h        |   1 +
@@ -43,10 +41,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 150 ++++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 150 +++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
- sysdeps/aero/meson.build                    |  60 +++++++
- 41 files changed, 641 insertions(+), 14 deletions(-)
+ sysdeps/aero/meson.build                    |  60 ++++++++
+ 39 files changed, 624 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -128,30 +126,6 @@ index 55e9070..8b3f4ba 100644
  elif host_machine.system() == 'managarm'
  	# TODO: Adopt the include_directories() commands from the managarm meson.build.
  	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
-diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 339e70a..9024871 100644
---- a/options/rtdl/generic/linker.cpp
-+++ b/options/rtdl/generic/linker.cpp
-@@ -70,13 +70,12 @@ void closeOrDie(int fd) {
- namespace {
- 	Tcb *getCurrentTcb() {
- 		uintptr_t ptr;
--#if defined(__x86_64__)
--		asm volatile ("mov %%fs:0, %0" : "=r"(ptr));
--#elif defined(__aarch64__)
--		asm volatile ("mrs %0, tpidr_el0" : "=r"(ptr));
--#else
--#	error Unknown architecture
--#endif
-+
-+		// TODO(Andy-Python-Programmer): This is currently a heck to get the
-+		// tcb pointer instead of just reading the fs register. I will fix it
-+		// someday in the new year :^) Christmas moment
-+		__ensure(!mlibc::sys_tcb_get((void**)&ptr));
-+
- 		return reinterpret_cast<Tcb *>(ptr);
- 	}
- } // namespace anonymous
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
 index 1521779..5d145bf 100644
 --- a/options/rtdl/generic/main.cpp
@@ -199,18 +173,6 @@ index 1521779..5d145bf 100644
  				<< (void *)executableSO->entry << frg::endlog;
  	return executableSO->entry;
  }
-diff --git a/options/rtdl/include/mlibc/rtdl-sysdeps.hpp b/options/rtdl/include/mlibc/rtdl-sysdeps.hpp
-index c35271c..075f345 100644
---- a/options/rtdl/include/mlibc/rtdl-sysdeps.hpp
-+++ b/options/rtdl/include/mlibc/rtdl-sysdeps.hpp
-@@ -4,6 +4,7 @@
- namespace [[gnu::visibility("hidden")]] mlibc {
- 
- int sys_tcb_set(void *pointer);
-+int sys_tcb_get(void **pointer);
- 
- [[gnu::weak]] int sys_vm_readahead(void *pointer, size_t size);
- 
 diff --git a/sysdeps/aero/crt-x86_64/crt0.S b/sysdeps/aero/crt-x86_64/crt0.S
 new file mode 100644
 index 0000000..190b5a0
@@ -227,10 +189,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..99c2d6f
+index 0000000..b9b2fa5
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,164 @@
+@@ -0,0 +1,154 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -261,16 +223,6 @@ index 0000000..99c2d6f
 +        return -res;
 +    }
 +
-+    return 0;
-+}
-+
-+int sys_tcb_get(void** pointer) {
-+    ssize_t res = syscall(SYS_ARCH_PRCTL, ARCH_GET_FS);
-+
-+    if (res < 0)
-+        return -res;
-+
-+    *pointer = (void*)res;
 +    return 0;
 +}
 +
