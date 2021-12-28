@@ -30,6 +30,7 @@ use core::mem;
 
 use crate::mem::paging::VirtAddr;
 
+use crate::tls::PerCpuData;
 use crate::utils::io;
 
 bitflags::bitflags! {
@@ -93,7 +94,7 @@ static mut BOOT_GDT: [GdtEntry; BOOT_GDT_ENTRY_COUNT] = [
     ),
 ];
 
-#[thread_local]
+// TODO: Should we keep a reference to the per-cpu GDT in the TLS?
 static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
     // GDT null descriptor.
     GdtEntry::NULL,
@@ -165,9 +166,6 @@ static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
     // and twice the normal size.
     GdtEntry::NULL,
 ];
-
-#[thread_local]
-pub static mut TASK_STATE_SEGMENT: Tss = Tss::new();
 
 struct GdtAccessFlags;
 
@@ -285,28 +283,13 @@ pub struct Tss {
 
     /// The 16-bit offset to the I/O permission bit map from the 64-bit TSS base.
     pub iomap_base: u16,
-    kernel_fs: u64,
 }
 
-impl Tss {
-    #[inline]
-    const fn new() -> Self {
-        Self {
-            reserved: 0x00,
-            rsp: [0; 3],
-            reserved2: 0x00,
-            ist: [0; 7],
-            reserved3: 0x00,
-            reserved4: 0x00,
-            iomap_base: 0x00,
-            kernel_fs: 0x00,
-        }
-    }
-
-    #[inline(always)]
-    pub fn set_kernel_fs(&mut self, kernel_fs: u64) {
-        self.kernel_fs = kernel_fs;
-    }
+// Processor Control Region
+#[repr(C, packed)]
+pub struct Kpcr {
+    pub tss: Tss,
+    pub cpu_local: &'static mut PerCpuData,
 }
 
 /// Initialize the bootstrap GDT which is required to initialize TLS (Thread Local Storage)
@@ -327,22 +310,33 @@ pub fn init_boot() {
         load_cs(SegmentSelector::new(GdtEntryType::KERNEL_CODE, Ring::Ring0));
         load_ds(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
         load_es(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
-        load_fs(SegmentSelector::new(GdtEntryType::KERNEL_TLS, Ring::Ring0));
-        load_gs(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_fs(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_gs(SegmentSelector::new(GdtEntryType::KERNEL_TLS, Ring::Ring0));
         load_ss(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
     }
+}
+
+/// SAFETY: The GS base should point to the kernel PCR.
+pub fn get_task_state_segement() -> &'static mut Tss {
+    unsafe { &mut *(io::rdmsr(io::IA32_GS_BASE) as *mut Tss) }
+}
+
+/// SAFETY: The GS base should point to the kernel PCR.
+pub fn get_kpcr() -> &'static mut Kpcr {
+    unsafe { &mut *(io::rdmsr(io::IA32_GS_BASE) as *mut Kpcr) }
 }
 
 /// Initialize the *actual* GDT stored in TLS.
 pub fn init(stack_top: VirtAddr) {
     unsafe {
-        let tss_ptr = &mut TASK_STATE_SEGMENT as *mut Tss;
+        let tss_ref = get_task_state_segement();
+        let tss_ptr = tss_ref as *mut Tss;
 
         GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
         GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
         GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
 
-        TASK_STATE_SEGMENT.rsp[0] = stack_top.as_u64();
+        tss_ref.rsp[0] = stack_top.as_u64();
 
         let gdt_descriptor = GdtDescriptor::new(
             (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,
@@ -350,8 +344,6 @@ pub fn init(stack_top: VirtAddr) {
         );
 
         load_gdt(&gdt_descriptor);
-
-        io::wrmsr(io::IA32_KERNEL_GSBASE, tss_ptr as *mut _ as u64);
 
         // Reload the GDT segments.
         load_cs(SegmentSelector::new(GdtEntryType::KERNEL_CODE, Ring::Ring0));

@@ -29,52 +29,42 @@ use core::alloc::Layout;
 
 use alloc::alloc::alloc_zeroed;
 
-use crate::arch::gdt::TASK_STATE_SEGMENT;
-use crate::mem::paging::VirtAddr;
+use crate::arch::gdt::{Kpcr, Tss};
 use crate::userland::scheduler;
 use crate::utils::io;
-use crate::utils::linker::LinkerSymbol;
 
-struct Tls {
-    sptr: VirtAddr,
+pub struct PerCpuData {
+    pub cpuid: usize,
 }
 
-impl Tls {
-    fn new(address: VirtAddr) -> &'static mut Tls {
-        unsafe { &mut *address.as_mut_ptr::<Tls>() }
-    }
-
-    fn setup(&mut self) {
-        self.sptr = VirtAddr::new(self as *mut _ as u64);
-
-        unsafe {
-            io::wrmsr(io::IA32_FS_BASE, self.sptr.as_u64());
-        }
-    }
+/// SAFETY: The GS base should point to the kernel PCR.
+pub fn get_cpuid() -> usize {
+    get_percpu().cpuid
 }
 
-/// Initialize support for the `#[thread_local]` attribute.
+/// SAFETY: The GS base should point to the kernel PCR.
+pub fn get_percpu() -> &'static mut PerCpuData {
+    unsafe { (&mut *(io::rdmsr(io::IA32_GS_BASE) as *mut Kpcr)).cpu_local }
+}
+
 pub fn init() {
-    extern "C" {
-        /// The starting byte of the thread data segment.
-        static __tdata_start: LinkerSymbol;
-        /// The ending byte of the thread data segment.
-        static __tdata_end: LinkerSymbol;
-    }
+    let size = core::mem::size_of::<PerCpuData>();
 
-    let total_size = unsafe { __tdata_end.as_usize() - __tdata_start.as_usize() };
-
-    let tls_layout = unsafe { Layout::from_size_align_unchecked(total_size + 8, 8) };
-    let tls_raw_ptr = unsafe { alloc_zeroed(tls_layout) };
-
+    // NOTE: Inside kernel space, the GS base will always point to the CPU local data and when
+    // jumping to userland `swapgs` is called making the GS base point to the userland TLS data.
     unsafe {
-        __tdata_start.as_ptr().copy_to(tls_raw_ptr, total_size);
+        let tss_layout = Layout::from_size_align_unchecked(
+            core::mem::size_of::<Kpcr>(),
+            core::mem::align_of::<Kpcr>(),
+        );
 
-        let tls = Tls::new(VirtAddr::new(tls_raw_ptr.add(total_size) as u64));
-        tls.setup();
+        let tss_ptr = alloc_zeroed(tss_layout) as *mut Tss;
+        io::wrmsr(io::IA32_GS_BASE, tss_ptr as u64);
 
-        // SAFETY: Safe to access thread local variables as at this point are accessible.
-        TASK_STATE_SEGMENT.set_kernel_fs(tls.sptr.as_u64());
+        let tls_layout = Layout::from_size_align_unchecked(size, 8);
+        let tls_raw_ptr = alloc_zeroed(tls_layout);
+
+        crate::arch::gdt::get_kpcr().cpu_local = &mut *(tls_raw_ptr as *mut PerCpuData);
     }
 }
 

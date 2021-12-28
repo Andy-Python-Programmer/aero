@@ -22,6 +22,7 @@
 pub const IA32_EFER: u32 = 0xc0000080;
 
 pub const IA32_FS_BASE: u32 = 0xC0000100;
+pub const IA32_GS_BASE: u32 = 0xc0000101;
 
 /// System Call Target Address (R/W).
 pub const IA32_STAR: u32 = 0xc0000081;
@@ -34,9 +35,6 @@ pub const IA32_FMASK: u32 = 0xc0000084;
 
 /// APIC Location and Status (R/W).
 pub const IA32_APIC_BASE: u32 = 0x1b;
-
-/// Swap Target of BASE Address of GS (R/W).
-pub const IA32_KERNEL_GSBASE: u32 = 0xc0000102;
 
 /// x2APIC Spurious Interrupt Vector register (R/W)
 pub const IA32_X2APIC_SIVR: u32 = 0x80f;

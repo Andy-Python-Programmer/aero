@@ -169,7 +169,7 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     // Get the CPU ID where this panic happened and if PANIC_HOOK_READY is false
     // then we cannot get the CPU where this panic happened.
     let cpu_id = if PANIC_HOOK_READY.load(Ordering::SeqCst) {
-        unsafe { crate::CPU_ID }
+        crate::tls::get_cpuid()
     } else {
         0x00
     };

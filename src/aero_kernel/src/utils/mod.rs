@@ -52,6 +52,26 @@ pub fn validate_str(ptr: *const u8, len: usize) -> Option<&'static str> {
     }
 }
 
+pub macro swapgs_iff_ring3_fast() {
+    "
+    // Check whether the last two bits RSP+8 (code segment) are equal to zero.
+    test QWORD PTR [rsp + 8], 0x3
+    // Skip the SWAPGS instruction if CS & 0b11 == 0b00.
+    jz 1f
+    swapgs
+    1:
+    "
+}
+
+pub macro swapgs_iff_ring3_fast_errorcode() {
+    "
+    test QWORD PTR [rsp + 16], 0x3
+    jz 1f
+    swapgs
+    1:
+    "
+}
+
 /// Push scratch registers.
 pub macro push_scratch() {
     "
@@ -117,29 +137,6 @@ pub macro pop_scratch() {
     pop rdx
     pop rcx
     pop rax
-    "
-}
-
-pub macro push_fs() {
-    "
-    /* 
-    * Push FS segment.
-    */
-    
-    push fs
-
-    mov rcx, 0x18
-    mov fs, cx
-    "
-}
-
-pub macro pop_fs() {
-    "
-    /* 
-    * Pop FS segment.
-    */
-
-    pop fs
     "
 }
 
@@ -262,12 +259,12 @@ impl<T> PerCpu<T> {
 
     #[inline]
     pub fn get(&self) -> &T {
-        unsafe { &*self.as_mut_ptr().offset(crate::CPU_ID as _) }
+        unsafe { &*self.as_mut_ptr().offset(crate::tls::get_cpuid() as _) }
     }
 
     #[inline]
     pub fn get_mut(&self) -> &mut T {
-        unsafe { &mut *self.as_mut_ptr().offset(crate::CPU_ID as _) }
+        unsafe { &mut *self.as_mut_ptr().offset(crate::tls::get_cpuid() as _) }
     }
 }
 

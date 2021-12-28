@@ -34,6 +34,8 @@ jump_userland_exec:
     pop rcx
     pop rsp
 
+    swapgs
+
     o64 sysret
 
 iretq_init:
@@ -66,14 +68,15 @@ sysret_fork_init:
     pop rcx     ; Restore rip
 
     push rdx
-    swapgs
+
     mov rdx, rsp
     add rdx, 16            ; Skip RDX and user RSP currently on the stack
     mov [gs:0x04], rdx     ; Stash kernel stack
-    swapgs
-    pop rdx
 
+    pop rdx
     pop rsp                ; Restore user stack
+
+    swapgs
 
     o64 sysret
 

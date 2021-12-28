@@ -23,20 +23,16 @@ global syscall_handler
 
 syscall_handler:
     swapgs
-
     mov [gs:0x1C], rsp  ; Temporarily save user stack
     mov rsp, [gs:0x04]   ; Set kernel stack
 
     sub rsp, 0x08
+
     push rax
     mov rax, qword [gs:0x1C]
     mov qword [gs:0x1C], 0
     mov [rsp + 0x08], rax
     pop rax
-
-    call restore_kernel_fs_base_locked
-
-    swapgs
 
     push rcx
     push r11
@@ -66,9 +62,6 @@ syscall_handler:
     cld
     call __inner_syscall  ; Invoke the inner syscall handler implementation
 
-    cli
-    call restore_user_tls
-
     pop rax
     mov cr2, rax
     pop rax
@@ -91,13 +84,12 @@ syscall_handler:
     pop rcx           ; Restore RIP
 
     push rdx
-    swapgs
     mov rdx, rsp
     add rdx, 16       ; Skip RDX and user RSP currently on the stack
     mov [gs:4], rdx   ; Stash kernel stack
-    swapgs
-    pop rdx
 
+    pop rdx
     pop rsp           ; Restore user stack
 
+    swapgs
     o64 sysret

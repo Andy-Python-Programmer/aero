@@ -31,7 +31,7 @@ use crate::userland::vm::{LoadedBinary, Vm};
 use crate::utils::StackHelper;
 
 use super::controlregs;
-use super::gdt::{Ring, TASK_STATE_SEGMENT};
+use super::gdt::Ring;
 use super::interrupts::IretRegisters;
 
 use crate::mem::AddressSpace;
@@ -350,7 +350,7 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
 
     unsafe {
         // Set the stack pointer in the TSS.
-        TASK_STATE_SEGMENT.rsp[0] = to.context_switch_rsp.as_u64();
+        super::gdt::get_task_state_segement().rsp[0] = to.context_switch_rsp.as_u64();
 
         task_spinup(&mut from.context, to.context.as_ref());
     }

@@ -107,9 +107,6 @@ static INITRD_MODULE: spin::Once<&StivaleModule> = spin::Once::new();
 
 const IO_VIRTUAL_BASE: VirtAddr = VirtAddr::new(0xffffff0000000000);
 
-#[thread_local]
-static mut CPU_ID: u64 = 0x00;
-
 fn aero_main() -> ! {
     // NOTE: In this function we only want to initialize essential serivces, including
     // the task scheduler. Rest of the initializing (including kernel modules) should go
@@ -184,9 +181,7 @@ extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
     arch::gdt::init(stack_top_addr);
     log::info!("AP{}: loaded GDT", ap_id);
 
-    unsafe {
-        CPU_ID = ap_id; // Set the local cpu id global to the AP id provided in the AP bootinfo
-    }
+    tls::get_percpu().cpuid = ap_id as usize; // Set the local cpu id global to the AP id provided in the AP bootinfo
 
     apic::mark_ap_ready(true);
 

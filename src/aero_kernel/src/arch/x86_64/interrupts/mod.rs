@@ -235,18 +235,18 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
 
         $crate::utils::intel_fn!(
             pub extern "asm" fn $name() {
+                $crate::utils::swapgs_iff_ring3_fast_errorcode!(),
+
                 // Move rax into code's place and put code in last instead to be
                 // compatible with interrupt stack.
                 "xchg [rsp], rax\n",
 
                 $crate::utils::push_scratch!(),
                 $crate::utils::push_preserved!(),
-                $crate::utils::push_fs!(),
 
                 // Push the error code.
                 "push rax\n",
 
-                "call restore_kernel_fs_base\n",
                 "call map_pti\n",
 
                 // Call the inner interrupt handler implementation.
@@ -258,10 +258,10 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
                 // Pop the error code.
                 "add rsp, 8\n",
 
-                $crate::utils::pop_fs!(),
                 $crate::utils::pop_preserved!(),
                 $crate::utils::pop_scratch!(),
 
+                $crate::utils::swapgs_iff_ring3_fast!(),
                 "iretq\n",
             }
         );
@@ -286,13 +286,13 @@ pub macro interrupt_stack(pub unsafe fn $name:ident($stack:ident: &mut Interrupt
 
         $crate::utils::intel_fn!(
             pub extern "asm" fn $name() {
+                $crate::utils::swapgs_iff_ring3_fast!(),
+
                 "push rax\n",
 
                 $crate::utils::push_scratch!(),
                 $crate::utils::push_preserved!(),
-                $crate::utils::push_fs!(),
 
-                "call restore_kernel_fs_base\n",
                 "call map_pti\n",
 
                 "mov rdi, rsp\n",
@@ -300,10 +300,10 @@ pub macro interrupt_stack(pub unsafe fn $name:ident($stack:ident: &mut Interrupt
 
                 "call unmap_pti\n",
 
-                $crate::utils::pop_fs!(),
                 $crate::utils::pop_preserved!(),
                 $crate::utils::pop_scratch!(),
 
+                $crate::utils::swapgs_iff_ring3_fast!(),
                 "iretq\n",
             }
         );
@@ -322,11 +322,12 @@ pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
 
         $crate::utils::intel_fn!(
             pub extern "asm" fn $name() {
+                $crate::utils::swapgs_iff_ring3_fast!(),
+
                 "push rax\n",
 
                 $crate::utils::push_scratch!(),
 
-                "call restore_kernel_fs_base\n",
                 "call map_pti\n",
 
                 "mov rdi, rsp\n",
@@ -336,6 +337,7 @@ pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
 
                 $crate::utils::pop_scratch!(),
 
+                $crate::utils::swapgs_iff_ring3_fast!(),
                 "iretq\n",
             }
         );

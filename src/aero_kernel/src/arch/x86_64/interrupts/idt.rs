@@ -151,7 +151,6 @@ impl IretRegisters {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct InterruptStack {
-    pub fs: u64,
     pub preserved: PreservedRegisters,
     pub scratch: ScratchRegisters,
     pub iret: IretRegisters,
