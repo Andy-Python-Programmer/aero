@@ -62,6 +62,9 @@ syscall_handler:
     cld
     call __inner_syscall  ; Invoke the inner syscall handler implementation
 
+    cli
+    call restore_user_tls
+
     pop rax
     mov cr2, rax
     pop rax
