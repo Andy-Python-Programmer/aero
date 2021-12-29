@@ -1,4 +1,4 @@
-From f767fbc1cfc0f7d41ab65d6a58d4c62bb2a47031 Mon Sep 17 00:00:00 2001
+From d98685f5aa30d6ed70efafbc63a4ff1be4d7c827 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -12,7 +12,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
  sysdeps/aero/generic/aero.cc                | 154 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 ++++
- sysdeps/aero/generic/filesystem.cc          | 113 ++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 117 +++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  42 ++++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -44,7 +44,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/aero/syscall.h         | 150 +++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 624 insertions(+), 7 deletions(-)
+ 39 files changed, 628 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -387,10 +387,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..94db192
+index 0000000..e769bd4
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,117 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -449,7 +449,7 @@ index 0000000..94db192
 +
 +	*fd = ret;
 +
-+	return 0; 
++	return 0;
 +}
 +
 +int sys_close(int fd) {
@@ -476,7 +476,7 @@ index 0000000..94db192
 +}
 +
 +int sys_isatty(int fd) {
-+	// The easiest way to check if a file descriptor is a TTY is to
++	// NOTE: The easiest way to check if a file descriptor is a TTY is to
 +	// do an ioctl of TIOCGWINSZ on it and see if it succeeds :^)
 +	struct winsize ws;
 +	long ret = syscall(SYS_IOCTL, fd, TIOCGWINSZ, (uintptr_t)&ws);
@@ -493,7 +493,11 @@ index 0000000..94db192
 +int sys_link(const char* srcpath, const char* destpath) UNIMPLEMENTED("sys_link")
 +int sys_unlink(const char* path) UNIMPLEMENTED("sys_unlink")
 +int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) UNIMPLEMENTED("sys_read_entries")
-+int sys_open_dir(const char* path, int* handle) UNIMPLEMENTED("sys_open_dir")
++
++int sys_open_dir(const char* path, int* handle) {
++	return sys_open(path, O_DIRECTORY, handle);
++}
++
 +int sys_rename(const char* path, const char* new_path) UNIMPLEMENTED("sys_rename")
 +int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) UNIMPLEMENTED("sys_readlink")
 +int sys_dup(int fd, int flags, int* newfd) UNIMPLEMENTED("sys_dup")
@@ -509,7 +513,7 @@ new file mode 100644
 index 0000000..e69de29
 diff --git a/sysdeps/aero/generic/thread.cc b/sysdeps/aero/generic/thread.cc
 new file mode 100644
-index 0000000..7e73cc6
+index 0000000..eeedeb7
 --- /dev/null
 +++ b/sysdeps/aero/generic/thread.cc
 @@ -0,0 +1,42 @@
@@ -544,8 +548,8 @@ index 0000000..7e73cc6
 +namespace mlibc {
 +    void* prepare_stack(void *entry, void *user_arg, void *tcb) {
 +        uintptr_t *sp = reinterpret_cast<uintptr_t *>(reinterpret_cast<uintptr_t>(
-+                mmap(nullptr, 0x1000000, 
-+                    PROT_READ | PROT_WRITE, 
++                mmap(nullptr, 0x1000000,
++                    PROT_READ | PROT_WRITE,
 +                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
 +                ) + 0x1000000);
 +
