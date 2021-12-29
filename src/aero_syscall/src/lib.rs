@@ -157,6 +157,7 @@ pub enum AeroSyscallError {
 }
 
 #[derive(Debug)]
+#[repr(usize)]
 pub enum SysFileType {
     File,
     Directory,
@@ -168,7 +169,7 @@ pub struct SysDirEntry {
     pub inode: usize,
     pub offset: usize,
     pub reclen: usize,
-    pub file_type: SysFileType,
+    pub file_type: usize,
     pub name: [u8; 0],
 }
 

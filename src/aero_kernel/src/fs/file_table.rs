@@ -118,11 +118,14 @@ impl FileHandle {
                 let reclen = core::mem::size_of::<SysDirEntry>() + entry.name().len();
                 let dir_offset = offset + reclen;
 
+                let file_type = entry.inode().metadata()?.file_type();
+                let file_type: aero_syscall::SysFileType = file_type.into();
+
                 let sysd = SysDirEntry {
                     inode: entry.inode().metadata()?.id(),
                     offset: dir_offset,
                     reclen,
-                    file_type: entry.inode().metadata()?.file_type().into(),
+                    file_type: file_type as usize,
                     name: [], // will be filled in later
                 };
 

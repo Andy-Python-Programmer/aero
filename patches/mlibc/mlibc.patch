@@ -1,4 +1,4 @@
-From d98685f5aa30d6ed70efafbc63a4ff1be4d7c827 Mon Sep 17 00:00:00 2001
+From a09ed692b02425963217040dc0397e4d3f34b958 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -10,11 +10,11 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  meson.build                                 |   4 +
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 154 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 154 +++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 ++++
- sysdeps/aero/generic/filesystem.cc          | 117 +++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 161 ++++++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
- sysdeps/aero/generic/thread.cc              |  42 ++++++
+ sysdeps/aero/generic/thread.cc              |  42 +++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
  sysdeps/aero/include/abi-bits/abi.h         |   1 +
  sysdeps/aero/include/abi-bits/auxv.h        |   1 +
@@ -41,10 +41,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 150 +++++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 150 ++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 628 insertions(+), 7 deletions(-)
+ 39 files changed, 672 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -387,10 +387,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..e769bd4
+index 0000000..5a2f9eb
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,117 @@
+@@ -0,0 +1,161 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -492,7 +492,51 @@ index 0000000..e769bd4
 +int sys_rmdir(const char* path) UNIMPLEMENTED("sys_rmdir")
 +int sys_link(const char* srcpath, const char* destpath) UNIMPLEMENTED("sys_link")
 +int sys_unlink(const char* path) UNIMPLEMENTED("sys_unlink")
-+int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) UNIMPLEMENTED("sys_read_entries")
++
++struct aero_dir_entry {
++	size_t inode;
++	size_t offset;
++	size_t reclen;
++	size_t filetyp;
++	char name[];
++} __attribute__((packed));
++
++int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) {
++	struct aero_dir_entry entry;
++
++	auto result = syscall(SYS_GETDENTS, handle, &entry, sizeof(struct aero_dir_entry));
++
++	// Check if we got an error.
++	if (result < 0) {
++		*bytes_read = 0;
++		return -result;
++	}
++
++	// Nothing to read.
++	if (result == 0) {
++		*bytes_read = 0;
++		return 0;
++	}
++
++	struct dirent *dirent = (struct dirent *)buffer;
++
++	dirent->d_ino = entry.inode;
++	dirent->d_off = entry.offset;
++	dirent->d_reclen = entry.reclen;
++	dirent->d_type = entry.filetyp;
++
++	// The reclen is the size of the dirent struct, plus the size of the name.
++	auto name_size = entry.reclen - sizeof(struct aero_dir_entry);
++
++	if (name_size > 255) {
++		name_size = 255;
++	}
++
++	memcpy(dirent->d_name, entry.name, name_size);
++	*bytes_read = entry.reclen;
++
++	return 0;
++}
 +
 +int sys_open_dir(const char* path, int* handle) {
 +	return sys_open(path, O_DIRECTORY, handle);
