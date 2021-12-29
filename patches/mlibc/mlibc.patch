@@ -1,4 +1,4 @@
-From a09ed692b02425963217040dc0397e4d3f34b958 Mon Sep 17 00:00:00 2001
+From 3b8c5f5a35f2c05c9f50c2180aa6e70ebd1af370 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -12,7 +12,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
  sysdeps/aero/generic/aero.cc                | 154 +++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 ++++
- sysdeps/aero/generic/filesystem.cc          | 161 ++++++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 162 ++++++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  42 +++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -44,7 +44,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/aero/syscall.h         | 150 ++++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 672 insertions(+), 7 deletions(-)
+ 39 files changed, 673 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -387,10 +387,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..5a2f9eb
+index 0000000..318181c
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,161 @@
+@@ -0,0 +1,162 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -448,7 +448,6 @@ index 0000000..5a2f9eb
 +		return -ret;
 +
 +	*fd = ret;
-+
 +	return 0;
 +}
 +
@@ -503,7 +502,6 @@ index 0000000..5a2f9eb
 +
 +int sys_read_entries(int handle, void *buffer, size_t max_size, size_t *bytes_read) {
 +	struct aero_dir_entry entry;
-+
 +	auto result = syscall(SYS_GETDENTS, handle, &entry, sizeof(struct aero_dir_entry));
 +
 +	// Check if we got an error.
@@ -517,6 +515,9 @@ index 0000000..5a2f9eb
 +		*bytes_read = 0;
 +		return 0;
 +	}
++
++	// Check if we have enough space.
++	__ensure(max_size >= entry.reclen);
 +
 +	struct dirent *dirent = (struct dirent *)buffer;
 +
