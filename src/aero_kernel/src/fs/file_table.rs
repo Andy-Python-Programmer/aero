@@ -183,6 +183,11 @@ impl FileTable {
         None
     }
 
+    pub fn deep_clone(&self) -> Self {
+        let files = self.0.read();
+        Self(RwLock::new(files.clone()))
+    }
+
     pub fn open_file(&self, dentry: DirCacheItem, mut flags: OpenFlags) -> super::Result<usize> {
         let mut files = self.0.write();
 

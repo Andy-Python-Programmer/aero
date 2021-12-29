@@ -269,7 +269,7 @@ impl Task {
             zombies: Zombies::new(),
 
             arch_task,
-            file_table: self.file_table.clone(),
+            file_table: Arc::new(self.file_table.deep_clone()),
             vm: Arc::new(Vm::new()),
             state: AtomicU8::new(TaskState::Runnable as _),
 
