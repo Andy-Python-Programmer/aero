@@ -331,11 +331,13 @@ def prepare_iso(args, kernel_bin, user_bins):
             os.makedirs(os.path.dirname(dest_file), exist_ok=True)
             shutil.copy(file, dest)
 
-    if os.path.exists(SYSROOT_DIR):
-        bin_src = os.path.join(SYSROOT_DIR, 'system-root/usr/bin')
-        lib_src = os.path.join(SYSROOT_DIR, 'system-root/usr/lib')
+    bin_src = os.path.join(SYSROOT_DIR, 'system-root/usr/bin')
+    lib_src = os.path.join(SYSROOT_DIR, 'system-root/usr/lib')
 
+    if os.path.exists(bin_src):
         cp(bin_src, initramfs_bin)
+
+    if os.path.exists(lib_src):
         cp(lib_src, initramfs_lib)
 
     for file in user_bins:
