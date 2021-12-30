@@ -1,4 +1,4 @@
-From 3b8c5f5a35f2c05c9f50c2180aa6e70ebd1af370 Mon Sep 17 00:00:00 2001
+From 7c1a6f64e8f2e9148359f64ed1847302ef860e67 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -10,9 +10,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  meson.build                                 |   4 +
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 154 +++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 154 +++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 ++++
- sysdeps/aero/generic/filesystem.cc          | 162 ++++++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 174 ++++++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  42 +++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -41,10 +41,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 150 ++++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 150 +++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
- sysdeps/aero/meson.build                    |  60 ++++++++
- 39 files changed, 673 insertions(+), 7 deletions(-)
+ sysdeps/aero/meson.build                    |  60 +++++++
+ 39 files changed, 685 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -387,10 +387,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..318181c
+index 0000000..1c7042e
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,174 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -460,8 +460,20 @@ index 0000000..318181c
 +	return 0;
 +}
 +
-+int sys_access(const char* filename, int mode) UNIMPLEMENTED("sys_access")
-+int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) UNIMPLEMENTED("sys_stat")
++int sys_access(const char* filename, int mode) {
++	int fd;
++	auto result = sys_open(filename, O_RDWR, &fd);
++
++	if (result < 0)
++		return -result; 
++
++	sys_close(fd);
++	return 0;
++}
++
++int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
++	return 0;
++}
 +
 +int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 +	long ret = syscall(SYS_IOCTL, (uint64_t)fd, request, (uintptr_t)arg);
