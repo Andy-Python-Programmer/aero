@@ -1,4 +1,4 @@
-From 45873cc3db982305bfbc1c9eb424a21bf0d58a3e Mon Sep 17 00:00:00 2001
+From 7ec12e121ba996b4fb3a6bc3a4fe004acb4df2d9 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -8,7 +8,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  .gitignore                                  |   1 +
  abis/aero/auxv.h                            |  13 ++
  meson.build                                 |   4 +
- options/ansi/generic/stdlib-stubs.cpp       |   2 +
+ options/ansi/generic/stdlib-stubs.cpp       |   3 +
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
  sysdeps/aero/generic/aero.cc                | 161 ++++++++++++++++++
@@ -45,7 +45,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/aero/syscall.h         | 151 +++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 +++++++
- 40 files changed, 693 insertions(+), 7 deletions(-)
+ 40 files changed, 694 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -128,14 +128,15 @@ index 55e9070..8b3f4ba 100644
  	# TODO: Adopt the include_directories() commands from the managarm meson.build.
  	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
-index 347c659..b7af086 100644
+index 347c659..8e97b26 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
 +++ b/options/ansi/generic/stdlib-stubs.cpp
-@@ -205,6 +205,8 @@ void *calloc(size_t count, size_t size) {
+@@ -205,6 +205,9 @@ void *calloc(size_t count, size_t size) {
  // realloc() is provided by the platform
  
  void abort(void) {
-+	sys_exit(1);
++	// FIXME: Remove this when we have signals implemented in the aero kernel.
++	mlibc::sys_exit(1);
 +
  	sigset_t set;
  	sigemptyset(&set);
