@@ -53,6 +53,7 @@
 //! | 29     | gettid                  |
 //! | 30     | gettime                 |
 //! | 31     | sleep                   |
+//! | 32     | access                  |
 
 use core::mem::MaybeUninit;
 

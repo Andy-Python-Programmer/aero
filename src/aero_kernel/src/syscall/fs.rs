@@ -19,7 +19,7 @@
 
 use aero_syscall::{AeroSyscallError, OpenFlags};
 
-use crate::fs::{self, lookup_path};
+use crate::fs::{self, lookup_path, LookupMode};
 use crate::userland::scheduler;
 
 use crate::fs::Path;
@@ -69,9 +69,15 @@ pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, A
     }
 
     let path = validate_str(path as *const u8, len).ok_or(AeroSyscallError::EINVAL)?;
-
     let path = Path::new(path);
-    let inode = fs::lookup_path(path)?;
+
+    let mut lookup_mode = LookupMode::None;
+
+    if flags.contains(OpenFlags::O_CREAT) {
+        lookup_mode = LookupMode::Create;
+    }
+
+    let inode = fs::lookup_path_with_mode(path, lookup_mode)?;
 
     if flags.contains(OpenFlags::O_DIRECTORY) && !inode.inode().metadata()?.is_directory() {
         return Err(AeroSyscallError::ENOTDIR);

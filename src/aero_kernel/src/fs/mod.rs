@@ -250,6 +250,16 @@ pub fn lookup_path_with(
     Ok(cwd)
 }
 
+pub fn lookup_path_with_mode(path: &Path, mode: LookupMode) -> Result<DirCacheItem> {
+    let cwd = if !path.is_absolute() {
+        scheduler::get_scheduler().current_task().get_cwd_dirent()
+    } else {
+        root_dir().clone()
+    };
+
+    lookup_path_with(cwd, path, mode)
+}
+
 pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
     let cwd = if !path.is_absolute() {
         scheduler::get_scheduler().current_task().get_cwd_dirent()
