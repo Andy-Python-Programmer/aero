@@ -46,6 +46,13 @@ impl log::Log for AeroLogger {
         if self.enabled(record.metadata()) {
             use crate::drivers::uart_16550::*;
 
+            if let Some(pp) = record.module_path() {
+                // Only log the vm logs if the vmlog feature is enabled ;^).
+                if pp == "aero_kernel::userland::vm" && !cfg!(feature = "vmlog") {
+                    return;
+                }
+            }
+
             let level = record.level();
             let spaces = MAX_LOG_LEVEL_SPACE - level.as_str().len();
             let rendy_dbg = RENDY_DEBUG.load(Ordering::Relaxed);

@@ -17,6 +17,7 @@ ci = []
 # kernel memory leaks in a way similar to a tracing
 # garbage collector.
 kmemleak = []
+vmlog = []
 
 default = ["round-robin"]
 
