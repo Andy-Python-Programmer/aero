@@ -49,3 +49,4 @@ pub const SYS_SEEK: usize = 28;
 pub const SYS_GETTID: usize = 29;
 pub const SYS_GETTIME: usize = 30;
 pub const SYS_SLEEP: usize = 31;
+pub const SYS_ACCESS: usize = 32;

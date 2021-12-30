@@ -19,7 +19,7 @@
 
 use aero_syscall::{AeroSyscallError, OpenFlags};
 
-use crate::fs;
+use crate::fs::{self, lookup_path};
 use crate::userland::scheduler;
 
 use crate::fs::Path;
@@ -224,4 +224,23 @@ pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, AeroSyscal
         .ok_or(AeroSyscallError::EBADFD)?;
 
     Ok(handle.seek(offset as isize, aero_syscall::SeekWhence::from(whence))?)
+}
+
+pub fn access(
+    fd: usize,
+    path: usize,
+    path_size: usize,
+    _mode: usize,
+    _flags: usize,
+) -> Result<usize, AeroSyscallError> {
+    if fd as isize == aero_syscall::AT_FDCWD {
+        let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+        let path = Path::new(path_str);
+
+        lookup_path(path)?;
+        Ok(0x00)
+    } else {
+        // TODO: Implement atfd access
+        unimplemented!()
+    }
 }

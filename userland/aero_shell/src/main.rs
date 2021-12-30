@@ -117,7 +117,15 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 let child = sys_fork()?;
 
                 if child == 0 {
-                    if sys_exec(cmd, &[cmd], &[]).is_err() {
+                    let args = args.collect::<Vec<_>>();
+                    let mut argv = Vec::new();
+
+                    argv.push(cmd);
+                    argv.extend(args);
+
+                    let argv = argv.as_slice();
+
+                    if sys_exec(cmd, argv, &[]).is_err() {
                         println!("{}: command not found", cmd);
                         sys_exit(1);
                     }

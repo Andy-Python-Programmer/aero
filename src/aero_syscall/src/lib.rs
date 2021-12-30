@@ -426,6 +426,19 @@ pub fn sys_shutdown() -> ! {
     unreachable!()
 }
 
+pub fn sys_access(fd: usize, path: &str) -> Result<usize, AeroSyscallError> {
+    let value = syscall5(
+        prelude::SYS_ACCESS,
+        fd,
+        path.as_ptr() as usize,
+        path.len(),
+        0,
+        0,
+    );
+
+    isize_as_syscall_result(value as _)
+}
+
 pub fn sys_waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_WAITPID,
