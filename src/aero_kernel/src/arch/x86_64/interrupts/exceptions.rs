@@ -109,12 +109,23 @@ interrupt_error_stack!(
 
         unwind::prepare_panic();
 
-        log::error!(
-            "EXCEPTION: Page Fault\n\nAccessed Address: {:?}\nError: {:?}\nStack: {:#x?}",
-            accessed_address,
-            reason,
-            stack.stack,
-        );
+        log::error!("EXCEPTION: Page Fault");
+        log::error!("");
+        log::error!("Accessed Address: {:#x}", accessed_address);
+        log::error!("Error: {:?}", reason);
+        log::error!("");
+
+        if stack.stack.iret.is_user() {
+            let task = scheduler::get_scheduler().current_task();
+
+            log::error!(
+                "Task Info: TID={}, PID={}",
+                task.tid().as_usize(),
+                task.pid().as_usize()
+            );
+        }
+
+        log::error!("Stack: {:#x?}", stack);
 
         unwind::unwind_stack_trace();
 
