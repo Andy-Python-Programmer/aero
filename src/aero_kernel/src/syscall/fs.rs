@@ -18,7 +18,10 @@
  */
 
 use aero_syscall::{AeroSyscallError, OpenFlags};
+use alloc::sync::Arc;
 
+use crate::fs::inode::DirEntry;
+use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
 use crate::userland::scheduler;
 
@@ -230,6 +233,39 @@ pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, AeroSyscal
         .ok_or(AeroSyscallError::EBADFD)?;
 
     Ok(handle.seek(offset as isize, aero_syscall::SeekWhence::from(whence))?)
+}
+
+pub fn pipe(fds: usize, flags: usize) -> Result<usize, AeroSyscallError> {
+    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+    let fds = validate_slice_mut(fds as *mut usize, 2).ok_or(AeroSyscallError::EINVAL)?;
+
+    let pipe = Pipe::new();
+
+    let entry = DirEntry::from_inode(pipe);
+
+    let flags_1 = OpenFlags::O_RDONLY | (flags & OpenFlags::O_CLOEXEC);
+    let flags_2 = OpenFlags::O_WRONLY | (flags & OpenFlags::O_CLOEXEC);
+
+    let current_task = scheduler::get_scheduler().current_task();
+
+    let fd1 = current_task.file_table.open_file(entry.clone(), flags_1)?;
+    let fd2 = current_task.file_table.open_file(entry, flags_2);
+
+    // If there was an error in opening the second file descriptor,
+    // then close the first file descriptor. Just to be safe :^)
+    let fd2 = match fd2 {
+        Err(err) => {
+            current_task.file_table.close_file(fd1);
+            return Err(err.into());
+        }
+
+        Ok(fd2) => fd2,
+    };
+
+    fds[0] = fd1;
+    fds[1] = fd2;
+
+    Ok(0x00)
 }
 
 pub fn access(

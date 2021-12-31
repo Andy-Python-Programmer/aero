@@ -1,4 +1,4 @@
-From 7ec12e121ba996b4fb3a6bc3a4fe004acb4df2d9 Mon Sep 17 00:00:00 2001
+From 2d90688f3e8c730bc7d73bfbf82932c964696b16 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -11,9 +11,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/ansi/generic/stdlib-stubs.cpp       |   3 +
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 161 ++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 170 ++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 ++++
- sysdeps/aero/generic/filesystem.cc          | 172 ++++++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 180 ++++++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  42 +++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -42,10 +42,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 151 +++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 152 +++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
  sysdeps/aero/meson.build                    |  60 +++++++
- 40 files changed, 694 insertions(+), 7 deletions(-)
+ 40 files changed, 712 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -204,10 +204,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..9ced0a0
+index 0000000..0b12f3c
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,161 @@
+@@ -0,0 +1,170 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -351,7 +351,16 @@ index 0000000..9ced0a0
 +	__builtin_unreachable();
 +}
 +
-+int sys_waitpid(pid_t pid, int *status, int flags, pid_t *ret_pid) UNIMPLEMENTED("sys_waitpid")
++int sys_waitpid(pid_t pid, int *status, int flags, pid_t *ret_pid) {
++    auto result = syscall(SYS_WAITPID, (uint64_t)pid, (uint64_t)status, (uint64_t)flags);
++
++    if (result < 0)
++        return -result;
++
++    *ret_pid = result;
++    return 0;
++}
++
 +int sys_fork(pid_t *child) {
 +    ssize_t ret = syscall(SYS_FORK);
 +
@@ -409,10 +418,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..1a6eaac
+index 0000000..403b10d
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,180 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -583,7 +592,15 @@ index 0000000..1a6eaac
 +int sys_pselect(int nfds, fd_set* readfds, fd_set* writefds,
 +				fd_set *exceptfds, const struct timespec* timeout, const sigset_t* sigmask, int *num_events) UNIMPLEMENTED("sys_pselect")
 +int sys_chmod(const char *pathname, mode_t mode) UNIMPLEMENTED("sys_chmod")
-+int sys_pipe(int *fds, int flags) UNIMPLEMENTED("sys_pipe")
++
++int sys_pipe(int *fds, int flags) {
++	auto result = syscall(SYS_PIPE, (uintptr_t)fds, flags);
++
++	if (result < 0)
++		return -result;
++
++	return 0;
++}
 +} // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cc b/sysdeps/aero/generic/sockets.cc
 new file mode 100644
@@ -852,10 +869,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..af2e9d4
+index 0000000..40aac19
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,151 @@
+@@ -0,0 +1,152 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -895,6 +912,7 @@ index 0000000..af2e9d4
 +#define SYS_GETTIME     30
 +#define SYS_SLEEP       31
 +#define SYS_ACCESS      32
++#define SYS_PIPE        33
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.

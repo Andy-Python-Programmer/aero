@@ -39,6 +39,7 @@ pub mod devfs;
 pub mod file_table;
 pub mod initramfs;
 pub mod inode;
+pub mod pipe;
 pub mod ramfs;
 
 static ROOT_FS: Once<Arc<RamFs>> = Once::new();

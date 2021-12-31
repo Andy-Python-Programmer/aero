@@ -33,6 +33,7 @@ use crate::utils::Downcastable;
 
 use super::cache;
 use super::cache::Cacheable;
+use super::cache::CachedINode;
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::devfs::DevINode;
 use super::{FileSystem, FileSystemError, Result};
@@ -270,6 +271,28 @@ impl DirEntry {
 
             cache_marker: DIR_CACHE_MARKER.fetch_add(1, Ordering::SeqCst),
             filesystem: Once::new(),
+        })
+    }
+
+    pub fn from_inode(inode: Arc<dyn INodeInterface>) -> DirCacheItem {
+        let icache = cache::icache();
+        let inode = icache.make_item_no_cache(CachedINode::new(inode));
+
+        cache::dcache().make_item_no_cache(Self {
+            data: Mutex::new(DirProtectedData {
+                parent: None,
+
+                name: String::new(),
+                inode: inode.clone(),
+            }),
+
+            filesystem: if let Some(fs) = inode.weak_filesystem() {
+                Once::initialized(fs)
+            } else {
+                Once::new()
+            },
+
+            cache_marker: 0,
         })
     }
 

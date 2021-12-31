@@ -554,3 +554,8 @@ pub fn sys_sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
     let value = syscall1(prelude::SYS_SLEEP, timespec as *const _ as usize);
     isize_as_syscall_result(value as _)
 }
+
+pub fn sys_pipe(fds: &mut [usize; 2], flags: OpenFlags) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_PIPE, fds.as_ptr() as usize, flags.bits());
+    isize_as_syscall_result(value as _)
+}

@@ -17,8 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod readline;
-
 use aero_syscall::*;
 
 const HOSTNAME: &str = "root@aero";
@@ -98,9 +96,40 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     println!("{}", entry);
                 }
             }
+
             "uwutest" => {
-                let _ = readline::readline()?;
+                let mut pipe = [0usize; 2];
+                sys_pipe(&mut pipe, OpenFlags::empty())?;
+
+                let child = sys_fork()?;
+
+                if child == 0 {
+                    sys_close(pipe[0])?; // close the read end
+
+                    let mut buffer = [0; 1024];
+                    let length = sys_read(0, &mut buffer)?;
+
+                    sys_write(pipe[1], &buffer[0..length])?;
+
+                    sys_close(pipe[1])?; // close the write end
+                    sys_exit(0)
+                } else {
+                    let mut status = 0;
+                    sys_waitpid(child, &mut status, 0)?;
+
+                    sys_close(pipe[1])?; // close the write end
+
+                    let mut buffer = [0; 1024];
+                    let length = sys_read(pipe[0], &mut buffer)?;
+
+                    println!("{}", unsafe {
+                        core::str::from_utf8_unchecked(&buffer[0..length])
+                    });
+
+                    sys_close(pipe[0])?; // close the read end
+                }
             }
+
             "pid" => {
                 println!("{}", sys_getpid()?);
             }
