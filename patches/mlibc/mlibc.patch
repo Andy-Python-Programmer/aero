@@ -1,4 +1,4 @@
-From 2d90688f3e8c730bc7d73bfbf82932c964696b16 Mon Sep 17 00:00:00 2001
+From 5a2e83b82f7d331f3c954c72466cfdc558c924a7 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -11,11 +11,11 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/ansi/generic/stdlib-stubs.cpp       |   3 +
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 170 ++++++++++++++++++
- sysdeps/aero/generic/entry.cc               |  32 ++++
- sysdeps/aero/generic/filesystem.cc          | 180 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 223 ++++++++++++++++++++
+ sysdeps/aero/generic/entry.cc               |  32 +++
+ sysdeps/aero/generic/filesystem.cc          | 180 ++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
- sysdeps/aero/generic/thread.cc              |  42 +++++
+ sysdeps/aero/generic/thread.cc              |  42 ++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
  sysdeps/aero/include/abi-bits/abi.h         |   1 +
  sysdeps/aero/include/abi-bits/auxv.h        |   1 +
@@ -42,10 +42,11 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 152 +++++++++++++++++
- sysdeps/aero/include/mlibc/thread-entry.hpp |  10 ++
- sysdeps/aero/meson.build                    |  60 +++++++
- 40 files changed, 712 insertions(+), 7 deletions(-)
+ sysdeps/aero/include/aero/syscall.h         | 152 +++++++++++++
+ sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
+ sysdeps/aero/meson.build                    |  60 ++++++
+ sysdeps/dripos/generic/generic.cpp          |   3 +
+ 41 files changed, 768 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -204,10 +205,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..0b12f3c
+index 0000000..d84c5e6
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,170 @@
+@@ -0,0 +1,223 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -217,10 +218,40 @@ index 0000000..0b12f3c
 +#include <mlibc/thread-entry.hpp>
 +#include <errno.h>
 +
++#include <frg/vector.hpp>
++#include <mlibc/allocator.hpp>
++
 +#define ARCH_SET_GS		0x1001
 +#define ARCH_SET_FS		0x1002
 +#define ARCH_GET_FS		0x1003
 +#define ARCH_GET_GS		0x1004
++
++struct Slice {
++    void* ptr;
++    uint64_t len;
++};
++
++static frg::vector<Slice, MemoryAllocator> create_slice(char *const arg[]) {
++    if (arg == nullptr) {
++        return frg::vector<Slice, MemoryAllocator> { getAllocator() };
++    }
++
++    auto len = 0;
++
++    while (arg[len] != nullptr) {
++        len += 1;
++    }
++
++    frg::vector<Slice, MemoryAllocator> params { getAllocator() };
++    params.resize(len);
++
++    for (size_t i = 0; i < len; ++i) {
++        params[i].ptr = (void*)arg[i];
++        params[i].len = strlen(arg[i]);
++    }
++
++    return params;
++}
 +
 +namespace mlibc {
 +int sys_futex_tid() {
@@ -362,18 +393,41 @@ index 0000000..0b12f3c
 +}
 +
 +int sys_fork(pid_t *child) {
-+    ssize_t ret = syscall(SYS_FORK);
++    auto result = syscall(SYS_FORK);
 +
-+    if (ret < 0) {
-+        return -ret;
-+    }
++    if (result < 0)
++        return -result;
 +
-+    *child = ret;
-+
++    *child = result;
 +    return 0;
 +}
 +
-+int sys_execve(const char *path, char *const argv[], char *const envp[]) UNIMPLEMENTED("sys_execve")
++int sys_execve(const char *path, char *const argv[], char *const envp[]) {
++    auto envv_slice = create_slice(envp);
++    auto argv_slice = create_slice(argv);
++
++    auto path_ptr = (uintptr_t)path;
++    auto path_len = strlen(path);
++
++    auto result = syscall(
++        SYS_EXEC,
++
++        path_ptr,
++        path_len,
++
++        argv_slice.data(), 
++        argv_slice.size(), 
++        
++        envv_slice.data(), 
++        envv_slice.size()
++    );
++
++    if (result < 0)
++        return -result;
++
++    __builtin_unreachable();
++}
++
 +int sys_getentropy(void *buffer, size_t length) UNIMPLEMENTED("sys_getentropy")
 +
 +#endif
@@ -1107,6 +1161,20 @@ index 0000000..d3dbb22
 +		install_dir: get_option('libdir')
 +	)
 +endif
+diff --git a/sysdeps/dripos/generic/generic.cpp b/sysdeps/dripos/generic/generic.cpp
+index 124b860..7520c15 100644
+--- a/sysdeps/dripos/generic/generic.cpp
++++ b/sysdeps/dripos/generic/generic.cpp
+@@ -7,6 +7,9 @@
+ #include <fcntl.h>
+ #include <limits.h>
+ 
++#include <frg/vector.hpp>
++#include <mlibc/allocator.hpp>
++
+ namespace mlibc {
+ 
+ void sys_libc_log(const char *message) {
 -- 
 2.25.1
 
