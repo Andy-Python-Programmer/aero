@@ -213,8 +213,6 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         }
     };
 
-    log::debug!("{:?}", result);
-
     stack.rax = aero_syscall::syscall_result_as_usize(result) as _;
 }
 
