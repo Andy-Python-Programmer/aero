@@ -208,18 +208,27 @@ impl INodeInterface for LockedRamINode {
         let this = self.0.read();
 
         match &this.contents {
+            // NOTE: We cannot just straight way copy the buffer using the `copy_from_slice` method
+            // since the buffer can be larger than the static buffer causing it to panic since
+            // it expects the buffers to be the same size.
             FileContents::Content(vec) => {
                 let vec = vec.lock();
 
                 let size = core::cmp::min(buffer.len(), vec.len() - offset);
-                buffer.copy_from_slice(&vec.as_slice()[offset..offset + size]);
+
+                for (i, b) in (&vec.as_slice()[offset..offset + size]).iter().enumerate() {
+                    buffer[i] = *b;
+                }
 
                 Ok(size)
             }
 
             FileContents::StaticContent(static_buffer) => {
                 let size = core::cmp::min(buffer.len(), static_buffer.len() - offset);
-                buffer.copy_from_slice(&static_buffer[offset..offset + size]);
+
+                for (i, b) in (&static_buffer[offset..offset + size]).iter().enumerate() {
+                    buffer[i] = *b;
+                }
 
                 Ok(size)
             }

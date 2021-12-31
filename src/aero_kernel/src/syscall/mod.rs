@@ -54,6 +54,7 @@
 //! | 30     | gettime                 |
 //! | 31     | sleep                   |
 //! | 32     | access                  |
+//! | 33     | pipe                    |
 
 use core::mem::MaybeUninit;
 
@@ -211,6 +212,8 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
             Err(AeroSyscallError::ENOSYS)
         }
     };
+
+    log::debug!("{:?}", result);
 
     stack.rax = aero_syscall::syscall_result_as_usize(result) as _;
 }

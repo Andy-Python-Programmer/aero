@@ -18,7 +18,6 @@
  */
 
 use aero_syscall::{AeroSyscallError, OpenFlags};
-use alloc::sync::Arc;
 
 use crate::fs::inode::DirEntry;
 use crate::fs::pipe::Pipe;
