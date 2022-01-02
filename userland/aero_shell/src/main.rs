@@ -176,10 +176,14 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
 
                     let argv = argv.as_slice();
 
-                    if sys_exec(cmd, argv, &[]).is_err() {
-                        println!("{}: command not found", cmd);
-                        sys_exit(1);
+                    match sys_exec(cmd, argv, &[]) {
+                        Ok(_) => core::unreachable!(),
+                        Err(AeroSyscallError::EISDIR) => println!("{}: is a directory", cmd),
+                        Err(AeroSyscallError::ENOENT) => println!("{}: command not found", cmd),
+                        Err(err) => println!("{}: {:?}", cmd, err),
                     }
+
+                    sys_exit(1);
                 } else {
                     // Wait for the child
                     let mut status = 0;

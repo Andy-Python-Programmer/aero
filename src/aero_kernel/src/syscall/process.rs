@@ -114,6 +114,10 @@ pub fn exec(
 
     let executable = fs::lookup_path(path)?;
 
+    if executable.inode().metadata()?.is_directory() {
+        return Err(AeroSyscallError::EISDIR);
+    }
+
     // NOTE: Neither args nor envs should be used after this point, the kernel
     // now has owned copies in args and environment variables.
     let argv = if argc > 0 {
