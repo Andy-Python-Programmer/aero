@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2021 The Aero Project Developers.
+# Copyright (C) 2021-2022 The Aero Project Developers.
 #
 # This file is part of The Aero Project.
 #

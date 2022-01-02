@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Aero Project Developers.
+ * Copyright (C) 2021-2022 The Aero Project Developers.
  *
  * This file is part of The Aero Project.
  *
@@ -21,7 +21,10 @@ use alloc::sync::Arc;
 
 use crate::fs::{FileSystemError, Path};
 
-use super::{cache::DirCacheItem, ramfs::RamFs, root_dir, FileSystem, Result, MOUNT_MANAGER};
+use super::cache::DirCacheItem;
+use super::ramfs::RamFs;
+
+use super::{root_dir, FileSystem, Result, MOUNT_MANAGER};
 
 lazy_static::lazy_static! {
     static ref INIT_FILESYSTEM: Arc<InitRamFs> = InitRamFs::new();
