@@ -1,0 +1,81 @@
+From d413109d47cba4c05c48ff959850bef39bd1630e Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sun, 2 Jan 2022 13:01:40 +1100
+Subject: [PATCH] config: add aero target
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ config.sub   |  2 +-
+ configure.ac | 15 ++++++++++++++-
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/config.sub b/config.sub
+index ba37cf9..cea962e 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1394,7 +1394,7 @@ case $os in
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+ 	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* \
+ 	      | -onefs* | -tirtos* | -phoenix* | -fuchsia* | -redox* | -bme* \
+-	      | -midnightbsd*)
++	      | -midnightbsd* | -aero*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)
+diff --git a/configure.ac b/configure.ac
+index e57ef7c..d686b36 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -379,6 +379,9 @@ then
+ 	*-*-cygwin*)
+ 		ac_sys_system=Cygwin
+ 		;;
++	*-*-aero*)
++		ac_sys_system=Aero
++		;;
+ 	*-*-vxworks*)
+ 	    ac_sys_system=VxWorks
+ 	    ;;
+@@ -431,6 +434,9 @@ if test "$cross_compiling" = yes; then
+ 	*-*-vxworks*)
+ 		_host_cpu=$host_cpu
+ 		;;
++	*-*-aero*)
++		_host_cpu=$host_cpu
++		;;
+ 	*)
+ 		# for now, limit cross builds to known configurations
+ 		MACHDEP="unknown"
+@@ -2641,6 +2647,9 @@ then
+ 	CYGWIN*)
+ 		LDSHARED="gcc -shared -Wl,--enable-auto-image-base"
+ 		LDCXXSHARED="g++ -shared -Wl,--enable-auto-image-base";;
++	Aero*)
++		LDSHARED='$(CC) -shared'
++		LDCXXSHARED='$(CXX) -shared';;
+ 	*)	LDSHARED="ld";;
+ 	esac
+ fi
+@@ -2677,7 +2686,9 @@ then
+ 		else CCSHARED="-Kpic -belf"
+ 		fi;;
+ 	VxWorks*)
+-		CCSHARED="-fpic -D__SO_PICABILINUX__  -ftls-model=global-dynamic"
++		CCSHARED="-fpic -D__SO_PICABILINUX__  -ftls-model=global-dynamic";;
++	Aero*)
++		CCSHARED="-fPIC";;
+ 	esac
+ fi
+ AC_MSG_RESULT($CCSHARED)
+@@ -2738,6 +2749,8 @@ then
+ 		LINKFORSHARED='-Wl,-E -N 2048K';;
+ 	VxWorks*)
+ 		LINKFORSHARED='--export-dynamic';;
++	Aero*)
++		LINKFORSHARED='-export-dynamic';;
+ 	esac
+ fi
+ AC_MSG_RESULT($LINKFORSHARED)
+-- 
+2.25.1
+
