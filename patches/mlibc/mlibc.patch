@@ -1,4 +1,4 @@
-From 190cae31fc322a34ec97738854148baaaf4f4934 Mon Sep 17 00:00:00 2001
+From c3b39e03d05479e743517e390a56820e32ba4af4 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -15,7 +15,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/generic/entry.cc               |  32 +++
  sysdeps/aero/generic/filesystem.cc          | 180 ++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
- sysdeps/aero/generic/thread.cc              |  42 ++++
+ sysdeps/aero/generic/thread.cc              |  45 ++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
  sysdeps/aero/include/abi-bits/abi.h         |   1 +
  sysdeps/aero/include/abi-bits/auxv.h        |   1 +
@@ -46,7 +46,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  60 ++++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
- 41 files changed, 767 insertions(+), 7 deletions(-)
+ 41 files changed, 770 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -114,10 +114,10 @@ index 0000000..59d4d4d
 +
 +#endif // _ABIBITS_AUXV_H
 diff --git a/meson.build b/meson.build
-index 55e9070..8b3f4ba 100644
+index 4027c99..b363aa3 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -94,6 +94,10 @@ if host_machine.system() == 'linux'
+@@ -98,6 +98,10 @@ if host_machine.system() == 'linux'
  	rtdl_include_dirs += include_directories('sysdeps/linux/include')
  	libc_include_dirs += include_directories('sysdeps/linux/include')
  	subdir('sysdeps/linux')
@@ -143,10 +143,10 @@ index 347c659..8e97b26 100644
  	sigemptyset(&set);
  	sigaddset(&set, SIGABRT);
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
-index 1521779..5d145bf 100644
+index bed8e11..5f5d22d 100644
 --- a/options/rtdl/generic/main.cpp
 +++ b/options/rtdl/generic/main.cpp
-@@ -118,9 +118,10 @@ extern "C" [[gnu::alias("dl_debug_state"), gnu::visibility("default")]] void _dl
+@@ -119,9 +119,10 @@ extern "C" [[gnu::alias("dl_debug_state"), gnu::visibility("default")]] void _dl
  [[ gnu::visibility("default") ]] DebugInterface *_dl_debug_addr = &globalDebugInterface;
  
  extern "C" void *interpreterMain(uintptr_t *entry_stack) {
@@ -159,7 +159,7 @@ index 1521779..5d145bf 100644
  	runtimeTlsMap.initialize();
  
  	void *phdr_pointer = 0;
-@@ -134,11 +135,9 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
+@@ -135,11 +136,9 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
  #ifndef MLIBC_STATIC_BUILD
  	auto ldso_base = reinterpret_cast<uintptr_t>(_DYNAMIC)
  			- reinterpret_cast<uintptr_t>(_GLOBAL_OFFSET_TABLE_[0]);
@@ -171,7 +171,7 @@ index 1521779..5d145bf 100644
  
  // on aarch64 these lines corrupt unrelated GOT entries (entries for ld.so functions)
  #ifdef __x86_64__
-@@ -211,7 +210,6 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
+@@ -212,7 +211,6 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
  	__ensure(phdr_pointer);
  	__ensure(entry_pointer);
  
@@ -179,7 +179,7 @@ index 1521779..5d145bf 100644
  		mlibc::infoLogger() << "ldso: Executable PHDRs are at " << phdr_pointer
  				<< frg::endlog;
  
-@@ -267,8 +265,7 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
+@@ -268,8 +266,7 @@ extern "C" void *interpreterMain(uintptr_t *entry_stack) {
  	globalDebugInterface.state = 0;
  	dl_debug_state();
  
@@ -205,7 +205,7 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..4a0d95e
+index 0000000..7980cbe
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
 @@ -0,0 +1,222 @@
@@ -227,7 +227,7 @@ index 0000000..4a0d95e
 +#define ARCH_GET_GS		0x1004
 +
 +struct Slice {
-+    void* ptr;
++    void *ptr;
 +    uint64_t len;
 +};
 +
@@ -236,7 +236,7 @@ index 0000000..4a0d95e
 +        return frg::vector<Slice, MemoryAllocator> { getAllocator() };
 +    }
 +
-+    auto len = 0;
++    size_t len = 0;
 +
 +    while (arg[len] != nullptr) {
 +        len += 1;
@@ -259,7 +259,7 @@ index 0000000..4a0d95e
 +    return syscall(SYS_GETTID);
 +}
 +
-+int sys_futex_wait(int *pointer, int expected) UNIMPLEMENTED("sys_futex_wait")
++int sys_futex_wait(int *pointer, int expected, const struct timespec *time) UNIMPLEMENTED("sys_futex_wait")
 +int sys_futex_wake(int *pointer) UNIMPLEMENTED("sys_futex_wake")
 +
 +int sys_tcb_set(void* pointer) {
@@ -414,10 +414,10 @@ index 0000000..4a0d95e
 +        path_ptr,
 +        path_len,
 +
-+        argv_slice.data(), 
-+        argv_slice.size(), 
-+        
-+        envv_slice.data(), 
++        argv_slice.data(),
++        argv_slice.size(),
++
++        envv_slice.data(),
 +        envv_slice.size()
 +    );
 +
@@ -660,22 +660,25 @@ new file mode 100644
 index 0000000..e69de29
 diff --git a/sysdeps/aero/generic/thread.cc b/sysdeps/aero/generic/thread.cc
 new file mode 100644
-index 0000000..eeedeb7
+index 0000000..41a47b2
 --- /dev/null
 +++ b/sysdeps/aero/generic/thread.cc
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,45 @@
 +#include <mlibc/thread-entry.hpp>
 +#include <mlibc/all-sysdeps.hpp>
++
 +#include <mlibc/tcb.hpp>
 +#include <bits/ensure.h>
++
 +#include <sys/mman.h>
++
 +#include <stdint.h>
 +#include <stddef.h>
 +
 +extern "C" void __mlibc_enter_thread(void *entry, void *user_arg, Tcb *tcb) {
 +	// Wait until our parent sets up the TID.
 +	while(!__atomic_load_n(&tcb->tid, __ATOMIC_RELAXED))
-+		mlibc::sys_futex_wait(&tcb->tid, 0);
++		mlibc::sys_futex_wait(&tcb->tid, 0, nullptr);
 +
 +	if(mlibc::sys_tcb_set(tcb))
 +		__ensure(!"sys_tcb_set() failed");
@@ -1161,7 +1164,7 @@ index 0000000..d3dbb22
 +	)
 +endif
 diff --git a/sysdeps/dripos/generic/generic.cpp b/sysdeps/dripos/generic/generic.cpp
-index 124b860..7520c15 100644
+index 0a85169..48bfc57 100644
 --- a/sysdeps/dripos/generic/generic.cpp
 +++ b/sysdeps/dripos/generic/generic.cpp
 @@ -7,6 +7,9 @@
