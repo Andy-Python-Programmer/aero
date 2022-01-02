@@ -396,7 +396,7 @@ def run_in_emulator(args, iso_path):
     qemu_args = ['-cdrom', iso_path,
                  '-cpu', 'qemu64,+la57' if args.la57 else 'qemu64',
                  '-M', 'q35',
-                 '-m', '2G',
+                 '-m', '5G',
                  '-smp', '1',
                  '-serial', 'stdio']
 

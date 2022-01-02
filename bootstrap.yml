@@ -47,17 +47,17 @@ sources:
     patch-path-strip: 1
     version: '12.rolling'
 
-  - name: python
-    subdir: 'bundled'
-    patch-path-strip: 1
-    git: 'https://github.com/python/cpython.git'
-    tag: 'v3.8.2'
-    version: '3.8.2'
-    tools_required:
-      - host-autoconf-v2.69
-      - host-automake-v1.16
-    regenerate:
-      - args: ['autoreconf', '-f', '-i']
+  # - name: python
+  #   subdir: 'bundled'
+  #   patch-path-strip: 1
+  #   git: 'https://github.com/python/cpython.git'
+  #   tag: 'v3.8.2'
+  #   version: '3.8.2'
+  #   tools_required:
+  #     - host-autoconf-v2.69
+  #     - host-automake-v1.16
+  #   regenerate:
+  #     - args: ['autoreconf', '-f', '-i']
 
 tools:
   - name: host-autoconf-v2.69
@@ -103,16 +103,16 @@ tools:
       - args: ['make', 'install-strip']
       - args: ['ln', '-sf', '@PREFIX@/share/aclocal-1.16', '@PREFIX@/share/aclocal']
 
-  - name: host-python
-    from_source: python
-    configure:
-      - args:
-        - '@THIS_SOURCE_DIR@/configure'
-        - '--prefix=@PREFIX@'
-    compile:
-      - args: ['make', '-j@PARALLELISM@']
-    install:
-      - args: ['make', 'install']
+  # - name: host-python
+  #   from_source: python
+  #   configure:
+  #     - args:
+  #       - '@THIS_SOURCE_DIR@/configure'
+  #       - '--prefix=@PREFIX@'
+  #   compile:
+  #     - args: ['make', '-j@PARALLELISM@']
+  #   install:
+  #     - args: ['make', 'install']
 
   - name: host-binutils
     from_source: binutils
@@ -360,34 +360,34 @@ packages:
       - args: ['make']
       - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install-strip']
 
-  - name: python
-    from_source: python
-    tools_required:
-      - host-gcc
-      - host-python
-    pkgs_required:
-      - mlibc
-    configure:
-      - args:
-        - '@THIS_SOURCE_DIR@/configure'
-        - '--host=x86_64-aero'
-        - '--build=x86_64-linux-gnu'
-        - '--prefix=/usr'
-        - '--enable-shared'
-        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
-        - '--with-system-ffi'
-        - '--with-system-expat'
-        - '--disable-ipv6'
-        - '--without-ensurepip'
-        environ:
-          CONFIG_SITE: '@SOURCE_ROOT@/extra-files/python/python-config-site'
-          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
-          PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
-    build:
-      - args: ['make', '-j@PARALLELISM@']
-      - args: ['make', 'install']
-        environ:
-          DESTDIR: '@THIS_COLLECT_DIR@'
+  # - name: python
+  #   from_source: python
+  #   tools_required:
+  #     - host-gcc
+  #     - host-python
+  #   pkgs_required:
+  #     - mlibc
+  #   configure:
+  #     - args:
+  #       - '@THIS_SOURCE_DIR@/configure'
+  #       - '--host=x86_64-aero'
+  #       - '--build=x86_64-linux-gnu'
+  #       - '--prefix=/usr'
+  #       - '--enable-shared'
+  #       - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+  #       - '--with-system-ffi'
+  #       - '--with-system-expat'
+  #       - '--disable-ipv6'
+  #       - '--without-ensurepip'
+  #       environ:
+  #         CONFIG_SITE: '@SOURCE_ROOT@/extra-files/python/python-config-site'
+  #         PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+  #         PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
+  #   build:
+  #     - args: ['make', '-j@PARALLELISM@']
+  #     - args: ['make', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'
 
 tasks:
   - name: sysroot
