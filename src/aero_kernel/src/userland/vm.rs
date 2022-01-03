@@ -334,12 +334,24 @@ impl Mapping {
         start: VirtAddr,
         end: VirtAddr,
     ) -> Result<UnmapResult, UnmapError> {
+        let mut unmap_range_inner = |range| -> Result<(), UnmapError> {
+            match offset_table.unmap_range(range, Size4KiB::SIZE) {
+                Ok(_) => Ok(()),
+
+                // its fine since technically we are not actually allocating the range
+                // and they are just allocated on faults. So there might be a chance where we
+                // try to unmap a region that is mapped but not actually allocated.
+                Err(UnmapError::PageNotMapped) => Ok(()),
+                Err(err) => return Err(err),
+            }
+        };
+
         if end <= self.start_addr || start >= self.end_addr {
             Ok(UnmapResult::None)
         } else if start > self.start_addr && end < self.end_addr {
             // The address we want to unmap is in the middle of the region. So we
             // will need to split the mapping and update the end address accordingly.
-            offset_table.unmap_range(start..end, Size4KiB::SIZE)?;
+            unmap_range_inner(start..end)?;
 
             let new_file = self.file.as_ref().map(|file| {
                 let offset = file.offset + (end - self.start_addr) as usize;
@@ -361,10 +373,10 @@ impl Mapping {
             Ok(UnmapResult::Parital(new_mapping))
         } else if start <= self.start_addr && end >= self.end_addr {
             // We are unmapping the whole region.
-            offset_table.unmap_range(self.start_addr..self.end_addr, Size4KiB::SIZE)?;
+            unmap_range_inner(self.start_addr..self.end_addr)?;
             Ok(UnmapResult::Full)
         } else if start <= self.start_addr && end < self.end_addr {
-            offset_table.unmap_range(self.start_addr..end, Size4KiB::SIZE)?;
+            unmap_range_inner(self.start_addr..end)?;
 
             // Update the start address of the mapping since we have unmapped the
             // first chunk of the mapping.
@@ -378,7 +390,7 @@ impl Mapping {
 
             Ok(UnmapResult::Start)
         } else {
-            offset_table.unmap_range(start..self.end_addr, Size4KiB::SIZE)?;
+            unmap_range_inner(start..self.end_addr)?;
 
             // Update the end address of the mapping since we have unmapped the
             // last chunk of the mapping.
@@ -586,6 +598,22 @@ impl VmProtected {
         })
     }
 
+    fn clear(&mut self) {
+        let mut cursor = self.mappings.cursor_front_mut();
+
+        let mut address_space = AddressSpace::this();
+        let mut offset_table = address_space.offset_page_table();
+
+        while let Some(map) = cursor.current() {
+            // now this should automatically free the physical page backed by this mapping
+            // if the reference count of that frame is 0 since we have now unmapped it.
+            map.unmap(&mut offset_table, map.start_addr, map.end_addr)
+                .expect("vm_clear: unexpected error while unmapping");
+
+            cursor.remove_current();
+        }
+    }
+
     fn munmap(&mut self, address: VirtAddr, size: usize) -> bool {
         let start = address.align_up(Size4KiB::SIZE);
         let end = (address + size).align_up(Size4KiB::SIZE);
@@ -756,14 +784,12 @@ pub struct Vm {
 
 impl Vm {
     /// Creates a new instance of VM.
-    #[inline]
     pub(super) fn new() -> Self {
         Self {
             inner: Mutex::new(VmProtected::new()),
         }
     }
 
-    #[inline]
     pub fn mmap(
         &self,
         address: VirtAddr,
@@ -780,27 +806,23 @@ impl Vm {
         self.inner.lock().munmap(address, size)
     }
 
-    #[inline]
     pub(super) fn fork_from(&self, parent: &Vm) {
         self.inner.lock().fork_from(parent)
     }
 
     /// Mapping the provided `bin` file into the VM.
-    #[inline]
     pub(super) fn load_bin(&self, bin: DirCacheItem) -> LoadedBinary {
         self.inner.lock().load_bin(bin)
     }
 
-    /// Clears all of the mappings in the VM.
-    #[inline]
+    /// Clears and unmaps all of the mappings in the VM.
     pub(super) fn clear(&self) {
-        self.inner.lock().mappings.clear()
+        self.inner.lock().clear()
     }
 
     /// This function is responsible for handling page faults occured in
     /// user mode. It determines the address, the reason of the page fault
     /// and then passes it off to one of the appropriate page fault handlers.
-    #[inline]
     pub(crate) fn handle_page_fault(
         &self,
         reason: PageFaultErrorCode,
