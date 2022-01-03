@@ -37,6 +37,12 @@ const UWUFETCH_LOGO: &str = r#"
  `--''
 "#;
 
+macro_rules! error {
+    ($($arg:tt)*) => {
+        std::print!("\x1b[1;31merror\x1b[0m: {}\n", format_args!($($arg)*))
+    }
+}
+
 fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     let mut pwd_buffer = [0; 1024];
     let mut cmd_buffer = [0; 1024];
@@ -71,18 +77,18 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 Some(path) => {
                     sys_mkdir(path)?;
                 }
-                None => println!("mkdir: missing operand"),
+                None => error!("mkdir: missing operand"),
             },
             "rmdir" => match args.next() {
                 Some(path) => {
                     sys_rmdir(path)?;
                 }
-                None => println!("rmdir: missing operand"),
+                None => error!("rmdir: missing operand"),
             },
             "exit" => match args.next() {
                 Some(status) => match status.parse::<usize>() {
                     Ok(exit_code) => sys_exit(exit_code),
-                    Err(_) => println!("exit: invalid operand"),
+                    Err(_) => error!("exit: invalid operand"),
                 },
                 None => sys_exit(0),
             },
@@ -178,16 +184,22 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
 
                     match sys_exec(cmd, argv, &[]) {
                         Ok(_) => core::unreachable!(),
-                        Err(AeroSyscallError::EISDIR) => println!("{}: is a directory", cmd),
-                        Err(AeroSyscallError::ENOENT) => println!("{}: command not found", cmd),
-                        Err(err) => println!("{}: {:?}", cmd, err),
+                        Err(AeroSyscallError::EISDIR) => error!("{}: is a directory", cmd),
+                        Err(AeroSyscallError::ENOENT) => error!("{}: command not found", cmd),
+                        Err(err) => error!("{}: {:?}", cmd, err),
                     }
 
-                    sys_exit(1);
+                    sys_exit(0);
                 } else {
                     // Wait for the child
                     let mut status = 0;
                     sys_waitpid(child, &mut status, 0)?;
+
+                    let exit_code = status & 0xff;
+
+                    if exit_code != 0 {
+                        error!("{} exited with a non-zero status code: {} ", cmd, exit_code);
+                    }
                 }
             }
         }
@@ -333,7 +345,7 @@ fn main() {
 
     loop {
         if let Err(error) = repl(&mut history) {
-            println!("error: {:?}", error);
+            error!("{:?}", error);
         }
     }
 }
