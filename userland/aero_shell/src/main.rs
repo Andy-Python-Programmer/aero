@@ -273,6 +273,7 @@ fn cat_file(path: Option<&str>) -> Result<(), AeroSyscallError> {
         sys_close(fd)?;
     }
 
+    print!("\n");
     Ok(())
 }
 
