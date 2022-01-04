@@ -51,3 +51,4 @@ pub const SYS_GETTIME: usize = 30;
 pub const SYS_SLEEP: usize = 31;
 pub const SYS_ACCESS: usize = 32;
 pub const SYS_PIPE: usize = 33;
+pub const SYS_UNLINK: usize = 34;

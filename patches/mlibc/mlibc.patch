@@ -1,4 +1,4 @@
-From 5182b9dc735607e399b140745c327011e627cfcd Mon Sep 17 00:00:00 2001
+From d922ab0e346b27104915d28126219cd9cdd3fd44 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -13,7 +13,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
  sysdeps/aero/generic/aero.cc                | 236 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 180 +++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 194 ++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  45 ++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -42,11 +42,11 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 191 ++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 192 ++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  60 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
- 41 files changed, 828 insertions(+), 7 deletions(-)
+ 41 files changed, 843 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -490,10 +490,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..403b10d
+index 0000000..95cbf24
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,180 @@
+@@ -0,0 +1,194 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -588,6 +588,8 @@ index 0000000..403b10d
 +}
 +
 +int sys_isatty(int fd) {
++	return 1;
++
 +	// NOTE: The easiest way to check if a file descriptor is a TTY is to
 +	// do an ioctl of TIOCGWINSZ on it and see if it succeeds :^)
 +	struct winsize ws;
@@ -603,7 +605,19 @@ index 0000000..403b10d
 +int sys_mkdir(const char* path) UNIMPLEMENTED("sys_mkdir")
 +int sys_rmdir(const char* path) UNIMPLEMENTED("sys_rmdir")
 +int sys_link(const char* srcpath, const char* destpath) UNIMPLEMENTED("sys_link")
-+int sys_unlink(const char* path) UNIMPLEMENTED("sys_unlink")
++
++int sys_unlink(const char* path) {
++	return sys_unlinkat(AT_FDCWD, path, 0);
++}
++
++int sys_unlinkat(int fd, const char *path, int flags) {
++	auto result = syscall(SYS_UNLINK, fd, (uintptr_t)path, strlen(path), flags);
++
++	if (result < 0)
++		return -result;
++
++	return 0;
++}
 +
 +struct aero_dir_entry {
 +	size_t inode;
@@ -944,10 +958,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..95ed8cc
+index 0000000..e35bddb
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,191 @@
+@@ -0,0 +1,192 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -988,6 +1002,7 @@ index 0000000..95ed8cc
 +#define SYS_SLEEP       31
 +#define SYS_ACCESS      32
 +#define SYS_PIPE        33
++#define SYS_UNLINK      34
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.

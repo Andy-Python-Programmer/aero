@@ -115,6 +115,14 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     fn ioctl(&self, _command: usize, _arg: usize) -> Result<usize> {
         Err(FileSystemError::NotSupported)
     }
+
+    fn truncate(&self, _size: usize) -> Result<()> {
+        Err(FileSystemError::NotSupported)
+    }
+
+    fn unlink(&self, _name: &str) -> Result<()> {
+        Err(FileSystemError::NotSupported)
+    }
 }
 
 /// Structure representing the curcial, characteristics of an inode. The metadata
@@ -142,6 +150,11 @@ impl Metadata {
     #[inline]
     pub fn file_type(&self) -> FileType {
         self.file_type
+    }
+
+    /// Returns [`true`] if the file type of the inode is a file.
+    pub fn is_file(&self) -> bool {
+        self.file_type == FileType::File
     }
 
     /// Returns [`true`] if the file type of the inode is a directory.
@@ -303,6 +316,10 @@ impl DirEntry {
     /// Returns the inner cached inode item of the directory entry.
     pub fn inode(&self) -> INodeCacheItem {
         self.data.lock().inode.clone()
+    }
+
+    pub fn parent(&self) -> Option<DirCacheItem> {
+        self.data.lock().parent.clone()
     }
 
     /// Drops the directory entry from the cache.

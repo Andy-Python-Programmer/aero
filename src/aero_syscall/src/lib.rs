@@ -545,6 +545,18 @@ pub fn sys_accept(
     isize_as_syscall_result(value as _)
 }
 
+pub fn sys_unlink(fd: usize, path: &str, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
+    let value = syscall4(
+        prelude::SYS_UNLINK,
+        fd,
+        path.as_ptr() as usize,
+        path.len(),
+        flags.bits(),
+    );
+
+    isize_as_syscall_result(value as _)
+}
+
 pub fn sys_gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_GETTIME, clock, timespec as *mut _ as usize);
     isize_as_syscall_result(value as _)

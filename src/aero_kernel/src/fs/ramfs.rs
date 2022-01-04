@@ -204,6 +204,25 @@ impl INodeInterface for LockedRamINode {
         })
     }
 
+    fn unlink(&self, _name: &str) -> Result<()> {
+        Ok(())
+    }
+
+    fn truncate(&self, size: usize) -> Result<()> {
+        let this = self.0.write();
+
+        match &this.contents {
+            FileContents::Content(vec) => {
+                let mut vec = vec.lock();
+                vec.resize(size, 0);
+
+                return Ok(());
+            }
+
+            _ => Err(FileSystemError::NotSupported),
+        }
+    }
+
     fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
         let this = self.0.read();
 

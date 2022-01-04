@@ -55,6 +55,7 @@
 //! | 31     | sleep                   |
 //! | 32     | access                  |
 //! | 33     | pipe                    |
+//! | 34     | unlink                  |
 
 use core::mem::MaybeUninit;
 
@@ -203,6 +204,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_SEEK => fs::seek(b, c, d),
         SYS_ACCESS => fs::access(b, c, d, e, f),
         SYS_PIPE => fs::pipe(b, c),
+        SYS_UNLINK => fs::unlink(b, c, d, e),
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),

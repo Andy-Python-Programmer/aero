@@ -146,26 +146,32 @@ impl From<FileSystemError> for AeroSyscallError {
 pub struct Path(str);
 
 impl Path {
-    #[inline]
     pub fn new(path: &str) -> &Self {
         unsafe { &*(path as *const str as *const Path) }
     }
 
     /// Returns [`true`] if the path is absolute.
-    #[inline]
     pub fn is_absolute(&self) -> bool {
         self.0.starts_with('/')
     }
 
     /// Returns an iterator over the components of the path.
-    #[inline]
     pub fn components(&self) -> impl Iterator<Item = &str> {
         self.0.split("/").filter(|e| *e != "" && *e != ".")
     }
 
-    #[inline]
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    pub fn container(&self) -> &Path {
+        let dir = self.0.rfind("/");
+
+        match dir {
+            Some(0) => Path::new(&self.0[1..]),
+            Some(v) => Path::new(&self.0[v + 1..]),
+            None => Path::new(&self.0),
+        }
     }
 
     /// Helper function that returns the parent path and the base name

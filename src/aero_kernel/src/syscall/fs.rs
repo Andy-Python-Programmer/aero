@@ -86,8 +86,7 @@ pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, A
     }
 
     if flags.contains(OpenFlags::O_TRUNC) {
-        // FIXME(Andy-Python-Programmer): Implement file truncation.
-        unimplemented!()
+        inode.inode().truncate(0)?;
     }
 
     Ok(scheduler::get_scheduler()
@@ -267,6 +266,36 @@ pub fn pipe(fds: usize, flags: usize) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
+pub fn unlink(
+    fd: usize,
+    path: usize,
+    path_size: usize,
+    flags: usize,
+) -> Result<usize, AeroSyscallError> {
+    let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path = Path::new(path_str);
+
+    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+    let name = path.container();
+
+    if fd as isize == aero_syscall::AT_FDCWD {
+        let file = fs::lookup_path(path)?;
+
+        if let Some(dir) = file.parent() {
+            let metadata = file.inode().metadata()?;
+
+            if metadata.is_file() {
+                dir.inode().unlink(name.as_str())?;
+                file.drop_from_cache();
+            }
+        }
+    } else {
+        unimplemented!()
+    }
+
+    Ok(0x00)
+}
+
 pub fn access(
     fd: usize,
     path: usize,
@@ -274,10 +303,10 @@ pub fn access(
     _mode: usize,
     _flags: usize,
 ) -> Result<usize, AeroSyscallError> {
-    if fd as isize == aero_syscall::AT_FDCWD {
-        let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
-        let path = Path::new(path_str);
+    let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path = Path::new(path_str);
 
+    if fd as isize == aero_syscall::AT_FDCWD {
         lookup_path(path)?;
         Ok(0x00)
     } else {
