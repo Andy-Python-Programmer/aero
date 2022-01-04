@@ -1,4 +1,4 @@
-From d922ab0e346b27104915d28126219cd9cdd3fd44 Mon Sep 17 00:00:00 2001
+From 932d1d378a246272a266080c6dd9772b1147347c Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -13,7 +13,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
  sysdeps/aero/generic/aero.cc                | 236 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 194 ++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 195 ++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  45 ++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -46,7 +46,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  60 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
- 41 files changed, 843 insertions(+), 7 deletions(-)
+ 41 files changed, 844 insertions(+), 7 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -490,10 +490,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..95cbf24
+index 0000000..9a4e63c
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,194 @@
+@@ -0,0 +1,195 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -588,15 +588,16 @@ index 0000000..95cbf24
 +}
 +
 +int sys_isatty(int fd) {
-+	return 1;
-+
 +	// NOTE: The easiest way to check if a file descriptor is a TTY is to
 +	// do an ioctl of TIOCGWINSZ on it and see if it succeeds :^)
 +	struct winsize ws;
-+	long ret = syscall(SYS_IOCTL, fd, TIOCGWINSZ, (uintptr_t)&ws);
++	int result;
 +
-+	if (!ret) return 0;
-+	return 1;
++	if (!sys_ioctl(fd, TIOCGWINSZ, &ws, &result)) {
++		return 0;
++	}
++
++	return ENOTTY;
 +}
 +
 +int sys_tcgetattr(int fd, struct termios *attr) UNIMPLEMENTED("sys_tcgetattr")
