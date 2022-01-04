@@ -238,7 +238,7 @@ pub fn lookup_path_with(
                                 && i == path.components().count() - 1
                                 && mode == LookupMode::Create =>
                         {
-                            cwd.inode().touch(cwd.clone(), component)?;
+                            cwd = cwd.inode().touch(cwd.clone(), component)?;
                         }
 
                         Err(err) => return Err(err),
