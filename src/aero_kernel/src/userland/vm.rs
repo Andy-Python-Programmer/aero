@@ -754,7 +754,7 @@ impl VmProtected {
                 }
             } else if header_type == xmas_elf::program::Type::Tls {
             } else if header_type == xmas_elf::program::Type::Interp {
-                let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
+                let ld = fs::lookup_path(fs::Path::new("/lib/ld.so")).unwrap();
 
                 let res = self.load_bin(ld);
                 entry_point = res.entry_point;
