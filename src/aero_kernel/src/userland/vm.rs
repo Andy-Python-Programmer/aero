@@ -109,8 +109,8 @@ impl Mapping {
                 addr_aligned + Size4KiB::SIZE
             );
 
-            let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-                .expect("Failed to allocate frame for userland mapping");
+            let frame: PhysFrame =
+                PhysFrame::containing_address(pmm_alloc(BuddyOrdering::Size4KiB));
 
             unsafe {
                 offset_table.map_to(
@@ -278,18 +278,17 @@ impl Mapping {
                     // This page is used by more then one process, so make it a private copy.
                     log::trace!("    - making {:?} into a private copy", page);
 
-                    let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-                        .expect("frame allocation failed");
+                    let frame = pmm_alloc(BuddyOrdering::Size4KiB);
 
                     unsafe {
                         address.as_ptr::<u8>().copy_to(
-                            (crate::PHYSICAL_MEMORY_OFFSET + frame.start_address().as_u64())
-                                .as_mut_ptr(),
+                            (crate::PHYSICAL_MEMORY_OFFSET + frame.as_u64()).as_mut_ptr(),
                             Size4KiB::SIZE as _,
                         );
                     }
 
                     offset_table.unmap(page).expect("unmap faild").1.flush();
+                    let frame = PhysFrame::containing_address(frame);
 
                     unsafe {
                         offset_table.map_to(
@@ -755,7 +754,7 @@ impl VmProtected {
                 }
             } else if header_type == xmas_elf::program::Type::Tls {
             } else if header_type == xmas_elf::program::Type::Interp {
-                let ld = fs::lookup_path(fs::Path::new("/lib/ld.so")).unwrap();
+                let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
 
                 let res = self.load_bin(ld);
                 entry_point = res.entry_point;
