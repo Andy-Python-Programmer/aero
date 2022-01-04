@@ -104,6 +104,9 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
             }
 
             "uwutest" => {
+                // TODO: Make a uwutest program that is executed by the kernel
+                // if the test kernel is built instead of randomly bloating the shell
+                // with tests :).
                 let mut pipe = [0usize; 2];
                 sys_pipe(&mut pipe, OpenFlags::empty())?;
 
@@ -249,6 +252,8 @@ fn cat_file(path: Option<&str>) -> Result<(), AeroSyscallError> {
         Some(path) => sys_open(path, OpenFlags::O_RDONLY)?,
         None => 0,
     };
+
+    sys_seek(fd, 0, SeekWhence::SeekSet)?;
 
     let mut buffer = [0; 1024];
 

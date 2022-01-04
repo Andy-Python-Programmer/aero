@@ -562,6 +562,11 @@ pub fn sys_gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, AeroS
     isize_as_syscall_result(value as _)
 }
 
+pub fn sys_seek(fd: usize, offset: usize, whence: SeekWhence) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(prelude::SYS_SEEK, fd, offset, whence as usize);
+    isize_as_syscall_result(value as _)
+}
+
 pub fn sys_sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
     let value = syscall1(prelude::SYS_SLEEP, timespec as *const _ as usize);
     isize_as_syscall_result(value as _)
