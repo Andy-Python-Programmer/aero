@@ -19,7 +19,6 @@
 
 use aero_syscall::*;
 
-const HOSTNAME: &str = "root@aero";
 const MAGENTA_FG: &str = "\x1b[1;35m";
 const RESET: &str = "\x1b[0m";
 const UWUFETCH_LOGO: &str = r#"
@@ -44,15 +43,16 @@ macro_rules! error {
 }
 
 fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
+    let mut hostname_buf = [0; 64];
     let mut pwd_buffer = [0; 1024];
     let mut cmd_buffer = [0; 1024];
 
+    let hostname_len = sys_gethostname(&mut hostname_buf)?;
+    let hostname = unsafe { core::str::from_utf8_unchecked(&hostname_buf[0..hostname_len]) };
+    let username = "root"; // TODO: Unhardcode this at some point :^)
+
     let pwd_length = sys_getcwd(&mut pwd_buffer)?;
     let pwd = unsafe { core::str::from_utf8_unchecked(&pwd_buffer[0..pwd_length]) };
-
-    let mut hostname_split = HOSTNAME.splitn(2, '@');
-    let username = hostname_split.next().unwrap_or("root");
-    let hostname = hostname_split.next().unwrap_or("aero");
 
     print!(
         "\x1b[1;32m{}@{}\x1b[0m:\x1b[1;34m{}\x1b[0m ",
@@ -300,13 +300,19 @@ fn uwufetch() -> Result<(), AeroSyscallError> {
         print!("{}{}{}: ", MAGENTA_FG, prefix, RESET);
     };
 
+    let mut hostname_buf = [0; 64];
+
+    let hostname_len = sys_gethostname(&mut hostname_buf)?;
+    let hostname = unsafe { core::str::from_utf8_unchecked(&hostname_buf[0..hostname_len]) };
+    let username = "root"; // TODO: Unhardcode this at some point :^)
+
     for (i, line) in UWUFETCH_LOGO.lines().skip(1).enumerate() {
         print!(" {}{:<19}{}", MAGENTA_FG, line, RESET);
 
         if i == 1 {
-            println!("{}", HOSTNAME);
+            println!("{}@{}", username, hostname);
         } else if i == 2 {
-            println!("{}", "-".repeat(HOSTNAME.len()));
+            println!("{}", "-".repeat(username.len() + hostname.len() + 1));
         } else if i == 3 {
             print_prefix("OS");
             println!("Aero");
