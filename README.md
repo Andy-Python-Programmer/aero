@@ -97,8 +97,8 @@ Each of these modes can be used with additional flags, that will alter the behav
 ways, some of them will not work for some of these modes - for example: the `--la57` option
 will not have any effect when you are simply checking or documenting the build.
 
-- `--release` toggles the release build flag when calling cargo, that will produce
-  both smaller and faster binaries, useful for deployment
+- `--debug` toggles off the release build flag when calling cargo. By default Aero is built
+  in release mode with debug symbols that will produce both smaller and faster binaries.
 - `--no-run` prevents from running the built disk image in the emulator
 - `--bios` lets you choose the firmware the emulator will use when booting Aero,
   currently supported values are: `legacy` and `uefi`

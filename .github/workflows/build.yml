@@ -24,7 +24,7 @@ jobs:
        sudo apt-get install -y nasm meson ninja-build
        python3 -m pip install requests xbstrap
     - name: Build the kernel and userland
-      run: ./aero.py --release --no-run
+      run: ./aero.py --no-run
     - name: Build kernel documentation
       run: ./aero.py --document
     - name: Upload built image as artifact
