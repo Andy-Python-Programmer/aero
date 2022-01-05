@@ -75,8 +75,9 @@ The main command we will focus on is `./aero.py`. The source code can be found i
 root of the repository and, as the file name states, it is written in Python.
 
 By default if you run `./aero.py` without any arguments it will build the kernel and userland
-in debug mode and run it in QEMU. You can configure the behavior of the build system though.
-If you want to, you can use the `--help` option to read a brief description of what it can do.
+in release mode with debug symbols and run it in QEMU. You can configure the behavior of the 
+build system though. If you want to, you can use the `--help` option to read a brief description 
+of what it can do.
 
 The build system acknowledges few different build modes, which cannot be used together
 and they are: `--clean`, `--check`, `--test` and `--document`.
@@ -97,8 +98,13 @@ Each of these modes can be used with additional flags, that will alter the behav
 ways, some of them will not work for some of these modes - for example: the `--la57` option
 will not have any effect when you are simply checking or documenting the build.
 
-- `--debug` toggles off the release build flag when calling cargo. By default Aero is built
-  in release mode with debug symbols that will produce both smaller and faster binaries.
+- `--debug` toggles off the release build flag when calling cargo.
+
+  **Summary**: If the `--debug` flag is not passed then it will build Aero in release mode
+               and debug symbols will be avaliable. On the other hand, if the debug flag is passed
+               then it will be built in debug mode and debug symbols will be still avaliable. By default
+               Aero is built in release mode (with debug symbols) since it generates faster and smaller
+               binaries which are easier to test.
 - `--no-run` prevents from running the built disk image in the emulator
 - `--bios` lets you choose the firmware the emulator will use when booting Aero,
   currently supported values are: `legacy` and `uefi`
