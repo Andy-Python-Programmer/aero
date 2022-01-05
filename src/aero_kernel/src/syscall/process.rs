@@ -18,6 +18,8 @@
  */
 
 use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
+use alloc::string::String;
+use spin::{Mutex, Once};
 
 use crate::fs;
 use crate::fs::Path;
@@ -25,6 +27,12 @@ use crate::fs::Path;
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::utils::validate_str;
+
+static HOSTNAME: Once<Mutex<String>> = Once::new();
+
+fn hostname() -> &'static Mutex<String> {
+    HOSTNAME.call_once(|| Mutex::new(String::from("aero")))
+}
 
 pub fn exit(status: usize) -> ! {
     log::trace!(
@@ -205,6 +213,32 @@ pub fn getpid() -> Result<usize, AeroSyscallError> {
 
 pub fn gettid() -> Result<usize, AeroSyscallError> {
     Ok(scheduler::get_scheduler().current_task().tid().as_usize())
+}
+
+pub fn gethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError> {
+    let slice = unsafe { core::slice::from_raw_parts_mut(ptr as *mut u8, length) };
+    let hostname = hostname().lock();
+    let bytes = hostname.as_bytes();
+
+    if bytes.len() > slice.len() {
+        Err(AeroSyscallError::ENAMETOOLONG)
+    } else {
+        slice[0..bytes.len()].copy_from_slice(bytes);
+
+        Ok(bytes.len())
+    }
+}
+
+pub fn sethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError> {
+    let slice = unsafe { core::slice::from_raw_parts(ptr as *const u8, length) };
+
+    match core::str::from_utf8(slice) {
+        Ok(new_hostname) => {
+            *hostname().lock() = String::from(new_hostname);
+            Ok(0)
+        }
+        Err(_) => Err(AeroSyscallError::EINVAL),
+    }
 }
 
 pub fn shutdown() -> ! {

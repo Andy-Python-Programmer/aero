@@ -52,3 +52,5 @@ pub const SYS_SLEEP: usize = 31;
 pub const SYS_ACCESS: usize = 32;
 pub const SYS_PIPE: usize = 33;
 pub const SYS_UNLINK: usize = 34;
+pub const SYS_GETHOSTNAME: usize = 35;
+pub const SYS_SETHOSTNAME: usize = 36;
