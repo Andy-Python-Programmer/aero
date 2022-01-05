@@ -78,6 +78,7 @@ mod fs;
 mod logger;
 mod mem;
 mod modules;
+mod socket;
 mod rendy;
 mod syscall;
 #[cfg(test)]

@@ -482,64 +482,87 @@ pub fn sys_getpid() -> Result<usize, AeroSyscallError> {
 }
 
 // Sockets
-pub fn sys_socket(domain: usize, typee: usize, protocol: usize) -> Result<usize, AeroSyscallError> {
-    let value = syscall3(prelude::SYS_SOCKET, domain, typee, protocol);
-    isize_as_syscall_result(value as _)
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub struct SocketAddrUnix {
+    family: i16,
+    path: [u8; 108],
 }
 
-/// Structure describing a generic socket address.
-pub struct SocketAddr {
-    /// POSIX.1g specifies this type name for the `sa_family' member.
-    pub sa_family: u16,
-    /// Address data
-    pub sa_data: [u8; 14],
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub struct SocketAddrInet {
+    family: i16,
+    port: [u8; 2],
+    address: [u8; 4],
+    padding: [u8; 8],
+}
+
+#[derive(Debug, Clone)]
+pub enum SocketAddr {
+    Unix(SocketAddrUnix),
+    Inet(SocketAddrInet),
+}
+
+pub const AF_UNIX: usize = 1;
+pub const AF_INET: usize = 2;
+
+pub const SOCK_STREAM: usize = 1;
+pub const SOCK_DGRAM: usize = 2;
+
+pub const IPPROTO_TCP: usize = 6;
+pub const IPPROTO_UDP: usize = 17;
+
+pub fn sys_socket(
+    domain: usize,
+    socket_type: usize,
+    protocol: usize,
+) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(prelude::SYS_SOCKET, domain, socket_type, protocol);
+    isize_as_syscall_result(value as _)
 }
 
 pub fn sys_connect(
-    sockfd: usize,
-    sockaddr: &SocketAddr,
-    socklen: u32,
+    fd: usize,
+    address: &SocketAddr,
+    length: u32,
 ) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_CONNECT,
-        sockfd,
-        sockaddr as *const SocketAddr as usize,
-        socklen as usize,
+        fd,
+        address as *const SocketAddr as usize,
+        length as usize,
     );
 
     isize_as_syscall_result(value as _)
 }
 
-pub fn sys_bind(
-    sockfd: usize,
-    sockaddr: &SocketAddr,
-    socklen: u32,
-) -> Result<usize, AeroSyscallError> {
+pub fn sys_bind(fd: usize, address: &SocketAddr, length: u32) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_BIND,
-        sockfd,
-        sockaddr as *const SocketAddr as usize,
-        socklen as usize,
+        fd,
+        address as *const SocketAddr as usize,
+        length as usize,
     );
 
     isize_as_syscall_result(value as _)
 }
 
-pub fn sys_listen(sockfd: usize, backlog: usize) -> Result<usize, AeroSyscallError> {
-    let value = syscall2(prelude::SYS_LISTEN, sockfd, backlog);
+pub fn sys_listen(fd: usize, backlog: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_LISTEN, fd, backlog);
     isize_as_syscall_result(value as _)
 }
 
 pub fn sys_accept(
-    sockfd: usize,
-    sockaddr: &SocketAddr,
-    socklen: u32,
+    fd: usize,
+    address: &mut SocketAddr,
+    length: &mut u32,
 ) -> Result<usize, AeroSyscallError> {
     let value = syscall3(
         prelude::SYS_ACCEPT,
-        sockfd,
-        sockaddr as *const SocketAddr as usize,
-        socklen as usize,
+        fd,
+        address as *const SocketAddr as usize,
+        length as *mut u32 as usize,
     );
 
     isize_as_syscall_result(value as _)
