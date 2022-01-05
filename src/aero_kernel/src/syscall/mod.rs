@@ -62,6 +62,7 @@ use core::mem::MaybeUninit;
 use aero_syscall::prelude::*;
 
 pub mod fs;
+mod net;
 pub mod process;
 pub mod time;
 
@@ -205,6 +206,8 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_ACCESS => fs::access(b, c, d, e, f),
         SYS_PIPE => fs::pipe(b, c),
         SYS_UNLINK => fs::unlink(b, c, d, e),
+
+        SYS_SOCKET => net::socket(b, c, d),
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),
