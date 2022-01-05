@@ -208,8 +208,55 @@ impl INodeInterface for DevKmsg {
     }
 }
 
+struct DevFb(usize);
+
+impl DevFb {
+    fn new() -> Arc<Self> {
+        Arc::new(Self(alloc_device_marker()))
+    }
+}
+
+impl Device for DevFb {
+    fn device_marker(&self) -> usize {
+        self.0
+    }
+
+    fn device_name(&self) -> String {
+        String::from("fb")
+    }
+
+    fn inode(&self) -> Arc<dyn INodeInterface> {
+        DEV_FB.get().expect("device not initialized").clone()
+    }
+}
+
+impl INodeInterface for DevFb {
+    fn write_at(&self, offset: usize, buffer: &[u8]) -> Result<usize> {
+        crate::rendy::DEBUG_RENDY
+            .get()
+            .map(|e| {
+                let mut lock = e.lock_irq();
+                let fb = lock.get_framebuffer();
+
+                let mut count = buffer.len();
+
+                if offset + buffer.len() > fb.len() {
+                    count = buffer.len() - ((offset + buffer.len()) - fb.len());
+                }
+
+                let raw = buffer.as_ptr() as *const u32;
+                let src = unsafe { core::slice::from_raw_parts(raw, count) };
+
+                fb[offset..offset + count].copy_from_slice(src);
+                Ok(count)
+            })
+            .expect("/dev/fb: terminal not initialized")
+    }
+}
+
 static DEV_NULL: Once<Arc<DevNull>> = Once::new();
 static DEV_KMSG: Once<Arc<DevKmsg>> = Once::new();
+static DEV_FB: Once<Arc<DevFb>> = Once::new();
 
 /// Initializes the dev filesystem. (See the module-level documentation for more information).
 pub(super) fn init() -> Result<()> {
@@ -221,9 +268,11 @@ pub(super) fn init() -> Result<()> {
     {
         let null = DEV_NULL.call_once(|| DevNull::new());
         let kmsg = DEV_KMSG.call_once(|| DevKmsg::new());
+        let fb = DEV_FB.call_once(|| DevFb::new());
 
         install_device(null.clone())?;
         install_device(kmsg.clone())?;
+        install_device(fb.clone())?;
     }
 
     Ok(())

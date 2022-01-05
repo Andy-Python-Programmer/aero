@@ -107,6 +107,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 // TODO: Make a uwutest program that is executed by the kernel
                 // if the test kernel is built instead of randomly bloating the shell
                 // with tests :).
+
                 let mut pipe = [0usize; 2];
                 sys_pipe(&mut pipe, OpenFlags::empty())?;
 
@@ -137,6 +138,16 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
 
                     sys_close(pipe[0])?; // close the read end
                 }
+
+                // let fb = sys_open("/dev/fb", OpenFlags::O_RDWR)?;
+
+                // let buffer = &[u32::MAX; (1024 * 768)];
+                // let casted = buffer.as_ptr() as *mut u8;
+                // let casted = unsafe { core::slice::from_raw_parts(casted, (1024 * 768) as usize) };
+
+                // println!("writing to fb");
+                // sys_write(fb, casted)?;
+                // sys_close(fb)?;
             }
 
             "pid" => {
