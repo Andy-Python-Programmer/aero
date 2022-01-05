@@ -481,6 +481,11 @@ pub fn sys_getpid() -> Result<usize, AeroSyscallError> {
     isize_as_syscall_result(value as _)
 }
 
+pub fn sys_gettid() -> Result<usize, AeroSyscallError> {
+    let value = syscall0(prelude::SYS_GETTID);
+    isize_as_syscall_result(value as _)
+}
+
 // Sockets
 #[derive(Debug, Clone)]
 #[repr(C)]
