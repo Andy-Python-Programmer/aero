@@ -194,7 +194,7 @@ fn parse_bmp_image(data: &[u8]) -> Image {
     }
 }
 
-struct DebugRendy<'this> {
+pub struct DebugRendy<'this> {
     /// The raw framebuffer pointer queried from the BIOS or UEFI firmware represented
     /// as a [u8] slice.
     buffer: &'this mut [u32],
@@ -423,6 +423,10 @@ impl<'this> DebugRendy<'this> {
                 img_x += ratio;
             }
         }
+    }
+
+    pub fn get_framebuffer<'a>(&'a mut self) -> &'a mut [u32] {
+        self.buffer
     }
 
     fn loop_external(
@@ -788,7 +792,7 @@ impl<'this> fmt::Write for DebugRendy<'this> {
 unsafe impl<'this> Send for DebugRendy<'this> {}
 unsafe impl<'this> Sync for DebugRendy<'this> {}
 
-static DEBUG_RENDY: Once<Mutex<DebugRendy>> = Once::new();
+pub static DEBUG_RENDY: Once<Mutex<DebugRendy>> = Once::new();
 
 pub macro print {
     ($($arg:tt)*) => ($crate::rendy::_print(format_args!($($arg)*))),

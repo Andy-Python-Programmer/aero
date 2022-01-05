@@ -101,10 +101,10 @@ def parse_args():
                             action='store_true',
                             help='generates the documentation for the aero kernel')
 
-    parser.add_argument('--release',
+    parser.add_argument('--debug',
                         default=False,
                         action='store_true',
-                        help='builds the kernel and userland in release mode')
+                        help='builds the kernel and userland in debug mode')
 
     parser.add_argument('--no-run',
                         default=False,
@@ -206,7 +206,7 @@ def build_kernel(args):
     cmd_args = ['--package', 'aero_kernel',
                 '--target', f'.cargo/{args.target}.json']
 
-    if args.release:
+    if not args.debug:
         cmd_args += ['--release']
 
     if args.test:
@@ -267,7 +267,7 @@ def build_userland(args):
     command = 'build'
     cmd_args = []
 
-    if args.release:
+    if not args.debug:
         cmd_args += ['--release']
 
     if args.check:

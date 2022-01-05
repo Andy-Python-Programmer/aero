@@ -21,10 +21,11 @@ jobs:
         toolchain: nightly
     - name: Install dependencies
       run: |
+       sudo apt-get update
        sudo apt-get install -y nasm meson ninja-build
        python3 -m pip install requests xbstrap
     - name: Build the kernel and userland
-      run: ./aero.py --release --no-run
+      run: ./aero.py --no-run
     - name: Build kernel documentation
       run: ./aero.py --document
     - name: Upload built image as artifact
@@ -50,6 +51,7 @@ jobs:
         toolchain: nightly
     - name: Install dependencies
       run: |
+       sudo apt-get update
        sudo apt-get install -y nasm meson ninja-build qemu-system-x86
        python3 -m pip install requests xbstrap
     - name: Print QEMU version

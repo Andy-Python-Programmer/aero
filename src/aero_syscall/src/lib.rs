@@ -482,6 +482,25 @@ pub fn sys_getpid() -> Result<usize, AeroSyscallError> {
     isize_as_syscall_result(value as _)
 }
 
+pub fn sys_gettid() -> Result<usize, AeroSyscallError> {
+    let value = syscall0(prelude::SYS_GETTID);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_gethostname(buf: &mut [u8]) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(
+        prelude::SYS_GETHOSTNAME,
+        buf.as_mut_ptr() as usize,
+        buf.len(),
+    );
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_sethostname(name: &str) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_SETHOSTNAME, name.as_ptr() as usize, name.len());
+    isize_as_syscall_result(value as _)
+}
+
 // Sockets
 #[derive(Debug, Clone)]
 #[repr(C)]
