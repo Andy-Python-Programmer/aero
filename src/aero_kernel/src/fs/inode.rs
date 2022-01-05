@@ -19,7 +19,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use aero_syscall::OpenFlags;
+use aero_syscall::{OpenFlags, SocketAddr};
 
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -123,22 +123,27 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     fn unlink(&self, _name: &str) -> Result<()> {
         Err(FileSystemError::NotSupported)
     }
+
+    // Socket operations
+    fn bind(&self, _address: &SocketAddr, _length: usize) -> Result<()> {
+        Err(FileSystemError::NotSupported)
+    }
 }
 
 /// Structure representing the curcial, characteristics of an inode. The metadata
 /// of an inode can be retrieved by invoking the [INodeInterface::metadata] function.
 #[derive(Debug, Copy, Clone)]
 pub struct Metadata {
-    pub(super) id: usize,
-    pub(super) file_type: FileType,
+    pub id: usize,
+    pub file_type: FileType,
 
     /// The total size of the content that the inode holds. Set to `0x00` if
     /// the inode file type is *not* a file.
-    pub(super) size: usize,
+    pub size: usize,
 
     /// The length of the children's map of the inode. Set to `0x00` if the inode
     /// has no children and if the file type of the inode is *not* a directory.
-    pub(super) children_len: usize,
+    pub children_len: usize,
 }
 
 impl Metadata {
@@ -161,6 +166,12 @@ impl Metadata {
     #[inline]
     pub fn is_directory(&self) -> bool {
         self.file_type == FileType::Directory
+    }
+
+    /// Returns [`true`] if the file type of the inode is a socket.
+    #[inline]
+    pub fn is_socket(&self) -> bool {
+        self.file_type == FileType::Socket
     }
 }
 
@@ -195,6 +206,7 @@ pub enum FileType {
     File,
     Directory,
     Device,
+    Socket,
 }
 
 impl From<FileType> for aero_syscall::SysFileType {
@@ -203,6 +215,7 @@ impl From<FileType> for aero_syscall::SysFileType {
             FileType::File => aero_syscall::SysFileType::File,
             FileType::Directory => aero_syscall::SysFileType::Directory,
             FileType::Device => aero_syscall::SysFileType::Device,
+            FileType::Socket => aero_syscall::SysFileType::Socket,
         }
     }
 }
