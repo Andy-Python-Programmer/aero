@@ -92,6 +92,10 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
+    fn make_local_socket_inode(&self, _name: &str) -> Result<INodeCacheItem> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Looks up the directory entry in the filesystem.
     fn lookup(&self, _dir: DirCacheItem, _name: &str) -> Result<DirCacheItem> {
         Err(FileSystemError::NotSupported)
@@ -320,6 +324,28 @@ impl DirEntry {
 
             cache_marker: 0,
         })
+    }
+
+    pub fn from_inode_custom(
+        parent: DirCacheItem,
+        name: String,
+        inode: Arc<dyn INodeInterface>,
+    ) -> Result<DirCacheItem> {
+        let inode = parent.inode().make_local_socket_inode(name.as_str())?;
+
+        Ok(cache::dcache().make_item_no_cache(Self {
+            data: Mutex::new(DirProtectedData {
+                parent: Some(parent),
+                inode: inode.clone(),
+                name,
+            }),
+            filesystem: if let Some(filesystem) = inode.weak_filesystem() {
+                Once::initialized(filesystem)
+            } else {
+                Once::new()
+            },
+            cache_marker: 0,
+        }))
     }
 
     pub fn name(&self) -> String {

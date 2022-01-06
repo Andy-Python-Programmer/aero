@@ -143,6 +143,11 @@ impl INodeInterface for LockedRamINode {
         self.make_inode(name, FileType::File, FileContents::StaticContent(buffer))
     }
 
+    #[inline]
+    fn make_local_socket_inode(&self, name: &str) -> Result<INodeCacheItem> {
+        self.make_inode(name, FileType::Socket, FileContents::None)
+    }
+
     fn write_at(&self, offset: usize, buffer: &[u8]) -> Result<usize> {
         let this = self.0.read();
 
