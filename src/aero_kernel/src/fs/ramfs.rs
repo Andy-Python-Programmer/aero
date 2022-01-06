@@ -144,8 +144,12 @@ impl INodeInterface for LockedRamINode {
     }
 
     #[inline]
-    fn make_local_socket_inode(&self, name: &str) -> Result<INodeCacheItem> {
-        self.make_inode(name, FileType::Socket, FileContents::None)
+    fn make_local_socket_inode(
+        &self,
+        name: &str,
+        inode: Arc<dyn INodeInterface>,
+    ) -> Result<INodeCacheItem> {
+        self.make_inode(name, FileType::Socket, FileContents::Socket(inode))
     }
 
     fn write_at(&self, offset: usize, buffer: &[u8]) -> Result<usize> {
@@ -172,6 +176,7 @@ impl INodeInterface for LockedRamINode {
                 device.write_at(offset, buffer)
             }
 
+            FileContents::Socket(_) => Err(FileSystemError::NotSupported),
             FileContents::None => Err(FileSystemError::NotSupported),
         }
     }
@@ -264,6 +269,7 @@ impl INodeInterface for LockedRamINode {
                 device.read_at(offset, buffer)
             }
 
+            FileContents::Socket(_) => Err(FileSystemError::NotSupported),
             FileContents::None => Err(FileSystemError::NotSupported),
         }
     }

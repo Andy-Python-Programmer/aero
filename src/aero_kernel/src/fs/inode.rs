@@ -92,7 +92,11 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
-    fn make_local_socket_inode(&self, _name: &str) -> Result<INodeCacheItem> {
+    fn make_local_socket_inode(
+        &self,
+        _name: &str,
+        _inode: Arc<dyn INodeInterface>,
+    ) -> Result<INodeCacheItem> {
         Err(FileSystemError::NotSupported)
     }
 
@@ -193,6 +197,9 @@ pub enum FileContents {
     /// If the file type of the inode is [FileType::Device], in that case this variant
     /// is used.
     Device(Arc<DevINode>),
+
+    /// This variant is used to store the backing socket inode.
+    Socket(Arc<dyn INodeInterface>),
 
     /// This file does *not* and *cannot* have any contents in bytes. This is useful
     /// in the cases of directories.
@@ -331,7 +338,9 @@ impl DirEntry {
         name: String,
         inode: Arc<dyn INodeInterface>,
     ) -> Result<DirCacheItem> {
-        let inode = parent.inode().make_local_socket_inode(name.as_str())?;
+        let inode = parent
+            .inode()
+            .make_local_socket_inode(name.as_str(), inode)?;
 
         Ok(cache::dcache().make_item_no_cache(Self {
             data: Mutex::new(DirProtectedData {
