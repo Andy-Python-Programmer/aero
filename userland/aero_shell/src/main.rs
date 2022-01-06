@@ -155,6 +155,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
             "pid" => {
                 println!("{}", sys_getpid()?);
             }
+
             "sleep" => {
                 let duration = args.next().unwrap_or("0").parse::<usize>().unwrap_or(0);
                 let timespec = TimeSpec {
@@ -164,6 +165,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
 
                 sys_sleep(&timespec)?;
             }
+
             "gcc" => {
                 let child = sys_fork()?;
 
@@ -186,6 +188,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     sys_waitpid(child, &mut status, 0)?;
                 }
             }
+
             _ => {
                 let child = sys_fork()?;
 
@@ -334,6 +337,9 @@ fn uwufetch() -> Result<(), AeroSyscallError> {
     let hostname = unsafe { core::str::from_utf8_unchecked(&hostname_buf[0..hostname_len]) };
     let username = "root"; // TODO: Unhardcode this at some point :^)
 
+    let mut sysinfo = unsafe { core::mem::zeroed() };
+    sys_info(&mut sysinfo)?;
+
     for (i, line) in UWUFETCH_LOGO.lines().skip(1).enumerate() {
         print!(" {}{:<19}{}", MAGENTA_FG, line, RESET);
 
@@ -366,6 +372,9 @@ fn uwufetch() -> Result<(), AeroSyscallError> {
                 uname_info.version(),
                 uname_info.machine()
             );
+        } else if i == 6 {
+            print_prefix("Uptime");
+            println!("{}", sysinfo.uptime);
         } else {
             println!();
         }

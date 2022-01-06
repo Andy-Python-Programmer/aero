@@ -275,7 +275,8 @@ pub fn unlink(
     let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
     let path = Path::new(path_str);
 
-    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+    // TODO: Make use of the open flags.
+    let _flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
     let name = path.container();
 
     if fd as isize == aero_syscall::AT_FDCWD {

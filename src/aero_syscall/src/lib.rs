@@ -284,6 +284,32 @@ pub struct Termios {
 
 pub const AT_FDCWD: isize = -100;
 
+#[repr(C)]
+pub struct SysInfo {
+    /// Seconds since boot
+    pub uptime: i64,
+    /// 1, 5, and 15 minute load averages
+    pub loads: [u64; 3],
+    /// Total usable main memory size.
+    pub totalram: u64,
+    /// Available memory size.
+    pub freeram: u64,
+    /// Amount of shared memory.
+    pub sharedram: u64,
+    /// Memory used by buffers.
+    pub bufferram: u64,
+    /// Total swap space size.
+    pub totalswap: u64,
+    /// Swap space still available.
+    pub freeswap: u64,
+    pub procs: u16,
+    pub pad: u16,
+    pub totalhigh: u64,
+    pub freehigh: u64,
+    pub mem_unit: u32,
+    pub _f: [i8; 0],
+}
+
 pub fn syscall_result_as_usize(result: Result<usize, AeroSyscallError>) -> usize {
     match result {
         Ok(value) => value as _,
@@ -617,5 +643,10 @@ pub fn sys_sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
 
 pub fn sys_pipe(fds: &mut [usize; 2], flags: OpenFlags) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_PIPE, fds.as_ptr() as usize, flags.bits());
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_info(struc: &mut SysInfo) -> Result<usize, AeroSyscallError> {
+    let value = syscall1(prelude::SYS_INFO, struc as *mut _ as usize);
     isize_as_syscall_result(value as _)
 }

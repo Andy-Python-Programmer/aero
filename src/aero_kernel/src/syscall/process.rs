@@ -229,6 +229,15 @@ pub fn gethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError>
     }
 }
 
+pub fn info(struc: usize) -> Result<usize, AeroSyscallError> {
+    let struc = unsafe { &mut *(struc as *mut aero_syscall::SysInfo) };
+
+    // TODO: Fill in the rest of the struct.
+    struc.uptime = crate::time::get_uptime_ticks() as i64;
+
+    Ok(0x00)
+}
+
 pub fn sethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError> {
     let slice = unsafe { core::slice::from_raw_parts(ptr as *const u8, length) };
 

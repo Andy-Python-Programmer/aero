@@ -184,6 +184,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_GETTID => process::gettid(),
         SYS_GETHOSTNAME => process::gethostname(b, c),
         SYS_SETHOSTNAME => process::sethostname(b, c),
+        SYS_INFO => process::info(b),
 
         0x13A => {
             let syscall_name = unsafe {
