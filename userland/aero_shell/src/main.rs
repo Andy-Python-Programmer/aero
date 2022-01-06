@@ -108,36 +108,36 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 // if the test kernel is built instead of randomly bloating the shell
                 // with tests :).
 
-                let mut pipe = [0usize; 2];
-                sys_pipe(&mut pipe, OpenFlags::empty())?;
+                // let mut pipe = [0usize; 2];
+                // sys_pipe(&mut pipe, OpenFlags::empty())?;
 
-                let child = sys_fork()?;
+                // let child = sys_fork()?;
 
-                if child == 0 {
-                    sys_close(pipe[0])?; // close the read end
+                // if child == 0 {
+                //     sys_close(pipe[0])?; // close the read end
 
-                    let mut buffer = [0; 1024];
-                    let length = sys_read(0, &mut buffer)?;
+                //     let mut buffer = [0; 1024];
+                //     let length = sys_read(0, &mut buffer)?;
 
-                    sys_write(pipe[1], &buffer[0..length])?;
+                //     sys_write(pipe[1], &buffer[0..length])?;
 
-                    sys_close(pipe[1])?; // close the write end
-                    sys_exit(0)
-                } else {
-                    let mut status = 0;
-                    sys_waitpid(child, &mut status, 0)?;
+                //     sys_close(pipe[1])?; // close the write end
+                //     sys_exit(0)
+                // } else {
+                //     let mut status = 0;
+                //     sys_waitpid(child, &mut status, 0)?;
 
-                    sys_close(pipe[1])?; // close the write end
+                //     sys_close(pipe[1])?; // close the write end
 
-                    let mut buffer = [0; 1024];
-                    let length = sys_read(pipe[0], &mut buffer)?;
+                //     let mut buffer = [0; 1024];
+                //     let length = sys_read(pipe[0], &mut buffer)?;
 
-                    println!("{}", unsafe {
-                        core::str::from_utf8_unchecked(&buffer[0..length])
-                    });
+                //     println!("{}", unsafe {
+                //         core::str::from_utf8_unchecked(&buffer[0..length])
+                //     });
 
-                    sys_close(pipe[0])?; // close the read end
-                }
+                //     sys_close(pipe[0])?; // close the read end
+                // }
 
                 // let fb = sys_open("/dev/fb", OpenFlags::O_RDWR)?;
 
@@ -148,6 +148,8 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 // println!("writing to fb");
                 // sys_write(fb, casted)?;
                 // sys_close(fb)?;
+
+                uwutest()?;
             }
 
             "pid" => {
@@ -293,6 +295,32 @@ fn print_kernel_log() -> Result<(), AeroSyscallError> {
     // TODO: Add colored output back :^)
 
     cat_file(Some("/dev/kmsg"))
+}
+
+fn uwutest() -> Result<(), AeroSyscallError> {
+    const SOCKET_PATH: &str = "/socket.unix";
+
+    let socket = sys_socket(AF_UNIX, SOCK_STREAM, 0)?;
+
+    println!("uwutest: socket file descriptor is: {}", socket);
+
+    let mut sock_addr = SocketAddrUnix {
+        family: AF_UNIX as i16,
+        path: [0; 108],
+    };
+
+    sock_addr.path[0..SOCKET_PATH.len()].copy_from_slice(SOCKET_PATH.as_bytes());
+
+    sys_bind(
+        socket,
+        &SocketAddr::Unix(sock_addr),
+        core::mem::size_of::<SocketAddrUnix>() as u32,
+    )?;
+
+    println!("uwutest: successfully bound to {:?}", SOCKET_PATH);
+    list_directory(".")?;
+
+    Ok(())
 }
 
 fn uwufetch() -> Result<(), AeroSyscallError> {
