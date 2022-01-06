@@ -49,6 +49,7 @@ LIMINE_URL = 'https://github.com/limine-bootloader/limine'
 BUILD_DIR = 'build'
 BUNDLED_DIR = 'bundled'
 SYSROOT_DIR = 'sysroot'
+BASE_FILES_DIR = 'base-files'
 OVMF_FILES = ['OVMF-pure-efi.fd']
 
 LIMINE_TEMPLATE = """
@@ -347,7 +348,7 @@ def prepare_iso(args, kernel_bin, user_bins):
             dest_file = os.path.join(dest, line)
 
             os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-            shutil.copy(file, dest)
+            shutil.copy(file, dest_file)
 
     bin_src = os.path.join(SYSROOT_DIR, 'system-root/usr/bin')
     lib_src = os.path.join(SYSROOT_DIR, 'system-root/usr/lib')
@@ -361,6 +362,8 @@ def prepare_iso(args, kernel_bin, user_bins):
 
     if os.path.exists(inc_src):
         cp(inc_src, initramfs_include)
+
+    cp(BASE_FILES_DIR, initramfs_root)
 
     for file in user_bins:
         bin_name = os.path.basename(file)
