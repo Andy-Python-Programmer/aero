@@ -210,7 +210,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_UNLINK => fs::unlink(b, c, d, e),
 
         SYS_SOCKET => net::socket(b, c, d),
-        SYS_BIND => net::bind(b, unsafe { &*(c as *const SocketAddr) }, d),
+        SYS_BIND => net::bind(b, c, d),
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),

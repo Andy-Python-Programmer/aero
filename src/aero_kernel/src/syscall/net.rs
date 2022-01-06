@@ -30,7 +30,8 @@ pub fn socket(
     Ok(fd)
 }
 
-pub fn bind(fd: usize, address: &SocketAddr, length: usize) -> Result<usize, AeroSyscallError> {
+pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
+    let address = unsafe { &*(address as *const SocketAddr) };
     let current_task = scheduler::get_scheduler().current_task();
     let file = current_task.file_table.get_handle(fd);
 
