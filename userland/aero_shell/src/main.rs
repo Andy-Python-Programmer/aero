@@ -156,6 +156,10 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 println!("{}", sys_getpid()?);
             }
 
+            "uptime" => {
+                print!("{}", get_uptime()?);
+            }
+
             "sleep" => {
                 let duration = args.next().unwrap_or("0").parse::<usize>().unwrap_or(0);
                 let timespec = TimeSpec {
@@ -326,6 +330,55 @@ fn uwutest() -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
+fn get_uptime() -> Result<String, AeroSyscallError> {
+    let mut sysinfo = unsafe { core::mem::zeroed() };
+    sys_info(&mut sysinfo)?;
+
+    let mut seconds = sysinfo.uptime;
+    let mut uptime = String::new();
+
+    if seconds / 86400 > 0 {
+        uptime = format!(
+            "{} day{}, ",
+            seconds / 86400,
+            if (seconds / 86400) == 1 { "" } else { "s" }
+        );
+
+        seconds %= 86400;
+    }
+
+    if seconds / 3600 > 0 {
+        uptime = format!(
+            "{}{} hour{}, ",
+            uptime,
+            seconds / 3600,
+            if (seconds / 3600) == 1 { "" } else { "s" },
+        );
+
+        seconds %= 3600;
+    }
+
+    if seconds / 60 > 0 {
+        uptime = format!(
+            "{}{} minute{}, ",
+            uptime,
+            seconds / 60,
+            if (seconds / 60) == 1 { "" } else { "s" }
+        );
+
+        seconds %= 60;
+    }
+
+    uptime = format!(
+        "{}{} second{}\n",
+        uptime,
+        seconds,
+        if seconds == 1 { "" } else { "s" }
+    );
+
+    Ok(uptime)
+}
+
 fn uwufetch() -> Result<(), AeroSyscallError> {
     let print_prefix = |prefix| {
         print!("{}{}{}: ", MAGENTA_FG, prefix, RESET);
@@ -336,9 +389,6 @@ fn uwufetch() -> Result<(), AeroSyscallError> {
     let hostname_len = sys_gethostname(&mut hostname_buf)?;
     let hostname = unsafe { core::str::from_utf8_unchecked(&hostname_buf[0..hostname_len]) };
     let username = "root"; // TODO: Unhardcode this at some point :^)
-
-    let mut sysinfo = unsafe { core::mem::zeroed() };
-    sys_info(&mut sysinfo)?;
 
     for (i, line) in UWUFETCH_LOGO.lines().skip(1).enumerate() {
         print!(" {}{:<19}{}", MAGENTA_FG, line, RESET);
@@ -374,7 +424,7 @@ fn uwufetch() -> Result<(), AeroSyscallError> {
             );
         } else if i == 6 {
             print_prefix("Uptime");
-            println!("{}", sysinfo.uptime);
+            println!("{}", get_uptime()?);
         } else {
             println!();
         }

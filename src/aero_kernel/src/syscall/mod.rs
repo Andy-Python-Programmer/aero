@@ -59,7 +59,7 @@
 
 use core::mem::MaybeUninit;
 
-use aero_syscall::{prelude::*, SocketAddr};
+use aero_syscall::prelude::*;
 
 pub mod fs;
 mod net;
