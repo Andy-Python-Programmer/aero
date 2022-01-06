@@ -17,18 +17,25 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use alloc::sync::Arc;
-
-use crate::fs::{
-    inode::{FileType, INodeInterface, Metadata},
-    Result,
+use aero_syscall::SocketAddr;
+use alloc::{
+    string::String,
+    sync::{Arc, Weak},
 };
 
-pub struct UnixSocket;
+use crate::fs;
+use crate::fs::{
+    inode::{DirEntry, FileType, INodeInterface, Metadata},
+    FileSystemError, Path, Result,
+};
+
+pub struct UnixSocket {
+    weak: Weak<UnixSocket>,
+}
 
 impl UnixSocket {
     pub fn new() -> Arc<UnixSocket> {
-        Arc::new(UnixSocket)
+        Arc::new_cyclic(|weak| UnixSocket { weak: weak.clone() })
     }
 }
 
@@ -40,5 +47,34 @@ impl INodeInterface for UnixSocket {
             size: 0,
             children_len: 0,
         })
+    }
+
+    fn bind(&self, address: &SocketAddr, _length: usize) -> Result<()> {
+        if let SocketAddr::Unix(address) = address {
+            let path_len = address
+                .path
+                .iter()
+                .position(|&b| b == 0)
+                .unwrap_or(address.path.len());
+
+            let path_str = unsafe { core::str::from_utf8_unchecked(&address.path[0..path_len]) };
+            let path = Path::new(path_str);
+
+            if fs::lookup_path(path).is_ok() {
+                return Err(FileSystemError::EntryExists);
+            }
+
+            let (parent, name) = path.parent_and_basename();
+
+            DirEntry::from_inode_custom(
+                fs::lookup_path(parent)?,
+                String::from(name),
+                self.weak.upgrade().unwrap(),
+            )?;
+
+            Ok(())
+        } else {
+            Err(FileSystemError::NotSupported)
+        }
     }
 }
