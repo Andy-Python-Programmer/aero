@@ -331,50 +331,46 @@ fn uwutest() -> Result<(), AeroSyscallError> {
 }
 
 fn get_uptime() -> Result<String, AeroSyscallError> {
-    let mut sysinfo = unsafe { core::mem::zeroed() };
-    sys_info(&mut sysinfo)?;
+    let mut info = unsafe { core::mem::zeroed() };
 
-    let mut seconds = sysinfo.uptime;
+    sys_info(&mut info)?;
+
     let mut uptime = String::new();
 
-    if seconds / 86400 > 0 {
-        uptime = format!(
+    let days = info.uptime / (3600 * 24);
+    let hours = info.uptime % (3600 * 24) / 3600;
+    let minutes = info.uptime % 3600 / 60;
+    let seconds = info.uptime % 60;
+
+    if days > 0 {
+        uptime.push_str(&format!(
             "{} day{}, ",
-            seconds / 86400,
-            if (seconds / 86400) == 1 { "" } else { "s" }
-        );
-
-        seconds %= 86400;
+            days,
+            if days == 1 { "" } else { "s" }
+        ));
     }
 
-    if seconds / 3600 > 0 {
-        uptime = format!(
-            "{}{} hour{}, ",
-            uptime,
-            seconds / 3600,
-            if (seconds / 3600) == 1 { "" } else { "s" },
-        );
-
-        seconds %= 3600;
+    if hours > 0 {
+        uptime.push_str(&format!(
+            "{} hour{}, ",
+            hours,
+            if hours == 1 { "" } else { "s" },
+        ));
     }
 
-    if seconds / 60 > 0 {
-        uptime = format!(
-            "{}{} minute{}, ",
-            uptime,
-            seconds / 60,
-            if (seconds / 60) == 1 { "" } else { "s" }
-        );
-
-        seconds %= 60;
+    if minutes > 0 {
+        uptime.push_str(&format!(
+            "{} minute{}, ",
+            minutes,
+            if minutes == 1 { "" } else { "s" }
+        ));
     }
 
-    uptime = format!(
-        "{}{} second{}\n",
-        uptime,
+    uptime.push_str(&format!(
+        "{} second{}",
         seconds,
         if seconds == 1 { "" } else { "s" }
-    );
+    ));
 
     Ok(uptime)
 }
