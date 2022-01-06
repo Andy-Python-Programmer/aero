@@ -29,3 +29,22 @@ pub fn socket(
 
     Ok(fd)
 }
+
+pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
+    let address = unsafe { &*(address as *const SocketAddr) };
+    let current_task = scheduler::get_scheduler().current_task();
+    let file = current_task.file_table.get_handle(fd);
+
+    match file {
+        Some(handle) => {
+            if handle.inode().metadata()?.is_socket() {
+                handle.inode().bind(address, length)?;
+
+                Ok(0)
+            } else {
+                Err(AeroSyscallError::ENOTSOCK)
+            }
+        }
+        None => Err(AeroSyscallError::ENOENT),
+    }
+}

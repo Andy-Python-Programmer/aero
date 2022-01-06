@@ -162,6 +162,7 @@ pub enum SysFileType {
     File,
     Directory,
     Device,
+    Socket,
 }
 
 #[repr(C, packed)]
@@ -504,17 +505,17 @@ pub fn sys_sethostname(name: &str) -> Result<usize, AeroSyscallError> {
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct SocketAddrUnix {
-    family: i16,
-    path: [u8; 108],
+    pub family: i16,
+    pub path: [u8; 108],
 }
 
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct SocketAddrInet {
-    family: i16,
-    port: [u8; 2],
-    address: [u8; 4],
-    padding: [u8; 8],
+    pub family: i16,
+    pub port: [u8; 2],
+    pub address: [u8; 4],
+    pub padding: [u8; 8],
 }
 
 #[derive(Debug, Clone)]

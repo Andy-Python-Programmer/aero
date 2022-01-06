@@ -19,7 +19,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use aero_syscall::OpenFlags;
+use aero_syscall::{OpenFlags, SocketAddr};
 
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -92,6 +92,14 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
+    fn make_local_socket_inode(
+        &self,
+        _name: &str,
+        _inode: Arc<dyn INodeInterface>,
+    ) -> Result<INodeCacheItem> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Looks up the directory entry in the filesystem.
     fn lookup(&self, _dir: DirCacheItem, _name: &str) -> Result<DirCacheItem> {
         Err(FileSystemError::NotSupported)
@@ -123,22 +131,27 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     fn unlink(&self, _name: &str) -> Result<()> {
         Err(FileSystemError::NotSupported)
     }
+
+    // Socket operations
+    fn bind(&self, _address: &SocketAddr, _length: usize) -> Result<()> {
+        Err(FileSystemError::NotSupported)
+    }
 }
 
 /// Structure representing the curcial, characteristics of an inode. The metadata
 /// of an inode can be retrieved by invoking the [INodeInterface::metadata] function.
 #[derive(Debug, Copy, Clone)]
 pub struct Metadata {
-    pub(super) id: usize,
-    pub(super) file_type: FileType,
+    pub id: usize,
+    pub file_type: FileType,
 
     /// The total size of the content that the inode holds. Set to `0x00` if
     /// the inode file type is *not* a file.
-    pub(super) size: usize,
+    pub size: usize,
 
     /// The length of the children's map of the inode. Set to `0x00` if the inode
     /// has no children and if the file type of the inode is *not* a directory.
-    pub(super) children_len: usize,
+    pub children_len: usize,
 }
 
 impl Metadata {
@@ -162,6 +175,12 @@ impl Metadata {
     pub fn is_directory(&self) -> bool {
         self.file_type == FileType::Directory
     }
+
+    /// Returns [`true`] if the file type of the inode is a socket.
+    #[inline]
+    pub fn is_socket(&self) -> bool {
+        self.file_type == FileType::Socket
+    }
 }
 
 /// Enum representing the inner contents of a file. The file contents depend on the
@@ -179,6 +198,9 @@ pub enum FileContents {
     /// is used.
     Device(Arc<DevINode>),
 
+    /// This variant is used to store the backing socket inode.
+    Socket(Arc<dyn INodeInterface>),
+
     /// This file does *not* and *cannot* have any contents in bytes. This is useful
     /// in the cases of directories.
     None,
@@ -195,6 +217,7 @@ pub enum FileType {
     File,
     Directory,
     Device,
+    Socket,
 }
 
 impl From<FileType> for aero_syscall::SysFileType {
@@ -203,6 +226,7 @@ impl From<FileType> for aero_syscall::SysFileType {
             FileType::File => aero_syscall::SysFileType::File,
             FileType::Directory => aero_syscall::SysFileType::Directory,
             FileType::Device => aero_syscall::SysFileType::Device,
+            FileType::Socket => aero_syscall::SysFileType::Socket,
         }
     }
 }
@@ -307,6 +331,30 @@ impl DirEntry {
 
             cache_marker: 0,
         })
+    }
+
+    pub fn from_socket_inode(
+        parent: DirCacheItem,
+        name: String,
+        inode: Arc<dyn INodeInterface>,
+    ) -> Result<DirCacheItem> {
+        let inode = parent
+            .inode()
+            .make_local_socket_inode(name.as_str(), inode)?;
+
+        Ok(cache::dcache().make_item_no_cache(Self {
+            data: Mutex::new(DirProtectedData {
+                parent: Some(parent),
+                inode: inode.clone(),
+                name,
+            }),
+            filesystem: if let Some(filesystem) = inode.weak_filesystem() {
+                Once::initialized(filesystem)
+            } else {
+                Once::new()
+            },
+            cache_marker: 0,
+        }))
     }
 
     pub fn name(&self) -> String {
