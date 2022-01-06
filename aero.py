@@ -316,7 +316,8 @@ def prepare_iso(args, kernel_bin, user_bins):
     initramfs_root = os.path.join(BUILD_DIR, 'initramfs_root')
 
     initramfs_bin = os.path.join(initramfs_root, 'bin')
-    initramfs_lib = os.path.join(initramfs_root, 'lib')
+    initramfs_lib = os.path.join(initramfs_root, 'usr', 'lib')
+    initramfs_include = os.path.join(initramfs_root, 'usr', 'include')
 
     if os.path.exists(initramfs_root):
         shutil.rmtree(initramfs_root)
@@ -350,12 +351,16 @@ def prepare_iso(args, kernel_bin, user_bins):
 
     bin_src = os.path.join(SYSROOT_DIR, 'system-root/usr/bin')
     lib_src = os.path.join(SYSROOT_DIR, 'system-root/usr/lib')
+    inc_src = os.path.join(SYSROOT_DIR, 'system-root/usr/include')
 
     if os.path.exists(bin_src):
         cp(bin_src, initramfs_bin)
 
     if os.path.exists(lib_src):
         cp(lib_src, initramfs_lib)
+
+    if os.path.exists(inc_src):
+        cp(inc_src, initramfs_include)
 
     for file in user_bins:
         bin_name = os.path.basename(file)

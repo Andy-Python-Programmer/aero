@@ -29,15 +29,12 @@ use core::borrow::Borrow;
 use core::fmt::Debug;
 use core::hash::Hash;
 use core::ops;
-use core::sync::atomic::AtomicBool;
-use core::sync::atomic::Ordering;
 
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 
 use alloc::vec::Vec;
-use lru::LruCache;
 use spin::Once;
 
 use crate::fs::inode::{DirEntry, INodeInterface};
@@ -153,7 +150,6 @@ pub trait Cacheable<K: CacheKey>: Sized {
 pub struct CacheItem<K: CacheKey, V: Cacheable<K>> {
     cache: Weak<Cache<K, V>>,
     value: V,
-    used: AtomicBool,
 }
 
 impl<K: CacheKey, V: Cacheable<K>> CacheItem<K, V> {
@@ -163,26 +159,7 @@ impl<K: CacheKey, V: Cacheable<K>> CacheItem<K, V> {
         CacheArc::new(Self {
             cache: cache.clone(),
             value,
-            used: AtomicBool::new(false),
         })
-    }
-
-    /// Returns if the cache-item is used.
-    #[inline]
-    pub fn is_used(&self) -> bool {
-        self.used.load(Ordering::SeqCst)
-    }
-
-    /// Marks the cache-item as unused.
-    #[inline]
-    fn mark_unused(&self) {
-        self.used.store(false, Ordering::SeqCst);
-    }
-
-    /// Marks the cache-item as used.
-    #[inline]
-    fn mark_used(&self) {
-        self.used.store(true, Ordering::SeqCst);
     }
 }
 
@@ -196,10 +173,7 @@ impl<K: CacheKey, V: Cacheable<K>> ops::Deref for CacheItem<K, V> {
 
 unsafe impl<K: CacheKey, V: Cacheable<K>> Sync for CacheItem<K, V> {}
 
-/// Inner implementation structure for caching. This structure basically contains the
-/// LRU cache of the unused entries and a hashmap of the used entries.
 struct CacheIndex<K: CacheKey, V: Cacheable<K>> {
-    unused: LruCache<K, Arc<CacheItem<K, V>>>,
     used: hashbrown::HashMap<K, Weak<CacheItem<K, V>>>,
 }
 
@@ -212,11 +186,9 @@ pub struct Cache<K: CacheKey, V: Cacheable<K>> {
 }
 
 impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
-    /// Creates a new cache with the provided that holds at most `capacity` items.
-    pub(super) fn new(capacity: usize) -> Arc<Self> {
+    pub(super) fn new() -> Arc<Self> {
         Arc::new_cyclic(|this| Cache::<K, V> {
             index: Mutex::new(CacheIndex {
-                unused: LruCache::new(capacity),
                 used: hashbrown::HashMap::new(),
             }),
             self_ref: this.clone(),
@@ -226,7 +198,6 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
     pub(super) fn clear(&self) {
         let mut index_mut = self.index.lock();
 
-        index_mut.unused.clear();
         index_mut.used.clear();
     }
 
@@ -238,7 +209,6 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
             .used
             .insert(item.cache_key(), Arc::downgrade(&item));
 
-        item.mark_used();
         item
     }
 
@@ -247,15 +217,10 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
     }
 
     pub(super) fn get(&self, key: K) -> Option<CacheArc<CacheItem<K, V>>> {
-        let mut index = self.index.lock();
+        let index = self.index.lock();
 
         if let Some(entry) = index.used.get(&key) {
             Some(CacheArc::from(entry.upgrade()?))
-        } else if let Some(entry) = index.unused.pop(&key) {
-            entry.mark_used();
-            index.used.insert(key, Arc::downgrade(&entry));
-
-            Some(entry.into())
         } else {
             None
         }
@@ -268,39 +233,27 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
         for item in self.index.lock().used.iter() {
             log::debug!("\t\t {:?} -> {:?}", item.0, item.1.strong_count());
         }
-
-        log::debug!("\t Un-used entries: {}", self.index.lock().unused.len());
-        for item in self.index.lock().unused.iter() {
-            log::debug!("\t\t {:?} -> {:?}", item.0, Arc::strong_count(item.1));
-        }
     }
 
     /// Removes the item with the provided `key` from the cache.
     pub(super) fn remove(&self, key: &K) {
         let mut index = self.index.lock();
 
-        if index.used.remove(key).is_none() {
-            index.unused.pop(key);
-        }
+        index.used.remove(key);
     }
 
     fn mark_item_unused(&self, item: CacheArc<CacheItem<K, V>>) {
         let mut this = self.index.lock();
         let key = item.cache_key();
 
-        if this.used.remove(&key).is_some() {
-            this.unused.put(key, item.0.clone());
-        }
+        this.used.remove(&key);
     }
 }
 
 impl<K: CacheKey, T: Cacheable<K>> CacheDropper for CacheItem<K, T> {
     fn drop_this(&self, this: Arc<Self>) {
         if let Some(cache) = self.cache.upgrade() {
-            if self.is_used() {
-                self.mark_unused();
-                cache.mark_item_unused(this.into());
-            }
+            cache.mark_item_unused(this.into());
         }
     }
 }
@@ -409,6 +362,6 @@ pub fn dcache() -> &'static Arc<DirCache> {
 
 /// This function is responsible for initializing the inode cache.
 pub fn init() {
-    INODE_CACHE.call_once(|| INodeCache::new(256));
-    DIR_CACHE.call_once(|| DirCache::new(256));
+    INODE_CACHE.call_once(|| INodeCache::new());
+    DIR_CACHE.call_once(|| DirCache::new());
 }
