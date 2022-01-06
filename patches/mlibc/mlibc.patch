@@ -1,4 +1,4 @@
-From 932d1d378a246272a266080c6dd9772b1147347c Mon Sep 17 00:00:00 2001
+From da21a7275364ad98b2239a3d48557d0e886ab98d Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -9,11 +9,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  abis/aero/auxv.h                            |  13 ++
  meson.build                                 |   4 +
  options/ansi/generic/stdlib-stubs.cpp       |   3 +
+ options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
  sysdeps/aero/generic/aero.cc                | 236 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 195 ++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 204 +++++++++++++++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  45 ++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -42,11 +43,11 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 192 ++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 195 ++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  60 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
- 41 files changed, 844 insertions(+), 7 deletions(-)
+ 42 files changed, 858 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -147,6 +148,22 @@ index 347c659..8e97b26 100644
  	sigset_t set;
  	sigemptyset(&set);
  	sigaddset(&set, SIGABRT);
+diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
+index 1720d4f..81e4d7e 100644
+--- a/options/rtdl/generic/linker.cpp
++++ b/options/rtdl/generic/linker.cpp
+@@ -367,9 +367,8 @@ void ObjectRepository::_fetchFromFile(SharedObject *object, int fd) {
+ 	object->baseAddress = libraryBase;
+ 	libraryBase += (highest_address + (hugeSize - 1)) & ~(hugeSize - 1);
+ 
+-	if(verbose || logBaseAddresses)
+-		mlibc::infoLogger() << "rtdl: Loading " << object->name
+-				<< " at " << (void *)object->baseAddress << frg::endlog;
++	mlibc::infoLogger() << "rtdl: Loading " << object->name
++			<< " at " << (void *)object->baseAddress << frg::endlog;
+ 
+ 	// Load all segments.
+ 	constexpr size_t pageSize = 0x1000;
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
 index bed8e11..5f5d22d 100644
 --- a/options/rtdl/generic/main.cpp
@@ -490,10 +507,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..9a4e63c
+index 0000000..d5b7d7b
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,195 @@
+@@ -0,0 +1,204 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -603,7 +620,16 @@ index 0000000..9a4e63c
 +int sys_tcgetattr(int fd, struct termios *attr) UNIMPLEMENTED("sys_tcgetattr")
 +int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) UNIMPLEMENTED("sys_tcsetattr")
 +int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) UNIMPLEMENTED("sys_poll")
-+int sys_mkdir(const char* path) UNIMPLEMENTED("sys_mkdir")
++
++int sys_mkdir(const char* path) {
++	auto result = syscall(SYS_MKDIR, (uintptr_t)path, strlen(path));
++
++	if (result < 0)
++		return -result;
++
++	return 0;
++}
++
 +int sys_rmdir(const char* path) UNIMPLEMENTED("sys_rmdir")
 +int sys_link(const char* srcpath, const char* destpath) UNIMPLEMENTED("sys_link")
 +
@@ -959,10 +985,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..e35bddb
+index 0000000..5664bf7
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,192 @@
+@@ -0,0 +1,195 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -1004,6 +1030,9 @@ index 0000000..e35bddb
 +#define SYS_ACCESS      32
 +#define SYS_PIPE        33
 +#define SYS_UNLINK      34
++#define SYS_GETHOSTNAME 35
++#define SYS_SETHOSTNAME 36
++#define SYS_INFO        37
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.
