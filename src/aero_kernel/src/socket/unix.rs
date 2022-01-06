@@ -66,7 +66,7 @@ impl INodeInterface for UnixSocket {
 
             let (parent, name) = path.parent_and_basename();
 
-            DirEntry::from_inode_custom(
+            DirEntry::from_socket_inode(
                 fs::lookup_path(parent)?,
                 String::from(name),
                 self.weak.upgrade().unwrap(),

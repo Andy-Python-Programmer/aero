@@ -333,7 +333,7 @@ impl DirEntry {
         })
     }
 
-    pub fn from_inode_custom(
+    pub fn from_socket_inode(
         parent: DirCacheItem,
         name: String,
         inode: Arc<dyn INodeInterface>,
