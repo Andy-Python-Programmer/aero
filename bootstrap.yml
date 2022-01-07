@@ -47,6 +47,18 @@ sources:
     patch-path-strip: 1
     version: '12.rolling'
 
+  - name: rust
+    subdir: 'bundled'
+    branch: master
+    git: 'https://github.com/rust-lang/rust'
+    commit: e012a191d768adeda1ee36a99ef8b92d51920154
+
+  - name: rust-libc
+    subdir: 'bundled'
+    git: 'https://github.com/rust-lang/libc/'
+    branch: master
+    commit: '1f1ebd5b8056b278f86ed6421f02c149bda9ae08'
+
   # - name: python
   #   subdir: 'bundled'
   #   patch-path-strip: 1
@@ -102,6 +114,20 @@ tools:
     install:
       - args: ['make', 'install-strip']
       - args: ['ln', '-sf', '@PREFIX@/share/aclocal-1.16', '@PREFIX@/share/aclocal']
+
+  - name: host-rust
+    from_source: rust
+    sources_required:
+      - rust-libc
+    revision: 2
+    # configure:
+    #   - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    compile:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+      - args: ['cp', '@SOURCE_ROOT@/extra-files/rust/config.toml', 'config.toml']
+      - args: ['python3', '@THIS_SOURCE_DIR@/x.py', 'build', '--stage', '2', '-j', '@PARALLELISM@']
+    install:
+      - args: ['python3', '@THIS_SOURCE_DIR@/x.py', 'install', '-j', '@PARALLELISM@']
 
   # - name: host-python
   #   from_source: python
