@@ -15,6 +15,52 @@ use super::{cache, FileSystemError};
 use super::inode::{DirEntry, INodeInterface, Metadata};
 use super::{FileSystem, Path, Result, MOUNT_MANAGER};
 
+fn push_string_if_some(map: &mut serde_json::Value, key: &str, value: Option<String>) {
+    if let Some(value) = value {
+        map[key] = serde_json::Value::String(value);
+    }
+}
+
+fn get_cpuinfo_cached() -> &'static str {
+    static CACHED: Once<String> = Once::new();
+
+    CACHED.call_once(|| {
+        use alloc::vec;
+        use serde_json::*;
+
+        let mut data = json!({ "processors": [] });
+
+        data.get_mut("processors")
+            .and_then(|processors| processors.as_array_mut())
+            .map(|processors| {
+                let mut cpu_info = vec![];
+
+                crate::tls::for_cpu_info_cached(|info| {
+                    let mut processor = json!({});
+
+                    processor["id"] = Value::Number(Number::from(info.cpuid));
+                    processor["fpu"] = Value::Bool(info.fpu);
+
+                    push_string_if_some(&mut processor, "brand", info.brand.clone());
+                    push_string_if_some(&mut processor, "vendor", info.vendor.clone());
+
+                    processor["features"] = Value::Array(
+                        info.features
+                            .iter()
+                            .map(|feature| Value::String(feature.to_string()))
+                            .collect(),
+                    );
+
+                    cpu_info.push(processor);
+                });
+
+                *processors = cpu_info;
+            });
+
+        data.to_string()
+    })
+}
+
 #[derive(Default)]
 struct ProcINode {
     id: usize,
@@ -103,33 +149,7 @@ impl INodeInterface for LockedProcINode {
 
         match &this.contents {
             FileContents::CpuInfo => {
-                static CACHED: Once<String> = Once::new();
-
-                let data = CACHED.call_once(|| {
-                    use alloc::vec;
-                    use serde_json::*;
-
-                    let mut data = json!({ "processors": [] });
-
-                    data.get_mut("processors")
-                        .and_then(|processors| processors.as_array_mut())
-                        .map(|processors| {
-                            let mut cpu_info = vec![];
-
-                            crate::tls::for_cpu_info_cached(|info| {
-                                let mut processor = json!({});
-
-                                processor["id"] = Value::Number(Number::from(info.cpuid));
-                                processor["brand"] = Value::String(info.brand.clone());
-
-                                cpu_info.push(processor);
-                            });
-
-                            *processors = cpu_info;
-                        });
-
-                    data.to_string()
-                });
+                let data = get_cpuinfo_cached();
 
                 let count = core::cmp::min(buffer.len(), data.len() - offset);
                 buffer[..count].copy_from_slice(&data.as_bytes()[offset..]);
