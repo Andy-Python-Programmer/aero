@@ -40,6 +40,7 @@ pub mod file_table;
 pub mod initramfs;
 pub mod inode;
 pub mod pipe;
+pub mod procfs;
 pub mod ramfs;
 
 static ROOT_FS: Once<Arc<RamFs>> = Once::new();
@@ -292,12 +293,16 @@ pub fn init() -> Result<()> {
     root_dir().inode().mkdir("dev")?;
     root_dir().inode().mkdir("home")?;
     root_dir().inode().mkdir("temp")?;
+    root_dir().inode().mkdir("proc")?;
 
     initramfs::init()?;
     log::info!("Installed initramfs");
 
     devfs::init()?;
     log::info!("Installed devfs");
+
+    procfs::init()?;
+    log::info!("Installed procfs");
 
     Ok(())
 }

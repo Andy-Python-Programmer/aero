@@ -78,8 +78,8 @@ mod fs;
 mod logger;
 mod mem;
 mod modules;
-mod socket;
 mod rendy;
+mod socket;
 mod syscall;
 #[cfg(test)]
 mod tests;
@@ -176,13 +176,11 @@ extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
     arch::gdt::init_boot();
     log::info!("AP{}: loaded boot GDT", ap_id);
 
-    tls::init();
+    tls::init(ap_id as usize);
     log::info!("AP{}: loaded TLS", ap_id);
 
     arch::gdt::init(stack_top_addr);
     log::info!("AP{}: loaded GDT", ap_id);
-
-    tls::get_percpu().cpuid = ap_id as usize; // Set the local cpu id global to the AP id provided in the AP bootinfo
 
     apic::mark_ap_ready(true);
 

@@ -192,7 +192,7 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     acpi::init(rsdp_address).unwrap();
     log::info!("Loaded ACPI");
 
-    tls::init();
+    tls::init(0);
     log::info!("loaded TLS");
 
     crate::unwind::set_panic_hook_ready(true);

@@ -28,10 +28,21 @@
 use core::alloc::Layout;
 
 use alloc::alloc::alloc_zeroed;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 use crate::arch::gdt::{Kpcr, Tss};
 use crate::userland::scheduler;
 use crate::utils::io;
+use crate::utils::sync::Mutex;
+
+static CPU_INFO: Mutex<Vec<CpuInfo>> = Mutex::new(Vec::new());
+
+pub struct CpuInfo {
+    pub cpuid: usize,
+
+    pub brand: String,
+}
 
 pub struct PerCpuData {
     pub cpuid: usize,
@@ -47,7 +58,7 @@ pub fn get_percpu() -> &'static mut PerCpuData {
     unsafe { (&mut *(io::rdmsr(io::IA32_GS_BASE) as *mut Kpcr)).cpu_local }
 }
 
-pub fn init() {
+pub fn init(cpuid: usize) {
     let size = core::mem::size_of::<PerCpuData>();
 
     // NOTE: Inside kernel space, the GS base will always point to the CPU local data and when
@@ -65,6 +76,30 @@ pub fn init() {
         let tls_raw_ptr = alloc_zeroed(tls_layout);
 
         crate::arch::gdt::get_kpcr().cpu_local = &mut *(tls_raw_ptr as *mut PerCpuData);
+    }
+
+    get_percpu().cpuid = cpuid;
+
+    let cpuid = raw_cpuid::CpuId::new();
+
+    CPU_INFO.lock().push(CpuInfo {
+        cpuid: 0,
+
+        brand: cpuid
+            .get_processor_brand_string()
+            .map(|e| String::from(e.as_str()))
+            .unwrap_or(String::from("<unknown>")),
+    })
+}
+
+pub fn for_cpu_info_cached<F>(mut f: F)
+where
+    F: FnMut(&CpuInfo),
+{
+    let lock = CPU_INFO.lock();
+
+    for info in lock.iter() {
+        f(&info);
     }
 }
 
