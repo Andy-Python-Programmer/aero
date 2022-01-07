@@ -31,6 +31,13 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 - Symmetric Multiprocessing (SMP)
 - On-demand paging
 
+# Goals
+
+* Creating a modern, safe, beautiful and fast operating system.
+* Targetting modern 64-bit architectures and CPU features.
+* Good source-level compatibility with Linux so we can port programs over easily.
+* Making a usable OS which can run on real hardware, not just on emulators or virtual machines.
+
 # How to Build and Run Aero
 
 Please make sure you have a **unix-like** host system before building 
