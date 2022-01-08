@@ -234,7 +234,7 @@ tools:
         # clang configuration options.
         - '-DDEFAULT_SYSROOT=@SYSROOT_DIR@'
         # Gold linker configuration options.
-        - '-DLLVM_BINUTILS_INCDIR=@SOURCE_ROOT@/ports/binutils/include'
+        - '-DLLVM_BINUTILS_INCDIR=@SOURCE_ROOT@/bundled/binutils/include'
         - '@THIS_SOURCE_DIR@/llvm'
     compile:
       - args: ['ninja']
