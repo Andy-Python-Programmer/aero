@@ -1,20 +1,20 @@
-From a7e203eeef81136ff99593a85865f94940978e52 Mon Sep 17 00:00:00 2001
+From 3178aa405b484401026cd6ec5c316cf45f2543d8 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Fri, 7 Jan 2022 16:46:16 +1100
-Subject: [PATCH] libc: add aero target
+Date: Wed, 12 Jan 2022 16:00:31 +1100
+Subject: [PATCH] targets: add aero target
 
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
- src/unix/aero/mod.rs | 599 +++++++++++++++++++++++++++++++++++++++++++
- src/unix/mod.rs      |   3 +
+ src/unix/mlibc/mod.rs | 599 ++++++++++++++++++++++++++++++++++++++++++
+ src/unix/mod.rs       |   3 +
  2 files changed, 602 insertions(+)
- create mode 100644 src/unix/aero/mod.rs
+ create mode 100644 src/unix/mlibc/mod.rs
 
-diff --git a/src/unix/aero/mod.rs b/src/unix/aero/mod.rs
+diff --git a/src/unix/mlibc/mod.rs b/src/unix/mlibc/mod.rs
 new file mode 100644
-index 000000000..2ee699a42
+index 0000000..f374aa1
 --- /dev/null
-+++ b/src/unix/aero/mod.rs
++++ b/src/unix/mlibc/mod.rs
 @@ -0,0 +1,599 @@
 +#[cfg(not(target_pointer_width = "64"))]
 +compile_error!("Aero target is not ported to this architecture");
@@ -24,19 +24,6 @@ index 000000000..2ee699a42
 +pub type c_long = i64;
 +pub type c_ulong = u64;
 +pub type wchar_t = ::c_int;
-+
-+// abis/mlibc/vm-flags.h
-+pub const MAP_ANON: ::c_int = 8;
-+pub const MAP_PRIVATE: ::c_int = 1;
-+pub const MAP_SHARED: ::c_int = 2;
-+pub const PROT_EXEC: ::c_int = 4;
-+pub const PROT_READ: ::c_int = 1;
-+pub const PROT_WRITE: ::c_int = 2;
-+
-+// options/posix/include/sys/mman.h
-+pub const MAP_FAILED: *mut ::c_void = usize::MAX as *mut ::c_void;
-+pub const MS_ASYNC: ::c_int = 1;
-+pub const MS_SYNC: ::c_int = 2;
 +
 +// options/posix/include/sys/resource.h
 +pub type rlim_t = ::c_ulong;
@@ -49,6 +36,19 @@ index 000000000..2ee699a42
 +
 +// options/internal/include/bits/off_t.h
 +pub type off_t = ::c_long;
++
++// abis/mlibc/vm-flags.h 
++pub const MAP_ANON: ::c_int = 8;
++pub const MAP_PRIVATE: ::c_int = 1;
++pub const MAP_SHARED: ::c_int = 2;
++pub const PROT_EXEC: ::c_int = 4;
++pub const PROT_READ: ::c_int = 1;
++pub const PROT_WRITE: ::c_int = 2;
++
++// options/posix/include/sys/mman.h
++pub const MAP_FAILED: *mut ::c_void = usize::MAX as *mut ::c_void;
++pub const MS_ASYNC: ::c_int = 1;
++pub const MS_SYNC: ::c_int = 2;
 +
 +// options/ansi/include/time.h
 +pub const CLOCK_MONOTONIC: clockid_t = 1;
@@ -135,6 +135,9 @@ index 000000000..2ee699a42
 +    }
 +}
 +
++// options/posix/include/termios.h
++pub const TIOCGWINSZ: ::c_ulong = 0x5413;
++
 +// abis/mlibc/ino_t.h
 +pub type ino_t = ::c_long;
 +
@@ -152,9 +155,6 @@ index 000000000..2ee699a42
 +
 +// options/posix/include/bits/posix/in_port_t.h
 +pub type in_port_t = u16;
-+
-+// options/posix/include/termios.h
-+pub const TIOCGWINSZ: ::c_ulong = 0x5413;
 +
 +// options/ansi/include/stdlib.h
 +pub const EXIT_FAILURE: ::c_int = 1;
@@ -616,16 +616,16 @@ index 000000000..2ee699a42
 +    pub fn writev(fd: ::c_int, iov: *const ::iovec, count: ::c_int) -> ::ssize_t;
 +}
 diff --git a/src/unix/mod.rs b/src/unix/mod.rs
-index 5ff2294e7..d90b73e2a 100644
+index be7b6e7..44dfd55 100644
 --- a/src/unix/mod.rs
 +++ b/src/unix/mod.rs
-@@ -1475,6 +1475,9 @@ cfg_if! {
+@@ -1459,6 +1459,9 @@ cfg_if! {
      } else if #[cfg(target_os = "redox")] {
          mod redox;
          pub use self::redox::*;
 +    } else if #[cfg(target_os = "aero")] {
-+        mod aero;
-+        pub use self::aero::*;
++        mod mlibc;
++        pub use self::mlibc::*;
      } else {
          // Unknown target_os
      }

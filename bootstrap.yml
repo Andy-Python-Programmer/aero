@@ -1,3 +1,7 @@
+general:
+  cargo:
+    config_toml: 'extrafiles/rust/config.toml'
+
 sources:
   - name: binutils
     subdir: 'bundled'
@@ -49,15 +53,15 @@ sources:
 
   - name: rust
     subdir: 'bundled'
-    branch: master
-    git: 'https://github.com/rust-lang/rust'
-    commit: e012a191d768adeda1ee36a99ef8b92d51920154
+    git: 'https://github.com/rust-lang/rust.git'
+    tag: '1.51.0'
+    version: '1.51.0'
 
   - name: rust-libc
     subdir: 'bundled'
-    git: 'https://github.com/rust-lang/libc/'
-    branch: master
-    commit: '1f1ebd5b8056b278f86ed6421f02c149bda9ae08'
+    git: 'https://github.com/rust-lang/libc.git'
+    tag: '0.2.93'
+    version: '0.2.93'
 
   - name: llvm
     subdir: 'bundled'
@@ -123,14 +127,29 @@ tools:
 
   - name: host-rust
     from_source: rust
+    tools_required:
+      - host-llvm
     sources_required:
       - rust-libc
-    revision: 2
-    # configure:
-    #   - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
     compile:
-      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
-      - args: ['cp', '@SOURCE_ROOT@/extra-files/rust/config.toml', 'config.toml']
+      - args: |
+            cat << EOF > config.toml
+            changelog-seen = 2
+            [llvm]
+            targets = "X86"
+            [build]
+            target = ["x86_64-unknown-aero-system", "x86_64-unknown-linux-gnu"]
+            build-dir = "@THIS_BUILD_DIR@"
+            docs = false
+            [install]
+            prefix = "@PREFIX@"
+            [rust]
+            codegen-tests = false
+            [target.x86_64-unknown-linux-gnu]
+            llvm-config = "@BUILD_ROOT@/tools/host-llvm/bin/llvm-config"
+            [target.x86_64-unknown-aero-system]
+            llvm-config = "@BUILD_ROOT@/tools/host-llvm/bin/llvm-config"
+            EOF
       - args: ['python3', '@THIS_SOURCE_DIR@/x.py', 'build', '--stage', '2', '-j', '@PARALLELISM@']
     install:
       - args: ['python3', '@THIS_SOURCE_DIR@/x.py', 'install', '-j', '@PARALLELISM@']
@@ -231,13 +250,14 @@ tools:
         - '-DCMAKE_BUILD_TYPE=Release'
         - '-DLLVM_TARGETS_TO_BUILD=X86'
         - '-DLLVM_ENABLE_PROJECTS=llvm'
+        - '-DLLVM_ENABLE_Z3_SOLVER=OFF'
         # clang configuration options.
         - '-DDEFAULT_SYSROOT=@SYSROOT_DIR@'
         # Gold linker configuration options.
         - '-DLLVM_BINUTILS_INCDIR=@SOURCE_ROOT@/bundled/binutils/include'
         - '@THIS_SOURCE_DIR@/llvm'
     compile:
-      - args: ['ninja']
+      - args: ['ninja', '-j@PARALLELISM@']
       # Build on a single CPU to prevent OOM on smaller systems.
       #- args: ['ninja', '-j1']
     install:
@@ -340,37 +360,37 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
-  # - name: gcc
-  #   from_source: gcc
-  #   revision: 2
-  #   tools_required:
-  #     - host-gcc
-  #   pkgs_required:
-  #     - mlibc
-  #     - binutils
-  #   configure:
-  #     - args:
-  #       - '@THIS_SOURCE_DIR@/configure'
-  #       - '--host=x86_64-aero'
-  #       - '--prefix=/usr'
-  #       - '--target=x86_64-aero'
-  #       - '--with-sysroot=/'
-  #       - '--with-build-sysroot=@SYSROOT_DIR@'
-  #       - '--enable-languages=c,c++'
-  #       - '--enable-initfini-array'
-  #       - '--disable-multilib'
-  #       - '--disable-nls'
-  #       # -g blows up GCC's binary size.
-  #       - 'CFLAGS=-O2 -pipe'
-  #       - 'CXXFLAGS=-O2 -pipe'
-  #   build:
-  #     - args: ['make', '-j@PARALLELISM@', 'all-gcc', 'all-target-libgcc']
-  #     - args: ['make', 'install-strip-gcc', 'install-strip-target-libgcc']
-  #       environ:
-  #         DESTDIR: '@THIS_COLLECT_DIR@'
-  #     - args: ['sh', '-c', 'cp -rv @BUILD_ROOT@/tools/host-gcc/x86_64-aero/lib/* @THIS_COLLECT_DIR@/usr/lib/']
-  #     - args: ['sh', '-c', 'cp -rv @BUILD_ROOT@/tools/host-gcc/x86_64-aero/include/* @THIS_COLLECT_DIR@/usr/include/']
-  #     - args: ['ln', '-s', '/usr/bin/gcc', '@THIS_COLLECT_DIR@/usr/bin/cc']
+  - name: gcc
+    from_source: gcc
+    revision: 2
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - binutils
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--target=x86_64-aero'
+        - '--with-sysroot=/'
+        - '--with-build-sysroot=@SYSROOT_DIR@'
+        - '--enable-languages=c,c++'
+        - '--enable-initfini-array'
+        - '--disable-multilib'
+        - '--disable-nls'
+        # -g blows up GCC's binary size.
+        - 'CFLAGS=-O2 -pipe'
+        - 'CXXFLAGS=-O2 -pipe'
+    build:
+      - args: ['make', '-j@PARALLELISM@', 'all-gcc', 'all-target-libgcc']
+      - args: ['make', 'install-strip-gcc', 'install-strip-target-libgcc']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['sh', '-c', 'cp -rv @BUILD_ROOT@/tools/host-gcc/x86_64-aero/lib/* @THIS_COLLECT_DIR@/usr/lib/']
+      - args: ['sh', '-c', 'cp -rv @BUILD_ROOT@/tools/host-gcc/x86_64-aero/include/* @THIS_COLLECT_DIR@/usr/include/']
+      - args: ['ln', '-s', '/usr/bin/gcc', '@THIS_COLLECT_DIR@/usr/bin/cc']
 
   - name: binutils
     from_source: binutils
