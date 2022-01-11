@@ -386,6 +386,28 @@ packages:
       - args: ['make']
       - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install-strip']
 
+  - name: nasm
+    source:
+      subdir: 'bundled'
+      url: 'http://www.nasm.us/pub/nasm/releasebuilds/2.14.02/nasm-2.14.02.tar.xz'
+      format: 'tar.xz'
+      extract_path: 'nasm-2.14.02'
+      version: '2.14.02'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   # - name: python
   #   from_source: python
   #   tools_required:
