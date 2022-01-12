@@ -254,9 +254,42 @@ impl INodeInterface for DevFb {
     }
 }
 
+struct DevUrandom(usize);
+
+impl DevUrandom {
+    fn new() -> Arc<Self> {
+        Arc::new(Self(alloc_device_marker()))
+    }
+}
+
+impl Device for DevUrandom {
+    fn device_marker(&self) -> usize {
+        self.0
+    }
+
+    fn device_name(&self) -> String {
+        String::from("urandom")
+    }
+
+    fn inode(&self) -> Arc<dyn INodeInterface> {
+        DEV_URANDOM.get().expect("device not initialized").clone()
+    }
+}
+
+impl INodeInterface for DevUrandom {
+    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> Result<usize> {
+        for (_, b) in buffer.iter_mut().enumerate() {
+            *b = 0;
+        }
+
+        Ok(buffer.len())
+    }
+}
+
 static DEV_NULL: Once<Arc<DevNull>> = Once::new();
 static DEV_KMSG: Once<Arc<DevKmsg>> = Once::new();
 static DEV_FB: Once<Arc<DevFb>> = Once::new();
+static DEV_URANDOM: Once<Arc<DevUrandom>> = Once::new();
 
 /// Initializes the dev filesystem. (See the module-level documentation for more information).
 pub(super) fn init() -> Result<()> {
@@ -269,10 +302,12 @@ pub(super) fn init() -> Result<()> {
         let null = DEV_NULL.call_once(|| DevNull::new());
         let kmsg = DEV_KMSG.call_once(|| DevKmsg::new());
         let fb = DEV_FB.call_once(|| DevFb::new());
+        let urandom = DEV_URANDOM.call_once(|| DevUrandom::new());
 
         install_device(null.clone())?;
         install_device(kmsg.clone())?;
         install_device(fb.clone())?;
+        install_device(urandom.clone())?;
     }
 
     Ok(())
