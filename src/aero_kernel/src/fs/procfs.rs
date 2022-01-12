@@ -218,6 +218,10 @@ impl INodeInterface for LockedProcINode {
                 .map(|(name, inode)| DirEntry::new(parent, inode.clone(), name.clone())),
         })
     }
+
+    fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
+        Some(self.0.read().filesystem.clone())
+    }
 }
 
 struct ProcFs {
