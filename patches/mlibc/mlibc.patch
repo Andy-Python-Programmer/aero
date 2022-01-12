@@ -1,4 +1,4 @@
-From da21a7275364ad98b2239a3d48557d0e886ab98d Mon Sep 17 00:00:00 2001
+From 0fa7e9a1c5e05ab166493330a0cac749db0dacee Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -12,9 +12,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 236 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 246 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 204 +++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 208 +++++++++++++++++
+ sysdeps/aero/generic/signals.cc             |  15 ++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  45 ++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -45,14 +46,16 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
  sysdeps/aero/include/aero/syscall.h         | 195 ++++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
- sysdeps/aero/meson.build                    |  60 +++++
+ sysdeps/aero/meson.build                    |  61 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
- 42 files changed, 858 insertions(+), 10 deletions(-)
+ sysdeps/lemon/generic/signals.S             |   7 +
+ 44 files changed, 895 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
  create mode 100644 sysdeps/aero/generic/entry.cc
  create mode 100644 sysdeps/aero/generic/filesystem.cc
+ create mode 100644 sysdeps/aero/generic/signals.cc
  create mode 100644 sysdeps/aero/generic/sockets.cc
  create mode 100644 sysdeps/aero/generic/thread.cc
  create mode 100644 sysdeps/aero/generic/thread_entry.S
@@ -84,6 +87,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  create mode 100644 sysdeps/aero/include/aero/syscall.h
  create mode 100644 sysdeps/aero/include/mlibc/thread-entry.hpp
  create mode 100644 sysdeps/aero/meson.build
+ create mode 100644 sysdeps/lemon/generic/signals.S
 
 diff --git a/.gitignore b/.gitignore
 index 1701c90..6e0116b 100644
@@ -227,10 +231,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..ec6b94c
+index 0000000..58eb2cc
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,236 @@
+@@ -0,0 +1,246 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -282,7 +286,10 @@ index 0000000..ec6b94c
 +}
 +
 +int sys_futex_wait(int *pointer, int expected, const struct timespec *time) UNIMPLEMENTED("sys_futex_wait")
-+int sys_futex_wake(int *pointer) UNIMPLEMENTED("sys_futex_wake")
++int sys_futex_wake(int *pointer) {
++    mlibc::infoLogger() << "sys_futex_wake() is not implemented" << frg::endlog;
++    return 0;
++}
 +
 +int sys_tcb_set(void* pointer) {
 +    ssize_t res = syscall(SYS_ARCH_PRCTL, ARCH_SET_FS, (uint64_t)pointer);
@@ -357,7 +364,14 @@ index 0000000..ec6b94c
 +    return 0;
 +}
 +
-+int sys_getcwd(char *buffer, size_t size) UNIMPLEMENTED("sys_getcwd")
++int sys_getcwd(char *buffer, size_t size) {
++    auto result = syscall(SYS_GETCWD, (uintptr_t)buffer, (uint64_t)size);
++
++    if (result < 0)
++        return -result;
++
++    return 0;
++}
 +
 +int sys_chdir(const char *path) UNIMPLEMENTED("sys_chdir")
 +
@@ -507,10 +521,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..d5b7d7b
+index 0000000..ad40c83
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,204 @@
+@@ -0,0 +1,208 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -619,7 +633,11 @@ index 0000000..d5b7d7b
 +
 +int sys_tcgetattr(int fd, struct termios *attr) UNIMPLEMENTED("sys_tcgetattr")
 +int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) UNIMPLEMENTED("sys_tcsetattr")
-+int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) UNIMPLEMENTED("sys_poll")
++
++int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
++	mlibc::infoLogger() << "sys_poll() is not implemented" << frg::endlog;
++	return 0;
++}
 +
 +int sys_mkdir(const char* path) {
 +	auto result = syscall(SYS_MKDIR, (uintptr_t)path, strlen(path));
@@ -715,6 +733,28 @@ index 0000000..d5b7d7b
 +	return 0;
 +}
 +} // namespace mlibc
+diff --git a/sysdeps/aero/generic/signals.cc b/sysdeps/aero/generic/signals.cc
+new file mode 100644
+index 0000000..71217ed
+--- /dev/null
++++ b/sysdeps/aero/generic/signals.cc
+@@ -0,0 +1,15 @@
++#include <mlibc/debug.hpp>
++#include <sys/types.h>
++#include <mlibc/ansi-sysdeps.hpp>
++
++namespace mlibc {
++int sys_sigaction(int how, const struct sigaction *__restrict action, struct sigaction *__restrict old_action) {
++    mlibc::infoLogger() << "sys_sigprocmask() is not implemented" << frg::endlog;
++    return 0;
++}
++
++int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
++    mlibc::infoLogger() << "sys_sigprocmask() is not implemented" << frg::endlog;
++    return 0;
++}
++} // namespace mlibc
+\ No newline at end of file
 diff --git a/sysdeps/aero/generic/sockets.cc b/sysdeps/aero/generic/sockets.cc
 new file mode 100644
 index 0000000..e69de29
@@ -1202,10 +1242,10 @@ index 0000000..2dd88a6
 +}
 diff --git a/sysdeps/aero/meson.build b/sysdeps/aero/meson.build
 new file mode 100644
-index 0000000..d3dbb22
+index 0000000..9cad2a3
 --- /dev/null
 +++ b/sysdeps/aero/meson.build
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,61 @@
 +if not static
 +	rtdl_sources += files(
 +		'generic/aero.cc',
@@ -1220,6 +1260,7 @@ index 0000000..d3dbb22
 +	'generic/thread.cc',
 +	'generic/filesystem.cc',
 +	'generic/sockets.cc',
++	'generic/signals.cc',
 +)
 +
 +if not no_headers
@@ -1280,6 +1321,19 @@ index 0a85169..48bfc57 100644
  namespace mlibc {
  
  void sys_libc_log(const char *message) {
+diff --git a/sysdeps/lemon/generic/signals.S b/sysdeps/lemon/generic/signals.S
+new file mode 100644
+index 0000000..ab6b074
+--- /dev/null
++++ b/sysdeps/lemon/generic/signals.S
+@@ -0,0 +1,7 @@
++.section .text
++.global __mlibc_signal_restore
++
++__mlibc_signal_restore:
++	mov $314, %rax
++	syscall
++	ud2
 -- 
 2.25.1
 
