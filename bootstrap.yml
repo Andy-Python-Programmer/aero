@@ -350,6 +350,34 @@ packages:
         - '@THIS_COLLECT_DIR@/usr'
         - '-j@PARALLELISM@'
 
+  - name: sd
+    source:
+      subdir: bundled
+      git: 'https://github.com/chmln/sd'
+      tag: 'v0.7.6'
+      version: '0.7.6'
+    tools_required:
+      - host-cargo
+    sources_required:
+      - rust-patched-libs
+    pkgs_required:
+      - mlibc
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+      # cc: https://github.com/rust-lang/cargo/issues/10283
+      # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
+    build:
+      - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
+      - args:
+        - 'cargo'
+        - 'install'
+        - '--locked'
+        - '--path'
+        - '.'
+        - '--root'
+        - '@THIS_COLLECT_DIR@/usr'
+        - '-j@PARALLELISM@'
+
   - name: mlibc-headers
     from_source: mlibc
     implict_package: true
