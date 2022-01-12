@@ -1,0 +1,35 @@
+From 69bdbf9a09b403cac206f0dba50663ebf1e161d9 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Wed, 12 Jan 2022 17:19:55 +1100
+Subject: [PATCH] aero specific changes
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ src/lib.rs | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/lib.rs b/src/lib.rs
+index 6c8280f..e87efa8 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -331,7 +331,8 @@ fn get_num_physical_cpus() -> usize {
+     target_os = "android",
+     target_os = "solaris",
+     target_os = "illumos",
+-    target_os = "fuchsia")
++    target_os = "fuchsia",
++    target_os = "aero")
+ )]
+ fn get_num_cpus() -> usize {
+     // On ARM targets, processors could be turned off to save power.
+@@ -420,6 +421,7 @@ fn get_num_cpus() -> usize {
+     target_os = "netbsd",
+     target_os = "haiku",
+     target_os = "hermit",
++    target_os = "aero",
+     windows,
+ )))]
+ fn get_num_cpus() -> usize {
+-- 
+2.25.1
+

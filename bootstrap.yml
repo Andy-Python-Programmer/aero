@@ -1,6 +1,6 @@
 general:
   cargo:
-    config_toml: 'extrafiles/rust/config.toml'
+    config_toml: 'extra-files/rust/config.toml'
 
 sources:
   - name: binutils
@@ -68,6 +68,34 @@ sources:
     git: 'https://github.com/llvm/llvm-project'
     tag: 'llvmorg-10.0.0'
     version: '10.0.0'
+
+  # ---------------------------------------------------------------------------
+  # Rust patched crates start
+  # ---------------------------------------------------------------------------
+  - name: rust-num-cpus
+    subdir: 'bundled'
+    git: 'https://github.com/seanmonstar/num_cpus.git'
+    tag: 'v1.13.0'
+    version: '1.13.0'
+
+  - name: rust-users
+    subdir: 'bundled'
+    git: 'https://github.com/ogham/rust-users.git'
+    tag: 'v0.11.0'
+    version: '0.11.0'
+
+  - name: rust-patched-libs
+    subdir: 'bundled'
+    sources_required:
+      - name: rust-libc
+        recursive: true
+      - name: rust-num-cpus
+        recursive: true
+      - name: rust-users
+        recursive: true
+  # ---------------------------------------------------------------------------
+  # Rust patched crates end
+  # ---------------------------------------------------------------------------
 
   # - name: python
   #   subdir: 'bundled'
@@ -153,6 +181,35 @@ tools:
       - args: ['python3', '@THIS_SOURCE_DIR@/x.py', 'build', '--stage', '2', '-j', '@PARALLELISM@']
     install:
       - args: ['python3', '@THIS_SOURCE_DIR@/x.py', 'install', '-j', '@PARALLELISM@']
+
+  - name: host-cargo
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/rust-lang/cargo.git'
+      tag: '0.53.0'
+      version: '0.53.0'
+    tools_required:
+      - tool: host-rust
+        recursive: true
+      - tool: host-gcc # GCC is used for linking
+        recursive: true
+    sources_required:
+      # This cargo runs on the host, so we don't actually need any patches here. We just
+      # add the sources used by cargo so that the dependency resolver doesn't complain.
+      - rust-patched-libs
+    compile:
+      - args:
+        - 'cargo'
+        - 'install'
+        - '--target'
+        - 'x86_64-unknown-linux-gnu'
+        - '--target-dir'
+        - '@THIS_BUILD_DIR@'
+        - '--path'
+        - '@THIS_SOURCE_DIR@'
+        - '-j@PARALLELISM@'
+        - '--root'
+        - '@PREFIX@'
 
   # - name: host-python
   #   from_source: python
@@ -265,6 +322,34 @@ tools:
         # quiet: true
 
 packages:
+  - name: ripgrep
+    source:
+      subdir: bundled
+      git: 'https://github.com/BurntSushi/ripgrep.git'
+      tag: '12.1.1'
+      version: '12.1.1'
+    tools_required:
+      - host-cargo
+    sources_required:
+      - rust-patched-libs
+    pkgs_required:
+      - mlibc
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+      # cc: https://github.com/rust-lang/cargo/issues/10283
+      # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
+    build:
+      - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
+      - args:
+        - 'cargo'
+        - 'install'
+        - '--locked'
+        - '--path'
+        - '.'
+        - '--root'
+        - '@THIS_COLLECT_DIR@/usr'
+        - '-j@PARALLELISM@'
+
   - name: mlibc-headers
     from_source: mlibc
     implict_package: true

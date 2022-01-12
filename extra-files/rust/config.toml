@@ -6,7 +6,9 @@ rustc = "@BUILD_ROOT@/tools/host-rust/bin/rustc"
 target = "x86_64-unknown-aero-system"
 
 [target.x86_64-unknown-aero-system]
-linker = "@BUILD_ROOT@/tools/system-gcc/bin/x86_64-aero-gcc"
+linker = "@BUILD_ROOT@/tools/host-gcc/bin/x86_64-aero-gcc"
 
 [patch.crates-io]
 libc = { path = "@SOURCE_ROOT@/bundled/rust-libc" }
+num_cpus = { path = "@SOURCE_ROOT@/bundled/rust-num-cpus" }
+users = { path = "@SOURCE_ROOT@/bundled/rust-users" }

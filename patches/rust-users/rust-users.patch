@@ -1,0 +1,40 @@
+From 0dcaffa14eb80d3a8d1236a09d0bd2f28326c6db Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Wed, 12 Jan 2022 17:23:53 +1100
+Subject: [PATCH] aero specific changes
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ src/base.rs | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/base.rs b/src/base.rs
+index ece499a..fc5f3cb 100644
+--- a/src/base.rs
++++ b/src/base.rs
+@@ -923,7 +923,7 @@ pub mod os {
+     /// Although the `passwd` struct is common among Unix systems, its actual
+     /// format can vary. See the definitions in the `base` module to check which
+     /// fields are actually present.
+-    #[cfg(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "freebsd", target_os = "dragonfly", target_os = "openbsd", target_os = "netbsd", target_os = "solaris"))]
++    #[cfg(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "freebsd", target_os = "dragonfly", target_os = "openbsd", target_os = "netbsd", target_os = "solaris", target_os = "aero"))]
+     pub mod unix {
+         use std::ffi::{OsStr, OsString};
+         use std::path::{Path, PathBuf};
+@@ -1176,11 +1176,11 @@ pub mod os {
+     pub type UserExtras = bsd::UserExtras;
+ 
+     /// Any extra fields on a `User` specific to the current platform.
+-    #[cfg(any(target_os = "linux", target_os = "android", target_os = "solaris"))]
++    #[cfg(any(target_os = "linux", target_os = "android", target_os = "solaris", target_os = "aero"))]
+     pub type UserExtras = unix::UserExtras;
+ 
+     /// Any extra fields on a `Group` specific to the current platform.
+-    #[cfg(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "freebsd", target_os = "dragonfly", target_os = "openbsd", target_os = "netbsd", target_os = "solaris"))]
++    #[cfg(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "freebsd", target_os = "dragonfly", target_os = "openbsd", target_os = "netbsd", target_os = "solaris", target_os = "aero"))]
+     pub type GroupExtras = unix::GroupExtras;
+ }
+ 
+-- 
+2.25.1
+
