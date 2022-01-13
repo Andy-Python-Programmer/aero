@@ -133,7 +133,7 @@ pub struct SyscallFrame {
     pub rsp: u64,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 #[repr(C)]
 pub struct RegistersFrame {
     pub cr2: u64,
@@ -185,6 +185,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_GETHOSTNAME => process::gethostname(b, c),
         SYS_SETHOSTNAME => process::sethostname(b, c),
         SYS_INFO => process::info(b),
+        SYS_CLONE => process::clone(b, c),
 
         0x13A => {
             let syscall_name = unsafe {

@@ -1,4 +1,4 @@
-From 0fa7e9a1c5e05ab166493330a0cac749db0dacee Mon Sep 17 00:00:00 2001
+From 4a1d0b17ed2cb00a4d8d6a68d647bccd466ef91e Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -6,15 +6,15 @@ Subject: [PATCH] targets: add aero target port
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                                  |   6 +
- abis/aero/auxv.h                            |  13 ++
+ abis/aero/auxv.h                            |  13 +
  meson.build                                 |   4 +
  options/ansi/generic/stdlib-stubs.cpp       |   3 +
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 246 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 255 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 208 +++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 208 ++++++++++++++++
  sysdeps/aero/generic/signals.cc             |  15 ++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  45 ++++
@@ -44,12 +44,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 195 ++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 196 +++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  61 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 44 files changed, 895 insertions(+), 10 deletions(-)
+ 44 files changed, 905 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -231,10 +231,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..58eb2cc
+index 0000000..e87db7d
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,246 @@
+@@ -0,0 +1,255 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -425,9 +425,18 @@ index 0000000..58eb2cc
 +
 +void sys_yield() UNIMPLEMENTED("sys_yield")
 +
-+int sys_clone(void *entry, void *user_arg, void *tcb, pid_t *tid_out) UNIMPLEMENTED("sys_clone")
++int sys_clone(void *entry, void *user_arg, void *tcb, pid_t *tid_out) {
++    auto stack = prepare_stack(entry, user_arg, tcb);
++    auto tid = syscall(SYS_CLONE, __mlibc_start_thread, stack);
 +
-+void sys_thread_exit() {
++    if (tid < 0)
++        return -tid;
++
++    *tid_out = (pid_t)tid;
++    return 0;
++}
++
++void sys_thread_exit() {    
 +	__builtin_unreachable();
 +}
 +
@@ -1025,10 +1034,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..5664bf7
+index 0000000..7a5362d
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,195 @@
+@@ -0,0 +1,196 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -1073,6 +1082,7 @@ index 0000000..5664bf7
 +#define SYS_GETHOSTNAME 35
 +#define SYS_SETHOSTNAME 36
 +#define SYS_INFO        37
++#define SYS_CLONE       38
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.

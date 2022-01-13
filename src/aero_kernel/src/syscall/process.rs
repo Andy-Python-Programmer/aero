@@ -109,6 +109,14 @@ pub fn fork() -> Result<usize, AeroSyscallError> {
     Ok(forked.pid().as_usize())
 }
 
+pub fn clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
+    let scheduler = scheduler::get_scheduler();
+    let cloned = scheduler.current_task().clone_process(entry, stack);
+
+    scheduler.register_task(cloned.clone());
+    Ok(cloned.pid().as_usize())
+}
+
 pub fn exec(
     path: usize,
     path_size: usize,

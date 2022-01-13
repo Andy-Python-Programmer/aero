@@ -55,3 +55,4 @@ pub const SYS_UNLINK: usize = 34;
 pub const SYS_GETHOSTNAME: usize = 35;
 pub const SYS_SETHOSTNAME: usize = 36;
 pub const SYS_INFO: usize = 37;
+pub const SYS_CLONE: usize = 38;

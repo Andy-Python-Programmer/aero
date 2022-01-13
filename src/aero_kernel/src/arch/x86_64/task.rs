@@ -171,6 +171,63 @@ impl ArchTask {
         }
     }
 
+    pub fn clone_process(&self, entry: usize, stack: usize) -> Result<Self, MapToError<Size4KiB>> {
+        let new_address_space = AddressSpace::this().offset_page_table().fork()?;
+
+        // Since the fork function marks all of the userspace entries in both the forked
+        // and the parent address spaces as read only, we will flush the page table of the
+        // current process to trigger COW.
+        unsafe {
+            asm!("mov cr3, {}", in(reg) controlregs::read_cr3_raw(), options(nostack));
+        }
+
+        let switch_stack = unsafe {
+            let layout = Layout::from_size_align_unchecked(0x1000, 0x1000);
+            alloc_zeroed(layout).add(layout.size())
+        };
+
+        let mut old_stack_ptr = self.context_switch_rsp.as_u64();
+        let mut old_stack = StackHelper::new(&mut old_stack_ptr);
+
+        let mut new_stack_ptr = switch_stack as u64;
+        let mut new_stack = StackHelper::new(&mut new_stack_ptr);
+
+        unsafe {
+            // Get the syscall frame and registers frame from the current task and copy it over
+            // to the fork task.
+            let sys_frame = new_stack.offset::<SyscallFrame>();
+            let old_sys_frame = old_stack.offset::<SyscallFrame>();
+
+            *sys_frame = *old_sys_frame;
+
+            sys_frame.rip = entry as u64;
+            sys_frame.rflags = 0x200;
+            sys_frame.rsp = stack as u64;
+
+            let registers_frame = new_stack.offset::<RegistersFrame>();
+            *registers_frame = RegistersFrame::default();
+        }
+
+        // Prepare the trampoline...
+        let context = unsafe { new_stack.offset::<Context>() };
+
+        extern "C" {
+            fn sysret_fork_init();
+        }
+
+        *context = Context::default();
+        context.rip = sysret_fork_init as u64;
+        context.cr3 = new_address_space.cr3().start_address().as_u64();
+
+        Ok(Self {
+            context: unsafe { Unique::new_unchecked(context) },
+            context_switch_rsp: VirtAddr::new(switch_stack as u64),
+            address_space: new_address_space,
+            rpl: Ring::Ring3,
+            fs_base: VirtAddr::zero(),
+        })
+    }
+
     pub fn fork(&self) -> Result<Self, MapToError<Size4KiB>> {
         let new_address_space = AddressSpace::this().offset_page_table().fork()?;
 

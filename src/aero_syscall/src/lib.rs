@@ -650,3 +650,8 @@ pub fn sys_info(struc: &mut SysInfo) -> Result<usize, AeroSyscallError> {
     let value = syscall1(prelude::SYS_INFO, struc as *mut _ as usize);
     isize_as_syscall_result(value as _)
 }
+
+pub fn sys_clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_CLONE, entry, stack);
+    isize_as_syscall_result(value as _)
+}

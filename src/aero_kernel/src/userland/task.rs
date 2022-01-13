@@ -255,13 +255,7 @@ impl Task {
         })
     }
 
-    pub fn fork(&self) -> Arc<Task> {
-        let arch_task = UnsafeCell::new(
-            self.arch_task_mut()
-                .fork()
-                .expect("failed to fork arch task"),
-        );
-
+    fn make_child(&self, arch_task: UnsafeCell<ArchTask>) -> Arc<Task> {
         let pid = TaskId::allocate();
 
         let this = Arc::new_cyclic(|sref| Self {
@@ -293,6 +287,26 @@ impl Task {
         this.vm.fork_from(self.vm());
         this.vm.log();
         this
+    }
+
+    pub fn clone_process(&self, entry: usize, stack: usize) -> Arc<Task> {
+        let arch_task = UnsafeCell::new(
+            self.arch_task_mut()
+                .clone_process(entry, stack)
+                .expect("failed to fork arch task"),
+        );
+
+        self.make_child(arch_task)
+    }
+
+    pub fn fork(&self) -> Arc<Task> {
+        let arch_task = UnsafeCell::new(
+            self.arch_task_mut()
+                .fork()
+                .expect("failed to fork arch task"),
+        );
+
+        self.make_child(arch_task)
     }
 
     fn this(&self) -> Arc<Self> {

@@ -17,7 +17,12 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+extern crate alloc;
+
+use core::alloc::Layout;
+
 use aero_syscall::*;
+use alloc::alloc::{alloc_zeroed, dealloc};
 
 const MAGENTA_FG: &str = "\x1b[1;35m";
 const RESET: &str = "\x1b[0m";
