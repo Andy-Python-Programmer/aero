@@ -259,13 +259,68 @@ pub struct WinSize {
 bitflags::bitflags! {
     #[derive(Default)]
     pub struct TermiosLFlag: u32 {
-        const ECHO   = 0000010; // Enable echo
-        const ECHOE  = 0000020; // Echo erase character as error-correcting backspace
-        const ECHOK  = 0000040; // Echo kill
-        const ECHONL = 0000100; // Echo NL
-        const NOFLSH = 0000200; // Disable flush after interrupt or quit
-        const TOSTOP = 0000400; // Send SIGTTOU for background output
-        const ICANON = 0000002; // Canonical input (erase and kill processing)
+        const ECHO   =  0x0001;
+        const ECHOE  =  0x0002;
+        const ECHOK  =  0x0004;
+        const ECHONL =  0x0008;
+        const ICANON =  0x0010;
+        const IEXTEN =  0x0020;
+        const ISIG   =  0x0040;
+        const NOFLSH =  0x0080;
+        const TOSTOP =  0x0100;
+        const ECHOPRT=  0x0200;
+    }
+}
+
+bitflags::bitflags! {
+    #[derive(Default)]
+    pub struct TermiosCFlag: u32 {
+        const CSIZE  =  0x0003;
+        const CS5    =  0x0000;
+        const CS6    =  0x0001;
+        const CS7    =  0x0002;
+        const CS8    =  0x0003;
+        const CSTOPB =  0x0004;
+        const CREAD  =  0x0008;
+        const PARENB =  0x0010;
+        const PARODD =  0x0020;
+        const HUPCL  =  0x0040;
+        const CLOCAL =  0x0080;
+    }
+}
+
+bitflags::bitflags! {
+    #[derive(Default)]
+    pub struct TermiosOFlag: u32 {
+        const OPOST  =  0x0001;
+        const ONLCR  =  0x0002;
+        const OCRNL  =  0x0004;
+        const ONOCR  =  0x0008;
+        const ONLRET =  0x0010;
+        const OFDEL  =  0x0020;
+        const OFILL  =  0x0040;
+        const NLDLY  =  0x0080;
+        const NL0    =  0x0000;
+        const NL1    =  0x0080;
+        const CRDLY  =  0x0300;
+        const CR0    =  0x0000;
+        const CR1    =  0x0100;
+        const CR2    =  0x0200;
+        const CR3    =  0x0300;
+        const TABDLY =  0x0C00;
+        const TAB0   =  0x0000;
+        const TAB1   =  0x0400;
+        const TAB2   =  0x0800;
+        const TAB3   =  0x0C00;
+        const BSDLY  =  0x1000;
+        const BS0    =  0x0000;
+        const BS1    =  0x1000;
+        const VTDLY  =  0x2000;
+        const VT0    =  0x0000;
+        const VT1    =  0x2000;
+        const FFDLY  =  0x4000;
+        const FF0    =  0x0000;
+        const FF1    =  0x4000;
     }
 }
 
@@ -273,8 +328,8 @@ bitflags::bitflags! {
 #[repr(C)]
 pub struct Termios {
     pub c_iflag: u32,
-    pub c_oflag: u32,
-    pub c_cflag: u32,
+    pub c_oflag: TermiosOFlag,
+    pub c_cflag: TermiosCFlag,
     pub c_lflag: TermiosLFlag,
     pub c_line: u8,
     pub c_cc: [u8; 32],

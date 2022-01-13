@@ -1,4 +1,4 @@
-From 4a1d0b17ed2cb00a4d8d6a68d647bccd466ef91e Mon Sep 17 00:00:00 2001
+From c81a0aa8fad28272743226986e49f775226a136d Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -12,9 +12,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 255 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 259 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 208 ++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 238 ++++++++++++++++++
  sysdeps/aero/generic/signals.cc             |  15 ++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  45 ++++
@@ -44,12 +44,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 196 +++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 197 +++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  61 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 44 files changed, 905 insertions(+), 10 deletions(-)
+ 44 files changed, 940 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -231,10 +231,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..e87db7d
+index 0000000..268b2b7
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,259 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -285,7 +285,11 @@ index 0000000..e87db7d
 +    return syscall(SYS_GETTID);
 +}
 +
-+int sys_futex_wait(int *pointer, int expected, const struct timespec *time) UNIMPLEMENTED("sys_futex_wait")
++int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
++    mlibc::infoLogger() << "sys_futex_wait() is not implemented" << frg::endlog;
++    return 0;
++}
++
 +int sys_futex_wake(int *pointer) {
 +    mlibc::infoLogger() << "sys_futex_wake() is not implemented" << frg::endlog;
 +    return 0;
@@ -530,10 +534,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..ad40c83
+index 0000000..e1465dc
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,208 @@
+@@ -0,0 +1,238 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -640,8 +644,27 @@ index 0000000..ad40c83
 +	return ENOTTY;
 +}
 +
-+int sys_tcgetattr(int fd, struct termios *attr) UNIMPLEMENTED("sys_tcgetattr")
-+int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) UNIMPLEMENTED("sys_tcsetattr")
++int sys_tcgetattr(int fd, struct termios *attr) {
++	auto result = syscall(SYS_IOCTL, fd, TCGETS, (uintptr_t)attr);
++
++	if (result < 0)
++		return -result;
++
++	return 0;
++}
++
++int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
++	if (optional_action)
++		mlibc::infoLogger() << "mlibc: warning: sys_tcsetattr ignores optional_action" << frg::endlog;
++
++	// 0x5404 = TCSETSF (using this workaround since the headers don't define it)
++	auto result = syscall(SYS_IOCTL, fd, 0x5404, (uintptr_t)attr);
++
++	if (result < 0)
++		return -result;
++
++	return 0;
++}
 +
 +int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
 +	mlibc::infoLogger() << "sys_poll() is not implemented" << frg::endlog;
@@ -729,8 +752,19 @@ index 0000000..ad40c83
 +int sys_dup(int fd, int flags, int* newfd) UNIMPLEMENTED("sys_dup")
 +int sys_dup2(int fd, int flags, int newfd) UNIMPLEMENTED("sys_dup2")
 +int sys_fcntl(int fd, int request, va_list args, int* result) UNIMPLEMENTED("sys_fcntl")
-+int sys_pselect(int nfds, fd_set* readfds, fd_set* writefds,
-+				fd_set *exceptfds, const struct timespec* timeout, const sigset_t* sigmask, int *num_events) UNIMPLEMENTED("sys_pselect")
++
++int sys_pselect(
++	int nfds, 
++	fd_set* readfds, 
++	fd_set* writefds,
++	fd_set *exceptfds, 
++	const struct timespec* timeout, 
++	const sigset_t* sigmask, 
++	int *num_events) {
++	*num_events = 10;
++	return 0;
++}
++
 +int sys_chmod(const char *pathname, mode_t mode) UNIMPLEMENTED("sys_chmod")
 +
 +int sys_pipe(int *fds, int flags) {
@@ -1034,10 +1068,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..7a5362d
+index 0000000..ea48b8e
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,196 @@
+@@ -0,0 +1,197 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -1083,6 +1117,7 @@ index 0000000..7a5362d
 +#define SYS_SETHOSTNAME 36
 +#define SYS_INFO        37
 +#define SYS_CLONE       38
++#define SYS_SELECT      39
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.

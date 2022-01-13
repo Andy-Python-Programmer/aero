@@ -22,6 +22,9 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 <img src="misc/demo.png">
 <p align="center"><i>Aero OS running in Qemu (the background image is by <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Rick Astley</a>)</i></p>
 
+<img src="misc/qjs-in-aero.png">
+<p align="center">QJS running in Aero</p>
+
 # Features
 - 64-bit higher half kernel
 - 4/5 level paging

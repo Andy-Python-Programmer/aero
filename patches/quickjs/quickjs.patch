@@ -1,0 +1,86 @@
+From e6336a3d82e80205e1dd91dc08cf92e7d40393a5 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Thu, 13 Jan 2022 14:53:32 +1100
+Subject: [PATCH] aero specific changes
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ .vscode/settings.json | 3 +++
+ qjs.c                 | 4 ++++
+ quickjs-libc.c        | 4 ++++
+ quickjs.c             | 4 ++++
+ 4 files changed, 15 insertions(+)
+ create mode 100644 .vscode/settings.json
+
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+new file mode 100644
+index 0000000..560faaa
+--- /dev/null
++++ b/.vscode/settings.json
+@@ -0,0 +1,3 @@
++{
++    "editor.formatOnSave": false,
++}
+\ No newline at end of file
+diff --git a/qjs.c b/qjs.c
+index d56b843..de8308a 100644
+--- a/qjs.c
++++ b/qjs.c
+@@ -148,6 +148,8 @@ static inline size_t js_trace_malloc_usable_size(void *ptr)
+     return _msize(ptr);
+ #elif defined(EMSCRIPTEN)
+     return 0;
++#elif defined(__aero__)
++    return 0; // TODO: (Aero): This is totally wrong.
+ #elif defined(__linux__)
+     return malloc_usable_size(ptr);
+ #else
+@@ -270,6 +272,8 @@ static const JSMallocFunctions trace_mf = {
+     (size_t (*)(const void *))_msize,
+ #elif defined(EMSCRIPTEN)
+     NULL,
++#elif defined(__aero__)
++    NULL, // TODO: (Aero): This is totally wrong.
+ #elif defined(__linux__)
+     (size_t (*)(const void *))malloc_usable_size,
+ #else
+diff --git a/quickjs-libc.c b/quickjs-libc.c
+index e180dd0..45313fd 100644
+--- a/quickjs-libc.c
++++ b/quickjs-libc.c
+@@ -57,6 +57,10 @@ typedef sig_t sighandler_t;
+ 
+ #endif
+ 
++#if defined(__aero__)
++typedef void (*sighandler_t)(int);
++#endif
++
+ #if !defined(_WIN32)
+ /* enable the os.Worker API. IT relies on POSIX threads */
+ #define USE_WORKER
+diff --git a/quickjs.c b/quickjs.c
+index 48aeffc..8922b67 100644
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -1682,6 +1682,8 @@ static inline size_t js_def_malloc_usable_size(void *ptr)
+     return _msize(ptr);
+ #elif defined(EMSCRIPTEN)
+     return 0;
++#elif defined(__aero__)
++    return 0; // TODO: (Aero) this is totally wrong :^)
+ #elif defined(__linux__)
+     return malloc_usable_size(ptr);
+ #else
+@@ -1756,6 +1758,8 @@ static const JSMallocFunctions def_malloc_funcs = {
+     (size_t (*)(const void *))_msize,
+ #elif defined(EMSCRIPTEN)
+     NULL,
++#elif defined(__aero__)
++    NULL, // TODO: (Aero) this is totally wrong :^)
+ #elif defined(__linux__)
+     (size_t (*)(const void *))malloc_usable_size,
+ #else
+-- 
+2.25.1
+

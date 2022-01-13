@@ -34,18 +34,18 @@ use super::keyboard::KeyboardListener;
 
 lazy_static::lazy_static! {
     static ref TTY: Arc<Tty> = Tty::new();
-}
 
-static TERMIOS: Mutex<aero_syscall::Termios> = Mutex::new(aero_syscall::Termios {
-    c_iflag: 0,
-    c_oflag: 0,
-    c_cflag: 0,
-    c_lflag: aero_syscall::TermiosLFlag::ECHO,
-    c_line: 0,
-    c_cc: [0; 32],
-    c_ispeed: 0,
-    c_ospeed: 0,
-});
+    static ref TERMIOS: Mutex<aero_syscall::Termios> = Mutex::new(aero_syscall::Termios {
+        c_iflag: 0,
+        c_oflag: aero_syscall::TermiosOFlag::empty(),
+        c_cflag: aero_syscall::TermiosCFlag::empty(),
+        c_lflag: aero_syscall::TermiosLFlag::ECHO | aero_syscall::TermiosLFlag::ICANON,
+        c_line: 0,
+        c_cc: [0; 32],
+        c_ispeed: 0,
+        c_ospeed: 0,
+    });
+}
 
 // From the linux kernel: https://github.com/torvalds/linux/blob/master/drivers/tty/vt/defkeymap.c_shipped
 const PLAIN_MAP: &[u16; 128] = &[
@@ -265,7 +265,7 @@ impl INodeInterface for Tty {
                 let (rows, cols) = crate::rendy::get_rows_cols();
 
                 winsize.ws_row = rows as u16;
-                winsize.ws_col = (cols as u16) - (crate::rendy::X_PAD * 3) as u16;
+                winsize.ws_col = (cols as u16) - (crate::rendy::X_PAD * 2) as u16;
 
                 let (xpixel, ypixel) = crate::rendy::get_resolution();
 
@@ -306,6 +306,7 @@ impl INodeInterface for Tty {
                 core::mem::drop(stdin);
 
                 let termios = VirtAddr::new(arg as u64);
+
                 let termios = unsafe {
                     core::slice::from_raw_parts(
                         termios.as_mut_ptr::<u8>(),
@@ -350,6 +351,10 @@ impl KeyboardListener for Tty {
     fn on_key(&self, key: KeyCode, released: bool) {
         let mut state = self.state.lock();
         let termios = TERMIOS.lock_irq();
+
+        // qjs: c_cflag = CSIZE | CS6 | CS7 | CS8
+        //      c_lflag = ICANON
+        //      c_oflag = OPOST
 
         let lchar = || {
             let mut shift = state.lshift || state.rshift;
@@ -605,7 +610,7 @@ impl vte::Perform for AnsiEscape {
                     crate::rendy::set_cursor_visibility(action == 'h')
                 }
 
-                _ => {}
+                _ => unimplemented!(),
             },
 
             // Clears parts of the screen.
@@ -620,6 +625,8 @@ impl vte::Perform for AnsiEscape {
                     0 => {
                         let (x, y) = crate::rendy::get_cursor_position();
                         let (term_rows, term_cols) = crate::rendy::get_rows_cols();
+
+                        let term_cols = term_cols - (crate::rendy::X_PAD * 2);
 
                         let rows_remaining = term_rows - (y + 1);
                         let cols_diff = term_cols - (x + 1);
@@ -641,8 +648,28 @@ impl vte::Perform for AnsiEscape {
                     2 | 3 => crate::rendy::clear_screen(false),
 
                     // Unknown value, do nothing.
-                    _ => {}
+                    _ => unimplemented!(),
                 }
+            }
+
+            'D' => {
+                let mut iter = params.iter();
+
+                // If `n` is missing, it defaults to 1.
+                let mut n = iter.next().unwrap_or(&[1])[0] as usize;
+
+                let (x, y) = crate::rendy::get_cursor_position();
+
+                // If the cursor is already at the edge of the screen, this has no effect.
+                if n > x {
+                    n = x;
+                }
+
+                if n == 0 {
+                    n = 1;
+                }
+
+                crate::rendy::set_cursor_position(x - n, y);
             }
 
             // Sets colors and style of the characters following this code.
