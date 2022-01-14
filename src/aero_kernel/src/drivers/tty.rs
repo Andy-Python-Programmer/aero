@@ -21,9 +21,9 @@ use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
-use crate::fs;
 use crate::fs::devfs;
 use crate::fs::inode;
+use crate::{aero_main, fs};
 
 use crate::fs::inode::INodeInterface;
 use crate::mem::paging::VirtAddr;
@@ -352,9 +352,14 @@ impl KeyboardListener for Tty {
         let mut state = self.state.lock();
         let termios = TERMIOS.lock_irq();
 
-        // qjs: c_cflag = CSIZE | CS6 | CS7 | CS8
-        //      c_lflag = ICANON
-        //      c_oflag = OPOST
+        let push_str = |k: &str| {
+            // TODO: decckm
+            let mut stdin = self.stdin.lock_irq();
+
+            for each in k.bytes() {
+                stdin.back_buffer.push(each);
+            }
+        };
 
         let lchar = || {
             let mut shift = state.lshift || state.rshift;
@@ -396,25 +401,17 @@ impl KeyboardListener for Tty {
         };
 
         let backspace = || {
-            let mut stdin = self.stdin.lock_irq();
+            if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ICANON) {
+                let mut stdin = self.stdin.lock_irq();
 
-            // We cannot backspace if the backbuffer is empty
-            // and we do not want to remove any lines commited
-            // by "\n".
-            if stdin.back_buffer.pop().is_some() {
-                if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
-                    crate::rendy::backspace();
-                    stdin.cursor -= 1;
+                if stdin.back_buffer.pop().is_some() {
+                    if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
+                        crate::rendy::backspace();
+                        stdin.cursor -= 1;
+                    }
                 }
-            }
-        };
-
-        let push_str = |k: &str| {
-            // TODO: decckm
-            let mut stdin = self.stdin.lock_irq();
-
-            for each in k.bytes() {
-                stdin.back_buffer.push(each);
+            } else {
+                push_str("\x08");
             }
         };
 
@@ -650,6 +647,28 @@ impl vte::Perform for AnsiEscape {
                     // Unknown value, do nothing.
                     _ => unimplemented!(),
                 }
+            }
+
+            'C' => {
+                let mut iter = params.iter();
+
+                // If `n` is missing, it defaults to 1.
+                let mut n = iter.next().unwrap_or(&[1])[0] as usize;
+
+                let (x, y) = crate::rendy::get_cursor_position();
+                let (_, term_cols) = crate::rendy::get_rows_cols();
+
+                let term_cols = term_cols - (crate::rendy::X_PAD * 2);
+
+                if x + n > term_cols - 1 {
+                    n = (term_cols - 1) - x;
+                }
+
+                if n == 0 {
+                    n = 1;
+                }
+
+                crate::rendy::set_cursor_position(x + n, y);
             }
 
             'D' => {
