@@ -34,6 +34,14 @@ pub fn run() -> fs::Result<()> {
     Ok(())
 }
 
+pub fn run_tests() -> fs::Result<()> {
+    let utest_path = Path::new("/bin/utest");
+    let utest_inode = fs::lookup_path(utest_path)?;
+
+    scheduler::get_scheduler().exec(utest_inode, None, None);
+    Ok(())
+}
+
 pub fn init_ap() {
     syscall::init();
 }

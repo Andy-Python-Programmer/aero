@@ -35,13 +35,19 @@ fn hostname() -> &'static Mutex<String> {
 }
 
 pub fn exit(status: usize) -> ! {
-    log::trace!(
-        "exiting the process (pid={pid}) with status: {status}",
-        pid = scheduler::get_scheduler().current_task().pid().as_usize(),
-        status = status
-    );
+    #[cfg(all(test, feature = "ci"))]
+    crate::emu::exit_qemu(crate::emu::ExitStatus::Success);
 
-    scheduler::get_scheduler().inner.exit(status as isize);
+    #[cfg(not(any(test, feature = "ci")))]
+    {
+        log::trace!(
+            "exiting the process (pid={pid}) with status: {status}",
+            pid = scheduler::get_scheduler().current_task().pid().as_usize(),
+            status = status
+        );
+
+        scheduler::get_scheduler().inner.exit(status as isize);
+    }
 }
 
 const ARCH_SET_GS: usize = 0x1001;

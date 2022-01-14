@@ -1,0 +1,12 @@
+[package]
+name = "utest-proc"
+version = "0.1.0"
+edition = "2021"
+authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0.82", features = ["proc-macro", "full"] }
+quote = "1.0.10"

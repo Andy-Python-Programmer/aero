@@ -17,35 +17,27 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#[cfg(feature = "ci")]
-use crate::emu;
+use aero_syscall::*;
 
-pub struct Test {
-    pub test_fn: fn(),
-    pub path: &'static str,
+struct Test<'a> {
+    path: &'a str,
+    func: fn(),
 }
 
-pub(crate) fn test_runner(tests: &[&Test]) {
-    crate::rendy::clear_screen(true);
-    crate::logger::set_rendy_debug(true);
+static TEST_FUNCTIONS: &[&'static Test<'static>] = &[&clone_process];
 
-    log::info!("running {} tests", tests.len());
+fn main() {
+    sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
+    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stdout");
+    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stderr");
 
-    let mut passed = 0usize;
+    println!("Running userland tests...");
 
-    for test in tests {
-        (test.test_fn)();
-        log::info!("test {} ... ok", test.path);
-
-        passed += 1;
+    for test_function in TEST_FUNCTIONS {
+        (test_function.func)();
+        println!("test {} ... ok", test_function.path);
     }
-
-    log::info!("");
-    log::info!(
-        "test result: ok. {} passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
-        passed
-    );
-
-    #[cfg(test)]
-    crate::userland::run_tests().unwrap();
 }
+
+#[utest_proc::test]
+fn clone_process() {}

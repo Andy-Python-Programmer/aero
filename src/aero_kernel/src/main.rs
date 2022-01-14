@@ -159,11 +159,13 @@ fn kernel_main_thread() {
     #[cfg(test)]
     test_main();
 
+    #[cfg(not(test))]
     if logger::enabled_rendy_debug() {
         rendy::clear_screen(true);
         logger::set_rendy_debug(false);
     }
 
+    #[cfg(not(test))]
     userland::run().unwrap();
 
     unreachable!()

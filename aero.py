@@ -274,14 +274,14 @@ def build_userland(args):
     if args.check:
         command = 'check'
 
-    # TODO: Add support for userland tests?
-    # if args.test:
-    #     command = 'test'
-    #     cmd_args += ['--no-run']
+    if args.test:
+        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args])
+    else:
+        return build_cargo_workspace('userland', command, cmd_args)
+
+    # TODO: Userland check
     # elif args.check:
     #     command = 'check'
-
-    return build_cargo_workspace('userland', command, cmd_args)
 
 
 def generate_docs(args):
