@@ -629,11 +629,15 @@ impl vte::Perform for AnsiEscape {
                         let cols_diff = term_cols - (x + 1);
                         let to_clear = rows_remaining * term_cols + cols_diff;
 
+                        crate::rendy::set_auto_flush(false);
+
                         for _ in 0..to_clear {
                             crate::rendy::print!(" ");
                         }
 
                         crate::rendy::set_cursor_position(x, y);
+                        crate::rendy::double_buffer_flush();
+                        crate::rendy::set_auto_flush(true);
                     }
 
                     1 => unimplemented!(),

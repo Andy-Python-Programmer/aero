@@ -228,6 +228,7 @@ pub struct DebugRendy<'this> {
     offset_y: usize,
 
     cursor_visibility: bool,
+    auto_flush: bool,
 }
 
 impl<'this> DebugRendy<'this> {
@@ -335,7 +336,9 @@ impl<'this> DebugRendy<'this> {
             vga_font_bool,
 
             queue_cursor: 0,
+
             cursor_visibility: true,
+            auto_flush: true,
         };
 
         let image = cmdline.term_background.map(|a| parse_bmp_image(a));
@@ -561,12 +564,18 @@ impl<'this> DebugRendy<'this> {
         }
     }
 
+    fn set_auto_flush(&mut self, yes: bool) {
+        self.auto_flush = yes;
+    }
+
     fn write_string(&mut self, string: &str) {
         for char in string.chars() {
             self.write_character(char)
         }
 
-        self.double_buffer_flush();
+        if self.auto_flush {
+            self.double_buffer_flush();
+        }
     }
 
     fn draw_cursor(&mut self) {
@@ -930,12 +939,30 @@ pub fn set_cursor_visibility(yes: bool) {
 /// Returns a tuple of the amount of `(rows, columns)` in the terminal.
 ///
 /// ## Panics
-/// Attempted to get the terminal info before the terminal was initialized.
+/// This function was called before the terminal was initialized.
 pub fn get_term_info() -> (usize, usize) {
     DEBUG_RENDY.get().map(|l| {
         let lock = l.lock_irq();
         (lock.rows, lock.cols)
     }).expect("get_term_info: attepted to get the terminal information before the terminal was initialized")
+}
+
+/// ## Panics
+/// This function was called before the terminal was initialized.
+pub fn set_auto_flush(yes: bool) {
+    DEBUG_RENDY
+        .get()
+        .map(|e| e.lock_irq().set_auto_flush(yes))
+        .expect("set_auto_flush: attempted to set auto flush before the terminal was initialized");
+}
+
+/// ## Panics
+/// This function was called before the terminal was initialized.
+pub fn double_buffer_flush() {
+    DEBUG_RENDY
+        .get()
+        .map(|e| e.lock_irq().double_buffer_flush())
+        .expect("double_buffer_flush: attempted to flush before the terminal was initialized");
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.
