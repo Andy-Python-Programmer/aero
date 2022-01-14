@@ -38,7 +38,7 @@ pub fn exit(status: usize) -> ! {
     #[cfg(all(test, feature = "ci"))]
     crate::emu::exit_qemu(crate::emu::ExitStatus::Success);
 
-    #[cfg(not(any(test, feature = "ci")))]
+    #[cfg(not(feature = "ci"))]
     {
         log::trace!(
             "exiting the process (pid={pid}) with status: {status}",
