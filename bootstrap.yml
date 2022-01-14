@@ -54,14 +54,14 @@ sources:
   - name: rust
     subdir: 'bundled'
     git: 'https://github.com/rust-lang/rust.git'
-    tag: '1.51.0'
-    version: '1.51.0'
+    branch: 'master'
+    commit: '22e491ac7ed454d34669151a8b6464cb643c9b41'
 
   - name: rust-libc
     subdir: 'bundled'
-    git: 'https://github.com/rust-lang/libc.git'
-    tag: '0.2.93'
-    version: '0.2.93'
+    git: 'https://github.com/Andy-Python-Programmer/libc.git'
+    branch: 'master'
+    commit: '9d6a6ee0c3973be6ea9ff48dac1e8fe3b177cf45'
 
   - name: llvm
     subdir: 'bundled'
