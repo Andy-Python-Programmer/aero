@@ -45,7 +45,4 @@ pub(crate) fn test_runner(tests: &[&Test]) {
         "test result: ok. {} passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
         passed
     );
-
-    #[cfg(test)]
-    crate::userland::run_tests().unwrap();
 }

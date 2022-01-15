@@ -33,11 +33,11 @@ fn main() {
     sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stdout");
     sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stderr");
 
-    println!("Running userland tests...");
+    println!("running {} tests", TEST_FUNCTIONS.len());
 
     for test_function in TEST_FUNCTIONS {
         (test_function.func)().unwrap();
-        println!("test {} ... ok", test_function.path);
+        println!("test {} ... \x1b[1;32mok\x1b[0m", test_function.path);
     }
 }
 
