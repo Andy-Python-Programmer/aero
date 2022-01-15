@@ -26,7 +26,7 @@ struct Test<'a> {
     func: fn() -> Result<(), AeroSyscallError>,
 }
 
-static TEST_FUNCTIONS: &[&'static Test<'static>] = &[&clone_process];
+static TEST_FUNCTIONS: &[&'static Test<'static>] = &[&clone_process, &forked_pipe];
 
 fn main() {
     sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
@@ -39,6 +39,37 @@ fn main() {
         (test_function.func)().unwrap();
         println!("test {} ... ok", test_function.path);
     }
+}
+
+#[utest_proc::test]
+fn forked_pipe() -> Result<(), AeroSyscallError> {
+    let mut pipe = [0usize; 2];
+    sys_pipe(&mut pipe, OpenFlags::empty())?;
+
+    let child = sys_fork()?;
+
+    if child == 0 {
+        sys_close(pipe[0])?; // close the read end
+
+        sys_write(pipe[1], b"Hello, World!")?;
+
+        sys_close(pipe[1])?; // close the write end
+        sys_exit(0)
+    } else {
+        let mut status = 0;
+        sys_waitpid(child, &mut status, 0)?;
+
+        sys_close(pipe[1])?; // close the write end
+
+        let mut buffer = [0; 13];
+        sys_read(pipe[0], &mut buffer)?;
+
+        core::assert_eq!(&buffer, b"Hello, World!");
+
+        sys_close(pipe[0])?; // close the read end
+    }
+
+    Ok(())
 }
 
 // Emulates how mlibc under the hood does clone()
