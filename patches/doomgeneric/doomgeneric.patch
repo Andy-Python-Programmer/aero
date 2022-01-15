@@ -1,0 +1,204 @@
+From ff175a6025424a25fbc686b855dac701560113d5 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sat, 15 Jan 2022 18:07:32 +1100
+Subject: [PATCH] add aero doom
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ .gitignore                     |  8 ++++
+ doomgeneric/Makefile.aero      | 80 ++++++++++++++++++++++++++++++++++
+ doomgeneric/d_iwad.c           |  3 ++
+ doomgeneric/doomgeneric_aero.c | 63 ++++++++++++++++++++++++++
+ 4 files changed, 154 insertions(+)
+ create mode 100644 .gitignore
+ create mode 100644 doomgeneric/Makefile.aero
+ create mode 100644 doomgeneric/doomgeneric_aero.c
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..6ac1485
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,8 @@
++build
++
++doomgeneric/doomgeneric
++doomgeneric/doomgeneric.map
++
++doom1.wad
++
++.vscode
+\ No newline at end of file
+diff --git a/doomgeneric/Makefile.aero b/doomgeneric/Makefile.aero
+new file mode 100644
+index 0000000..3cde87c
+--- /dev/null
++++ b/doomgeneric/Makefile.aero
+@@ -0,0 +1,80 @@
++################################################################
++#
++# $Id:$
++#
++# $Log:$
++#
++
++# Copyright (C) 2021-2022 The Aero Project Developers.
++#
++# This file is part of The Aero Project.
++#
++# Aero is free software: you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation, either version 3 of the License, or
++# (at your option) any later version.
++#
++# Aero is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with Aero. If not, see <https://www.gnu.org/licenses/>.
++
++ifeq ($(V),1)
++	VB=''
++else
++	VB=@
++endif
++
++CC=x86_64-aero-gcc
++
++CFLAGS+=-O0 -g
++LDFLAGS+=-Wl,--gc-sections
++CFLAGS+=-Wall -DNORMALUNIX -DLINUX -DSNDSERV -D_DEFAULT_SOURCE
++
++LIBS+=-lm -lc
++
++OBJDIR=build
++OUTPUT=doomgeneric
++
++SRC_DOOM = i_main.o dummy.o am_map.o doomdef.o doomstat.o dstrings.o d_event.o \
++		d_items.o d_iwad.o d_loop.o d_main.o d_mode.o d_net.o f_finale.o f_wipe.o \
++		g_game.o hu_lib.o hu_stuff.o info.o i_cdmus.o i_endoom.o i_joystick.o i_scale.o \
++		i_sound.o i_system.o i_timer.o memio.o m_argv.o m_bbox.o m_cheat.o m_config.o \
++		m_controls.o m_fixed.o m_menu.o m_misc.o m_random.o p_ceilng.o p_doors.o p_enemy.o \
++		p_floor.o p_inter.o p_lights.o p_map.o p_maputl.o p_mobj.o p_plats.o p_pspr.o \
++		p_saveg.o p_setup.o p_sight.o p_spec.o p_switch.o p_telept.o p_tick.o p_user.o \
++		r_bsp.o r_data.o r_draw.o r_main.o r_plane.o r_segs.o r_sky.o r_things.o sha1.o \
++		sounds.o statdump.o st_lib.o st_stuff.o s_sound.o tables.o v_video.o wi_stuff.o \
++		w_checksum.o w_file.o w_main.o w_wad.o z_zone.o w_file_stdc.o i_input.o i_video.o \
++		doomgeneric.o doomgeneric_aero.o
++
++OBJS += $(addprefix $(OBJDIR)/, $(SRC_DOOM))
++
++all: $(OUTPUT)
++
++clean:
++	rm -rf $(OBJDIR)
++	rm -f $(OUTPUT)
++	rm -f $(OUTPUT).gdb
++	rm -f $(OUTPUT).map
++
++$(OUTPUT): $(OBJS)
++	@echo [Linking $@]
++
++	$(VB)$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) \
++		-o $(OUTPUT) $(LIBS) -Wl,-Map,$(OUTPUT).map
++
++	@echo [Size]
++	-$(CROSS_COMPILE)size $(OUTPUT)
++
++$(OBJS): | $(OBJDIR)
++
++$(OBJDIR):
++	mkdir -p $(OBJDIR)
++
++$(OBJDIR)/%.o: %.c
++	@echo [Compiling $<]
++	$(VB)$(CC) $(CFLAGS) -c $< -o $@
+diff --git a/doomgeneric/d_iwad.c b/doomgeneric/d_iwad.c
+index 9da6337..368c712 100644
+--- a/doomgeneric/d_iwad.c
++++ b/doomgeneric/d_iwad.c
+@@ -407,6 +407,9 @@ static boolean DirIsFile(char *path, char *filename)
+ 
+ static char *CheckDirectoryHasIWAD(char *dir, char *iwadname)
+ {
++    printf("Checking if %s contains %s\n", dir, iwadname);
++    while (1);
++
+     char *filename; 
+ 
+     // As a special case, the "directory" may refer directly to an
+diff --git a/doomgeneric/doomgeneric_aero.c b/doomgeneric/doomgeneric_aero.c
+new file mode 100644
+index 0000000..b9c1934
+--- /dev/null
++++ b/doomgeneric/doomgeneric_aero.c
+@@ -0,0 +1,63 @@
++/*
++ * Copyright (C) 2021-2022 The Aero Project Developers.
++ *
++ * This file is part of The Aero Project.
++ *
++ * Aero is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * Aero is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with Aero. If not, see <https://www.gnu.org/licenses/>.
++ */
++
++#include <stdint.h>
++#include <fcntl.h>
++#include <stdio.h>
++
++#define LOG_INFO     1
++
++static int64_t framebuffer_fd = -1;
++
++static void log_info(char* message) {
++#ifdef LOG_INFO
++    printf("\x1b[1;32minfo\x1b[0m: %s\n", message);
++#endif
++}
++
++static void log_error(char* message) {
++    printf("\x1b[1;31minfo\x1b[0m: %s\n", message);
++    fflush(stdout);
++}
++
++void DG_Init() {
++    log_info("initializing framebuffer");
++
++    // Open up the framebuffer device.
++    framebuffer_fd = open("/dev/fb", O_WRONLY);
++
++    // Make sure the there were no errors.
++    if (!framebuffer_fd) {
++        log_error("failed to open /dev/fb");
++        exit(1);
++    }
++
++    log_info("successfuly initialized doomgeneric");
++}
++
++void DG_DrawFrame() {
++    printf("Attempted to draw the first frame!\n");
++    while (1);
++}
++
++void DG_SleepMs() {}
++uint32_t DG_GetTicksMs() {}
++
++int DG_GetKey(int *pressed, unsigned char *doomKey) {}
++void DG_SetWindowTitle(const char *title) {}
+\ No newline at end of file
+-- 
+2.25.1
+

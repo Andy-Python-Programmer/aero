@@ -141,19 +141,19 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 sys_sleep(&timespec)?;
             }
 
-            "gcc" => {
+            "doom" => {
                 let child = sys_fork()?;
 
                 if child == 0 {
                     let args = args.collect::<Vec<_>>();
                     let mut argv = Vec::new();
 
-                    argv.push("/bin/x86_64-aero-gcc");
+                    argv.push("/bin/doomgeneric");
                     argv.extend(args);
 
                     let argv = argv.as_slice();
 
-                    if sys_exec("/bin/x86_64-aero-gcc", argv, &["TERM=linux"]).is_err() {
+                    if sys_exec("/bin/doomgeneric", argv, &["TERM=linux"]).is_err() {
                         println!("{}: command not found", cmd);
                         sys_exit(1);
                     }
