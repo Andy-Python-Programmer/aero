@@ -1,4 +1,4 @@
-From ff175a6025424a25fbc686b855dac701560113d5 Mon Sep 17 00:00:00 2001
+From 8a107ad6f5a44bfc821024a4c9630705290f6ff2 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Sat, 15 Jan 2022 18:07:32 +1100
 Subject: [PATCH] add aero doom
@@ -7,9 +7,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                     |  8 ++++
  doomgeneric/Makefile.aero      | 80 ++++++++++++++++++++++++++++++++++
- doomgeneric/d_iwad.c           |  3 ++
- doomgeneric/doomgeneric_aero.c | 63 ++++++++++++++++++++++++++
- 4 files changed, 154 insertions(+)
+ doomgeneric/d_main.c           |  4 ++
+ doomgeneric/doomgeneric_aero.c | 64 +++++++++++++++++++++++++++
+ 4 files changed, 156 insertions(+)
  create mode 100644 .gitignore
  create mode 100644 doomgeneric/Makefile.aero
  create mode 100644 doomgeneric/doomgeneric_aero.c
@@ -115,26 +115,33 @@ index 0000000..3cde87c
 +$(OBJDIR)/%.o: %.c
 +	@echo [Compiling $<]
 +	$(VB)$(CC) $(CFLAGS) -c $< -o $@
-diff --git a/doomgeneric/d_iwad.c b/doomgeneric/d_iwad.c
-index 9da6337..368c712 100644
---- a/doomgeneric/d_iwad.c
-+++ b/doomgeneric/d_iwad.c
-@@ -407,6 +407,9 @@ static boolean DirIsFile(char *path, char *filename)
+diff --git a/doomgeneric/d_main.c b/doomgeneric/d_main.c
+index c7cf977..435e76a 100644
+--- a/doomgeneric/d_main.c
++++ b/doomgeneric/d_main.c
+@@ -1357,12 +1357,16 @@ void D_DoomMain (void)
+     D_BindVariables();
+     M_LoadDefaults();
  
- static char *CheckDirectoryHasIWAD(char *dir, char *iwadname)
- {
-+    printf("Checking if %s contains %s\n", dir, iwadname);
-+    while (1);
++    DEH_printf("I_AtExit: Installing handler to save config at exit.\n");
 +
-     char *filename; 
+     // Save configuration at exit.
+     I_AtExit(M_SaveDefaults, false);
  
-     // As a special case, the "directory" may refer directly to an
++    DEH_printf("D_FindIWAD: Searching for the IWAD file.\n");
+     // Find main IWAD file and load it.
+     iwadfile = D_FindIWAD(IWAD_MASK_DOOM, &gamemission);
+ 
++
+     // None found?
+ 
+     if (iwadfile == NULL)
 diff --git a/doomgeneric/doomgeneric_aero.c b/doomgeneric/doomgeneric_aero.c
 new file mode 100644
-index 0000000..b9c1934
+index 0000000..b9041f4
 --- /dev/null
 +++ b/doomgeneric/doomgeneric_aero.c
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,64 @@
 +/*
 + * Copyright (C) 2021-2022 The Aero Project Developers.
 + *
@@ -156,6 +163,7 @@ index 0000000..b9c1934
 +
 +#include <stdint.h>
 +#include <fcntl.h>
++#include <stdlib.h>
 +#include <stdio.h>
 +
 +#define LOG_INFO     1
@@ -189,7 +197,7 @@ index 0000000..b9c1934
 +}
 +
 +void DG_DrawFrame() {
-+    printf("Attempted to draw the first frame!\n");
++    log_info("Attempted to draw the first frame!\n");
 +    while (1);
 +}
 +

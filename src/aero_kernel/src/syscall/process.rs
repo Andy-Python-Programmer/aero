@@ -273,7 +273,9 @@ pub fn sigaction(
     old: usize,
 ) -> Result<usize, AeroSyscallError> {
     if sig == 34 {
-        // HECK: make mlibc happy
+        // HECK: make mlibc happy :^)
+        //
+        // In function PthreadSignalInstaller, file mlibc/options/posix/generic/pthread-stubs.cpp:419
         return Err(AeroSyscallError::ENOSYS);
     }
 
