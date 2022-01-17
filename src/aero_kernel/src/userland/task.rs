@@ -17,7 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::AeroSyscallError;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 
@@ -35,8 +34,12 @@ use crate::fs::file_table::FileTable;
 use crate::syscall::ExecArgs;
 use crate::utils::sync::{BlockQueue, Mutex};
 
+use crate::userland::signals::Signals;
+
 use intrusive_collections::{intrusive_adapter, LinkedList, LinkedListLink};
 
+use super::scheduler;
+use super::signals::{SignalResult, TriggerResult};
 use super::vm::Vm;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -127,7 +130,7 @@ impl Zombies {
         self.block.notify_complete();
     }
 
-    fn waitpid(&self, pid: usize, status: &mut u32) -> usize {
+    fn waitpid(&self, pid: usize, status: &mut u32) -> SignalResult<usize> {
         let mut captured = (TaskId(0), 0);
 
         self.block.block_on(&self.list, |l| {
@@ -145,7 +148,7 @@ impl Zombies {
             }
 
             false
-        });
+        })?;
 
         let (tid, st) = captured;
 
@@ -155,7 +158,7 @@ impl Zombies {
         // The lower 8-bits are used to store the exit status.
         *status |= st as u32 & 0xff;
 
-        tid.as_usize()
+        Ok(tid.as_usize())
     }
 }
 
@@ -178,6 +181,7 @@ pub struct Task {
     zombies: Zombies,
 
     sleep_duration: AtomicUsize,
+    signals: Signals,
 
     pub(super) link: intrusive_collections::LinkedListLink,
     pub(super) clink: intrusive_collections::LinkedListLink,
@@ -219,6 +223,7 @@ impl Task {
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
 
+            signals: Signals::new(),
             cwd: Cwd::new(),
         })
     }
@@ -251,6 +256,7 @@ impl Task {
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
 
+            signals: Signals::new(),
             cwd: Cwd::new(),
         })
     }
@@ -280,13 +286,19 @@ impl Task {
             parent: Mutex::new(None),
 
             cwd: self.cwd.read().fork(),
+            signals: Signals::new(),
         });
 
         self.add_child(this.clone());
+        this.signals().copy_from(self.signals());
 
         this.vm.fork_from(self.vm());
         this.vm.log();
         this
+    }
+
+    pub fn signals(&self) -> &Signals {
+        &self.signals
     }
 
     pub fn clone_process(&self, entry: usize, stack: usize) -> Arc<Task> {
@@ -347,8 +359,8 @@ impl Task {
         self.sleep_duration.load(Ordering::SeqCst)
     }
 
-    pub fn waitpid(&self, pid: usize, status: &mut u32) -> Result<usize, AeroSyscallError> {
-        Ok(self.zombies.waitpid(pid, status))
+    pub fn waitpid(&self, pid: usize, status: &mut u32) -> SignalResult<usize> {
+        self.zombies.waitpid(pid, status)
     }
 
     pub fn exec(
@@ -359,8 +371,11 @@ impl Task {
         envv: Option<ExecArgs>,
     ) -> Result<(), MapToError<Size4KiB>> {
         let vm = self.vm();
-
         vm.clear();
+
+        // Clear the signals that are pending for this task on exec.
+        self.signals().clear();
+
         let loaded_binary = vm.load_bin(executable);
 
         self.arch_task_mut().exec(vm, loaded_binary, argv, envv)
@@ -415,6 +430,62 @@ impl Task {
     fn get_parent(&self) -> Option<Arc<Task>> {
         let parent = self.parent.lock();
         parent.clone()
+    }
+
+    pub fn wake_up(&self) {
+        scheduler::get_scheduler().inner.wake_up(self.this())
+    }
+
+    pub fn is_process_leader(&self) -> bool {
+        self.tid() == self.pid()
+    }
+
+    pub fn process_leader(&self) -> Arc<Task> {
+        if self.is_process_leader() {
+            self.this()
+        } else {
+            let parent = self.get_parent().unwrap();
+
+            assert!(parent.is_process_leader());
+            parent
+        }
+    }
+
+    pub fn signal(&self, signal: usize) -> bool {
+        match self.signals().trigger(signal, false) {
+            TriggerResult::Triggered => {
+                self.wake_up();
+                true
+            }
+
+            TriggerResult::Ignored => false,
+
+            TriggerResult::Blocked => {
+                // Find other thread in process to notify
+                let process_leader = self.process_leader();
+
+                if !process_leader.signals().is_blocked(signal) {
+                    process_leader.wake_up();
+
+                    return true;
+                }
+
+                for c in process_leader
+                    .children
+                    .lock()
+                    .iter()
+                    .filter(|t| t.pid() == self.pid())
+                {
+                    if !c.signals().is_blocked(signal) {
+                        c.wake_up();
+
+                        return true;
+                    }
+                }
+
+                false
+            }
+        }
     }
 
     pub(super) fn into_zombie(&self) {

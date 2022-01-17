@@ -20,6 +20,7 @@
 pub mod controlregs;
 pub mod gdt;
 pub mod interrupts;
+pub mod signals;
 pub mod task;
 
 use crate::acpi;

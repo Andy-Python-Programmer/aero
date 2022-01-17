@@ -72,7 +72,7 @@ impl INodeInterface for Pipe {
     fn read_at(&self, _offset: usize, buf: &mut [u8]) -> super::Result<usize> {
         let mut buffer = self
             .readers
-            .block_on(&self.queue.buffer, |lock| lock.has_data());
+            .block_on(&self.queue.buffer, |lock| lock.has_data())?;
 
         let read = buffer.read_data(buf);
 

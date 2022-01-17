@@ -21,6 +21,7 @@
 #![feature(decl_macro)]
 
 pub mod consts;
+pub mod signal;
 pub mod syscall;
 
 pub use crate::syscall::*;
@@ -709,4 +710,51 @@ pub fn sys_info(struc: &mut SysInfo) -> Result<usize, AeroSyscallError> {
 pub fn sys_clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_CLONE, entry, stack);
     isize_as_syscall_result(value as _)
+}
+
+pub fn sys_sigreturn() -> Result<usize, AeroSyscallError> {
+    let value = syscall0(prelude::SYS_SIGRETURN);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_sigaction(
+    sig: usize,
+    sigaction: Option<&signal::SigAction>,
+    old_sigaction: Option<&mut signal::SigAction>,
+) -> Result<usize, AeroSyscallError> {
+    let sigact = sigaction;
+
+    let value = syscall4(
+        prelude::SYS_SIGACTION,
+        sig,
+        sigact
+            .and_then(|f| Some(f as *const signal::SigAction as usize))
+            .unwrap_or(0),
+        sys_sigreturn as usize,
+        old_sigaction
+            .and_then(|f| Some(f as *mut signal::SigAction as usize))
+            .unwrap_or(0),
+    );
+
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_sigprocmask(
+    how: signal::SigProcMask,
+    set: &mut u64,
+    old_set: Option<&mut u64>,
+) -> Result<usize, AeroSyscallError> {
+    let old_set = match old_set {
+        Some(e) => e as *const u64 as usize,
+        None => 0,
+    };
+
+    let result = syscall3(
+        prelude::SYS_SIGPROCMASK,
+        how as usize,
+        set as *const u64 as usize,
+        old_set,
+    );
+
+    isize_as_syscall_result(result as _)
 }

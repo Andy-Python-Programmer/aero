@@ -253,6 +253,9 @@ pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptError
                 "mov rdi, rsp\n",
                 "call __interrupt_", stringify!($name), "\n",
 
+                "mov rdi, rsp\n",
+                "call interrupt_check_signals_error_stack\n",
+
                 "call unmap_pti\n",
 
                 // Pop the error code.
@@ -298,6 +301,9 @@ pub macro interrupt_stack(pub unsafe fn $name:ident($stack:ident: &mut Interrupt
                 "mov rdi, rsp\n",
                 "call __interrupt_", stringify!($name), "\n",
 
+                "mov rdi, rsp\n",
+                "call interrupt_check_signals\n",
+
                 "call unmap_pti\n",
 
                 $crate::utils::pop_preserved!(),
@@ -336,7 +342,6 @@ pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
                 "call unmap_pti\n",
 
                 $crate::utils::pop_scratch!(),
-
                 $crate::utils::swapgs_iff_ring3_fast!(),
                 "iretq\n",
             }

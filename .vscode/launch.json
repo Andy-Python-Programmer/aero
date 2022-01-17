@@ -5,7 +5,7 @@
             "type": "cppdbg",
             "request": "launch",
             "name": "Attach Qemu",
-            "program": "${workspaceFolder}/src/target/x86_64-aero_os/debug/aero_kernel",
+            "program": "${workspaceFolder}/src/target/x86_64-aero_os/release/aero_kernel",
             "args": [],
             "cwd": "${workspaceFolder}",
             "externalConsole": false,
@@ -24,7 +24,7 @@
                     "description": "Connect to QEMU remote debugger"
                 },
                 {
-                    "text": "symbol-file ${workspaceFolder}/src/target/x86_64-aero_os/debug/aero_kernel",
+                    "text": "symbol-file ${workspaceFolder}/src/target/x86_64-aero_os/release/aero_kernel",
                     "description": "Get kernel symbols"
                 }
             ],
@@ -38,7 +38,7 @@
                 "platform select remote-gdb-server"
             ],
             "targetCreateCommands": [
-                "target create ${workspaceFolder}/src/target/x86_64-aero_os/debug/aero_kernel"
+                "target create ${workspaceFolder}/src/target/x86_64-aero_os/release/aero_kernel"
             ],
             "processCreateCommands": [
                 "gdb-remote 127.0.0.1:1234" // Connect to the GDB Server

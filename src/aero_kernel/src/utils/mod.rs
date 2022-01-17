@@ -317,6 +317,17 @@ impl<'a> StackHelper<'a> {
 
         (*self.ptr as *mut u8).copy_from(bytes.as_ptr(), bytes.len());
     }
+
+    pub fn get_by(&mut self, by: u64) {
+        *self.ptr += by;
+    }
+
+    pub unsafe fn get<'b, T: Sized>(&mut self) -> &'b mut T {
+        let x = &mut *(*self.ptr as *mut T);
+
+        self.get_by(core::mem::size_of::<T>() as u64);
+        x
+    }
 }
 
 pub trait CeilDiv {

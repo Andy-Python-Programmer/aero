@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::signal::SigAction;
 use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
 use alloc::string::String;
 use spin::{Mutex, Once};
@@ -26,6 +27,7 @@ use crate::fs::Path;
 
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
+use crate::userland::signals::SignalEntry;
 use crate::utils::validate_str;
 
 static HOSTNAME: Once<Mutex<String>> = Once::new();
@@ -262,6 +264,52 @@ pub fn sethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError>
         }
         Err(_) => Err(AeroSyscallError::EINVAL),
     }
+}
+
+pub fn sigaction(
+    sig: usize,
+    sigact: usize,
+    sigreturn: usize,
+    old: usize,
+) -> Result<usize, AeroSyscallError> {
+    if sig == 34 {
+        // HECK: make mlibc happy
+        return Err(AeroSyscallError::ENOSYS);
+    }
+
+    let new = if sigact == 0 {
+        None
+    } else {
+        let address = VirtAddr::new(sigact as u64);
+        let raw = address.as_mut_ptr::<SigAction>();
+        let sigact = unsafe { &mut *raw };
+
+        Some(sigact)
+    };
+
+    let entry = if let Some(new) = new {
+        Some(SignalEntry::from_sigaction(*new, sigreturn)?)
+    } else {
+        None
+    };
+
+    let old = if old == 0 {
+        None
+    } else {
+        let address = VirtAddr::new(old as u64);
+        let raw = address.as_mut_ptr::<SigAction>();
+        let sigact = unsafe { &mut *raw };
+
+        Some(sigact)
+    };
+
+    let scheduler = scheduler::get_scheduler();
+    let task = scheduler.current_task();
+    let signals = task.signals();
+
+    signals.set_signal(sig, entry, old);
+
+    Ok(0)
 }
 
 pub fn shutdown() -> ! {

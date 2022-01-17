@@ -19,6 +19,7 @@
 
 extern crate alloc;
 
+use aero_syscall::signal::*;
 use aero_syscall::*;
 
 const MAGENTA_FG: &str = "\x1b[1;35m";
@@ -149,6 +150,8 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     let mut argv = Vec::new();
 
                     argv.push("/bin/doomgeneric");
+
+                    argv.extend(&["-iwad", "./doom1.wad"]);
                     argv.extend(args);
 
                     let argv = argv.as_slice();
@@ -163,6 +166,23 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     sys_waitpid(child, &mut status, 0)?;
                 }
             }
+
+            "sigtest" => unsafe {
+                let child = sys_fork()?;
+
+                if child == 0 {
+                    (0xcafebabe as *mut u32).write_volatile(0xdeadbeef);
+                } else {
+                    let mut status = 0;
+                    sys_waitpid(child, &mut status, 0)?;
+
+                    let exit_code = status & 0xff;
+
+                    if exit_code != 0 {
+                        error!("{} exited with a non-zero status code: {} ", cmd, exit_code);
+                    }
+                }
+            },
 
             _ => {
                 let child = sys_fork()?;
@@ -417,7 +437,18 @@ fn uname() -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
+fn handle_segmentation_fault(_fault: usize) {
+    error!("segmentation fault");
+    sys_exit(0x1);
+}
+
 fn main() {
+    let handler = SignalHandler::Handle(handle_segmentation_fault);
+    let sigaction = SigAction::new(handler, 0, SignalFlags::empty());
+
+    sys_sigaction(SIGSEGV, Some(&sigaction), None)
+        .expect("failed to install the segmentation fault handler");
+
     let mut history = vec![];
 
     loop {

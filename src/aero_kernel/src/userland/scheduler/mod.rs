@@ -30,6 +30,7 @@ use spin::Once;
 use crate::utils::Downcastable;
 
 use self::round_robin::RoundRobin;
+use super::signals::SignalResult;
 use super::task::{Task, TaskId};
 
 static SCHEDULER: Once<Scheduler> = Once::new();
@@ -44,9 +45,10 @@ pub trait SchedulerInterface: Send + Sync + Downcastable {
     fn current_task(&self) -> Arc<Task>;
 
     fn init(&self);
-    fn await_io(&self);
     fn wake_up(&self, task: Arc<Task>);
-    fn sleep(&self, duration: Option<usize>);
+
+    fn await_io(&self) -> SignalResult<()>;
+    fn sleep(&self, duration: Option<usize>) -> SignalResult<()>;
 
     /// Yields execution to another task.
     fn preempt(&self);

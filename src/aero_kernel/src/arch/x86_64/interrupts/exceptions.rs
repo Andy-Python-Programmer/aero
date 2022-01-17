@@ -100,7 +100,10 @@ interrupt_error_stack!(
                 .handle_page_fault(reason, accessed_address);
 
             if !signal && stack.stack.iret.is_user() {
-                log::debug!("SIGSEGV");
+                let task = scheduler::get_scheduler().current_task();
+                task.signal(aero_syscall::signal::SIGSEGV);
+
+                return;
             } else if !signal {
             } else {
                 return;

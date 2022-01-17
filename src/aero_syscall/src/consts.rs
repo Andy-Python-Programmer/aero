@@ -56,3 +56,6 @@ pub const SYS_GETHOSTNAME: usize = 35;
 pub const SYS_SETHOSTNAME: usize = 36;
 pub const SYS_INFO: usize = 37;
 pub const SYS_CLONE: usize = 38;
+pub const SYS_SIGRETURN: usize = 39;
+pub const SYS_SIGACTION: usize = 40;
+pub const SYS_SIGPROCMASK: usize = 41;

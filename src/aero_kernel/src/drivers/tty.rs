@@ -224,7 +224,7 @@ impl Tty {
 impl INodeInterface for Tty {
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         self.block_queue
-            .block_on(&self.stdin, |future| future.is_complete());
+            .block_on(&self.stdin, |future| future.is_complete())?;
 
         let mut stdin = self.stdin.lock_irq();
 

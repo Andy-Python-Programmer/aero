@@ -74,6 +74,7 @@ pub use process::*;
 use raw_cpuid::CpuId;
 pub use time::*;
 
+use crate::arch::signals;
 use crate::arch::{gdt::GdtEntryType, interrupts};
 use crate::utils::{io, StackHelper};
 
@@ -169,6 +170,12 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         _ => unsafe { interrupts::enable_interrupts() },
     }
 
+    if a == SYS_SIGRETURN {
+        let result = signals::sigreturn(sys, stack);
+        stack.rax = result as u64;
+        return;
+    }
+
     let result = match a {
         SYS_EXIT => process::exit(b),
         SYS_SHUTDOWN => process::shutdown(),
@@ -185,6 +192,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_GETHOSTNAME => process::gethostname(b, c),
         SYS_SETHOSTNAME => process::sethostname(b, c),
         SYS_INFO => process::info(b),
+        SYS_SIGACTION => process::sigaction(b, c, d, e),
         SYS_CLONE => process::clone(b, c),
 
         0x13A => {
@@ -223,7 +231,10 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         }
     };
 
-    stack.rax = aero_syscall::syscall_result_as_usize(result) as _;
+    let result = aero_syscall::syscall_result_as_usize(result) as _;
+
+    crate::arch::signals::syscall_check_signals(result as isize, sys, stack);
+    stack.rax = result;
 }
 
 extern "C" {

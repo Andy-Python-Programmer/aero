@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 
 use crate::arch::interrupts;
 use crate::userland::scheduler;
+use crate::userland::signals::SignalResult;
 use crate::userland::task::Task;
 
 pub struct BlockQueue {
@@ -24,12 +25,12 @@ impl BlockQueue {
         &self,
         mutex: &'future Mutex<T>,
         mut future: F,
-    ) -> MutexGuard<'future, T> {
+    ) -> SignalResult<MutexGuard<'future, T>> {
         let mut lock = mutex.lock_irq();
 
         // Check if the future was already completed.
         if future(&mut lock) {
-            return lock;
+            return Ok(lock);
         }
 
         let scheduler = scheduler::get_scheduler();
@@ -40,14 +41,14 @@ impl BlockQueue {
         // Wait until the future is completed.
         while !future(&mut lock) {
             core::mem::drop(lock); // Drop the IRQ lock and await for IO to complete.
-            scheduler.inner.await_io();
+            scheduler.inner.await_io()?;
 
             // Re-acquire the lock.
             lock = mutex.lock_irq();
         }
 
         self.remove_task(task);
-        lock
+        Ok(lock)
     }
 
     /// Inner helper function which removes a task from the block queue.

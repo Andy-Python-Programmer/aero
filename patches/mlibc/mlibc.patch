@@ -1,4 +1,4 @@
-From c81a0aa8fad28272743226986e49f775226a136d Mon Sep 17 00:00:00 2001
+From 0197d2fea0db1eab653ecdeeb91b257d341c9188 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -8,6 +8,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  .gitignore                                  |   6 +
  abis/aero/auxv.h                            |  13 +
  meson.build                                 |   4 +
+ options/ansi/generic/environment.cpp        |   2 +
  options/ansi/generic/stdlib-stubs.cpp       |   3 +
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
@@ -15,7 +16,8 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/generic/aero.cc                | 259 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
  sysdeps/aero/generic/filesystem.cc          | 238 ++++++++++++++++++
- sysdeps/aero/generic/signals.cc             |  15 ++
+ sysdeps/aero/generic/signals.S              |   7 +
+ sysdeps/aero/generic/signals.cc             |  43 ++++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  45 ++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -44,17 +46,18 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 197 +++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 199 +++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
- sysdeps/aero/meson.build                    |  61 +++++
+ sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 44 files changed, 940 insertions(+), 10 deletions(-)
+ 46 files changed, 985 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
  create mode 100644 sysdeps/aero/generic/entry.cc
  create mode 100644 sysdeps/aero/generic/filesystem.cc
+ create mode 100644 sysdeps/aero/generic/signals.S
  create mode 100644 sysdeps/aero/generic/signals.cc
  create mode 100644 sysdeps/aero/generic/sockets.cc
  create mode 100644 sysdeps/aero/generic/thread.cc
@@ -138,6 +141,19 @@ index 4027c99..b363aa3 100644
  elif host_machine.system() == 'managarm'
  	# TODO: Adopt the include_directories() commands from the managarm meson.build.
  	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
+diff --git a/options/ansi/generic/environment.cpp b/options/ansi/generic/environment.cpp
+index d20ec84..e512c46 100644
+--- a/options/ansi/generic/environment.cpp
++++ b/options/ansi/generic/environment.cpp
+@@ -96,6 +96,8 @@ void unassign_variable(frg::string_view name) {
+ } // anonymous namespace
+ 
+ char *getenv(const char *name) {
++	return "";
++
+ 	auto k = find_environ_index(name);
+ 	if(k == size_t(-1))
+ 		return nullptr;
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
 index 347c659..8e97b26 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
@@ -776,19 +792,60 @@ index 0000000..e1465dc
 +	return 0;
 +}
 +} // namespace mlibc
+diff --git a/sysdeps/aero/generic/signals.S b/sysdeps/aero/generic/signals.S
+new file mode 100644
+index 0000000..9e5d12b
+--- /dev/null
++++ b/sysdeps/aero/generic/signals.S
+@@ -0,0 +1,7 @@
++.section .text
++.global __mlibc_signal_restore
++
++__mlibc_signal_restore:
++	mov $39, %rax
++	syscall
++	ud2
 diff --git a/sysdeps/aero/generic/signals.cc b/sysdeps/aero/generic/signals.cc
 new file mode 100644
-index 0000000..71217ed
+index 0000000..c851372
 --- /dev/null
 +++ b/sysdeps/aero/generic/signals.cc
-@@ -0,0 +1,15 @@
+@@ -0,0 +1,43 @@
 +#include <mlibc/debug.hpp>
-+#include <sys/types.h>
 +#include <mlibc/ansi-sysdeps.hpp>
++
++#include <sys/types.h>
++#include <aero/syscall.h>
++
++#define LOG_SIGACTION_INSTALL 0
++
++extern "C" void __mlibc_signal_restore(); // defined in `signals.S`
 +
 +namespace mlibc {
 +int sys_sigaction(int how, const struct sigaction *__restrict action, struct sigaction *__restrict old_action) {
-+    mlibc::infoLogger() << "sys_sigprocmask() is not implemented" << frg::endlog;
++#ifdef LOG_SIGACTION_INSTALL
++    mlibc::infoLogger() << "sys_sigaction: signal " << how << frg::endlog;
++    mlibc::infoLogger() << "sys_sigaction: size: " << sizeof(*action) << frg::endlog;
++
++    if (action != NULL) {
++        mlibc::infoLogger() << "sys_sigaction: handler " << (int64_t)action->sa_handler << frg::endlog;
++        mlibc::infoLogger() << "sys_sigaction: action " << (int64_t)action->sa_sigaction << frg::endlog;
++        mlibc::infoLogger() << "sys_sigaction: flags " << (int64_t)action->sa_flags << frg::endlog;
++    }
++
++    mlibc::infoLogger() << frg::endlog;
++#endif
++
++    auto res = syscall(
++        SYS_SIGACTION,
++        how,
++        (uint64_t)(action),
++        (uint64_t)(__mlibc_signal_restore),
++        (uint64_t)old_action);
++    
++    if (res < 0)
++        return -res;
++
 +    return 0;
 +}
 +
@@ -1068,10 +1125,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..ea48b8e
+index 0000000..b1c825f
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,197 @@
+@@ -0,0 +1,199 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -1117,7 +1174,9 @@ index 0000000..ea48b8e
 +#define SYS_SETHOSTNAME 36
 +#define SYS_INFO        37
 +#define SYS_CLONE       38
-+#define SYS_SELECT      39
++#define SYS_SIGRETURN   39
++#define SYS_SIGACTION   40
++#define SYS_SIGPROCMASK 41
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.
@@ -1287,10 +1346,10 @@ index 0000000..2dd88a6
 +}
 diff --git a/sysdeps/aero/meson.build b/sysdeps/aero/meson.build
 new file mode 100644
-index 0000000..9cad2a3
+index 0000000..5033f0f
 --- /dev/null
 +++ b/sysdeps/aero/meson.build
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,67 @@
 +if not static
 +	rtdl_sources += files(
 +		'generic/aero.cc',
@@ -1351,6 +1410,12 @@ index 0000000..9cad2a3
 +		install: true,
 +		install_dir: get_option('libdir')
 +	)
++endif
++
++if host_machine.cpu_family() == 'x86_64'
++	libc_sources += files('generic/signals.S')
++else
++	error('Unknown architecture')
 +endif
 diff --git a/sysdeps/dripos/generic/generic.cpp b/sysdeps/dripos/generic/generic.cpp
 index 0a85169..48bfc57 100644
