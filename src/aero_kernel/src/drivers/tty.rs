@@ -21,9 +21,9 @@ use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
+use crate::fs;
 use crate::fs::devfs;
 use crate::fs::inode;
-use crate::{aero_main, fs};
 
 use crate::fs::inode::INodeInterface;
 use crate::mem::paging::VirtAddr;

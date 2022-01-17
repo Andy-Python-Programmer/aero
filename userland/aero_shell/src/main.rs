@@ -19,6 +19,8 @@
 
 extern crate alloc;
 
+use core::sync::atomic::{AtomicU32, Ordering};
+
 use aero_syscall::signal::*;
 use aero_syscall::*;
 
@@ -44,6 +46,8 @@ macro_rules! error {
         std::print!("\x1b[1;31merror\x1b[0m: {}\n", format_args!($($arg)*))
     }
 }
+
+static LAST_EXIT_CODE: AtomicU32 = AtomicU32::new(0);
 
 fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     let mut hostname_buf = [0; 64];
@@ -71,6 +75,16 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
         history.push(cmd_string.to_string());
 
         match cmd {
+            "echo" => {
+                let message = args.collect::<Vec<_>>().join(" ");
+                let message = message.replace(
+                    "$?",
+                    LAST_EXIT_CODE.load(Ordering::Relaxed).to_string().as_str(),
+                );
+
+                println!("{}", message);
+            }
+
             "ls" => list_directory(args.next().unwrap_or("."))?,
             "pwd" => println!("{}", pwd),
             "cd" => {
@@ -164,25 +178,15 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     // Wait for the child
                     let mut status = 0;
                     sys_waitpid(child, &mut status, 0)?;
-                }
-            }
-
-            "sigtest" => unsafe {
-                let child = sys_fork()?;
-
-                if child == 0 {
-                    (0xcafebabe as *mut u32).write_volatile(0xdeadbeef);
-                } else {
-                    let mut status = 0;
-                    sys_waitpid(child, &mut status, 0)?;
 
                     let exit_code = status & 0xff;
+                    LAST_EXIT_CODE.store(exit_code, Ordering::SeqCst);
 
                     if exit_code != 0 {
                         error!("{} exited with a non-zero status code: {} ", cmd, exit_code);
                     }
                 }
-            },
+            }
 
             _ => {
                 let child = sys_fork()?;
@@ -210,6 +214,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     sys_waitpid(child, &mut status, 0)?;
 
                     let exit_code = status & 0xff;
+                    LAST_EXIT_CODE.store(exit_code, Ordering::SeqCst);
 
                     if exit_code != 0 {
                         error!("{} exited with a non-zero status code: {} ", cmd, exit_code);
