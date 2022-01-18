@@ -37,8 +37,6 @@ fn hostname() -> &'static Mutex<String> {
 }
 
 pub fn exit(status: usize) -> ! {
-    crate::unwind::unwind_stack_trace();
-
     #[cfg(all(test, feature = "ci"))]
     crate::emu::exit_qemu(crate::emu::ExitStatus::Success);
 

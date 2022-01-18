@@ -1,4 +1,4 @@
-From 26231740c332161be2eb5aec09fb0f45ddb15992 Mon Sep 17 00:00:00 2001
+From 479ee0c0c5a508211e13e27ef06e3faa33a705be Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Tue, 18 Jan 2022 13:35:43 +1100
 Subject: [PATCH] bash: add aero port
@@ -6,7 +6,6 @@ Subject: [PATCH] bash: add aero port
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .vscode/settings.json   |  3 +++
- builtins/common.c       |  4 ++--
  builtins/psize.c        | 19 +++-------------
  lib/readline/terminal.c |  2 +-
  lib/termcap/termcap.c   |  2 +-
@@ -17,7 +16,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  support/man2html.c      |  5 +++--
  support/mksignames.c    |  2 --
  support/signames.c      |  2 --
- 12 files changed, 20 insertions(+), 80 deletions(-)
+ 11 files changed, 18 insertions(+), 78 deletions(-)
  create mode 100644 .vscode/settings.json
 
 diff --git a/.vscode/settings.json b/.vscode/settings.json
@@ -30,21 +29,6 @@ index 0000000..9792498
 +    "editor.formatOnSave": false
 +}
 \ No newline at end of file
-diff --git a/builtins/common.c b/builtins/common.c
-index 3c9ac49..fd88f81 100644
---- a/builtins/common.c
-+++ b/builtins/common.c
-@@ -953,8 +953,8 @@ shell_builtin_compare (sbp1, sbp2)
- void
- initialize_shell_builtins ()
- {
--  qsort (shell_builtins, num_shell_builtins, sizeof (struct builtin),
--    (QSFUNC *)shell_builtin_compare);
-+  // qsort (shell_builtins, num_shell_builtins, sizeof (struct builtin),
-+  //   (QSFUNC *)shell_builtin_compare);
- }
- 
- #if !defined (HELP_BUILTIN)
 diff --git a/builtins/psize.c b/builtins/psize.c
 index 30881fb..be9c84b 100644
 --- a/builtins/psize.c
