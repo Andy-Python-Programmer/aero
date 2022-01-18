@@ -19,6 +19,7 @@
 
 #![feature(naked_functions)]
 
+use core::assert_eq;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::signal::*;
@@ -35,6 +36,7 @@ static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
     &signal_handler,
     &dup_fds,
     &dup2_redirect_stdout,
+    &fcntl_get_set_fdflags,
 ];
 
 fn main() {
@@ -48,6 +50,20 @@ fn main() {
         (test_function.func)().unwrap();
         println!("test {} ... \x1b[1;32mok\x1b[0m", test_function.path);
     }
+}
+
+#[utest_proc::test]
+fn fcntl_get_set_fdflags() -> Result<(), AeroSyscallError> {
+    let fd = sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
+    let flags = prelude::FdFlags::CLOEXEC;
+
+    sys_fcntl(fd, prelude::F_SETFD, flags.bits())?;
+    let fd_flags = sys_fcntl(fd, prelude::F_GETFD, 0)?;
+
+    core::assert_eq!(fd_flags, flags.bits());
+
+    sys_close(fd)?;
+    Ok(())
 }
 
 #[utest_proc::test]

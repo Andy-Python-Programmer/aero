@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::prelude::FdFlags;
 use aero_syscall::{AeroSyscallError, OpenFlags};
 
 use crate::fs::inode::DirEntry;
@@ -337,6 +338,21 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscall
         .get_handle(fd)
         .ok_or(AeroSyscallError::EBADFD)?;
 
-    log::debug!("{:?}", command);
-    panic!();
+    match command {
+        // Get the fd flags:
+        aero_syscall::prelude::F_GETFD => {
+            let flags = handle.fd_flags.lock().bits();
+            Ok(flags)
+        }
+
+        // Set the FD flags:
+        aero_syscall::prelude::F_SETFD => {
+            let flags = FdFlags::from_bits(arg).ok_or(AeroSyscallError::EINVAL)?;
+            handle.fd_flags.lock().insert(flags);
+
+            Ok(0x00)
+        }
+
+        _ => unimplemented!(),
+    }
 }

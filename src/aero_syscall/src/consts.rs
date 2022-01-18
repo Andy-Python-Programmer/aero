@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+// syscall number constants:
 pub const SYS_READ: usize = 0;
 pub const SYS_WRITE: usize = 1;
 pub const SYS_OPEN: usize = 2;
@@ -62,3 +63,14 @@ pub const SYS_SIGPROCMASK: usize = 41;
 pub const SYS_DUP: usize = 42;
 pub const SYS_FCNTL: usize = 43;
 pub const SYS_DUP2: usize = 44;
+
+// fcntl constants:
+pub const F_GETFD: usize = 3;
+pub const F_SETFD: usize = 4;
+
+// constants for fcntl()'s additional argument of F_GETFD and F_SETFD:
+bitflags::bitflags! {
+    pub struct FdFlags: usize {
+        const CLOEXEC = 1;
+    }
+}

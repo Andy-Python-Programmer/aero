@@ -19,12 +19,13 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::prelude::FdFlags;
 use aero_syscall::{OpenFlags, SysDirEntry};
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
-use spin::RwLock;
+use spin::{Mutex, RwLock};
 
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::inode::FileType;
@@ -37,6 +38,7 @@ pub struct FileHandle {
     // is duplicated, the `offset` needs to be in sync with the parent.
     pub offset: Arc<AtomicUsize>,
     pub flags: OpenFlags,
+    pub fd_flags: Mutex<FdFlags>,
 }
 
 impl FileHandle {
@@ -47,6 +49,7 @@ impl FileHandle {
             inode: inode.clone(),
             offset: Arc::new(AtomicUsize::new(0)),
             flags,
+            fd_flags: Mutex::new(FdFlags::empty()),
         }
     }
 
@@ -114,6 +117,7 @@ impl FileHandle {
             inode: self.inode.clone(),
             offset: self.offset.clone(),
             flags,
+            fd_flags: Mutex::new(self.fd_flags.lock().clone()),
         });
 
         new.inode.inode().open(flags)?;
