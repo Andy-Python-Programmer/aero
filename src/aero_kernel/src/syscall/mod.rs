@@ -231,10 +231,46 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         }
     };
 
-    let result = aero_syscall::syscall_result_as_usize(result) as _;
+    let result_usize = aero_syscall::syscall_result_as_usize(result) as _;
 
-    crate::arch::signals::syscall_check_signals(result as isize, sys, stack);
-    stack.rax = result;
+    #[cfg(feature = "syslog")]
+    {
+        use crate::drivers::uart_16550;
+        use alloc::string::String;
+
+        let name = aero_syscall::syscall_as_str(a);
+        let mut result_v = String::new();
+
+        if result.is_ok() {
+            result_v.push_str("\x1b[1;32m");
+        } else {
+            result_v.push_str("\x1b[1;31m");
+        }
+
+        result_v.push_str(name);
+        result_v.push_str("\x1b[0m");
+
+        result_v.push_str("(");
+
+        for (i, arg) in [b, c, d, e, f, g].iter().enumerate() {
+            if i != 0 {
+                result_v.push_str(", ");
+            }
+
+            let hex_arg = alloc::format!("{:#x}", *arg);
+            result_v.push_str(&hex_arg);
+        }
+
+        result_v.push_str(") = ");
+
+        let result_str = alloc::format!("{:?}", result);
+        result_v.push_str(&result_str);
+
+        uart_16550::serial_println!("{}", result_v);
+    }
+
+    crate::arch::signals::syscall_check_signals(result_usize as isize, sys, stack);
+    stack.rax = result_usize;
 }
 
 extern "C" {

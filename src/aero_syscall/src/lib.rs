@@ -157,6 +157,55 @@ pub enum AeroSyscallError {
     Unknown = isize::MAX,
 }
 
+pub fn syscall_as_str(syscall: usize) -> &'static str {
+    match syscall {
+        prelude::SYS_READ => "read",
+        prelude::SYS_WRITE => "write",
+        prelude::SYS_OPEN => "open",
+        prelude::SYS_CLOSE => "close",
+        prelude::SYS_SHUTDOWN => "shutdown",
+        prelude::SYS_EXIT => "exit",
+        prelude::SYS_FORK => "fork",
+        prelude::SYS_REBOOT => "reboot",
+        prelude::SYS_MMAP => "mmap",
+        prelude::SYS_MUNMAP => "munmap",
+        prelude::SYS_ARCH_PRCTL => "arch_prctl",
+        prelude::SYS_GETDENTS => "getdents",
+        prelude::SYS_GETCWD => "getcwd",
+        prelude::SYS_CHDIR => "chdir",
+        prelude::SYS_MKDIR => "mkdir",
+        prelude::SYS_MKDIR_AT => "mkdir_at",
+        prelude::SYS_RMDIR => "rmdir",
+        prelude::SYS_EXEC => "exec",
+        prelude::SYS_LOG => "log",
+        prelude::SYS_UNAME => "uname",
+        prelude::SYS_WAITPID => "waitpid",
+        prelude::SYS_IOCTL => "ioctl",
+        prelude::SYS_GETPID => "getpid",
+        prelude::SYS_SOCKET => "socket",
+        prelude::SYS_CONNECT => "connect",
+        prelude::SYS_BIND => "bind",
+        prelude::SYS_LISTEN => "listen",
+        prelude::SYS_ACCEPT => "accept",
+        prelude::SYS_SEEK => "seek",
+        prelude::SYS_GETTID => "gettid",
+        prelude::SYS_GETTIME => "gettime",
+        prelude::SYS_SLEEP => "sleep",
+        prelude::SYS_ACCESS => "access",
+        prelude::SYS_PIPE => "pipe",
+        prelude::SYS_UNLINK => "unlink",
+        prelude::SYS_GETHOSTNAME => "gethostname",
+        prelude::SYS_SETHOSTNAME => "sethostname",
+        prelude::SYS_INFO => "info",
+        prelude::SYS_CLONE => "clone",
+        prelude::SYS_SIGRETURN => "sigreturn",
+        prelude::SYS_SIGACTION => "sigaction",
+        prelude::SYS_SIGPROCMASK => "sigprocmask",
+
+        _ => unreachable!("unknown syscall"),
+    }
+}
+
 #[derive(Debug)]
 #[repr(usize)]
 pub enum SysFileType {
