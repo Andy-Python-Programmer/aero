@@ -1,4 +1,4 @@
-From cf0a2927a51e25b1d5eed6e35093e381ad3289c4 Mon Sep 17 00:00:00 2001
+From f158df3abb5ee9bd8792b9c55c4099c901978049 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -15,7 +15,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
  sysdeps/aero/generic/aero.cc                | 269 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 248 ++++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 257 +++++++++++++++++++
  sysdeps/aero/generic/signals.S              |   7 +
  sysdeps/aero/generic/signals.cc             |  43 ++++
  sysdeps/aero/generic/sockets.cc             |   0
@@ -46,12 +46,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 200 +++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 201 +++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 46 files changed, 1006 insertions(+), 10 deletions(-)
+ 46 files changed, 1016 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -560,10 +560,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..f64d1cb
+index 0000000..e84f90f
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,248 @@
+@@ -0,0 +1,257 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -787,7 +787,16 @@ index 0000000..f64d1cb
 +}
 +
 +int sys_dup2(int fd, int flags, int newfd) UNIMPLEMENTED("sys_dup2")
-+int sys_fcntl(int fd, int request, va_list args, int* result) UNIMPLEMENTED("sys_fcntl")
++
++int sys_fcntl(int fd, int request, va_list args, int* result_value) {
++	auto result = syscall(SYS_FCNTL, fd, request, va_arg(args, uint64_t));
++
++	if (result < 0)
++		return -result;
++
++	*result_value = result;
++	return 0;
++}
 +
 +int sys_pselect(
 +	int nfds, 
@@ -1145,10 +1154,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..fbe46b8
+index 0000000..08e12f6
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,201 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -1198,6 +1207,7 @@ index 0000000..fbe46b8
 +#define SYS_SIGACTION   40
 +#define SYS_SIGPROCMASK 41
 +#define SYS_DUP         42
++#define SYS_FCNTL       43
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.

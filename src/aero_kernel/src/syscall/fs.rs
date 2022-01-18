@@ -322,3 +322,14 @@ pub fn access(
         unimplemented!()
     }
 }
+
+pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscallError> {
+    let handle = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    log::debug!("{:?}", command);
+    panic!();
+}
