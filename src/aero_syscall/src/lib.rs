@@ -203,6 +203,7 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_SIGPROCMASK => "sigprocmask",
         prelude::SYS_DUP => "dup",
         prelude::SYS_FCNTL => "fcntl",
+        prelude::SYS_DUP2 => "dup2",
 
         _ => unreachable!("unknown syscall"),
     }
@@ -817,5 +818,10 @@ pub fn sys_dup(fd: usize, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
 
 pub fn sys_fcntl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSyscallError> {
     let value = syscall3(prelude::SYS_FCNTL, fd, command, argument);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_dup2(fd: usize, new_fd: usize, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(prelude::SYS_DUP2, fd, new_fd, flags.bits());
     isize_as_syscall_result(value as _)
 }

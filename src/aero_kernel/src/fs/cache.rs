@@ -292,7 +292,10 @@ impl ops::Deref for CachedINode {
 
 impl Cacheable<INodeCacheKey> for CachedINode {
     fn cache_key(&self) -> INodeCacheKey {
-        todo!()
+        (
+            Weak::as_ptr(&self.weak_filesystem().unwrap()) as *const () as usize,
+            self.metadata().unwrap().id,
+        )
     }
 }
 

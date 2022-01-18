@@ -128,6 +128,9 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
+    /// ## Saftey
+    ///
+    /// The caller is responsible for removing the inode from the cache.
     fn unlink(&self, _name: &str) -> Result<()> {
         Err(FileSystemError::NotSupported)
     }

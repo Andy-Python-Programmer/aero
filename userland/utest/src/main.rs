@@ -29,8 +29,13 @@ struct Test<'a> {
     func: fn() -> Result<(), AeroSyscallError>,
 }
 
-static TEST_FUNCTIONS: &[&'static Test<'static>] =
-    &[&clone_process, &forked_pipe, &signal_handler, &dup_fds];
+static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
+    &clone_process,
+    &forked_pipe,
+    &signal_handler,
+    &dup_fds,
+    &dup2_redirect_stdout,
+];
 
 fn main() {
     sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
@@ -43,6 +48,33 @@ fn main() {
         (test_function.func)().unwrap();
         println!("test {} ... \x1b[1;32mok\x1b[0m", test_function.path);
     }
+}
+
+#[utest_proc::test]
+fn dup2_redirect_stdout() -> Result<(), AeroSyscallError> {
+    let utest_fd = sys_open("utest.txt", OpenFlags::O_WRONLY | OpenFlags::O_CREAT)?;
+
+    // We set the new_fd to the file descriptor of stdout (i.e. 1)
+    sys_dup2(utest_fd, 1, OpenFlags::O_WRONLY)?;
+
+    // Now if we write to stdout, it will be written to utest.txt
+    println!("yes");
+
+    sys_seek(utest_fd, 0, SeekWhence::SeekSet)?;
+
+    let mut content = [0; 3];
+    sys_read(utest_fd, &mut content)?;
+
+    core::assert_eq!(&content, b"yes");
+
+    sys_unlink(AT_FDCWD as usize, "utest.txt", OpenFlags::empty())?;
+    sys_close(utest_fd)?;
+
+    // Restore the actual stdout.
+    let tty_fd = sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
+    sys_dup2(tty_fd, 1, OpenFlags::O_WRONLY)?;
+
+    Ok(())
 }
 
 #[utest_proc::test]
@@ -63,11 +95,11 @@ fn dup_fds() -> Result<(), AeroSyscallError> {
 
     core::assert_eq!(&content, b"testing dup...\n");
 
+    sys_unlink(AT_FDCWD as usize, "utest.txt", OpenFlags::empty())?;
+
     // Close all of the fds.
     sys_close(utest_fd)?;
     sys_close(cutest_fd)?;
-
-    // TODO: destory the utest.txt file after we are done with the test.
 
     Ok(())
 }

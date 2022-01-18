@@ -219,6 +219,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_PIPE => fs::pipe(b, c),
         SYS_UNLINK => fs::unlink(b, c, d, e),
         SYS_DUP => fs::dup(b, c),
+        SYS_DUP2 => fs::dup2(b, c, d),
         SYS_FCNTL => fs::fcntl(b, c, d),
 
         SYS_SOCKET => net::socket(b, c, d),

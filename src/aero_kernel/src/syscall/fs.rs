@@ -102,6 +102,13 @@ pub fn dup(fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
     task.file_table.duplicate(fd, flags)
 }
 
+pub fn dup2(fd: usize, new_fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
+    let task = scheduler::get_scheduler().current_task();
+    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
+
+    task.file_table.duplicate_at(fd, new_fd, flags)
+}
+
 pub fn getdents(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()

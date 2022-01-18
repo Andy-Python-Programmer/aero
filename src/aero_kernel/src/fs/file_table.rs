@@ -199,6 +199,34 @@ impl FileTable {
         None
     }
 
+    pub fn duplicate_at(
+        &self,
+        fd: usize,
+        new_fd: usize,
+        flags: OpenFlags,
+    ) -> Result<usize, aero_syscall::AeroSyscallError> {
+        let handle = self
+            .get_handle(fd)
+            .ok_or(aero_syscall::AeroSyscallError::EINVAL)?;
+
+        let mut files = self.0.write();
+
+        if files[new_fd].is_none() {
+            files[new_fd] = Some(handle.duplicate(flags)?);
+            Ok(0x00)
+        } else {
+            let handle = handle.duplicate(flags)?;
+            let old = files[new_fd]
+                .take()
+                .expect("duplicate_at: failed to take the value at new_fd");
+
+            old.inode.inode().close(old.flags);
+            files[new_fd] = Some(handle);
+
+            Ok(0x00)
+        }
+    }
+
     pub fn duplicate(
         &self,
         fd: usize,

@@ -61,3 +61,4 @@ pub const SYS_SIGACTION: usize = 40;
 pub const SYS_SIGPROCMASK: usize = 41;
 pub const SYS_DUP: usize = 42;
 pub const SYS_FCNTL: usize = 43;
+pub const SYS_DUP2: usize = 44;
