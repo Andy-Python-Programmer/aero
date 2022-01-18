@@ -418,8 +418,9 @@ def prepare_iso(args, kernel_bin, user_bins):
 
 
 def run_in_emulator(args, iso_path):
+    is_kvm_available = is_kvm_supported()
+
     qemu_args = ['-cdrom', iso_path,
-                 '-cpu', 'qemu64,+la57' if args.la57 else 'qemu64',
                  '-M', 'q35',
                  '-m', '5G',
                  '-smp', '1',
@@ -436,7 +437,66 @@ def run_in_emulator(args, iso_path):
     if cmdline:
         qemu_args += cmdline
 
+    if is_kvm_available:
+        print("Running with KVM acceleration enabled")
+
+        qemu_args += ['-enable-kvm', '-cpu',
+                      'host,+la57' if args.la57 else 'host']
+    else:
+        qemu_args += ["-cpu", "qemu64,+la57" if args.la57 else "qemu64"]
+
     run_command(['qemu-system-x86_64', *qemu_args])
+
+
+def is_kvm_supported() -> bool:
+    """
+    Returns True if KVM is supported on this machine
+    """
+
+    kvm_path = "/dev/kvm"
+    platform = sys.platform
+
+    if platform == "linux":
+        # Check if the `/dev/kvm` device exists.
+        if not os.path.exists(kvm_path):
+            return False
+
+        # Read out the cpuinfo from `/proc/cpuinfo`
+        fd = open("/proc/cpuinfo")
+        cpuinfo = fd.read()
+
+        # Parse the cpuinfo
+        cpuinfo_array = cpuinfo.split("\n\n")
+        processors_info = []
+
+        for cpu in cpuinfo_array:
+            ret = {}
+            for line in cpu.split("\n"):
+                try:
+                    name, value = line.split(":")
+
+                    name = name.strip()
+                    value = value.strip()
+
+                    ret[name] = value
+                except ValueError:
+                    pass
+
+            processors_info.append(ret)
+
+        for processor in processors_info:
+            if processor["processor"] == "0":
+                # KVM acceleration can be used
+                if "vmx" in processor["flags"]:
+                    return True
+                # KVM acceleration cannot be used
+                else:
+                    return False
+
+        fd.close()
+
+    # KVM is not avaliable on Windows
+    return True
 
 
 def main():
