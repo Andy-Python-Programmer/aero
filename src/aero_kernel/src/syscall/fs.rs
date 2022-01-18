@@ -95,6 +95,13 @@ pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, A
         .open_file(inode, flags)?)
 }
 
+pub fn dup(fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
+    let task = scheduler::get_scheduler().current_task();
+    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
+
+    task.file_table.duplicate(fd, flags)
+}
+
 pub fn getdents(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()

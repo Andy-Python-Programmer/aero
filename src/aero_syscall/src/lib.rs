@@ -201,6 +201,7 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_SIGRETURN => "sigreturn",
         prelude::SYS_SIGACTION => "sigaction",
         prelude::SYS_SIGPROCMASK => "sigprocmask",
+        prelude::SYS_DUP => "dup",
 
         _ => unreachable!("unknown syscall"),
     }
@@ -805,5 +806,10 @@ pub fn sys_sigprocmask(
         old_set,
     );
 
+    isize_as_syscall_result(result as _)
+}
+
+pub fn sys_dup(fd: usize, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
+    let result = syscall2(prelude::SYS_DUP, fd, flags.bits());
     isize_as_syscall_result(result as _)
 }

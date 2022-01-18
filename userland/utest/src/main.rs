@@ -29,7 +29,8 @@ struct Test<'a> {
     func: fn() -> Result<(), AeroSyscallError>,
 }
 
-static TEST_FUNCTIONS: &[&'static Test<'static>] = &[&clone_process, &forked_pipe, &signal_handler];
+static TEST_FUNCTIONS: &[&'static Test<'static>] =
+    &[&clone_process, &forked_pipe, &signal_handler, &dup_fds];
 
 fn main() {
     sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
@@ -42,6 +43,33 @@ fn main() {
         (test_function.func)().unwrap();
         println!("test {} ... \x1b[1;32mok\x1b[0m", test_function.path);
     }
+}
+
+#[utest_proc::test]
+fn dup_fds() -> Result<(), AeroSyscallError> {
+    let utest_fd = sys_open("utest.txt", OpenFlags::O_WRONLY | OpenFlags::O_CREAT)?;
+
+    // dup() will create a copy of the utest fd as cutest_fd then both can
+    // be used interchangeably.
+    let cutest_fd = sys_dup(utest_fd, OpenFlags::O_RDWR)?;
+
+    sys_write(utest_fd, b"testing ")?;
+    sys_write(cutest_fd, b"dup...\n")?;
+
+    sys_seek(utest_fd, 0, SeekWhence::SeekSet)?;
+
+    let mut content = [0; 15];
+    sys_read(utest_fd, &mut content)?;
+
+    core::assert_eq!(&content, b"testing dup...\n");
+
+    // Close all of the fds.
+    sys_close(utest_fd)?;
+    sys_close(cutest_fd)?;
+
+    // TODO: destory the utest.txt file after we are done with the test.
+
+    Ok(())
 }
 
 #[utest_proc::test]

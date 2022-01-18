@@ -100,6 +100,26 @@ interrupt_error_stack!(
                 .handle_page_fault(reason, accessed_address);
 
             if !signal && stack.stack.iret.is_user() {
+                log::error!("Segmentation fault");
+                log::error!("");
+                log::error!("accessed address: {:#x}", accessed_address);
+                log::error!("reason: {:?}", reason);
+                log::error!("");
+
+                if stack.stack.iret.is_user() {
+                    let task = scheduler::get_scheduler().current_task();
+
+                    log::error!(
+                        "process: (pid={}, pid={})",
+                        task.tid().as_usize(),
+                        task.pid().as_usize()
+                    );
+                }
+
+                log::error!("stack: {:#x?}", stack);
+
+                unwind::unwind_stack_trace();
+
                 let task = scheduler::get_scheduler().current_task();
                 task.signal(aero_syscall::signal::SIGSEGV);
 
@@ -117,16 +137,6 @@ interrupt_error_stack!(
         log::error!("Accessed Address: {:#x}", accessed_address);
         log::error!("Error: {:?}", reason);
         log::error!("");
-
-        if stack.stack.iret.is_user() {
-            let task = scheduler::get_scheduler().current_task();
-
-            log::error!(
-                "Task Info: TID={}, PID={}",
-                task.tid().as_usize(),
-                task.pid().as_usize()
-            );
-        }
 
         log::error!("Stack: {:#x?}", stack);
 

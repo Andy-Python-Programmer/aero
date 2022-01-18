@@ -59,3 +59,4 @@ pub const SYS_CLONE: usize = 38;
 pub const SYS_SIGRETURN: usize = 39;
 pub const SYS_SIGACTION: usize = 40;
 pub const SYS_SIGPROCMASK: usize = 41;
+pub const SYS_DUP: usize = 42;

@@ -1,4 +1,4 @@
-From 0197d2fea0db1eab653ecdeeb91b257d341c9188 Mon Sep 17 00:00:00 2001
+From cf0a2927a51e25b1d5eed6e35093e381ad3289c4 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -13,9 +13,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 259 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 269 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 238 ++++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 248 ++++++++++++++++++
  sysdeps/aero/generic/signals.S              |   7 +
  sysdeps/aero/generic/signals.cc             |  43 ++++
  sysdeps/aero/generic/sockets.cc             |   0
@@ -46,12 +46,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 199 +++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 200 +++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 46 files changed, 985 insertions(+), 10 deletions(-)
+ 46 files changed, 1006 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -247,10 +247,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..268b2b7
+index 0000000..de8bc69
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,259 @@
+@@ -0,0 +1,269 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -368,7 +368,17 @@ index 0000000..268b2b7
 +    return result;
 +}
 +
-+pid_t sys_getppid() UNIMPLEMENTED("sys_getppid")
++pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
++    mlibc::infoLogger() << "sys_getpgid() is unimplemented" << frg::endlog;
++    *pgid = 0;
++    
++    return 0;
++}
++
++pid_t sys_getppid() {
++    mlibc::infoLogger() << "sys_getppid() is unimplemented" << frg::endlog;
++    return 0;
++}
 +
 +int sys_clock_get(int clock, time_t *secs, long *nanos) {
 +    struct timespec ts;
@@ -550,10 +560,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..e1465dc
+index 0000000..f64d1cb
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,238 @@
+@@ -0,0 +1,248 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -605,7 +615,7 @@ index 0000000..e1465dc
 +}
 +
 +int sys_open(const char* filename, int flags, int* fd){
-+	long ret = syscall(SYS_OPEN, 0, (uintptr_t)filename, strlen(filename), flags);
++	auto ret = syscall(SYS_OPEN, 0, (uintptr_t)filename, strlen(filename), flags);
 +
 +	if(ret < 0)
 +		return -ret;
@@ -765,7 +775,17 @@ index 0000000..e1465dc
 +
 +int sys_rename(const char* path, const char* new_path) UNIMPLEMENTED("sys_rename")
 +int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) UNIMPLEMENTED("sys_readlink")
-+int sys_dup(int fd, int flags, int* newfd) UNIMPLEMENTED("sys_dup")
++
++int sys_dup(int fd, int flags, int* newfd) {
++	auto result = syscalln2(SYS_DUP, (uint64_t)fd, (uint64_t)flags);
++
++	if (result < 0)
++		return -result;
++
++	*newfd = result;
++	return 0;
++}
++
 +int sys_dup2(int fd, int flags, int newfd) UNIMPLEMENTED("sys_dup2")
 +int sys_fcntl(int fd, int request, va_list args, int* result) UNIMPLEMENTED("sys_fcntl")
 +
@@ -1125,10 +1145,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..b1c825f
+index 0000000..fbe46b8
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,199 @@
+@@ -0,0 +1,200 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -1177,6 +1197,7 @@ index 0000000..b1c825f
 +#define SYS_SIGRETURN   39
 +#define SYS_SIGACTION   40
 +#define SYS_SIGPROCMASK 41
++#define SYS_DUP         42
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.

@@ -33,7 +33,9 @@ use super::FileSystemError;
 pub struct FileHandle {
     pub fd: usize,
     pub inode: DirCacheItem,
-    pub offset: AtomicUsize,
+    // We need to store the `offset` behind an Arc since when the file handle
+    // is duplicated, the `offset` needs to be in sync with the parent.
+    pub offset: Arc<AtomicUsize>,
     pub flags: OpenFlags,
 }
 
@@ -43,7 +45,7 @@ impl FileHandle {
         Self {
             fd,
             inode: inode.clone(),
-            offset: AtomicUsize::new(0),
+            offset: Arc::new(AtomicUsize::new(0)),
             flags,
         }
     }
@@ -103,6 +105,20 @@ impl FileHandle {
 
     pub fn inode(&self) -> INodeCacheItem {
         self.inode.inode()
+    }
+
+    pub fn duplicate(&self, flags: OpenFlags) -> super::Result<Arc<FileHandle>> {
+        let flags = self.flags | flags;
+        let new = Arc::new(Self {
+            fd: self.fd,
+            inode: self.inode.clone(),
+            offset: self.offset.clone(),
+            flags,
+        });
+
+        new.inode.inode().open(flags)?;
+
+        Ok(new)
     }
 
     pub fn get_dents(&self, mut buffer: &mut [u8]) -> super::Result<usize> {
@@ -181,6 +197,26 @@ impl FileTable {
         }
 
         None
+    }
+
+    pub fn duplicate(
+        &self,
+        fd: usize,
+        flags: OpenFlags,
+    ) -> Result<usize, aero_syscall::AeroSyscallError> {
+        let handle = self
+            .get_handle(fd)
+            .ok_or(aero_syscall::AeroSyscallError::EINVAL)?;
+
+        let mut files = self.0.write();
+
+        if let Some((index, f)) = files.iter_mut().enumerate().find(|e| e.1.is_none()) {
+            *f = Some(handle.duplicate(flags)?);
+            Ok(index)
+        } else {
+            files.push(Some(handle.duplicate(flags)?));
+            Ok(files.len() - 1)
+        }
     }
 
     pub fn deep_clone(&self) -> Self {
