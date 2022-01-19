@@ -137,6 +137,11 @@ def parse_args():
                         action='store_true',
                         help='build the full userland sysroot. If disabled, then the sysroot will only contain the aero_shell and the init binaries')
 
+    parser.add_argument('--disable-kvm',
+                        default=False,
+                        action='store_true',
+                        help='disable KVM acceleration even if its available')
+
     parser.add_argument('remaining',
                         nargs=argparse.REMAINDER,
                         help='additional arguments to pass as the emulator')
@@ -437,7 +442,7 @@ def run_in_emulator(args, iso_path):
     if cmdline:
         qemu_args += cmdline
 
-    if is_kvm_available:
+    if is_kvm_available and not args.disable_kvm:
         print("Running with KVM acceleration enabled")
 
         qemu_args += ['-enable-kvm', '-cpu',
