@@ -19,7 +19,6 @@
 
 #![feature(naked_functions)]
 
-use core::assert_eq;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::signal::*;
