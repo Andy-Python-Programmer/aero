@@ -56,7 +56,7 @@ fn init_heap() -> LockedHeap {
         HEAP_SIZE,
         MMapProt::PROT_READ | MMapProt::PROT_WRITE,
         MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_PRIVATE,
-        0,
+        -1isize as usize,
         0,
     )
     .expect("Failed to allocate virtual memory for heap");

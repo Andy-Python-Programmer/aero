@@ -182,9 +182,12 @@ pub fn mmap(
     size: usize,
     protocol: usize,
     flags: usize,
-    _fd: usize,
-    _offset: usize,
+    fd: usize,
+    offset: usize,
 ) -> Result<usize, AeroSyscallError> {
+    assert_eq!(offset as isize, 0);
+    assert_eq!(fd as isize, -1);
+
     let address = VirtAddr::new(address as u64);
 
     let protocol = MMapProt::from_bits(protocol).ok_or(AeroSyscallError::EINVAL)?;

@@ -1,4 +1,4 @@
-From 2543e3cb82d9ae4af63e6f1467e0f8daa386ffda Mon Sep 17 00:00:00 2001
+From a717827ec97570a01162119ab29c97a14a7fb676 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -46,12 +46,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 202 +++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 188 ++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 46 files changed, 1024 insertions(+), 10 deletions(-)
+ 46 files changed, 1010 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -247,7 +247,7 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..de8bc69
+index 0000000..841b225
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
 @@ -0,0 +1,269 @@
@@ -322,7 +322,7 @@ index 0000000..de8bc69
 +}
 +
 +int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
-+    ssize_t result = syscall(SYS_MMAP, (uint64_t)hint, size, prot, flags, fd, offset);
++    auto result = syscall(SYS_MMAP, (uintptr_t)hint, size, prot, flags, fd, offset);
 +
 +    if (result < 0)
 +        return -result;
@@ -336,7 +336,7 @@ index 0000000..de8bc69
 +}
 +
 +int sys_anon_allocate(size_t size, void **pointer) {
-+    return sys_vm_map(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0, pointer);
++    return sys_vm_map(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0, pointer);
 +}
 +
 +int sys_anon_free(void *pointer, size_t size) {
@@ -349,7 +349,7 @@ index 0000000..de8bc69
 +}
 +
 +void sys_libc_log(const char* msg) {
-+    syscalln2(SYS_LOG, (unsigned long long)msg, strlen(msg));
++    syscall(SYS_LOG, (unsigned long long)msg, strlen(msg));
 +}
 +
 +void sys_exit(int status) {
@@ -1161,211 +1161,197 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..28e916a
+index 0000000..11f3a9b
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,202 @@
+@@ -0,0 +1,188 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
-+#include <stdint.h>
 +#include <bits/ensure.h>
++#include <stdint.h>
 +
-+#define SYS_READ        0
-+#define SYS_WRITE       1
-+#define SYS_OPEN        2
-+#define SYS_CLOSE       3
-+#define SYS_SHUTDOWN    4
-+#define SYS_EXIT        5
-+#define SYS_FORK        6
-+#define SYS_REBOOT      7
-+#define SYS_MMAP        8
-+#define SYS_MUNMAP      9
-+#define SYS_ARCH_PRCTL  10
-+#define SYS_GETDENTS    11
-+#define SYS_GETCWD      12
-+#define SYS_CHDIR       13
-+#define SYS_MKDIR       14
-+#define SYS_MKDIR_AT    15
-+#define SYS_RMDIR       16
-+#define SYS_EXEC        17
-+#define SYS_LOG         18
-+#define SYS_UNAME       19
-+#define SYS_WAITPID     20
-+#define SYS_IOCTL       21
-+#define SYS_GETPID      22
-+#define SYS_SOCKET      23
-+#define SYS_CONNECT     24
-+#define SYS_BIND        25
-+#define SYS_LISTEN      26
-+#define SYS_ACCEPT      27
-+#define SYS_SEEK        28
-+#define SYS_GETTID      29
-+#define SYS_GETTIME     30
-+#define SYS_SLEEP       31
-+#define SYS_ACCESS      32
-+#define SYS_PIPE        33
-+#define SYS_UNLINK      34
++#define SYS_READ 0
++#define SYS_WRITE 1
++#define SYS_OPEN 2
++#define SYS_CLOSE 3
++#define SYS_SHUTDOWN 4
++#define SYS_EXIT 5
++#define SYS_FORK 6
++#define SYS_REBOOT 7
++#define SYS_MMAP 8
++#define SYS_MUNMAP 9
++#define SYS_ARCH_PRCTL 10
++#define SYS_GETDENTS 11
++#define SYS_GETCWD 12
++#define SYS_CHDIR 13
++#define SYS_MKDIR 14
++#define SYS_MKDIR_AT 15
++#define SYS_RMDIR 16
++#define SYS_EXEC 17
++#define SYS_LOG 18
++#define SYS_UNAME 19
++#define SYS_WAITPID 20
++#define SYS_IOCTL 21
++#define SYS_GETPID 22
++#define SYS_SOCKET 23
++#define SYS_CONNECT 24
++#define SYS_BIND 25
++#define SYS_LISTEN 26
++#define SYS_ACCEPT 27
++#define SYS_SEEK 28
++#define SYS_GETTID 29
++#define SYS_GETTIME 30
++#define SYS_SLEEP 31
++#define SYS_ACCESS 32
++#define SYS_PIPE 33
++#define SYS_UNLINK 34
 +#define SYS_GETHOSTNAME 35
 +#define SYS_SETHOSTNAME 36
-+#define SYS_INFO        37
-+#define SYS_CLONE       38
-+#define SYS_SIGRETURN   39
-+#define SYS_SIGACTION   40
++#define SYS_INFO 37
++#define SYS_CLONE 38
++#define SYS_SIGRETURN 39
++#define SYS_SIGACTION 40
 +#define SYS_SIGPROCMASK 41
-+#define SYS_DUP         42
-+#define SYS_FCNTL       43
-+#define SYS_DUP2        44
++#define SYS_DUP 42
++#define SYS_FCNTL 43
++#define SYS_DUP2 44
 +
 +// Invalid syscall used to trigger a log error in the kernel (as a hint)
 +// so, that we can implement the syscall in the kernel.
-+#define UNIMPLEMENTED(FUNCTION_NAME)  { \
-+    syscall(314, FUNCTION_NAME, strlen(FUNCTION_NAME)); \
-+    __ensure(!"UNIMPLEMENTED function was called"); \
-+    __builtin_unreachable(); \
++#define UNIMPLEMENTED(FUNCTION_NAME)                                           \
++  {                                                                            \
++    syscall(314, FUNCTION_NAME, strlen(FUNCTION_NAME));                        \
++    __ensure(!"UNIMPLEMENTED function was called");                            \
++    __builtin_unreachable();                                                   \
++  }
++
++extern "C" {
++using sc_word_t = long;
++
++static sc_word_t syscall0(int sc) {
++  sc_word_t ret;
++  asm volatile("syscall" : "=a"(ret) : "a"(sc) : "rcx", "r11", "memory");
++  return ret;
 +}
 +
-+#ifdef __cplusplus
-+extern "C"
-+{
-+#endif
-+
-+    __attribute__((always_inline)) static inline long syscalln0(uint64_t call)
-+    {
-+        volatile long ret;
-+
-+        asm volatile("syscall"
-+                     : "=a"(ret)
-+                     : "a"(call));
-+
-+        return ret;
-+    }
-+
-+    __attribute__((always_inline)) static inline long syscalln1(uint64_t call, uint64_t arg0)
-+    {
-+        volatile long ret;
-+
-+        asm volatile("syscall"
-+                     : "=a"(ret)
-+                     : "a"(call), "D"(arg0)
-+                     : "memory");
-+
-+        return ret;
-+    }
-+
-+    __attribute__((always_inline)) static inline long syscalln2(uint64_t call, uint64_t arg0, uint64_t arg1)
-+    {
-+        volatile long ret;
-+
-+        asm volatile("syscall"
-+                     : "=a"(ret)
-+                     : "a"(call), "D"(arg0), "S"(arg1)
-+                     : "memory");
-+
-+        return ret;
-+    }
-+
-+    __attribute__((always_inline)) static inline long syscalln3(
-+        uint64_t call, 
-+        uint64_t arg0, 
-+        uint64_t arg1, 
-+        uint64_t arg2
-+    ) {
-+        volatile long ret;
-+
-+        asm volatile("syscall"
-+                     : "=a"(ret)
-+                     : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2)
-+                     : "memory");
-+
-+        return ret;
-+    }
-+
-+    __attribute__((always_inline)) static inline long syscalln4(
-+        uint64_t call, 
-+        uint64_t arg0, 
-+        uint64_t arg1, 
-+        uint64_t arg2, 
-+        uint64_t arg3
-+    ) {
-+        volatile long ret;
-+
-+        register uint64_t arg3r asm("r10") = arg3;
-+
-+        asm volatile("syscall"
-+                     : "=a"(ret)
-+                     : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "r"(arg3r)
-+                     : "memory");
-+
-+        return ret;
-+    }
-+
-+    __attribute__((always_inline)) static inline long syscalln5(
-+        uint64_t call, 
-+        uint64_t arg0, 
-+        uint64_t arg1, 
-+        uint64_t arg2, 
-+        uint64_t arg3, 
-+        uint64_t arg4
-+    ) {
-+        volatile long ret;
-+
-+        register uint64_t arg3r asm("r10") = arg3;
-+        register uint64_t arg4r asm("r9") = arg4;
-+
-+        asm volatile("syscall"
-+                     : "=a"(ret)
-+                     : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "r"(arg3r), "r"(arg4r)
-+                     : "memory");
-+
-+        return ret;
-+    }
-+
-+    __attribute__((always_inline)) static inline long syscalln6(
-+        uint64_t call, 
-+        uint64_t arg0, 
-+        uint64_t arg1, 
-+        uint64_t arg2, 
-+        uint64_t arg3, 
-+        uint64_t arg4, 
-+        uint64_t arg5
-+    ) {
-+        volatile long ret;
-+
-+        register uint64_t arg3r asm("r10") = arg3;
-+        register uint64_t arg4r asm("r9") = arg4;
-+        register uint64_t arg5r asm("r8") = arg5;
-+
-+        asm volatile("syscall"
-+                     : "=a"(ret)
-+                     : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "r"(arg3r), "r"(arg4r), "r"(arg5r)
-+                     : "memory");
-+
-+        return ret;
-+    }
-+
-+#ifdef __cplusplus
++static sc_word_t syscall1(int sc, sc_word_t arg1) {
++  sc_word_t ret;
++  asm volatile("syscall"
++               : "=a"(ret)
++               : "a"(sc), "D"(arg1)
++               : "rcx", "r11", "memory");
++  return ret;
 +}
-+__attribute__((always_inline)) static inline long _syscall(uint64_t call) { return syscalln0(call); }
-+__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0) { return syscalln1(call, arg0); }
-+__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1) { return syscalln2(call, arg0, arg1); }
-+__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2) { return syscalln3(call, arg0, arg1, arg2); }
-+__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3) { return syscalln4(call, arg0, arg1, arg2, arg3); }
-+__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4) { return syscalln5(call, arg0, arg1, arg2, arg3, arg4); }
-+__attribute__((always_inline)) static inline long _syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) { return syscalln6(call, arg0, arg1, arg2, arg3, arg4, arg5); }
++
++static sc_word_t syscall2(int sc, sc_word_t arg1, sc_word_t arg2) {
++  sc_word_t ret;
++  asm volatile("syscall"
++               : "=a"(ret)
++               : "a"(sc), "D"(arg1), "S"(arg2)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++
++static sc_word_t syscall3(int sc, sc_word_t arg1, sc_word_t arg2,
++                          sc_word_t arg3) {
++  sc_word_t ret;
++  asm volatile("syscall"
++               : "=a"(ret)
++               : "a"(sc), "D"(arg1), "S"(arg2), "d"(arg3)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++
++static sc_word_t syscall4(int sc, sc_word_t arg1, sc_word_t arg2,
++                          sc_word_t arg3, sc_word_t arg4) {
++  sc_word_t ret;
++
++  register sc_word_t arg4_reg asm("r10") = arg4;
++
++  asm volatile("syscall"
++               : "=a"(ret)
++               : "a"(sc), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg4_reg)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++
++static sc_word_t syscall5(int sc, sc_word_t arg1, sc_word_t arg2,
++                          sc_word_t arg3, sc_word_t arg4, sc_word_t arg5) {
++  sc_word_t ret;
++
++  register sc_word_t arg4_reg asm("r10") = arg4;
++  register sc_word_t arg5_reg asm("r8") = arg5;
++
++  asm volatile("syscall"
++               : "=a"(ret)
++               : "a"(sc), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg4_reg),
++                 "r"(arg5_reg)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++
++static sc_word_t syscall6(int sc, sc_word_t arg1, sc_word_t arg2,
++                          sc_word_t arg3, sc_word_t arg4, sc_word_t arg5,
++                          sc_word_t arg6) {
++  sc_word_t ret;
++
++  register sc_word_t arg4_reg asm("r10") = arg4;
++  register sc_word_t arg5_reg asm("r8") = arg5;
++  register sc_word_t arg6_reg asm("r9") = arg6;
++
++  asm volatile("syscall"
++               : "=a"(ret)
++               : "a"(sc), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg4_reg),
++                 "r"(arg5_reg), "r"(arg6_reg)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++} // extern "C"
++
++// C++ wrappers for the extern "C" functions.
++__attribute__((always_inline)) static inline long _syscall(int call) {
++  return syscall0(call);
++}
++
++__attribute__((always_inline)) 
++static inline long _syscall(int call, sc_word_t arg0) {
++  return syscall1(call, arg0);
++}
++
++__attribute__((always_inline)) static inline long
++_syscall(int call, sc_word_t arg0, sc_word_t arg1) {
++  return syscall2(call, arg0, arg1);
++}
++
++__attribute__((always_inline)) static inline long
++_syscall(int call, sc_word_t arg0, sc_word_t arg1, sc_word_t arg2) {
++  return syscall3(call, arg0, arg1, arg2);
++}
++
++__attribute__((always_inline)) static inline long
++_syscall(int call, sc_word_t arg0, sc_word_t arg1, sc_word_t arg2,
++         sc_word_t arg3) {
++  return syscall4(call, arg0, arg1, arg2, arg3);
++}
++
++__attribute__((always_inline)) static inline long
++_syscall(int call, sc_word_t arg0, sc_word_t arg1, sc_word_t arg2,
++         sc_word_t arg3, sc_word_t arg4) {
++  return syscall5(call, arg0, arg1, arg2, arg3, arg4);
++}
++
++__attribute__((always_inline)) static inline long
++_syscall(int call, sc_word_t arg0, sc_word_t arg1, sc_word_t arg2,
++         sc_word_t arg3, sc_word_t arg4, sc_word_t arg5) {
++  return syscall6(call, arg0, arg1, arg2, arg3, arg4, arg5);
++}
 +
 +template <typename... T>
-+__attribute__((always_inline)) static inline long syscall(uint64_t call, T... args)
-+{
-+    return _syscall(call, (uint64_t)(args)...);
++__attribute__((always_inline)) static inline long syscall(sc_word_t call,
++                                                          T... args) {
++  return _syscall(call, (sc_word_t)(args)...);
 +}
-+#else
-+#define GET_SYSCALL(a0, a1, a2, a3, a4, a5, a6, name, ...) name
-+#define syscall(...)                                                                                      \
-+    GET_SYSCALL(__VA_ARGS__, syscalln6, syscalln5, syscalln4, syscalln3, syscalln2, syscalln1, syscalln0) \
-+    (__VA_ARGS__)
-+#endif
-+
 +#endif // SYSCALL_H
 diff --git a/sysdeps/aero/include/mlibc/thread-entry.hpp b/sysdeps/aero/include/mlibc/thread-entry.hpp
 new file mode 100644
