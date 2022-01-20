@@ -1,4 +1,4 @@
-From a717827ec97570a01162119ab29c97a14a7fb676 Mon Sep 17 00:00:00 2001
+From 3c8e5583b560da877ed24dadfdd6c54a7eb855ef Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -15,7 +15,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
  sysdeps/aero/generic/aero.cc                | 269 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
- sysdeps/aero/generic/filesystem.cc          | 264 +++++++++++++++++++
+ sysdeps/aero/generic/filesystem.cc          | 266 +++++++++++++++++++
  sysdeps/aero/generic/signals.S              |   7 +
  sysdeps/aero/generic/signals.cc             |  43 ++++
  sysdeps/aero/generic/sockets.cc             |   0
@@ -46,12 +46,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/include/abi-bits/uid_t.h       |   1 +
  sysdeps/aero/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/aero/include/abi-bits/wait.h        |   1 +
- sysdeps/aero/include/aero/syscall.h         | 188 ++++++++++++++
+ sysdeps/aero/include/aero/syscall.h         | 192 ++++++++++++++
  sysdeps/aero/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 46 files changed, 1010 insertions(+), 10 deletions(-)
+ 46 files changed, 1016 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -247,7 +247,7 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..841b225
+index 0000000..50f2aa2
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
 @@ -0,0 +1,269 @@
@@ -322,7 +322,7 @@ index 0000000..841b225
 +}
 +
 +int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
-+    auto result = syscall(SYS_MMAP, (uintptr_t)hint, size, prot, flags, fd, offset);
++    auto result = syscall(SYS_MMAP, hint, size, prot, flags, fd, offset);
 +
 +    if (result < 0)
 +        return -result;
@@ -332,7 +332,7 @@ index 0000000..841b225
 +}
 +
 +int sys_vm_unmap(void* address, size_t size) {
-+    return syscall(SYS_MUNMAP, (uint64_t)address, size);
++    return syscall(SYS_MUNMAP, address, size);
 +}
 +
 +int sys_anon_allocate(size_t size, void **pointer) {
@@ -349,7 +349,7 @@ index 0000000..841b225
 +}
 +
 +void sys_libc_log(const char* msg) {
-+    syscall(SYS_LOG, (unsigned long long)msg, strlen(msg));
++    syscall(SYS_LOG, msg, strlen(msg));
 +}
 +
 +void sys_exit(int status) {
@@ -395,7 +395,7 @@ index 0000000..841b225
 +}
 +
 +int sys_getcwd(char *buffer, size_t size) {
-+    auto result = syscall(SYS_GETCWD, (uintptr_t)buffer, (uint64_t)size);
++    auto result = syscall(SYS_GETCWD, buffer, size);
 +
 +    if (result < 0)
 +        return -result;
@@ -457,7 +457,7 @@ index 0000000..841b225
 +
 +int sys_clone(void *entry, void *user_arg, void *tcb, pid_t *tid_out) {
 +    auto stack = prepare_stack(entry, user_arg, tcb);
-+    auto tid = syscall(SYS_CLONE, __mlibc_start_thread, stack);
++    auto tid = syscall(SYS_CLONE, (uintptr_t)__mlibc_start_thread, stack);
 +
 +    if (tid < 0)
 +        return -tid;
@@ -471,7 +471,7 @@ index 0000000..841b225
 +}
 +
 +int sys_waitpid(pid_t pid, int *status, int flags, pid_t *ret_pid) {
-+    auto result = syscall(SYS_WAITPID, (uint64_t)pid, (uint64_t)status, (uint64_t)flags);
++    auto result = syscall(SYS_WAITPID, pid, status, flags);
 +
 +    if (result < 0)
 +        return -result;
@@ -560,10 +560,10 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..ea37858
+index 0000000..3d92c01
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
-@@ -0,0 +1,264 @@
+@@ -0,0 +1,266 @@
 +#include <aero/syscall.h>
 +
 +#include <sys/types.h>
@@ -580,7 +580,7 @@ index 0000000..ea37858
 +
 +namespace mlibc {
 +int sys_write(int fd, const void* buffer, size_t count, ssize_t* written) {
-+	long ret = syscall(SYS_WRITE, fd, (uintptr_t)buffer, count);
++	long ret = syscall(SYS_WRITE, fd, buffer, count);
 +
 +	if(ret < 0)
 +		return -ret;
@@ -590,7 +590,7 @@ index 0000000..ea37858
 +}
 +
 +int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
-+	long ret = syscall(SYS_READ, fd, (uintptr_t)buf, count);
++	long ret = syscall(SYS_READ, fd, buf, count);
 +
 +	if(ret < 0){
 +		*bytes_read = 0;
@@ -605,7 +605,7 @@ index 0000000..ea37858
 +int sys_pread(int fd, void *buf, size_t count, off_t off, ssize_t *bytes_read)  UNIMPLEMENTED("sys_pread")
 +
 +int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
-+	long ret = syscall(SYS_SEEK, (uint64_t)fd, (uint64_t)offset, (uint64_t)whence);
++	long ret = syscall(SYS_SEEK, fd, offset, whence);
 +
 +	if(ret < 0)
 +		return -ret;
@@ -615,7 +615,7 @@ index 0000000..ea37858
 +}
 +
 +int sys_open(const char* filename, int flags, int* fd){
-+	auto ret = syscall(SYS_OPEN, 0, (uintptr_t)filename, strlen(filename), flags);
++	auto ret = syscall(SYS_OPEN, 0, filename, strlen(filename), flags);
 +
 +	if(ret < 0)
 +		return -ret;
@@ -634,7 +634,7 @@ index 0000000..ea37858
 +}
 +
 +int sys_access(const char* filename, int mode) {
-+	auto result = syscall(SYS_ACCESS, AT_FDCWD, (uintptr_t)filename, strlen(filename), mode, 0);
++	auto result = syscall(SYS_ACCESS, AT_FDCWD, filename, strlen(filename), mode, 0);
 +
 +	if (result < 0)
 +		return -result;
@@ -643,15 +643,17 @@ index 0000000..ea37858
 +}
 +
 +int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
++	mlibc::infoLogger() << "sys_stat() is unimplemented" << frg::endlog;
++
++	memset(statbuf, 0, sizeof(struct stat));
 +	return 0;
 +}
 +
 +int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
-+	long ret = syscall(SYS_IOCTL, (uint64_t)fd, request, (uintptr_t)arg);
++	auto ret = syscall(SYS_IOCTL, fd, request, arg);
 +	
-+	if (ret < 0) {
++	if (ret < 0)
 +		return -ret;
-+	}
 +
 +	*result = ret;
 +	return 0;
@@ -671,11 +673,11 @@ index 0000000..ea37858
 +}
 +
 +int sys_tcgetattr(int fd, struct termios *attr) {
-+	auto result = syscall(SYS_IOCTL, fd, TCGETS, (uintptr_t)attr);
-+
-+	if (result < 0)
-+		return -result;
-+
++	int result;
++	
++	if (int e = sys_ioctl(fd, TCGETS, (void*)attr, &result); e)
++		return e;
++	
 +	return 0;
 +}
 +
@@ -683,12 +685,12 @@ index 0000000..ea37858
 +	if (optional_action)
 +		mlibc::infoLogger() << "mlibc: warning: sys_tcsetattr ignores optional_action" << frg::endlog;
 +
++	int result;
++	
 +	// 0x5404 = TCSETSF (using this workaround since the headers don't define it)
-+	auto result = syscall(SYS_IOCTL, fd, 0x5404, (uintptr_t)attr);
-+
-+	if (result < 0)
-+		return -result;
-+
++	if (int e = sys_ioctl(fd, 0x5404, (void*)attr, &result); e)
++		return e;
++	
 +	return 0;
 +}
 +
@@ -698,7 +700,7 @@ index 0000000..ea37858
 +}
 +
 +int sys_mkdir(const char* path) {
-+	auto result = syscall(SYS_MKDIR, (uintptr_t)path, strlen(path));
++	auto result = syscall(SYS_MKDIR, path, strlen(path));
 +
 +	if (result < 0)
 +		return -result;
@@ -714,7 +716,7 @@ index 0000000..ea37858
 +}
 +
 +int sys_unlinkat(int fd, const char *path, int flags) {
-+	auto result = syscall(SYS_UNLINK, fd, (uintptr_t)path, strlen(path), flags);
++	auto result = syscall(SYS_UNLINK, fd, path, strlen(path), flags);
 +
 +	if (result < 0)
 +		return -result;
@@ -777,7 +779,7 @@ index 0000000..ea37858
 +int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) UNIMPLEMENTED("sys_readlink")
 +
 +int sys_dup(int fd, int flags, int* newfd) {
-+	auto result = syscall(SYS_DUP, (uint64_t)fd, (uint64_t)flags);
++	auto result = syscall(SYS_DUP, fd, flags);
 +
 +	if (result < 0)
 +		return -result;
@@ -787,7 +789,7 @@ index 0000000..ea37858
 +}
 +
 +int sys_dup2(int fd, int flags, int newfd) {
-+	auto result = syscall(SYS_DUP2, (uint64_t)fd, (uint64_t)newfd, (uint64_t)flags);
++	auto result = syscall(SYS_DUP2, fd, newfd, flags);
 +
 +	if (result < 0)
 +		return -result;
@@ -820,7 +822,7 @@ index 0000000..ea37858
 +int sys_chmod(const char *pathname, mode_t mode) UNIMPLEMENTED("sys_chmod")
 +
 +int sys_pipe(int *fds, int flags) {
-+	auto result = syscall(SYS_PIPE, (uintptr_t)fds, flags);
++	auto result = syscall(SYS_PIPE, fds, flags);
 +
 +	if (result < 0)
 +		return -result;
@@ -1161,10 +1163,10 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 new file mode 100644
-index 0000000..11f3a9b
+index 0000000..d3fe862
 --- /dev/null
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -0,0 +1,188 @@
+@@ -0,0 +1,192 @@
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
 +
@@ -1309,6 +1311,10 @@ index 0000000..11f3a9b
 +}
 +} // extern "C"
 +
++// Cast to the argument type of the extern "C" functions.
++__attribute__((always_inline)) inline sc_word_t sc_cast(long x) { return x; }
++__attribute__((always_inline)) inline sc_word_t sc_cast(const void *x) { return reinterpret_cast<sc_word_t>(x); }
++
 +// C++ wrappers for the extern "C" functions.
 +__attribute__((always_inline)) static inline long _syscall(int call) {
 +  return syscall0(call);
@@ -1350,7 +1356,7 @@ index 0000000..11f3a9b
 +template <typename... T>
 +__attribute__((always_inline)) static inline long syscall(sc_word_t call,
 +                                                          T... args) {
-+  return _syscall(call, (sc_word_t)(args)...);
++  return _syscall(call, sc_cast(args)...);
 +}
 +#endif // SYSCALL_H
 diff --git a/sysdeps/aero/include/mlibc/thread-entry.hpp b/sysdeps/aero/include/mlibc/thread-entry.hpp

@@ -12,3 +12,6 @@ sysroot
 
 # Bochs specific files:
 bx_enh_dbg.ini
+
+# Objdump files:
+*.dump
