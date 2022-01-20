@@ -277,24 +277,12 @@ impl INodeInterface for Tty {
 
             aero_syscall::TCGETS => {
                 let termios = VirtAddr::new(arg as u64);
-                let termios = unsafe {
-                    core::slice::from_raw_parts_mut(
-                        termios.as_mut_ptr::<u8>(),
-                        core::mem::size_of::<aero_syscall::Termios>(),
-                    )
-                };
+                let termios = unsafe { &mut *(termios.as_mut_ptr::<aero_syscall::Termios>()) };
 
                 let lock = TERMIOS.lock_irq();
                 let this = &*lock;
 
-                let this = unsafe {
-                    core::slice::from_raw_parts(
-                        this as *const aero_syscall::Termios as *const u8,
-                        core::mem::size_of::<aero_syscall::Termios>(),
-                    )
-                };
-
-                termios.copy_from_slice(this);
+                *termios = this.clone();
                 Ok(0x00)
             }
 
@@ -306,25 +294,12 @@ impl INodeInterface for Tty {
                 core::mem::drop(stdin);
 
                 let termios = VirtAddr::new(arg as u64);
-
-                let termios = unsafe {
-                    core::slice::from_raw_parts(
-                        termios.as_mut_ptr::<u8>(),
-                        core::mem::size_of::<aero_syscall::Termios>(),
-                    )
-                };
+                let termios = unsafe { &*(termios.as_mut_ptr::<aero_syscall::Termios>()) };
 
                 let mut lock = TERMIOS.lock_irq();
                 let this = &mut *lock;
 
-                let this = unsafe {
-                    core::slice::from_raw_parts_mut(
-                        this as *mut aero_syscall::Termios as *mut u8,
-                        core::mem::size_of::<aero_syscall::Termios>(),
-                    )
-                };
-
-                this.copy_from_slice(termios);
+                *this = termios.clone();
                 Ok(0x00)
             }
 
