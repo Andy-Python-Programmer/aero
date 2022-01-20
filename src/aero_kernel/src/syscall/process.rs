@@ -180,7 +180,7 @@ pub fn waitpid(pid: usize, status: usize, _flags: usize) -> Result<usize, AeroSy
 pub fn mmap(
     address: usize,
     size: usize,
-    protocol: usize,
+    protection: usize,
     flags: usize,
     fd: usize,
     offset: usize,
@@ -190,7 +190,7 @@ pub fn mmap(
 
     let address = VirtAddr::new(address as u64);
 
-    let protocol = MMapProt::from_bits(protocol).ok_or(AeroSyscallError::EINVAL)?;
+    let protection = MMapProt::from_bits(protection).ok_or(AeroSyscallError::EINVAL)?;
     let flags = MMapFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
 
     if !flags.contains(MMapFlags::MAP_ANONYOMUS) {
@@ -204,7 +204,7 @@ pub fn mmap(
     if let Some(alloc) = scheduler::get_scheduler()
         .current_task()
         .vm()
-        .mmap(address, size, protocol, flags)
+        .mmap(address, size, protection, flags)
     {
         Ok(alloc.as_u64() as usize)
     } else {
@@ -275,13 +275,6 @@ pub fn sigaction(
     sigreturn: usize,
     old: usize,
 ) -> Result<usize, AeroSyscallError> {
-    if sig == 34 {
-        // HECK: make mlibc happy :^)
-        //
-        // In function PthreadSignalInstaller, file mlibc/options/posix/generic/pthread-stubs.cpp:419
-        return Err(AeroSyscallError::ENOSYS);
-    }
-
     let new = if sigact == 0 {
         None
     } else {

@@ -43,7 +43,13 @@ impl SigAction {
 bitflags::bitflags! {
     #[derive(Default)]
     pub struct SignalFlags: u32 {
-        const RESTART = (1u32 << 3);
+        const SA_NOCLDSTOP = (1 << 0);
+        const SA_ONSTACK   = (1 << 1);
+        const SA_RESETHAND = (1 << 2);
+        const SA_RESTART   = (1 << 3);
+        const SA_SIGINFO   = (1 << 4);
+        const SA_NOCLDWAIT = (1 << 5);
+        const SA_NODEFER   = (1 << 6);
     }
 }
 

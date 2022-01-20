@@ -76,6 +76,8 @@ mod default {
         Action::Ignore,                   // UNUSED
         Action::Ignore,                   // UNUSED
         Action::Handle(terminate_thread), // UNUSED
+        Action::Ignore,                   // UNUSED
+        Action::Ignore,                   // UNUSED
     ];
 
     fn terminate() {
@@ -180,7 +182,7 @@ impl SignalEntry {
     }
 }
 
-const SIGNAL_COUNT: usize = 33;
+const SIGNAL_COUNT: usize = 35;
 
 #[derive(Copy, Clone)]
 pub struct Entries {
@@ -355,6 +357,8 @@ impl Signals {
         handler: Option<SignalEntry>,
         old: Option<&mut SigAction>,
     ) {
+        log::debug!("{}", signal);
+
         assert!(signal < SIGNAL_COUNT);
 
         if !can_override(signal) {
