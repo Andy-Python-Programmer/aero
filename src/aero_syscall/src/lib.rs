@@ -53,15 +53,25 @@ bitflags::bitflags! {
 
 bitflags::bitflags! {
     pub struct OpenFlags: usize {
-        const O_RDONLY      = 2;
-        const O_RDWR        = 3;
-        const O_WRONLY      = 5;
-        const O_CREAT       = 0x10;
-        const O_DIRECTORY   = 0x20;
-        const O_EXCL        = 0x40;
-        const O_NOCTTY      = 0x80;
-        const O_TRUNC       = 0x0200;
-        const O_CLOEXEC     = 0x4000;
+        const O_ACCMODE   = 0x0007;
+        const O_EXEC      = 1;
+        const O_RDONLY    = 2;
+        const O_RDWR      = 3;
+        const O_SEARCH    = 4;
+        const O_WRONLY    = 5;
+        const O_APPEND    = 0x0008;
+        const O_CREAT     = 0x0010;
+        const O_DIRECTORY =  0x0020;
+        const O_EXCL      =  0x0040;
+        const O_NOCTTY    = 0x0080;
+        const O_NOFOLLOW  = 0x0100;
+        const O_TRUNC     = 0x0200;
+        const O_NONBLOCK  = 0x0400;
+        const O_DSYNC     = 0x0800;
+        const O_RSYNC     = 0x1000;
+        const O_SYNC      = 0x2000;
+        const O_CLOEXEC   = 0x4000;
+        const O_PATH      = 0x8000;
     }
 }
 
@@ -593,7 +603,7 @@ pub fn sys_ioctl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSys
 pub fn sys_mmap(
     address: usize,
     size: usize,
-    protocol: MMapProt,
+    protection: MMapProt,
     flags: MMapFlags,
     fd: usize,
     offset: usize,
@@ -602,7 +612,7 @@ pub fn sys_mmap(
         prelude::SYS_MMAP,
         address,
         size,
-        protocol.bits(),
+        protection.bits(),
         flags.bits(),
         fd,
         offset,
