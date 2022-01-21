@@ -118,6 +118,8 @@ interrupt_error_stack!(
 
                 log::error!("stack: {:#x?}", stack);
 
+                scheduler::get_scheduler().current_task().vm.log();
+
                 unwind::unwind_stack_trace();
 
                 let task = scheduler::get_scheduler().current_task();
