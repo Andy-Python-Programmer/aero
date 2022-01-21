@@ -82,7 +82,7 @@ impl MMapFile {
 
 #[derive(Clone)]
 struct Mapping {
-    protocol: MMapProt,
+    protection: MMapProt,
     flags: MMapFlags,
 
     start_addr: VirtAddr,
@@ -118,7 +118,7 @@ impl Mapping {
                     frame,
                     PageTableFlags::USER_ACCESSIBLE
                         | PageTableFlags::PRESENT
-                        | self.protocol.into(),
+                        | self.protection.into(),
                     &mut FRAME_ALLOCATOR,
                 )
             }
@@ -192,7 +192,7 @@ impl Mapping {
 
                 let mut flags = PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE
-                    | self.protocol.into();
+                    | self.protection.into();
 
                 // We want to remove the writable flag since, we want to share the page table
                 // entry with other processes or threads until it tries to write to the same page
@@ -240,7 +240,7 @@ impl Mapping {
                         frame,
                         PageTableFlags::PRESENT
                             | PageTableFlags::USER_ACCESSIBLE
-                            | self.protocol.into(),
+                            | self.protection.into(),
                         &mut FRAME_ALLOCATOR,
                     )
                 }
@@ -296,7 +296,7 @@ impl Mapping {
                             frame,
                             PageTableFlags::PRESENT
                                 | PageTableFlags::USER_ACCESSIBLE
-                                | self.protocol.into(),
+                                | self.protection.into(),
                             &mut FRAME_ALLOCATOR,
                         )
                     }
@@ -311,7 +311,7 @@ impl Mapping {
                             page,
                             PageTableFlags::PRESENT
                                 | PageTableFlags::USER_ACCESSIBLE
-                                | self.protocol.into(),
+                                | self.protection.into(),
                         )
                     }
                     .expect("failed to update page table flags")
@@ -360,7 +360,7 @@ impl Mapping {
             });
 
             let new_mapping = Mapping {
-                protocol: self.protocol.clone(),
+                protection: self.protection.clone(),
                 flags: self.flags.clone(),
                 start_addr: end,
                 end_addr: end + (self.end_addr - end),
@@ -422,18 +422,18 @@ impl VmProtected {
         {
             log::trace!("mapping {:?} on demand", accessed_address);
 
-            if map.protocol.is_empty() {
+            if map.protection.is_empty() {
                 return false;
             }
 
             if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
-                && !map.protocol.contains(MMapProt::PROT_WRITE)
+                && !map.protection.contains(MMapProt::PROT_WRITE)
             {
                 return false;
             }
 
             if reason.contains(PageFaultErrorCode::INSTRUCTION_FETCH)
-                && !map.protocol.contains(MMapProt::PROT_EXEC)
+                && !map.protection.contains(MMapProt::PROT_EXEC)
             {
                 return false;
             }
@@ -541,7 +541,7 @@ impl VmProtected {
         &mut self,
         address: VirtAddr,
         size: usize,
-        protocol: MMapProt,
+        protection: MMapProt,
         flags: MMapFlags,
         offset: usize,
         file: Option<DirCacheItem>,
@@ -574,7 +574,7 @@ impl VmProtected {
             if let Some(prev) = cursor.peek_prev() {
                 if prev.end_addr == addr
                     && prev.flags == flags
-                    && prev.protocol == protocol
+                    && prev.protection == protection
                     && prev.file.is_none()
                 {
                     prev.end_addr = addr + size_aligned;
@@ -584,7 +584,7 @@ impl VmProtected {
             }
 
             cursor.insert_before(Mapping {
-                protocol,
+                protection,
                 flags,
 
                 start_addr: addr,
@@ -676,7 +676,7 @@ impl VmProtected {
 
         let load_offset = VirtAddr::new(
             if elf.header.pt2.type_().as_type() == header::Type::SharedObject {
-                0x7500_0000_0000u64
+                0x40000000u64
             } else {
                 0u64
             },
@@ -793,12 +793,12 @@ impl Vm {
         &self,
         address: VirtAddr,
         size: usize,
-        protocol: MMapProt,
+        protection: MMapProt,
         flags: MMapFlags,
     ) -> Option<VirtAddr> {
         self.inner
             .lock()
-            .mmap(address, size, protocol, flags, 0x00, None)
+            .mmap(address, size, protection, flags, 0x00, None)
     }
 
     pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
@@ -841,7 +841,7 @@ impl Vm {
                     "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
                     mmap.start_addr,
                     mmap.end_addr,
-                    mmap.protocol,
+                    mmap.protection,
                     mmap.flags,
                     file.offset,
                     file.size,
@@ -851,7 +851,7 @@ impl Vm {
                     "{:?}..{:?} => {:?}, {:?}",
                     mmap.start_addr,
                     mmap.end_addr,
-                    mmap.protocol,
+                    mmap.protection,
                     mmap.flags,
                 );
             }
