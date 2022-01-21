@@ -1,4 +1,4 @@
-From 3c8e5583b560da877ed24dadfdd6c54a7eb855ef Mon Sep 17 00:00:00 2001
+From b4b8b1e784030153608652778b241e5d0b765883 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -13,7 +13,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 269 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 267 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
  sysdeps/aero/generic/filesystem.cc          | 266 +++++++++++++++++++
  sysdeps/aero/generic/signals.S              |   7 +
@@ -51,7 +51,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 46 files changed, 1016 insertions(+), 10 deletions(-)
+ 46 files changed, 1014 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -247,10 +247,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..50f2aa2
+index 0000000..c308094
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,269 @@
+@@ -0,0 +1,267 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -382,11 +382,10 @@ index 0000000..50f2aa2
 +
 +int sys_clock_get(int clock, time_t *secs, long *nanos) {
 +    struct timespec ts;
-+    long ret = syscall(SYS_GETTIME, clock, &ts);
++    auto ret = syscall(SYS_GETTIME, clock, &ts);
 +
-+    if (ret < 0) {
++    if (ret < 0)
 +        return -ret;
-+    }
 +
 +    *secs = ts.tv_sec;
 +    *nanos = ts.tv_nsec;
@@ -411,11 +410,10 @@ index 0000000..50f2aa2
 +        .tv_nsec = *nanosec
 +    };
 +
-+    long ret = syscall(SYS_SLEEP, &ts);
++    auto ret = syscall(SYS_SLEEP, &ts);
 +
-+    if (ret < 0) {
++    if (ret < 0)
 +        return -ret;
-+    }
 +
 +    return 0;
 +}
@@ -560,7 +558,7 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..3d92c01
+index 0000000..e3551a0
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
 @@ -0,0 +1,266 @@
@@ -686,11 +684,11 @@ index 0000000..3d92c01
 +		mlibc::infoLogger() << "mlibc: warning: sys_tcsetattr ignores optional_action" << frg::endlog;
 +
 +	int result;
-+	
++
 +	// 0x5404 = TCSETSF (using this workaround since the headers don't define it)
 +	if (int e = sys_ioctl(fd, 0x5404, (void*)attr, &result); e)
 +		return e;
-+	
++
 +	return 0;
 +}
 +
