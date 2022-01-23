@@ -1,4 +1,4 @@
-From b4b8b1e784030153608652778b241e5d0b765883 Mon Sep 17 00:00:00 2001
+From b0b9858e41733bd7fad1e279e6cdf4b38b9a8477 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -8,7 +8,6 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  .gitignore                                  |   6 +
  abis/aero/auxv.h                            |  13 +
  meson.build                                 |   4 +
- options/ansi/generic/environment.cpp        |   2 +
  options/ansi/generic/stdlib-stubs.cpp       |   3 +
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
@@ -51,7 +50,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 46 files changed, 1014 insertions(+), 10 deletions(-)
+ 45 files changed, 1012 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -141,19 +140,6 @@ index 4027c99..b363aa3 100644
  elif host_machine.system() == 'managarm'
  	# TODO: Adopt the include_directories() commands from the managarm meson.build.
  	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
-diff --git a/options/ansi/generic/environment.cpp b/options/ansi/generic/environment.cpp
-index d20ec84..e512c46 100644
---- a/options/ansi/generic/environment.cpp
-+++ b/options/ansi/generic/environment.cpp
-@@ -96,6 +96,8 @@ void unassign_variable(frg::string_view name) {
- } // anonymous namespace
- 
- char *getenv(const char *name) {
-+	return "";
-+
- 	auto k = find_environ_index(name);
- 	if(k == size_t(-1))
- 		return nullptr;
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
 index 347c659..8e97b26 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp

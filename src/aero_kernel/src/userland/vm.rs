@@ -728,6 +728,34 @@ impl VmProtected {
                     prot.insert(MMapProt::PROT_EXEC);
                 }
 
+                /*
+                 * The last non-bss frame of the segment consists partly of data and partly of bss
+                 * memory, which must be zeroed. Unfortunately, the file representation might have
+                 * reused the part of the frame that should be zeroed to store the next segment. This
+                 * means that we can't simply overwrite that part with zeroes, as we might overwrite
+                 * other data this way.
+                 *
+                 * Example:
+                 *
+                 *   XXXXXXXXXXXXXXX000000YYYYYYY000ZZZZZZZZZZZ     virtual memory (XYZ are data)
+                 *   |·············|     /·····/   /·········/
+                 *   |·············| ___/·····/   /·········/
+                 *   |·············|/·····/‾‾‾   /·········/
+                 *   |·············||·····|/·̅·̅·̅·̅·̅·····/‾‾‾‾
+                 *   XXXXXXXXXXXXXXXYYYYYYYZZZZZZZZZZZ              file memory (zeros are not saved)
+                 *   '       '       '       '        '
+                 *   The areas filled with dots (`·`) indicate a mapping between virtual and file
+                 *   memory. We see that the data regions `X`, `Y`, `Z` have a valid mapping, while
+                 *   the regions that are initialized with 0 have not.
+                 *
+                 *   The ticks (`'`) below the file memory line indicate the start of a new frame. We
+                 *   see that the last frames of the `X` and `Y` regions in the file are followed
+                 *   by the bytes of the next region. So we can't zero these parts of the frame
+                 *   because they are needed by other memory regions.
+                 *
+                 * To solve this issue while still keeping the offset page aligned, we align down the
+                 * file offset and the virtual start offset aswell.
+                 */
                 let virtual_fend = self
                     .mmap(
                         virtual_start,
