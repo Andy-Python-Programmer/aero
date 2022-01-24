@@ -119,6 +119,7 @@ interrupt_error_stack!(
                 log::error!("stack: {:#x?}", stack);
 
                 scheduler::get_scheduler().current_task().vm.log();
+                scheduler::get_scheduler().current_task().file_table.log();
 
                 unwind::unwind_stack_trace();
 

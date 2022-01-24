@@ -74,3 +74,52 @@ bitflags::bitflags! {
         const CLOEXEC = 1;
     }
 }
+
+// framebuffer constants:
+//
+// NOTE: The framebuffer constants and structs are derived from the layout
+// of these constants and structs in the linux usermode API.
+//
+// https://github.com/torvalds/linux/blob/master/include/uapi/linux/fb.h
+pub const FBIOGET_VSCREENINFO: usize = 0x4600;
+
+#[derive(Default, Clone)]
+pub struct FramebufferBitField {
+    pub offset: u32,
+    pub length: u32,
+    pub msb_right: u32,
+}
+
+// framebuffer variable screen info:
+#[derive(Default, Clone)]
+pub struct FramebufferVScreenInfo {
+    pub xres: u32,
+    pub yres: u32,
+    pub xres_virtual: u32,
+    pub yres_virtual: u32,
+    pub xoffset: u32,
+    pub yoffset: u32,
+    pub bits_per_pixel: u32,
+    pub grayscale: u32,
+    pub red: FramebufferBitField,
+    pub green: FramebufferBitField,
+    pub blue: FramebufferBitField,
+    pub transp: FramebufferBitField,
+    pub nonstd: u32,
+    pub activate: u32,
+    pub height: u32,
+    pub width: u32,
+    pub accel_flags: u32,
+    pub pixclock: u32,
+    pub left_margin: u32,
+    pub right_margin: u32,
+    pub upper_margin: u32,
+    pub lower_margin: u32,
+    pub hsync_len: u32,
+    pub vsync_len: u32,
+    pub sync: u32,
+    pub vmode: u32,
+    pub rotate: u32,
+    pub colorspace: u32,
+    pub reserved: [u32; 4],
+}

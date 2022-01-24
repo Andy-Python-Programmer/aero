@@ -70,7 +70,7 @@ impl FileHandle {
             .ok()
             .ok_or(FileSystemError::IsPipe)?;
 
-        if meta.file_type() == FileType::File {
+        if meta.file_type() == FileType::File || meta.file_type() == FileType::Device {
             match whence {
                 aero_syscall::SeekWhence::SeekSet => {
                     self.offset.store(off as usize, Ordering::SeqCst);
@@ -201,6 +201,20 @@ impl FileTable {
         }
 
         None
+    }
+
+    pub fn log(&self) {
+        let files = self.0.read();
+
+        for handle in files.iter() {
+            if let Some(handle) = handle {
+                log::debug!(
+                    "file handle: (fd={}, name={})",
+                    handle.fd,
+                    handle.inode.name()
+                )
+            }
+        }
     }
 
     pub fn duplicate_at(
