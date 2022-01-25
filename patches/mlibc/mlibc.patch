@@ -1,4 +1,4 @@
-From b0b9858e41733bd7fad1e279e6cdf4b38b9a8477 Mon Sep 17 00:00:00 2001
+From c89c130a211f4eb58b4a73d9849d183aa0777ebf Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -12,11 +12,11 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 267 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 276 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
  sysdeps/aero/generic/filesystem.cc          | 266 +++++++++++++++++++
  sysdeps/aero/generic/signals.S              |   7 +
- sysdeps/aero/generic/signals.cc             |  43 ++++
+ sysdeps/aero/generic/signals.cc             |  43 +++
  sysdeps/aero/generic/sockets.cc             |   0
  sysdeps/aero/generic/thread.cc              |  45 ++++
  sysdeps/aero/generic/thread_entry.S         |   8 +
@@ -50,7 +50,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 45 files changed, 1012 insertions(+), 10 deletions(-)
+ 45 files changed, 1021 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -233,10 +233,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..c308094
+index 0000000..841e48c
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,267 @@
+@@ -0,0 +1,276 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -390,16 +390,25 @@ index 0000000..c308094
 +
 +int sys_chdir(const char *path) UNIMPLEMENTED("sys_chdir")
 +
++int sys_gethostname(char *buffer, size_t bufsize) {
++    auto result = syscall(SYS_GETHOSTNAME, buffer, bufsize);
++
++    if (result < 0)
++        return -result;
++
++    return 0;
++}
++
 +int sys_sleep(time_t* sec, long* nanosec) {
 +    struct timespec ts = {
 +        .tv_sec = *sec,
 +        .tv_nsec = *nanosec
 +    };
 +
-+    auto ret = syscall(SYS_SLEEP, &ts);
++    auto result = syscall(SYS_SLEEP, &ts);
 +
-+    if (ret < 0)
-+        return -ret;
++    if (result < 0)
++        return -result;
 +
 +    return 0;
 +}
@@ -829,7 +838,7 @@ index 0000000..9e5d12b
 +	ud2
 diff --git a/sysdeps/aero/generic/signals.cc b/sysdeps/aero/generic/signals.cc
 new file mode 100644
-index 0000000..c851372
+index 0000000..10539ba
 --- /dev/null
 +++ b/sysdeps/aero/generic/signals.cc
 @@ -0,0 +1,43 @@
@@ -845,7 +854,7 @@ index 0000000..c851372
 +
 +namespace mlibc {
 +int sys_sigaction(int how, const struct sigaction *__restrict action, struct sigaction *__restrict old_action) {
-+#ifdef LOG_SIGACTION_INSTALL
++#if LOG_SIGACTION_INSTALL
 +    mlibc::infoLogger() << "sys_sigaction: signal " << how << frg::endlog;
 +    mlibc::infoLogger() << "sys_sigaction: size: " << sizeof(*action) << frg::endlog;
 +
