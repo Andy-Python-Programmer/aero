@@ -41,7 +41,6 @@
     new_uninit,
     box_syntax,
     const_fn_fn_ptr_basics,
-    arc_new_cyclic,
     naked_functions,
     step_trait,
     const_btree_new,
