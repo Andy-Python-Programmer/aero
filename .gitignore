@@ -15,3 +15,6 @@ bx_enh_dbg.ini
 
 # Objdump files:
 *.dump
+
+# Remove doom port related files:
+base-files/doom1.wad

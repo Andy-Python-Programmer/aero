@@ -190,7 +190,7 @@ impl Mapping {
                     .read_at(offset as usize, buffer)
                     .unwrap();
 
-                let mut flags = PageTableFlags::PRESENT
+                let flags = PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE
                     | self.protection.into();
 
@@ -198,7 +198,11 @@ impl Mapping {
                 // entry with other processes or threads until it tries to write to the same page
                 // and the mapping is marked as writable, in that case we will copy the page table
                 // entry.
-                flags.remove(PageTableFlags::WRITABLE);
+                //
+                // TODO: We have to remove the writable flag here, fix this after we seperate the last
+                // BSS frame which also intersects with the last frame of the actual file.
+                //
+                // flags.remove(PageTableFlags::WRITABLE);
 
                 unsafe {
                     offset_table.map_to(
@@ -210,6 +214,8 @@ impl Mapping {
                 }
                 .expect("failed to map allocated frame for private file read")
                 .flush();
+
+            // TODO: Remove this when the above TODO has been fixed.
             } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
                 && !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
             {
