@@ -1216,8 +1216,8 @@ index 0000000..d3fe862
 +// so, that we can implement the syscall in the kernel.
 +#define UNIMPLEMENTED(FUNCTION_NAME)                                           \
 +  {                                                                            \
-+    syscall(314, FUNCTION_NAME, strlen(FUNCTION_NAME));                        \
-+    __ensure(!"UNIMPLEMENTED function was called");                            \
++    sys_libc_log("Unimplemented syscall: " FUNCTION_NAME);                     \
++    sys_exit(1);                                                               \
 +    __builtin_unreachable();                                                   \
 +  }
 +
