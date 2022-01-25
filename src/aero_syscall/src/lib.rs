@@ -395,7 +395,7 @@ pub struct Termios {
     pub c_cflag: TermiosCFlag,
     pub c_lflag: TermiosLFlag,
     pub c_line: u8,
-    pub c_cc: [u8; 32],
+    pub c_cc: [u8; 11],
     pub c_ispeed: u32,
     pub c_ospeed: u32,
 }

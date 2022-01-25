@@ -41,7 +41,7 @@ lazy_static::lazy_static! {
         c_cflag: aero_syscall::TermiosCFlag::empty(),
         c_lflag: aero_syscall::TermiosLFlag::ECHO | aero_syscall::TermiosLFlag::ICANON,
         c_line: 0,
-        c_cc: [0; 32],
+        c_cc: [0; 11],
         c_ispeed: 0,
         c_ospeed: 0,
     });
@@ -324,6 +324,17 @@ impl devfs::Device for Tty {
 
 impl KeyboardListener for Tty {
     fn on_key(&self, key: KeyCode, released: bool) {
+        // requirements bash termios: Termios {
+        //    c_iflag: 0,
+        //    c_oflag: NL0 | CR0 | TAB0 | BS0 | VT0 | FF0,
+        //    c_cflag: CS5,
+        //    c_lflag: ISIG,
+        //    c_line: 0,
+        //    c_cc: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        //    c_ispeed: 0,
+        //    c_ospeed: 0
+        // }
+
         let mut state = self.state.lock();
         let termios = TERMIOS.lock_irq();
 
