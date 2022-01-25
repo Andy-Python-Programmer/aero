@@ -67,6 +67,13 @@ pub const SYS_DUP2: usize = 44;
 // fcntl constants:
 pub const F_GETFD: usize = 3;
 pub const F_SETFD: usize = 4;
+pub const F_GETFL: usize = 5;
+pub const F_SETFL: usize = 6;
+pub const F_GETLK: usize = 7;
+pub const F_SETLK: usize = 8;
+pub const F_SETLKW: usize = 9;
+pub const F_GETOWN: usize = 10;
+pub const F_SETOWN: usize = 11;
 
 // constants for fcntl()'s additional argument of F_GETFD and F_SETFD:
 bitflags::bitflags! {

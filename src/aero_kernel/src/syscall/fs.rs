@@ -339,18 +339,24 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscall
         .ok_or(AeroSyscallError::EBADFD)?;
 
     match command {
-        // Get the fd flags:
+        // Get the value of file descriptor flags.
         aero_syscall::prelude::F_GETFD => {
             let flags = handle.fd_flags.lock().bits();
             Ok(flags)
         }
 
-        // Set the FD flags:
+        // Set the value of file descriptor flags:
         aero_syscall::prelude::F_SETFD => {
             let flags = FdFlags::from_bits(arg).ok_or(AeroSyscallError::EINVAL)?;
             handle.fd_flags.lock().insert(flags);
 
             Ok(0x00)
+        }
+
+        // Get the value of file status flags:
+        aero_syscall::prelude::F_GETFL => {
+            let flags = handle.flags.bits();
+            Ok(flags)
         }
 
         _ => unimplemented!(),
