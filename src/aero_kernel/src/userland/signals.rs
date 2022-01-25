@@ -357,8 +357,6 @@ impl Signals {
         handler: Option<SignalEntry>,
         old: Option<&mut SigAction>,
     ) {
-        log::debug!("{}", signal);
-
         assert!(signal < SIGNAL_COUNT);
 
         if !can_override(signal) {
