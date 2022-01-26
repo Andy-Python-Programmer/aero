@@ -376,9 +376,7 @@ impl Task {
         // Clear the signals that are pending for this task on exec.
         self.signals().clear();
 
-        let loaded_binary = vm.load_bin(executable);
-
-        self.arch_task_mut().exec(vm, loaded_binary, argv, envv)
+        self.arch_task_mut().exec(vm, executable, argv, envv)
     }
 
     pub fn vm(&self) -> &Arc<Vm> {

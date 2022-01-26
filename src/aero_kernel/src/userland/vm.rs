@@ -190,7 +190,7 @@ impl Mapping {
                     .read_at(offset as usize, buffer)
                     .unwrap();
 
-                let flags = PageTableFlags::PRESENT
+                let mut flags = PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE
                     | self.protection.into();
 
@@ -198,11 +198,7 @@ impl Mapping {
                 // entry with other processes or threads until it tries to write to the same page
                 // and the mapping is marked as writable, in that case we will copy the page table
                 // entry.
-                //
-                // TODO: We have to remove the writable flag here, fix this after we seperate the last
-                // BSS frame which also intersects with the last frame of the actual file.
-                //
-                // flags.remove(PageTableFlags::WRITABLE);
+                flags.remove(PageTableFlags::WRITABLE);
 
                 unsafe {
                     offset_table.map_to(
@@ -214,49 +210,8 @@ impl Mapping {
                 }
                 .expect("failed to map allocated frame for private file read")
                 .flush();
-
-            // TODO: Remove this when the above TODO has been fixed.
-            } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
-                && !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
-            {
-                // We are writing to private file mapping so copy the content of the page.
-                log::trace!("    - private file C: {:?}", address);
-
-                // // addr_aligned, p.page().to_virt(), bytes, self.prot
-                let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-                    .expect("failed to allocate frame for a private file write");
-
-                let buffer = unsafe {
-                    let phys = frame.start_address().as_u64();
-                    let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
-                    let ptr = virt.as_mut_ptr::<u8>();
-
-                    core::slice::from_raw_parts_mut(ptr, size as usize)
-                };
-
-                mmap_file
-                    .file
-                    .inode()
-                    .read_at(offset as usize, buffer)
-                    .unwrap();
-
-                unsafe {
-                    offset_table.map_to(
-                        Page::containing_address(address),
-                        frame,
-                        PageTableFlags::PRESENT
-                            | PageTableFlags::USER_ACCESSIBLE
-                            | self.protection.into(),
-                        &mut FRAME_ALLOCATOR,
-                    )
-                }
-                .expect("failed to map allocated frame for private file read")
-                .flush();
-            } else if reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
-                && reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
-            {
-                log::trace!("    - private file COW: {:?}", address);
-                return self.handle_cow(offset_table, address, true);
+            } else {
+                unimplemented!()
             }
 
             true
@@ -664,7 +619,48 @@ impl VmProtected {
         success
     }
 
-    fn load_bin(&mut self, bin: DirCacheItem) -> LoadedBinary<'static> {
+    fn fork_from(&mut self, parent: &Vm) {
+        let data = parent.inner.lock();
+
+        // Copy over all of the mappings from the parent into the child.
+        self.mappings = data.mappings.clone();
+    }
+}
+
+pub struct Vm {
+    inner: Mutex<VmProtected>,
+}
+
+impl Vm {
+    /// Creates a new instance of VM.
+    pub(super) fn new() -> Self {
+        Self {
+            inner: Mutex::new(VmProtected::new()),
+        }
+    }
+
+    pub fn mmap(
+        &self,
+        address: VirtAddr,
+        size: usize,
+        protection: MMapProt,
+        flags: MMapFlags,
+    ) -> Option<VirtAddr> {
+        self.inner
+            .lock()
+            .mmap(address, size, protection, flags, 0x00, None)
+    }
+
+    pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
+        self.inner.lock().munmap(address, size)
+    }
+
+    pub(super) fn fork_from(&self, parent: &Vm) {
+        self.inner.lock().fork_from(parent)
+    }
+
+    /// Mapping the provided `bin` file into the VM.
+    pub fn load_bin(&self, bin: DirCacheItem) -> LoadedBinary {
         let size_align = Size4KiB::SIZE as usize;
 
         let buffer = unsafe {
@@ -717,8 +713,9 @@ impl VmProtected {
                 let virtual_fend = VirtAddr::new(header.virtual_addr() + header.file_size())
                     + load_offset.as_u64();
 
-                let len = virtual_fend - virtual_start;
+                let data_size = virtual_fend - virtual_start;
                 let file_offset = align_down(header.offset(), Size4KiB::SIZE);
+                let size = (virtual_end - virtual_start) as usize;
 
                 let mut prot = MMapProt::empty();
 
@@ -726,9 +723,7 @@ impl VmProtected {
                     prot.insert(MMapProt::PROT_READ);
                 }
 
-                if header_flags.is_write() {
-                    prot.insert(MMapProt::PROT_WRITE);
-                }
+                prot.insert(MMapProt::PROT_WRITE);
 
                 if header_flags.is_execute() {
                     prot.insert(MMapProt::PROT_EXEC);
@@ -758,33 +753,30 @@ impl VmProtected {
                  *   see that the last frames of the `X` and `Y` regions in the file are followed
                  *   by the bytes of the next region. So we can't zero these parts of the frame
                  *   because they are needed by other memory regions.
-                 *
-                 * To solve this issue while still keeping the offset page aligned, we align down the
-                 * file offset and the virtual start offset aswell.
                  */
-                let virtual_fend = self
+                let address = self
+                    .inner
+                    .lock()
                     .mmap(
                         virtual_start,
-                        len as usize,
+                        size,
                         prot,
-                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED,
+                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED | MMapFlags::MAP_ANONYOMUS,
                         file_offset as usize,
                         Some(bin.clone()),
                     )
-                    .expect("load_bin: failed to memory map ELF header")
-                    + align_up(len, Size4KiB::SIZE);
+                    .expect("load_bin: failed to memory map ELF header");
 
-                if virtual_fend < virtual_end {
-                    let len = virtual_end - virtual_fend;
+                let buffer = unsafe {
+                    core::slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), data_size as usize)
+                };
 
-                    self.mmap(
-                        virtual_fend,
-                        len as usize,
-                        prot,
-                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_FIXED,
-                        0x00,
-                        None,
-                    );
+                bin.inode()
+                    .read_at(file_offset as usize, buffer)
+                    .expect("load_bin: failed to read at offset");
+
+                if !header.flags().is_write() {
+                    // TODO: Update the protection flags to remove the writable flag.
                 }
             } else if header_type == xmas_elf::program::Type::Tls {
             } else if header_type == xmas_elf::program::Type::Interp {
@@ -801,51 +793,6 @@ impl VmProtected {
 
             base_addr,
         }
-    }
-
-    fn fork_from(&mut self, parent: &Vm) {
-        let data = parent.inner.lock();
-
-        // Copy over all of the mappings from the parent into the child.
-        self.mappings = data.mappings.clone();
-    }
-}
-
-pub struct Vm {
-    inner: Mutex<VmProtected>,
-}
-
-impl Vm {
-    /// Creates a new instance of VM.
-    pub(super) fn new() -> Self {
-        Self {
-            inner: Mutex::new(VmProtected::new()),
-        }
-    }
-
-    pub fn mmap(
-        &self,
-        address: VirtAddr,
-        size: usize,
-        protection: MMapProt,
-        flags: MMapFlags,
-    ) -> Option<VirtAddr> {
-        self.inner
-            .lock()
-            .mmap(address, size, protection, flags, 0x00, None)
-    }
-
-    pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
-        self.inner.lock().munmap(address, size)
-    }
-
-    pub(super) fn fork_from(&self, parent: &Vm) {
-        self.inner.lock().fork_from(parent)
-    }
-
-    /// Mapping the provided `bin` file into the VM.
-    pub(super) fn load_bin(&self, bin: DirCacheItem) -> LoadedBinary {
-        self.inner.lock().load_bin(bin)
     }
 
     /// Clears and unmaps all of the mappings in the VM.

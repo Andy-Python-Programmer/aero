@@ -25,6 +25,7 @@ use alloc::vec::Vec;
 use core::alloc::Layout;
 use core::ptr::Unique;
 
+use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::syscall::{ExecArgs, RegistersFrame, SyscallFrame};
 use crate::userland::vm::{LoadedBinary, Vm};
@@ -284,7 +285,7 @@ impl ArchTask {
     pub fn exec(
         &mut self,
         vm: &Vm,
-        loaded_binary: LoadedBinary,
+        executable: DirCacheItem,
 
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
@@ -314,6 +315,8 @@ impl ArchTask {
         vm.log();
 
         address_space.switch(); // Perform the address space switch
+
+        let loaded_binary = vm.load_bin(executable);
 
         self.context = Unique::dangling();
         self.address_space = address_space; // Update the address space reference
