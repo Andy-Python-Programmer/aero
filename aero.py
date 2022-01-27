@@ -477,7 +477,7 @@ def get_sysctl(name: str) -> str:
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE)
     if status != 0:
-        print("`sysctl` failed:")
+        print("`sysctl` failed: ", end="")
         print(stderr.decode())
     
     return stdout.strip().decode()
