@@ -404,8 +404,18 @@ def prepare_iso(args, kernel_bin, user_bins):
 
     if platform.system() == 'Windows':
         limine_install = 'limine-install-win32.exe'
-    elif platform.system() == 'Linux' or platform.system() == 'Darwin':
+    elif platform.system() == 'Linux':
         limine_install = 'limine-install-linux-x86_64'
+    elif platform.system() == 'Darwin':
+        limine_install = 'limine-install'
+        # Limine doesn't provide pre-built binaries, so we have to build from source
+        code, _, limine_build_stderr = run_command(['make', '-C', limine_path],
+                                                   stdout=subprocess.PIPE,
+                                                   stderr=subprocess.PIPE)
+        if code != 0:
+            print('Failed to build `limine-install`')
+            print(limine_build_stderr.decode('utf8'))
+            exit(1)
 
     limine_install = os.path.join(limine_path, limine_install)
 
@@ -445,12 +455,32 @@ def run_in_emulator(args, iso_path):
     if is_kvm_available and not args.disable_kvm:
         print("Running with KVM acceleration enabled")
 
-        qemu_args += ['-enable-kvm', '-cpu',
-                      'host,+la57' if args.la57 else 'host']
+        if platform.system() == 'Darwin':
+            qemu_args += ['-accel', 'hvf']
+        else:
+            qemu_args += ['-enable-kvm']
+        qemu_args += ['-cpu', 'host,+la57' if args.la57 else 'host']
     else:
         qemu_args += ["-cpu", "qemu64,+la57" if args.la57 else "qemu64"]
 
     run_command(['qemu-system-x86_64', *qemu_args])
+
+
+def get_sysctl(name: str) -> str:
+    """
+    Shell out to sysctl(1)
+
+    Returns the value as a string.
+    Non-leaf nodes will return the value for each sub-node separated by newline characters.
+    """
+    status, stdout, stderr = run_command(["sysctl", "-n", name],
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE)
+    if status != 0:
+        print("`sysctl` failed:")
+        print(stderr.decode())
+    
+    return stdout.strip().decode()
 
 
 def is_kvm_supported() -> bool:
@@ -458,10 +488,21 @@ def is_kvm_supported() -> bool:
     Returns True if KVM is supported on this machine
     """
 
-    kvm_path = "/dev/kvm"
     platform = sys.platform
 
+    if platform == "darwin":
+        # Check for VMX support
+        cpu_features = get_sysctl("machdep.cpu.features")
+        vmx_support  = "VMX" in cpu_features.split(' ')
+
+        # Check for HVF support
+        hv_support = get_sysctl("kern.hv_support") == "1"
+        
+        return hv_support and vmx_support
+
     if platform == "linux":
+        kvm_path = "/dev/kvm"
+
         # Check if the `/dev/kvm` device exists.
         if not os.path.exists(kvm_path):
             return False
