@@ -501,7 +501,7 @@ def is_kvm_supported() -> bool:
         fd.close()
 
     # KVM is not avaliable on Windows
-    return True
+    return False
 
 
 def main():
