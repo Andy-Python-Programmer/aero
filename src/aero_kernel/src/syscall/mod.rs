@@ -195,14 +195,6 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_SIGACTION => process::sigaction(b, c, d, e),
         SYS_CLONE => process::clone(b, c),
 
-        0x13A => {
-            let syscall_name = unsafe {
-                core::str::from_utf8_unchecked(core::slice::from_raw_parts(b as *const u8, c))
-            };
-
-            panic!("Unimplemented syscall: {}", syscall_name);
-        }
-
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),
         SYS_CLOSE => fs::close(b),
