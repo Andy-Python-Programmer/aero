@@ -404,7 +404,7 @@ def prepare_iso(args, kernel_bin, user_bins):
 
     if platform.system() == 'Windows':
         limine_install = 'limine-install-win32.exe'
-    elif platform.system() == 'Linux':
+    elif platform.system() == 'Linux' or platform.system() == 'Darwin':
         limine_install = 'limine-install-linux-x86_64'
 
     limine_install = os.path.join(limine_path, limine_install)
