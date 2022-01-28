@@ -181,7 +181,7 @@ pub enum KeyCode {
     KEY_COMPOSE = 127,
 }
 
-pub fn handle(scancode: u8) {
+pub extern "C" fn handle(scancode: u8) {
     match scancode {
         0xE0 => PS2_KEYBOARD_STATE.lock().special = true,
         0xF0 => PS2_KEYBOARD_STATE.lock().released = true,
@@ -373,7 +373,7 @@ impl INodeInterface for KeyboardDevice {
 }
 
 /// This function is responsible for initializing PS2 keyboard driver.
-pub fn ps2_keyboard_init() {
+pub extern "C" fn ps2_keyboard_init() {
     let lock = PS2_KEYBOARD_STATE.lock_irq();
 
     unsafe {
@@ -413,7 +413,7 @@ pub fn ps2_keyboard_init() {
     devfs::install_device(KEYBOARD.clone()).expect("failed to install keyboard device");
 }
 
-pub fn register_keyboard_listener(listner: &'static dyn KeyboardListener) {
+pub extern "C" fn register_keyboard_listener(listner: &'static dyn KeyboardListener) {
     KEYBOARD_LISTNER.write().push(listner)
 }
 
