@@ -373,7 +373,7 @@ impl INodeInterface for KeyboardDevice {
 }
 
 /// This function is responsible for initializing PS2 keyboard driver.
-pub extern "C" fn ps2_keyboard_init() {
+pub fn ps2_keyboard_init() {
     let lock = PS2_KEYBOARD_STATE.lock_irq();
 
     unsafe {
