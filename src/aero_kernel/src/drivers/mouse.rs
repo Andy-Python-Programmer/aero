@@ -192,7 +192,7 @@ unsafe fn mouse_write(value: u8) {
 }
 
 /// Initialise the PS/2 Mouse.
-pub fn init() {
+pub extern "C" fn init() {
     unsafe {
         // Enable the auxiliary device - mouse.
         io::outb(0x64, 0xA8);
