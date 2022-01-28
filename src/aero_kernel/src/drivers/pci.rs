@@ -244,7 +244,7 @@ pub enum DeviceType {
 }
 
 impl DeviceType {
-    pub fn new(base_class: u32, sub_class: u32) -> Self {
+    pub extern "C" fn new(base_class: u32, sub_class: u32) -> Self {
         match (base_class, sub_class) {
             (0x00, 0x00) => DeviceType::LegacyNotVgaCompatible,
             (0x00, 0x01) => DeviceType::LegacyVgaCompatible,
@@ -380,7 +380,7 @@ pub enum Vendor {
 }
 
 impl Vendor {
-    pub fn new(id: u32) -> Self {
+    pub extern "C" fn new(id: u32) -> Self {
         match id {
             0x8086 => Self::Intel,
             0x1022 => Self::AMD,
@@ -390,7 +390,7 @@ impl Vendor {
         }
     }
 
-    pub fn is_valid(&self) -> bool {
+    pub extern "C" fn is_valid(&self) -> bool {
         match self {
             Self::Unknown(id) => *id != 0xFFFF,
             _ => true,
@@ -401,7 +401,7 @@ impl Vendor {
 pub struct PciHeader(u32);
 
 impl PciHeader {
-    pub fn new(bus: u8, device: u8, function: u8) -> Self {
+    pub extern "C" fn new(bus: u8, device: u8, function: u8) -> Self {
         let mut result: u32 = 0;
 
         result.set_bits(0..3, function as u32);
@@ -412,15 +412,15 @@ impl PciHeader {
         Self(result)
     }
 
-    pub fn bus(&self) -> u8 {
+    pub extern "C" fn bus(&self) -> u8 {
         self.0.get_bits(8..16) as u8
     }
 
-    pub fn device(&self) -> u8 {
+    pub extern "C" fn device(&self) -> u8 {
         self.0.get_bits(3..8) as u8
     }
 
-    pub fn function(&self) -> u8 {
+    pub extern "C" fn function(&self) -> u8 {
         self.0.get_bits(0..3) as u8
     }
 
@@ -459,7 +459,7 @@ impl PciHeader {
     /// Enables response to memory accesses on the primary interface that address a device
     /// that resides behind the bridge in both the memory mapped I/O and prefetchable memory
     /// ranges or targets a location within the bridge itself.
-    pub fn enable_mmio(&self) {
+    pub extern "C" fn enable_mmio(&self) {
         // Read the Command Register from the device's PCI Configuration Space, set bit 1
         // (MMIO bit) and write the modified Command Register.
         let command = unsafe { self.read::<u16>(0x04) };
@@ -470,7 +470,7 @@ impl PciHeader {
     /// Enable the bridge to operate as a master on the primary interface for memory and I/O
     /// transactions forwarded from the secondary interface. This allows the PCI device to perform
     /// DMA.
-    pub fn enable_bus_mastering(&self) {
+    pub extern "C" fn enable_bus_mastering(&self) {
         // Read the Command Register from the device's PCI Configuration Space, set bit 2
         // (bus mastering bit) and write the modified Command Register. Note that some BISOs do
         // enable bus mastering by default.
@@ -481,7 +481,7 @@ impl PciHeader {
 
     /// Returns the value stored in the PCI vendor ID register which is used to identify
     /// the manufacturer of the PCI device.
-    pub fn get_vendor(&self) -> Vendor {
+    pub extern "C" fn get_vendor(&self) -> Vendor {
         unsafe { Vendor::new(self.read::<u16>(0x00)) }
     }
 
@@ -491,16 +491,16 @@ impl PciHeader {
         DeviceType::new(id.get_bits(24..32), id.get_bits(16..24))
     }
 
-    pub fn has_multiple_functions(&self) -> bool {
+    pub extern "C" fn has_multiple_functions(&self) -> bool {
         unsafe { self.read::<u32>(0x0c) }.get_bit(23)
     }
 
-    pub fn pin(&self) -> u8 {
+    pub extern "C" fn pin(&self) -> u8 {
         unsafe { (self.read::<u32>(0x3D) >> (0x3D & 0b11) * 8) as u8 }
     }
 
     #[allow(unused)]
-    pub fn resolve_irq_mapping(&self) -> Option<u32> {
+    pub extern "C" fn resolve_irq_mapping(&self) -> Option<u32> {
         PCI_ROUTER
             .get()
             .map(|r| {
@@ -522,13 +522,13 @@ impl PciHeader {
 
     /// Returnes the value stored in the PCI header type register which is used to
     /// indicate layout for bytes,of the device’s configuration space.
-    pub fn get_header_type(&self) -> u8 {
+    pub extern "C" fn get_header_type(&self) -> u8 {
         unsafe { self.read::<u8>(0x0E) as u8 & 0b01111111 }
     }
 
     /// Returns the value stored in the bar of the provided slot. Returns [`None`] if the
     /// bar is empty.
-    pub fn get_bar(&self, bar: u8) -> Option<Bar> {
+    pub extern "C" fn get_bar(&self, bar: u8) -> Option<Bar> {
         debug_assert!(self.get_header_type() == 0); // Ensure header type == 0
         debug_assert!(bar <= 5); // Make sure the bar is valid.
 
@@ -594,27 +594,27 @@ impl PciHeader {
     // (device-specific) registers into Memory or I/O Spaces. Refer to the PCI Local Bus
     // Specification for a detailed discussion of base address registers.
 
-    pub fn base_address0(&self) -> u32 {
+    pub extern "C" fn base_address0(&self) -> u32 {
         unsafe { self.read::<u32>(0x10) }
     }
 
-    pub fn base_address1(&self) -> u32 {
+    pub extern "C" fn base_address1(&self) -> u32 {
         unsafe { self.read::<u32>(0x14) }
     }
 
-    pub fn base_address2(&self) -> u32 {
+    pub extern "C" fn base_address2(&self) -> u32 {
         unsafe { self.read::<u32>(0x18) }
     }
 
-    pub fn base_address3(&self) -> u32 {
+    pub extern "C" fn base_address3(&self) -> u32 {
         unsafe { self.read::<u32>(0x1C) }
     }
 
-    pub fn base_address4(&self) -> u32 {
+    pub extern "C" fn base_address4(&self) -> u32 {
         unsafe { self.read::<u32>(0x20) }
     }
 
-    pub fn program_interface(&self) -> ProgramInterface {
+    pub extern "C" fn program_interface(&self) -> ProgramInterface {
         let bits = unsafe { self.read::<u8>(0x09) };
         ProgramInterface::from_bits_truncate(bits as u8)
     }
@@ -644,16 +644,16 @@ impl PciTable {
     }
 }
 
-pub fn register_device_driver(handle: Arc<dyn PciDeviceHandle>) {
+pub extern "C" fn register_device_driver(handle: Arc<dyn PciDeviceHandle>) {
     PCI_TABLE.lock().inner.push(PciDevice { handle })
 }
 
-pub fn init_pci_router(pci_router: PciRoutingTable) {
+pub extern "C" fn init_pci_router(pci_router: PciRoutingTable) {
     PCI_ROUTER.call_once(move || pci_router);
 }
 
 /// Lookup and initialize all PCI devices.
-pub fn init(offset_table: &mut OffsetPageTable) {
+pub extern "C" fn init(offset_table: &mut OffsetPageTable) {
     // Check if the MCFG table is avaliable.
     if mcfg::is_avaliable() {
         let mcfg_table = mcfg::get_mcfg_table();
