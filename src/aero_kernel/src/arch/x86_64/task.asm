@@ -80,8 +80,9 @@ sysret_fork_init:
 
     o64 sysret
 
-; This function is responsible for switching from the current context to the new one and 
-; also save the current state in the previous context so there is a restore point.
+; extern "C" fn task_spinup(prev: &mut Context, next: &mut Context)
+;
+; Saves the current context into `prev` and restore the context from `next`.
 task_spinup:
     pushfq
 
@@ -112,4 +113,5 @@ task_spinup:
 
     popfq
 
+    ; Resume the next thread.
     ret

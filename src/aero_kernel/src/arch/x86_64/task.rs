@@ -28,8 +28,8 @@ use core::ptr::Unique;
 use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::syscall::{ExecArgs, RegistersFrame, SyscallFrame};
-use crate::userland::vm::{LoadedBinary, Vm};
-use crate::utils::StackHelper;
+use crate::userland::vm::Vm;
+use crate::utils::{io, StackHelper};
 
 use super::controlregs;
 use super::gdt::Ring;
@@ -278,7 +278,9 @@ impl ArchTask {
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
             address_space: new_address_space,
             rpl: Ring::Ring3,
-            fs_base: VirtAddr::zero(),
+
+            // The FS base is inherited from the parent process.
+            fs_base: self.fs_base.clone(),
         })
     }
 
