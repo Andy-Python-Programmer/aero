@@ -231,7 +231,6 @@ fn list_directory(path: &str) -> Result<(), AeroSyscallError> {
     let dir_fd = sys_open(path, OpenFlags::O_DIRECTORY)?;
 
     loop {
-        let mut offset = 0;
         let mut dir_ents_buffer = [0; 1024];
 
         let size = sys_getdents(dir_fd, &mut dir_ents_buffer)?;
@@ -240,20 +239,15 @@ fn list_directory(path: &str) -> Result<(), AeroSyscallError> {
             break;
         }
 
-        while offset < size {
-            let dir_entry =
-                unsafe { &*(dir_ents_buffer.as_ptr().add(offset) as *const SysDirEntry) };
+        let dir_entry = unsafe { &*(dir_ents_buffer.as_ptr() as *const SysDirEntry) };
 
-            let name_start = offset + core::mem::size_of::<SysDirEntry>();
-            let name_end = offset + dir_entry.reclen;
+        let name_start = core::mem::size_of::<SysDirEntry>();
+        let name_end = dir_entry.reclen;
 
-            let name =
-                unsafe { core::str::from_utf8_unchecked(&dir_ents_buffer[name_start..name_end]) };
+        let name =
+            unsafe { core::str::from_utf8_unchecked(&dir_ents_buffer[name_start..name_end]) };
 
-            offset += dir_entry.reclen;
-
-            print!("{} ", name);
-        }
+        print!("{} ", name);
     }
 
     println!();

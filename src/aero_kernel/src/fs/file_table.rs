@@ -125,57 +125,49 @@ impl FileHandle {
         Ok(new)
     }
 
-    pub fn get_dents(&self, mut buffer: &mut [u8]) -> super::Result<usize> {
-        let mut offset = 0x00usize;
+    pub fn get_dents(&self, buffer: &mut [u8]) -> super::Result<usize> {
+        let inode = self
+            .inode
+            .inode()
+            .dirent(self.inode.clone(), self.offset.load(Ordering::SeqCst))?;
 
-        loop {
-            let inode = self
-                .inode
-                .inode()
-                .dirent(self.inode.clone(), self.offset.load(Ordering::SeqCst))?;
+        // We are allowed to chop off the name of the entry though not the header
+        // itself.
+        if buffer.len() < core::mem::size_of::<SysDirEntry>() {
+            return Err(FileSystemError::TooSmall);
+        }
 
-            if let Some(entry) = inode {
-                let reclen = core::mem::size_of::<SysDirEntry>() + entry.name().len();
-                let dir_offset = offset + reclen;
+        if let Some(entry) = inode {
+            let mut reclen = core::mem::size_of::<SysDirEntry>() + entry.name().len();
 
-                let file_type = entry.inode().metadata()?.file_type();
-                let file_type: aero_syscall::SysFileType = file_type.into();
-
-                let sysd = SysDirEntry {
-                    inode: entry.inode().metadata()?.id(),
-                    offset: dir_offset,
-                    reclen,
-                    file_type: file_type as usize,
-                    name: [], // will be filled in later
-                };
-
-                if buffer.len() < sysd.reclen {
-                    break Ok(offset);
-                }
-
-                self.offset.fetch_add(1, Ordering::SeqCst);
-
-                unsafe {
-                    let sysd_ref = &mut *(buffer.as_mut_ptr() as *mut SysDirEntry);
-
-                    // Copy the directory entry info into the provided buffer.
-                    buffer.as_mut_ptr().copy_from(
-                        &sysd as *const _ as *const u8,
-                        core::mem::size_of::<SysDirEntry>(),
-                    );
-
-                    // Copy over the name of the inode.
-                    sysd_ref
-                        .name
-                        .as_mut_ptr()
-                        .copy_from(entry.name().as_ptr(), entry.name().len());
-                }
-
-                offset += sysd.reclen;
-                buffer = &mut buffer[sysd.reclen..];
-            } else {
-                break Ok(offset);
+            if reclen > buffer.len() {
+                reclen = buffer.len();
             }
+
+            let name_size = reclen - core::mem::size_of::<SysDirEntry>();
+
+            let file_type = entry.inode().metadata()?.file_type();
+            let file_type: aero_syscall::SysFileType = file_type.into();
+
+            let sysd = unsafe { &mut *(buffer.as_mut_ptr() as *mut SysDirEntry) };
+
+            sysd.inode = entry.inode().metadata()?.id();
+            sysd.offset = reclen;
+            sysd.reclen = reclen;
+            sysd.file_type = file_type as usize;
+
+            unsafe {
+                // Copy over the name of the inode.
+                sysd.name
+                    .as_mut_ptr()
+                    .copy_from(entry.name().as_ptr(), name_size);
+            }
+
+            self.offset.fetch_add(1, Ordering::SeqCst);
+            Ok(reclen)
+        } else {
+            // nothin to read
+            Ok(0)
         }
     }
 }
