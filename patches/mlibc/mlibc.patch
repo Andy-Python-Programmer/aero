@@ -1,4 +1,4 @@
-From c89c130a211f4eb58b4a73d9849d183aa0777ebf Mon Sep 17 00:00:00 2001
+From 791ffe535a74e6df0809459c5283ac80c46d0d6c Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -9,6 +9,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  abis/aero/auxv.h                            |  13 +
  meson.build                                 |   4 +
  options/ansi/generic/stdlib-stubs.cpp       |   3 +
+ options/posix/generic/resolv_conf.cpp       |   2 +-
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
@@ -50,7 +51,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 45 files changed, 1021 insertions(+), 10 deletions(-)
+ 46 files changed, 1022 insertions(+), 11 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -154,6 +155,19 @@ index 347c659..8e97b26 100644
  	sigset_t set;
  	sigemptyset(&set);
  	sigaddset(&set, SIGABRT);
+diff --git a/options/posix/generic/resolv_conf.cpp b/options/posix/generic/resolv_conf.cpp
+index bd3fe73..9ffefb5 100644
+--- a/options/posix/generic/resolv_conf.cpp
++++ b/options/posix/generic/resolv_conf.cpp
+@@ -34,7 +34,7 @@ frg::optional<struct nameserver_data> get_nameserver() {
+ 	}
+ 
+ 	fclose(file);
+-	if(ret.name == "")
++	if(ret.name.size() == 0)
+ 		return frg::null_opt;
+ 	return ret;
+ }
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
 index 1720d4f..81e4d7e 100644
 --- a/options/rtdl/generic/linker.cpp
@@ -553,7 +567,7 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..e3551a0
+index 0000000..a944402
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
 @@ -0,0 +1,266 @@
@@ -667,10 +681,10 @@ index 0000000..e3551a0
 +
 +int sys_tcgetattr(int fd, struct termios *attr) {
 +	int result;
-+	
++
 +	if (int e = sys_ioctl(fd, TCGETS, (void*)attr, &result); e)
 +		return e;
-+	
++
 +	return 0;
 +}
 +
@@ -1216,8 +1230,8 @@ index 0000000..d3fe862
 +// so, that we can implement the syscall in the kernel.
 +#define UNIMPLEMENTED(FUNCTION_NAME)                                           \
 +  {                                                                            \
-+    sys_libc_log("Unimplemented syscall: " FUNCTION_NAME);                     \
-+    sys_exit(1);                                                               \
++    syscall(314, FUNCTION_NAME, strlen(FUNCTION_NAME));                        \
++    __ensure(!"UNIMPLEMENTED function was called");                            \
 +    __builtin_unreachable();                                                   \
 +  }
 +
