@@ -3,6 +3,7 @@
 import sys
 import os
 import subprocess
+import signal
 
 
 def gdb_main(program: str, is_lib: bool):
@@ -28,6 +29,14 @@ def gdb_main(program: str, is_lib: bool):
         gdb.execute("b main")
 
 
+def wait_for_process(process):
+    try:
+        process.wait()
+    except KeyboardInterrupt:
+        process.send_signal(signal.SIGINT)
+        wait_for_process(process)
+
+
 if __name__ == "__main__":
     if os.getenv("IN_GDB") == "yes":
         import gdb
@@ -47,5 +56,5 @@ if __name__ == "__main__":
         process = subprocess.Popen(
             "gdb -tui -q -x tools/gdb-debug-userland.py", shell=True)
 
-        process.wait()
+        wait_for_process(process)
         os.environ["IN_GDB"] = "no"
