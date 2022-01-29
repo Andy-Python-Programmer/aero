@@ -55,6 +55,8 @@ const DEFAULT_FONT_HEIGHT: usize = 16;
 
 const DEFAULT_MARGIN: usize = 64 / 2;
 
+const TAB_SIZE: usize = 4;
+
 /// The amount of VGA font glyphs.
 const VGA_FONT_GLYPHS: usize = 256;
 
@@ -723,6 +725,16 @@ impl<'this> DebugRendy<'this> {
     fn write_character(&mut self, char: char) {
         match char {
             '\n' => self.newline(),
+
+            '\t' => {
+                if (self.x_pos / TAB_SIZE + 1) >= self.cols {
+                    self.set_cursor_position(self.cols - 1, self.y_pos);
+                    return;
+                }
+
+                self.set_cursor_position((self.x_pos / TAB_SIZE + 1) * TAB_SIZE, self.y_pos);
+            }
+
             '\r' => {}
 
             _ => {
