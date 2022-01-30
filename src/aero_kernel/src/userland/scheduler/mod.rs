@@ -126,6 +126,11 @@ impl Scheduler {
     pub fn find_task(&self, task_id: TaskId) -> Option<Arc<Task>> {
         self.tasks.find_task(task_id)
     }
+
+    #[inline]
+    pub fn wake_up(&self, task: Arc<Task>) {
+        self.inner.wake_up(task);
+    }
 }
 
 /// Get a reference to the active scheduler.
