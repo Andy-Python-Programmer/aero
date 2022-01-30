@@ -326,6 +326,8 @@ pub fn ipc_send(
     let msg_id = queue.make_id();
 
     queue.push_back(Message::new(msg_id, current_task.pid(), buf));
+    scheduler.wake_up(target_task);
+
     Ok(msg_id)
 }
 
