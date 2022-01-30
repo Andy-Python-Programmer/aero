@@ -214,6 +214,8 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_DUP => "dup",
         prelude::SYS_FCNTL => "fcntl",
         prelude::SYS_DUP2 => "dup2",
+        prelude::SYS_IPC_SEND => "ipc_send",
+        prelude::SYS_IPC_RECV => "ipc_recv",
 
         _ => unreachable!("unknown syscall"),
     }
@@ -833,5 +835,59 @@ pub fn sys_fcntl(fd: usize, command: usize, argument: usize) -> Result<usize, Ae
 
 pub fn sys_dup2(fd: usize, new_fd: usize, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
     let value = syscall3(prelude::SYS_DUP2, fd, new_fd, flags.bits());
+    isize_as_syscall_result(value as _)
+}
+
+bitflags::bitflags! {
+    #[derive(Default)]
+    pub struct IpcSendFlags : u32 {
+        const NONE = 0;
+    }
+}
+
+bitflags::bitflags! {
+    #[derive(Default)]
+    pub struct IpcRecvFlags : u32 {
+        const NONE = 0;
+        /// If there is no message in the queue to be read the syscall returns
+        /// ENOMSG. If this isn't specified the call will block until there is
+        /// a message available.
+        const NO_WAIT = 1 << 0;
+        /// If the message is too long to fit in the provided buffer the message will
+        /// be truncated, effectively losing the part that didn't fit. If this isnt
+        /// specified and the message is too big the syscall will return E2BIG
+        const TRUNCATE = 1 << 1;
+    }
+}
+
+pub fn sys_ipc_send(
+    pid: usize,
+    buf: &[u8],
+    flags: IpcSendFlags,
+) -> Result<usize, AeroSyscallError> {
+    let value = syscall4(
+        prelude::SYS_IPC_SEND,
+        pid,
+        buf.as_ptr() as _,
+        buf.len(),
+        flags.bits() as _,
+    );
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_ipc_recv(
+    buf: &mut [u8],
+    pid: &mut usize,
+    length: &mut usize,
+    flags: IpcRecvFlags,
+) -> Result<usize, AeroSyscallError> {
+    let value = syscall5(
+        prelude::SYS_IPC_RECV,
+        buf.as_mut_ptr() as _,
+        buf.len(),
+        pid as *mut usize as _,
+        length as *mut usize as _,
+        flags.bits() as _,
+    );
     isize_as_syscall_result(value as _)
 }

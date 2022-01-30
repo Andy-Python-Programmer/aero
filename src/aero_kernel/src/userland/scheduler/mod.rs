@@ -76,6 +76,11 @@ impl TaskContainer {
     fn register_task(&self, task_id: TaskId, task: Arc<Task>) {
         self.0.lock().insert(task_id, task);
     }
+
+    #[inline]
+    fn find_task(&self, task_id: TaskId) -> Option<Arc<Task>> {
+        self.0.lock().get(&task_id).map(|task| task.clone())
+    }
 }
 
 unsafe impl Send for TaskContainer {}
@@ -115,6 +120,11 @@ impl Scheduler {
     #[inline]
     pub fn current_task(&self) -> Arc<Task> {
         self.inner.current_task()
+    }
+
+    #[inline]
+    pub fn find_task(&self, task_id: TaskId) -> Option<Arc<Task>> {
+        self.tasks.find_task(task_id)
     }
 }
 

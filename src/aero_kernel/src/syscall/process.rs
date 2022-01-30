@@ -18,7 +18,7 @@
  */
 
 use aero_syscall::signal::SigAction;
-use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
+use aero_syscall::{AeroSyscallError, IpcRecvFlags, IpcSendFlags, MMapFlags, MMapProt};
 use alloc::string::String;
 use spin::{Mutex, Once};
 
@@ -28,6 +28,7 @@ use crate::fs::Path;
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::signals::SignalEntry;
+use crate::userland::task::{Message, TaskId};
 use crate::utils::validate_str;
 
 static HOSTNAME: Once<Mutex<String>> = Once::new();
@@ -304,6 +305,65 @@ pub fn sigaction(
     signals.set_signal(sig, entry, old);
 
     Ok(0)
+}
+
+pub fn ipc_send(
+    pid: usize,
+    buf_ptr: usize,
+    buf_len: usize,
+    flags: usize,
+) -> Result<usize, AeroSyscallError> {
+    let scheduler = scheduler::get_scheduler();
+    let current_task = scheduler.current_task();
+    let target_task = scheduler
+        .find_task(TaskId::new(pid))
+        .ok_or(AeroSyscallError::EINVAL)?;
+
+    let _flags = IpcSendFlags::from_bits_truncate(flags as u32);
+    let buf = unsafe { core::slice::from_raw_parts(buf_ptr as *const u8, buf_len) };
+
+    let queue = target_task.message_queue();
+    let msg_id = queue.make_id();
+
+    queue.push_back(Message::new(msg_id, current_task.pid(), buf));
+    Ok(msg_id)
+}
+
+pub fn ipc_recv(
+    buf_ptr: usize,
+    buf_len: usize,
+    pid_ptr: usize,
+    length_ptr: usize,
+    flags: usize,
+) -> Result<usize, AeroSyscallError> {
+    let scheduler = scheduler::get_scheduler();
+    let current_task = scheduler.current_task();
+
+    let queue = current_task.message_queue();
+    let flags = IpcRecvFlags::from_bits_truncate(flags as u32);
+    let buffer = unsafe { core::slice::from_raw_parts_mut(buf_ptr as *mut u8, buf_len) };
+    let message = if !queue.is_empty() {
+        queue.pop_front().unwrap()
+    } else if !flags.contains(IpcRecvFlags::NO_WAIT) {
+        queue.wait_for_message()?
+    } else {
+        return Err(AeroSyscallError::ENOMSG);
+    };
+
+    let pid_ptr = unsafe { &mut *(pid_ptr as *mut usize) };
+    let length_ptr = unsafe { &mut *(length_ptr as *mut usize) };
+    let data = message.data();
+
+    if data.len() <= buffer.len() || flags.contains(IpcRecvFlags::TRUNCATE) {
+        let bytes_to_copy = buffer.len().min(data.len());
+        buffer[0..bytes_to_copy].copy_from_slice(&data[0..bytes_to_copy]);
+        *pid_ptr = message.from().as_usize();
+        *length_ptr = bytes_to_copy;
+        Ok(message.id())
+    } else {
+        queue.push_front(message);
+        Err(AeroSyscallError::E2BIG)
+    }
 }
 
 pub fn shutdown() -> ! {

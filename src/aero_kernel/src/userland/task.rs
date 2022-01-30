@@ -17,8 +17,10 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use alloc::collections::VecDeque;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
+use alloc::vec::Vec;
 
 use spin::RwLock;
 
@@ -47,7 +49,7 @@ use super::vm::Vm;
 pub struct TaskId(usize);
 
 impl TaskId {
-    pub(super) const fn new(pid: usize) -> Self {
+    pub const fn new(pid: usize) -> Self {
         Self(pid)
     }
 
@@ -162,6 +164,78 @@ impl Zombies {
     }
 }
 
+pub struct Message {
+    id: usize,
+    from: TaskId,
+    data: Vec<u8>,
+}
+
+pub struct MessageQueue {
+    queue: Mutex<VecDeque<Message>>,
+    block: BlockQueue,
+    counter: AtomicUsize,
+}
+
+impl Message {
+    pub fn new(id: usize, from: TaskId, data: &[u8]) -> Self {
+        Self {
+            id,
+            from,
+            data: Vec::from(data),
+        }
+    }
+
+    pub fn id(&self) -> usize {
+        self.id
+    }
+
+    pub fn from(&self) -> TaskId {
+        self.from
+    }
+
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
+}
+
+impl MessageQueue {
+    pub fn new() -> Self {
+        Self {
+            queue: Mutex::new(VecDeque::new()),
+            block: BlockQueue::new(),
+            counter: AtomicUsize::new(0),
+        }
+    }
+
+    pub fn make_id(&self) -> usize {
+        self.counter.fetch_add(1, Ordering::Relaxed)
+    }
+
+    pub fn push_front(&self, msg: Message) {
+        self.queue.lock().push_front(msg);
+    }
+
+    pub fn push_back(&self, msg: Message) {
+        self.queue.lock().push_back(msg);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.queue.lock().is_empty()
+    }
+
+    pub fn pop_front(&self) -> Option<Message> {
+        self.queue.lock().pop_front()
+    }
+
+    pub fn wait_for_message(&self) -> SignalResult<Message> {
+        let mut queue = self
+            .block
+            .block_on(&self.queue, |queue| !queue.is_empty())?;
+
+        Ok(queue.pop_front().unwrap())
+    }
+}
+
 pub struct Task {
     sref: Weak<Task>,
 
@@ -177,6 +251,7 @@ pub struct Task {
 
     parent: Mutex<Option<Arc<Task>>>,
     children: Mutex<intrusive_collections::LinkedList<TaskAdapter>>,
+    message_queue: MessageQueue,
 
     zombies: Zombies,
 
@@ -220,6 +295,7 @@ impl Task {
             sleep_duration: AtomicUsize::new(0),
             exit_status: AtomicIsize::new(0),
 
+            message_queue: MessageQueue::new(),
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
 
@@ -253,6 +329,7 @@ impl Task {
             sleep_duration: AtomicUsize::new(0),
             exit_status: AtomicIsize::new(0),
 
+            message_queue: MessageQueue::new(),
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
 
@@ -282,6 +359,7 @@ impl Task {
             tid: pid.clone(),
             pid,
 
+            message_queue: MessageQueue::new(),
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
 
@@ -484,6 +562,10 @@ impl Task {
                 false
             }
         }
+    }
+
+    pub fn message_queue(&self) -> &MessageQueue {
+        &self.message_queue
     }
 
     pub(super) fn into_zombie(&self) {
