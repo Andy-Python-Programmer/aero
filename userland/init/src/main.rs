@@ -34,14 +34,10 @@ fn init_main() -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
-fn main() {
-    sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
-    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stdout");
-    sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stderr");
+fn main() -> Result<(), AeroSyscallError> {
+    sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
+    sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
+    sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
 
-    loop {
-        if let Err(error) = init_main() {
-            println!("error: {:?}", error);
-        }
-    }
+    init_main()
 }
