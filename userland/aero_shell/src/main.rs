@@ -329,10 +329,10 @@ fn ipc_test() -> Result<(), AeroSyscallError> {
     let child_pid = sys_fork()?;
 
     if child_pid == 0 {
-        // sys_sleep(&TimeSpec {
-        //     tv_sec: 2,
-        //     tv_nsec: 0,
-        // })?;
+        sys_sleep(&TimeSpec {
+            tv_sec: 1,
+            tv_nsec: 0,
+        })?;
 
         println!("[child] Sending a message...");
 
@@ -342,11 +342,6 @@ fn ipc_test() -> Result<(), AeroSyscallError> {
 
         sys_exit(0);
     } else {
-        sys_sleep(&TimeSpec {
-            tv_sec: 1,
-            tv_nsec: 0,
-        })?;
-
         println!("[parent] Waiting for a message...");
 
         let mut buffer = [0; 64];
