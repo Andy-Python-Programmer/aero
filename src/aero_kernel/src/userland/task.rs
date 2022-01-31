@@ -233,12 +233,15 @@ impl MessageQueue {
         self.queue.lock().pop_front()
     }
 
-    pub fn wait_for_message(&self) -> SignalResult<Message> {
-        let mut queue = self
-            .block
+    pub fn peek_length(&self) -> Option<usize> {
+        self.queue.lock().front().map(|msg| msg.data().len())
+    }
+
+    pub fn wait_for_message(&self) -> SignalResult<()> {
+        self.block
             .block_on(&self.queue, |queue| !queue.is_empty())?;
 
-        Ok(queue.pop_front().unwrap())
+        Ok(())
     }
 }
 

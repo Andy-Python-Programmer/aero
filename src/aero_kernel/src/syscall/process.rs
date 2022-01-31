@@ -350,19 +350,21 @@ pub fn ipc_recv(
     let tag = unsafe { &mut *(tag_ptr as *mut usize) };
     let flags = IpcRecvFlags::from_bits_truncate(flags as u32);
 
-    if queue.is_empty() && flags.contains(IpcRecvFlags::NO_WAIT) {
-        return Err(AeroSyscallError::ENOMSG);
+    if queue.is_empty() {
+        if flags.contains(IpcRecvFlags::NO_WAIT) {
+            return Err(AeroSyscallError::ENOMSG);
+        } else {
+            queue.wait_for_message()?;
+        }
     }
 
-    let message = if queue.is_empty() {
-        queue.wait_for_message()?
-    } else {
-        queue.pop_front().unwrap()
-    };
+    // It's safe to unwrap here since we're guaranteed to have
+    // a message in the queue.
+    let message_length = queue.peek_length().unwrap();
 
-    let data = message.data();
-
-    if data.len() <= buffer.len() || flags.contains(IpcRecvFlags::TRUNCATE) {
+    if message_length <= buffer.len() || flags.contains(IpcRecvFlags::TRUNCATE) {
+        let message = queue.pop_front().unwrap();
+        let data = message.data();
         let bytes_to_copy = buffer.len().min(data.len());
 
         buffer[0..bytes_to_copy].copy_from_slice(&data[0..bytes_to_copy]);
@@ -373,9 +375,7 @@ pub fn ipc_recv(
 
         Ok(message.id())
     } else {
-        *length = data.len();
-
-        queue.push_front(message);
+        *length = message_length;
 
         Err(AeroSyscallError::E2BIG)
     }
