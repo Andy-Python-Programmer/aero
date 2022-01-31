@@ -1,4 +1,4 @@
-From bf83f6680b24350322a80e8dd6c043cf9293c814 Mon Sep 17 00:00:00 2001
+From cf2c1a37c21f6125d37ba426bb0470e994e33677 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -9,7 +9,6 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  abis/aero/auxv.h                            |  13 +
  meson.build                                 |   4 +
  options/ansi/generic/stdlib-stubs.cpp       |   3 +
- options/posix/generic/resolv_conf.cpp       |   2 +-
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
@@ -51,7 +50,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 46 files changed, 1019 insertions(+), 11 deletions(-)
+ 45 files changed, 1018 insertions(+), 10 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -155,21 +154,8 @@ index 347c659..8e97b26 100644
  	sigset_t set;
  	sigemptyset(&set);
  	sigaddset(&set, SIGABRT);
-diff --git a/options/posix/generic/resolv_conf.cpp b/options/posix/generic/resolv_conf.cpp
-index bd3fe73..9ffefb5 100644
---- a/options/posix/generic/resolv_conf.cpp
-+++ b/options/posix/generic/resolv_conf.cpp
-@@ -34,7 +34,7 @@ frg::optional<struct nameserver_data> get_nameserver() {
- 	}
- 
- 	fclose(file);
--	if(ret.name == "")
-+	if(ret.name.size() == 0)
- 		return frg::null_opt;
- 	return ret;
- }
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 1720d4f..81e4d7e 100644
+index 9620645..ffa60a7 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
 @@ -367,9 +367,8 @@ void ObjectRepository::_fetchFromFile(SharedObject *object, int fd) {
@@ -565,7 +551,7 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..6518ec2
+index 0000000..a294337
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
 @@ -0,0 +1,262 @@
@@ -812,9 +798,9 @@ index 0000000..6518ec2
 +	int nfds,
 +	fd_set* readfds,
 +	fd_set* writefds,
-+	fd_set *exceptfds, 
-+	const struct timespec* timeout, 
-+	const sigset_t* sigmask, 
++	fd_set *exceptfds,
++	const struct timespec* timeout,
++	const sigset_t* sigmask,
 +	int *num_events) {
 +	*num_events = 10;
 +	return 0;
