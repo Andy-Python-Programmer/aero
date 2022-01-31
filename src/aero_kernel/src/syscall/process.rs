@@ -197,10 +197,6 @@ pub fn mmap(
         unimplemented!()
     }
 
-    // HACK: This is currently a hack since mlibc tries to do somethin
-    // fancy. Oh well andy plz fix this in the future.
-    let size = size + 4096;
-
     if let Some(alloc) = scheduler::get_scheduler()
         .current_task()
         .vm()
