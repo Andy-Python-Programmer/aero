@@ -1,4 +1,4 @@
-From d92b4e7afe56d401b465f3dcdf12c60d9b414b6b Mon Sep 17 00:00:00 2001
+From bf83f6680b24350322a80e8dd6c043cf9293c814 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -13,7 +13,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/rtdl/generic/linker.cpp             |   5 +-
  options/rtdl/generic/main.cpp               |  11 +-
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 276 ++++++++++++++++++++
+ sysdeps/aero/generic/aero.cc                | 274 ++++++++++++++++++++
  sysdeps/aero/generic/entry.cc               |  32 +++
  sysdeps/aero/generic/filesystem.cc          | 262 +++++++++++++++++++
  sysdeps/aero/generic/signals.S              |   7 +
@@ -51,7 +51,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/meson.build                    |  67 +++++
  sysdeps/dripos/generic/generic.cpp          |   3 +
  sysdeps/lemon/generic/signals.S             |   7 +
- 46 files changed, 1021 insertions(+), 11 deletions(-)
+ 46 files changed, 1019 insertions(+), 11 deletions(-)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
  create mode 100644 sysdeps/aero/generic/aero.cc
@@ -247,10 +247,10 @@ index 0000000..190b5a0
 +.size _start, . - _start
 diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
 new file mode 100644
-index 0000000..841e48c
+index 0000000..182056e
 --- /dev/null
 +++ b/sysdeps/aero/generic/aero.cc
-@@ -0,0 +1,276 @@
+@@ -0,0 +1,274 @@
 +#include <aero/syscall.h>
 +#include <stddef.h>
 +#include <bits/ensure.h>
@@ -473,9 +473,7 @@ index 0000000..841e48c
 +    return 0;
 +}
 +
-+void sys_thread_exit() {    
-+	__builtin_unreachable();
-+}
++void sys_thread_exit() UNIMPLEMENTED("sys_thread_exit")
 +
 +int sys_waitpid(pid_t pid, int *status, int flags, pid_t *ret_pid) {
 +    auto result = syscall(SYS_WAITPID, pid, status, flags);
@@ -567,7 +565,7 @@ index 0000000..265ab56
 +}
 diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
 new file mode 100644
-index 0000000..421e2d6
+index 0000000..6518ec2
 --- /dev/null
 +++ b/sysdeps/aero/generic/filesystem.cc
 @@ -0,0 +1,262 @@
@@ -811,8 +809,8 @@ index 0000000..421e2d6
 +}
 +
 +int sys_pselect(
-+	int nfds, 
-+	fd_set* readfds, 
++	int nfds,
++	fd_set* readfds,
 +	fd_set* writefds,
 +	fd_set *exceptfds, 
 +	const struct timespec* timeout, 
