@@ -862,12 +862,14 @@ bitflags::bitflags! {
 
 pub fn sys_ipc_send(
     pid: usize,
+    tag: usize,
     buf: &[u8],
     flags: IpcSendFlags,
 ) -> Result<usize, AeroSyscallError> {
-    let value = syscall4(
+    let value = syscall5(
         prelude::SYS_IPC_SEND,
         pid,
+        tag,
         buf.as_ptr() as _,
         buf.len(),
         flags.bits() as _,
@@ -879,14 +881,16 @@ pub fn sys_ipc_recv(
     buf: &mut [u8],
     pid: &mut usize,
     length: &mut usize,
+    tag: &mut usize,
     flags: IpcRecvFlags,
 ) -> Result<usize, AeroSyscallError> {
-    let value = syscall5(
+    let value = syscall6(
         prelude::SYS_IPC_RECV,
         buf.as_mut_ptr() as _,
         buf.len(),
         pid as *mut usize as _,
         length as *mut usize as _,
+        tag as *mut usize as _,
         flags.bits() as _,
     );
     isize_as_syscall_result(value as _)

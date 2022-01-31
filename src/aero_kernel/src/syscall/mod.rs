@@ -194,8 +194,8 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_INFO => process::info(b),
         SYS_SIGACTION => process::sigaction(b, c, d, e),
         SYS_CLONE => process::clone(b, c),
-        SYS_IPC_SEND => process::ipc_send(b, c, d, e),
-        SYS_IPC_RECV => process::ipc_recv(b, c, d, e, f),
+        SYS_IPC_SEND => process::ipc_send(b, c, d, e, f),
+        SYS_IPC_RECV => process::ipc_recv(b, c, d, e, f, g),
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),

@@ -138,10 +138,6 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 uwutest()?;
             }
 
-            "ipctest" => {
-                ipc_test()?;
-            }
-
             "pid" => {
                 println!("{}", sys_getpid()?);
             }
@@ -320,40 +316,6 @@ fn uwutest() -> Result<(), AeroSyscallError> {
 
     println!("uwutest: successfully bound to {:?}", SOCKET_PATH);
     list_directory(".")?;
-
-    Ok(())
-}
-
-fn ipc_test() -> Result<(), AeroSyscallError> {
-    let parent_pid = sys_getpid()?;
-    let child_pid = sys_fork()?;
-
-    if child_pid == 0 {
-        sys_sleep(&TimeSpec {
-            tv_sec: 1,
-            tv_nsec: 0,
-        })?;
-
-        println!("[child] Sending a message...");
-
-        let msg_id = sys_ipc_send(parent_pid, &1337_u32.to_le_bytes(), IpcSendFlags::empty())?;
-
-        println!("[child] Sent message with ID = {}", msg_id);
-
-        sys_exit(0);
-    } else {
-        println!("[parent] Waiting for a message...");
-
-        let mut buffer = [0; 64];
-        let mut sender = 0;
-        let mut length = 0;
-
-        let msg_id = sys_ipc_recv(&mut buffer, &mut sender, &mut length, IpcRecvFlags::empty())?;
-
-        println!("[parent] Received a message with ID = {}", msg_id);
-        println!("[parent] Sender PID = {}", sender);
-        println!("[parent] Payload = {:?}", &buffer[0..length]);
-    }
 
     Ok(())
 }

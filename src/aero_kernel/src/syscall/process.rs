@@ -311,6 +311,7 @@ pub fn ipc_send(
     pid: usize,
     buf_ptr: usize,
     buf_len: usize,
+    tag: usize,
     flags: usize,
 ) -> Result<usize, AeroSyscallError> {
     let scheduler = scheduler::get_scheduler();
@@ -325,7 +326,7 @@ pub fn ipc_send(
     let queue = target_task.message_queue();
     let msg_id = queue.make_id();
 
-    queue.push_back(Message::new(msg_id, current_task.pid(), buf));
+    queue.push_back(Message::new(msg_id, tag, current_task.pid(), buf));
     scheduler.wake_up(target_task);
 
     Ok(msg_id)
@@ -336,6 +337,7 @@ pub fn ipc_recv(
     buf_len: usize,
     pid_ptr: usize,
     length_ptr: usize,
+    tag_ptr: usize,
     flags: usize,
 ) -> Result<usize, AeroSyscallError> {
     let scheduler = scheduler::get_scheduler();
@@ -345,6 +347,7 @@ pub fn ipc_recv(
     let buffer = unsafe { core::slice::from_raw_parts_mut(buf_ptr as *mut u8, buf_len) };
     let pid = unsafe { &mut *(pid_ptr as *mut usize) };
     let length = unsafe { &mut *(length_ptr as *mut usize) };
+    let tag = unsafe { &mut *(tag_ptr as *mut usize) };
     let flags = IpcRecvFlags::from_bits_truncate(flags as u32);
 
     if queue.is_empty() && flags.contains(IpcRecvFlags::NO_WAIT) {
@@ -366,6 +369,7 @@ pub fn ipc_recv(
 
         *pid = message.from().as_usize();
         *length = bytes_to_copy;
+        *tag = message.tag();
 
         Ok(message.id())
     } else {

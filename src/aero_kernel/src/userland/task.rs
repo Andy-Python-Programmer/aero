@@ -166,6 +166,7 @@ impl Zombies {
 
 pub struct Message {
     id: usize,
+    tag: usize,
     from: TaskId,
     data: Vec<u8>,
 }
@@ -177,9 +178,10 @@ pub struct MessageQueue {
 }
 
 impl Message {
-    pub fn new(id: usize, from: TaskId, data: &[u8]) -> Self {
+    pub fn new(id: usize, tag: usize, from: TaskId, data: &[u8]) -> Self {
         Self {
             id,
+            tag,
             from,
             data: Vec::from(data),
         }
@@ -187,6 +189,10 @@ impl Message {
 
     pub fn id(&self) -> usize {
         self.id
+    }
+
+    pub fn tag(&self) -> usize {
+        self.tag
     }
 
     pub fn from(&self) -> TaskId {
