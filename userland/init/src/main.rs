@@ -17,27 +17,35 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_ipc::event_loop::EventLoop;
 use aero_syscall::*;
 
-fn init_main() -> Result<(), AeroSyscallError> {
-    let shell_pid = sys_fork()?;
+fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<(), AeroSyscallError> {
+    let pid = sys_fork()?;
 
-    if shell_pid == 0 {
-        sys_exec("/bin/aero_shell", &["/bin/aero_shell"], &[])?;
+    if pid == 0 {
+        sys_exec(path, argv, envv)?;
+        sys_exit(1); // Unreachable
     } else {
-        let mut shell_exit_code = 0;
-
-        sys_waitpid(shell_pid, &mut shell_exit_code, 0)?;
-        sys_exit(shell_exit_code as usize);
+        Ok(())
     }
-
-    Ok(())
 }
 
 fn main() -> Result<(), AeroSyscallError> {
+    // Open the stdio file descriptors.
     sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
 
-    init_main()
+    // Run some child processes
+    fork_and_exec("/bin/aero_shell", &[], &[])?;
+
+    // Create the event loop and handle the events
+    let mut event_loop = EventLoop::new();
+
+    loop {
+        let message = event_loop.receive()?;
+
+        println!("{:?}", message);
+    }
 }
