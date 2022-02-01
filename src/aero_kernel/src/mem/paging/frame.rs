@@ -138,7 +138,6 @@ impl Iterator for RangeMemoryIter {
     }
 }
 
-#[derive(Copy, Clone)]
 #[repr(usize)]
 pub enum BuddyOrdering {
     Size4KiB = 0,
