@@ -762,8 +762,8 @@ impl Vm {
                         size,
                         prot,
                         MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED | MMapFlags::MAP_ANONYOMUS,
-                        file_offset as usize,
-                        Some(bin.clone()),
+                        0,
+                        None,
                     )
                     .expect("load_bin: failed to memory map ELF header");
 
