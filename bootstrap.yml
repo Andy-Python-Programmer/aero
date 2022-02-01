@@ -186,8 +186,8 @@ tools:
     source:
       subdir: 'bundled'
       git: 'https://github.com/rust-lang/cargo.git'
-      tag: '0.53.0'
-      version: '0.53.0'
+      branch: 'master'
+      commit: '25fcb135d02ea897ce894b67ae021f48107d522b'
     tools_required:
       - tool: host-rust
         recursive: true
