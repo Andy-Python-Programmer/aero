@@ -4,6 +4,7 @@ patch-in-config = true
 [build]
 rustc = "@BUILD_ROOT@/tools/host-rust/bin/rustc"
 target = "x86_64-unknown-aero-system"
+rustflags = ["-C", "link-args=-no-pie"]
 
 [target.x86_64-unknown-aero-system]
 linker = "@BUILD_ROOT@/tools/host-gcc/bin/x86_64-aero-gcc"
