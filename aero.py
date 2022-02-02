@@ -49,6 +49,8 @@ LIMINE_URL = 'https://github.com/limine-bootloader/limine'
 BUILD_DIR = 'build'
 BUNDLED_DIR = 'bundled'
 SYSROOT_DIR = 'sysroot'
+EXTRA_FILES = 'extra-files'
+SYSROOT_CARGO_HOME = os.path.join(SYSROOT_DIR, 'cargo-home')
 BASE_FILES_DIR = 'base-files'
 OVMF_FILES = ['OVMF-pure-efi.fd']
 
@@ -239,6 +241,26 @@ def symlink_rel(src, dst):
 def build_userland_sysroot(args):
     if not os.path.exists(SYSROOT_DIR):
         os.mkdir(SYSROOT_DIR)
+
+    # FIXME(xbstrap): xbstrap does not copy over the extra-files/rust/config.toml
+    # file into the cargo home directory.
+    if not os.path.exists(SYSROOT_CARGO_HOME):
+        os.mkdir(SYSROOT_CARGO_HOME)
+
+    cargo_sys_cfg = os.path.join(SYSROOT_CARGO_HOME, 'config.toml')
+    if not os.path.exists(cargo_sys_cfg):
+        cargo_cfg_fd = open(os.path.join(
+            EXTRA_FILES, 'rust', 'config.toml'), 'r')
+        cargo_cfg = cargo_cfg_fd.read()
+        cargo_cfg_fd.close()
+
+        cargo_cfg = cargo_cfg.replace("@SOURCE_ROOT@", os.getcwd())
+        cargo_cfg = cargo_cfg.replace(
+            "@BUILD_ROOT@", os.path.join(os.getcwd(), SYSROOT_DIR))
+
+        cargo_cfg_fd = open(cargo_sys_cfg, "w+")
+        cargo_cfg_fd.write(cargo_cfg)
+        cargo_cfg_fd.close()
 
     blink = os.path.join(SYSROOT_DIR, 'bootstrap.link')
 
@@ -479,7 +501,7 @@ def get_sysctl(name: str) -> str:
     if status != 0:
         print("`sysctl` failed: ", end="")
         print(stderr.decode())
-    
+
     return stdout.strip().decode()
 
 
@@ -493,11 +515,11 @@ def is_kvm_supported() -> bool:
     if platform == "darwin":
         # Check for VMX support
         cpu_features = get_sysctl("machdep.cpu.features")
-        vmx_support  = "VMX" in cpu_features.split(' ')
+        vmx_support = "VMX" in cpu_features.split(' ')
 
         # Check for HVF support
         hv_support = get_sysctl("kern.hv_support") == "1"
-        
+
         return hv_support and vmx_support
 
     if platform == "linux":
