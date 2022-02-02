@@ -193,13 +193,13 @@ def extract_artifacts(stdout):
     return result
 
 
-def build_cargo_workspace(cwd, command, args, cargo='cargo'):
-    code, _, _ = run_command([cargo, command, *args], cwd=cwd)
+def build_cargo_workspace(cwd, command, args):
+    code, _, _ = run_command(['cargo', command, *args], cwd=cwd)
 
     if code != 0:
         return None
 
-    _, stdout, _ = run_command([cargo, command, *args, '--message-format=json'],
+    _, stdout, _ = run_command(['cargo', command, *args, '--message-format=json'],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL,
                                cwd=cwd)
@@ -279,13 +279,10 @@ def build_userland(args):
     if args.check:
         command = 'check'
 
-    cargo = '../sysroot/tools/host-cargo/bin/cargo'
-    cmd_args += ['--target', 'x86_64-unknown-aero-system']
-
     if args.test:
-        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args], cargo)
+        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args])
     else:
-        return build_cargo_workspace('userland', command, cmd_args, cargo)
+        return build_cargo_workspace('userland', command, cmd_args)
 
     # TODO: Userland check
     # elif args.check:
