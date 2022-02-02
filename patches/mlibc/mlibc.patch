@@ -1,4 +1,4 @@
-From 34bebf99a44089afead83849d3b804290f7f1324 Mon Sep 17 00:00:00 2001
+From a513b374fb24e1cce54e8cad7137c4d95dd10998 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -915,11 +915,11 @@ index 0000000..c945860
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/abi-bits/auxv.h b/sysdeps/aero/include/abi-bits/auxv.h
 new file mode 120000
-index 0000000..0f14415
+index 0000000..86157e8
 --- /dev/null
 +++ b/sysdeps/aero/include/abi-bits/auxv.h
 @@ -0,0 +1 @@
-+../../../../abis/lemon/auxv.h
++../../../../abis/aero/auxv.h
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/abi-bits/blkcnt_t.h b/sysdeps/aero/include/abi-bits/blkcnt_t.h
 new file mode 120000
