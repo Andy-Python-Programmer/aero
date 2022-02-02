@@ -17,11 +17,15 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use alloc::string::String;
+use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::RwLock;
 
-use crate::apic;
+use crate::{apic, fs};
 
+use crate::fs::devfs::{self, Device};
+use crate::fs::inode::INodeInterface;
 use crate::utils::io;
 use crate::utils::sync::Mutex;
 
@@ -303,10 +307,68 @@ pub fn handle(scancode: u8) {
 
             core::mem::drop(lock);
 
-            for listener in KEYBOARD_LISTNER.read().iter() {
+            let listners = KEYBOARD_LISTNER.read();
+            for listener in listners.iter() {
                 listener.on_key(keycode, released);
             }
         }
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref KEYBOARD: Arc<KeyboardDevice> = KeyboardDevice::new();
+}
+
+struct KeyboardDevice {
+    marker: usize,
+    buffer: Mutex<Vec<u8>>,
+    sref: Weak<Self>,
+}
+
+impl KeyboardDevice {
+    fn new() -> Arc<Self> {
+        Arc::new_cyclic(|this| Self {
+            marker: devfs::alloc_device_marker(),
+            buffer: Mutex::new(Vec::new()),
+            sref: this.clone(),
+        })
+    }
+}
+
+impl Device for KeyboardDevice {
+    fn device_marker(&self) -> usize {
+        self.marker
+    }
+
+    fn device_name(&self) -> String {
+        String::from("kbd0")
+    }
+
+    fn inode(&self) -> Arc<dyn INodeInterface> {
+        self.sref.upgrade().unwrap()
+    }
+}
+
+impl KeyboardListener for KeyboardDevice {
+    fn on_key(&self, keycode: KeyCode, released: bool) {
+        if released {
+            self.buffer.lock_irq().push(0x80 | keycode as u8);
+        } else {
+            self.buffer.lock_irq().push(keycode as u8);
+        }
+    }
+}
+
+impl INodeInterface for KeyboardDevice {
+    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+        let mut sbuf = self.buffer.lock_irq();
+        let drainage = core::cmp::min(buffer.len(), sbuf.len());
+
+        for (i, byte) in sbuf.drain(..drainage).enumerate() {
+            buffer[i] = byte;
+        }
+
+        Ok(drainage)
     }
 }
 
@@ -344,6 +406,11 @@ pub fn ps2_keyboard_init() {
     }
 
     apic::io_apic_setup_legacy_irq(1, 1);
+
+    // TODO: Move this into /dev/input instead
+    // TODO: Add support for multiple keyboards
+    register_keyboard_listener(KEYBOARD.as_ref().clone());
+    devfs::install_device(KEYBOARD.clone()).expect("failed to install keyboard device");
 }
 
 pub fn register_keyboard_listener(listner: &'static dyn KeyboardListener) {

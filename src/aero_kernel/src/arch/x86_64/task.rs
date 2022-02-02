@@ -25,10 +25,11 @@ use alloc::vec::Vec;
 use core::alloc::Layout;
 use core::ptr::Unique;
 
+use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::syscall::{ExecArgs, RegistersFrame, SyscallFrame};
-use crate::userland::vm::{LoadedBinary, Vm};
-use crate::utils::StackHelper;
+use crate::userland::vm::Vm;
+use crate::utils::{io, StackHelper};
 
 use super::controlregs;
 use super::gdt::Ring;
@@ -277,14 +278,16 @@ impl ArchTask {
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
             address_space: new_address_space,
             rpl: Ring::Ring3,
-            fs_base: VirtAddr::zero(),
+
+            // The FS base is inherited from the parent process.
+            fs_base: self.fs_base.clone(),
         })
     }
 
     pub fn exec(
         &mut self,
         vm: &Vm,
-        loaded_binary: LoadedBinary,
+        executable: DirCacheItem,
 
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
@@ -314,6 +317,8 @@ impl ArchTask {
         vm.log();
 
         address_space.switch(); // Perform the address space switch
+
+        let loaded_binary = vm.load_bin(executable);
 
         self.context = Unique::dangling();
         self.address_space = address_space; // Update the address space reference

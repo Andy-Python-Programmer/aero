@@ -21,9 +21,9 @@ use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
+use crate::fs;
 use crate::fs::devfs;
 use crate::fs::inode;
-use crate::{aero_main, fs};
 
 use crate::fs::inode::INodeInterface;
 use crate::mem::paging::VirtAddr;
@@ -41,7 +41,7 @@ lazy_static::lazy_static! {
         c_cflag: aero_syscall::TermiosCFlag::empty(),
         c_lflag: aero_syscall::TermiosLFlag::ECHO | aero_syscall::TermiosLFlag::ICANON,
         c_line: 0,
-        c_cc: [0; 32],
+        c_cc: [0; 11],
         c_ispeed: 0,
         c_ospeed: 0,
     });
@@ -224,7 +224,7 @@ impl Tty {
 impl INodeInterface for Tty {
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         self.block_queue
-            .block_on(&self.stdin, |future| future.is_complete());
+            .block_on(&self.stdin, |future| future.is_complete())?;
 
         let mut stdin = self.stdin.lock_irq();
 
@@ -277,24 +277,12 @@ impl INodeInterface for Tty {
 
             aero_syscall::TCGETS => {
                 let termios = VirtAddr::new(arg as u64);
-                let termios = unsafe {
-                    core::slice::from_raw_parts_mut(
-                        termios.as_mut_ptr::<u8>(),
-                        core::mem::size_of::<aero_syscall::Termios>(),
-                    )
-                };
+                let termios = unsafe { &mut *(termios.as_mut_ptr::<aero_syscall::Termios>()) };
 
                 let lock = TERMIOS.lock_irq();
                 let this = &*lock;
 
-                let this = unsafe {
-                    core::slice::from_raw_parts(
-                        this as *const aero_syscall::Termios as *const u8,
-                        core::mem::size_of::<aero_syscall::Termios>(),
-                    )
-                };
-
-                termios.copy_from_slice(this);
+                *termios = this.clone();
                 Ok(0x00)
             }
 
@@ -306,25 +294,12 @@ impl INodeInterface for Tty {
                 core::mem::drop(stdin);
 
                 let termios = VirtAddr::new(arg as u64);
-
-                let termios = unsafe {
-                    core::slice::from_raw_parts(
-                        termios.as_mut_ptr::<u8>(),
-                        core::mem::size_of::<aero_syscall::Termios>(),
-                    )
-                };
+                let termios = unsafe { &*(termios.as_mut_ptr::<aero_syscall::Termios>()) };
 
                 let mut lock = TERMIOS.lock_irq();
                 let this = &mut *lock;
 
-                let this = unsafe {
-                    core::slice::from_raw_parts_mut(
-                        this as *mut aero_syscall::Termios as *mut u8,
-                        core::mem::size_of::<aero_syscall::Termios>(),
-                    )
-                };
-
-                this.copy_from_slice(termios);
+                *this = termios.clone();
                 Ok(0x00)
             }
 
@@ -349,6 +324,17 @@ impl devfs::Device for Tty {
 
 impl KeyboardListener for Tty {
     fn on_key(&self, key: KeyCode, released: bool) {
+        // requirements bash termios: Termios {
+        //    c_iflag: 0,
+        //    c_oflag: NL0 | CR0 | TAB0 | BS0 | VT0 | FF0,
+        //    c_cflag: CS5,
+        //    c_lflag: ISIG,
+        //    c_line: 0,
+        //    c_cc: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        //    c_ispeed: 0,
+        //    c_ospeed: 0
+        // }
+
         let mut state = self.state.lock();
         let termios = TERMIOS.lock_irq();
 

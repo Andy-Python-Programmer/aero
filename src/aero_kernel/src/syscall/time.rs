@@ -30,7 +30,7 @@ pub fn sleep(timespec: usize) -> Result<usize, AeroSyscallError> {
     let timespec = unsafe { &*(timespec.as_mut_ptr::<aero_syscall::TimeSpec>()) };
     let duration = (timespec.tv_nsec as usize).ceil_div(1000000000) + timespec.tv_sec as usize;
 
-    scheduler::get_scheduler().inner.sleep(Some(duration));
+    scheduler::get_scheduler().inner.sleep(Some(duration))?;
 
     Ok(0x00)
 }

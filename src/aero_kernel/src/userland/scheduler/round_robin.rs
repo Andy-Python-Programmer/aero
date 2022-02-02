@@ -22,6 +22,7 @@ use alloc::sync::Arc;
 use intrusive_collections::LinkedList;
 
 use crate::arch;
+use crate::userland::signals::{SignalError, SignalResult};
 use crate::userland::task::{SchedTaskAdapter, Task, TaskState};
 
 use crate::utils::sync::IrqGuard;
@@ -217,7 +218,7 @@ impl SchedulerInterface for RoundRobin {
         }
     }
 
-    fn sleep(&self, duration: Option<usize>) {
+    fn sleep(&self, duration: Option<usize>) -> SignalResult<()> {
         let _guard = IrqGuard::new();
         let queue = self.queue.get_mut();
 
@@ -237,7 +238,17 @@ impl SchedulerInterface for RoundRobin {
 
         self.preempt();
 
-        // TODO: Check for signal interrupts.
+        let task = queue
+            .current_task
+            .as_ref()
+            .expect("IDLE task should not await for anything")
+            .clone();
+
+        if task.signals().has_pending() {
+            Err(SignalError::Interrupted)
+        } else {
+            Ok(())
+        }
     }
 
     fn preempt(&self) {
@@ -265,19 +276,8 @@ impl SchedulerInterface for RoundRobin {
         }
     }
 
-    fn await_io(&self) {
-        let _guard = IrqGuard::new();
-        let queue = self.queue.get_mut();
-
-        queue.push_awaiting(
-            queue
-                .current_task
-                .as_ref()
-                .expect("IDLE task should not await for anything")
-                .clone(),
-        );
-
-        self.preempt();
+    fn await_io(&self) -> SignalResult<()> {
+        self.sleep(None)
     }
 
     fn exit(&self, status: isize) -> ! {

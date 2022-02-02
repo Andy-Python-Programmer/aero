@@ -23,6 +23,7 @@ use crate::fs::Path;
 use crate::syscall;
 
 pub mod scheduler;
+pub mod signals;
 pub mod task;
 pub mod vm;
 
@@ -34,6 +35,7 @@ pub fn run() -> fs::Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
 pub fn run_tests() -> fs::Result<()> {
     let utest_path = Path::new("/bin/utest");
     let utest_inode = fs::lookup_path(utest_path)?;

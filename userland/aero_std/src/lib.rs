@@ -17,15 +17,18 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(alloc_error_handler, prelude_import)]
+#![feature(alloc_error_handler, lang_items, never_type, prelude_import, start)]
 #![no_std]
 
-extern crate aero_rt;
 extern crate alloc;
 
 pub mod heap;
 pub mod io;
 pub mod prelude;
+pub mod process;
+
+use aero_syscall::*;
+use process::Termination;
 
 #[prelude_import]
 pub use prelude::rust_2021::*;
@@ -67,4 +70,33 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
 #[alloc_error_handler]
 fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("Failed allocating memory with layout: {:?}", layout)
+}
+
+#[no_mangle]
+unsafe extern "C" fn _start(argc: isize, argv: *const *const u8) -> ! {
+    extern "C" {
+        fn main(_argc: isize, _argv: *const *const u8) -> isize;
+    }
+
+    sys_exit(main(argc, argv) as usize);
+}
+
+#[lang = "start"]
+fn lang_start<T: Termination + 'static>(
+    main: fn() -> T,
+    _argc: isize,
+    _argv: *const *const u8,
+) -> isize {
+    main().report() as _
+}
+
+#[lang = "eh_personality"]
+fn eh_personality() -> ! {
+    unreachable!();
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+fn _Unwind_Resume() -> ! {
+    unreachable!();
 }

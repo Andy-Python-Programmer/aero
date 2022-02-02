@@ -18,6 +18,7 @@ ci = []
 # garbage collector.
 kmemleak = []
 vmlog = []
+syslog = []
 
 default = ["round-robin"]
 

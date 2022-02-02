@@ -74,6 +74,7 @@ pub use process::*;
 use raw_cpuid::CpuId;
 pub use time::*;
 
+use crate::arch::signals;
 use crate::arch::{gdt::GdtEntryType, interrupts};
 use crate::utils::{io, StackHelper};
 
@@ -169,6 +170,12 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         _ => unsafe { interrupts::enable_interrupts() },
     }
 
+    if a == SYS_SIGRETURN {
+        let result = signals::sigreturn(sys, stack);
+        stack.rax = result as u64;
+        return;
+    }
+
     let result = match a {
         SYS_EXIT => process::exit(b),
         SYS_SHUTDOWN => process::shutdown(),
@@ -185,15 +192,8 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_GETHOSTNAME => process::gethostname(b, c),
         SYS_SETHOSTNAME => process::sethostname(b, c),
         SYS_INFO => process::info(b),
+        SYS_SIGACTION => process::sigaction(b, c, d, e),
         SYS_CLONE => process::clone(b, c),
-
-        0x13A => {
-            let syscall_name = unsafe {
-                core::str::from_utf8_unchecked(core::slice::from_raw_parts(b as *const u8, c))
-            };
-
-            panic!("Unimplemented syscall: {}", syscall_name);
-        }
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),
@@ -210,6 +210,9 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_ACCESS => fs::access(b, c, d, e, f),
         SYS_PIPE => fs::pipe(b, c),
         SYS_UNLINK => fs::unlink(b, c, d, e),
+        SYS_DUP => fs::dup(b, c),
+        SYS_DUP2 => fs::dup2(b, c, d),
+        SYS_FCNTL => fs::fcntl(b, c, d),
 
         SYS_SOCKET => net::socket(b, c, d),
         SYS_BIND => net::bind(b, c, d),
@@ -223,7 +226,46 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         }
     };
 
-    stack.rax = aero_syscall::syscall_result_as_usize(result) as _;
+    let result_usize = aero_syscall::syscall_result_as_usize(result) as _;
+
+    #[cfg(feature = "syslog")]
+    {
+        use crate::drivers::uart_16550;
+        use alloc::string::String;
+
+        let name = aero_syscall::syscall_as_str(a);
+        let mut result_v = String::new();
+
+        if result.is_ok() {
+            result_v.push_str("\x1b[1;32m");
+        } else {
+            result_v.push_str("\x1b[1;31m");
+        }
+
+        result_v.push_str(name);
+        result_v.push_str("\x1b[0m");
+
+        result_v.push_str("(");
+
+        for (i, arg) in [b, c, d, e, f, g].iter().enumerate() {
+            if i != 0 {
+                result_v.push_str(", ");
+            }
+
+            let hex_arg = alloc::format!("{:#x}", *arg);
+            result_v.push_str(&hex_arg);
+        }
+
+        result_v.push_str(") = ");
+
+        let result_str = alloc::format!("{:?}", result);
+        result_v.push_str(&result_str);
+
+        uart_16550::serial_println!("{}", result_v);
+    }
+
+    crate::arch::signals::syscall_check_signals(result_usize as isize, sys, stack);
+    stack.rax = result_usize;
 }
 
 extern "C" {

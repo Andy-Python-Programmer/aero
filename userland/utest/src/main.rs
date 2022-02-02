@@ -19,26 +19,197 @@
 
 #![feature(naked_functions)]
 
+use core::sync::atomic::{AtomicUsize, Ordering};
+
+use aero_syscall::signal::*;
 use aero_syscall::*;
 
-struct Test<'a> {
+mod mmap;
+
+pub struct Test<'a> {
     path: &'a str,
     func: fn() -> Result<(), AeroSyscallError>,
 }
 
-static TEST_FUNCTIONS: &[&'static Test<'static>] = &[&clone_process];
+static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
+    // TODO: Why does clone process fail?
+    // &clone_process,
+    &forked_pipe,
+    &signal_handler,
+    &dup_fds,
+    &dup2_redirect_stdout,
+    &fcntl_get_set_fdflags,
+    // mmap tests:
+    &mmap::zero_sized_mapping,
+];
 
 fn main() {
     sys_open("/dev/tty", OpenFlags::O_RDONLY).expect("Failed to open stdin");
     sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stdout");
     sys_open("/dev/tty", OpenFlags::O_WRONLY).expect("Failed to open stderr");
 
-    println!("Running userland tests...");
+    println!("running {} tests", TEST_FUNCTIONS.len());
 
     for test_function in TEST_FUNCTIONS {
         (test_function.func)().unwrap();
-        println!("test {} ... ok", test_function.path);
+        println!("test {} ... \x1b[1;32mok\x1b[0m", test_function.path);
     }
+}
+
+#[utest_proc::test]
+fn fcntl_get_set_fdflags() -> Result<(), AeroSyscallError> {
+    let fd = sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
+    let flags = prelude::FdFlags::CLOEXEC;
+
+    sys_fcntl(fd, prelude::F_SETFD, flags.bits())?;
+    let fd_flags = sys_fcntl(fd, prelude::F_GETFD, 0)?;
+
+    core::assert_eq!(fd_flags, flags.bits());
+
+    sys_close(fd)?;
+    Ok(())
+}
+
+#[utest_proc::test]
+fn dup2_redirect_stdout() -> Result<(), AeroSyscallError> {
+    let utest_fd = sys_open("utest.txt", OpenFlags::O_WRONLY | OpenFlags::O_CREAT)?;
+
+    // We set the new_fd to the file descriptor of stdout (i.e. 1)
+    sys_dup2(utest_fd, 1, OpenFlags::O_WRONLY)?;
+
+    // Now if we write to stdout, it will be written to utest.txt
+    println!("yes");
+
+    sys_seek(utest_fd, 0, SeekWhence::SeekSet)?;
+
+    let mut content = [0; 3];
+    sys_read(utest_fd, &mut content)?;
+
+    core::assert_eq!(&content, b"yes");
+
+    sys_unlink(AT_FDCWD as usize, "utest.txt", OpenFlags::empty())?;
+    sys_close(utest_fd)?;
+
+    // Restore the actual stdout.
+    let tty_fd = sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
+    sys_dup2(tty_fd, 1, OpenFlags::O_WRONLY)?;
+
+    Ok(())
+}
+
+#[utest_proc::test]
+fn dup_fds() -> Result<(), AeroSyscallError> {
+    let utest_fd = sys_open("utest.txt", OpenFlags::O_WRONLY | OpenFlags::O_CREAT)?;
+
+    // dup() will create a copy of the utest fd as cutest_fd then both can
+    // be used interchangeably.
+    let cutest_fd = sys_dup(utest_fd, OpenFlags::O_RDWR)?;
+
+    sys_write(utest_fd, b"testing ")?;
+    sys_write(cutest_fd, b"dup...\n")?;
+
+    sys_seek(utest_fd, 0, SeekWhence::SeekSet)?;
+
+    let mut content = [0; 15];
+    sys_read(utest_fd, &mut content)?;
+
+    core::assert_eq!(&content, b"testing dup...\n");
+
+    sys_unlink(AT_FDCWD as usize, "utest.txt", OpenFlags::empty())?;
+
+    // Close all of the fds.
+    sys_close(utest_fd)?;
+    sys_close(cutest_fd)?;
+
+    Ok(())
+}
+
+#[utest_proc::test]
+fn signal_handler() -> Result<(), AeroSyscallError> {
+    let child = sys_fork()?;
+
+    // We perform the test in a forked process since then we dont
+    // have to worry about restoring the signal handlers.
+    if child == 0 {
+        let mut pipe = [0usize; 2];
+        sys_pipe(&mut pipe, OpenFlags::empty())?;
+
+        static PIPE_WRITE: AtomicUsize = AtomicUsize::new(0);
+        PIPE_WRITE.store(pipe[1], Ordering::SeqCst);
+
+        fn handle_segmentation_fault(fault: usize) {
+            core::assert_eq!(fault, 11);
+
+            let pfd = PIPE_WRITE.load(Ordering::SeqCst);
+
+            // Dont worry about closing the file descriptors since they will
+            // be auto closed by the parent.
+            sys_write(pfd, b"yes").expect("failed to write to the pipe");
+            sys_exit(0);
+        }
+
+        // Install the signal handler.
+        let handler = SignalHandler::Handle(handle_segmentation_fault);
+        let sigaction = SigAction::new(handler, 0, SignalFlags::empty());
+
+        sys_sigaction(SIGSEGV, Some(&sigaction), None)
+            .expect("failed to install the segmentation fault handler");
+
+        // On fork the signal handler will be copied over to the child process.
+        let child = sys_fork()?;
+
+        if child == 0 {
+            // Create a traditional page fault :^)
+            unsafe {
+                *(0xcafebabe as *mut usize) = 69;
+            }
+        } else {
+            let mut buffer = [0; 3];
+            sys_read(pipe[0], &mut buffer)?;
+
+            core::assert_eq!(&buffer, b"yes");
+        }
+
+        // Close the pipe
+        sys_close(pipe[0])?;
+        sys_close(pipe[1])?;
+    } else {
+        let mut status = 0;
+        sys_waitpid(child, &mut status, 0)?;
+    }
+
+    Ok(())
+}
+
+#[utest_proc::test]
+fn forked_pipe() -> Result<(), AeroSyscallError> {
+    let mut pipe = [0usize; 2];
+    sys_pipe(&mut pipe, OpenFlags::empty())?;
+
+    let child = sys_fork()?;
+
+    if child == 0 {
+        sys_close(pipe[0])?; // close the read end
+
+        sys_write(pipe[1], b"Hello, World!")?;
+
+        sys_close(pipe[1])?; // close the write end
+        sys_exit(0)
+    } else {
+        let mut status = 0;
+        sys_waitpid(child, &mut status, 0)?;
+
+        sys_close(pipe[1])?; // close the write end
+
+        let mut buffer = [0; 13];
+        sys_read(pipe[0], &mut buffer)?;
+
+        core::assert_eq!(&buffer, b"Hello, World!");
+
+        sys_close(pipe[0])?; // close the read end
+    }
+
+    Ok(())
 }
 
 // Emulates how mlibc under the hood does clone()

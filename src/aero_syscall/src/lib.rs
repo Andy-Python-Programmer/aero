@@ -21,6 +21,7 @@
 #![feature(decl_macro)]
 
 pub mod consts;
+pub mod signal;
 pub mod syscall;
 
 pub use crate::syscall::*;
@@ -52,15 +53,25 @@ bitflags::bitflags! {
 
 bitflags::bitflags! {
     pub struct OpenFlags: usize {
-        const O_RDONLY      = 2;
-        const O_RDWR        = 3;
-        const O_WRONLY      = 5;
-        const O_CREAT       = 0x10;
-        const O_DIRECTORY   = 0x20;
-        const O_EXCL        = 0x40;
-        const O_NOCTTY      = 0x80;
-        const O_TRUNC       = 0x0200;
-        const O_CLOEXEC     = 0x4000;
+        const O_ACCMODE   = 0x0007;
+        const O_EXEC      = 1;
+        const O_RDONLY    = 2;
+        const O_RDWR      = 3;
+        const O_SEARCH    = 4;
+        const O_WRONLY    = 5;
+        const O_APPEND    = 0x0008;
+        const O_CREAT     = 0x0010;
+        const O_DIRECTORY =  0x0020;
+        const O_EXCL      =  0x0040;
+        const O_NOCTTY    = 0x0080;
+        const O_NOFOLLOW  = 0x0100;
+        const O_TRUNC     = 0x0200;
+        const O_NONBLOCK  = 0x0400;
+        const O_DSYNC     = 0x0800;
+        const O_RSYNC     = 0x1000;
+        const O_SYNC      = 0x2000;
+        const O_CLOEXEC   = 0x4000;
+        const O_PATH      = 0x8000;
     }
 }
 
@@ -154,6 +165,58 @@ pub enum AeroSyscallError {
     ENOTBLK = 1083,
 
     Unknown = isize::MAX,
+}
+
+pub fn syscall_as_str(syscall: usize) -> &'static str {
+    match syscall {
+        prelude::SYS_READ => "read",
+        prelude::SYS_WRITE => "write",
+        prelude::SYS_OPEN => "open",
+        prelude::SYS_CLOSE => "close",
+        prelude::SYS_SHUTDOWN => "shutdown",
+        prelude::SYS_EXIT => "exit",
+        prelude::SYS_FORK => "fork",
+        prelude::SYS_REBOOT => "reboot",
+        prelude::SYS_MMAP => "mmap",
+        prelude::SYS_MUNMAP => "munmap",
+        prelude::SYS_ARCH_PRCTL => "arch_prctl",
+        prelude::SYS_GETDENTS => "getdents",
+        prelude::SYS_GETCWD => "getcwd",
+        prelude::SYS_CHDIR => "chdir",
+        prelude::SYS_MKDIR => "mkdir",
+        prelude::SYS_MKDIR_AT => "mkdir_at",
+        prelude::SYS_RMDIR => "rmdir",
+        prelude::SYS_EXEC => "exec",
+        prelude::SYS_LOG => "log",
+        prelude::SYS_UNAME => "uname",
+        prelude::SYS_WAITPID => "waitpid",
+        prelude::SYS_IOCTL => "ioctl",
+        prelude::SYS_GETPID => "getpid",
+        prelude::SYS_SOCKET => "socket",
+        prelude::SYS_CONNECT => "connect",
+        prelude::SYS_BIND => "bind",
+        prelude::SYS_LISTEN => "listen",
+        prelude::SYS_ACCEPT => "accept",
+        prelude::SYS_SEEK => "seek",
+        prelude::SYS_GETTID => "gettid",
+        prelude::SYS_GETTIME => "gettime",
+        prelude::SYS_SLEEP => "sleep",
+        prelude::SYS_ACCESS => "access",
+        prelude::SYS_PIPE => "pipe",
+        prelude::SYS_UNLINK => "unlink",
+        prelude::SYS_GETHOSTNAME => "gethostname",
+        prelude::SYS_SETHOSTNAME => "sethostname",
+        prelude::SYS_INFO => "info",
+        prelude::SYS_CLONE => "clone",
+        prelude::SYS_SIGRETURN => "sigreturn",
+        prelude::SYS_SIGACTION => "sigaction",
+        prelude::SYS_SIGPROCMASK => "sigprocmask",
+        prelude::SYS_DUP => "dup",
+        prelude::SYS_FCNTL => "fcntl",
+        prelude::SYS_DUP2 => "dup2",
+
+        _ => unreachable!("unknown syscall"),
+    }
 }
 
 #[derive(Debug)]
@@ -332,7 +395,7 @@ pub struct Termios {
     pub c_cflag: TermiosCFlag,
     pub c_lflag: TermiosLFlag,
     pub c_line: u8,
-    pub c_cc: [u8; 32],
+    pub c_cc: [u8; 11],
     pub c_ispeed: u32,
     pub c_ospeed: u32,
 }
@@ -540,7 +603,7 @@ pub fn sys_ioctl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSys
 pub fn sys_mmap(
     address: usize,
     size: usize,
-    protocol: MMapProt,
+    protection: MMapProt,
     flags: MMapFlags,
     fd: usize,
     offset: usize,
@@ -549,7 +612,7 @@ pub fn sys_mmap(
         prelude::SYS_MMAP,
         address,
         size,
-        protocol.bits(),
+        protection.bits(),
         flags.bits(),
         fd,
         offset,
@@ -708,5 +771,67 @@ pub fn sys_info(struc: &mut SysInfo) -> Result<usize, AeroSyscallError> {
 
 pub fn sys_clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_CLONE, entry, stack);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_sigreturn() -> Result<usize, AeroSyscallError> {
+    let value = syscall0(prelude::SYS_SIGRETURN);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_sigaction(
+    sig: usize,
+    sigaction: Option<&signal::SigAction>,
+    old_sigaction: Option<&mut signal::SigAction>,
+) -> Result<usize, AeroSyscallError> {
+    let sigact = sigaction;
+
+    let value = syscall4(
+        prelude::SYS_SIGACTION,
+        sig,
+        sigact
+            .and_then(|f| Some(f as *const signal::SigAction as usize))
+            .unwrap_or(0),
+        sys_sigreturn as usize,
+        old_sigaction
+            .and_then(|f| Some(f as *mut signal::SigAction as usize))
+            .unwrap_or(0),
+    );
+
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_sigprocmask(
+    how: signal::SigProcMask,
+    set: &mut u64,
+    old_set: Option<&mut u64>,
+) -> Result<usize, AeroSyscallError> {
+    let old_set = match old_set {
+        Some(e) => e as *const u64 as usize,
+        None => 0,
+    };
+
+    let value = syscall3(
+        prelude::SYS_SIGPROCMASK,
+        how as usize,
+        set as *const u64 as usize,
+        old_set,
+    );
+
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_dup(fd: usize, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_DUP, fd, flags.bits());
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_fcntl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(prelude::SYS_FCNTL, fd, command, argument);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_dup2(fd: usize, new_fd: usize, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(prelude::SYS_DUP2, fd, new_fd, flags.bits());
     isize_as_syscall_result(value as _)
 }

@@ -55,6 +55,8 @@ const DEFAULT_FONT_HEIGHT: usize = 16;
 
 const DEFAULT_MARGIN: usize = 64 / 2;
 
+const TAB_SIZE: usize = 4;
+
 /// The amount of VGA font glyphs.
 const VGA_FONT_GLYPHS: usize = 256;
 
@@ -125,8 +127,8 @@ pub struct RendyInfo {
     pub vertical_resolution: usize,
     /// The color format of each pixel.
     pub pixel_format: PixelFormat,
-    /// The number of bytes per pixel.
-    pub bytes_per_pixel: usize,
+    /// The number of bits per pixel.
+    pub bits_per_pixel: usize,
     /// Number of pixels between the start of a line and the start of the next.
     ///
     /// Some framebuffers use additional padding at the end of a line, so this
@@ -723,6 +725,16 @@ impl<'this> DebugRendy<'this> {
     fn write_character(&mut self, char: char) {
         match char {
             '\n' => self.newline(),
+
+            '\t' => {
+                if (self.x_pos / TAB_SIZE + 1) >= self.cols {
+                    self.set_cursor_position(self.cols - 1, self.y_pos);
+                    return;
+                }
+
+                self.set_cursor_position((self.x_pos / TAB_SIZE + 1) * TAB_SIZE, self.y_pos);
+            }
+
             '\r' => {}
 
             _ => {
@@ -877,7 +889,7 @@ pub fn reset_default() {
 /// tuple.
 ///
 /// # Panics
-/// Attempted to get the resolution before the terminal was initialized.
+/// This function was called before the terminal was initialized.
 pub fn get_resolution() -> (usize, usize) {
     DEBUG_RENDY
         .get()
@@ -889,9 +901,19 @@ pub fn get_resolution() -> (usize, usize) {
                 this.info.vertical_resolution,
             )
         })
-        .expect(
-            "get_resolution: attempted to get the resolution before the terminal was initialized",
-        )
+        .expect("get_resolution: invoked before the terminal was initialized")
+}
+
+/// # Panics
+/// This function was called before the terminal was initialized.
+pub fn get_rendy_info() -> RendyInfo {
+    DEBUG_RENDY
+        .get()
+        .map(|l| {
+            let this = l.lock_irq();
+            this.info
+        })
+        .expect("get_rendy_info: invoked before the terminal was initialized")
 }
 
 /// Returns the terminal's rows and columns in the form of a `(rows, columns)` tuple.
@@ -902,7 +924,7 @@ pub fn get_rows_cols() -> (usize, usize) {
             let this = l.lock_irq();
             (this.rows, this.cols)
         })
-        .expect("get_rows_cols: attempted to get the rows,cols before the terminal was initialized")
+        .expect("get_rows_cols: invoked before the terminal was initialized")
 }
 
 /// Gets the cursor position as a tuple `(x, y)`.
@@ -913,10 +935,13 @@ pub fn get_rows_cols() -> (usize, usize) {
 /// ## Panics
 /// Attempted to get the cursor position before the terminal was initialized.
 pub fn get_cursor_position() -> (usize, usize) {
-    DEBUG_RENDY.get().map(|l| {
-        let lock = l.lock_irq();
-        (lock.x_pos-X_PAD, lock.y_pos)
-    }).expect("get_cursor_position: attepted to get the cursor position before the terminal was initialized")
+    DEBUG_RENDY
+        .get()
+        .map(|l| {
+            let lock = l.lock_irq();
+            (lock.x_pos - X_PAD, lock.y_pos)
+        })
+        .expect("get_cursor_position: invoked before the terminal was initialized")
 }
 
 /// Sets the cursor position to the provided `x` and `y` coordinates.
@@ -941,10 +966,13 @@ pub fn set_cursor_visibility(yes: bool) {
 /// ## Panics
 /// This function was called before the terminal was initialized.
 pub fn get_term_info() -> (usize, usize) {
-    DEBUG_RENDY.get().map(|l| {
-        let lock = l.lock_irq();
-        (lock.rows, lock.cols)
-    }).expect("get_term_info: attepted to get the terminal information before the terminal was initialized")
+    DEBUG_RENDY
+        .get()
+        .map(|l| {
+            let lock = l.lock_irq();
+            (lock.rows, lock.cols)
+        })
+        .expect("get_term_info: invoked before the terminal was initialized")
 }
 
 /// ## Panics
@@ -953,7 +981,7 @@ pub fn set_auto_flush(yes: bool) {
     DEBUG_RENDY
         .get()
         .map(|e| e.lock_irq().set_auto_flush(yes))
-        .expect("set_auto_flush: attempted to set auto flush before the terminal was initialized");
+        .expect("set_auto_flush: invoked before the terminal was initialized");
 }
 
 /// ## Panics
@@ -962,7 +990,7 @@ pub fn double_buffer_flush() {
     DEBUG_RENDY
         .get()
         .map(|e| e.lock_irq().double_buffer_flush())
-        .expect("double_buffer_flush: attempted to flush before the terminal was initialized");
+        .expect("double_buffer_flush: invoked before the terminal was initialized");
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.
@@ -976,7 +1004,7 @@ pub unsafe fn force_unlock() {
 pub fn init(framebuffer_tag: &'static StivaleFramebufferTag, cmdline: &CommandLine) {
     let framebuffer_info = RendyInfo {
         byte_len: framebuffer_tag.size(),
-        bytes_per_pixel: framebuffer_tag.framebuffer_bpp as usize,
+        bits_per_pixel: framebuffer_tag.framebuffer_bpp as usize,
         horizontal_resolution: framebuffer_tag.framebuffer_width as usize,
         vertical_resolution: framebuffer_tag.framebuffer_height as usize,
         pixel_format: PixelFormat::BGR,

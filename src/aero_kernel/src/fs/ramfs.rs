@@ -214,8 +214,14 @@ impl INodeInterface for LockedRamINode {
         })
     }
 
-    fn unlink(&self, _name: &str) -> Result<()> {
-        Ok(())
+    fn unlink(&self, name: &str) -> Result<()> {
+        let mut this = self.0.write();
+
+        if let Some(_) = this.children.remove(name) {
+            Ok(())
+        } else {
+            Err(FileSystemError::EntryNotFound)
+        }
     }
 
     fn truncate(&self, size: usize) -> Result<()> {

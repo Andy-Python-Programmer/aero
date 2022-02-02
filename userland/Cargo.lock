@@ -3,13 +3,6 @@
 version = 3
 
 [[package]]
-name = "aero_rt"
-version = "0.1.0"
-dependencies = [
- "aero_syscall",
-]
-
-[[package]]
 name = "aero_shell"
 version = "0.1.0"
 dependencies = [
@@ -102,7 +95,6 @@ dependencies = [
 name = "std"
 version = "0.1.0"
 dependencies = [
- "aero_rt",
  "aero_syscall",
  "linked_list_allocator",
  "spin",

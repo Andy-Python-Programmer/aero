@@ -137,6 +137,11 @@ def parse_args():
                         action='store_true',
                         help='build the full userland sysroot. If disabled, then the sysroot will only contain the aero_shell and the init binaries')
 
+    parser.add_argument('--disable-kvm',
+                        default=False,
+                        action='store_true',
+                        help='disable KVM acceleration even if its available')
+
     parser.add_argument('remaining',
                         nargs=argparse.REMAINDER,
                         help='additional arguments to pass as the emulator')
@@ -188,13 +193,13 @@ def extract_artifacts(stdout):
     return result
 
 
-def build_cargo_workspace(cwd, command, args):
-    code, _, _ = run_command(['cargo', command, *args], cwd=cwd)
+def build_cargo_workspace(cwd, command, args, cargo='cargo'):
+    code, _, _ = run_command([cargo, command, *args], cwd=cwd)
 
     if code != 0:
         return None
 
-    _, stdout, _ = run_command(['cargo', command, *args, '--message-format=json'],
+    _, stdout, _ = run_command([cargo, command, *args, '--message-format=json'],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL,
                                cwd=cwd)
@@ -274,10 +279,13 @@ def build_userland(args):
     if args.check:
         command = 'check'
 
+    cargo = '../sysroot/tools/host-cargo/bin/cargo'
+    cmd_args += ['--target', 'x86_64-unknown-aero-system']
+
     if args.test:
-        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args])
+        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args], cargo)
     else:
-        return build_cargo_workspace('userland', command, cmd_args)
+        return build_cargo_workspace('userland', command, cmd_args, cargo)
 
     # TODO: Userland check
     # elif args.check:
@@ -401,6 +409,16 @@ def prepare_iso(args, kernel_bin, user_bins):
         limine_install = 'limine-install-win32.exe'
     elif platform.system() == 'Linux':
         limine_install = 'limine-install-linux-x86_64'
+    elif platform.system() == 'Darwin':
+        limine_install = 'limine-install'
+        # Limine doesn't provide pre-built binaries, so we have to build from source
+        code, _, limine_build_stderr = run_command(['make', '-C', limine_path],
+                                                   stdout=subprocess.PIPE,
+                                                   stderr=subprocess.PIPE)
+        if code != 0:
+            print('Failed to build `limine-install`')
+            print(limine_build_stderr.decode('utf8'))
+            exit(1)
 
     limine_install = os.path.join(limine_path, limine_install)
 
@@ -418,8 +436,9 @@ def prepare_iso(args, kernel_bin, user_bins):
 
 
 def run_in_emulator(args, iso_path):
+    is_kvm_available = is_kvm_supported()
+
     qemu_args = ['-cdrom', iso_path,
-                 '-cpu', 'qemu64,+la57' if args.la57 else 'qemu64',
                  '-M', 'q35',
                  '-m', '5G',
                  '-smp', '1',
@@ -436,7 +455,97 @@ def run_in_emulator(args, iso_path):
     if cmdline:
         qemu_args += cmdline
 
+    if is_kvm_available and not args.disable_kvm:
+        print("Running with KVM acceleration enabled")
+
+        if platform.system() == 'Darwin':
+            qemu_args += ['-accel', 'hvf']
+        else:
+            qemu_args += ['-enable-kvm']
+        qemu_args += ['-cpu', 'host,+la57' if args.la57 else 'host']
+    else:
+        qemu_args += ["-cpu", "qemu64,+la57" if args.la57 else "qemu64"]
+
     run_command(['qemu-system-x86_64', *qemu_args])
+
+
+def get_sysctl(name: str) -> str:
+    """
+    Shell out to sysctl(1)
+
+    Returns the value as a string.
+    Non-leaf nodes will return the value for each sub-node separated by newline characters.
+    """
+    status, stdout, stderr = run_command(["sysctl", "-n", name],
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE)
+    if status != 0:
+        print("`sysctl` failed: ", end="")
+        print(stderr.decode())
+    
+    return stdout.strip().decode()
+
+
+def is_kvm_supported() -> bool:
+    """
+    Returns True if KVM is supported on this machine
+    """
+
+    platform = sys.platform
+
+    if platform == "darwin":
+        # Check for VMX support
+        cpu_features = get_sysctl("machdep.cpu.features")
+        vmx_support  = "VMX" in cpu_features.split(' ')
+
+        # Check for HVF support
+        hv_support = get_sysctl("kern.hv_support") == "1"
+        
+        return hv_support and vmx_support
+
+    if platform == "linux":
+        kvm_path = "/dev/kvm"
+
+        # Check if the `/dev/kvm` device exists.
+        if not os.path.exists(kvm_path):
+            return False
+
+        # Read out the cpuinfo from `/proc/cpuinfo`
+        fd = open("/proc/cpuinfo")
+        cpuinfo = fd.read()
+
+        # Parse the cpuinfo
+        cpuinfo_array = cpuinfo.split("\n\n")
+        processors_info = []
+
+        for cpu in cpuinfo_array:
+            ret = {}
+            for line in cpu.split("\n"):
+                try:
+                    name, value = line.split(":")
+
+                    name = name.strip()
+                    value = value.strip()
+
+                    ret[name] = value
+                except ValueError:
+                    pass
+
+            processors_info.append(ret)
+
+        for processor in processors_info:
+            if processor["processor"] == "0":
+                # KVM acceleration can be used
+                if "vmx" in processor["flags"]:
+                    return True
+                # KVM acceleration cannot be used
+                else:
+                    return False
+
+        fd.close()
+
+    # KVM is not avaliable on Windows
+    return False
 
 
 def main():

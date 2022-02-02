@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::signal::SigAction;
 use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
 use alloc::string::String;
 use spin::{Mutex, Once};
@@ -26,6 +27,7 @@ use crate::fs::Path;
 
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
+use crate::userland::signals::SignalEntry;
 use crate::utils::validate_str;
 
 static HOSTNAME: Once<Mutex<String>> = Once::new();
@@ -178,28 +180,27 @@ pub fn waitpid(pid: usize, status: usize, _flags: usize) -> Result<usize, AeroSy
 pub fn mmap(
     address: usize,
     size: usize,
-    protocol: usize,
+    protection: usize,
     flags: usize,
-    _fd: usize,
-    _offset: usize,
+    fd: usize,
+    offset: usize,
 ) -> Result<usize, AeroSyscallError> {
+    assert_eq!(offset as isize, 0);
+    assert_eq!(fd as isize, -1);
+
     let address = VirtAddr::new(address as u64);
 
-    let protocol = MMapProt::from_bits(protocol).ok_or(AeroSyscallError::EINVAL)?;
+    let protection = MMapProt::from_bits(protection).ok_or(AeroSyscallError::EINVAL)?;
     let flags = MMapFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
 
     if !flags.contains(MMapFlags::MAP_ANONYOMUS) {
         unimplemented!()
     }
 
-    // HACK: This is currently a hack since mlibc tries to do somethin
-    // fancy. Oh well andy plz fix this in the future.
-    let size = size + 4096;
-
     if let Some(alloc) = scheduler::get_scheduler()
         .current_task()
         .vm()
-        .mmap(address, size, protocol, flags)
+        .mmap(address, size, protection, flags)
     {
         Ok(alloc.as_u64() as usize)
     } else {
@@ -262,6 +263,47 @@ pub fn sethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError>
         }
         Err(_) => Err(AeroSyscallError::EINVAL),
     }
+}
+
+pub fn sigaction(
+    sig: usize,
+    sigact: usize,
+    sigreturn: usize,
+    old: usize,
+) -> Result<usize, AeroSyscallError> {
+    let new = if sigact == 0 {
+        None
+    } else {
+        let address = VirtAddr::new(sigact as u64);
+        let raw = address.as_mut_ptr::<SigAction>();
+        let sigact = unsafe { &mut *raw };
+
+        Some(sigact)
+    };
+
+    let entry = if let Some(new) = new {
+        Some(SignalEntry::from_sigaction(*new, sigreturn)?)
+    } else {
+        None
+    };
+
+    let old = if old == 0 {
+        None
+    } else {
+        let address = VirtAddr::new(old as u64);
+        let raw = address.as_mut_ptr::<SigAction>();
+        let sigact = unsafe { &mut *raw };
+
+        Some(sigact)
+    };
+
+    let scheduler = scheduler::get_scheduler();
+    let task = scheduler.current_task();
+    let signals = task.signals();
+
+    signals.set_signal(sig, entry, old);
+
+    Ok(0)
 }
 
 pub fn shutdown() -> ! {

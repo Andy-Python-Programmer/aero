@@ -31,12 +31,15 @@ use spin::{Once, RwLock};
 use crate::fs::lookup_path;
 use crate::fs::Path;
 use crate::logger;
+use crate::rendy::RendyInfo;
 
 use super::cache::DirCacheItem;
 use super::inode::INodeInterface;
 use super::ramfs::RamFs;
 use super::FileSystemError;
 use super::{FileSystem, Result, MOUNT_MANAGER};
+
+use aero_syscall::prelude::*;
 
 lazy_static::lazy_static! {
     static ref DEV_FILESYSTEM: Arc<DevFs> = DevFs::new();
@@ -208,17 +211,34 @@ impl INodeInterface for DevKmsg {
     }
 }
 
-struct DevFb(usize);
+struct DevFb {
+    marker: usize,
+    vinfo: FramebufferVScreenInfo,
+}
 
 impl DevFb {
-    fn new() -> Arc<Self> {
-        Arc::new(Self(alloc_device_marker()))
+    fn new(info: RendyInfo) -> Arc<Self> {
+        Arc::new(Self {
+            marker: alloc_device_marker(),
+            vinfo: FramebufferVScreenInfo {
+                xres: info.horizontal_resolution as u32,
+                yres: info.vertical_resolution as u32,
+
+                xres_virtual: info.horizontal_resolution as u32,
+                yres_virtual: info.vertical_resolution as u32,
+
+                bits_per_pixel: info.bits_per_pixel as u32,
+
+                // TODO: Implement rest of the members
+                ..Default::default()
+            },
+        })
     }
 }
 
 impl Device for DevFb {
     fn device_marker(&self) -> usize {
-        self.0
+        self.marker
     }
 
     fn device_name(&self) -> String {
@@ -251,6 +271,19 @@ impl INodeInterface for DevFb {
                 Ok(count)
             })
             .expect("/dev/fb: terminal not initialized")
+    }
+
+    fn ioctl(&self, command: usize, arg: usize) -> Result<usize> {
+        match command {
+            FBIOGET_VSCREENINFO => {
+                let struc = unsafe { &mut *(arg as *mut FramebufferVScreenInfo) };
+
+                *struc = self.vinfo.clone();
+                Ok(0x00)
+            }
+
+            _ => Err(FileSystemError::NotSupported),
+        }
     }
 }
 
@@ -298,10 +331,12 @@ pub(super) fn init() -> Result<()> {
     let inode = lookup_path(Path::new("/dev"))?;
     MOUNT_MANAGER.mount(inode, DEV_FILESYSTEM.clone())?;
 
+    let rendy_info = crate::rendy::get_rendy_info();
+
     {
         let null = DEV_NULL.call_once(|| DevNull::new());
         let kmsg = DEV_KMSG.call_once(|| DevKmsg::new());
-        let fb = DEV_FB.call_once(|| DevFb::new());
+        let fb = DEV_FB.call_once(|| DevFb::new(rendy_info));
         let urandom = DEV_URANDOM.call_once(|| DevUrandom::new());
 
         install_device(null.clone())?;

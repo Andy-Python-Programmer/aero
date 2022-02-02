@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::prelude::FdFlags;
 use aero_syscall::{AeroSyscallError, OpenFlags};
 
 use crate::fs::inode::DirEntry;
@@ -93,6 +94,20 @@ pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, A
         .current_task()
         .file_table
         .open_file(inode, flags)?)
+}
+
+pub fn dup(fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
+    let task = scheduler::get_scheduler().current_task();
+    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
+
+    task.file_table.duplicate(fd, flags)
+}
+
+pub fn dup2(fd: usize, new_fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
+    let task = scheduler::get_scheduler().current_task();
+    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
+
+    task.file_table.duplicate_at(fd, new_fd, flags)
 }
 
 pub fn getdents(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
@@ -313,5 +328,37 @@ pub fn access(
     } else {
         // TODO: Implement atfd access
         unimplemented!()
+    }
+}
+
+pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscallError> {
+    let handle = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    match command {
+        // Get the value of file descriptor flags.
+        aero_syscall::prelude::F_GETFD => {
+            let flags = handle.fd_flags.lock().bits();
+            Ok(flags)
+        }
+
+        // Set the value of file descriptor flags:
+        aero_syscall::prelude::F_SETFD => {
+            let flags = FdFlags::from_bits(arg).ok_or(AeroSyscallError::EINVAL)?;
+            handle.fd_flags.lock().insert(flags);
+
+            Ok(0x00)
+        }
+
+        // Get the value of file status flags:
+        aero_syscall::prelude::F_GETFL => {
+            let flags = handle.flags.bits();
+            Ok(flags)
+        }
+
+        _ => unimplemented!(),
     }
 }
