@@ -1,6 +1,19 @@
-[unstable]
-build-std = ["core", "compiler_builtins", "alloc"]
-build-std-features = ["compiler-builtins-mem"]
-
 [build]
-target = "./.cargo/x86_64-unknown-none.json"
+rustc = "/home/czapek/Development/aero/sysroot/tools/host-rust/bin/rustc"
+target = "x86_64-unknown-aero-system"
+rustflags = ["-C", "link-args=-no-pie", "-lc"]
+
+[target.x86_64-unknown-aero-system]
+linker = "/home/czapek/Development/aero/sysroot/tools/host-gcc/bin/x86_64-aero-gcc"
+
+[patch.crates-io]
+libc = { path = "/home/czapek/Development/aero/bundled/rust-libc" }
+num_cpus = { path = "/home/czapek/Development/aero/bundled/rust-num-cpus" }
+users = { path = "/home/czapek/Development/aero/bundled/rust-users" }
+
+# [unstable]
+# build-std = ["core", "compiler_builtins", "alloc"]
+# build-std-features = ["compiler-builtins-mem"]
+
+# [build]
+# target = "./.cargo/x86_64-unknown-none.json"
