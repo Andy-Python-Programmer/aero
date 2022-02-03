@@ -23,6 +23,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::MMapFlags;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
@@ -30,6 +31,7 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::RwLock;
 
+use crate::mem::paging::PhysAddr;
 use crate::utils::downcast;
 use crate::utils::sync::Mutex;
 
@@ -295,7 +297,7 @@ impl INodeInterface for LockedRamINode {
         })
     }
 
-    fn ioctl(&self, _command: usize, _arg: usize) -> Result<usize> {
+    fn ioctl(&self, command: usize, arg: usize) -> Result<usize> {
         let this = self.0.read();
 
         match &this.contents {
@@ -303,8 +305,24 @@ impl INodeInterface for LockedRamINode {
                 let device = dev.clone();
                 drop(this);
 
-                device.ioctl(_command, _arg)
+                device.ioctl(command, arg)
             }
+            _ => Err(FileSystemError::NotSupported),
+        }
+    }
+
+    fn mmap(&self, offset: usize, flags: MMapFlags) -> Result<PhysAddr> {
+        let this = self.0.read();
+
+        match &this.contents {
+            FileContents::Device(dev) => {
+                let device = dev.clone();
+                drop(this);
+
+                device.mmap(offset, flags)
+            }
+
+            // TODO: Support memory mapping ramfs files:
             _ => Err(FileSystemError::NotSupported),
         }
     }

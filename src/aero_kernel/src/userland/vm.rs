@@ -136,7 +136,6 @@ impl Mapping {
             self.handle_cow(offset_table, addr_aligned, false)
         } else {
             log::error!("    - present page read failed");
-
             false
         }
     }
@@ -162,9 +161,7 @@ impl Mapping {
                 mmap_file.size as u64 - (address - self.start_addr),
             );
 
-            if !reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
-                && !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
-            {
+            if !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
                 // We are writing to private file mapping so copy the content of the page.
                 log::trace!(
                     "    - private file R: {:?}..{:?} (offset={:#x})",
@@ -173,48 +170,32 @@ impl Mapping {
                     offset
                 );
 
-                let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-                    .expect("failed to allocate frame for a private file read");
-
-                let buffer = unsafe {
-                    let phys = frame.start_address().as_u64();
-                    let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
-                    let ptr = virt.as_mut_ptr::<u8>();
-
-                    core::slice::from_raw_parts_mut(ptr, size as usize)
-                };
-
-                mmap_file
+                let phys = mmap_file
                     .file
                     .inode()
-                    .read_at(offset as usize, buffer)
-                    .unwrap();
+                    .mmap(offset as usize, self.flags)
+                    .expect("handle_pf_private_file: file does not support mmap");
 
-                let mut flags = PageTableFlags::PRESENT
-                    | PageTableFlags::USER_ACCESSIBLE
-                    | self.protection.into();
-
-                // We want to remove the writable flag since, we want to share the page table
-                // entry with other processes or threads until it tries to write to the same page
-                // and the mapping is marked as writable, in that case we will copy the page table
-                // entry.
-                flags.remove(PageTableFlags::WRITABLE);
+                let frame: PhysFrame<Size4KiB> = PhysFrame::containing_address(phys);
 
                 unsafe {
                     offset_table.map_to(
                         Page::containing_address(address),
                         frame,
-                        flags,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::USER_ACCESSIBLE
+                            | self.protection.into(),
                         &mut FRAME_ALLOCATOR,
                     )
                 }
                 .expect("failed to map allocated frame for private file read")
                 .flush();
-            } else {
-                unimplemented!()
-            }
 
-            true
+                true
+            } else {
+                log::error!("    - present page read failed");
+                false
+            }
         } else {
             false
         }
@@ -645,10 +626,12 @@ impl Vm {
         size: usize,
         protection: MMapProt,
         flags: MMapFlags,
+        offset: usize,
+        file: Option<DirCacheItem>,
     ) -> Option<VirtAddr> {
         self.inner
             .lock()
-            .mmap(address, size, protection, flags, 0x00, None)
+            .mmap(address, size, protection, flags, offset, file)
     }
 
     pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {

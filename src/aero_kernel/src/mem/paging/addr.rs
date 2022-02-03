@@ -314,6 +314,10 @@ impl PhysAddr {
         unsafe { PhysAddr::new_unchecked(addr) }
     }
 
+    pub const fn zero() -> Self {
+        unsafe { Self::new_unchecked(0) }
+    }
+
     pub fn as_vm_frame(&self) -> Option<&'static VmFrame> {
         let frames = super::get_vm_frames();
 

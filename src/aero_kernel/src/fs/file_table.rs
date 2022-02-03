@@ -106,6 +106,10 @@ impl FileHandle {
         Ok(new_offset)
     }
 
+    pub fn dirnode(&self) -> DirCacheItem {
+        self.inode.clone()
+    }
+
     pub fn inode(&self) -> INodeCacheItem {
         self.inode.inode()
     }

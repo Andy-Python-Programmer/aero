@@ -185,22 +185,32 @@ pub fn mmap(
     fd: usize,
     offset: usize,
 ) -> Result<usize, AeroSyscallError> {
-    assert_eq!(offset as isize, 0);
-    assert_eq!(fd as isize, -1);
-
     let address = VirtAddr::new(address as u64);
 
     let protection = MMapProt::from_bits(protection).ok_or(AeroSyscallError::EINVAL)?;
     let flags = MMapFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
 
-    if !flags.contains(MMapFlags::MAP_ANONYOMUS) {
+    if flags.contains(MMapFlags::MAP_SHARED) {
         unimplemented!()
+    }
+
+    let mut file = None;
+
+    if fd as isize != -1 {
+        file = Some(
+            scheduler::get_scheduler()
+                .current_task()
+                .file_table
+                .get_handle(fd)
+                .ok_or(AeroSyscallError::EBADF)?
+                .dirnode(),
+        );
     }
 
     if let Some(alloc) = scheduler::get_scheduler()
         .current_task()
         .vm()
-        .mmap(address, size, protection, flags)
+        .mmap(address, size, protection, flags, offset, file)
     {
         Ok(alloc.as_u64() as usize)
     } else {

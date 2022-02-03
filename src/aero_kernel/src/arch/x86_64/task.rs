@@ -312,6 +312,8 @@ impl ArchTask {
             USERLAND_STACK_SIZE as usize,
             MMapProt::PROT_WRITE | MMapProt::PROT_READ,
             MMapFlags::MAP_FIXED | MMapFlags::MAP_PRIVATE | MMapFlags::MAP_ANONYOMUS,
+            0,
+            None,
         );
 
         vm.log();

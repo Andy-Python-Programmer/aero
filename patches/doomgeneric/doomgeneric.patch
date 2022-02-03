@@ -1,16 +1,16 @@
-From a9634a899b60b3d783c9aabc4d667435bdeb4270 Mon Sep 17 00:00:00 2001
+From 0005041b6e5c82519820a22e8d34f827a5abf11d Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Sat, 15 Jan 2022 18:07:32 +1100
 Subject: [PATCH] add aero doom
 
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
- .gitignore                     |   8 ++
- doomgeneric/Makefile.aero      |  80 +++++++++++
- doomgeneric/aero/framebuffer.h | 243 +++++++++++++++++++++++++++++++
+ .gitignore                     |   9 ++
+ doomgeneric/Makefile.aero      |  80 ++++++++++
+ doomgeneric/aero/framebuffer.h | 243 ++++++++++++++++++++++++++++++
  doomgeneric/d_main.c           |   4 +
- doomgeneric/doomgeneric_aero.c | 255 +++++++++++++++++++++++++++++++++
- 5 files changed, 590 insertions(+)
+ doomgeneric/doomgeneric_aero.c | 266 +++++++++++++++++++++++++++++++++
+ 5 files changed, 602 insertions(+)
  create mode 100644 .gitignore
  create mode 100644 doomgeneric/Makefile.aero
  create mode 100644 doomgeneric/aero/framebuffer.h
@@ -18,10 +18,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 
 diff --git a/.gitignore b/.gitignore
 new file mode 100644
-index 0000000..6ac1485
+index 0000000..e610a33
 --- /dev/null
 +++ b/.gitignore
-@@ -0,0 +1,8 @@
+@@ -0,0 +1,9 @@
 +build
 +
 +doomgeneric/doomgeneric
@@ -30,7 +30,7 @@ index 0000000..6ac1485
 +doom1.wad
 +
 +.vscode
-\ No newline at end of file
++.clang-format
 diff --git a/doomgeneric/Makefile.aero b/doomgeneric/Makefile.aero
 new file mode 100644
 index 0000000..3cde87c
@@ -389,10 +389,10 @@ index c7cf977..435e76a 100644
      if (iwadfile == NULL)
 diff --git a/doomgeneric/doomgeneric_aero.c b/doomgeneric/doomgeneric_aero.c
 new file mode 100644
-index 0000000..6dd20b0
+index 0000000..a5adc60
 --- /dev/null
 +++ b/doomgeneric/doomgeneric_aero.c
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,266 @@
 +/*
 + * Copyright (C) 2021-2022 The Aero Project Developers.
 + *
@@ -417,22 +417,25 @@ index 0000000..6dd20b0
 +
 +#include "aero/framebuffer.h"
 +
-+#include <stdint.h>
 +#include <fcntl.h>
-+#include <stdlib.h>
-+#include <stdio.h>
 +#include <stdarg.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
 +#include <termios.h>
 +#include <unistd.h>
-+#include <stdbool.h>
 +
++#include <sys/mman.h>
 +#include <sys/time.h>
 +
-+#define LOG_INFO             0
-+#define KEYBOARD_QUEUE_SIZE  16
++#define LOG_INFO 0
++#define KEYBOARD_QUEUE_SIZE 16
 +
-+FILE *framebuffer = NULL;
 +FILE *keyboard = NULL;
++
++static uint32_t *framebuffer_ptr = NULL;
 +
 +static uint32_t s_screen_width = 0;
 +static uint32_t s_screen_height = 0;
@@ -485,49 +488,49 @@ index 0000000..6dd20b0
 +    uint8_t key = 0;
 +
 +    switch (scancode) {
-+        case 28: // enter
-+            key = KEY_ENTER;
-+            break;
-+        
-+        case 1: // escape
-+            key = KEY_ESCAPE;
-+            break;
-+        
-+        case 105: // left
-+            key = KEY_LEFTARROW;
-+            break;
-+        
-+        case 106: // right
-+            key = KEY_RIGHTARROW;
-+            break;
-+        
-+        case 103: // up
-+            key = KEY_UPARROW;
-+            break;
-+        
-+        case 108: // down
-+            key = KEY_DOWNARROW;
-+            break;
-+        
-+        case 29: // left control
-+        case 97: // right control
-+            key = KEY_FIRE;
-+            break;
-+        
-+        case 57: // spacebar
-+            key = KEY_USE;
-+            break;
++    case 28: // enter
++        key = KEY_ENTER;
++        break;
 +
-+        case 54: // rightshift
-+            key = KEY_RSHIFT;
-+            break;
-+        
-+        case 21: // y
-+            key = 'y';
-+            break;
++    case 1: // escape
++        key = KEY_ESCAPE;
++        break;
 +
-+        default: 
-+            break;
++    case 105: // left
++        key = KEY_LEFTARROW;
++        break;
++
++    case 106: // right
++        key = KEY_RIGHTARROW;
++        break;
++
++    case 103: // up
++        key = KEY_UPARROW;
++        break;
++
++    case 108: // down
++        key = KEY_DOWNARROW;
++        break;
++
++    case 29: // left control
++    case 97: // right control
++        key = KEY_FIRE;
++        break;
++
++    case 57: // spacebar
++        key = KEY_USE;
++        break;
++
++    case 54: // rightshift
++        key = KEY_RSHIFT;
++        break;
++
++    case 21: // y
++        key = 'y';
++        break;
++
++    default:
++        break;
 +    }
 +
 +    return key;
@@ -561,13 +564,13 @@ index 0000000..6dd20b0
 +    }
 +}
 +
-+/// Initialize doomgeneric. This includes setting up the framebuffer and keyboard
-+/// devices.
++/// Initialize doomgeneric. This includes setting up the framebuffer and
++/// keyboard devices.
 +void DG_Init() {
 +    log_info("initializing framebuffer");
 +
 +    // Open up the framebuffer device.
-+    framebuffer = fopen("/dev/fb", "r+");
++    size_t framebuffer = fopen("/dev/fb", "r+");
 +
 +    // Make sure the there were no errors.
 +    if (framebuffer == NULL) {
@@ -588,10 +591,15 @@ index 0000000..6dd20b0
 +    s_screen_width = vinfo.xres;
 +    s_screen_height = vinfo.yres;
 +
-+    log_info("framebuffer: (width=%lu, height=%lu)", (uint64_t)s_screen_width, (uint64_t)s_screen_height);
++    log_info("framebuffer: (width=%lu, height=%lu)", (uint64_t)s_screen_width,
++             (uint64_t)s_screen_height);
 +
 +    s_position_x = (s_screen_width - DOOMGENERIC_RESX) / 2;
 +    s_position_y = (s_screen_height - DOOMGENERIC_RESY) / 2;
++
++    uint32_t size = s_screen_width * s_screen_height * vinfo.bits_per_pixel / 8;
++    framebuffer_ptr = (uint32_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
++                                       MAP_PRIVATE, fileno(framebuffer), 0);
 +
 +    enable_raw_tty();
 +    atexit(disable_raw_tty);
@@ -610,16 +618,19 @@ index 0000000..6dd20b0
 +
 +void DG_DrawFrame() {
 +    for (int i = 0; i < DOOMGENERIC_RESY; i++) {
-+        fseek(framebuffer, s_position_x + (i + s_position_y) * s_screen_width, SEEK_SET);
-+        fwrite(DG_ScreenBuffer + i * DOOMGENERIC_RESX, 1, DOOMGENERIC_RESX * 4, framebuffer);
++        size_t index = s_position_x + (i + s_position_y) * s_screen_width;
++        size_t count = DOOMGENERIC_RESX * 4;
++
++        uint32_t *dest_ptr = &framebuffer_ptr[index];
++        uint32_t *src_ptr = DG_ScreenBuffer + i * DOOMGENERIC_RESX;
++
++        memcpy(dest_ptr, src_ptr, count);
 +    }
 +
 +    handle_keyboard_input();
 +}
 +
-+void DG_SleepMs(uint32_t ms) {
-+    usleep(ms * 1000000);
-+}
++void DG_SleepMs(uint32_t ms) { usleep(ms * 1000000); }
 +
 +uint32_t DG_GetTicksMs() {
 +    struct timeval tp;
@@ -646,7 +657,7 @@ index 0000000..6dd20b0
 +    return 1;
 +}
 +
-+// We dont need to set the window title :)
++// NOTE: We dont need to set the window title :)
 +void DG_SetWindowTitle(const char *title) {}
 -- 
 2.25.1
