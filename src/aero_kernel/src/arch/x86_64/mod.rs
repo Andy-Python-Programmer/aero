@@ -170,10 +170,10 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     gdt::init_boot();
     log::info!("loaded bootstrap GDT");
 
-    let mut offset_table = paging::init(mmap_tag).unwrap();
+    paging::init(mmap_tag).unwrap();
     log::info!("loaded paging");
 
-    alloc::init_heap(&mut offset_table).expect("failed to initialize the kernel heap");
+    alloc::init_heap();
     log::info!("loaded heap");
 
     paging::init_vm_frames();
