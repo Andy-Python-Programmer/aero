@@ -1,4 +1,4 @@
-From a513b374fb24e1cce54e8cad7137c4d95dd10998 Mon Sep 17 00:00:00 2001
+From 4f8a7cd8dd0758d21118191372fc95bf17663e43 Mon Sep 17 00:00:00 2001
 From: unknown <andypythonappdeveloper@gmail.com>
 Date: Sun, 6 Jun 2021 16:37:54 +1000
 Subject: [PATCH] targets: add aero target port
@@ -9,13 +9,13 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  abis/aero/auxv.h                            |  13 +
  meson.build                                 |   4 +
  sysdeps/aero/crt-x86_64/crt0.S              |   8 +
- sysdeps/aero/generic/aero.cc                | 292 ++++++++++++++++++++
- sysdeps/aero/generic/entry.cc               |  34 +++
- sysdeps/aero/generic/filesystem.cc          | 276 ++++++++++++++++++
+ sysdeps/aero/generic/aero.cpp               | 292 ++++++++++++++++++++
+ sysdeps/aero/generic/entry.cpp              |  34 +++
+ sysdeps/aero/generic/filesystem.cpp         | 276 ++++++++++++++++++
  sysdeps/aero/generic/signals.S              |   7 +
- sysdeps/aero/generic/signals.cc             |  49 ++++
- sysdeps/aero/generic/sockets.cc             |   0
- sysdeps/aero/generic/thread.cc              |  45 +++
+ sysdeps/aero/generic/signals.cpp            |  49 ++++
+ sysdeps/aero/generic/sockets.cpp            |   0
+ sysdeps/aero/generic/thread.cpp             |  45 +++
  sysdeps/aero/generic/thread_entry.S         |   8 +
  sysdeps/aero/include/abi-bits/abi.h         |   1 +
  sysdeps/aero/include/abi-bits/auxv.h        |   1 +
@@ -48,13 +48,13 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  40 files changed, 1039 insertions(+)
  create mode 100644 abis/aero/auxv.h
  create mode 100644 sysdeps/aero/crt-x86_64/crt0.S
- create mode 100644 sysdeps/aero/generic/aero.cc
- create mode 100644 sysdeps/aero/generic/entry.cc
- create mode 100644 sysdeps/aero/generic/filesystem.cc
+ create mode 100644 sysdeps/aero/generic/aero.cpp
+ create mode 100644 sysdeps/aero/generic/entry.cpp
+ create mode 100644 sysdeps/aero/generic/filesystem.cpp
  create mode 100644 sysdeps/aero/generic/signals.S
- create mode 100644 sysdeps/aero/generic/signals.cc
- create mode 100644 sysdeps/aero/generic/sockets.cc
- create mode 100644 sysdeps/aero/generic/thread.cc
+ create mode 100644 sysdeps/aero/generic/signals.cpp
+ create mode 100644 sysdeps/aero/generic/sockets.cpp
+ create mode 100644 sysdeps/aero/generic/thread.cpp
  create mode 100644 sysdeps/aero/generic/thread_entry.S
  create mode 120000 sysdeps/aero/include/abi-bits/abi.h
  create mode 120000 sysdeps/aero/include/abi-bits/auxv.h
@@ -148,11 +148,11 @@ index 0000000..190b5a0
 +    call __mlibc_entry
 +
 +.size _start, . - _start
-diff --git a/sysdeps/aero/generic/aero.cc b/sysdeps/aero/generic/aero.cc
+diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
 new file mode 100644
 index 0000000..7de909f
 --- /dev/null
-+++ b/sysdeps/aero/generic/aero.cc
++++ b/sysdeps/aero/generic/aero.cpp
 @@ -0,0 +1,292 @@
 +#include <abi-bits/pid_t.h>
 +#include <aero/syscall.h>
@@ -446,11 +446,11 @@ index 0000000..7de909f
 +
 +#endif
 +} // namespace mlibc
-diff --git a/sysdeps/aero/generic/entry.cc b/sysdeps/aero/generic/entry.cc
+diff --git a/sysdeps/aero/generic/entry.cpp b/sysdeps/aero/generic/entry.cpp
 new file mode 100644
 index 0000000..b5b9d42
 --- /dev/null
-+++ b/sysdeps/aero/generic/entry.cc
++++ b/sysdeps/aero/generic/entry.cpp
 @@ -0,0 +1,34 @@
 +#include <bits/ensure.h>
 +#include <mlibc/elf/startup.h>
@@ -486,11 +486,11 @@ index 0000000..b5b9d42
 +        main_fn(__mlibc_stack_data.argc, __mlibc_stack_data.argv, environ);
 +    exit(result);
 +}
-diff --git a/sysdeps/aero/generic/filesystem.cc b/sysdeps/aero/generic/filesystem.cc
+diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
 new file mode 100644
 index 0000000..52a5043
 --- /dev/null
-+++ b/sysdeps/aero/generic/filesystem.cc
++++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -0,0 +1,276 @@
 +#include <aero/syscall.h>
 +
@@ -781,11 +781,11 @@ index 0000000..9e5d12b
 +	mov $39, %rax
 +	syscall
 +	ud2
-diff --git a/sysdeps/aero/generic/signals.cc b/sysdeps/aero/generic/signals.cc
+diff --git a/sysdeps/aero/generic/signals.cpp b/sysdeps/aero/generic/signals.cpp
 new file mode 100644
 index 0000000..3527370
 --- /dev/null
-+++ b/sysdeps/aero/generic/signals.cc
++++ b/sysdeps/aero/generic/signals.cpp
 @@ -0,0 +1,49 @@
 +#include <mlibc/ansi-sysdeps.hpp>
 +#include <mlibc/debug.hpp>
@@ -837,14 +837,14 @@ index 0000000..3527370
 +}
 +} // namespace mlibc
 \ No newline at end of file
-diff --git a/sysdeps/aero/generic/sockets.cc b/sysdeps/aero/generic/sockets.cc
+diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
 new file mode 100644
 index 0000000..e69de29
-diff --git a/sysdeps/aero/generic/thread.cc b/sysdeps/aero/generic/thread.cc
+diff --git a/sysdeps/aero/generic/thread.cpp b/sysdeps/aero/generic/thread.cpp
 new file mode 100644
 index 0000000..4eef04a
 --- /dev/null
-+++ b/sysdeps/aero/generic/thread.cc
++++ b/sysdeps/aero/generic/thread.cpp
 @@ -0,0 +1,45 @@
 +#include <mlibc/all-sysdeps.hpp>
 +#include <mlibc/thread-entry.hpp>
@@ -1323,25 +1323,25 @@ index 0000000..ed5d7d3
 +} // namespace mlibc
 diff --git a/sysdeps/aero/meson.build b/sysdeps/aero/meson.build
 new file mode 100644
-index 0000000..5033f0f
+index 0000000..4d9420b
 --- /dev/null
 +++ b/sysdeps/aero/meson.build
 @@ -0,0 +1,67 @@
 +if not static
 +	rtdl_sources += files(
-+		'generic/aero.cc',
-+		'generic/filesystem.cc',
++		'generic/aero.cpp',
++		'generic/filesystem.cpp',
 +	)
 +endif
 +
 +libc_sources += files(
-+	'generic/aero.cc',
-+	'generic/entry.cc',
++	'generic/aero.cpp',
++	'generic/entry.cpp',
 +	'generic/thread_entry.S',
-+	'generic/thread.cc',
-+	'generic/filesystem.cc',
-+	'generic/sockets.cc',
-+	'generic/signals.cc',
++	'generic/thread.cpp',
++	'generic/filesystem.cpp',
++	'generic/sockets.cpp',
++	'generic/signals.cpp',
 +)
 +
 +if not no_headers
