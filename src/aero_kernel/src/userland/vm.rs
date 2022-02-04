@@ -28,6 +28,7 @@ use alloc::collections::LinkedList;
 use xmas_elf::header;
 use xmas_elf::ElfFile;
 
+use crate::arch::task::userland_last_address;
 use crate::fs;
 use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
@@ -504,6 +505,17 @@ impl VmProtected {
             self.find_any_above(VirtAddr::new(0x7000_0000_0000), size_aligned as _)
         } else {
             if flags.contains(MMapFlags::MAP_FIXED) {
+                // SAFTEY: The provided address should be page aligned.
+                if !address.is_aligned(Size4KiB::SIZE) {
+                    return None;
+                }
+
+                // SAFTEY: The provided (address + size) should be less then
+                // the userland max address.
+                if (address + size_aligned) > userland_last_address() {
+                    return None;
+                }
+
                 self.munmap(address, size_aligned as usize); // Unmap any existing mappings.
                 self.find_fixed_mapping(address, size_aligned as _)
             } else {

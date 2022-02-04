@@ -105,6 +105,13 @@ impl VirtAddr {
         VirtAddr(align_down(self.0, align.into()))
     }
 
+    pub fn is_aligned<U>(&self, align: U) -> bool
+    where
+        U: Into<u64>,
+    {
+        is_aligned(self.0, align.into())
+    }
+
     /// Aligns the virtual address upwards to the given alignment.
     ///
     /// See the `align_up` function for more information.
@@ -501,9 +508,20 @@ pub fn align_up(addr: u64, align: u64) -> u64 {
     }
 }
 
+#[inline]
+pub fn is_aligned(addr: u64, align: u64) -> bool {
+    align_up(addr, align) == addr
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[aero_test::test]
+    pub fn test_is_aligned() {
+        assert!(is_aligned(0x1000, 0x1000));
+        assert!(!is_aligned(69, 0x1000));
+    }
 
     #[aero_test::test]
     pub fn test_align_up() {
