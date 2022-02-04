@@ -143,7 +143,7 @@ impl Mapping {
     /// Handler routine for pages backed by a file. This function will allocate a frame and
     /// read a page-sized amount from the disk into the allocated frame. Then it maps
     /// the allocated frame at the faulted address.
-    fn handle_pf_private_file(
+    fn handle_pf_file(
         &mut self,
         offset_table: &mut OffsetPageTable,
         reason: PageFaultErrorCode,
@@ -174,7 +174,7 @@ impl Mapping {
                     .file
                     .inode()
                     .mmap(offset as usize, self.flags)
-                    .expect("handle_pf_private_file: file does not support mmap");
+                    .expect("handle_pf_file: file does not support mmap");
 
                 let frame: PhysFrame<Size4KiB> = PhysFrame::containing_address(phys);
 
@@ -391,12 +391,11 @@ impl VmProtected {
                     map.handle_pf_private_anon(&mut offset_table, reason, accessed_address)
                 }
 
-                (true, false) => {
-                    map.handle_pf_private_file(&mut offset_table, reason, accessed_address)
+                (true, false) | (false, false) => {
+                    map.handle_pf_file(&mut offset_table, reason, accessed_address)
                 }
 
                 (false, true) => unreachable!("shared and anonymous mapping"),
-                (false, false) => unimplemented!(),
             };
 
             result

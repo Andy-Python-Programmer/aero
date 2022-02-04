@@ -1,4 +1,4 @@
-From 0005041b6e5c82519820a22e8d34f827a5abf11d Mon Sep 17 00:00:00 2001
+From fe158557671423437d813cf623ca1997d498dc19 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Sat, 15 Jan 2022 18:07:32 +1100
 Subject: [PATCH] add aero doom
@@ -389,7 +389,7 @@ index c7cf977..435e76a 100644
      if (iwadfile == NULL)
 diff --git a/doomgeneric/doomgeneric_aero.c b/doomgeneric/doomgeneric_aero.c
 new file mode 100644
-index 0000000..a5adc60
+index 0000000..1172db3
 --- /dev/null
 +++ b/doomgeneric/doomgeneric_aero.c
 @@ -0,0 +1,266 @@
@@ -599,7 +599,7 @@ index 0000000..a5adc60
 +
 +    uint32_t size = s_screen_width * s_screen_height * vinfo.bits_per_pixel / 8;
 +    framebuffer_ptr = (uint32_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
-+                                       MAP_PRIVATE, fileno(framebuffer), 0);
++                                       MAP_SHARED, fileno(framebuffer), 0);
 +
 +    enable_raw_tty();
 +    atexit(disable_raw_tty);

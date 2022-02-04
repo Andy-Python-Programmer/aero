@@ -31,7 +31,7 @@ use spin::{Once, RwLock};
 use crate::fs::lookup_path;
 use crate::fs::Path;
 use crate::logger;
-use crate::mem::paging::PhysAddr;
+use crate::mem::paging::*;
 use crate::rendy::RendyInfo;
 
 use super::cache::DirCacheItem;
@@ -278,12 +278,11 @@ impl INodeInterface for DevFb {
             .expect("/dev/fb: terminal not initialized")
     }
 
-    fn mmap(&self, offset: usize, _flags: MMapFlags) -> Result<PhysAddr> {
-        // NOTE: We dont need to check for the mmap flags here.
+    fn mmap(&self, offset: usize, flags: MMapFlags) -> Result<PhysAddr> {
         let rinfo = crate::rendy::get_rendy_info();
 
         // Make sure we are in bounds.
-        if offset > rinfo.byte_len {
+        if offset > rinfo.byte_len || offset + Size4KiB::SIZE as usize > rinfo.byte_len {
             return Ok(PhysAddr::zero());
         }
 
@@ -291,14 +290,34 @@ impl INodeInterface for DevFb {
             .get()
             .map(|e| unsafe {
                 let mut lock = e.lock_irq();
-                let fb = lock.get_framebuffer();
 
-                let fb_ptr = fb.as_ptr() as *const u8;
-                let fb_ptr = fb_ptr.add(offset);
+                if flags.contains(MMapFlags::MAP_SHARED) {
+                    // This is a shared file mapping.
+                    let fb = lock.get_framebuffer();
 
-                let fb_phys_ptr = fb_ptr.sub(crate::PHYSICAL_MEMORY_OFFSET.as_u64() as usize);
+                    let fb_ptr = fb.as_ptr() as *const u8;
+                    let fb_ptr = fb_ptr.add(offset);
 
-                Ok(PhysAddr::new_unchecked(fb_phys_ptr as u64))
+                    let fb_phys_ptr = fb_ptr.sub(crate::PHYSICAL_MEMORY_OFFSET.as_u64() as usize);
+
+                    Ok(PhysAddr::new_unchecked(fb_phys_ptr as u64))
+                } else {
+                    let fb = lock.get_framebuffer();
+
+                    // This is a private file mapping.
+                    let private_cp: PhysFrame = FRAME_ALLOCATOR
+                        .allocate_frame()
+                        .expect("/dev/fb: failed to allocate frame for private file mapping");
+
+                    let private_phys = private_cp.start_address();
+                    let private_virt = crate::PHYSICAL_MEMORY_OFFSET + private_phys.as_u64();
+                    let private_ptr = private_virt.as_mut_ptr();
+
+                    core::slice::from_raw_parts_mut(private_ptr, Size4KiB::SIZE as usize)
+                        .copy_from_slice(&fb[offset..offset + Size4KiB::SIZE as usize]);
+
+                    Ok(private_phys)
+                }
             })
             .expect("/dev/fb: terminal not initialized")
     }

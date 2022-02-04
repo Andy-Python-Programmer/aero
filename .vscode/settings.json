@@ -7,6 +7,7 @@
     "rust-analyzer.checkOnSave.extraArgs": [
         "-Zbuild-std=core,alloc"
     ],
+    "editor.formatOnSave": true,
     "files.associations": {
         "stdio.h": "c",
         "unistd.h": "c",

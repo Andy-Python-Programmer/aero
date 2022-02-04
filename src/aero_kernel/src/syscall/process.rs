@@ -190,10 +190,6 @@ pub fn mmap(
     let protection = MMapProt::from_bits(protection).ok_or(AeroSyscallError::EINVAL)?;
     let flags = MMapFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
 
-    if flags.contains(MMapFlags::MAP_SHARED) {
-        unimplemented!()
-    }
-
     let mut file = None;
 
     if fd as isize != -1 {
