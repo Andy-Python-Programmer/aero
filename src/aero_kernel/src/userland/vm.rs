@@ -498,6 +498,23 @@ impl VmProtected {
             return None;
         }
 
+        if file.is_some() {
+            // SAFTEY: We cannot mmap a file with the anonymous flag.
+            if flags.contains(MMapFlags::MAP_ANONYOMUS) {
+                return None;
+            }
+        } else {
+            // SAFTEY: Mappings not backed by a file must be anonymous.
+            if !flags.contains(MMapFlags::MAP_ANONYOMUS) {
+                return None;
+            }
+
+            // SAFTEY: We cannot have a shared and an anonymous mapping.
+            if flags.contains(MMapFlags::MAP_SHARED) {
+                return None;
+            }
+        }
+
         let size_aligned = align_up(size as _, Size4KiB::SIZE);
 
         if address == VirtAddr::zero() {
