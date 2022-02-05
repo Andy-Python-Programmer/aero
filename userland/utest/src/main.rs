@@ -41,6 +41,7 @@ static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
     &fcntl_get_set_fdflags,
     // mmap tests:
     &mmap::zero_sized_mapping,
+    &rpc_test
 ];
 
 fn main() {
@@ -285,5 +286,41 @@ fn clone_process() -> Result<(), AeroSyscallError> {
         core::panic!("child exited with a non-zero status code: {}", exit_code);
     }
 
+    Ok(())
+}
+
+
+aero_ipc::ipc! {
+    trait Hello {
+        fn hello(favorite_number: i32) -> ();
+    }
+}
+
+struct HelloServer;
+impl Hello::Server for HelloServer {
+    fn hello(&self, favnum: i32) {
+        println!("hey: {}", favnum);
+    }
+}
+// a lock message transport
+struct ServerCallProxy;
+static IDALLOC: AtomicUsize = AtomicUsize::new(0);
+impl aero_ipc::MessageTransport for ServerCallProxy {
+    fn exchange(_meta: usize, _mid: usize, data: &[u8]) -> Vec<u8> {
+        aero_ipc::handle_request(6, data).unwrap()
+    }
+
+    fn alloc_id() -> usize {
+        IDALLOC.fetch_add(1, Ordering::SeqCst)
+    }
+    fn free_id(id: usize) {}
+}
+
+#[utest_proc::test]
+fn rpc_test() -> Result<(), AeroSyscallError> {
+    aero_ipc::listen(Hello::handler(HelloServer {}));
+    let c: Hello::Client<ServerCallProxy> = Hello::Client { pid: 7, phantom: ::core::marker::PhantomData{} };
+    c.hello(3);
+    
     Ok(())
 }
