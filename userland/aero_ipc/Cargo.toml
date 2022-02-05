@@ -1,0 +1,16 @@
+[package]
+name = "aero_ipc"
+version = "0.1.0"
+authors = ["pitust <piotr@stelmaszek.com>"]
+edition = "2021"
+
+[dependencies]
+aero_syscall = { path = "../../src/aero_syscall" }
+postcard = { version = "0.7.3", features = ["alloc"] }
+std = { path = "../aero_std" }
+serde = { version = "1.0.136", default-features = false, features = ["alloc"] }
+spin = "0.9"
+
+[dependencies.lazy_static]
+version = "1.4.0"
+features = ["spin_no_std"]
