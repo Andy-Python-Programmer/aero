@@ -17,16 +17,14 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 use crate::{
-    userland::{
-        scheduler::get_scheduler,
-    },
+    userland::scheduler::get_scheduler,
     utils::{
         sync::{BlockQueue, Mutex},
         validate_slice_mut,
     },
 };
 use aero_syscall::AeroSyscallError;
-use alloc::vec::Vec;
+use alloc::{collections::VecDeque, vec::Vec};
 use hashbrown::HashMap;
 use lazy_static::lazy_static;
 
@@ -34,30 +32,64 @@ struct Message {
     from: usize,
     data: Vec<u8>,
 }
+struct MessageQueue {
+    pub queue: VecDeque<Message>,
+}
 
 lazy_static! {
     static ref BLOCK_QUEUE: BlockQueue = BlockQueue::new();
-    static ref MESSAGES: Mutex<HashMap<usize, Option<Message>>> = Mutex::new(HashMap::new());
+    static ref MESSAGES: Mutex<HashMap<usize, MessageQueue>> = Mutex::new(HashMap::new());
 }
 
+fn messagequeue_do_recieve(
+    pidptr: usize,
+    messageptr: usize,
+    messagesiz: usize,
+    msg: Message,
+) -> Result<usize, AeroSyscallError> {
+    let output =
+        validate_slice_mut(messageptr as *mut u8, messagesiz).ok_or(AeroSyscallError::EINVAL)?;
+
+    output
+        .split_at_mut(msg.data.len())
+        .0
+        .copy_from_slice(&msg.data);
+
+    unsafe {
+        (pidptr as *mut usize).write(msg.from);
+    }
+    Ok(msg.data.len())
+}
 pub fn send(pid: usize, message: usize, messagesiz: usize) -> Result<usize, AeroSyscallError> {
     let payload =
         validate_slice_mut(message as *mut u8, messagesiz).ok_or(AeroSyscallError::EINVAL)?;
 
-    let mut bqueue = BLOCK_QUEUE
-        .block_on(&MESSAGES, |msg| {
-            let mp = msg.get(&pid);
-            match mp {
-                Some(None) => true,
-                _ => false,
-            }
-        })
-        .unwrap();
-    let bqueueitem = bqueue.get_mut(&pid).unwrap();
-    bqueueitem.replace(Message {
-        from: get_scheduler().current_task().pid().as_usize(),
-        data: payload.to_vec(),
-    });
+    let mut messagequeue = MESSAGES.lock();
+    match messagequeue.get_mut(&pid) {
+        Some(mq) => {
+            mq.queue.push_back(Message {
+                from: get_scheduler().current_task().pid().as_usize(),
+                data: payload.to_vec(),
+            });
+        }
+        None => {
+            messagequeue.insert(
+                pid,
+                MessageQueue {
+                    queue: [Message {
+                        from: get_scheduler().current_task().pid().as_usize(),
+                        data: payload.to_vec(),
+                    }]
+                    .into(),
+                },
+            );
+        }
+    }
+    // let bqueueitem = bqueue.get_mut(&pid).unwrap();
+    // bqueueitem.replace(Message {
+    //     from: get_scheduler().current_task().pid().as_usize(),
+    //     data: payload.to_vec(),
+    // });
     BLOCK_QUEUE.notify_complete();
     Ok(0)
 }
@@ -67,53 +99,63 @@ pub fn recv(
     messagemax: usize,
     block: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let output =
-        validate_slice_mut(messageptr as *mut u8, messagemax).ok_or(AeroSyscallError::EINVAL)?;
     let pid = get_scheduler().current_task().pid().as_usize();
 
     if block == 0 {
         // nonblocking read
         let mut msgqueue = MESSAGES.lock();
-        match msgqueue.get(&pid) {
-            Some(m) => match m {
-                None => return Err(AeroSyscallError::EAGAIN),
-                Some(_) => {
-                    let m = msgqueue.remove(&pid).unwrap().unwrap();
-                    output.split_at_mut(m.data.len()).0.copy_from_slice(&m.data);
-                    BLOCK_QUEUE.notify_complete();
-                    unsafe {
-                        *(pidptr as *mut usize) = m.from;
-                    }
-                    return Ok(m.data.len());
+        match msgqueue.get_mut(&pid) {
+            Some(m) => {
+                let item = m
+                    .queue
+                    .pop_front()
+                    .expect("empty message queues should always be deleted!");
+                if item.data.len() > messagemax {
+                    m.queue.push_front(item);
+                    return Err(AeroSyscallError::E2BIG);
                 }
-            },
+                if m.queue.len() == 0 {
+                    msgqueue
+                        .remove(&pid)
+                        .expect("safety violation: modification of a value behind a mutex!");
+                }
+                return messagequeue_do_recieve(pidptr, messageptr, messagemax, item);
+            }
             None => {
-                // just set it up
-                msgqueue.insert(pid, None);
+                // nope
                 return Err(AeroSyscallError::EAGAIN);
             }
         }
     }
 
-    let mut mqueue = MESSAGES.lock();
-    mqueue.insert(pid, None);
-    BLOCK_QUEUE.notify_complete();
-    drop(mqueue);
-
-    let mut bqueue = BLOCK_QUEUE
+    let mut queue_map = BLOCK_QUEUE
         .block_on(&MESSAGES, |msg| {
-            let mp = msg.get(&pid);
+            let mp = msg.get_mut(&pid);
             match mp {
-                Some(Some(_)) => true,
+                Some(mq) => match mq.queue.front() {
+                    Some(_) => true,
+                    None => false,
+                },
                 _ => false,
             }
         })
         .unwrap();
-    let m = bqueue.remove(&pid).unwrap().unwrap();
-    output.split_at_mut(m.data.len()).0.copy_from_slice(&m.data);
-    BLOCK_QUEUE.notify_complete();
-    unsafe {
-        *(pidptr as *mut usize) = m.from;
+    
+    let mq = queue_map
+        .get_mut(&pid)
+        .expect("someone else stole our messagequeue!");
+    let msg = mq
+        .queue
+        .pop_front()
+        .expect("someone else stole our message!");
+    if msg.data.len() > messagemax {
+        mq.queue.push_front(msg);
+        return Err(AeroSyscallError::E2BIG);
     }
-    Ok(m.data.len())
+    if mq.queue.len() == 0 {
+        queue_map
+            .remove(&pid)
+            .expect("safety violation: modification of a value behind a mutex!");
+    }
+    messagequeue_do_recieve(pidptr, messageptr, messagemax, msg)
 }
