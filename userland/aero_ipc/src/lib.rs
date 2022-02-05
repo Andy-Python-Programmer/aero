@@ -54,7 +54,7 @@ impl MessageTransport for SendRecieveTransport {
         IDALLOC.fetch_xor(value << 13, Ordering::SeqCst);
         IDALLOC.fetch_xor(value >> 7, Ordering::SeqCst);
         IDALLOC.fetch_xor(value << 17, Ordering::SeqCst);
-        return IDALLOC.fetch_add(1, Ordering::SeqCst);
+        return IDALLOC.fetch_add(1, Ordering::SeqCst) >> 3;
     }
     fn free_id(_: usize) {}
     fn exchange(meta: usize, mid: usize, msg: &[u8]) -> Vec<u8> {
@@ -66,7 +66,7 @@ impl MessageTransport for SendRecieveTransport {
             let rx = service_with_response_finding();
             match rx {
                 // if we got a response,
-                Some((mut msg, srcpid)) => {
+                Some((srcpid, mut msg)) => {
                     // and the response has the correct message ID...
                     let mut deser = postcard::Deserializer::from_bytes(&msg);
                     let msgid = usize::deserialize(&mut deser)
