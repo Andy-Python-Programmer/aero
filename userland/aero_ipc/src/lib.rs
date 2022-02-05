@@ -67,7 +67,7 @@ impl MessageTransport for SendRecieveTransport {
                         .expect("message ID not present in the message!");
                     if msgid == (mid << 1) | 1 {
                         // return the message contents!
-                        return msg.split_off(8);
+                        return msg.split_off(core::mem::size_of::<usize>());
                     }
                 }
                 None => {}
