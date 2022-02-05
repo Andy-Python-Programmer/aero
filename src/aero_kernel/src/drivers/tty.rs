@@ -265,7 +265,7 @@ impl INodeInterface for Tty {
                 let (rows, cols) = crate::rendy::get_rows_cols();
 
                 winsize.ws_row = rows as u16;
-                winsize.ws_col = (cols as u16) - (crate::rendy::X_PAD * 2) as u16;
+                winsize.ws_col = cols as u16;
 
                 let (xpixel, ypixel) = crate::rendy::get_resolution();
 
@@ -609,8 +609,6 @@ impl vte::Perform for AnsiEscape {
                         let (x, y) = crate::rendy::get_cursor_position();
                         let (term_rows, term_cols) = crate::rendy::get_rows_cols();
 
-                        let term_cols = term_cols - (crate::rendy::X_PAD * 2);
-
                         let rows_remaining = term_rows - (y + 1);
                         let cols_diff = term_cols - (x + 1);
                         let to_clear = rows_remaining * term_cols + cols_diff;
@@ -647,8 +645,6 @@ impl vte::Perform for AnsiEscape {
 
                 let (x, y) = crate::rendy::get_cursor_position();
                 let (_, term_cols) = crate::rendy::get_rows_cols();
-
-                let term_cols = term_cols - (crate::rendy::X_PAD * 2);
 
                 if x + n > term_cols - 1 {
                     n = (term_cols - 1) - x;

@@ -19,6 +19,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::MMapFlags;
 use aero_syscall::{OpenFlags, SocketAddr};
 
 use alloc::string::String;
@@ -28,6 +29,7 @@ use alloc::sync::Weak;
 use alloc::vec::Vec;
 use spin::Once;
 
+use crate::mem::paging::PhysAddr;
 use crate::utils::sync::Mutex;
 use crate::utils::Downcastable;
 
@@ -132,6 +134,10 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     ///
     /// The caller is responsible for removing the inode from the cache.
     fn unlink(&self, _name: &str) -> Result<()> {
+        Err(FileSystemError::NotSupported)
+    }
+
+    fn mmap(&self, _offset: usize, _flags: MMapFlags) -> Result<PhysAddr> {
         Err(FileSystemError::NotSupported)
     }
 

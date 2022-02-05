@@ -84,7 +84,6 @@ mod syscall;
 #[cfg(test)]
 mod tests;
 mod time;
-mod tls;
 mod unwind;
 mod userland;
 mod utils;
@@ -176,6 +175,8 @@ fn kernel_main_thread() {
 
 #[no_mangle]
 extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
+    use crate::arch::tls;
+
     log::debug!("booting CPU {}", ap_id);
 
     arch::gdt::init_boot();

@@ -60,10 +60,6 @@ const TAB_SIZE: usize = 4;
 /// The amount of VGA font glyphs.
 const VGA_FONT_GLYPHS: usize = 256;
 
-/// Constant describing the number of columns padded at the left
-/// and right of the screen.
-pub const X_PAD: usize = 1;
-
 const MARGIN_GRADIENT: usize = 4;
 const DWORD_SIZE: usize = core::mem::size_of::<u32>();
 
@@ -561,7 +557,7 @@ impl<'this> DebugRendy<'this> {
         }
 
         if mv {
-            self.x_pos = X_PAD;
+            self.x_pos = 0;
             self.y_pos = 0;
         }
     }
@@ -700,13 +696,13 @@ impl<'this> DebugRendy<'this> {
         self.push_to_queue(&char, self.x_pos, self.y_pos);
         self.x_pos += 1;
 
-        if self.x_pos == self.cols - X_PAD {
-            self.x_pos = X_PAD;
+        if self.x_pos == self.cols {
+            self.x_pos = 0;
             self.y_pos += 1;
         }
 
         if self.y_pos == self.rows {
-            self.x_pos = X_PAD;
+            self.x_pos = 0;
             self.y_pos -= 1;
             self.scroll();
         }
@@ -714,11 +710,11 @@ impl<'this> DebugRendy<'this> {
 
     fn newline(&mut self) {
         if self.y_pos == self.rows - 1 {
-            self.x_pos = X_PAD;
+            self.x_pos = 0;
             self.scroll();
         } else {
             self.y_pos += 1;
-            self.x_pos = X_PAD;
+            self.x_pos = 0;
         }
     }
 
@@ -744,7 +740,7 @@ impl<'this> DebugRendy<'this> {
     }
 
     fn scroll(&mut self) {
-        for i in X_PAD * self.cols..self.rows * self.cols {
+        for i in self.cols..self.rows * self.cols {
             let queue = self.map[i];
             let res;
 
@@ -796,7 +792,7 @@ impl<'this> DebugRendy<'this> {
     fn set_cursor_position(&mut self, x: usize, y: usize) {
         assert!(x <= self.cols && y <= self.rows);
 
-        self.x_pos = X_PAD + x;
+        self.x_pos = x;
         self.y_pos = y;
         self.double_buffer_flush();
     }
@@ -929,9 +925,6 @@ pub fn get_rows_cols() -> (usize, usize) {
 
 /// Gets the cursor position as a tuple `(x, y)`.
 ///
-/// ## Notes
-/// The return'ed cursor position will not have `X` and `Y` padding applied.
-///
 /// ## Panics
 /// Attempted to get the cursor position before the terminal was initialized.
 pub fn get_cursor_position() -> (usize, usize) {
@@ -939,7 +932,7 @@ pub fn get_cursor_position() -> (usize, usize) {
         .get()
         .map(|l| {
             let lock = l.lock_irq();
-            (lock.x_pos - X_PAD, lock.y_pos)
+            (lock.x_pos, lock.y_pos)
         })
         .expect("get_cursor_position: invoked before the terminal was initialized")
 }

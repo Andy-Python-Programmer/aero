@@ -28,6 +28,7 @@ use alloc::collections::LinkedList;
 use xmas_elf::header;
 use xmas_elf::ElfFile;
 
+use crate::arch::task::userland_last_address;
 use crate::fs;
 use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
@@ -136,7 +137,6 @@ impl Mapping {
             self.handle_cow(offset_table, addr_aligned, false)
         } else {
             log::error!("    - present page read failed");
-
             false
         }
     }
@@ -144,7 +144,7 @@ impl Mapping {
     /// Handler routine for pages backed by a file. This function will allocate a frame and
     /// read a page-sized amount from the disk into the allocated frame. Then it maps
     /// the allocated frame at the faulted address.
-    fn handle_pf_private_file(
+    fn handle_pf_file(
         &mut self,
         offset_table: &mut OffsetPageTable,
         reason: PageFaultErrorCode,
@@ -162,9 +162,7 @@ impl Mapping {
                 mmap_file.size as u64 - (address - self.start_addr),
             );
 
-            if !reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
-                && !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
-            {
+            if !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
                 // We are writing to private file mapping so copy the content of the page.
                 log::trace!(
                     "    - private file R: {:?}..{:?} (offset={:#x})",
@@ -173,48 +171,32 @@ impl Mapping {
                     offset
                 );
 
-                let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-                    .expect("failed to allocate frame for a private file read");
-
-                let buffer = unsafe {
-                    let phys = frame.start_address().as_u64();
-                    let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
-                    let ptr = virt.as_mut_ptr::<u8>();
-
-                    core::slice::from_raw_parts_mut(ptr, size as usize)
-                };
-
-                mmap_file
+                let phys = mmap_file
                     .file
                     .inode()
-                    .read_at(offset as usize, buffer)
-                    .unwrap();
+                    .mmap(offset as usize, self.flags)
+                    .expect("handle_pf_file: file does not support mmap");
 
-                let mut flags = PageTableFlags::PRESENT
-                    | PageTableFlags::USER_ACCESSIBLE
-                    | self.protection.into();
-
-                // We want to remove the writable flag since, we want to share the page table
-                // entry with other processes or threads until it tries to write to the same page
-                // and the mapping is marked as writable, in that case we will copy the page table
-                // entry.
-                flags.remove(PageTableFlags::WRITABLE);
+                let frame: PhysFrame<Size4KiB> = PhysFrame::containing_address(phys);
 
                 unsafe {
                     offset_table.map_to(
                         Page::containing_address(address),
                         frame,
-                        flags,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::USER_ACCESSIBLE
+                            | self.protection.into(),
                         &mut FRAME_ALLOCATOR,
                     )
                 }
                 .expect("failed to map allocated frame for private file read")
                 .flush();
-            } else {
-                unimplemented!()
-            }
 
-            true
+                true
+            } else {
+                log::error!("    - present page read failed");
+                false
+            }
         } else {
             false
         }
@@ -410,12 +392,11 @@ impl VmProtected {
                     map.handle_pf_private_anon(&mut offset_table, reason, accessed_address)
                 }
 
-                (true, false) => {
-                    map.handle_pf_private_file(&mut offset_table, reason, accessed_address)
+                (true, false) | (false, false) => {
+                    map.handle_pf_file(&mut offset_table, reason, accessed_address)
                 }
 
                 (false, true) => unreachable!("shared and anonymous mapping"),
-                (false, false) => unimplemented!(),
             };
 
             result
@@ -517,6 +498,23 @@ impl VmProtected {
             return None;
         }
 
+        if file.is_some() {
+            // SAFTEY: We cannot mmap a file with the anonymous flag.
+            if flags.contains(MMapFlags::MAP_ANONYOMUS) {
+                return None;
+            }
+        } else {
+            // SAFTEY: Mappings not backed by a file must be anonymous.
+            if !flags.contains(MMapFlags::MAP_ANONYOMUS) {
+                return None;
+            }
+
+            // SAFTEY: We cannot have a shared and an anonymous mapping.
+            if flags.contains(MMapFlags::MAP_SHARED) {
+                return None;
+            }
+        }
+
         let size_aligned = align_up(size as _, Size4KiB::SIZE);
 
         if address == VirtAddr::zero() {
@@ -524,6 +522,17 @@ impl VmProtected {
             self.find_any_above(VirtAddr::new(0x7000_0000_0000), size_aligned as _)
         } else {
             if flags.contains(MMapFlags::MAP_FIXED) {
+                // SAFTEY: The provided address should be page aligned.
+                if !address.is_aligned(Size4KiB::SIZE) {
+                    return None;
+                }
+
+                // SAFTEY: The provided (address + size) should be less then
+                // the userland max address.
+                if (address + size_aligned) > userland_last_address() {
+                    return None;
+                }
+
                 self.munmap(address, size_aligned as usize); // Unmap any existing mappings.
                 self.find_fixed_mapping(address, size_aligned as _)
             } else {
@@ -645,10 +654,12 @@ impl Vm {
         size: usize,
         protection: MMapProt,
         flags: MMapFlags,
+        offset: usize,
+        file: Option<DirCacheItem>,
     ) -> Option<VirtAddr> {
         self.inner
             .lock()
-            .mmap(address, size, protection, flags, 0x00, None)
+            .mmap(address, size, protection, flags, offset, file)
     }
 
     pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
@@ -762,8 +773,8 @@ impl Vm {
                         size,
                         prot,
                         MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED | MMapFlags::MAP_ANONYOMUS,
-                        file_offset as usize,
-                        Some(bin.clone()),
+                        0,
+                        None,
                     )
                     .expect("load_bin: failed to memory map ELF header");
 

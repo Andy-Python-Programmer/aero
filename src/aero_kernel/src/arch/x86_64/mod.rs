@@ -22,6 +22,7 @@ pub mod gdt;
 pub mod interrupts;
 pub mod signals;
 pub mod task;
+pub mod tls;
 
 use crate::acpi;
 use crate::apic;
@@ -35,7 +36,6 @@ use crate::mem::paging::{PhysAddr, VirtAddr};
 use crate::drivers;
 use crate::logger;
 use crate::rendy;
-use crate::tls;
 use crate::utils::io;
 
 use raw_cpuid::CpuId;
@@ -170,10 +170,10 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     gdt::init_boot();
     log::info!("loaded bootstrap GDT");
 
-    let mut offset_table = paging::init(mmap_tag).unwrap();
+    paging::init(mmap_tag).unwrap();
     log::info!("loaded paging");
 
-    alloc::init_heap(&mut offset_table).expect("failed to initialize the kernel heap");
+    alloc::init_heap();
     log::info!("loaded heap");
 
     paging::init_vm_frames();

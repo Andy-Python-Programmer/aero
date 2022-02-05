@@ -361,7 +361,7 @@ pub fn io_apic_set_redirect(vec: u8, gsi: u32, flags: u16, status: i32) {
         }
 
         redirect |= vec;
-        redirect |= (crate::tls::get_cpuid() << 56) as u8; // Set the target APIC ID.
+        redirect |= (crate::arch::tls::get_cpuid() << 56) as u8; // Set the target APIC ID.
 
         let entry = madt::IO_APICS.read()[io_apic];
         let ioredtbl = (gsi - entry.global_system_interrupt_base) * 2 + 16;
