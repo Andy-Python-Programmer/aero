@@ -72,17 +72,16 @@ impl log::Log for AeroLogger {
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
             match record.level() {
-                Level::Error => serial_print!("\x1b[1;41m"), // bold red
-                Level::Warn => serial_print!("\x1b[1;43m"),  // bold yellow
-                Level::Info => serial_print!("\x1b[1;42m"),  // bold green
-                Level::Debug => serial_print!("\x1b[1;44m"), // bold blue
-                Level::Trace => serial_print!("\x1b[1;45m"), // bold magenta
+                Level::Info =>  serial_print!("\x1b[32;1minfo "), // green info
+                Level::Warn =>  serial_print!("\x1b[33;1mwarn "), // yellow warn
+                Level::Error => serial_print!("\x1b[32;1merr  "), // red error
+                Level::Debug => serial_print!("\x1b[30;1mdbg  "), // gray debug
+                Level::Trace => serial_print!("\x1b[34;1mtrace"), // blue trace
             }
 
-            log!("  {}{: <2$} ", level, "", spaces);
-            crate::drivers::uart_16550::serial_print!("\x1b[0;0m");
+            crate::drivers::uart_16550::serial_print!("\x1b[0m");
 
-            log_ln!("      {}", record.args());
+            log_ln!(" {}", record.args());
         }
     }
 
