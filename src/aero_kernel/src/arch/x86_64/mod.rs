@@ -22,6 +22,7 @@ pub mod gdt;
 pub mod interrupts;
 pub mod signals;
 pub mod task;
+pub mod tls;
 
 use crate::acpi;
 use crate::apic;
@@ -35,7 +36,6 @@ use crate::mem::paging::{PhysAddr, VirtAddr};
 use crate::drivers;
 use crate::logger;
 use crate::rendy;
-use crate::tls;
 use crate::utils::io;
 
 use raw_cpuid::CpuId;

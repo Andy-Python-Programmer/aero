@@ -30,7 +30,7 @@ use core::mem;
 
 use crate::mem::paging::VirtAddr;
 
-use crate::tls::PerCpuData;
+use crate::arch::tls::PerCpuData;
 use crate::utils::io;
 
 bitflags::bitflags! {

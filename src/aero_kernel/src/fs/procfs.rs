@@ -9,11 +9,15 @@ use spin::{Once, RwLock};
 
 use crate::fs::inode::FileType;
 
-use super::cache::{CacheWeak, CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem};
-use super::{cache, FileSystemError};
+use crate::arch::tls;
 
-use super::inode::{DirEntry, INodeInterface, Metadata};
-use super::{FileSystem, Path, Result, MOUNT_MANAGER};
+use super::cache;
+use super::cache::*;
+
+use super::FileSystemError;
+
+use super::inode::*;
+use super::*;
 
 fn push_string_if_some(map: &mut serde_json::Value, key: &str, value: Option<String>) {
     if let Some(value) = value {
@@ -35,7 +39,7 @@ fn get_cpuinfo_cached() -> &'static str {
             .map(|processors| {
                 let mut cpu_info = vec![];
 
-                crate::tls::for_cpu_info_cached(|info| {
+                tls::for_cpu_info_cached(|info| {
                     let mut processor = json!({});
 
                     processor["id"] = Value::Number(Number::from(info.cpuid));
