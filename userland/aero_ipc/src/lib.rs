@@ -69,6 +69,7 @@ macro_rules! ipc {
             fn $fnnm:ident($($argname:ident : $argty:ty),*) $(-> $t:ty)?;
         )*
     } } => {
+        #[allow(non_snake_case)]
         pub mod $nm {
             use $crate::ipcmodules::*;
             pub struct Client<T: $crate::MessageTransport> {
