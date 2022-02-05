@@ -27,7 +27,6 @@ use spin::Once;
 use crate::utils::buffer::RingBuffer;
 use crate::utils::sync::Mutex;
 
-const MAX_LOG_LEVEL_SPACE: usize = 6;
 const DEFAULT_LOG_RING_BUFFER_SIZE: usize = 4096;
 
 static LOG_RING_BUFFER: Once<Mutex<RingBuffer<[u8; DEFAULT_LOG_RING_BUFFER_SIZE]>>> = Once::new();
@@ -46,6 +45,11 @@ impl log::Log for AeroLogger {
         if self.enabled(record.metadata()) {
             use crate::drivers::uart_16550::*;
 
+            let file = record.file().unwrap_or("unknown");
+            let file = file.strip_prefix("aero_kernel/src/").unwrap_or(file);
+
+            let line = record.line().unwrap_or(0);
+
             if let Some(pp) = record.module_path() {
                 // Only log the vm logs if the vmlog feature is enabled ;^).
                 if pp == "aero_kernel::userland::vm" && !cfg!(feature = "vmlog") {
@@ -54,13 +58,7 @@ impl log::Log for AeroLogger {
             }
 
             let level = record.level();
-            let spaces = MAX_LOG_LEVEL_SPACE - level.as_str().len();
             let rendy_dbg = RENDY_DEBUG.load(Ordering::Relaxed);
-
-            macro log($($arg:tt)*) {
-                $crate::drivers::uart_16550::serial_print!("{}", format_args!($($arg)*));
-                if rendy_dbg { $crate::rendy::print!("{}", format_args!($($arg)*)); }
-            }
 
             macro log_ln($($arg:tt)*) {
                 serial_println!("{}", format_args!($($arg)*));
@@ -71,17 +69,18 @@ impl log::Log for AeroLogger {
             let mut log_ring = LOG_RING_BUFFER.get().unwrap().lock_irq();
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
+            serial_print!("\x1b[37;1m{file}:{line} ");
+
             match record.level() {
-                Level::Info =>  serial_print!("\x1b[32;1minfo "), // green info
-                Level::Warn =>  serial_print!("\x1b[33;1mwarn "), // yellow warn
-                Level::Error => serial_print!("\x1b[32;1merr  "), // red error
-                Level::Debug => serial_print!("\x1b[30;1mdbg  "), // gray debug
-                Level::Trace => serial_print!("\x1b[34;1mtrace"), // blue trace
+                Level::Info => serial_print!("\x1b[32;1minfo "), // green info
+                Level::Warn => serial_print!("\x1b[33;1mwarn "), // yellow warn
+                Level::Error => serial_print!("\x1b[32;1merror "), // red error
+                Level::Debug => serial_print!("\x1b[35;1mdebug "), // gray debug
+                Level::Trace => serial_print!("\x1b[34;1mtrace "), // blue trace
             }
 
             crate::drivers::uart_16550::serial_print!("\x1b[0m");
-
-            log_ln!(" {}", record.args());
+            log_ln!("{}", record.args());
         }
     }
 
