@@ -24,19 +24,26 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
+/// This is an ugly hack that exposes postcard and serde for the macro to use
 pub mod ipcmodules {
     pub use postcard;
     pub use serde;
 }
 
+/// A MessageHandler is a trait describing an IPC client
 pub trait MessageHandler: Send + Sync {
     fn handle(&mut self, src: usize, msg: &[u8]) -> Option<Vec<u8>>;
 }
+
+/// A MessageTransport allows for high-level IPC exchanges over the IPC interfce.
+/// It also handles the allocation of request identifiers.
 pub trait MessageTransport {
     fn alloc_id() -> usize;
     fn free_id(id: usize);
     fn exchange(meta: usize, mid: usize, data: &[u8]) -> Vec<u8>;
 }
+
+/// A SendRecieveTransport transfers messages by using the IPC system calls.
 pub struct SendRecieveTransport;
 static IDALLOC: AtomicUsize = AtomicUsize::new(0);
 impl MessageTransport for SendRecieveTransport {
@@ -45,15 +52,21 @@ impl MessageTransport for SendRecieveTransport {
     }
     fn free_id(_: usize) {}
     fn exchange(meta: usize, mid: usize, msg: &[u8]) -> Vec<u8> {
+        // send the data
         sys_ipc_send(meta, msg).expect("exchange failed: request failed!");
+        // now wait for a repsonse
         loop {
+            // get a response
             let rx = service_with_response_finding();
             match rx {
+                // if we got a response,
                 Some(mut msg) => {
+                    // and the response has the correct message ID...
                     let mut deser = postcard::Deserializer::from_bytes(&msg);
                     let msgid = usize::deserialize(&mut deser)
                         .expect("message ID not present in the message!");
                     if msgid == (mid << 1) | 1 {
+                        // return the message contents!
                         return msg.split_off(8);
                     }
                 }
@@ -62,6 +75,19 @@ impl MessageTransport for SendRecieveTransport {
         }
     }
 }
+/// The IPC inteface macro
+/// 
+/// You can create interfaces like this:
+/// ```no_run
+/// aero_ipc::ipc! {
+///     trait Hello {
+///         fn hello(favorite_number: i32) -> ();
+///     }
+/// ```
+/// 
+/// Then, Hello::Client is the client interface, Hello::Server is the server
+/// inteface and Hello::handler instantiates a MessageHandler that can be added
+/// to the listening pool.
 #[macro_export]
 macro_rules! ipc {
     { trait $nm:ident {
@@ -138,6 +164,7 @@ lazy_static! {
     static ref RX_ARENA: spin::Mutex<Box<[u8; 0x4000]>> = spin::Mutex::new(Box::new([0; 0x4000]));
 }
 
+/// Register a request listener
 pub fn listen(iface: Box<dyn MessageHandler>) {
     let mut list = HANDLER_LIST
         .try_lock()
@@ -145,6 +172,7 @@ pub fn listen(iface: Box<dyn MessageHandler>) {
 
     list.push(iface);
 }
+/// Handle an IPC request from a specified process
 pub fn handle_request(src: usize, msg: &[u8]) -> Option<Vec<u8>> {
     let mut list = HANDLER_LIST
         .try_lock()
@@ -161,7 +189,7 @@ pub fn handle_request(src: usize, msg: &[u8]) -> Option<Vec<u8>> {
     );
     None
 }
-pub fn service_with_response_finding() -> Option<Vec<u8>> {
+fn service_with_response_finding() -> Option<Vec<u8>> {
     let mut src: usize = 0;
     let mut arena = RX_ARENA.try_lock().expect("recieve arena is locked!");
     let msg = sys_ipc_recv(&mut src, arena.as_mut(), true).expect("sys_ipc_recv failed!");
@@ -181,6 +209,7 @@ pub fn service_with_response_finding() -> Option<Vec<u8>> {
         }
     }
 }
+/// Service one request from the IPC queues
 pub fn service_request() {
     let mut src: usize = 0;
     let mut arena = RX_ARENA.try_lock().expect("recieve arena is locked!");
