@@ -31,7 +31,8 @@ use alloc::alloc::alloc_zeroed;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use crate::arch::gdt::{Kpcr, Tss};
+use super::gdt::*;
+
 use crate::userland::scheduler;
 use crate::utils::io;
 use crate::utils::sync::Mutex;
@@ -114,6 +115,8 @@ pub struct CpuInfo {
 
 pub struct PerCpuData {
     pub cpuid: usize,
+
+    pub(super) gdt: &'static mut [GdtEntry],
 }
 
 /// SAFETY: The GS base should point to the kernel PCR.

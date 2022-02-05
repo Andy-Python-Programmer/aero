@@ -460,7 +460,7 @@ def run_in_emulator(args, iso_path):
     qemu_args = ['-cdrom', iso_path,
                  '-M', 'q35',
                  '-m', '5G',
-                 '-smp', '1',
+                 '-smp', '5',
                  '-serial', 'stdio']
 
     if args.bios == 'uefi':

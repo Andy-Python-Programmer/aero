@@ -26,11 +26,16 @@
 //! ## Notes
 //! * <https://wiki.osdev.org/Global_Descriptor_Table>
 
+use core::alloc::Layout;
 use core::mem;
+
+use alloc::alloc::alloc_zeroed;
 
 use crate::mem::paging::VirtAddr;
 
 use crate::arch::tls::PerCpuData;
+
+use super::tls;
 use crate::utils::io;
 
 bitflags::bitflags! {
@@ -94,8 +99,7 @@ static mut BOOT_GDT: [GdtEntry; BOOT_GDT_ENTRY_COUNT] = [
     ),
 ];
 
-// TODO: Should we keep a reference to the per-cpu GDT in the TLS?
-static mut GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
+static GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
     // GDT null descriptor.
     GdtEntry::NULL,
     // GDT kernel code descriptor.
@@ -219,7 +223,7 @@ impl GdtDescriptor {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-struct GdtEntry {
+pub(super) struct GdtEntry {
     limit_low: u16,
     base_low: u16,
     base_middle: u8,
@@ -327,20 +331,37 @@ pub fn get_kpcr() -> &'static mut Kpcr {
 }
 
 /// Initialize the *actual* GDT stored in TLS.
+///
+/// ## Saftey
+/// The heap must be initialized before this function is called.
 pub fn init(stack_top: VirtAddr) {
+    let gdt = unsafe {
+        let gdt_ent_size = core::mem::size_of::<GdtEntry>();
+        let gdt_ent_align = core::mem::align_of::<GdtEntry>();
+
+        let gdt_size = gdt_ent_size * GDT_ENTRY_COUNT;
+        let layout = Layout::from_size_align_unchecked(gdt_size, gdt_ent_align);
+
+        let ptr = alloc_zeroed(layout) as *mut GdtEntry;
+        core::slice::from_raw_parts_mut::<GdtEntry>(ptr, GDT_ENTRY_COUNT)
+    };
+
+    // Copy over the GDT template:
+    gdt.copy_from_slice(&GDT);
+
     unsafe {
         let tss_ref = get_task_state_segement();
         let tss_ptr = tss_ref as *mut Tss;
 
-        GDT[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
-        GDT[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
-        GDT[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
+        gdt[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
+        gdt[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
+        gdt[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
 
         tss_ref.rsp[0] = stack_top.as_u64();
 
         let gdt_descriptor = GdtDescriptor::new(
             (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,
-            (&GDT as *const _) as u64,
+            gdt.as_ptr() as u64,
         );
 
         load_gdt(&gdt_descriptor);
@@ -354,6 +375,10 @@ pub fn init(stack_top: VirtAddr) {
         // Load the Task State Segment.
         load_tss(SegmentSelector::new(GdtEntryType::TSS, Ring::Ring0));
     }
+
+    // Now we update the per-cpu storage to store a reference
+    // to the per-cpu GDT.
+    tls::get_percpu().gdt = gdt;
 }
 
 #[inline(always)]
