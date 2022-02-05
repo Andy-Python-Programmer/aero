@@ -1,2 +1,2 @@
 [workspace]
-members = ["aero_shell", "init", "utest"]
+members = ["aero_shell", "aero_ipc", "init", "utest"]
