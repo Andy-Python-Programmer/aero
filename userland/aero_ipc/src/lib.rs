@@ -32,7 +32,7 @@ pub mod ipcmodules {
 
 /// A MessageHandler is a trait describing an IPC client
 pub trait MessageHandler: Send + Sync {
-    fn handle(&mut self, src: usize, msg: &[u8]) -> Option<Vec<u8>>;
+    fn handle(&mut self, src: usize, msg: &[u8]) -> Result<Option<Vec<u8>>, ()>;
 }
 
 /// A MessageTransport allows for high-level IPC exchanges over the IPC interfce.
@@ -139,25 +139,34 @@ macro_rules! ipc {
                 Box::new(MessageHandlingProxy(server))
             }
             impl<T: Server> $crate::MessageHandler for MessageHandlingProxy<T> {
-                fn handle(&mut self, _: usize, msg: &[u8]) -> Option<Vec<u8>> {
+                fn handle(&mut self, _: usize, msg: &[u8]) -> Result<Option<Vec<u8>>, ()> {
                     use serde::Deserialize;
 
                     let mut deser = postcard::Deserializer::from_bytes(msg);
                     // TODO: cache this in the recieve part of the handler
                     //? i don't think it would help *that* much though
-                    let msgid = usize::deserialize(&mut deser).expect("message ID not present in the message!");
-                    let method = String::deserialize(&mut deser).expect("message name not present in the message!");
+                    let msgid: usize = usize::deserialize(&mut deser).or_else(|e| {
+                        println!("\x1b[31;1merr\x1b[0m message id failed to deserialize!");
+                        Err(())
+                    })?;
+                    let method = String::deserialize(&mut deser).or_else(|e| {
+                        println!("\x1b[31;1merr\x1b[0m message name failed to deserialize!");
+                        Err(())
+                    })?;
                     match method.as_str() {
                         $(
                             concat!(stringify!($nm), "::", stringify!($fnnm)) => {
-                                Some(postcard::to_allocvec(&(msgid|1, self.0.$fnnm(
+                                Ok(Some(postcard::to_allocvec(&(msgid|1, self.0.$fnnm(
                                     $(
-                                        <$argty>::deserialize(&mut deser).expect("message deserialization failed!")
+                                        <$argty>::deserialize(&mut deser).or_else(|e| {
+                                            println!("\x1b[31;1merr\x1b[0m message deserialization failed!");
+                                            Err(())
+                                        })?
                                     ),*
-                                ))).expect("response serialization failed!"))
+                                ))).expect("reply failed to serialize!")))
                             },
                         )*
-                        _ => None
+                        _ => Ok(None)
                     }
                 }
             }
@@ -192,8 +201,9 @@ pub fn handle_request(src: usize, msg: &[u8]) -> Option<Vec<u8>> {
     }
     for i in list.deref_mut() {
         match i.handle(src, msg) {
-            Some(data) => return Some(data),
-            None => {}
+            Ok(Some(data)) => return Some(data),
+            Ok(None) => {}
+            Err(_) => return None,
         }
     }
     println!(
