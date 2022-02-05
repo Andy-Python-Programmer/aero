@@ -50,10 +50,7 @@ fn messagequeue_do_recieve(
     let output =
         validate_slice_mut(messageptr as *mut u8, messagesiz).ok_or(AeroSyscallError::EINVAL)?;
 
-    output
-        .split_at_mut(msg.data.len())
-        .0
-        .copy_from_slice(&msg.data);
+    output[0..msg.data.len()].copy_from_slice(&msg.data);
 
     unsafe {
         (pidptr as *mut usize).write(msg.from);
@@ -112,18 +109,18 @@ pub fn recv(
                     .expect("empty message queues should always be deleted!");
                 if item.data.len() > messagemax {
                     m.queue.push_front(item);
-                    return Err(AeroSyscallError::E2BIG);
+                    return Err(AeroSyscallError::E2BIG)
                 }
                 if m.queue.len() == 0 {
                     msgqueue
                         .remove(&pid)
                         .expect("safety violation: modification of a value behind a mutex!");
                 }
-                return messagequeue_do_recieve(pidptr, messageptr, messagemax, item);
+                return messagequeue_do_recieve(pidptr, messageptr, messagemax, item)
             }
             None => {
                 // nope
-                return Err(AeroSyscallError::EAGAIN);
+                return Err(AeroSyscallError::EAGAIN)
             }
         }
     }
@@ -131,16 +128,14 @@ pub fn recv(
     let mut queue_map = BLOCK_QUEUE
         .block_on(&MESSAGES, |msg| {
             let mp = msg.get_mut(&pid);
-            match mp {
-                Some(mq) => match mq.queue.front() {
-                    Some(_) => true,
-                    None => false,
-                },
-                _ => false,
+            if let Some(mq) = mp {
+                mq.queue.front().is_some()
+            } else {
+                false
             }
         })
         .unwrap();
-    
+
     let mq = queue_map
         .get_mut(&pid)
         .expect("someone else stole our messagequeue!");
@@ -150,12 +145,13 @@ pub fn recv(
         .expect("someone else stole our message!");
     if msg.data.len() > messagemax {
         mq.queue.push_front(msg);
-        return Err(AeroSyscallError::E2BIG);
+        Err(AeroSyscallError::E2BIG)
+    } else {
+        if mq.queue.len() == 0 {
+            queue_map
+                .remove(&pid)
+                .expect("safety violation: modification of a value behind a mutex!");
+        }
+        messagequeue_do_recieve(pidptr, messageptr, messagemax, msg)
     }
-    if mq.queue.len() == 0 {
-        queue_map
-            .remove(&pid)
-            .expect("safety violation: modification of a value behind a mutex!");
-    }
-    messagequeue_do_recieve(pidptr, messageptr, messagemax, msg)
 }
