@@ -45,9 +45,15 @@ pub trait MessageTransport {
 
 /// A SendRecieveTransport transfers messages by using the IPC system calls.
 pub struct SendRecieveTransport;
-static IDALLOC: AtomicUsize = AtomicUsize::new(0);
+// trust me, this seed is fine
+static IDALLOC: AtomicUsize = AtomicUsize::new(0xde73_ce13_600f_e4e9);
 impl MessageTransport for SendRecieveTransport {
     fn alloc_id() -> usize {
+        let value = IDALLOC.fetch_add(1, Ordering::SeqCst);
+        // a small attempt at seed obfuscation
+        IDALLOC.fetch_xor(value << 13, Ordering::SeqCst);
+        IDALLOC.fetch_xor(value >> 7, Ordering::SeqCst);
+        IDALLOC.fetch_xor(value << 17, Ordering::SeqCst);
         return IDALLOC.fetch_add(1, Ordering::SeqCst);
     }
     fn free_id(_: usize) {}
@@ -60,12 +66,12 @@ impl MessageTransport for SendRecieveTransport {
             let rx = service_with_response_finding();
             match rx {
                 // if we got a response,
-                Some(mut msg) => {
+                Some((mut msg, srcpid)) => {
                     // and the response has the correct message ID...
                     let mut deser = postcard::Deserializer::from_bytes(&msg);
                     let msgid = usize::deserialize(&mut deser)
                         .expect("message ID not present in the message!");
-                    if msgid == (mid << 1) | 1 {
+                    if msgid == (mid << 1) | 1 && meta == srcpid {
                         // return the message contents!
                         return msg.split_off(core::mem::size_of::<usize>());
                     }
@@ -182,7 +188,7 @@ pub fn handle_request(src: usize, msg: &[u8]) -> Option<Vec<u8>> {
             "\x1b[32;1mwarn\x1b[0m recieved random response from {}!",
             src
         );
-        return None
+        return None;
     }
     for i in list.deref_mut() {
         match i.handle(src, msg) {
@@ -196,13 +202,13 @@ pub fn handle_request(src: usize, msg: &[u8]) -> Option<Vec<u8>> {
     );
     None
 }
-fn service_with_response_finding() -> Option<Vec<u8>> {
+fn service_with_response_finding() -> Option<(usize, Vec<u8>)> {
     let mut src: usize = 0;
     let mut arena = RX_ARENA.try_lock().expect("recieve arena is locked!");
     let msg = sys_ipc_recv(&mut src, arena.as_mut(), true).expect("sys_ipc_recv failed!");
     // if it's a response
     if (msg[0] & 1) == 1 {
-        return Some(msg.to_vec())
+        return Some((src, msg.to_vec()));
     }
     if let Some(data) = handle_request(src, msg) {
         sys_ipc_send(src, &data).expect("sys_ipc_send failed, reply dropped!");

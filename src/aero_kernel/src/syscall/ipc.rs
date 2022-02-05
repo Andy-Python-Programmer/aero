@@ -109,18 +109,18 @@ pub fn recv(
                     .expect("empty message queues should always be deleted!");
                 if item.data.len() > messagemax {
                     m.queue.push_front(item);
-                    return Err(AeroSyscallError::E2BIG)
+                    return Err(AeroSyscallError::E2BIG);
                 }
                 if m.queue.len() == 0 {
                     msgqueue
                         .remove(&pid)
                         .expect("safety violation: modification of a value behind a mutex!");
                 }
-                return messagequeue_do_recieve(pidptr, messageptr, messagemax, item)
+                return messagequeue_do_recieve(pidptr, messageptr, messagemax, item);
             }
             None => {
                 // nope
-                return Err(AeroSyscallError::EAGAIN)
+                return Err(AeroSyscallError::EAGAIN);
             }
         }
     }
