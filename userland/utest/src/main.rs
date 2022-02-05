@@ -302,24 +302,10 @@ impl Hello::Server for HelloServer {
         println!("hey: {}", favnum);
     }
 }
-// a lock message transport
-struct ServerCallProxy;
-static IDALLOC: AtomicUsize = AtomicUsize::new(0);
-impl aero_ipc::MessageTransport for ServerCallProxy {
-    fn exchange(_meta: usize, _mid: usize, data: &[u8]) -> Vec<u8> {
-        aero_ipc::handle_request(6, data).unwrap()
-    }
-
-    fn alloc_id() -> usize {
-        IDALLOC.fetch_add(1, Ordering::SeqCst)
-    }
-    fn free_id(id: usize) {}
-}
-
 #[utest_proc::test]
 fn rpc_test() -> Result<(), AeroSyscallError> {
     aero_ipc::listen(Hello::handler(HelloServer {}));
-    let c: Hello::Client<ServerCallProxy> = Hello::Client { pid: 7, phantom: ::core::marker::PhantomData{} };
+    let c = Hello::open(sys_getpid().unwrap());
     c.hello(3);
     
     Ok(())
