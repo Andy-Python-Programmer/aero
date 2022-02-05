@@ -76,7 +76,7 @@ impl MessageTransport for SendRecieveTransport {
     }
 }
 /// The IPC inteface macro
-/// 
+///
 /// You can create interfaces like this:
 /// ```no_run
 /// aero_ipc::ipc! {
@@ -84,7 +84,7 @@ impl MessageTransport for SendRecieveTransport {
 ///         fn hello(favorite_number: i32) -> ();
 ///     }
 /// ```
-/// 
+///
 /// Then, Hello::Client is the client interface, Hello::Server is the server
 /// inteface and Hello::handler instantiates a MessageHandler that can be added
 /// to the listening pool.
@@ -144,7 +144,7 @@ macro_rules! ipc {
                     match method.as_str() {
                         $(
                             concat!(stringify!($nm), "::", stringify!($fnnm)) => {
-                                Some(postcard::to_allocvec(&(msgid, self.0.$fnnm(
+                                Some(postcard::to_allocvec(&(msgid|1, self.0.$fnnm(
                                     $(
                                         <$argty>::deserialize(&mut deser).expect("message deserialization failed!")
                                     ),*
@@ -177,6 +177,13 @@ pub fn handle_request(src: usize, msg: &[u8]) -> Option<Vec<u8>> {
     let mut list = HANDLER_LIST
         .try_lock()
         .expect("cannot nest request handlers!");
+    if (msg[0] & 1) == 1 {
+        println!(
+            "\x1b[32;1mwarn\x1b[0m recieved random response from {}!",
+            src
+        );
+        return None
+    }
     for i in list.deref_mut() {
         match i.handle(src, msg) {
             Some(data) => return Some(data),
@@ -193,21 +200,14 @@ fn service_with_response_finding() -> Option<Vec<u8>> {
     let mut src: usize = 0;
     let mut arena = RX_ARENA.try_lock().expect("recieve arena is locked!");
     let msg = sys_ipc_recv(&mut src, arena.as_mut(), true).expect("sys_ipc_recv failed!");
-    match handle_request(src, msg) {
-        Some(data) => {
-            sys_ipc_send(src, &data).expect("sys_ipc_send failed, reply dropped!");
-            None
-        }
-        _ => {
-            if
-            /* response */
-            (msg[0] & 1) == 1 {
-                Some(msg.to_vec())
-            } else {
-                None
-            }
-        }
+    // if it's a response
+    if (msg[0] & 1) == 1 {
+        return Some(msg.to_vec())
     }
+    if let Some(data) = handle_request(src, msg) {
+        sys_ipc_send(src, &data).expect("sys_ipc_send failed, reply dropped!");
+    }
+    None
 }
 /// Service one request from the IPC queues
 pub fn service_request() {
