@@ -214,6 +214,8 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_DUP => "dup",
         prelude::SYS_FCNTL => "fcntl",
         prelude::SYS_DUP2 => "dup2",
+        prelude::SYS_IPC_SEND => "ipc_send",
+        prelude::SYS_IPC_RECV => "ipc_recv",
 
         _ => unreachable!("unknown syscall"),
     }
@@ -834,4 +836,38 @@ pub fn sys_fcntl(fd: usize, command: usize, argument: usize) -> Result<usize, Ae
 pub fn sys_dup2(fd: usize, new_fd: usize, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
     let value = syscall3(prelude::SYS_DUP2, fd, new_fd, flags.bits());
     isize_as_syscall_result(value as _)
+}
+
+pub fn sys_ipc_send(pid: usize, message: &[u8]) -> Result<(), AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_IPC_SEND,
+        pid,
+        message.as_ptr() as usize,
+        message.len(),
+    );
+    match isize_as_syscall_result(value as _) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
+pub fn sys_ipc_recv<'a>(
+    pid: &mut usize,
+    message: &'a mut [u8],
+    block: bool,
+) -> Result<&'a mut [u8], AeroSyscallError> {
+    let value = syscall4(
+        prelude::SYS_IPC_RECV,
+        pid as *mut usize as usize,
+        message.as_ptr() as usize,
+        message.len(),
+        match block {
+            true => 1,
+            false => 0,
+        },
+    );
+    match isize_as_syscall_result(value as _) {
+        Ok(siz) => Ok(&mut message[0..siz]),
+        Err(e) => Err(e),
+    }
 }

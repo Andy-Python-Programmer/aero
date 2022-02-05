@@ -65,6 +65,7 @@ pub mod fs;
 mod net;
 pub mod process;
 pub mod time;
+pub mod ipc;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -73,6 +74,7 @@ pub use fs::*;
 pub use process::*;
 use raw_cpuid::CpuId;
 pub use time::*;
+pub use ipc::*;
 
 use crate::arch::signals;
 use crate::arch::{gdt::GdtEntryType, interrupts};
@@ -219,6 +221,9 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),
+
+        SYS_IPC_SEND => ipc::send(b, c, d),
+        SYS_IPC_RECV => ipc::recv(b, c, d, e),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);
