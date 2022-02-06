@@ -112,9 +112,16 @@ impl Scheduler {
             .unwrap();
     }
 
+    /// Get the current task
     #[inline]
     pub fn current_task(&self) -> Arc<Task> {
         self.inner.current_task()
+    }
+
+    /// Lookup a task by ID
+    #[inline]
+    pub fn find_task(&self, task_id: TaskId) -> Option<Arc<Task>> {
+        self.tasks.0.lock().get(&task_id).map(|task| task.clone())
     }
 }
 

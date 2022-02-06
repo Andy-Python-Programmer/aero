@@ -24,12 +24,6 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
-/// This is an ugly hack that exposes postcard and serde for the macro to use
-pub mod ipcmodules {
-    pub use postcard;
-    pub use serde;
-}
-
 /// A MessageHandler is a trait describing an IPC client
 pub trait MessageHandler: Send + Sync {
     fn handle(&mut self, src: usize, msg: &[u8]) -> Result<Option<Vec<u8>>, ()>;
@@ -81,6 +75,10 @@ impl MessageTransport for SendRecieveTransport {
         }
     }
 }
+
+pub extern crate postcard;
+pub extern crate serde;
+
 /// The IPC inteface macro
 ///
 /// You can create interfaces like this:
@@ -103,7 +101,7 @@ macro_rules! ipc {
     } } => {
         #[allow(non_snake_case)]
         pub mod $nm {
-            use $crate::ipcmodules::*;
+            use $crate::{postcard, serde};
             pub struct Client<T: $crate::MessageTransport> {
                 pub pid: usize,
                 pub phantom: ::core::marker::PhantomData<T>,
