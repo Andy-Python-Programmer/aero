@@ -858,10 +858,7 @@ pub fn sys_ipc_recv<'a>(
         pid as *mut usize as usize,
         message.as_ptr() as usize,
         message.len(),
-        match block {
-            true => 1,
-            false => 0,
-        },
+        block as usize,
     );
     isize_as_syscall_result(value as _).map(|size| &mut message[0..size])
 }
