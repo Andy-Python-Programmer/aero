@@ -845,10 +845,7 @@ pub fn sys_ipc_send(pid: usize, message: &[u8]) -> Result<(), AeroSyscallError> 
         message.as_ptr() as usize,
         message.len(),
     );
-    match isize_as_syscall_result(value as _) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e),
-    }
+    isize_as_syscall_result(value as _).map(|_| ())
 }
 
 pub fn sys_ipc_recv<'a>(
