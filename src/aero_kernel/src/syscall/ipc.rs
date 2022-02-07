@@ -16,28 +16,26 @@
  * You should have received a copy of the GNU General Public License
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
-use crate::{
-    userland::{
-        scheduler::{get_scheduler, SchedulerInterface},
-        task::TaskId,
-    },
-    utils::{
-        sync::{BlockQueue, Mutex},
-        validate_slice_mut,
-    },
-};
+
+use crate::userland::scheduler::get_scheduler;
+use crate::userland::task::TaskId;
+
+use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::validate_slice_mut;
+
 use aero_syscall::AeroSyscallError;
 use alloc::{collections::VecDeque, vec::Vec};
-use lazy_static::lazy_static;
 
 struct Message {
     from: usize,
     data: Vec<u8>,
 }
+
 pub struct MessageQueue {
     queue: Mutex<VecDeque<Message>>,
     blockqueue: BlockQueue,
 }
+
 impl MessageQueue {
     pub fn new() -> MessageQueue {
         MessageQueue {
@@ -47,62 +45,70 @@ impl MessageQueue {
     }
 }
 
-lazy_static! {
-    static ref BLOCK_QUEUE: BlockQueue = BlockQueue::new();
-}
-
-fn messagequeue_do_recieve(
-    pidptr: usize,
-    messageptr: usize,
-    messagesiz: usize,
+fn handle_recieve(
+    pid: usize,
+    message_ptr: usize,
+    message_size: usize,
     msg: Message,
 ) -> Result<usize, AeroSyscallError> {
+    let pid_ptr = pid as *mut usize;
     let output =
-        validate_slice_mut(messageptr as *mut u8, messagesiz).ok_or(AeroSyscallError::EINVAL)?;
+        validate_slice_mut(message_ptr as *mut u8, message_size).ok_or(AeroSyscallError::EINVAL)?;
 
     output[0..msg.data.len()].copy_from_slice(&msg.data);
 
     unsafe {
-        (pidptr as *mut usize).write(msg.from);
+        pid_ptr.write(msg.from);
     }
+
     Ok(msg.data.len())
 }
-pub fn send(pid: usize, message: usize, messagesiz: usize) -> Result<usize, AeroSyscallError> {
+
+pub fn send(pid: usize, message: usize, message_size: usize) -> Result<usize, AeroSyscallError> {
+    // Verify and convert the provided message into a slice.
     let payload =
-        validate_slice_mut(message as *mut u8, messagesiz).ok_or(AeroSyscallError::EINVAL)?;
+        validate_slice_mut(message as *mut u8, message_size).ok_or(AeroSyscallError::EINVAL)?;
 
     let target = get_scheduler()
         .find_task(TaskId::new(pid))
         .ok_or(AeroSyscallError::EINVAL)?;
 
-    let messagequeue = &target.message_queue;
-    let mut queue = messagequeue.queue.lock();
+    let message_queue = &target.message_queue;
+    let mut queue = message_queue.queue.lock();
 
+    // Push the message to the message queue of the provided task.
     queue.push_back(Message {
         from: get_scheduler().current_task().pid().as_usize(),
         data: payload.to_vec(),
     });
-    messagequeue.blockqueue.notify_complete();
+
+    // Notify the task that it has a new message if its awaiting for one!
+    message_queue.blockqueue.notify_complete();
+
     Ok(0)
 }
+
 pub fn recv(
     pidptr: usize,
-    messageptr: usize,
-    messagemax: usize,
+    message_ptr: usize,
+    message_max: usize,
     block: usize,
 ) -> Result<usize, AeroSyscallError> {
     let current = get_scheduler().current_task();
+
     if block == 0 {
         // nonblocking read
         let mut msgqueue = current.message_queue.queue.lock();
         let item = msgqueue
             .pop_front()
             .expect("empty message queues should always be deleted!");
-        if item.data.len() > messagemax {
+
+        if item.data.len() > message_max {
             msgqueue.push_front(item);
             return Err(AeroSyscallError::E2BIG);
         }
-        return messagequeue_do_recieve(pidptr, messageptr, messagemax, item);
+
+        return handle_recieve(pidptr, message_ptr, message_max, item);
     }
 
     let mq = &current.message_queue;
@@ -113,11 +119,12 @@ pub fn recv(
 
     let msg = our_queue
         .pop_front()
-        .expect("someone else stole our message!");
-    if msg.data.len() > messagemax {
+        .expect("ipc_recieve: someone else stole our message!");
+
+    if msg.data.len() > message_max {
         our_queue.push_front(msg);
         Err(AeroSyscallError::E2BIG)
     } else {
-        messagequeue_do_recieve(pidptr, messageptr, messagemax, msg)
+        handle_recieve(pidptr, message_ptr, message_max, msg)
     }
 }

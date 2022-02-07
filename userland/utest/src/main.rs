@@ -298,11 +298,13 @@ aero_ipc::ipc! {
 }
 
 struct HelloServer;
+
 impl Hello::Server for HelloServer {
     fn hello(&self, favnum: i32) {
         println!("hey: {}", favnum);
     }
 }
+
 #[utest_proc::test]
 fn rpc_test() -> Result<(), AeroSyscallError> {
     aero_ipc::listen(Hello::handler(HelloServer {}));
