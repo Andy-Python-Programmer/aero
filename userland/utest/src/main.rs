@@ -34,6 +34,7 @@ pub struct Test<'a> {
 static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
     // TODO: Why does clone process fail?
     // &clone_process,
+    &rpc_test,
     &forked_pipe,
     &signal_handler,
     &dup_fds,
@@ -41,7 +42,6 @@ static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
     &fcntl_get_set_fdflags,
     // mmap tests:
     &mmap::zero_sized_mapping,
-    &rpc_test
 ];
 
 fn main() {
@@ -174,6 +174,8 @@ fn signal_handler() -> Result<(), AeroSyscallError> {
         // Close the pipe
         sys_close(pipe[0])?;
         sys_close(pipe[1])?;
+
+        sys_exit(0)
     } else {
         let mut status = 0;
         sys_waitpid(child, &mut status, 0)?;
@@ -289,7 +291,6 @@ fn clone_process() -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
-
 aero_ipc::ipc! {
     trait Hello {
         fn hello(favorite_number: i32) -> ();
@@ -307,6 +308,6 @@ fn rpc_test() -> Result<(), AeroSyscallError> {
     aero_ipc::listen(Hello::handler(HelloServer {}));
     let c = Hello::open(sys_getpid().unwrap());
     c.hello(3);
-    
+
     Ok(())
 }
