@@ -240,8 +240,11 @@ impl ArchTask {
         }
 
         let switch_stack = unsafe {
-            let layout = Layout::from_size_align_unchecked(0x1000, 0x1000);
-            alloc_zeroed(layout).add(layout.size())
+            let frame: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
+            let phys = frame.start_address();
+            let virt = crate::PHYSICAL_MEMORY_OFFSET + phys.as_u64();
+
+            virt.as_mut_ptr::<u8>().add(Size4KiB::SIZE as usize)
         };
 
         let mut old_stack_ptr = self.context_switch_rsp.as_u64();
@@ -320,7 +323,7 @@ impl ArchTask {
 
         address_space.switch(); // Perform the address space switch
 
-        let loaded_binary = vm.load_bin(executable);
+        let loaded_binary = vm.load_bin(executable).expect("exec: failed to load ELF");
 
         self.context = Unique::dangling();
         self.address_space = address_space; // Update the address space reference
@@ -350,7 +353,7 @@ impl ArchTask {
             }
         }
 
-        let p2_header = loaded_binary.elf.header.pt2;
+        let p2_header = loaded_binary.header.pt2;
 
         unsafe {
             let hdr: [(AuxvType, usize); 4] = [

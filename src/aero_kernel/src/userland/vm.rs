@@ -17,24 +17,170 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::alloc::Layout;
-
 use aero_syscall::{MMapFlags, MMapProt};
 
-use alloc::alloc::alloc_zeroed;
+use alloc::boxed::Box;
 use alloc::collections::linked_list::CursorMut;
 use alloc::collections::LinkedList;
 
-use xmas_elf::header;
-use xmas_elf::ElfFile;
+use xmas_elf::header::*;
+use xmas_elf::program::*;
+use xmas_elf::*;
 
 use crate::arch::task::userland_last_address;
 use crate::fs;
 use crate::fs::cache::DirCacheItem;
+use crate::fs::FileSystemError;
+use crate::mem;
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
 
 use crate::utils::sync::Mutex;
+
+const ELF_HEADER_MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];
+
+const ELF_PT1_SIZE: usize = core::mem::size_of::<HeaderPt1>();
+const ELF_PT2_64_SIZE: usize = core::mem::size_of::<HeaderPt2_<P64>>();
+
+#[derive(Debug)]
+pub enum ElfParseError {
+    /// Unexpected file system error occured when reading the file.
+    ReadError(FileSystemError),
+    /// The PT1 header has an invalid magic number.
+    InvalidMagic,
+    /// The ELF header contains an invalid class.
+    InvalidClass,
+    /// The provided program header index is invalid.
+    InvalidProgramHeaderIndex,
+}
+
+// TODO: Remove the Box::leak() calls
+fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfParseError> {
+    // 1. Read the ELF PT1 header:
+    let mut pt1_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT1_SIZE));
+
+    file.inode()
+        .read_at(0, &mut pt1_hdr_slice)
+        .map_err(|err| ElfParseError::ReadError(err))?;
+
+    let pt1_header: &'header _ = unsafe { &*(pt1_hdr_slice.as_ptr() as *const HeaderPt1) };
+
+    // 2. Ensure that the header has the correct magic number:
+    if pt1_header.magic != ELF_HEADER_MAGIC {
+        return Err(ElfParseError::InvalidMagic);
+    }
+
+    let pt2_header = match pt1_header.class() {
+        // 3. Read the 64-bit PT2 header:
+        Class::SixtyFour => {
+            let mut pt2_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT2_64_SIZE));
+
+            file.inode()
+                .read_at(ELF_PT1_SIZE, &mut pt2_hdr_slice)
+                .map_err(|err| ElfParseError::ReadError(err))?;
+
+            let pt2_header_ptr = pt2_hdr_slice.as_ptr();
+            let pt2_header: &'header _ = unsafe { &*(pt2_header_ptr as *const HeaderPt2_<P64>) };
+
+            Ok(HeaderPt2::Header64(pt2_header))
+        }
+
+        // 3. Read the 32-bit PT2 header:
+        Class::ThirtyTwo => {
+            unimplemented!("parse_elf_header: 32-bit executables are not implemented")
+        }
+
+        // SAFTEY: ensure the PT1 header has a valid class.
+        Class::None | Class::Other(_) => Err(ElfParseError::InvalidClass),
+    }?;
+
+    Ok(Header {
+        pt1: pt1_header,
+        pt2: pt2_header,
+    })
+}
+
+// TODO: Remove the Box::leak() calls
+fn parse_program_header<'pheader>(
+    file: DirCacheItem,
+    header: Header<'pheader>,
+    index: u16,
+) -> Result<ProgramHeader<'pheader>, ElfParseError> {
+    let pt2 = &header.pt2;
+
+    // SAFTEY: ensure that the provided program header index is valid.
+    if !(index < pt2.ph_count() && pt2.ph_offset() > 0 && pt2.ph_entry_size() > 0) {
+        return Err(ElfParseError::InvalidProgramHeaderIndex);
+    }
+
+    // 1. Calculate the start offset and size of the program header:
+    let start = pt2.ph_offset() as usize + index as usize * pt2.ph_entry_size() as usize;
+    let size = pt2.ph_entry_size() as usize;
+
+    // 2. Read the 64-bit program header:
+    let mut phdr_buffer = Box::leak(mem::alloc_boxed_buffer::<u8>(size));
+
+    file.inode()
+        .read_at(start, &mut phdr_buffer)
+        .map_err(|err| ElfParseError::ReadError(err))?;
+
+    let phdr_ptr = phdr_buffer.as_ptr();
+
+    match header.pt1.class() {
+        // 3. Cast and return the 64-bit program header:
+        Class::SixtyFour => {
+            let phdr: &'pheader _ = unsafe { &*(phdr_ptr as *const ProgramHeader64) };
+            Ok(ProgramHeader::Ph64(phdr))
+        }
+
+        // 3. Cast and return the 32-bit program header:
+        Class::ThirtyTwo => {
+            let phdr: &'pheader _ = unsafe { &*(phdr_ptr as *const ProgramHeader32) };
+            Ok(ProgramHeader::Ph32(phdr))
+        }
+
+        // SAFTEY: ensure the PT1 header has a valid class.
+        Class::None | Class::Other(_) => Err(ElfParseError::InvalidClass),
+    }
+}
+
+struct ProgramHeaderIter<'this> {
+    file: DirCacheItem,
+    header: Header<'this>,
+    next_index: usize,
+}
+
+impl<'this> ProgramHeaderIter<'this> {
+    fn new(header: Header<'this>, file: DirCacheItem) -> Self {
+        Self {
+            file,
+            header,
+
+            next_index: 0,
+        }
+    }
+}
+
+impl<'this> Iterator for ProgramHeaderIter<'this> {
+    type Item = ProgramHeader<'this>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let count = self.header.pt2.ph_count() as usize;
+
+        // We have reached at the end of the program header array.
+        if self.next_index >= count {
+            return None;
+        }
+
+        // Parse and return the program header.
+        let result =
+            parse_program_header(self.file.clone(), self.header, self.next_index as u16).ok();
+
+        // Increment the next index.
+        self.next_index += 1;
+        result
+    }
+}
 
 impl From<MMapProt> for PageTableFlags {
     fn from(e: MMapProt) -> Self {
@@ -61,7 +207,7 @@ enum UnmapResult {
 }
 
 pub struct LoadedBinary<'header> {
-    pub elf: ElfFile<'header>,
+    pub header: Header<'header>,
 
     pub entry_point: VirtAddr,
     pub base_addr: VirtAddr,
@@ -671,38 +817,26 @@ impl Vm {
     }
 
     /// Mapping the provided `bin` file into the VM.
-    pub fn load_bin(&self, bin: DirCacheItem) -> LoadedBinary {
-        let size_align = Size4KiB::SIZE as usize;
-
-        let buffer = unsafe {
-            let layout = Layout::from_size_align_unchecked(size_align, size_align);
-            let raw = alloc_zeroed(layout);
-
-            core::slice::from_raw_parts_mut(raw, size_align)
-        };
-
-        bin.inode()
-            .read_at(0, buffer)
-            .expect("load_bin: failed to read provided binary file");
-
-        let elf = ElfFile::new(buffer).unwrap();
+    pub fn load_bin(&self, bin: DirCacheItem) -> Result<LoadedBinary, ElfParseError> {
+        let header = parse_elf_header(bin.clone())?;
+        let phdr_iter = ProgramHeaderIter::new(header, bin.clone());
 
         let load_offset = VirtAddr::new(
-            if elf.header.pt2.type_().as_type() == header::Type::SharedObject {
+            if header.pt2.type_().as_type() == header::Type::SharedObject {
                 0x40000000u64
             } else {
                 0u64
             },
         );
 
-        let mut entry_point = load_offset + elf.header.pt2.entry_point();
+        let mut entry_point = load_offset + header.pt2.entry_point();
 
         log::debug!("entry point: {:#x}", entry_point);
-        log::debug!("entry point type: {:?}", elf.header.pt2.type_().as_type());
+        log::debug!("entry point type: {:?}", header.pt2.type_().as_type());
 
         let mut base_addr = VirtAddr::zero();
 
-        for header in elf.program_iter() {
+        for header in phdr_iter {
             let header_type = header
                 .get_type()
                 .expect("Failed to get program header type");
@@ -793,17 +927,17 @@ impl Vm {
             } else if header_type == xmas_elf::program::Type::Interp {
                 let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
 
-                let res = self.load_bin(ld);
+                let res = self.load_bin(ld)?;
                 entry_point = res.entry_point;
             }
         }
 
-        LoadedBinary {
-            elf,
+        Ok(LoadedBinary {
+            header,
             entry_point,
 
             base_addr,
-        }
+        })
     }
 
     /// Clears and unmaps all of the mappings in the VM.
