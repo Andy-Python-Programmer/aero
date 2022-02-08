@@ -18,6 +18,8 @@
  */
 #![feature(decl_macro)]
 
+mod interfaces;
+
 pub extern crate postcard;
 pub extern crate serde;
 
@@ -26,6 +28,8 @@ use core::ops::DerefMut;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use lazy_static::lazy_static;
 use serde::Deserialize;
+
+pub use interfaces::*;
 
 /// A MessageHandler is a trait describing an IPC client
 pub trait MessageHandler: Send + Sync {
@@ -135,7 +139,7 @@ macro_rules! ipc {
 
             pub trait Server: Send + Sync {
                 $(
-                    fn $fnnm(&self, $($argname: $argty)*) $(-> $t)?;
+                    fn $fnnm(&self, $($argname: $argty),*) $(-> $t)?;
                 )*
             }
 
@@ -152,12 +156,12 @@ macro_rules! ipc {
                     let mut deser = postcard::Deserializer::from_bytes(msg);
                     // TODO(pitust): cache this in the recieve part of the handler
                     //? i don't think it would help *that* much though
-                    let msgid: usize = usize::deserialize(&mut deser).or_else(|e| {
+                    let msgid: usize = usize::deserialize(&mut deser).or_else(|_e| {
                         println!("\x1b[31;1merr\x1b[0m message id failed to deserialize!");
                         Err(())
                     })?;
 
-                    let method = String::deserialize(&mut deser).or_else(|e| {
+                    let method = String::deserialize(&mut deser).or_else(|_e| {
                         println!("\x1b[31;1merr\x1b[0m message name failed to deserialize!");
                         Err(())
                     })?;
@@ -167,7 +171,7 @@ macro_rules! ipc {
                             concat!(stringify!($nm), "::", stringify!($fnnm)) => {
                                 Ok(Some(postcard::to_allocvec(&(msgid|1, self.0.$fnnm(
                                     $(
-                                        <$argty>::deserialize(&mut deser).or_else(|e| {
+                                        <$argty>::deserialize(&mut deser).or_else(|_e| {
                                             println!("\x1b[31;1merr\x1b[0m message deserialization failed!");
                                             Err(())
                                         })?
