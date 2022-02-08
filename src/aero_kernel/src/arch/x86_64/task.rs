@@ -353,7 +353,7 @@ impl ArchTask {
             }
         }
 
-        let p2_header = loaded_binary.header.pt2;
+        let p2_header = loaded_binary.elf.header.pt2;
 
         unsafe {
             let hdr: [(AuxvType, usize); 4] = [

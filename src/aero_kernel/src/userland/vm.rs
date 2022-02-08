@@ -43,7 +43,7 @@ const ELF_PT1_SIZE: usize = core::mem::size_of::<HeaderPt1>();
 const ELF_PT2_64_SIZE: usize = core::mem::size_of::<HeaderPt2_<P64>>();
 
 #[derive(Debug)]
-pub enum ElfParseError {
+pub enum ElfLoadError {
     /// Unexpected file system error occured when reading the file.
     ReadError(FileSystemError),
     /// The PT1 header has an invalid magic number.
@@ -52,22 +52,24 @@ pub enum ElfParseError {
     InvalidClass,
     /// The provided program header index is invalid.
     InvalidProgramHeaderIndex,
+    /// Unexpected file system error occured when memory mapping an
+    /// ELF segment.
+    MemoryMapError,
 }
 
-// TODO: Remove the Box::leak() calls
-fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfParseError> {
+fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfLoadError> {
     // 1. Read the ELF PT1 header:
     let mut pt1_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT1_SIZE));
 
     file.inode()
         .read_at(0, &mut pt1_hdr_slice)
-        .map_err(|err| ElfParseError::ReadError(err))?;
+        .map_err(|err| ElfLoadError::ReadError(err))?;
 
     let pt1_header: &'header _ = unsafe { &*(pt1_hdr_slice.as_ptr() as *const HeaderPt1) };
 
     // 2. Ensure that the header has the correct magic number:
     if pt1_header.magic != ELF_HEADER_MAGIC {
-        return Err(ElfParseError::InvalidMagic);
+        return Err(ElfLoadError::InvalidMagic);
     }
 
     let pt2_header = match pt1_header.class() {
@@ -77,7 +79,7 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfP
 
             file.inode()
                 .read_at(ELF_PT1_SIZE, &mut pt2_hdr_slice)
-                .map_err(|err| ElfParseError::ReadError(err))?;
+                .map_err(|err| ElfLoadError::ReadError(err))?;
 
             let pt2_header_ptr = pt2_hdr_slice.as_ptr();
             let pt2_header: &'header _ = unsafe { &*(pt2_header_ptr as *const HeaderPt2_<P64>) };
@@ -91,7 +93,7 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfP
         }
 
         // SAFTEY: ensure the PT1 header has a valid class.
-        Class::None | Class::Other(_) => Err(ElfParseError::InvalidClass),
+        Class::None | Class::Other(_) => Err(ElfLoadError::InvalidClass),
     }?;
 
     Ok(Header {
@@ -100,17 +102,16 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfP
     })
 }
 
-// TODO: Remove the Box::leak() calls
 fn parse_program_header<'pheader>(
     file: DirCacheItem,
     header: Header<'pheader>,
     index: u16,
-) -> Result<ProgramHeader<'pheader>, ElfParseError> {
+) -> Result<ProgramHeader<'pheader>, ElfLoadError> {
     let pt2 = &header.pt2;
 
     // SAFTEY: ensure that the provided program header index is valid.
     if !(index < pt2.ph_count() && pt2.ph_offset() > 0 && pt2.ph_entry_size() > 0) {
-        return Err(ElfParseError::InvalidProgramHeaderIndex);
+        return Err(ElfLoadError::InvalidProgramHeaderIndex);
     }
 
     // 1. Calculate the start offset and size of the program header:
@@ -122,7 +123,7 @@ fn parse_program_header<'pheader>(
 
     file.inode()
         .read_at(start, &mut phdr_buffer)
-        .map_err(|err| ElfParseError::ReadError(err))?;
+        .map_err(|err| ElfLoadError::ReadError(err))?;
 
     let phdr_ptr = phdr_buffer.as_ptr();
 
@@ -140,7 +141,23 @@ fn parse_program_header<'pheader>(
         }
 
         // SAFTEY: ensure the PT1 header has a valid class.
-        Class::None | Class::Other(_) => Err(ElfParseError::InvalidClass),
+        Class::None | Class::Other(_) => Err(ElfLoadError::InvalidClass),
+    }
+}
+
+pub struct Elf<'this> {
+    pub header: Header<'this>,
+    pub file: DirCacheItem,
+}
+
+impl<'this> Elf<'this> {
+    fn new(file: DirCacheItem) -> Result<Self, ElfLoadError> {
+        let header = parse_elf_header(file.clone())?;
+        Ok(Self { header, file })
+    }
+
+    fn program_iter(&self) -> ProgramHeaderIter<'this> {
+        ProgramHeaderIter::new(self.header, self.file.clone())
     }
 }
 
@@ -207,7 +224,7 @@ enum UnmapResult {
 }
 
 pub struct LoadedBinary<'header> {
-    pub header: Header<'header>,
+    pub elf: Elf<'header>,
 
     pub entry_point: VirtAddr,
     pub base_addr: VirtAddr,
@@ -817,9 +834,9 @@ impl Vm {
     }
 
     /// Mapping the provided `bin` file into the VM.
-    pub fn load_bin(&self, bin: DirCacheItem) -> Result<LoadedBinary, ElfParseError> {
-        let header = parse_elf_header(bin.clone())?;
-        let phdr_iter = ProgramHeaderIter::new(header, bin.clone());
+    pub fn load_bin(&self, bin: DirCacheItem) -> Result<LoadedBinary, ElfLoadError> {
+        let elf = Elf::new(bin.clone())?;
+        let header = &elf.header;
 
         let load_offset = VirtAddr::new(
             if header.pt2.type_().as_type() == header::Type::SharedObject {
@@ -836,10 +853,10 @@ impl Vm {
 
         let mut base_addr = VirtAddr::zero();
 
-        for header in phdr_iter {
+        for header in elf.program_iter() {
             let header_type = header
                 .get_type()
-                .expect("Failed to get program header type");
+                .expect("load_bin: failed to get program header type");
 
             let header_flags = header.flags();
 
@@ -910,7 +927,7 @@ impl Vm {
                         0,
                         None,
                     )
-                    .expect("load_bin: failed to memory map ELF header");
+                    .ok_or(ElfLoadError::MemoryMapError)?;
 
                 let buffer = unsafe {
                     core::slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), data_size as usize)
@@ -918,7 +935,7 @@ impl Vm {
 
                 bin.inode()
                     .read_at(file_offset as usize, buffer)
-                    .expect("load_bin: failed to read at offset");
+                    .map_err(|err| ElfLoadError::ReadError(err))?;
 
                 if !header.flags().is_write() {
                     // TODO: Update the protection flags to remove the writable flag.
@@ -933,7 +950,7 @@ impl Vm {
         }
 
         Ok(LoadedBinary {
-            header,
+            elf,
             entry_point,
 
             base_addr,
