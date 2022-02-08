@@ -45,6 +45,17 @@ macro_rules! print {
 }
 
 #[macro_export]
+macro_rules! eprintln {
+    () => ($crate::eprint!("\n"));
+    ($($arg:tt)*) => ($crate::eprint!("{}\n", format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! eprint {
+    ($($arg:tt)*) => ($crate::_print_stderr(format_args!($($arg)*)));
+}
+
+#[macro_export]
 macro_rules! dbg {
     ($arg:expr) => {{
         let value = $arg;
@@ -60,11 +71,17 @@ pub fn _print_stdout(args: core::fmt::Arguments) {
     let _ = io::Stdout.write_fmt(args);
 }
 
+#[doc(hidden)]
+pub fn _print_stderr(args: core::fmt::Arguments) {
+    use core::fmt::Write;
+
+    let _ = io::Stderr.write_fmt(args);
+}
+
 #[panic_handler]
 fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     println!("{}", info);
-
-    aero_syscall::sys_exit(42);
+    sys_exit(42);
 }
 
 #[alloc_error_handler]
