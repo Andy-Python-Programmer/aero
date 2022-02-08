@@ -216,6 +216,8 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_DUP2 => "dup2",
         prelude::SYS_IPC_SEND => "ipc_send",
         prelude::SYS_IPC_RECV => "ipc_recv",
+        prelude::SYS_IPC_DISCOVER_ROOT => "ipc_discover_root",
+        prelude::SYS_IPC_BECOME_ROOT => "ipc_become_root",
 
         _ => unreachable!("unknown syscall"),
     }
@@ -861,4 +863,14 @@ pub fn sys_ipc_recv<'a>(
         block as usize,
     );
     isize_as_syscall_result(value as _).map(|size| &mut message[0..size])
+}
+
+pub fn sys_ipc_discover_root() -> Result<usize, AeroSyscallError> {
+    let value = syscall0(prelude::SYS_IPC_DISCOVER_ROOT);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_ipc_become_root() -> Result<(), AeroSyscallError> {
+    let value = syscall0(prelude::SYS_IPC_BECOME_ROOT);
+    isize_as_syscall_result(value as _).map(|_| ())
 }

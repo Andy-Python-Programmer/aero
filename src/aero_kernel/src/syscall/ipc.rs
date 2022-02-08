@@ -25,6 +25,11 @@ use crate::utils::validate_slice_mut;
 
 use aero_syscall::AeroSyscallError;
 use alloc::{collections::VecDeque, vec::Vec};
+use spin::Once;
+
+// TODO: Make this reassignable in case we want to handle the root node's death, so
+// someone else can take over (e.g. system server but after it's restarted)
+static IPC_ROOT_NODE: Once<usize> = Once::new();
 
 struct Message {
     from: usize,
@@ -126,5 +131,22 @@ pub fn recv(
         Err(AeroSyscallError::E2BIG)
     } else {
         handle_recieve(pidptr, message_ptr, message_max, msg)
+    }
+}
+
+pub fn discover_root() -> Result<usize, AeroSyscallError> {
+    match IPC_ROOT_NODE.get() {
+        Some(pid) => Ok(*pid),
+        None => Err(AeroSyscallError::EINVAL),
+    }
+}
+
+pub fn become_root() -> Result<usize, AeroSyscallError> {
+    if IPC_ROOT_NODE.is_completed() {
+        Err(AeroSyscallError::EINVAL)
+    } else {
+        IPC_ROOT_NODE.call_once(|| get_scheduler().current_task().pid().as_usize());
+
+        Ok(0)
     }
 }
