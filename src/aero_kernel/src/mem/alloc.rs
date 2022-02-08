@@ -223,10 +223,9 @@ impl Allocator {
 
     fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         let mut inner = self.inner.lock_irq();
+        let address = ptr as usize;
 
-        let size = layout.size();
-
-        if size >= Size4KiB::SIZE as usize {
+        if address >= HEAP_START && address < HEAP_END {
             unsafe {
                 inner
                     .linked_list_heap
