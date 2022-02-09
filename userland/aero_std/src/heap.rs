@@ -17,19 +17,27 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::{sys_mmap, MMapFlags, MMapProt};
+use aero_syscall::*;
 use core::ptr::NonNull;
 use linked_list_allocator::LockedHeap;
 use spin::Once;
 
 #[global_allocator]
-static ALLOCATOR: LazilyInitializedHeap = LazilyInitializedHeap(Once::new());
+static ALLOCATOR: WrappedHeap = WrappedHeap::new();
 
-struct LazilyInitializedHeap(Once<LockedHeap>);
+struct WrappedHeap {
+    heap: Once<LockedHeap>,
+}
 
-unsafe impl core::alloc::GlobalAlloc for LazilyInitializedHeap {
+impl WrappedHeap {
+    pub const fn new() -> Self {
+        Self { heap: Once::new() }
+    }
+}
+
+unsafe impl core::alloc::GlobalAlloc for WrappedHeap {
     unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
-        let mut heap = self.0.call_once(init_heap).lock();
+        let mut heap = self.heap.call_once(init_heap).lock();
 
         match heap.allocate_first_fit(layout) {
             Ok(result) => result.as_ptr(),
@@ -38,7 +46,7 @@ unsafe impl core::alloc::GlobalAlloc for LazilyInitializedHeap {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
-        let mut heap = self.0.call_once(init_heap).lock();
+        let mut heap = self.heap.call_once(init_heap).lock();
 
         match NonNull::new(ptr) {
             Some(ptr) => heap.deallocate(ptr, layout),

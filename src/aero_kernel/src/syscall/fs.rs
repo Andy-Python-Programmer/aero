@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::sync::atomic::Ordering;
+
 use aero_syscall::prelude::FdFlags;
 use aero_syscall::{AeroSyscallError, OpenFlags};
 
@@ -246,6 +248,16 @@ pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, AeroSyscal
         .ok_or(AeroSyscallError::EBADFD)?;
 
     Ok(handle.seek(offset as isize, aero_syscall::SeekWhence::from(whence))?)
+}
+
+pub fn tell(fd: usize) -> Result<usize, AeroSyscallError> {
+    let handle = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    Ok(handle.offset.load(Ordering::Relaxed))
 }
 
 pub fn pipe(fds: usize, flags: usize) -> Result<usize, AeroSyscallError> {

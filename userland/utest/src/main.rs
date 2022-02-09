@@ -34,6 +34,7 @@ pub struct Test<'a> {
 static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
     // TODO: Why does clone process fail?
     // &clone_process,
+    &rpc_test,
     &forked_pipe,
     &signal_handler,
     &dup_fds,
@@ -173,6 +174,8 @@ fn signal_handler() -> Result<(), AeroSyscallError> {
         // Close the pipe
         sys_close(pipe[0])?;
         sys_close(pipe[1])?;
+
+        sys_exit(0)
     } else {
         let mut status = 0;
         sys_waitpid(child, &mut status, 0)?;
@@ -284,6 +287,29 @@ fn clone_process() -> Result<(), AeroSyscallError> {
     if exit_code != 0 {
         core::panic!("child exited with a non-zero status code: {}", exit_code);
     }
+
+    Ok(())
+}
+
+aero_ipc::ipc! {
+    trait Hello {
+        fn hello(favorite_number: i32) -> ();
+    }
+}
+
+struct HelloServer;
+
+impl Hello::Server for HelloServer {
+    fn hello(&self, favnum: i32) {
+        println!("hey: {}", favnum);
+    }
+}
+
+#[utest_proc::test]
+fn rpc_test() -> Result<(), AeroSyscallError> {
+    aero_ipc::listen(Hello::handler(HelloServer {}));
+    let c = Hello::open(sys_getpid().unwrap());
+    c.hello(3);
 
     Ok(())
 }

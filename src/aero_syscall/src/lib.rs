@@ -214,6 +214,11 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_DUP => "dup",
         prelude::SYS_FCNTL => "fcntl",
         prelude::SYS_DUP2 => "dup2",
+        prelude::SYS_IPC_SEND => "ipc_send",
+        prelude::SYS_IPC_RECV => "ipc_recv",
+        prelude::SYS_IPC_DISCOVER_ROOT => "ipc_discover_root",
+        prelude::SYS_IPC_BECOME_ROOT => "ipc_become_root",
+        prelude::SYS_TELL => "tell",
 
         _ => unreachable!("unknown syscall"),
     }
@@ -754,6 +759,11 @@ pub fn sys_seek(fd: usize, offset: usize, whence: SeekWhence) -> Result<usize, A
     isize_as_syscall_result(value as _)
 }
 
+pub fn sys_tell(fd: usize) -> Result<usize, AeroSyscallError> {
+    let value = syscall1(prelude::SYS_TELL, fd);
+    isize_as_syscall_result(value as _)
+}
+
 pub fn sys_sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
     let value = syscall1(prelude::SYS_SLEEP, timespec as *const _ as usize);
     isize_as_syscall_result(value as _)
@@ -834,4 +844,39 @@ pub fn sys_fcntl(fd: usize, command: usize, argument: usize) -> Result<usize, Ae
 pub fn sys_dup2(fd: usize, new_fd: usize, flags: OpenFlags) -> Result<usize, AeroSyscallError> {
     let value = syscall3(prelude::SYS_DUP2, fd, new_fd, flags.bits());
     isize_as_syscall_result(value as _)
+}
+
+pub fn sys_ipc_send(pid: usize, message: &[u8]) -> Result<(), AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_IPC_SEND,
+        pid,
+        message.as_ptr() as usize,
+        message.len(),
+    );
+    isize_as_syscall_result(value as _).map(|_| ())
+}
+
+pub fn sys_ipc_recv<'a>(
+    pid: &mut usize,
+    message: &'a mut [u8],
+    block: bool,
+) -> Result<&'a mut [u8], AeroSyscallError> {
+    let value = syscall4(
+        prelude::SYS_IPC_RECV,
+        pid as *mut usize as usize,
+        message.as_ptr() as usize,
+        message.len(),
+        block as usize,
+    );
+    isize_as_syscall_result(value as _).map(|size| &mut message[0..size])
+}
+
+pub fn sys_ipc_discover_root() -> Result<usize, AeroSyscallError> {
+    let value = syscall0(prelude::SYS_IPC_DISCOVER_ROOT);
+    isize_as_syscall_result(value as _)
+}
+
+pub fn sys_ipc_become_root() -> Result<(), AeroSyscallError> {
+    let value = syscall0(prelude::SYS_IPC_BECOME_ROOT);
+    isize_as_syscall_result(value as _).map(|_| ())
 }

@@ -31,7 +31,7 @@ use crate::mem::paging::*;
 
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
-use crate::syscall::ExecArgs;
+use crate::syscall::{ExecArgs, MessageQueue};
 use crate::utils::sync::{BlockQueue, Mutex};
 
 use crate::userland::signals::Signals;
@@ -47,7 +47,7 @@ use super::vm::Vm;
 pub struct TaskId(usize);
 
 impl TaskId {
-    pub(super) const fn new(pid: usize) -> Self {
+    pub const fn new(pid: usize) -> Self {
         Self(pid)
     }
 
@@ -189,6 +189,8 @@ pub struct Task {
     pub vm: Arc<Vm>,
     pub file_table: Arc<FileTable>,
 
+    pub message_queue: MessageQueue,
+
     cwd: RwLock<Cwd>,
 
     pub(super) exit_status: AtomicIsize,
@@ -207,6 +209,8 @@ impl Task {
 
             arch_task: UnsafeCell::new(ArchTask::new_idle()),
             file_table: Arc::new(FileTable::new()),
+
+            message_queue: MessageQueue::new(),
 
             tid: pid.clone(),
             pid,
@@ -241,6 +245,7 @@ impl Task {
                 enable_interrupts,
             )),
             file_table: Arc::new(FileTable::new()),
+            message_queue: MessageQueue::new(),
             vm: Arc::new(Vm::new()),
             state: AtomicU8::new(TaskState::Runnable as _),
 
@@ -270,6 +275,7 @@ impl Task {
 
             arch_task,
             file_table: Arc::new(self.file_table.deep_clone()),
+            message_queue: MessageQueue::new(),
             vm: Arc::new(Vm::new()),
             state: AtomicU8::new(TaskState::Runnable as _),
 

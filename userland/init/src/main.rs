@@ -19,19 +19,15 @@
 
 use aero_syscall::*;
 
-fn init_main() -> Result<(), AeroSyscallError> {
-    let shell_pid = sys_fork()?;
+fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
+    let pid = sys_fork()?;
 
-    if shell_pid == 0 {
-        sys_exec("/bin/aero_shell", &["/bin/aero_shell"], &[])?;
+    if pid == 0 {
+        sys_exec(path, argv, envv)?;
+        sys_exit(0);
     } else {
-        let mut shell_exit_code = 0;
-
-        sys_waitpid(shell_pid, &mut shell_exit_code, 0)?;
-        sys_exit(shell_exit_code as usize);
+        Ok(pid)
     }
-
-    Ok(())
 }
 
 fn main() -> Result<(), AeroSyscallError> {
@@ -39,5 +35,8 @@ fn main() -> Result<(), AeroSyscallError> {
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
 
-    init_main()
+    fork_and_exec("/bin/system_server", &[], &[])?;
+    fork_and_exec("/bin/aero_shell", &[], &[])?;
+
+    Ok(())
 }

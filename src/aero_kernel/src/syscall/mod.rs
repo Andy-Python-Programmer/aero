@@ -62,6 +62,7 @@ use core::mem::MaybeUninit;
 use aero_syscall::prelude::*;
 
 pub mod fs;
+pub mod ipc;
 mod net;
 pub mod process;
 pub mod time;
@@ -70,6 +71,7 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 pub use fs::*;
+pub use ipc::*;
 pub use process::*;
 use raw_cpuid::CpuId;
 pub use time::*;
@@ -207,6 +209,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_RMDIR => fs::rmdir(b, c),
         SYS_IOCTL => fs::ioctl(b, c, d),
         SYS_SEEK => fs::seek(b, c, d),
+        SYS_TELL => fs::tell(b),
         SYS_ACCESS => fs::access(b, c, d, e, f),
         SYS_PIPE => fs::pipe(b, c),
         SYS_UNLINK => fs::unlink(b, c, d, e),
@@ -219,6 +222,11 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),
+
+        SYS_IPC_SEND => ipc::send(b, c, d),
+        SYS_IPC_RECV => ipc::recv(b, c, d, e),
+        SYS_IPC_DISCOVER_ROOT => ipc::discover_root(),
+        SYS_IPC_BECOME_ROOT => ipc::become_root(),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);

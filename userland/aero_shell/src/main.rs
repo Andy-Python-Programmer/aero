@@ -21,6 +21,7 @@ extern crate alloc;
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
+use aero_ipc::SystemService;
 use aero_syscall::signal::*;
 use aero_syscall::*;
 
@@ -295,27 +296,16 @@ fn print_kernel_log() -> Result<(), AeroSyscallError> {
 }
 
 fn uwutest() -> Result<(), AeroSyscallError> {
-    const SOCKET_PATH: &str = "/socket.unix";
+    let my_pid = sys_getpid()?;
+    let ipc = SystemService::open(sys_ipc_discover_root()?);
 
-    let socket = sys_socket(AF_UNIX, SOCK_STREAM, 0)?;
+    ipc.announce(my_pid, "TestServer")
+        .expect("Failed to announce");
 
-    println!("uwutest: socket file descriptor is: {}", socket);
-
-    let mut sock_addr = SocketAddrUnix {
-        family: AF_UNIX as i16,
-        path: [0; 108],
-    };
-
-    sock_addr.path[0..SOCKET_PATH.len()].copy_from_slice(SOCKET_PATH.as_bytes());
-
-    sys_bind(
-        socket,
-        &SocketAddr::Unix(sock_addr),
-        core::mem::size_of::<SocketAddrUnix>() as u32,
-    )?;
-
-    println!("uwutest: successfully bound to {:?}", SOCKET_PATH);
-    list_directory(".")?;
+    println!(
+        "TestServer is at {}",
+        ipc.discover("TestServer").expect("Failed to discover")
+    );
 
     Ok(())
 }
