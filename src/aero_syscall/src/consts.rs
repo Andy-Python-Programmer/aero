@@ -67,7 +67,6 @@ pub const SYS_IPC_SEND: usize = 45;
 pub const SYS_IPC_RECV: usize = 46;
 pub const SYS_IPC_DISCOVER_ROOT: usize = 47;
 pub const SYS_IPC_BECOME_ROOT: usize = 48;
-pub const SYS_TELL: usize = 49;
 
 // fcntl constants:
 pub const F_GETFD: usize = 3;

@@ -38,3 +38,9 @@ impl Write for Stderr {
         Ok(())
     }
 }
+
+/// This function tells the current value of the file position indicator for the provided
+/// file descriptor (`fd`).
+pub fn tell(fd: usize) -> Result<usize, AeroSyscallError> {
+    sys_seek(fd, 0, SeekWhence::SeekCur)
+}
