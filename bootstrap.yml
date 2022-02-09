@@ -130,7 +130,7 @@ tools:
     source:
       name: automake-v1.16
       subdir: 'bundled'
-      git: 'https://git.savannah.gnu.org/git/automake.git'
+      git: 'https://github.com/autotools-mirror/automake'
       tag: 'v1.16.5'
       version: '1.16.5'
       tools_required:
