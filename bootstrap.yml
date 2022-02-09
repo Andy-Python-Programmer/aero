@@ -545,7 +545,7 @@ packages:
 
   - name: bash
     source:
-      git: 'https://git.savannah.gnu.org/git/bash.git'
+      git: 'https://github.com/bminor/bash'
       # Checkout bash 5.1
       branch: 'master'
       commit: '9439ce094c9aa7557a9d53ac7b412a23aa66e36b'
