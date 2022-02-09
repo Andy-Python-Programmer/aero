@@ -6,4 +6,3 @@ edition = "2021"
 
 [dependencies]
 aero_syscall = { path = "../../src/aero_syscall" }
-std = { path = "../aero_std" }
