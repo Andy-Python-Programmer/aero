@@ -209,6 +209,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_RMDIR => fs::rmdir(b, c),
         SYS_IOCTL => fs::ioctl(b, c, d),
         SYS_SEEK => fs::seek(b, c, d),
+        SYS_TELL => fs::tell(b),
         SYS_ACCESS => fs::access(b, c, d, e, f),
         SYS_PIPE => fs::pipe(b, c),
         SYS_UNLINK => fs::unlink(b, c, d, e),
