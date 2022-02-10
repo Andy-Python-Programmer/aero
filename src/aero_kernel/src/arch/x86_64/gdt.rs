@@ -268,24 +268,26 @@ impl GdtEntry {
     }
 }
 
-/// The Task State Segment (TSS) is a special data structure for x86 processors which holds information about a task.
-///
-/// **Notes**: <https://wiki.osdev.org/Task_State_Segment>
-#[derive(Debug, Clone, Copy)]
+/// Although hardware task-switching is not supported in 64-bit mode, a task
+/// state segment is required since the it holds information important to 64-bit
+/// mode and its not directly related to task switching mechanism.
 #[repr(C, packed)]
 pub struct Tss {
     reserved: u32,
 
-    /// The full 64-bit canonical forms of the stack pointers (RSP) for privilege levels 0-2.
+    /// The full 64-bit canonical forms of the stack pointers (RSP) for
+    /// privilege levels 0-2.
     pub rsp: [u64; 3],
     reserved2: u64,
 
-    /// The full 64-bit canonical forms of the interrupt stack table (IST) pointers.
+    /// The full 64-bit canonical forms of the interrupt stack table
+    /// (IST) pointers.
     pub ist: [u64; 7],
     reserved3: u64,
     reserved4: u16,
 
-    /// The 16-bit offset to the I/O permission bit map from the 64-bit TSS base.
+    /// The 16-bit offset to the I/O permission bit map from the 64-bit
+    /// TSS base.
     pub iomap_base: u16,
 }
 
