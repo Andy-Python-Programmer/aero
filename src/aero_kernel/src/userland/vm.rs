@@ -280,6 +280,9 @@ impl Mapping {
                 offset_table.map_to(
                     Page::containing_address(addr_aligned),
                     frame,
+                    // NOTE: We dont need to remove the writeable flag from this mapping, since
+                    // the writeable flag will be removed from the parent and child on fork so,
+                    // the mapping gets copied on write.
                     PageTableFlags::USER_ACCESSIBLE
                         | PageTableFlags::PRESENT
                         | self.protection.into(),
