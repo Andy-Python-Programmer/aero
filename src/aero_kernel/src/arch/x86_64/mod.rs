@@ -184,14 +184,11 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     interrupts::init();
     log::info!("loaded IDT");
 
-    let apic_type = apic::init();
-    log::info!(
-        "Loaded local apic (x2apic={})",
-        apic_type.supports_x2_apic()
-    );
+    apic::init();
+    log::info!("loaded APIC");
 
     acpi::init(rsdp_address).unwrap();
-    log::info!("Loaded ACPI");
+    log::info!("loaded ACPI");
 
     tls::init(0);
     log::info!("loaded TLS");

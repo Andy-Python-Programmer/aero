@@ -17,10 +17,10 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
-use core::{intrinsics, ptr};
 
-use crate::mem::paging::VirtAddr;
+use crate::mem::paging::{PhysAddr, VirtAddr};
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::Once;
 
@@ -44,14 +44,16 @@ const XAPIC_SVR: u32 = 0x0F0;
 /// EOI register. Write-only.
 const XAPIC_EOI: u32 = 0x0B0;
 
-/// Interrupt Command Register (ICR). Read/write.
-const XAPIC_ICR0: u32 = 0x300;
-
-/// Interrupt Command Register (ICR). Read/write.
-const XAPIC_ICR1: u32 = 0x310;
+/// Interrupt Command Register (ICR). Read/write. (64-bit register)
+const XAPIC_ICR: u32 = 0x300;
 
 /// Task Priority Register (TPR). Read/write. Bits 31:8 are reserved.
 const XAPIC_TPR: u32 = 0x080;
+
+/// Local APIC ID register. Read-only. See Section 10.12.5.1 for initial values.
+pub const XAPIC_ID: u32 = 0x020;
+
+const X2APIC_BASE_MSR: u32 = 0x800;
 
 static LOCAL_APIC: Once<Mutex<LocalApic>> = Once::new();
 static BSP_APIC_ID: AtomicU64 = AtomicU64::new(0xFFFF_FFFF_FFFF_FFFF);
@@ -74,15 +76,12 @@ impl ApicType {
     pub fn is_none(&self) -> bool {
         matches!(self, Self::None)
     }
-
-    /// Return true if the current CPU supports X2 APIC.
-    #[inline]
-    pub fn supports_x2_apic(&self) -> bool {
-        matches!(self, Self::X2apic)
-    }
 }
 
 impl From<FeatureInfo> for ApicType {
+    /// Processor support for XAPIC and X2APIC can be detected using
+    /// `cpuid`. If the X2APIC bit is set the processor supports the X2APIC
+    /// capability and can be placed into the X2APIC mode.
     fn from(feature_info: FeatureInfo) -> Self {
         if feature_info.has_x2apic() {
             Self::X2apic
@@ -110,35 +109,25 @@ impl LocalApic {
     }
 
     /// This function is responsible for initializing this instance of the local APIC.
-    unsafe fn init(&mut self) {
-        match self.apic_type {
-            ApicType::Xapic => {
-                // Clear the task priority register to enable all interrupts.
-                self.write(XAPIC_TPR, 0x00);
-
-                // Enable local APIC; set spurious interrupt vector.
-                self.write(XAPIC_SVR, 0x100 | APIC_SPURIOUS_VECTOR);
-
-                // Set up LVT (Local Vector Table) error.
-                self.write(XAPIC_LVT_ERROR, 49);
-            }
-
-            ApicType::X2apic => {
-                // Enable X2APIC (Bit 10)
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
+    fn init(&mut self) {
+        unsafe {
+            if self.apic_type == ApicType::X2apic {
+                // NOTE: We can place the local APIC in the X2APIC mode by setting the
+                // X2APIC mode enable bit (bit 10) in the APIC base MSR.
                 io::wrmsr(io::IA32_APIC_BASE, io::rdmsr(io::IA32_APIC_BASE) | 1 << 10);
-
-                // Clear the task priority register to enable all interrupts.
-                io::wrmsr(io::IA32_X2APIC_TPR, 0x00);
-
-                // Set up LVT (Local Vector Table) error.
-                io::wrmsr(io::IA32_X2APIC_LVT_ERROR, 49);
-
-                // Enable local APIC; set spurious interrupt vector.
-                io::wrmsr(io::IA32_X2APIC_SIVR, (0x100 | APIC_SPURIOUS_VECTOR) as _);
             }
 
-            // Do nothing for the case of the None APIC type.
-            ApicType::None => {}
+            // Clear the task priority register to enable all interrupts.
+            self.write(XAPIC_TPR, 0x00);
+
+            // Enable local APIC; set spurious interrupt vector.
+            self.write(XAPIC_SVR, 0x100 | APIC_SPURIOUS_VECTOR);
+
+            // Set up LVT (Local Vector Table) error.
+            self.write(XAPIC_LVT_ERROR, 49);
         }
     }
 
@@ -148,106 +137,180 @@ impl LocalApic {
     /// ## Saftey
     /// The provided `cpu` must be a valid logical processor ID and the provided `vec` must be
     /// a valid interrupt vector.
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
     pub unsafe fn send_ipi(&mut self, cpu: usize, vec: u8) {
-        match self.apic_type {
-            ApicType::Xapic => {
-                self.write(XAPIC_ICR1, (cpu as u32) << 24);
-                self.write(XAPIC_ICR0, vec as _);
+        self.write_long(XAPIC_ICR, (cpu as u64) << 32 | vec as u64);
 
-                // Make the ICR delivery status is clear, indicating that the
-                // local APIC has completed sending the IPI. If set to 1 the
-                // local APIC has not completed sending the IPI.
-                while self.read(XAPIC_ICR0) & (1u32 << 12) > 0 {}
-            }
-
-            ApicType::X2apic => {
-                io::wrmsr(io::IA32_X2APIC_ICR, vec as u64 | ((cpu as u64) << 32));
-
-                // Make the ICR delivery status is clear, indicating that the
-                // local APIC has completed sending the IPI. If set to 1 the
-                // local APIC has not completed sending the IPI.
-                while io::rdmsr(io::IA32_X2APIC_ICR) & (1u64 << 12) > 0 {}
-            }
-
-            // Do nothing for the case of the None APIC type.
-            ApicType::None => {}
+        // NOTE: Make the ICR delivery status is clear, indicating that the
+        // local APIC has completed sending the IPI. If set to 1 the
+        // local APIC has not completed sending the IPI.
+        while self.read(XAPIC_ICR) & (1u32 << 12) > 0 {
+            core::hint::spin_loop();
         }
     }
 
     /// At power up, system hardware assigns a unique APIC ID to each local APIC on the
     /// system bus. This function returns the unique APIC ID this instance.
-    #[inline]
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
     fn bsp_id(&self) -> u32 {
-        match self.apic_type {
-            ApicType::Xapic => unsafe { self.read(0x20) },
-            ApicType::X2apic => unsafe { io::rdmsr(io::IA32_X2APIC_APICID) as _ },
-            ApicType::None => u32::MAX,
-        }
+        unsafe { self.read(XAPIC_ID) }
     }
 
     /// The local APIC records errors detected during interrupt handling in the error status
     /// register (ESR). This function returns the value stored in the error status register
     /// of this instance.
-    pub unsafe fn get_esr(&mut self) -> u32 {
-        match self.apic_type {
-            ApicType::Xapic => {
-                self.write(XAPIC_ESR, 0x00);
-                self.read(XAPIC_ESR)
-            }
-
-            ApicType::X2apic => {
-                io::wrmsr(io::IA32_X2APIC_ESR, 0x00);
-                io::rdmsr(io::IA32_X2APIC_ESR) as _
-            }
-
-            ApicType::None => u32::MAX,
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
+    pub fn get_esr(&mut self) -> u32 {
+        unsafe {
+            self.write(XAPIC_ESR, 0);
+            self.read(XAPIC_ESR)
         }
     }
 
     /// Writes to the EOI register to signal the end of an interrupt. This makes the local APIC
     /// to delete the interrupt from its ISR queue and send a message on the bus indicating that the
     /// interrupt handling has been completed.
-    #[inline]
-    pub unsafe fn eoi(&mut self) {
-        match self.apic_type {
-            ApicType::Xapic => self.write(XAPIC_EOI, 0x00),
-            ApicType::X2apic => io::wrmsr(io::IA32_X2APIC_EOI, 0x00),
-            ApicType::None => {}
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
+    pub fn eoi(&mut self) {
+        unsafe {
+            self.write(XAPIC_EOI, 0);
         }
     }
 
-    /// Returns the APIC type of this local APIC instance.
-    #[inline]
+    /// Returns the APIC type of this instance.
     pub fn apic_type(&self) -> ApicType {
         self.apic_type
     }
 
     /// Sets the provided `value` to the ICR register of the instance.
-    pub unsafe fn set_icr_xapic(&mut self, value_master: u32, value_slave: u32) {
-        debug_assert!(self.apic_type == ApicType::Xapic); // Make sure we are dealing with XAPIC.
-
-        self.write(XAPIC_ICR1, value_master);
-        self.write(XAPIC_ICR0, value_slave);
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
+    ///
+    /// ## Safety
+    /// The provided `value` must be a valid value for the ICR register.
+    pub unsafe fn set_icr(&mut self, value: u64) {
+        self.write_long(XAPIC_ICR, value);
     }
 
-    /// Sets the provided `value` to the ICR register of this instance.
-    #[inline]
-    pub unsafe fn set_icr_x2apic(&mut self, value: u64) {
-        debug_assert!(self.apic_type == ApicType::X2apic); // Make sure we are dealing with X2APIC.
-
-        io::wrmsr(io::IA32_X2APIC_ICR, value);
+    /// Converts the provided APIC register (`register`) into its respective
+    /// MSR for the X2APIC since, in X2APIC mode the `rdmsr` and `wrmsr`
+    /// instructions are used to access the APIC registers.
+    ///
+    /// ## Safety
+    /// The provided `register` must be a valid APIC register.
+    unsafe fn register_to_x2apic_msr(&self, register: u32) -> u32 {
+        X2APIC_BASE_MSR + (register >> 4)
     }
 
-    /// Reads from the provided `register` as described by the MADT.
-    #[inline]
+    /// Converts the provided APIC register (`register`) into its respective
+    /// address for the XAPIC.
+    ///
+    /// ## Safety
+    /// The provided `register` must be a valid APIC register.
+    unsafe fn register_to_xapic_addr(&self, register: u32) -> VirtAddr {
+        self.address + register as u64
+    }
+
+    /// Reads the provided APIC register (`register`) and returns its value.
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
+    ///
+    /// ## Notes
+    /// This function works for both XAPIC and X2APIC.
+    ///
+    /// ## Safety
+    /// The provided `register` must be a valid APIC register.
     unsafe fn read(&self, register: u32) -> u32 {
-        intrinsics::volatile_load((self.address + register as u64).as_u64() as *const u32)
+        match self.apic_type {
+            ApicType::X2apic => {
+                let msr = self.register_to_x2apic_msr(register);
+                io::rdmsr(msr) as _
+            }
+
+            ApicType::Xapic => {
+                let addr = self.register_to_xapic_addr(register);
+                addr.as_ptr::<u32>().read_volatile()
+            }
+
+            ApicType::None => unreachable!(),
+        }
     }
 
-    /// Write to the provided `register` with the provided `data` as described by the MADT.
-    #[inline]
+    /// Writes the provided 32-bit value (`value`) to the provided
+    /// APIC register (`register`).
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
+    ///
+    /// ## Notes
+    /// This function works for both XAPIC and X2APIC.
+    ///
+    /// ## Safety
+    /// * The provided `register` must be a valid APIC register and the `value` must
+    /// be a valid value for the provided APIC register.
+    ///
+    /// * If the `register` is 64-bit wide, then the [`Self::write_long`] function must
+    /// be used instead.
     unsafe fn write(&mut self, register: u32, value: u32) {
-        intrinsics::volatile_store((self.address + register as u64).as_u64() as *mut u32, value);
+        match self.apic_type {
+            ApicType::X2apic => {
+                let msr = self.register_to_x2apic_msr(register);
+                io::wrmsr(msr, value as u64);
+            }
+
+            ApicType::Xapic => {
+                let addr = self.register_to_xapic_addr(register);
+                addr.as_mut_ptr::<u32>().write_volatile(value);
+            }
+
+            ApicType::None => unreachable!(),
+        }
+    }
+
+    /// Writes the provided 64-bit value (`value`) to the provided
+    /// APIC register (`register`).
+    ///
+    /// ## Panics
+    /// * If the APIC type is set to [`ApicType::None`].
+    ///
+    /// ## Notes
+    /// This function works for both XAPIC and X2APIC.
+    ///
+    /// ## Safety
+    /// * The provided `register` must be a valid APIC register and the `value` must
+    /// be a valid value for the provided APIC register.
+    ///
+    /// * If the `register` is 32-bit wide, then the [`Self::write`] function must
+    /// be used instead.
+    unsafe fn write_long(&mut self, register: u32, value: u64) {
+        match self.apic_type {
+            ApicType::X2apic => {
+                let msr = self.register_to_x2apic_msr(register);
+                io::wrmsr(msr, value);
+            }
+
+            ApicType::Xapic => {
+                let addr_low = self.register_to_xapic_addr(register);
+                let addr_high = self.register_to_xapic_addr(register + 0x10);
+
+                addr_high.as_mut_ptr::<u32>().write_volatile(value as u32);
+                addr_low
+                    .as_mut_ptr::<u32>()
+                    .write_volatile((value >> 32) as u32);
+            }
+
+            ApicType::None => unreachable!(),
+        }
     }
 }
 
@@ -411,19 +474,16 @@ pub fn init() -> ApicType {
         return apic_type;
     }
 
-    let address_phys = unsafe { io::rdmsr(io::IA32_APIC_BASE) as usize & 0xFFFF_0000 };
+    let apic_base = unsafe { io::rdmsr(io::IA32_APIC_BASE) };
+    let address_phys = PhysAddr::new(apic_base & 0xFFFF0000);
 
-    log::debug!("Found apic at: {:#x}", address_phys);
+    log::debug!("apic: detected APIC (addr={address_phys:?}, type={apic_type:?})");
 
-    let address_virt = unsafe { PHYSICAL_MEMORY_OFFSET } + address_phys;
-
+    let address_virt = unsafe { PHYSICAL_MEMORY_OFFSET } + address_phys.as_u64();
     let mut local_apic = LocalApic::new(address_virt, apic_type);
 
-    unsafe {
-        local_apic.init();
-    }
+    local_apic.init();
 
-    // Now atomic store the BSP id.
     let bsp_id = local_apic.bsp_id();
     BSP_APIC_ID.store(bsp_id as u64, Ordering::SeqCst);
 

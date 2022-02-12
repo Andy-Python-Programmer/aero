@@ -34,27 +34,13 @@ pub const IA32_LSTAR: u32 = 0xc0000082;
 pub const IA32_FMASK: u32 = 0xc0000084;
 
 /// APIC Location and Status (R/W).
+///
+/// ```text
+/// [..........]   [..........]   [............]  [...............]  [.......]  [...]  [............]
+/// 63         36  35         12       11                10              9        8    7            0
+///   reserved        address      XAPIC global     enable X2APIC    reserved    BSP      reserved
+/// ```
 pub const IA32_APIC_BASE: u32 = 0x1b;
-
-/// x2APIC Spurious Interrupt Vector register (R/W)
-pub const IA32_X2APIC_SIVR: u32 = 0x80f;
-
-/// x2APIC ID register (R/O) See X2APIC Specification.
-pub const IA32_X2APIC_APICID: u32 = 0x802;
-
-/// Error Status Register.
-pub const IA32_X2APIC_ESR: u32 = 0x828;
-
-/// x2APIC Interrupt Command register (R/W)
-pub const IA32_X2APIC_ICR: u32 = 0x830;
-
-/// x2APIC End of Interrupt.
-pub const IA32_X2APIC_EOI: u32 = 0x80b;
-
-pub const IA32_X2APIC_LVT_ERROR: u32 = 0x837;
-
-/// x2APIC Task Priority register (R/W)
-pub const IA32_X2APIC_TPR: u32 = 0x808;
 
 /// Wrapper function to the `outb` assembly instruction used to do the
 /// 8-bit low level port output.
