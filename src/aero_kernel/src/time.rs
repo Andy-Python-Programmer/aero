@@ -34,6 +34,8 @@ use crate::utils::io;
 use crate::utils::sync::Mutex;
 
 const PIT_FREQUENCY_HZ: usize = 1000;
+pub const PIT_DIVIDEND: usize = 1193182;
+
 const SCHED_TIMESLICE_MS: usize = 15;
 
 static SCHED_TICKS: AtomicUsize = AtomicUsize::new(0);
@@ -93,6 +95,37 @@ pub fn get_realtime_clock() -> TimeSpec {
     REALTIME_CLOCK.lock().clone()
 }
 
+/// Returns the current amount of PIT ticks.
+pub fn get_current_count() -> u16 {
+    unsafe {
+        io::outb(0x43, 0);
+
+        let lower = io::inb(0x40) as u16;
+        let higher = io::inb(0x40) as u16;
+
+        (higher << 8) | lower
+    }
+}
+
+pub fn set_reload_value(new_count: u16) {
+    // Channel 0, lo/hi access mode, mode 2 (rate generator)
+    unsafe {
+        io::outb(0x43, 0x34);
+        io::outb(0x40, new_count as u8);
+        io::outb(0x40, (new_count >> 8) as u8);
+    }
+}
+
+pub fn set_frequency(frequency: usize) {
+    let mut new_divisor = PIT_DIVIDEND / frequency;
+
+    if PIT_DIVIDEND % frequency > frequency / 2 {
+        new_divisor += 1;
+    }
+
+    set_reload_value(new_divisor as u16);
+}
+
 /// This function is responsible for initializing the PIT chip and setting
 /// up the IRQ.
 pub fn init() {
@@ -101,19 +134,8 @@ pub fn init() {
         .expect("failed to initialize realtime clock")
         .epoch as isize;
 
-    let mut x = 1193182 / PIT_FREQUENCY_HZ;
+    set_frequency(PIT_FREQUENCY_HZ);
 
-    if (1193182 % PIT_FREQUENCY_HZ) > (PIT_FREQUENCY_HZ / 2) {
-        x += 1;
-    }
-
-    unsafe {
-        io::outb(0x40, (x & 0x00ff) as u8);
-        io::wait();
-
-        io::outb(0x40, ((x & 0xff00) >> 8) as u8);
-        io::wait();
-    }
-
+    apic::get_local_apic().timer_calibrate();
     apic::io_apic_setup_legacy_irq(0, 1); // Set up the IRQ.
 }

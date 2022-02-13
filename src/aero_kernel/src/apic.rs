@@ -20,6 +20,7 @@
 use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
+use crate::arch::{interrupts, tls};
 use crate::mem::paging::{PhysAddr, VirtAddr};
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::Once;
@@ -28,7 +29,7 @@ use crate::utils::sync::{Mutex, MutexGuard};
 
 use crate::acpi::madt;
 use crate::utils::io;
-use crate::PHYSICAL_MEMORY_OFFSET;
+use crate::{time, PHYSICAL_MEMORY_OFFSET};
 
 const APIC_SPURIOUS_VECTOR: u32 = 0xFF;
 
@@ -51,7 +52,20 @@ const XAPIC_ICR: u32 = 0x300;
 const XAPIC_TPR: u32 = 0x080;
 
 /// Local APIC ID register. Read-only. See Section 10.12.5.1 for initial values.
-pub const XAPIC_ID: u32 = 0x020;
+const XAPIC_ID: u32 = 0x020;
+
+/// LVT Timer register. Read/write. See Figure 10-8 for reserved bits.
+const XAPIC_LVT_TIMER: u32 = 0x320;
+
+/// Initial Count register (for Timer). Read/write.
+const XAPIC_TIMER_INIT_COUNT: u32 = 0x380;
+
+/// Divide Configuration Register (DCR; for Timer). Read/write. See
+/// Figure 10-10 for reserved bits.
+const XAPIC_TIMER_DIV_CONF: u32 = 0x3E0;
+
+/// Current Count register (for Timer). Read-only.
+pub const XAPIC_TIMER_CURRENT_COUNT: u32 = 0x390;
 
 const X2APIC_BASE_MSR: u32 = 0x800;
 
@@ -188,6 +202,42 @@ impl LocalApic {
     /// Returns the APIC type of this instance.
     pub fn apic_type(&self) -> ApicType {
         self.apic_type
+    }
+
+    /// Stops the local APIC timer.
+    fn timer_stop(&mut self) {
+        unsafe {
+            self.write(XAPIC_TIMER_INIT_COUNT, 0);
+            self.write(XAPIC_LVT_TIMER, 1 << 16);
+        }
+    }
+
+    /// Calibrates the local APIC timer using the programmable
+    /// interval timer.
+    pub fn timer_calibrate(&mut self) {
+        self.timer_stop();
+
+        const SAMPLES: u32 = 0xfffff;
+
+        unsafe {
+            self.write(XAPIC_LVT_TIMER, (1 << 16) | 0xff); // vector 0xff, masked
+            self.write(XAPIC_TIMER_DIV_CONF, 1);
+
+            time::set_reload_value(0xffff);
+
+            let initial_pit_tick = time::get_current_count();
+            self.write(XAPIC_TIMER_INIT_COUNT, SAMPLES);
+
+            while self.read(XAPIC_TIMER_CURRENT_COUNT) != 0 {}
+
+            let final_pit_tick = time::get_current_count();
+            let pit_ticks = initial_pit_tick - final_pit_tick;
+            let timer_frequency = (SAMPLES / pit_ticks as u32) * time::PIT_DIVIDEND as u32;
+
+            tls::get_percpu().lapic_timer_frequency = timer_frequency;
+        }
+
+        self.timer_stop();
     }
 
     /// Sets the provided `value` to the ICR register of the instance.

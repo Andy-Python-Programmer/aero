@@ -115,6 +115,7 @@ pub struct CpuInfo {
 
 pub struct PerCpuData {
     pub cpuid: usize,
+    pub lapic_timer_frequency: u32,
 
     pub(super) gdt: &'static mut [GdtEntry],
 }
