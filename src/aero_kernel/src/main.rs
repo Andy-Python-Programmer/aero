@@ -114,9 +114,6 @@ fn aero_main() -> ! {
     drivers::mouse::init();
     log::info!("loaded PS/2 driver");
 
-    time::init();
-    log::info!("loaded PIT");
-
     fs::init().unwrap();
     log::info!("loaded filesystem");
 
@@ -135,6 +132,9 @@ fn aero_main() -> ! {
     unsafe {
         interrupts::enable_interrupts();
     }
+
+    time::init();
+    log::info!("loaded timer");
 
     // Pre-scheduler init done. Now we are waiting for the main kernel
     // thread to be scheduled.

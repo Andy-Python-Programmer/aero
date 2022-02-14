@@ -129,13 +129,13 @@ pub fn set_frequency(frequency: usize) {
 /// This function is responsible for initializing the PIT chip and setting
 /// up the IRQ.
 pub fn init() {
+    apic::get_local_apic().timer_calibrate();
+
     REALTIME_CLOCK.lock().tv_sec = EPOCH_TAG
         .get()
         .expect("failed to initialize realtime clock")
         .epoch as isize;
 
     set_frequency(PIT_FREQUENCY_HZ);
-
-    apic::get_local_apic().timer_calibrate();
     apic::io_apic_setup_legacy_irq(0, 1); // Set up the IRQ.
 }
