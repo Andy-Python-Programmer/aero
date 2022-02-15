@@ -20,7 +20,7 @@
 use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
-use crate::arch::{interrupts, tls};
+use crate::arch::tls;
 use crate::mem::paging::{PhysAddr, VirtAddr};
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::Once;
@@ -535,19 +535,18 @@ pub fn init() -> ApicType {
     local_apic.init();
 
     let bsp_id = local_apic.bsp_id();
-    BSP_APIC_ID.store(bsp_id as u64, Ordering::SeqCst);
 
+    BSP_APIC_ID.store(bsp_id as u64, Ordering::SeqCst);
     LOCAL_APIC.call_once(move || Mutex::new(local_apic));
 
     #[cfg(target_arch = "x86_64")]
     {
         use crate::arch::interrupts::INTERRUPT_CONTROLLER;
 
-        /*
-         * Now disable PIC as local APIC is initialized.
-         *
-         * SAFTEY: Its safe to disable the PIC chip as now the local APIC is initialized.
-         */
+        // Now disable PIC as local APIC is initialized.
+        //
+        // SAFETY: Its safe to disable the PIC chip as now the local
+        // APIC is initialized.
         INTERRUPT_CONTROLLER.switch_to_apic();
     }
 

@@ -198,8 +198,35 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     gdt::init(stack_top_addr);
     log::info!("loaded GDT");
 
-    // Initialize the non-arch specific parts of the kernel.
+    // Architecture init is done. Now we can initialize and start the init
+    // process in the non-architecture specific part of the kernel.
     crate::aero_main();
+}
+
+#[no_mangle]
+extern "C" fn x86_64_aero_ap_main(ap_id: usize, stack_top_addr: VirtAddr) {
+    log::debug!("booting CPU {}", ap_id);
+
+    gdt::init_boot();
+    log::info!("AP{}: loaded boot GDT", ap_id);
+
+    tls::init(ap_id);
+    log::info!("AP{}: loaded TLS", ap_id);
+
+    gdt::init(stack_top_addr);
+    log::info!("AP{}: loaded GDT", ap_id);
+
+    apic::mark_ap_ready(true);
+
+    // Wait for the BSP to be ready (after the BSP has initialized
+    // the scheduler).
+    while !apic::is_bsp_ready() {
+        core::hint::spin_loop();
+    }
+
+    // Architecture init is done. Now move on to the non-architecture specific
+    // initialization of the AP.
+    crate::aero_ap_main(ap_id);
 }
 
 pub fn init_cpu() {

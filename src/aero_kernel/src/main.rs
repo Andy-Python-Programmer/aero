@@ -173,27 +173,7 @@ fn kernel_main_thread() {
     unreachable!()
 }
 
-#[no_mangle]
-extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
-    use crate::arch::tls;
-
-    log::debug!("booting CPU {}", ap_id);
-
-    arch::gdt::init_boot();
-    log::info!("AP{}: loaded boot GDT", ap_id);
-
-    tls::init(ap_id as usize);
-    log::info!("AP{}: loaded TLS", ap_id);
-
-    arch::gdt::init(stack_top_addr);
-    log::info!("AP{}: loaded GDT", ap_id);
-
-    apic::mark_ap_ready(true);
-
-    while !apic::is_bsp_ready() {
-        interrupts::pause();
-    }
-
+extern "C" fn aero_ap_main(ap_id: usize) -> ! {
     userland::init_ap();
     log::info!("AP{}: Loaded userland", ap_id);
 

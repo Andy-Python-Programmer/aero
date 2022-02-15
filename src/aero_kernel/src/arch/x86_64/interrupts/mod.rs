@@ -102,9 +102,7 @@ impl ApicController {
     /// Send EOI to the local APIC, indicating the completion of an interrupt.
     #[inline(always)]
     fn eoi(&self) {
-        unsafe {
-            apic::get_local_apic().eoi();
-        }
+        apic::get_local_apic().eoi();
     }
 }
 
