@@ -19,8 +19,9 @@
 
 mod exceptions;
 mod idt;
-mod ipi;
-mod irq;
+
+// TODO: make the irq module private
+pub mod irq;
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
@@ -28,6 +29,7 @@ pub use idt::*;
 
 use crate::apic;
 use crate::utils::io;
+use crate::utils::sync::Mutex;
 
 use super::controlregs;
 
@@ -320,7 +322,7 @@ pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
     paste::item! {
         #[no_mangle]
         #[doc(hidden)]
-        unsafe extern "C" fn [<__interrupt_ $name>]() {
+        pub unsafe extern "C" fn [<__interrupt_ $name>]() {
             $code
         }
 
@@ -345,6 +347,40 @@ pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
             }
         );
     }
+}
+
+/// ## Panics
+/// * If another handler is already installed in the provided interrupt vector.
+pub fn register_handler(vector: u8, handler: unsafe extern "C" fn()) {
+    unsafe {
+        let entry = &mut idt::IDT[vector as usize];
+
+        let entry_ptr = entry as *const _ as *const u8;
+        let entry_slice = core::slice::from_raw_parts(entry_ptr, idt::IDT_ENTRY_SIZE);
+
+        // SAFETY: enusre that we don't already have a handler installed for
+        // the provided interrupt vector.
+        assert!(
+            entry_slice == &[0; idt::IDT_ENTRY_SIZE],
+            "register_handler: attempted to register interrupt handler with one already installed"
+        );
+
+        entry.set_function(handler);
+    }
+}
+
+pub fn allocate_vector() -> u8 {
+    static IDT_FREE_VECTOR: Mutex<u8> = Mutex::new(32);
+
+    let mut fvector = IDT_FREE_VECTOR.lock();
+    let fcopy = fvector.clone();
+
+    if fcopy == 0xf0 {
+        panic!("allocate_vector: vector allocation exhausted")
+    }
+
+    *fvector += 1;
+    fcopy
 }
 
 /// Wrapper function to the `hlt` assembly instruction used to halt

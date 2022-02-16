@@ -20,7 +20,7 @@
 use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
-use crate::arch::tls;
+use crate::arch::{interrupts, tls};
 use crate::mem::paging::{PhysAddr, VirtAddr};
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::Once;
@@ -140,8 +140,11 @@ impl LocalApic {
             // Enable local APIC; set spurious interrupt vector.
             self.write(XAPIC_SVR, 0x100 | APIC_SPURIOUS_VECTOR);
 
+            let lvt_err_vector = interrupts::allocate_vector();
+            interrupts::register_handler(lvt_err_vector, interrupts::irq::lapic_error);
+
             // Set up LVT (Local Vector Table) error.
-            self.write(XAPIC_LVT_ERROR, 49);
+            self.write(XAPIC_LVT_ERROR, lvt_err_vector as u32);
         }
     }
 
@@ -204,16 +207,28 @@ impl LocalApic {
         self.apic_type
     }
 
-    /// Stops the local APIC timer.
-    fn timer_stop(&mut self) {
+    /// Stops the APIC timer.
+    pub fn timer_stop(&mut self) {
         unsafe {
             self.write(XAPIC_TIMER_INIT_COUNT, 0);
             self.write(XAPIC_LVT_TIMER, 1 << 16);
         }
     }
 
-    /// Calibrates the local APIC timer using the programmable
-    /// interval timer.
+    pub fn timer_oneshot(&mut self, vec: u8, us: usize) {
+        self.timer_stop();
+
+        let lapic_timer_frequency = tls::get_percpu().lapic_timer_frequency;
+        let ticks = us * (lapic_timer_frequency / 1000000) as usize;
+
+        unsafe {
+            self.write(XAPIC_LVT_TIMER, vec as u32);
+            self.write(XAPIC_TIMER_DIV_CONF, 0);
+            self.write(XAPIC_TIMER_INIT_COUNT, ticks as u32);
+        }
+    }
+
+    /// Calibrates the local APIC timer using the programmable interval timer.
     pub fn timer_calibrate(&mut self) {
         self.timer_stop();
 
@@ -490,25 +505,19 @@ pub fn io_apic_set_redirect(vec: u8, gsi: u32, flags: u16, status: i32) {
     }
 }
 
-pub fn io_apic_setup_legacy_irq(irq: u8, status: i32) {
+pub fn io_apic_setup_legacy_irq(irq: u8, vec: u8, status: i32) {
     // Redirect will handle weather IRQ is masked or not, we just need to
     // search the MADT ISOs for a corrosponsing IRQ.
     let isos_entries = madt::ISOS.read();
 
     for entry in isos_entries.iter() {
         if entry.irq == irq {
-            io_apic_set_redirect(
-                entry.irq + 0x20,
-                entry.global_system_interrupt,
-                entry.flags,
-                status,
-            );
-
+            io_apic_set_redirect(vec, entry.global_system_interrupt, entry.flags, status);
             return;
         }
     }
 
-    io_apic_set_redirect(irq + 0x20, irq as _, 0, status)
+    io_apic_set_redirect(vec, irq as u32, 0, status)
 }
 
 /// Initialize the local apic.

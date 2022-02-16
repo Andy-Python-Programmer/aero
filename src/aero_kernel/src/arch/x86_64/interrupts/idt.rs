@@ -23,14 +23,9 @@
 
 const IDT_ENTRIES: usize = 256;
 
-pub const IPI_BASE: u8 = 0x40;
-
-pub const IPI_ABORT: u8 = IPI_BASE + 0x00;
-pub const IPI_RESCHEDULE: u8 = IPI_BASE + 0x01;
-
 pub type InterruptHandlerFn = unsafe extern "C" fn();
 
-static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
+pub(super) static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
 
 use core::mem::size_of;
 
@@ -63,9 +58,11 @@ impl IdtDescriptor {
     }
 }
 
+pub(super) const IDT_ENTRY_SIZE: usize = core::mem::size_of::<IdtEntry>();
+
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
-struct IdtEntry {
+pub(super) struct IdtEntry {
     offset_low: u16,
     selector: u16,
     ist: u8,
@@ -195,16 +192,6 @@ pub fn init() {
 
         // IDT[21..29] are reserved.
         IDT[30].set_function(super::exceptions::security);
-
-        // Set up the IRQs.
-        IDT[32].set_function(super::irq::pit_stack);
-        IDT[33].set_function(super::irq::keyboard);
-        IDT[44].set_function(super::irq::mouse);
-
-        IDT[49].set_function(super::irq::lapic_error);
-
-        IDT[IPI_ABORT as usize].set_function(super::ipi::abort);
-        IDT[IPI_RESCHEDULE as usize].set_function(super::ipi::reschedule);
 
         let idt_descriptor = IdtDescriptor::new(
             ((IDT.len() * size_of::<IdtEntry>()) - 1) as u16,

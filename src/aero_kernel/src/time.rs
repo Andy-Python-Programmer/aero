@@ -29,6 +29,7 @@ use aero_syscall::TimeSpec;
 use stivale_boot::v2::StivaleEpochTag;
 
 use crate::apic;
+use crate::arch::interrupts;
 use crate::userland::scheduler;
 use crate::utils::io;
 use crate::utils::sync::Mutex;
@@ -137,5 +138,9 @@ pub fn init() {
         .epoch as isize;
 
     set_frequency(PIT_FREQUENCY_HZ);
-    apic::io_apic_setup_legacy_irq(0, 1); // Set up the IRQ.
+
+    let pit_vector = interrupts::allocate_vector();
+    interrupts::register_handler(pit_vector, interrupts::irq::pit_stack);
+
+    apic::io_apic_setup_legacy_irq(0, pit_vector, 1); // Set up the IRQ.
 }

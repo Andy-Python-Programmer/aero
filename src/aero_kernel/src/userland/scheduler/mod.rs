@@ -137,7 +137,7 @@ pub fn is_initialized() -> bool {
     SCHEDULER.get().is_some()
 }
 
-/// Initialize the scheduler.
+/// Initialize the scheduler and set up the scheduler interrupt.
 #[inline]
 pub fn init() {
     SCHEDULER.call_once(|| Scheduler::new()).inner.init();
