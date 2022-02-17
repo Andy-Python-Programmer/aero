@@ -29,17 +29,16 @@ use aero_syscall::TimeSpec;
 use stivale_boot::v2::StivaleEpochTag;
 
 use crate::apic;
-use crate::arch::interrupts::{self, InterruptStack, INTERRUPT_CONTROLLER};
-use crate::userland::scheduler;
+
+use crate::arch::interrupts;
+use crate::arch::interrupts::InterruptStack;
+
 use crate::utils::io;
 use crate::utils::sync::Mutex;
 
 const PIT_FREQUENCY_HZ: usize = 1000;
 pub const PIT_DIVIDEND: usize = 1193182;
 
-const SCHED_TIMESLICE_MS: usize = 15;
-
-static SCHED_TICKS: AtomicUsize = AtomicUsize::new(0);
 static UPTIME_RAW: AtomicUsize = AtomicUsize::new(0);
 static UPTIME_SEC: AtomicUsize = AtomicUsize::new(0);
 
@@ -89,8 +88,6 @@ pub fn set_frequency(frequency: usize) {
 }
 
 fn pit_irq_handler(_stack: &mut InterruptStack) {
-    INTERRUPT_CONTROLLER.eoi();
-
     {
         let interval = aero_syscall::TimeSpec {
             tv_sec: 0,
@@ -115,17 +112,6 @@ fn pit_irq_handler(_stack: &mut InterruptStack) {
 
     if value % PIT_FREQUENCY_HZ == 0 {
         UPTIME_SEC.fetch_add(1, Ordering::Relaxed); // Increment uptime seconds
-    }
-
-    let value = SCHED_TICKS.fetch_add(1, Ordering::Relaxed); // Increment scheduler ticks.
-
-    // Check if the ticks are equal to the scheduler timeslice. If so, then
-    // reschedule.
-    if value == SCHED_TIMESLICE_MS {
-        SCHED_TICKS.store(0, Ordering::Relaxed); // Reset the scheduler ticks counter.
-
-        scheduler::get_scheduler().inner.preempt();
-        return;
     }
 }
 

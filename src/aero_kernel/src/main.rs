@@ -114,6 +114,9 @@ fn aero_main() -> ! {
     fs::init().unwrap();
     log::info!("loaded filesystem");
 
+    time::init();
+    log::info!("loaded timer");
+
     userland::init();
     log::info!("loaded userland");
 
@@ -129,9 +132,6 @@ fn aero_main() -> ! {
     unsafe {
         interrupts::enable_interrupts();
     }
-
-    time::init();
-    log::info!("loaded timer");
 
     // Pre-scheduler init done. Now we are waiting for the main kernel
     // thread to be scheduled.

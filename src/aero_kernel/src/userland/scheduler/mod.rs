@@ -22,6 +22,8 @@ pub mod round_robin;
 
 use alloc::sync::Arc;
 
+use crate::apic;
+use crate::arch::interrupts::{self, InterruptStack, INTERRUPT_CONTROLLER};
 use crate::utils::sync::Mutex;
 use crate::{fs::cache::DirCacheItem, syscall::ExecArgs};
 
@@ -137,8 +139,22 @@ pub fn is_initialized() -> bool {
     SCHEDULER.get().is_some()
 }
 
+static SCHEDULER_VECTOR: Once<u8> = Once::new();
+const SCHEDULER_TIMER_US: usize = 20000;
+
+fn scheduler_irq_handler(_stack: &mut InterruptStack) {
+    apic::get_local_apic().timer_oneshot(*SCHEDULER_VECTOR.get().unwrap(), SCHEDULER_TIMER_US);
+    INTERRUPT_CONTROLLER.eoi();
+    self::get_scheduler().inner.preempt();
+}
+
 /// Initialize the scheduler and set up the scheduler interrupt.
-#[inline]
 pub fn init() {
     SCHEDULER.call_once(|| Scheduler::new()).inner.init();
+
+    let scheduler_vector = interrupts::allocate_vector();
+    interrupts::register_handler(scheduler_vector, scheduler_irq_handler);
+
+    apic::get_local_apic().timer_oneshot(scheduler_vector, SCHEDULER_TIMER_US);
+    SCHEDULER_VECTOR.call_once(|| scheduler_vector);
 }

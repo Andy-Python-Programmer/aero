@@ -243,7 +243,7 @@ extern "C" fn generic_interrupt_handler(isr: usize, stack_frame: *mut InterruptE
 /// ## Panics
 /// * If another handler is already installed in the provided interrupt vector.
 pub fn register_handler(vector: u8, handler: fn(&mut InterruptStack)) {
-    let mut handlers = idt::INTERRUPT_HANDLERS.lock();
+    let mut handlers = idt::INTERRUPT_HANDLERS.lock_irq();
 
     // SAFETY: ensure there is no handler already installed.
     match handlers[vector as usize] {
