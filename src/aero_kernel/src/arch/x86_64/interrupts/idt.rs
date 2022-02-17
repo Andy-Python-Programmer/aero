@@ -23,13 +23,11 @@
 
 const IDT_ENTRIES: usize = 256;
 
-pub type InterruptHandlerFn = unsafe extern "C" fn();
-
 pub(super) static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
 
 use core::mem::size_of;
 
-use crate::arch::gdt::SegmentSelector;
+use crate::{arch::gdt::SegmentSelector, utils::sync::Mutex};
 
 bitflags::bitflags! {
     pub struct IDTFlags: u8 {
@@ -57,8 +55,6 @@ impl IdtDescriptor {
         Self { size, offset }
     }
 }
-
-pub(super) const IDT_ENTRY_SIZE: usize = core::mem::size_of::<IdtEntry>();
 
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
@@ -98,7 +94,7 @@ impl IdtEntry {
     }
 
     /// Set the handler function of the IDT entry.
-    pub(crate) fn set_function(&mut self, handler: InterruptHandlerFn) {
+    pub(crate) fn set_function(&mut self, handler: *const u8) {
         self.set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
         self.set_offset(8, handler as usize);
     }
@@ -160,39 +156,65 @@ pub struct InterruptErrorStack {
     pub stack: InterruptStack,
 }
 
+#[derive(Copy, Clone)]
+pub(super) enum IrqHandler {
+    ErrorHandler(fn(&mut InterruptErrorStack)),
+    Handler(fn(&mut InterruptStack)),
+
+    None,
+}
+
+pub(super) static INTERRUPT_HANDLERS: Mutex<[IrqHandler; IDT_ENTRIES]> =
+    Mutex::new([IrqHandler::None; IDT_ENTRIES]);
+
 /// Initialize the IDT.
 pub fn init() {
+    use super::exceptions;
+
+    extern "C" {
+        // defined in `handlers.asm`
+        static interrupt_handlers: [*const u8; IDT_ENTRIES];
+    }
+
     unsafe {
-        IDT[0].set_function(super::exceptions::divide_by_zero);
-        IDT[1].set_function(super::exceptions::debug);
-        IDT[2].set_function(super::exceptions::non_maskable);
-        IDT[3].set_function(super::exceptions::breakpoint);
-        IDT[4].set_function(super::exceptions::overflow);
-        IDT[5].set_function(super::exceptions::bound_range);
-        IDT[6].set_function(super::exceptions::invalid_opcode);
-        IDT[7].set_function(super::exceptions::device_not_available);
-        IDT[8].set_function(super::exceptions::double_fault);
+        for (index, &handler) in interrupt_handlers.iter().enumerate() {
+            // skip handler insertion if handler is null.
+            if handler.is_null() {
+                continue;
+            }
 
-        // IDT[9] is reserved.
+            IDT[index].set_function(handler);
+        }
+    }
 
-        IDT[10].set_function(super::exceptions::invalid_tss);
-        IDT[11].set_function(super::exceptions::segment_not_present);
-        IDT[12].set_function(super::exceptions::stack_segment);
-        IDT[13].set_function(super::exceptions::protection);
+    INTERRUPT_HANDLERS.lock()[0] = IrqHandler::ErrorHandler(exceptions::divide_by_zero);
+    INTERRUPT_HANDLERS.lock()[1] = IrqHandler::ErrorHandler(exceptions::debug);
+    INTERRUPT_HANDLERS.lock()[2] = IrqHandler::ErrorHandler(exceptions::non_maskable);
+    INTERRUPT_HANDLERS.lock()[3] = IrqHandler::ErrorHandler(exceptions::breakpoint);
+    INTERRUPT_HANDLERS.lock()[4] = IrqHandler::ErrorHandler(exceptions::overflow);
+    INTERRUPT_HANDLERS.lock()[5] = IrqHandler::ErrorHandler(exceptions::bound_range);
+    INTERRUPT_HANDLERS.lock()[6] = IrqHandler::ErrorHandler(exceptions::invalid_opcode);
+    INTERRUPT_HANDLERS.lock()[7] = IrqHandler::ErrorHandler(exceptions::device_not_available);
+    INTERRUPT_HANDLERS.lock()[8] = IrqHandler::ErrorHandler(exceptions::double_fault);
 
-        IDT[14].set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
-        IDT[14].set_offset(8, super::exceptions::page_fault as usize);
+    // INTERRUPT_HANDLERS.lock()[9] is reserved.
+    INTERRUPT_HANDLERS.lock()[10] = IrqHandler::ErrorHandler(exceptions::invalid_tss);
+    INTERRUPT_HANDLERS.lock()[11] = IrqHandler::ErrorHandler(exceptions::segment_not_present);
+    INTERRUPT_HANDLERS.lock()[12] = IrqHandler::ErrorHandler(exceptions::stack_segment);
+    INTERRUPT_HANDLERS.lock()[13] = IrqHandler::ErrorHandler(exceptions::protection);
+    INTERRUPT_HANDLERS.lock()[14] = IrqHandler::ErrorHandler(exceptions::page_fault);
 
-        // IDT[15] is reserved.
-        IDT[16].set_function(super::exceptions::fpu_fault);
-        IDT[17].set_function(super::exceptions::alignment_check);
-        IDT[18].set_function(super::exceptions::machine_check);
-        IDT[19].set_function(super::exceptions::simd);
-        IDT[20].set_function(super::exceptions::virtualization);
+    // INTERRUPT_HANDLERS.lock()[15] is reserved.
+    INTERRUPT_HANDLERS.lock()[16] = IrqHandler::ErrorHandler(exceptions::fpu_fault);
+    INTERRUPT_HANDLERS.lock()[17] = IrqHandler::ErrorHandler(exceptions::alignment_check);
+    INTERRUPT_HANDLERS.lock()[18] = IrqHandler::ErrorHandler(exceptions::machine_check);
+    INTERRUPT_HANDLERS.lock()[19] = IrqHandler::ErrorHandler(exceptions::simd);
+    INTERRUPT_HANDLERS.lock()[20] = IrqHandler::ErrorHandler(exceptions::virtualization);
 
-        // IDT[21..29] are reserved.
-        IDT[30].set_function(super::exceptions::security);
+    // INTERRUPT_HANDLERS.lock()[21..29] are reserved.
+    INTERRUPT_HANDLERS.lock()[30] = IrqHandler::ErrorHandler(exceptions::security);
 
+    unsafe {
         let idt_descriptor = IdtDescriptor::new(
             ((IDT.len() * size_of::<IdtEntry>()) - 1) as u16,
             (&IDT as *const _) as u64,

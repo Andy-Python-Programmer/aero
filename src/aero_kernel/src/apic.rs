@@ -20,6 +20,7 @@
 use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
+use crate::arch::interrupts::InterruptStack;
 use crate::arch::{interrupts, tls};
 use crate::mem::paging::{PhysAddr, VirtAddr};
 use raw_cpuid::{CpuId, FeatureInfo};
@@ -107,6 +108,11 @@ impl From<FeatureInfo> for ApicType {
     }
 }
 
+fn lapic_error_handler(stack: &mut InterruptStack) {
+    log::error!("Local apic error");
+    log::error!("ESR={:#0x}", self::get_local_apic().get_esr());
+}
+
 pub struct LocalApic {
     address: VirtAddr,
     apic_type: ApicType,
@@ -141,7 +147,7 @@ impl LocalApic {
             self.write(XAPIC_SVR, 0x100 | APIC_SPURIOUS_VECTOR);
 
             let lvt_err_vector = interrupts::allocate_vector();
-            interrupts::register_handler(lvt_err_vector, interrupts::irq::lapic_error);
+            interrupts::register_handler(lvt_err_vector, lapic_error_handler);
 
             // Set up LVT (Local Vector Table) error.
             self.write(XAPIC_LVT_ERROR, lvt_err_vector as u32);

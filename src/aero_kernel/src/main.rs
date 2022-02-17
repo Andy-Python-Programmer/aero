@@ -111,9 +111,6 @@ fn aero_main() -> ! {
     // NOTE: In this function we only want to initialize essential serivces, including
     // the task scheduler. Rest of the initializing (including kernel modules) should go
     // into the kernel main thread function instead.
-    drivers::mouse::init();
-    log::info!("loaded PS/2 driver");
-
     fs::init().unwrap();
     log::info!("loaded filesystem");
 

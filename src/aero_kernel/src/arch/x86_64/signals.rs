@@ -22,7 +22,7 @@ use crate::userland;
 use crate::userland::scheduler;
 use crate::utils::StackHelper;
 
-use super::interrupts::{InterruptErrorStack, InterruptStack};
+use super::interrupts::InterruptStack;
 
 const REDZONE_SIZE: u64 = 128;
 const SYSCALL_INSTRUCTION_SIZE: u64 = 2;
@@ -45,16 +45,7 @@ impl SignalFrame {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn interrupt_check_signals_error_stack(stack: &mut InterruptErrorStack) {
-    if stack.stack.iret.is_user() {
-        interrupt_check_signals(&mut stack.stack)
-    }
-}
-
-/// Helper function to check for any pending signals from an interrupt.
-#[no_mangle]
-pub extern "C" fn interrupt_check_signals(stack: &mut InterruptStack) {
+pub fn interrupt_check_signals(stack: &mut InterruptStack) {
     // SAFTEY: If this interrupt did not originate from userland then we cannot
     // check for signals since the scheduler might not be initialized.
     if !stack.iret.is_user() {

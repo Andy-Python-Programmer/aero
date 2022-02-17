@@ -22,7 +22,7 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::RwLock;
 
-use crate::arch::interrupts;
+use crate::arch::interrupts::{self, InterruptStack};
 use crate::{apic, fs};
 
 use crate::fs::devfs::{self, Device};
@@ -182,7 +182,114 @@ pub enum KeyCode {
     KEY_COMPOSE = 127,
 }
 
-pub fn handle(scancode: u8) {
+lazy_static::lazy_static! {
+    static ref KEYBOARD: Arc<KeyboardDevice> = KeyboardDevice::new();
+}
+
+struct KeyboardDevice {
+    marker: usize,
+    buffer: Mutex<Vec<u8>>,
+    sref: Weak<Self>,
+}
+
+impl KeyboardDevice {
+    fn new() -> Arc<Self> {
+        Arc::new_cyclic(|this| Self {
+            marker: devfs::alloc_device_marker(),
+            buffer: Mutex::new(Vec::new()),
+            sref: this.clone(),
+        })
+    }
+}
+
+impl Device for KeyboardDevice {
+    fn device_marker(&self) -> usize {
+        self.marker
+    }
+
+    fn device_name(&self) -> String {
+        String::from("kbd0")
+    }
+
+    fn inode(&self) -> Arc<dyn INodeInterface> {
+        self.sref.upgrade().unwrap()
+    }
+}
+
+impl KeyboardListener for KeyboardDevice {
+    fn on_key(&self, keycode: KeyCode, released: bool) {
+        if released {
+            self.buffer.lock_irq().push(0x80 | keycode as u8);
+        } else {
+            self.buffer.lock_irq().push(keycode as u8);
+        }
+    }
+}
+
+impl INodeInterface for KeyboardDevice {
+    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+        let mut sbuf = self.buffer.lock_irq();
+        let drainage = core::cmp::min(buffer.len(), sbuf.len());
+
+        for (i, byte) in sbuf.drain(..drainage).enumerate() {
+            buffer[i] = byte;
+        }
+
+        Ok(drainage)
+    }
+}
+
+/// This function is responsible for initializing PS2 keyboard driver.
+pub fn ps2_keyboard_init() {
+    let lock = PS2_KEYBOARD_STATE.lock_irq();
+
+    unsafe {
+        io::outb(0x60, 0xF5); // command: disable scanning
+
+        if io::inb(0x60) != 0xFA {
+            log::warn!("ps2: disable scanning failed, no ACK");
+        }
+
+        io::outb(0x60, 0xF4); // command: enable reporting
+        lock.flush();
+
+        if io::inb(0x60) != 0xFA {
+            log::warn!("ps2: failed to enable error reporting, no ACK");
+        }
+
+        io::outb(0x64, 0x20); // command: read
+        lock.flush();
+
+        let mut config = ConfigFlags::from_bits_truncate(io::inb(0x60));
+
+        config.remove(ConfigFlags::FIRST_DISABLED);
+        config.remove(ConfigFlags::FIRST_TRANSLATE); // Use scancode set 2
+        config.insert(ConfigFlags::FIRST_INTERRUPT);
+
+        io::outb(0x64, 0x60); // command: write config
+        io::outb(0x60, config.bits());
+
+        lock.flush();
+    }
+
+    let keyboard_vector = interrupts::allocate_vector();
+    interrupts::register_handler(keyboard_vector, keyboard_irq_handler);
+
+    apic::io_apic_setup_legacy_irq(1, keyboard_vector, 1);
+
+    // TODO: Move this into /dev/input instead
+    // TODO: Add support for multiple keyboards
+    register_keyboard_listener(KEYBOARD.as_ref().clone());
+    devfs::install_device(KEYBOARD.clone()).expect("failed to install keyboard device");
+}
+
+pub fn register_keyboard_listener(listner: &'static dyn KeyboardListener) {
+    KEYBOARD_LISTNER.write().push(listner)
+}
+
+pub fn keyboard_irq_handler(_stack: &mut InterruptStack) {
+    let scancode = unsafe { io::inb(0x60) };
+
     match scancode {
         0xE0 => PS2_KEYBOARD_STATE.lock().special = true,
         0xF0 => PS2_KEYBOARD_STATE.lock().released = true,
@@ -314,111 +421,6 @@ pub fn handle(scancode: u8) {
             }
         }
     }
-}
-
-lazy_static::lazy_static! {
-    static ref KEYBOARD: Arc<KeyboardDevice> = KeyboardDevice::new();
-}
-
-struct KeyboardDevice {
-    marker: usize,
-    buffer: Mutex<Vec<u8>>,
-    sref: Weak<Self>,
-}
-
-impl KeyboardDevice {
-    fn new() -> Arc<Self> {
-        Arc::new_cyclic(|this| Self {
-            marker: devfs::alloc_device_marker(),
-            buffer: Mutex::new(Vec::new()),
-            sref: this.clone(),
-        })
-    }
-}
-
-impl Device for KeyboardDevice {
-    fn device_marker(&self) -> usize {
-        self.marker
-    }
-
-    fn device_name(&self) -> String {
-        String::from("kbd0")
-    }
-
-    fn inode(&self) -> Arc<dyn INodeInterface> {
-        self.sref.upgrade().unwrap()
-    }
-}
-
-impl KeyboardListener for KeyboardDevice {
-    fn on_key(&self, keycode: KeyCode, released: bool) {
-        if released {
-            self.buffer.lock_irq().push(0x80 | keycode as u8);
-        } else {
-            self.buffer.lock_irq().push(keycode as u8);
-        }
-    }
-}
-
-impl INodeInterface for KeyboardDevice {
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        let mut sbuf = self.buffer.lock_irq();
-        let drainage = core::cmp::min(buffer.len(), sbuf.len());
-
-        for (i, byte) in sbuf.drain(..drainage).enumerate() {
-            buffer[i] = byte;
-        }
-
-        Ok(drainage)
-    }
-}
-
-/// This function is responsible for initializing PS2 keyboard driver.
-pub fn ps2_keyboard_init() {
-    let lock = PS2_KEYBOARD_STATE.lock_irq();
-
-    unsafe {
-        io::outb(0x60, 0xF5); // command: disable scanning
-
-        if io::inb(0x60) != 0xFA {
-            log::warn!("ps2: disable scanning failed, no ACK");
-        }
-
-        io::outb(0x60, 0xF4); // command: enable reporting
-        lock.flush();
-
-        if io::inb(0x60) != 0xFA {
-            log::warn!("ps2: failed to enable error reporting, no ACK");
-        }
-
-        io::outb(0x64, 0x20); // command: read
-        lock.flush();
-
-        let mut config = ConfigFlags::from_bits_truncate(io::inb(0x60));
-
-        config.remove(ConfigFlags::FIRST_DISABLED);
-        config.remove(ConfigFlags::FIRST_TRANSLATE); // Use scancode set 2
-        config.insert(ConfigFlags::FIRST_INTERRUPT);
-
-        io::outb(0x64, 0x60); // command: write config
-        io::outb(0x60, config.bits());
-
-        lock.flush();
-    }
-
-    let keyboard_vector = interrupts::allocate_vector();
-    interrupts::register_handler(keyboard_vector, interrupts::irq::keyboard);
-
-    apic::io_apic_setup_legacy_irq(1, keyboard_vector, 1);
-
-    // TODO: Move this into /dev/input instead
-    // TODO: Add support for multiple keyboards
-    register_keyboard_listener(KEYBOARD.as_ref().clone());
-    devfs::install_device(KEYBOARD.clone()).expect("failed to install keyboard device");
-}
-
-pub fn register_keyboard_listener(listner: &'static dyn KeyboardListener) {
-    KEYBOARD_LISTNER.write().push(listner)
 }
 
 crate::module_init!(ps2_keyboard_init);

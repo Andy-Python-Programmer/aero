@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use super::interrupt_error_stack;
+use super::InterruptErrorStack;
 
 use crate::arch::controlregs;
 use crate::mem::paging::PageFaultErrorCode;
@@ -26,26 +26,20 @@ use crate::unwind;
 use crate::userland::scheduler;
 
 macro interrupt_exception(fn $name:ident() => $message:expr) {
-    super::interrupt_error_stack!(
-        fn $name(stack: &mut InterruptErrorStack) {
-            $crate::unwind::prepare_panic();
-            log::error!("EXCEPTION: {}\n\nStack: {:#x?}", $message, stack);
+    pub fn $name(stack: &mut InterruptErrorStack) {
+        unwind::prepare_panic();
 
-            if stack.stack.iret.is_user() {
-                loop {}
-            }
+        log::error!("EXCEPTION: {}", $message);
+        log::error!("Stack: {:#x?}", stack);
 
-            $crate::unwind::unwind_stack_trace();
+        unwind::unwind_stack_trace();
 
-            unsafe {
-                $crate::arch::interrupts::disable_interrupts();
-
-                loop {
-                    $crate::arch::interrupts::halt();
-                }
+        unsafe {
+            loop {
+                super::halt();
             }
         }
-    );
+    }
 }
 
 interrupt_exception!(fn divide_by_zero() => "Division by zero");
@@ -67,88 +61,82 @@ interrupt_exception!(fn simd() => "SIMD floating point fault");
 interrupt_exception!(fn virtualization() => "Virtualization fault");
 interrupt_exception!(fn security() => "Security exception");
 
-interrupt_error_stack!(
-    fn breakpoint(stack: &mut InterruptErrorStack) {
-        /*
-         * We will need to prevent RIP from going out of sync with
-         * instructions.
-         *
-         * So we will set the RIP to RIP - 1, pointing to the int3
-         * instruction.
-         */
-        (*stack).stack.iret.rip -= 1;
-    }
-);
+pub fn breakpoint(stack: &mut InterruptErrorStack) {
+    // We will need to prevent RIP from going out of sync with
+    // instructions.
+    //
+    // So we will set the RIP to RIP - 1, pointing to the int3
+    // instruction.
+    (*stack).stack.iret.rip -= 1;
+}
 
-interrupt_error_stack!(
-    fn page_fault(stack: &mut InterruptErrorStack) {
-        let accessed_address = controlregs::read_cr2();
-        let reason = PageFaultErrorCode::from_bits_truncate(stack.code);
+pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
+    let accessed_address = controlregs::read_cr2();
+    let reason = PageFaultErrorCode::from_bits_truncate(stack.code);
 
-        // We cannot directly check if we want to handle the page fault by checking
-        // if the CS register contains the RPL_3 flag since, we also want to handle the
-        // situation where we are trying to access a user provided buffer in the kernel and
-        // its not mapped. So we handle the page fault if the accessed address is less then the
-        // MAX userland address and we only signal kill the process if its trying to access
-        // a non-mapped memory region while in RPL_3.
-        let userland_last_address = super::super::task::userland_last_address();
+    // We cannot directly check if we want to handle the page fault by checking
+    // if the CS register contains the RPL_3 flag since, we also want to handle the
+    // situation where we are trying to access a user provided buffer in the kernel and
+    // its not mapped. So we handle the page fault if the accessed address is less then the
+    // MAX userland address and we only signal kill the process if its trying to access
+    // a non-mapped memory region while in RPL_3.
+    let userland_last_address = super::super::task::userland_last_address();
 
-        if accessed_address < userland_last_address && scheduler::is_initialized() {
-            let signal = scheduler::get_scheduler()
-                .current_task()
-                .vm
-                .handle_page_fault(reason, accessed_address);
+    if accessed_address < userland_last_address && scheduler::is_initialized() {
+        let signal = scheduler::get_scheduler()
+            .current_task()
+            .vm
+            .handle_page_fault(reason, accessed_address);
 
-            if !signal && stack.stack.iret.is_user() {
-                log::error!("Segmentation fault");
-                log::error!("");
-                log::error!("accessed address: {:#x}", accessed_address);
-                log::error!("reason: {:?}", reason);
-                log::error!("");
+        if !signal && stack.stack.iret.is_user() {
+            log::error!("Segmentation fault");
+            log::error!("");
+            log::error!("accessed address: {:#x}", accessed_address);
+            log::error!("reason: {:?}", reason);
+            log::error!("");
 
-                if stack.stack.iret.is_user() {
-                    let task = scheduler::get_scheduler().current_task();
-
-                    log::error!(
-                        "process: (pid={}, pid={})",
-                        task.tid().as_usize(),
-                        task.pid().as_usize()
-                    );
-                }
-
-                log::error!("stack: {:#x?}", stack);
-
-                scheduler::get_scheduler().current_task().vm.log();
-                scheduler::get_scheduler().current_task().file_table.log();
-
-                unwind::unwind_stack_trace();
-
+            if stack.stack.iret.is_user() {
                 let task = scheduler::get_scheduler().current_task();
-                task.signal(aero_syscall::signal::SIGSEGV);
 
-                return;
-            } else if !signal {
-            } else {
-                return;
+                log::error!(
+                    "process: (pid={}, pid={})",
+                    task.tid().as_usize(),
+                    task.pid().as_usize()
+                );
             }
-        }
 
-        unwind::prepare_panic();
+            log::error!("stack: {:#x?}", stack);
 
-        log::error!("EXCEPTION: Page Fault");
-        log::error!("");
-        log::error!("Accessed Address: {:#x}", accessed_address);
-        log::error!("Error: {:?}", reason);
-        log::error!("");
+            scheduler::get_scheduler().current_task().vm.log();
+            scheduler::get_scheduler().current_task().file_table.log();
 
-        log::error!("Stack: {:#x?}", stack);
+            unwind::unwind_stack_trace();
 
-        unwind::unwind_stack_trace();
+            let task = scheduler::get_scheduler().current_task();
+            task.signal(aero_syscall::signal::SIGSEGV);
 
-        unsafe {
-            loop {
-                super::halt();
-            }
+            return;
+        } else if !signal {
+        } else {
+            return;
         }
     }
-);
+
+    unwind::prepare_panic();
+
+    log::error!("EXCEPTION: Page Fault");
+    log::error!("");
+    log::error!("Accessed Address: {:#x}", accessed_address);
+    log::error!("Error: {:?}", reason);
+    log::error!("");
+
+    log::error!("Stack: {:#x?}", stack);
+
+    unwind::unwind_stack_trace();
+
+    unsafe {
+        loop {
+            super::halt();
+        }
+    }
+}

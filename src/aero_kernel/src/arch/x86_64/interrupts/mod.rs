@@ -20,9 +20,6 @@
 mod exceptions;
 mod idt;
 
-// TODO: make the irq module private
-pub mod irq;
-
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 pub use idt::*;
@@ -217,156 +214,44 @@ impl PicController {
     }
 }
 
-/// Helper macro to generate an interrupt exception handler that expects an
-/// error code.
-pub macro interrupt_error_stack(fn $name:ident($stack:ident: &mut InterruptErrorStack) $code:block) {
-    paste::item! {
-        #[no_mangle]
-        #[doc(hidden)]
-        unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptErrorStack) {
-            #[inline(always)]
-            #[allow(unused)] // Unused variable ($stack).
-            fn inner($stack: &mut $crate::arch::interrupts::InterruptErrorStack) {
-                $code
-            }
+#[no_mangle]
+extern "C" fn generic_interrupt_handler(isr: usize, stack_frame: *mut InterruptErrorStack) {
+    let stack_frame = unsafe { &mut *stack_frame };
+    let handlers = idt::INTERRUPT_HANDLERS.lock();
 
-            inner(&mut *stack);
+    match &handlers[isr] {
+        IrqHandler::Handler(handler) => {
+            let handler = *handler;
+            core::mem::drop(handlers); // drop the lock
+            handler(&mut stack_frame.stack);
         }
 
-        $crate::utils::intel_fn!(
-            pub extern "asm" fn $name() {
-                $crate::utils::swapgs_iff_ring3_fast_errorcode!(),
-
-                // Move rax into code's place and put code in last instead to be
-                // compatible with interrupt stack.
-                "xchg [rsp], rax\n",
-
-                $crate::utils::push_scratch!(),
-                $crate::utils::push_preserved!(),
-
-                // Push the error code.
-                "push rax\n",
-
-                "call map_pti\n",
-
-                // Call the inner interrupt handler implementation.
-                "mov rdi, rsp\n",
-                "call __interrupt_", stringify!($name), "\n",
-
-                "mov rdi, rsp\n",
-                "call interrupt_check_signals_error_stack\n",
-
-                "call unmap_pti\n",
-
-                // Pop the error code.
-                "add rsp, 8\n",
-
-                $crate::utils::pop_preserved!(),
-                $crate::utils::pop_scratch!(),
-
-                $crate::utils::swapgs_iff_ring3_fast!(),
-                "iretq\n",
-            }
-        );
-    }
-}
-
-/// Helper macro to generate an interrupt handler that takes the interrupt stack as
-/// an argument.
-pub macro interrupt_stack(pub unsafe fn $name:ident($stack:ident: &mut InterruptStack) $code:block) {
-    paste::item! {
-        #[no_mangle]
-        #[doc(hidden)]
-        unsafe extern "C" fn [<__interrupt_ $name>](stack: *mut $crate::arch::interrupts::InterruptStack) {
-            #[inline(always)]
-            #[allow(unused)] // Unused variable ($stack).
-            unsafe fn inner($stack: &mut $crate::arch::interrupts::InterruptStack) {
-                $code
-            }
-
-            inner(&mut *stack);
+        IrqHandler::ErrorHandler(handler) => {
+            let handler = *handler;
+            core::mem::drop(handlers); // drop the lock
+            handler(stack_frame);
         }
 
-        $crate::utils::intel_fn!(
-            pub extern "asm" fn $name() {
-                $crate::utils::swapgs_iff_ring3_fast!(),
-
-                "push rax\n",
-
-                $crate::utils::push_scratch!(),
-                $crate::utils::push_preserved!(),
-
-                "call map_pti\n",
-
-                "mov rdi, rsp\n",
-                "call __interrupt_", stringify!($name), "\n",
-
-                "mov rdi, rsp\n",
-                "call interrupt_check_signals\n",
-
-                "call unmap_pti\n",
-
-                $crate::utils::pop_preserved!(),
-                $crate::utils::pop_scratch!(),
-
-                $crate::utils::swapgs_iff_ring3_fast!(),
-                "iretq\n",
-            }
-        );
+        IrqHandler::None => log::warn!("unhandled interrupt {}", isr),
     }
-}
 
-/// Helper macro that generates an interrupt handler that does *not* require the
-/// interrupt stack as an argument.
-pub macro interrupt(pub unsafe fn $name:ident() $code:block) {
-    paste::item! {
-        #[no_mangle]
-        #[doc(hidden)]
-        pub unsafe extern "C" fn [<__interrupt_ $name>]() {
-            $code
-        }
-
-        $crate::utils::intel_fn!(
-            pub extern "asm" fn $name() {
-                $crate::utils::swapgs_iff_ring3_fast!(),
-
-                "push rax\n",
-
-                $crate::utils::push_scratch!(),
-
-                "call map_pti\n",
-
-                "mov rdi, rsp\n",
-                "call __interrupt_", stringify!($name), "\n",
-
-                "call unmap_pti\n",
-
-                $crate::utils::pop_scratch!(),
-                $crate::utils::swapgs_iff_ring3_fast!(),
-                "iretq\n",
-            }
-        );
-    }
+    // Check and evaluate any pending signals.
+    super::signals::interrupt_check_signals(&mut stack_frame.stack);
+    INTERRUPT_CONTROLLER.eoi();
 }
 
 /// ## Panics
 /// * If another handler is already installed in the provided interrupt vector.
-pub fn register_handler(vector: u8, handler: unsafe extern "C" fn()) {
-    unsafe {
-        let entry = &mut idt::IDT[vector as usize];
+pub fn register_handler(vector: u8, handler: fn(&mut InterruptStack)) {
+    let mut handlers = idt::INTERRUPT_HANDLERS.lock();
 
-        let entry_ptr = entry as *const _ as *const u8;
-        let entry_slice = core::slice::from_raw_parts(entry_ptr, idt::IDT_ENTRY_SIZE);
-
-        // SAFETY: enusre that we don't already have a handler installed for
-        // the provided interrupt vector.
-        assert!(
-            entry_slice == &[0; idt::IDT_ENTRY_SIZE],
-            "register_handler: attempted to register interrupt handler with one already installed"
-        );
-
-        entry.set_function(handler);
+    // SAFETY: ensure there is no handler already installed.
+    match handlers[vector as usize] {
+        IrqHandler::None => {}
+        _ => unreachable!("register_handler: handler has already been registered"),
     }
+
+    handlers[vector as usize] = idt::IrqHandler::Handler(handler);
 }
 
 pub fn allocate_vector() -> u8 {
