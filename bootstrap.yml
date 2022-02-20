@@ -45,9 +45,9 @@ sources:
 
   - name: mlibc
     subdir: 'bundled'
-    url: 'https://github.com/managarm/mlibc/archive/bed4b55cef2164eaedb3dfa55404964756f1bc0f.tar.gz'
+    url: 'https://github.com/managarm/mlibc/archive/036b7571be388467a573328cfd4d009a77d4e052.tar.gz'
     format: 'tar.gz'
-    extract_path: 'mlibc-bed4b55cef2164eaedb3dfa55404964756f1bc0f'
+    extract_path: 'mlibc-036b7571be388467a573328cfd4d009a77d4e052'
     patch-path-strip: 1
     version: '12.rolling'
 
