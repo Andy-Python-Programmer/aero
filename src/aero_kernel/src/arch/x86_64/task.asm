@@ -46,39 +46,27 @@ sysret_fork_init:
     cli
     call restore_user_tls
 
-    pop rax
-    mov cr2, rax
-    pop rax
+    ; pop the preserved registers
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
     pop rbx
-    pop rcx
-    pop rdx
+
+    ; pop the scratch registers
+    pop r11
+    pop r10
+    pop r9
+    pop r8
     pop rsi
     pop rdi
-    pop rbp
-    pop r8
-    pop r9
-    pop r10
-    pop r11
-    pop r12
-    pop r13
-    pop r14
-    pop r15
-
-    pop r11     ; Restore rflags
-    pop rcx     ; Restore rip
-
-    push rdx
-
-    mov rdx, rsp
-    add rdx, 16            ; Skip RDX and user RSP currently on the stack
-    mov [gs:0x04], rdx     ; Stash kernel stack
-
     pop rdx
-    pop rsp                ; Restore user stack
+    pop rcx
+    pop rax
 
     swapgs
-
-    o64 sysret
+    iretq
 
 ; extern "C" fn task_spinup(prev: &mut Context, next: &mut Context)
 ;

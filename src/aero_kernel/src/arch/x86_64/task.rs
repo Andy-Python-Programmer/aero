@@ -25,9 +25,10 @@ use alloc::vec::Vec;
 use core::alloc::Layout;
 use core::ptr::Unique;
 
+use crate::arch::interrupts::InterruptStack;
 use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
-use crate::syscall::{ExecArgs, RegistersFrame, SyscallFrame};
+use crate::syscall::ExecArgs;
 use crate::userland::vm::Vm;
 use crate::utils::StackHelper;
 
@@ -194,19 +195,13 @@ impl ArchTask {
         let mut new_stack = StackHelper::new(&mut new_stack_ptr);
 
         unsafe {
-            // Get the syscall frame and registers frame from the current task and copy it over
-            // to the fork task.
-            let sys_frame = new_stack.offset::<SyscallFrame>();
-            let old_sys_frame = old_stack.offset::<SyscallFrame>();
-
+            let sys_frame = new_stack.offset::<InterruptStack>();
+            let old_sys_frame = old_stack.offset::<InterruptStack>();
             *sys_frame = *old_sys_frame;
 
-            sys_frame.rip = entry as u64;
-            sys_frame.rflags = 0x200;
-            sys_frame.rsp = stack as u64;
-
-            let registers_frame = new_stack.offset::<RegistersFrame>();
-            *registers_frame = RegistersFrame::default();
+            sys_frame.iret.rip = entry as u64;
+            sys_frame.iret.rflags = 0x200;
+            sys_frame.iret.rsp = stack as u64;
         }
 
         // Prepare the trampoline...
@@ -254,15 +249,11 @@ impl ArchTask {
         let mut new_stack = StackHelper::new(&mut new_stack_ptr);
 
         unsafe {
-            // Get the syscall frame and registers frame from the current task and copy it over
-            // to the fork task.
-            *new_stack.offset::<SyscallFrame>() = *old_stack.offset::<SyscallFrame>();
-
-            let registers_frame = new_stack.offset::<RegistersFrame>();
-            let old_registers_frame = old_stack.offset::<RegistersFrame>();
+            let registers_frame = new_stack.offset::<InterruptStack>();
+            let old_registers_frame = old_stack.offset::<InterruptStack>();
 
             *registers_frame = *old_registers_frame;
-            registers_frame.rax = 0x00; // Set the syscall result to 0
+            registers_frame.scratch.rax = 0x00; // Set the syscall result to 0
         }
 
         // Prepare the trampoline...
