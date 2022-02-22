@@ -478,10 +478,9 @@ def run_in_emulator(args, iso_path):
         print("Running with KVM acceleration enabled")
 
         if platform.system() == 'Darwin':
-            qemu_args += ['-accel', 'hvf']
+            qemu_args += ['-accel', 'hvf', '-cpu', 'qemu64,+la57' if args.la57 else 'qemu64']
         else:
-            qemu_args += ['-enable-kvm']
-        qemu_args += ['-cpu', 'host,+la57' if args.la57 else 'host']
+            qemu_args += ['-enable-kvm', '-cpu', 'host,+la57' if args.la57 else 'host']
     else:
         qemu_args += ["-cpu", "qemu64,+la57" if args.la57 else "qemu64"]
 
