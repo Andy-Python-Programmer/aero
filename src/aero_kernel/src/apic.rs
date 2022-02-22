@@ -108,7 +108,7 @@ impl From<FeatureInfo> for ApicType {
     }
 }
 
-fn lapic_error_handler(stack: &mut InterruptStack) {
+fn lapic_error_handler(_stack: &mut InterruptStack) {
     log::error!("Local apic error");
     log::error!("ESR={:#0x}", self::get_local_apic().get_esr());
 }
