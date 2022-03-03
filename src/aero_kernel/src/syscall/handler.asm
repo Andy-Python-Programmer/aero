@@ -86,9 +86,7 @@ syscall_handler:
 
     cld
     call __inner_syscall
-
     cli
-    call restore_user_tls
 
     ; pop the preserved registers
     pop r15

@@ -20,15 +20,12 @@ global task_spinup
 global iretq_init
 global fork_init
 
-extern restore_user_tls
-
 jump_userland_exec:
     push rdi ; Param: stack
     push rsi ; Param: RIP
     push rdx ; Param: RFLAGS
 
     cli
-    call restore_user_tls
 
     pop r11
     pop rcx
@@ -38,10 +35,7 @@ jump_userland_exec:
     o64 sysret
 
 fork_init:
-    cli
-    call restore_user_tls
     swapgs
-
     jmp iretq_init
 
 iretq_init:

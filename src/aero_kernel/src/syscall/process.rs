@@ -59,14 +59,14 @@ const ARCH_GET_GS: usize = 0x1004;
 
 pub fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError> {
     match command {
-        ARCH_SET_FS => {
+        ARCH_SET_FS => unsafe {
             scheduler::get_scheduler()
                 .current_task()
                 .arch_task_mut()
                 .set_fs_base(VirtAddr::new(address as u64));
 
             Ok(0x00)
-        }
+        },
 
         ARCH_GET_FS => Ok(scheduler::get_scheduler()
             .current_task()

@@ -45,7 +45,7 @@ use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::syscall::ExecArgs;
 use crate::userland::vm::Vm;
-use crate::utils::StackHelper;
+use crate::utils::{io, StackHelper};
 
 use super::controlregs;
 
@@ -327,13 +327,19 @@ impl ArchTask {
         Ok(())
     }
 
-    #[inline]
+    /// Returns the FS base for this instance.
     pub fn get_fs_base(&self) -> VirtAddr {
         self.fs_base
     }
 
-    #[inline]
-    pub fn set_fs_base(&mut self, base: VirtAddr) {
+    /// Sets the FS base to the provided `base`.
+    ///
+    /// ## Safety
+    /// This function **must** be called by the process that this [`ArchTask`] instance
+    /// belongs to. This is required since we also update the FS base register with the
+    /// `base` immediately (not waiting for a switch).
+    pub unsafe fn set_fs_base(&mut self, base: VirtAddr) {
+        io::wrmsr(io::IA32_FS_BASE, base.as_u64());
         self.fs_base = base;
     }
 }
@@ -347,5 +353,10 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
     unsafe {
         super::gdt::get_task_state_segement().rsp[0] = to.context_switch_rsp.as_u64();
         task_spinup(&mut from.context, to.context.as_ref());
+
+        // make a restore point for the current FS base.
+        from.fs_base = VirtAddr::new(io::rdmsr(io::IA32_FS_BASE));
+        // switch to the new FS base.
+        io::wrmsr(io::IA32_FS_BASE, to.fs_base.as_u64());
     }
 }
