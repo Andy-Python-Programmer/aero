@@ -17,6 +17,21 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! ## How does `x86_64` context switching work?
+//!
+//! The [`arch_task_spinup`] function is responsible for switching the current
+//! task to the next one. This function works by updating the TSS's RSP0 field to point
+//! to the per-task kernel stack and switches the page table for the next process.
+//!
+//! After a task is born, it directly context switches to it's specific trampoline. The
+//! trampoline is responsible for jumping to its appropriate context. At the point when
+//! the trampoline is called, the stack should have the switch frame pushed.
+//!
+//! The switch frame is not saved or restored at context switch time. Instead its
+//! stored when you enter and leave the kernel since then the context switch function
+//! does not have to worry about clobbering the user mode register values since
+//! they are safely stored on the kernel stack.
+
 use alloc::alloc::alloc_zeroed;
 
 use aero_syscall::{MMapFlags, MMapProt};
@@ -33,28 +48,22 @@ use crate::userland::vm::Vm;
 use crate::utils::StackHelper;
 
 use super::controlregs;
-use super::gdt::Ring;
-use super::interrupts::IretRegisters;
 
 use crate::mem::AddressSpace;
 
-#[repr(C, packed)]
-struct KernelTaskFrame {
-    rdi: u64,
-    iret: IretRegisters,
-}
-
 #[derive(Default)]
-#[repr(C, packed)]
+#[repr(C)]
 struct Context {
     cr3: u64,
-    rbp: u64,
-    r12: u64,
-    r13: u64,
-    r14: u64,
+
     r15: u64,
+    r14: u64,
+    r13: u64,
+    r12: u64,
+
     rbx: u64,
-    rflags: u64,
+    rbp: u64,
+
     rip: u64,
 }
 
@@ -108,7 +117,6 @@ pub struct ArchTask {
     address_space: AddressSpace,
     context_switch_rsp: VirtAddr,
 
-    rpl: Ring,
     fs_base: VirtAddr,
 }
 
@@ -121,35 +129,28 @@ impl ArchTask {
             // Since the IDLE task is a special kernel task, we use the kernel's
             // address space here and we also use the kernel privilage level here.
             address_space: AddressSpace::this(),
-            rpl: Ring::Ring0,
             fs_base: VirtAddr::zero(),
         }
     }
 
-    /// Allocates a new kernel task pointing at the provided entry point address. This function
-    /// is responsible for creating the kernel task and setting up the context switch stack itself.
     pub fn new_kernel(entry_point: VirtAddr, enable_interrupts: bool) -> Self {
         let task_stack = unsafe {
             let layout = Layout::from_size_align_unchecked(4096 * 16, 0x1000);
             alloc_zeroed(layout).add(layout.size())
         };
 
-        // Get the current active address space as we are making the task for
-        // the kernel itself.
         let address_space = AddressSpace::this();
 
-        // Now at this stage, we have mapped the kernel task stack. Now we have to set up the
-        // context for the kernel task required for the context switch.
         let mut stack_ptr = task_stack as u64;
         let mut stack = StackHelper::new(&mut stack_ptr);
 
-        let kernel_task_frame = unsafe { stack.offset::<KernelTaskFrame>() };
+        let kframe = unsafe { stack.offset::<InterruptStack>() };
 
-        kernel_task_frame.iret.ss = 0x10; // kernel stack segment
-        kernel_task_frame.iret.cs = 0x08; // kernel code segment
-        kernel_task_frame.iret.rip = entry_point.as_u64();
-        kernel_task_frame.iret.rsp = unsafe { task_stack.sub(8) as u64 };
-        kernel_task_frame.iret.rflags = if enable_interrupts { 0x200 } else { 0x00 };
+        kframe.iret.ss = 0x10; // kernel stack segment
+        kframe.iret.cs = 0x08; // kernel code segment
+        kframe.iret.rip = entry_point.as_u64();
+        kframe.iret.rsp = unsafe { task_stack.sub(8) as u64 };
+        kframe.iret.rflags = if enable_interrupts { 0x200 } else { 0x00 };
 
         extern "C" {
             fn iretq_init();
@@ -165,63 +166,16 @@ impl ArchTask {
             context: unsafe { Unique::new_unchecked(context) },
             address_space,
             context_switch_rsp: VirtAddr::new(task_stack as u64),
-
-            // Since we are creating a kernel task, we set the ring privilage
-            // level to ring 0.
-            rpl: Ring::Ring0,
             fs_base: VirtAddr::zero(),
         }
     }
 
-    pub fn clone_process(&self, entry: usize, stack: usize) -> Result<Self, MapToError<Size4KiB>> {
-        let new_address_space = AddressSpace::this().offset_page_table().fork()?;
-
-        // Since the fork function marks all of the userspace entries in both the forked
-        // and the parent address spaces as read only, we will flush the page table of the
-        // current process to trigger COW.
-        unsafe {
-            asm!("mov cr3, {}", in(reg) controlregs::read_cr3_raw(), options(nostack));
-        }
-
-        let switch_stack = unsafe {
-            let layout = Layout::from_size_align_unchecked(0x1000, 0x1000);
-            alloc_zeroed(layout).add(layout.size())
-        };
-
-        let mut old_stack_ptr = self.context_switch_rsp.as_u64();
-        let mut old_stack = StackHelper::new(&mut old_stack_ptr);
-
-        let mut new_stack_ptr = switch_stack as u64;
-        let mut new_stack = StackHelper::new(&mut new_stack_ptr);
-
-        unsafe {
-            let sys_frame = new_stack.offset::<InterruptStack>();
-            let old_sys_frame = old_stack.offset::<InterruptStack>();
-            *sys_frame = *old_sys_frame;
-
-            sys_frame.iret.rip = entry as u64;
-            sys_frame.iret.rflags = 0x200;
-            sys_frame.iret.rsp = stack as u64;
-        }
-
-        // Prepare the trampoline...
-        let context = unsafe { new_stack.offset::<Context>() };
-
-        extern "C" {
-            fn sysret_fork_init();
-        }
-
-        *context = Context::default();
-        context.rip = sysret_fork_init as u64;
-        context.cr3 = new_address_space.cr3().start_address().as_u64();
-
-        Ok(Self {
-            context: unsafe { Unique::new_unchecked(context) },
-            context_switch_rsp: VirtAddr::new(switch_stack as u64),
-            address_space: new_address_space,
-            rpl: Ring::Ring3,
-            fs_base: VirtAddr::zero(),
-        })
+    pub fn clone_process(
+        &self,
+        _entry: usize,
+        _stack: usize,
+    ) -> Result<Self, MapToError<Size4KiB>> {
+        todo!("implement clone_process")
     }
 
     pub fn fork(&self) -> Result<Self, MapToError<Size4KiB>> {
@@ -260,19 +214,17 @@ impl ArchTask {
         let context = unsafe { new_stack.offset::<Context>() };
 
         extern "C" {
-            fn sysret_fork_init();
+            fn fork_init();
         }
 
         *context = Context::default();
-        context.rip = sysret_fork_init as u64;
+        context.rip = fork_init as u64;
         context.cr3 = new_address_space.cr3().start_address().as_u64();
 
         Ok(Self {
             context: unsafe { Unique::new_unchecked(context) },
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
             address_space: new_address_space,
-            rpl: Ring::Ring3,
-
             // The FS base is inherited from the parent process.
             fs_base: self.fs_base.clone(),
         })
@@ -286,19 +238,7 @@ impl ArchTask {
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
     ) -> Result<(), MapToError<Size4KiB>> {
-        let address_space = if self.rpl == Ring::Ring0 {
-            // If the kernel task wants to execute an executable, then we have to
-            // create a new address space for it as we cannot use the kernel's address space
-            // here.
-            AddressSpace::new()?
-        } else {
-            // If we are the user who wants to execute an executable, we can just use the
-            // current address space allocated for the user and deallocate all of the user
-            // page entries.
-            //
-            // TODO: deallocate the user address space's page entries.
-            AddressSpace::new()?
-        };
+        let address_space = AddressSpace::new()?;
 
         // mmap the userland stack...
         vm.mmap(
@@ -388,7 +328,7 @@ impl ArchTask {
     }
 
     #[inline]
-    pub fn get_fs_base(&mut self) -> VirtAddr {
+    pub fn get_fs_base(&self) -> VirtAddr {
         self.fs_base
     }
 
@@ -398,18 +338,14 @@ impl ArchTask {
     }
 }
 
-/// This function is responsible for performing the inner task switch. Firstly it sets the
-/// new RSP in the TSS and then performes the actual context switch (saving the previous tasks
-/// state in its context and then switching to the new task).
+/// Check out the module level documentation for more information.
 pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
     extern "C" {
         fn task_spinup(from: &mut Unique<Context>, to: &Context);
     }
 
     unsafe {
-        // Set the stack pointer in the TSS.
         super::gdt::get_task_state_segement().rsp[0] = to.context_switch_rsp.as_u64();
-
         task_spinup(&mut from.context, to.context.as_ref());
     }
 }

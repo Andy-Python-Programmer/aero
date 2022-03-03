@@ -27,6 +27,28 @@ global syscall_handler
 %define USERLAND_SS         0x2b
 %define USERLAND_CS         0x33
 
+; 64-bit SYSCALL instruction entry point. The instruction supports
+; to to 6 arguments in registers.
+;
+; Registers state on entry:
+; RAX - system call number
+; RCX - return address
+; R11 - saved flags (note: R11 is callee-clobbered register in C ABI)
+; RDI - argument 1
+; RSI - argument 2
+; RDX - argument 3
+; R10 - argument 4 (needs to be moved to RCX to conform to C ABI)
+; R8  - argument 5
+; R9  - argument 6
+;
+; (note: R12..R15, RBP, RBX are callee-preserved in C ABI)
+;
+; The instruction saves the RIP to RCX, cleares RFLAGS.RF then saves
+; RFLAGS to R11. Followed by, it loads the new SS, CS, and RIP from
+; previously programmed MSRs.
+;
+; The instruction also does not save anything on the stack and does
+; *not* change the RSP.
 syscall_handler:
     ; swap the GS base to ensure that it points to the 
     ; kernel PCR.
@@ -36,7 +58,7 @@ syscall_handler:
     mov rsp, [gs:TSS_RSP0_OFF]          ; restore the kernel stack pointer
     push qword USERLAND_SS              ; push userspace SS
     push qword [gs:TSS_TEMP_USTACK_OFF] ; push userspace stack pointer
-    push r11                            ; push rflags
+    push r11                            ; push RFLAGS
     push qword USERLAND_CS              ; push userspace CS
     push rcx                            ; push userspace return pointer
 
@@ -91,6 +113,7 @@ syscall_handler:
     pop rcx
     add rsp, 8
     pop r11
+
     pop qword [gs:TSS_TEMP_USTACK_OFF]
     mov rsp, [gs:TSS_TEMP_USTACK_OFF]
 

@@ -18,7 +18,7 @@
 global jump_userland_exec
 global task_spinup
 global iretq_init
-global sysret_fork_init
+global fork_init
 
 extern restore_user_tls
 
@@ -35,17 +35,16 @@ jump_userland_exec:
     pop rsp
 
     swapgs
-
     o64 sysret
 
-iretq_init:
-    pop rdi
-    iretq
-
-sysret_fork_init:
+fork_init:
     cli
     call restore_user_tls
+    swapgs
 
+    jmp iretq_init
+
+iretq_init:
     ; pop the preserved registers
     pop r15
     pop r14
@@ -65,41 +64,37 @@ sysret_fork_init:
     pop rcx
     pop rax
 
-    swapgs
     iretq
 
 ; extern "C" fn task_spinup(prev: &mut Context, next: &mut Context)
 ;
 ; Saves the current context into `prev` and restore the context from `next`.
 task_spinup:
-    pushfq
-
-    cli
-
+    ; save callee-saved registers and this must match
+    ; the ordering of the fields in the `Context` struct.
     push rbp
-    push r15
-    push r14
-    push r13
-    push r12
     push rbx
+    push r12
+    push r13
+    push r14
+    push r15
 
-    mov rax, cr3    ; Save CR3
+    mov rax, cr3    ; save CR3
     push rax
 
-    mov [rdi], rsp	; Update old context pointer with current stack pointer
-    mov rsp, rsi	; Switch to new stack
+    mov [rdi], rsp	; update old context pointer with current stack pointer
+    mov rsp, rsi	; switch to new stack
 
-    pop rax         ; Restore CR3
+    pop rax         ; restore CR3
     mov cr3, rax
 
-    pop rbx
-    pop r12
-    pop r13
-    pop r14
+    ; restore callee-saved registers
     pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
     pop rbp
 
-    popfq
-
-    ; Resume the next thread.
+    ; resume the next thread
     ret

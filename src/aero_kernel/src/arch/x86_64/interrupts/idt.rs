@@ -100,7 +100,7 @@ impl IdtEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct ScratchRegisters {
     pub r11: u64,
@@ -114,7 +114,7 @@ pub struct ScratchRegisters {
     pub rax: u64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct PreservedRegisters {
     pub r15: u64,
@@ -125,7 +125,7 @@ pub struct PreservedRegisters {
     pub rbx: u64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct IretRegisters {
     pub rip: u64,
@@ -141,7 +141,7 @@ impl IretRegisters {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct InterruptStack {
     pub preserved: PreservedRegisters,

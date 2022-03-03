@@ -31,6 +31,20 @@ fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, Aero
 }
 
 fn main() -> Result<(), AeroSyscallError> {
+    // TODO: make this test case succeed!
+    //
+    // let _1 = Box::new(0);
+    // let pid = sys_fork()?;
+    //
+    // if pid == 0 {
+    //     let _2 = Box::new(0);
+    //     println!("from child: {}", _2);
+    //     return Ok(());
+    // } else {
+    //     let _2 = Box::new(0);
+    //     println!("from parent: {}", _2);
+    // }
+
     sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
