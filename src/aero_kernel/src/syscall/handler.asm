@@ -21,78 +21,99 @@ extern __inner_syscall
 
 global syscall_handler
 
-syscall_handler:
-    swapgs
-    mov [gs:0x1C], rsp  ; Temporarily save user stack
-    mov rsp, [gs:0x04]   ; Set kernel stack
+%define TSS_TEMP_USTACK_OFF 0x1c
+%define TSS_RSP0_OFF        0x04
 
-    sub rsp, 0x08
+%define USERLAND_SS         0x2b
+%define USERLAND_CS         0x33
+
+; 64-bit SYSCALL instruction entry point. The instruction supports
+; to to 6 arguments in registers.
+;
+; Registers state on entry:
+; RAX - system call number
+; RCX - return address
+; R11 - saved flags (note: R11 is callee-clobbered register in C ABI)
+; RDI - argument 1
+; RSI - argument 2
+; RDX - argument 3
+; R10 - argument 4 (needs to be moved to RCX to conform to C ABI)
+; R8  - argument 5
+; R9  - argument 6
+;
+; (note: R12..R15, RBP, RBX are callee-preserved in C ABI)
+;
+; The instruction saves the RIP to RCX, cleares RFLAGS.RF then saves
+; RFLAGS to R11. Followed by, it loads the new SS, CS, and RIP from
+; previously programmed MSRs.
+;
+; The instruction also does not save anything on the stack and does
+; *not* change the RSP.
+syscall_handler:
+    ; swap the GS base to ensure that it points to the 
+    ; kernel PCR.
+    swapgs
+
+    mov [gs:TSS_TEMP_USTACK_OFF], rsp   ; save the user stack pointer
+    mov rsp, [gs:TSS_RSP0_OFF]          ; restore the kernel stack pointer
+    push qword USERLAND_SS              ; push userspace SS
+    push qword [gs:TSS_TEMP_USTACK_OFF] ; push userspace stack pointer
+    push r11                            ; push RFLAGS
+    push qword USERLAND_CS              ; push userspace CS
+    push rcx                            ; push userspace return pointer
 
     push rax
-    mov rax, qword [gs:0x1C]
-    mov qword [gs:0x1C], 0
-    mov [rsp + 0x08], rax
-    pop rax
 
+    ; push the scratch registers
     push rcx
-    push r11
-
-    push r15
-    push r14
-    push r13
-    push r12
-    push r11
-    push r10
-    push r9
-    push r8
-    push rbp
+    push rdx
     push rdi
     push rsi
-    push rdx
-    push rcx
-    push rbx
-    push rax
-    mov rax, cr2
-    push rax
+    push r8
+    push r9
+    push r10
+    push r11
 
-    mov rdi, rsp          ; Param: pointer to the syscall frame
-    add rdi, 128
-    mov rsi, rsp          ; Param: pointer to the registers frame
+    ; push the preserved registers
+    push rbx
+    push rbp
+    push r12
+    push r13
+    push r14
+    push r15
+
+    mov rdi, rsp
 
     cld
-    call __inner_syscall  ; Invoke the inner syscall handler implementation
-
+    call __inner_syscall
     cli
-    call restore_user_tls
 
-    pop rax
-    mov cr2, rax
-    pop rax
+    ; pop the preserved registers
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
     pop rbx
-    pop rcx
-    pop rdx
+
+    ; pop the scratch registers
+    pop r11
+    pop r10
+    pop r9
+    pop r8
     pop rsi
     pop rdi
-    pop rbp
-    pop r8
-    pop r9
-    pop r10
-    pop r11
-    pop r12
-    pop r13
-    pop r14
-    pop r15
-
-    pop r11           ; Restore RFLAGS
-    pop rcx           ; Restore RIP
-
-    push rdx
-    mov rdx, rsp
-    add rdx, 16       ; Skip RDX and user RSP currently on the stack
-    mov [gs:4], rdx   ; Stash kernel stack
-
     pop rdx
-    pop rsp           ; Restore user stack
+    pop rcx
+    pop rax
+
+    ; make the sysret frame
+    pop rcx
+    add rsp, 8
+    pop r11
+
+    pop qword [gs:TSS_TEMP_USTACK_OFF]
+    mov rsp, [gs:TSS_TEMP_USTACK_OFF]
 
     swapgs
     o64 sysret

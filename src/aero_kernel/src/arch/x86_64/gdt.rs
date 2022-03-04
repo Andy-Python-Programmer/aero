@@ -63,7 +63,6 @@ bitflags::bitflags! {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Ring {
     Ring0 = 0b00,
-    Ring3 = 0b11,
 }
 
 const BOOT_GDT_ENTRY_COUNT: usize = 4;
@@ -273,22 +272,22 @@ impl GdtEntry {
 /// mode and its not directly related to task switching mechanism.
 #[repr(C, packed)]
 pub struct Tss {
-    reserved: u32,
+    reserved: u32, // offset 0x00
 
     /// The full 64-bit canonical forms of the stack pointers (RSP) for
     /// privilege levels 0-2.
-    pub rsp: [u64; 3],
-    reserved2: u64,
+    pub rsp: [u64; 3], // offset 0x04
+    reserved2: u64, // offset 0x1C
 
     /// The full 64-bit canonical forms of the interrupt stack table
     /// (IST) pointers.
-    pub ist: [u64; 7],
-    reserved3: u64,
-    reserved4: u16,
+    pub ist: [u64; 7], // offset 0x24
+    reserved3: u64, // offset 0x5c
+    reserved4: u16, // offset 0x64
 
     /// The 16-bit offset to the I/O permission bit map from the 64-bit
     /// TSS base.
-    pub iomap_base: u16,
+    pub iomap_base: u16, // offset 0x66
 }
 
 // Processor Control Region

@@ -76,6 +76,7 @@ pub use process::*;
 use raw_cpuid::CpuId;
 pub use time::*;
 
+use crate::arch::interrupts::InterruptStack;
 use crate::arch::signals;
 use crate::arch::{gdt::GdtEntryType, interrupts};
 use crate::utils::{io, StackHelper};
@@ -128,44 +129,15 @@ pub fn exec_args_from_slice(args: usize, size: usize) -> ExecArgs {
     ExecArgs { inner: result }
 }
 
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
-pub struct SyscallFrame {
-    pub rflags: u64,
-    pub rip: u64,
-    pub rsp: u64,
-}
-
-#[derive(Debug, Copy, Clone, Default)]
-#[repr(C)]
-pub struct RegistersFrame {
-    pub cr2: u64,
-    pub rax: u64,
-    pub rbx: u64,
-    pub rcx: u64,
-    pub rdx: u64,
-    pub rsi: u64,
-    pub rdi: u64,
-    pub rbp: u64,
-    pub r8: u64,
-    pub r9: u64,
-    pub r10: u64,
-    pub r11: u64,
-    pub r12: u64,
-    pub r13: u64,
-    pub r14: u64,
-    pub r15: u64,
-}
-
 #[no_mangle]
-extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame) {
-    let a = stack.rax as usize;
-    let b = stack.rdi as usize;
-    let c = stack.rsi as usize;
-    let d = stack.rdx as usize;
-    let e = stack.r10 as usize;
-    let f = stack.r8 as usize;
-    let g = stack.r9 as usize;
+extern "C" fn __inner_syscall(stack: &mut InterruptStack) {
+    let a = stack.scratch.rax as usize;
+    let b = stack.scratch.rdi as usize;
+    let c = stack.scratch.rsi as usize;
+    let d = stack.scratch.rdx as usize;
+    let e = stack.scratch.r10 as usize;
+    let f = stack.scratch.r8 as usize;
+    let g = stack.scratch.r9 as usize;
 
     match a {
         SYS_EXIT => {}
@@ -173,8 +145,8 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
     }
 
     if a == SYS_SIGRETURN {
-        let result = signals::sigreturn(sys, stack);
-        stack.rax = result as u64;
+        let result = signals::sigreturn(stack);
+        stack.scratch.rax = result as u64;
         return;
     }
 
@@ -271,8 +243,8 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         uart_16550::serial_println!("{}", result_v);
     }
 
-    crate::arch::signals::syscall_check_signals(result_usize as isize, sys, stack);
-    stack.rax = result_usize;
+    crate::arch::signals::syscall_check_signals(result_usize as isize, stack);
+    stack.scratch.rax = result_usize;
 }
 
 extern "C" {

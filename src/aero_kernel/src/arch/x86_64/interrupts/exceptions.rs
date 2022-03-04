@@ -24,6 +24,7 @@ use crate::mem::paging::PageFaultErrorCode;
 
 use crate::unwind;
 use crate::userland::scheduler;
+use crate::utils::io;
 
 macro interrupt_exception(fn $name:ident() => $message:expr) {
     pub fn $name(stack: &mut InterruptErrorStack) {
@@ -82,6 +83,18 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
     // a non-mapped memory region while in RPL_3.
     let userland_last_address = super::super::task::userland_last_address();
 
+    // prints out the error information for this page fault.
+    let print_info = || {
+        log::error!("");
+        log::error!("FS={:#x}", unsafe { io::rdmsr(io::IA32_FS_BASE) },);
+        log::error!("GS={:#x}", unsafe { io::rdmsr(io::IA32_GS_BASE) });
+        log::error!("");
+        log::error!("accessed address: {:#x}", accessed_address);
+        log::error!("reason: {:?}", reason);
+        log::error!("");
+        log::error!("stack: {:#x?}", stack);
+    };
+
     if accessed_address < userland_last_address && scheduler::is_initialized() {
         let signal = scheduler::get_scheduler()
             .current_task()
@@ -90,10 +103,7 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
 
         if !signal && stack.stack.iret.is_user() {
             log::error!("Segmentation fault");
-            log::error!("");
-            log::error!("accessed address: {:#x}", accessed_address);
-            log::error!("reason: {:?}", reason);
-            log::error!("");
+            print_info();
 
             if stack.stack.iret.is_user() {
                 let task = scheduler::get_scheduler().current_task();
@@ -104,8 +114,6 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
                     task.pid().as_usize()
                 );
             }
-
-            log::error!("stack: {:#x?}", stack);
 
             scheduler::get_scheduler().current_task().vm.log();
             scheduler::get_scheduler().current_task().file_table.log();
@@ -124,13 +132,8 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
 
     unwind::prepare_panic();
 
-    log::error!("EXCEPTION: Page Fault");
-    log::error!("");
-    log::error!("Accessed Address: {:#x}", accessed_address);
-    log::error!("Error: {:?}", reason);
-    log::error!("");
-
-    log::error!("Stack: {:#x?}", stack);
+    log::error!("Page fault");
+    print_info();
 
     unwind::unwind_stack_trace();
 

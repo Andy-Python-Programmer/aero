@@ -519,6 +519,30 @@ impl VmProtected {
         }
     }
 
+    fn log(&self) {
+        for mmap in &self.mappings {
+            if let Some(file) = mmap.file.as_ref() {
+                log::debug!(
+                    "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
+                    mmap.start_addr,
+                    mmap.end_addr,
+                    mmap.protection,
+                    mmap.flags,
+                    file.offset,
+                    file.size,
+                );
+            } else {
+                log::debug!(
+                    "{:?}..{:?} => {:?}, {:?}",
+                    mmap.start_addr,
+                    mmap.end_addr,
+                    mmap.protection,
+                    mmap.flags,
+                );
+            }
+        }
+    }
+
     fn handle_page_fault(
         &mut self,
         reason: PageFaultErrorCode,
@@ -568,8 +592,9 @@ impl VmProtected {
             result
         } else {
             log::trace!("mapping not found for address: {:#x}", accessed_address);
+            self.log();
 
-            // Else the mapping does not exist, so return false.
+            // else the mapping does not exist, so return false.
             false
         }
     }
@@ -979,28 +1004,6 @@ impl Vm {
     }
 
     pub(crate) fn log(&self) {
-        let this = self.inner.lock();
-
-        for mmap in &this.mappings {
-            if let Some(file) = mmap.file.as_ref() {
-                log::debug!(
-                    "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
-                    mmap.start_addr,
-                    mmap.end_addr,
-                    mmap.protection,
-                    mmap.flags,
-                    file.offset,
-                    file.size,
-                );
-            } else {
-                log::debug!(
-                    "{:?}..{:?} => {:?}, {:?}",
-                    mmap.start_addr,
-                    mmap.end_addr,
-                    mmap.protection,
-                    mmap.flags,
-                );
-            }
-        }
+        self.inner.lock().log()
     }
 }
