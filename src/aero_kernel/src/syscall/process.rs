@@ -70,12 +70,24 @@ pub fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallEr
 
         ARCH_GET_FS => Ok(scheduler::get_scheduler()
             .current_task()
-            .arch_task_mut()
+            .arch_task()
             .get_fs_base()
             .as_u64() as usize),
 
-        ARCH_SET_GS => unimplemented!(),
-        ARCH_GET_GS => unimplemented!(),
+        ARCH_SET_GS => unsafe {
+            scheduler::get_scheduler()
+                .current_task()
+                .arch_task_mut()
+                .set_gs_base(VirtAddr::new(address as u64));
+
+            Ok(0x00)
+        },
+
+        ARCH_GET_GS => Ok(scheduler::get_scheduler()
+            .current_task()
+            .arch_task()
+            .get_gs_base()
+            .as_u64() as usize),
 
         _ => Err(AeroSyscallError::EINVAL),
     }

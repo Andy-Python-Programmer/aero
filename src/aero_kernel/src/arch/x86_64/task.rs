@@ -118,6 +118,7 @@ pub struct ArchTask {
     context_switch_rsp: VirtAddr,
 
     fs_base: VirtAddr,
+    gs_base: VirtAddr,
 }
 
 impl ArchTask {
@@ -129,7 +130,9 @@ impl ArchTask {
             // Since the IDLE task is a special kernel task, we use the kernel's
             // address space here and we also use the kernel privilage level here.
             address_space: AddressSpace::this(),
+
             fs_base: VirtAddr::zero(),
+            gs_base: VirtAddr::zero(),
         }
     }
 
@@ -166,7 +169,9 @@ impl ArchTask {
             context: unsafe { Unique::new_unchecked(context) },
             address_space,
             context_switch_rsp: VirtAddr::new(task_stack as u64),
+
             fs_base: VirtAddr::zero(),
+            gs_base: VirtAddr::zero(),
         }
     }
 
@@ -225,8 +230,10 @@ impl ArchTask {
             context: unsafe { Unique::new_unchecked(context) },
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
             address_space: new_address_space,
-            // The FS base is inherited from the parent process.
+
+            // The FS and GS bases are inherited from the parent process.
             fs_base: self.fs_base.clone(),
+            gs_base: self.gs_base.clone(),
         })
     }
 
@@ -327,7 +334,23 @@ impl ArchTask {
         Ok(())
     }
 
-    /// Returns the FS base for this instance.
+    /// Returns the saved GS base for this task.
+    pub fn get_gs_base(&self) -> VirtAddr {
+        self.gs_base
+    }
+
+    /// Sets the GS base to the provided `base`.
+    ///
+    /// ## Safety
+    /// This function **must** be called by the process that this [`ArchTask`] instance
+    /// belongs to. This is required since we also update the GS base register with the
+    /// `base` immediately (not waiting for a switch).
+    pub unsafe fn set_gs_base(&mut self, base: VirtAddr) {
+        io::wrmsr(io::IA32_KERNEL_GSBASE, base.as_u64());
+        self.gs_base = base;
+    }
+
+    /// Returns the saved FS base for this task.
     pub fn get_fs_base(&self) -> VirtAddr {
         self.fs_base
     }
@@ -358,5 +381,10 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
         from.fs_base = VirtAddr::new(io::rdmsr(io::IA32_FS_BASE));
         // switch to the new FS base.
         io::wrmsr(io::IA32_FS_BASE, to.fs_base.as_u64());
+
+        // make a restore point for the current GS base.
+        from.gs_base = VirtAddr::new(io::rdmsr(io::IA32_KERNEL_GSBASE));
+        // update the swap GS target to point to the new GS base.
+        io::wrmsr(io::IA32_KERNEL_GSBASE, to.gs_base.as_u64());
     }
 }

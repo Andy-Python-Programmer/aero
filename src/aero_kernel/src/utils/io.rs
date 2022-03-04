@@ -21,8 +21,14 @@
 
 pub const IA32_EFER: u32 = 0xc0000080;
 
+/// Map of BASE Address of FS (R/W)  See Table 35-2.
 pub const IA32_FS_BASE: u32 = 0xC0000100;
+
+/// Map of BASE Address of GS (R/W)  See Table 35-2.
 pub const IA32_GS_BASE: u32 = 0xc0000101;
+
+/// Swap Target of BASE Address of GS (R/W) See Table 35-2.
+pub const IA32_KERNEL_GSBASE: u32 = 0xc0000102;
 
 /// System Call Target Address (R/W).
 pub const IA32_STAR: u32 = 0xc0000081;
