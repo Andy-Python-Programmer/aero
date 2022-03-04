@@ -60,7 +60,7 @@ pub struct Madt {
 
 impl Madt {
     pub(super) fn init(&'static self) {
-        log::debug!("Storing AP trampoline at 0x1000");
+        log::debug!("storing AP trampoline at 0x1000");
 
         let page_index = unsafe { smp_prepare_trampoline() };
 
@@ -228,7 +228,7 @@ impl Iterator for MadtIterator {
                     0x80..=0xff => continue,
 
                     _ => {
-                        log::warn!("Unknown MADT entry with id: {}", header.entry_type);
+                        log::warn!("unknown MADT entry with id: {}", header.entry_type);
 
                         return None;
                     }
