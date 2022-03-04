@@ -75,10 +75,7 @@ pub use ipc::*;
 pub use process::*;
 pub use time::*;
 
-use crate::arch::interrupts::InterruptStack;
-use crate::arch::signals;
-use crate::arch::{interrupts};
-use crate::utils::{StackHelper};
+use crate::utils::StackHelper;
 
 pub struct ExecArgs {
     inner: Vec<Box<[u8]>>,
@@ -128,27 +125,15 @@ pub fn exec_args_from_slice(args: usize, size: usize) -> ExecArgs {
     ExecArgs { inner: result }
 }
 
-#[no_mangle]
-extern "C" fn __inner_syscall(stack: &mut InterruptStack) {
-    let a = stack.scratch.rax as usize;
-    let b = stack.scratch.rdi as usize;
-    let c = stack.scratch.rsi as usize;
-    let d = stack.scratch.rdx as usize;
-    let e = stack.scratch.r10 as usize;
-    let f = stack.scratch.r8 as usize;
-    let g = stack.scratch.r9 as usize;
-
-    match a {
-        SYS_EXIT => {}
-        _ => unsafe { interrupts::enable_interrupts() },
-    }
-
-    if a == SYS_SIGRETURN {
-        let result = signals::sigreturn(stack);
-        stack.scratch.rax = result as u64;
-        return;
-    }
-
+pub fn generic_do_syscall(
+    a: usize,
+    b: usize,
+    c: usize,
+    d: usize,
+    e: usize,
+    f: usize,
+    g: usize,
+) -> usize {
     let result = match a {
         SYS_EXIT => process::exit(b),
         SYS_SHUTDOWN => process::shutdown(),
@@ -204,7 +189,7 @@ extern "C" fn __inner_syscall(stack: &mut InterruptStack) {
         }
     };
 
-    let result_usize = aero_syscall::syscall_result_as_usize(result) as _;
+    let result_usize = aero_syscall::syscall_result_as_usize(result);
 
     #[cfg(feature = "syslog")]
     {
@@ -242,6 +227,5 @@ extern "C" fn __inner_syscall(stack: &mut InterruptStack) {
         uart_16550::serial_println!("{}", result_v);
     }
 
-    crate::arch::signals::syscall_check_signals(result_usize as isize, stack);
-    stack.scratch.rax = result_usize;
+    result_usize
 }

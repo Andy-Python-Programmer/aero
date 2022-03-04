@@ -15,7 +15,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-extern __inner_syscall
+extern x86_64_do_syscall
 global x86_64_syscall_handler
 
 %define TSS_TEMP_USTACK_OFF 0x1c
@@ -82,7 +82,7 @@ x86_64_syscall_handler:
     mov rdi, rsp
 
     cld
-    call __inner_syscall
+    call x86_64_do_syscall
     cli
 
     ; pop the preserved registers

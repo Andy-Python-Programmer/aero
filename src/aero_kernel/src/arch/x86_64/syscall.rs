@@ -3,8 +3,39 @@ use raw_cpuid::CpuId;
 use crate::arch::gdt::GdtEntryType;
 use crate::utils::io;
 
+use super::interrupts::InterruptStack;
+
 extern "C" {
     fn x86_64_syscall_handler();
+}
+
+#[no_mangle]
+extern "C" fn x86_64_do_syscall(stack: &mut InterruptStack) {
+    let syscall_number = stack.scratch.rax as usize;
+
+    match syscall_number {
+        aero_syscall::prelude::SYS_EXIT => {}
+        aero_syscall::prelude::SYS_SIGRETURN => {
+            let result = super::signals::sigreturn(stack);
+            stack.scratch.rax = result as u64;
+            return;
+        }
+
+        _ => unsafe { super::interrupts::enable_interrupts() },
+    }
+
+    let result_usize = crate::syscall::generic_do_syscall(
+        syscall_number,
+        stack.scratch.rdi as usize, // argument 1
+        stack.scratch.rsi as usize, // argument 2
+        stack.scratch.rdx as usize, // argument 3
+        stack.scratch.r10 as usize, // argument 4
+        stack.scratch.r8 as usize,  // argument 5
+        stack.scratch.r9 as usize,  // argument 6
+    );
+
+    super::signals::syscall_check_signals(result_usize as isize, stack);
+    stack.scratch.rax = result_usize as _;
 }
 
 /// Initializes support for the `syscall` and `sysret` instructions for the
