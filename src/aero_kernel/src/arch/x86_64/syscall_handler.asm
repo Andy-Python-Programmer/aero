@@ -15,11 +15,8 @@
 ; You should have received a copy of the GNU General Public License
 ; along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-extern restore_kernel_fs_base_locked
-extern restore_user_tls
 extern __inner_syscall
-
-global syscall_handler
+global x86_64_syscall_handler
 
 %define TSS_TEMP_USTACK_OFF 0x1c
 %define TSS_RSP0_OFF        0x04
@@ -49,7 +46,7 @@ global syscall_handler
 ;
 ; The instruction also does not save anything on the stack and does
 ; *not* change the RSP.
-syscall_handler:
+x86_64_syscall_handler:
     ; swap the GS base to ensure that it points to the 
     ; kernel PCR.
     swapgs
@@ -112,8 +109,7 @@ syscall_handler:
     add rsp, 8
     pop r11
 
-    pop qword [gs:TSS_TEMP_USTACK_OFF]
-    mov rsp, [gs:TSS_TEMP_USTACK_OFF]
+    pop rsp
 
     swapgs
     o64 sysret

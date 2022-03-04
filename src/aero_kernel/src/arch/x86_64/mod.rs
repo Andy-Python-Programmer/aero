@@ -21,6 +21,7 @@ pub mod controlregs;
 pub mod gdt;
 pub mod interrupts;
 pub mod signals;
+pub mod syscall;
 pub mod task;
 pub mod tls;
 
@@ -198,6 +199,8 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     gdt::init(stack_top_addr);
     log::info!("loaded GDT");
 
+    syscall::init();
+
     // Architecture init is done. Now we can initialize and start the init
     // process in the non-architecture specific part of the kernel.
     crate::aero_main();
@@ -215,6 +218,8 @@ extern "C" fn x86_64_aero_ap_main(ap_id: usize, stack_top_addr: VirtAddr) {
 
     gdt::init(stack_top_addr);
     log::info!("AP{}: loaded GDT", ap_id);
+
+    syscall::init();
 
     apic::mark_ap_ready(true);
 

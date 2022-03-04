@@ -117,8 +117,8 @@ fn aero_main() -> ! {
     time::init();
     log::info!("loaded timer");
 
-    userland::init();
-    log::info!("loaded userland");
+    userland::scheduler::init();
+    log::info!("loaded scheduler");
 
     apic::mark_bsp_ready(true);
 
@@ -171,7 +171,6 @@ fn kernel_main_thread() {
 }
 
 extern "C" fn aero_ap_main(ap_id: usize) -> ! {
-    userland::init_ap();
     log::info!("AP{}: Loaded userland", ap_id);
 
     loop {

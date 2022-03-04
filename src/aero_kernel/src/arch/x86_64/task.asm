@@ -35,10 +35,15 @@ jump_userland_exec:
     o64 sysret
 
 fork_init:
+    cli
     swapgs
-    jmp iretq_init
+    jmp generic_iretq_init
 
 iretq_init:
+    cli
+    jmp generic_iretq_init
+
+generic_iretq_init:
     ; pop the preserved registers
     pop r15
     pop r14

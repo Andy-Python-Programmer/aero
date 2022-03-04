@@ -73,13 +73,12 @@ use alloc::vec::Vec;
 pub use fs::*;
 pub use ipc::*;
 pub use process::*;
-use raw_cpuid::CpuId;
 pub use time::*;
 
 use crate::arch::interrupts::InterruptStack;
 use crate::arch::signals;
-use crate::arch::{gdt::GdtEntryType, interrupts};
-use crate::utils::{io, StackHelper};
+use crate::arch::{interrupts};
+use crate::utils::{StackHelper};
 
 pub struct ExecArgs {
     inner: Vec<Box<[u8]>>,
@@ -245,38 +244,4 @@ extern "C" fn __inner_syscall(stack: &mut InterruptStack) {
 
     crate::arch::signals::syscall_check_signals(result_usize as isize, stack);
     stack.scratch.rax = result_usize;
-}
-
-extern "C" {
-    fn syscall_handler();
-}
-
-pub fn init() {
-    // Check if syscall is supported as it is a required CPU feature for aero to run.
-    let has_syscall = CpuId::new()
-        .get_extended_processor_and_feature_identifiers()
-        .map_or(false, |i| i.has_syscall_sysret());
-
-    assert!(has_syscall);
-
-    unsafe {
-        /*
-         * Enable support for `syscall` and `sysret` instructions if the current
-         * CPU supports them and the target pointer width is 64.
-         */
-        let syscall_base = GdtEntryType::KERNEL_CODE << 3;
-        let sysret_base = (GdtEntryType::USER_CODE32_UNUSED << 3) | 3;
-
-        let star_hi = syscall_base as u32 | ((sysret_base as u32) << 16);
-
-        io::wrmsr(io::IA32_STAR, (star_hi as u64) << 32);
-        io::wrmsr(io::IA32_LSTAR, syscall_handler as u64);
-
-        // Clear the trap flag and enable interrupts.
-        io::wrmsr(io::IA32_FMASK, 0x300);
-
-        // Set the EFER.SCE bit to enable the syscall feature
-        let efer = io::rdmsr(io::IA32_EFER);
-        io::wrmsr(io::IA32_EFER, efer | 1);
-    }
 }
