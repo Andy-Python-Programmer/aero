@@ -52,47 +52,6 @@ pub fn exit(status: usize) -> ! {
     }
 }
 
-const ARCH_SET_GS: usize = 0x1001;
-const ARCH_SET_FS: usize = 0x1002;
-const ARCH_GET_FS: usize = 0x1003;
-const ARCH_GET_GS: usize = 0x1004;
-
-pub fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError> {
-    match command {
-        ARCH_SET_FS => unsafe {
-            scheduler::get_scheduler()
-                .current_task()
-                .arch_task_mut()
-                .set_fs_base(VirtAddr::new(address as u64));
-
-            Ok(0x00)
-        },
-
-        ARCH_GET_FS => Ok(scheduler::get_scheduler()
-            .current_task()
-            .arch_task()
-            .get_fs_base()
-            .as_u64() as usize),
-
-        ARCH_SET_GS => unsafe {
-            scheduler::get_scheduler()
-                .current_task()
-                .arch_task_mut()
-                .set_gs_base(VirtAddr::new(address as u64));
-
-            Ok(0x00)
-        },
-
-        ARCH_GET_GS => Ok(scheduler::get_scheduler()
-            .current_task()
-            .arch_task()
-            .get_gs_base()
-            .as_u64() as usize),
-
-        _ => Err(AeroSyscallError::EINVAL),
-    }
-}
-
 pub fn uname(buffer: usize) -> Result<usize, AeroSyscallError> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
         let init_bytes = init.as_bytes();

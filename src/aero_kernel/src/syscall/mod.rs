@@ -56,6 +56,20 @@
 //! | 32     | access                  |
 //! | 33     | pipe                    |
 //! | 34     | unlink                  |
+//! | 35     | gethostname             |
+//! | 36     | sethostname             |
+//! | 37     | info                    |
+//! | 38     | clone                   |
+//! | 39     | sigreturn               |
+//! | 40     | sigaction               |
+//! | 41     | sigprocmask             |
+//! | 42     | dup                     |
+//! | 43     | fcntl                   |
+//! | 44     | dup2                    |
+//! | 45     | ipc_send                |
+//! | 46     | ipc_recv                |
+//! | 47     | ipc_discover_root       |
+//! | 48     | ipc_become_root         |
 
 use core::mem::MaybeUninit;
 
@@ -139,7 +153,6 @@ pub fn generic_do_syscall(
         SYS_SHUTDOWN => process::shutdown(),
         SYS_FORK => process::fork(),
         SYS_MMAP => process::mmap(b, c, d, e, f, g),
-        SYS_ARCH_PRCTL => process::arch_prctl(b, c),
         SYS_MUNMAP => process::munmap(b, c),
         SYS_EXEC => process::exec(b, c, d, e, f, g),
         SYS_LOG => process::log(b, c),
