@@ -160,10 +160,12 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
 
     // Parse the kernel command line.
     let command_line: &'static _ = boot_info.command_line().map_or("", |cmd| unsafe {
+        let cmdline = crate::PHYSICAL_MEMORY_OFFSET + cmd.command_line;
+
         // SAFETY: The bootloader has provided a pointer that points to a valid C
         // string with a NULL terminator of size less than `usize::MAX`, whose content
         // remain valid and has a static lifetime.
-        mem::c_str_as_str(cmd.command_line as *const u8)
+        mem::c_str_as_str(cmdline.as_ptr())
     });
 
     let command_line = cmdline::parse(command_line, modules);
