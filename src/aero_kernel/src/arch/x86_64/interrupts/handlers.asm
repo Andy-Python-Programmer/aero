@@ -68,7 +68,7 @@ interrupt_handler_%1:
     ; call the generic interrupt handler
     call generic_interrupt_handler
 
-    ; pop the error code and interrupt number
+    ; pop the error code
     add rsp, 8
 
     ; pop the preserved registers
