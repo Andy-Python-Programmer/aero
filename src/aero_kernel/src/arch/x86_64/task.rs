@@ -40,7 +40,7 @@ use alloc::vec::Vec;
 use core::alloc::Layout;
 use core::ptr::Unique;
 
-use crate::arch::interrupts::InterruptStack;
+use crate::arch::interrupts::InterruptErrorStack;
 use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::syscall::ExecArgs;
@@ -147,13 +147,13 @@ impl ArchTask {
         let mut stack_ptr = task_stack as u64;
         let mut stack = StackHelper::new(&mut stack_ptr);
 
-        let kframe = unsafe { stack.offset::<InterruptStack>() };
+        let kframe = unsafe { stack.offset::<InterruptErrorStack>() };
 
-        kframe.iret.ss = 0x10; // kernel stack segment
-        kframe.iret.cs = 0x08; // kernel code segment
-        kframe.iret.rip = entry_point.as_u64();
-        kframe.iret.rsp = unsafe { task_stack.sub(8) as u64 };
-        kframe.iret.rflags = if enable_interrupts { 0x200 } else { 0x00 };
+        kframe.stack.iret.ss = 0x10; // kernel stack segment
+        kframe.stack.iret.cs = 0x08; // kernel code segment
+        kframe.stack.iret.rip = entry_point.as_u64();
+        kframe.stack.iret.rsp = unsafe { task_stack.sub(8) as u64 };
+        kframe.stack.iret.rflags = if enable_interrupts { 0x200 } else { 0x00 };
 
         extern "C" {
             fn iretq_init();
@@ -208,11 +208,11 @@ impl ArchTask {
         let mut new_stack = StackHelper::new(&mut new_stack_ptr);
 
         unsafe {
-            let registers_frame = new_stack.offset::<InterruptStack>();
-            let old_registers_frame = old_stack.offset::<InterruptStack>();
+            let registers_frame = new_stack.offset::<InterruptErrorStack>();
+            let old_registers_frame = old_stack.offset::<InterruptErrorStack>();
 
             *registers_frame = *old_registers_frame;
-            registers_frame.scratch.rax = 0x00; // Set the syscall result to 0
+            registers_frame.stack.scratch.rax = 0x00; // Set the syscall result to 0
         }
 
         // Prepare the trampoline...

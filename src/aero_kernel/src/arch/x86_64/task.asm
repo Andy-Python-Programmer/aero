@@ -44,6 +44,9 @@ iretq_init:
     jmp generic_iretq_init
 
 generic_iretq_init:
+    ; pop the error code
+    add rsp, 8
+
     ; pop the preserved registers
     pop r15
     pop r14

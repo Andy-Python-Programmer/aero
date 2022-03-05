@@ -6,7 +6,7 @@ use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::utils::io;
 
-use super::interrupts::InterruptStack;
+use super::interrupts::InterruptErrorStack;
 
 extern "C" {
     fn x86_64_syscall_handler();
@@ -54,7 +54,9 @@ fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError>
 }
 
 #[no_mangle]
-extern "C" fn x86_64_do_syscall(stack: &mut InterruptStack) {
+extern "C" fn x86_64_do_syscall(stack: &mut InterruptErrorStack) {
+    let stack = &mut stack.stack;
+
     let syscall_number = stack.scratch.rax as usize; // syscall number
     let a = stack.scratch.rdi as usize; // argument 1
     let b = stack.scratch.rsi as usize; // argument 2

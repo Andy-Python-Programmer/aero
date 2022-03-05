@@ -79,11 +79,18 @@ x86_64_syscall_handler:
     push r14
     push r15
 
+    ; push a "fake" error code to match with the layout of the
+    ; `InterruptErrorStack` structure.
+    push 0
+
     mov rdi, rsp
 
     cld
     call x86_64_do_syscall
     cli
+
+    ; pop the "fake" error code
+    add rsp, 8
 
     ; pop the preserved registers
     pop r15
