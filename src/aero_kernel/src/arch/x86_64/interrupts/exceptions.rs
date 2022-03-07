@@ -113,6 +113,12 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
                     task.tid().as_usize(),
                     task.pid().as_usize()
                 );
+
+                log::error!(
+                    "process: (path=`{}`)",
+                    task.path()
+                        .expect("userland application does not have a path set")
+                );
             }
 
             scheduler::get_scheduler().current_task().vm.log();
