@@ -15,6 +15,10 @@
 ; You should have received a copy of the GNU General Public License
 ; along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+bits 64
+
+%include "registers.inc"
+
 global jump_userland_exec
 global task_spinup
 global iretq_init
@@ -34,38 +38,27 @@ jump_userland_exec:
     swapgs
     o64 sysret
 
-fork_init:
-    cli
-    swapgs
-    jmp generic_iretq_init
-
 iretq_init:
     cli
-    jmp generic_iretq_init
 
-generic_iretq_init:
     ; pop the error code
     add rsp, 8
 
-    ; pop the preserved registers
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbp
-    pop rbx
+    pop_preserved
+    pop_scratch
 
-    ; pop the scratch registers
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rsi
-    pop rdi
-    pop rdx
-    pop rcx
-    pop rax
+    iretq
 
+fork_init:
+    cli
+
+    ; pop the error code
+    add rsp, 8
+
+    pop_preserved
+    pop_scratch
+
+    swapgs
     iretq
 
 ; extern "C" fn task_spinup(prev: &mut Context, next: &mut Context)

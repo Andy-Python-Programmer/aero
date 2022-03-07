@@ -15,6 +15,10 @@
 ; You should have received a copy of the GNU General Public License
 ; along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+bits 64
+
+%include "registers.inc"
+
 extern x86_64_do_syscall
 global x86_64_syscall_handler
 
@@ -60,24 +64,8 @@ x86_64_syscall_handler:
     push rcx                            ; push userspace return pointer
 
     push rax
-
-    ; push the scratch registers
-    push rcx
-    push rdx
-    push rdi
-    push rsi
-    push r8
-    push r9
-    push r10
-    push r11
-
-    ; push the preserved registers
-    push rbx
-    push rbp
-    push r12
-    push r13
-    push r14
-    push r15
+    push_scratch
+    push_preserved
 
     ; push a "fake" error code to match with the layout of the
     ; `InterruptErrorStack` structure.
@@ -92,24 +80,8 @@ x86_64_syscall_handler:
     ; pop the "fake" error code
     add rsp, 8
 
-    ; pop the preserved registers
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbp
-    pop rbx
-
-    ; pop the scratch registers
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rsi
-    pop rdi
-    pop rdx
-    pop rcx
-    pop rax
+    pop_preserved
+    pop_scratch
 
     ; make the sysret frame
     pop rcx

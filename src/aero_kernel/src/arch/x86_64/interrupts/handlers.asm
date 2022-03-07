@@ -17,6 +17,8 @@
 
 bits 64
 
+%include "registers.inc"
+
 global interrupt_handlers
 
 extern generic_interrupt_handler
@@ -42,23 +44,9 @@ interrupt_handler_%1:
 
     xchg [rsp], rax
 
-    ; push the scratch registers
-    push rcx
-    push rdx
-    push rdi
-    push rsi
-    push r8
-    push r9
-    push r10
-    push r11
-
-    ; push the preserved registers
-    push rbx
-    push rbp
-    push r12
-    push r13
-    push r14
-    push r15
+    ; note: RAX is now on the top of the stack.
+    push_scratch
+    push_preserved
 
     push rax
 
@@ -71,24 +59,8 @@ interrupt_handler_%1:
     ; pop the error code
     add rsp, 8
 
-    ; pop the preserved registers
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbp
-    pop rbx
-
-    ; pop the scratch registers
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rsi
-    pop rdi
-    pop rdx
-    pop rcx
-    pop rax
+    pop_preserved
+    pop_scratch
 
     ; `swapgs` if the interrupt has originated from ring 3 since currently
     ; the GS base points to the kernel per-cpu data.
