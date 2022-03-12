@@ -368,49 +368,77 @@ impl Mapping {
         }
     }
 
+    /// Copies the contents of the `page` page to a newly allocated frame and maps it to
+    /// the `page` page with the provided `protection` protection flags.
+    fn map_copied(
+        offset_table: &mut OffsetPageTable,
+        page: Page<Size4KiB>,
+        protection: MMapProt,
+    ) -> Result<(), MapToError<Size4KiB>> {
+        // Allocate a new frame to hold the contents.
+        let new_frame: PhysFrame<Size4KiB> = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+            .expect("map_copied: failed to allocate frame");
+
+        let old_slice = unsafe {
+            let ptr = page.start_address().as_ptr::<u8>();
+            core::slice::from_raw_parts(ptr, Size4KiB::SIZE as _)
+        };
+
+        let new_slice = unsafe {
+            let phys = new_frame.start_address().as_u64();
+            let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
+            let ptr = virt.as_mut_ptr::<u8>();
+
+            core::slice::from_raw_parts_mut(ptr, Size4KiB::SIZE as _)
+        };
+
+        // Copy the contents from the old frame to the newly allocated frame.
+        new_slice.copy_from_slice(old_slice);
+
+        // Re-map the page to the newly allocated frame and with the provided
+        // protection flags.
+        offset_table.unmap(page).unwrap().1.ignore();
+
+        // NOTE: We operate on an active page table, so we flush the changes.
+        unsafe {
+            offset_table
+                .map_to(
+                    page,
+                    new_frame,
+                    PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | protection.into(),
+                    &mut FRAME_ALLOCATOR,
+                )?
+                .flush();
+        }
+
+        Ok(())
+    }
+
     /// Handler routine for a COW (Copy-On-Write) pages. A COW page is shared between multiple processes
     /// until a write occurs after which a private copy is made for the writing process. A COW page
     /// is recognised because the VMA for the region is marked writable even though the individual page
     /// table entry is not.
+    ///
+    /// ## Panics
+    /// * The provided `address` is not aligned to a page boundary.
     fn handle_cow(
         &mut self,
         offset_table: &mut OffsetPageTable,
         address: VirtAddr,
         copy: bool,
     ) -> bool {
-        if let TranslateResult::Mapped { frame, .. } = offset_table.translate(address) {
-            let addr = frame.start_address();
-            let page: Page<Size4KiB> = Page::containing_address(address);
+        debug_assert!(address.is_aligned(Size4KiB::SIZE));
 
-            if let Some(vm_frame) = addr.as_vm_frame() {
+        let page: Page<Size4KiB> = Page::containing_address(address);
+
+        if let TranslateResult::Mapped { frame, .. } = offset_table.translate(address) {
+            let phys_addr = frame.start_address();
+
+            if let Some(vm_frame) = phys_addr.as_vm_frame() {
                 if vm_frame.ref_count() > 1 || copy {
                     // This page is used by more then one process, so make it a private copy.
                     log::trace!("    - making {:?} into a private copy", page);
-
-                    let frame = pmm_alloc(BuddyOrdering::Size4KiB);
-
-                    unsafe {
-                        address.as_ptr::<u8>().copy_to(
-                            (crate::PHYSICAL_MEMORY_OFFSET + frame.as_u64()).as_mut_ptr(),
-                            Size4KiB::SIZE as _,
-                        );
-                    }
-
-                    offset_table.unmap(page).expect("unmap faild").1.flush();
-                    let frame = PhysFrame::containing_address(frame);
-
-                    unsafe {
-                        offset_table.map_to(
-                            page,
-                            frame,
-                            PageTableFlags::PRESENT
-                                | PageTableFlags::USER_ACCESSIBLE
-                                | self.protection.into(),
-                            &mut FRAME_ALLOCATOR,
-                        )
-                    }
-                    .expect("page mapping failed")
-                    .flush();
+                    Self::map_copied(offset_table, page, self.protection).unwrap();
                 } else {
                     // This page is used by only one process, so make it writable.
                     log::trace!("    - making {:?} writable", page);
@@ -423,7 +451,7 @@ impl Mapping {
                                 | self.protection.into(),
                         )
                     }
-                    .expect("failed to update page table flags")
+                    .unwrap()
                     .flush();
                 }
 
