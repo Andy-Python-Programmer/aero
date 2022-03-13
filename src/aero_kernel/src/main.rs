@@ -28,18 +28,15 @@
 
 #![feature(
     custom_test_frameworks,
-    core_intrinsics,
     alloc_error_handler,
     lang_items,
     panic_info_message,
-    thread_local,
     decl_macro,
     ptr_internals,
     linked_list_cursors,
     extern_types,
     new_uninit,
     box_syntax,
-    naked_functions,
     step_trait,
     const_btree_new,
     prelude_import
