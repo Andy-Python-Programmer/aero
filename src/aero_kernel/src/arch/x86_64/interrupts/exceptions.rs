@@ -95,7 +95,9 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
         log::error!("stack: {:#x?}", stack);
     };
 
-    if accessed_address < userland_last_address && scheduler::is_initialized() {
+    if accessed_address < userland_last_address && scheduler::is_initialized()
+        || stack.stack.iret.is_user()
+    {
         let signal = scheduler::get_scheduler()
             .current_task()
             .vm
@@ -105,21 +107,19 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
             log::error!("Segmentation fault");
             print_info();
 
-            if stack.stack.iret.is_user() {
-                let task = scheduler::get_scheduler().current_task();
+            let task = scheduler::get_scheduler().current_task();
 
-                log::error!(
-                    "process: (pid={}, pid={})",
-                    task.tid().as_usize(),
-                    task.pid().as_usize()
-                );
+            log::error!(
+                "process: (pid={}, pid={})",
+                task.tid().as_usize(),
+                task.pid().as_usize()
+            );
 
-                log::error!(
-                    "process: (path=`{}`)",
-                    task.path()
-                        .expect("userland application does not have a path set")
-                );
-            }
+            log::error!(
+                "process: (path=`{}`)",
+                task.path()
+                    .expect("userland application does not have a path set")
+            );
 
             scheduler::get_scheduler().current_task().vm.log();
             scheduler::get_scheduler().current_task().file_table.log();

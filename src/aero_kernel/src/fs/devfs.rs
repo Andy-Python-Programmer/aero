@@ -121,8 +121,8 @@ impl INodeInterface for DevINode {
         self.0.inode().read_at(offset, buffer)
     }
 
-    fn mmap(&self, offset: usize, flags: MMapFlags) -> Result<PhysAddr> {
-        self.0.inode().mmap(offset, flags)
+    fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> Result<PhysFrame> {
+        self.0.inode().mmap(offset, size, flags)
     }
 
     fn ioctl(&self, command: usize, arg: usize) -> Result<usize> {
@@ -278,12 +278,12 @@ impl INodeInterface for DevFb {
             .expect("/dev/fb: terminal not initialized")
     }
 
-    fn mmap(&self, offset: usize, flags: MMapFlags) -> Result<PhysAddr> {
+    fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> Result<PhysFrame> {
         let rinfo = crate::rendy::get_rendy_info();
 
         // Make sure we are in bounds.
         if offset > rinfo.byte_len || offset + Size4KiB::SIZE as usize > rinfo.byte_len {
-            return Ok(PhysAddr::zero());
+            return Ok(PhysFrame::containing_address(PhysAddr::zero()));
         }
 
         crate::rendy::DEBUG_RENDY
@@ -300,23 +300,17 @@ impl INodeInterface for DevFb {
 
                     let fb_phys_ptr = fb_ptr.sub(crate::PHYSICAL_MEMORY_OFFSET.as_u64() as usize);
 
-                    Ok(PhysAddr::new_unchecked(fb_phys_ptr as u64))
+                    Ok(PhysFrame::containing_address(PhysAddr::new_unchecked(
+                        fb_phys_ptr as u64,
+                    )))
                 } else {
                     let fb = lock.get_framebuffer();
 
                     // This is a private file mapping.
-                    let private_cp: PhysFrame = FRAME_ALLOCATOR
-                        .allocate_frame()
-                        .expect("/dev/fb: failed to allocate frame for private file mapping");
+                    let private_cp: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
+                    private_cp.as_slice_mut()[..size].copy_from_slice(&fb[offset..offset + size]);
 
-                    let private_phys = private_cp.start_address();
-                    let private_virt = crate::PHYSICAL_MEMORY_OFFSET + private_phys.as_u64();
-                    let private_ptr = private_virt.as_mut_ptr();
-
-                    core::slice::from_raw_parts_mut(private_ptr, Size4KiB::SIZE as usize)
-                        .copy_from_slice(&fb[offset..offset + Size4KiB::SIZE as usize]);
-
-                    Ok(private_phys)
+                    Ok(private_cp)
                 }
             })
             .expect("/dev/fb: terminal not initialized")

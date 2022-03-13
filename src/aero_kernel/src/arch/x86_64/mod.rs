@@ -69,8 +69,8 @@ static PAGING_TAG: Stivale5LevelPagingHeaderTag = Stivale5LevelPagingHeaderTag::
     .next((&UNMAP_NULL as *const StivaleUnmapNullHeaderTag).cast());
 
 /// The stivale2 specification says we need to define a "header structure".
-/// This structure needs to reside in the .stivale2hdr ELF section in order
-/// for the bootloader to find it. We use the #[linker_section] and #[used] macros to
+/// This structure needs to reside in the `.stivale2hdr` ELF section in order
+/// for the bootloader to find it. We use the `#[linker_section]` and `#[used]` macros to
 /// tell the compiler to put the following structure in said section.
 #[link_section = ".stivale2hdr"]
 #[no_mangle]

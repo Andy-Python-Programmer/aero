@@ -552,9 +552,8 @@ impl VmFrame {
     pub fn dec_ref_count(&self) {
         let mut this = self.lock.lock();
 
-        if this.use_count > 0 {
-            this.use_count -= 1;
-        }
+        assert!(this.use_count > 0);
+        this.use_count -= 1;
     }
 
     pub fn inc_ref_count(&self) {

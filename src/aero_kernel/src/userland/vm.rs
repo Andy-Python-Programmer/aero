@@ -337,13 +337,11 @@ impl Mapping {
                     offset
                 );
 
-                let phys = mmap_file
+                let frame = mmap_file
                     .file
                     .inode()
-                    .mmap(offset as usize, self.flags)
+                    .mmap(offset as _, size as _, self.flags)
                     .expect("handle_pf_file: file does not support mmap");
-
-                let frame: PhysFrame<Size4KiB> = PhysFrame::containing_address(phys);
 
                 unsafe {
                     offset_table.map_to(
@@ -359,6 +357,8 @@ impl Mapping {
                 .flush();
 
                 true
+            } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
+                self.handle_cow(offset_table, address, true)
             } else {
                 log::error!("    - present page read failed");
                 false
@@ -786,6 +786,137 @@ impl VmProtected {
         })
     }
 
+    fn load_bin<'header>(
+        &mut self,
+        bin: DirCacheItem,
+    ) -> Result<LoadedBinary<'header>, ElfLoadError> {
+        let elf = Elf::new(bin.clone())?;
+        let header = &elf.header;
+
+        let load_offset = VirtAddr::new(
+            if header.pt2.type_().as_type() == header::Type::SharedObject {
+                0x40000000u64
+            } else {
+                0u64
+            },
+        );
+
+        let mut entry_point = load_offset + header.pt2.entry_point();
+
+        log::debug!("entry point: {:#x}", entry_point);
+        log::debug!("entry point type: {:?}", header.pt2.type_().as_type());
+
+        let mut base_addr = VirtAddr::zero();
+
+        for header in elf.program_iter() {
+            let header_type = header
+                .get_type()
+                .expect("load_bin: failed to get program header type");
+
+            let header_flags = header.flags();
+
+            if header_type == xmas_elf::program::Type::Load {
+                let virtual_start = VirtAddr::new(header.virtual_addr()).align_down(Size4KiB::SIZE)
+                    + load_offset.as_u64();
+
+                if base_addr == VirtAddr::zero() {
+                    base_addr = virtual_start;
+                }
+
+                let virtual_end = VirtAddr::new(header.virtual_addr() + header.mem_size())
+                    .align_up(Size4KiB::SIZE)
+                    + load_offset.as_u64();
+
+                let virtual_fend = VirtAddr::new(header.virtual_addr() + header.file_size())
+                    + load_offset.as_u64();
+
+                let data_size = virtual_fend - virtual_start;
+                let aligned_data_size = align_up(data_size, Size4KiB::SIZE);
+
+                let file_offset = align_down(header.offset(), Size4KiB::SIZE);
+
+                let mut prot = MMapProt::empty();
+
+                if header_flags.is_read() {
+                    prot.insert(MMapProt::PROT_READ);
+                }
+
+                if header_flags.is_write() {
+                    prot.insert(MMapProt::PROT_WRITE);
+                }
+
+                if header_flags.is_execute() {
+                    prot.insert(MMapProt::PROT_EXEC);
+                }
+
+                /*
+                 * The last non-bss frame of the segment consists partly of data and partly of bss
+                 * memory, which must be zeroed. Unfortunately, the file representation might have
+                 * reused the part of the frame that should be zeroed to store the next segment. This
+                 * means that we can't simply overwrite that part with zeroes, as we might overwrite
+                 * other data this way.
+                 *
+                 * Example:
+                 *
+                 *   XXXXXXXXXXXXXXX000000YYYYYYY000ZZZZZZZZZZZ     virtual memory (XYZ are data)
+                 *   |·············|     /·····/   /·········/
+                 *   |·············| ___/·····/   /·········/
+                 *   |·············|/·····/‾‾‾   /·········/
+                 *   |·············||·····|/·̅·̅·̅·̅·̅·····/‾‾‾‾
+                 *   XXXXXXXXXXXXXXXYYYYYYYZZZZZZZZZZZ              file memory (zeros are not saved)
+                 *   '       '       '       '        '
+                 *   The areas filled with dots (`·`) indicate a mapping between virtual and file
+                 *   memory. We see that the data regions `X`, `Y`, `Z` have a valid mapping, while
+                 *   the regions that are initialized with 0 have not.
+                 *
+                 *   The ticks (`'`) below the file memory line indicate the start of a new frame. We
+                 *   see that the last frames of the `X` and `Y` regions in the file are followed
+                 *   by the bytes of the next region. So we can't zero these parts of the frame
+                 *   because they are needed by other memory regions.
+                 */
+                let address = self
+                    .mmap(
+                        virtual_start,
+                        data_size as usize,
+                        prot,
+                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED,
+                        file_offset as usize,
+                        Some(bin.clone()),
+                    )
+                    .ok_or(ElfLoadError::MemoryMapError)?;
+
+                let virtual_fend = address + aligned_data_size;
+
+                if virtual_fend < virtual_end {
+                    let bss_size = virtual_end - virtual_fend;
+
+                    self.mmap(
+                        virtual_fend,
+                        bss_size as usize,
+                        prot,
+                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_FIXED,
+                        0,
+                        None,
+                    )
+                    .ok_or(ElfLoadError::MemoryMapError)?;
+                }
+            } else if header_type == xmas_elf::program::Type::Tls {
+            } else if header_type == xmas_elf::program::Type::Interp {
+                let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
+
+                let res = self.load_bin(ld)?;
+                entry_point = res.entry_point;
+            }
+        }
+
+        Ok(LoadedBinary {
+            elf,
+            entry_point,
+
+            base_addr,
+        })
+    }
+
     fn clear(&mut self) {
         let mut cursor = self.mappings.cursor_front_mut();
 
@@ -891,126 +1022,7 @@ impl Vm {
 
     /// Mapping the provided `bin` file into the VM.
     pub fn load_bin(&self, bin: DirCacheItem) -> Result<LoadedBinary, ElfLoadError> {
-        let elf = Elf::new(bin.clone())?;
-        let header = &elf.header;
-
-        let load_offset = VirtAddr::new(
-            if header.pt2.type_().as_type() == header::Type::SharedObject {
-                0x40000000u64
-            } else {
-                0u64
-            },
-        );
-
-        let mut entry_point = load_offset + header.pt2.entry_point();
-
-        log::debug!("entry point: {:#x}", entry_point);
-        log::debug!("entry point type: {:?}", header.pt2.type_().as_type());
-
-        let mut base_addr = VirtAddr::zero();
-
-        for header in elf.program_iter() {
-            let header_type = header
-                .get_type()
-                .expect("load_bin: failed to get program header type");
-
-            let header_flags = header.flags();
-
-            if header_type == xmas_elf::program::Type::Load {
-                let virtual_start = VirtAddr::new(header.virtual_addr()).align_down(Size4KiB::SIZE)
-                    + load_offset.as_u64();
-
-                if base_addr == VirtAddr::zero() {
-                    base_addr = virtual_start;
-                }
-
-                let virtual_end = VirtAddr::new(header.virtual_addr() + header.mem_size())
-                    .align_up(Size4KiB::SIZE)
-                    + load_offset.as_u64();
-
-                let virtual_fend = VirtAddr::new(header.virtual_addr() + header.file_size())
-                    + load_offset.as_u64();
-
-                let data_size = virtual_fend - virtual_start;
-                let file_offset = align_down(header.offset(), Size4KiB::SIZE);
-                let size = (virtual_end - virtual_start) as usize;
-
-                let mut prot = MMapProt::empty();
-
-                if header_flags.is_read() {
-                    prot.insert(MMapProt::PROT_READ);
-                }
-
-                prot.insert(MMapProt::PROT_WRITE);
-
-                if header_flags.is_execute() {
-                    prot.insert(MMapProt::PROT_EXEC);
-                }
-
-                /*
-                 * The last non-bss frame of the segment consists partly of data and partly of bss
-                 * memory, which must be zeroed. Unfortunately, the file representation might have
-                 * reused the part of the frame that should be zeroed to store the next segment. This
-                 * means that we can't simply overwrite that part with zeroes, as we might overwrite
-                 * other data this way.
-                 *
-                 * Example:
-                 *
-                 *   XXXXXXXXXXXXXXX000000YYYYYYY000ZZZZZZZZZZZ     virtual memory (XYZ are data)
-                 *   |·············|     /·····/   /·········/
-                 *   |·············| ___/·····/   /·········/
-                 *   |·············|/·····/‾‾‾   /·········/
-                 *   |·············||·····|/·̅·̅·̅·̅·̅·····/‾‾‾‾
-                 *   XXXXXXXXXXXXXXXYYYYYYYZZZZZZZZZZZ              file memory (zeros are not saved)
-                 *   '       '       '       '        '
-                 *   The areas filled with dots (`·`) indicate a mapping between virtual and file
-                 *   memory. We see that the data regions `X`, `Y`, `Z` have a valid mapping, while
-                 *   the regions that are initialized with 0 have not.
-                 *
-                 *   The ticks (`'`) below the file memory line indicate the start of a new frame. We
-                 *   see that the last frames of the `X` and `Y` regions in the file are followed
-                 *   by the bytes of the next region. So we can't zero these parts of the frame
-                 *   because they are needed by other memory regions.
-                 */
-                let address = self
-                    .inner
-                    .lock()
-                    .mmap(
-                        virtual_start,
-                        size,
-                        prot,
-                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED | MMapFlags::MAP_ANONYOMUS,
-                        0,
-                        None,
-                    )
-                    .ok_or(ElfLoadError::MemoryMapError)?;
-
-                let buffer = unsafe {
-                    core::slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), data_size as usize)
-                };
-
-                bin.inode()
-                    .read_at(file_offset as usize, buffer)
-                    .map_err(|err| ElfLoadError::ReadError(err))?;
-
-                if !header.flags().is_write() {
-                    // TODO: Update the protection flags to remove the writable flag.
-                }
-            } else if header_type == xmas_elf::program::Type::Tls {
-            } else if header_type == xmas_elf::program::Type::Interp {
-                let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
-
-                let res = self.load_bin(ld)?;
-                entry_point = res.entry_point;
-            }
-        }
-
-        Ok(LoadedBinary {
-            elf,
-            entry_point,
-
-            base_addr,
-        })
+        self.inner.lock().load_bin(bin)
     }
 
     /// Clears and unmaps all of the mappings in the VM.

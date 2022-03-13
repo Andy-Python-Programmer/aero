@@ -246,6 +246,7 @@ impl ArchTask {
         envv: Option<ExecArgs>,
     ) -> Result<(), MapToError<Size4KiB>> {
         let address_space = AddressSpace::new()?;
+        let loaded_binary = vm.load_bin(executable).expect("exec: failed to load ELF");
 
         // mmap the userland stack...
         vm.mmap(
@@ -260,8 +261,6 @@ impl ArchTask {
         vm.log();
 
         address_space.switch(); // Perform the address space switch
-
-        let loaded_binary = vm.load_bin(executable).expect("exec: failed to load ELF");
 
         self.context = Unique::dangling();
         self.address_space = address_space; // Update the address space reference
