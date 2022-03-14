@@ -1,0 +1,10 @@
+[package]
+name = "std"
+version = "0.1.0"
+authors = ["czapek1337 <czapek1337@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+aero_syscall = { path = "../../../src/aero_syscall" }
+linked_list_allocator = "0.9"
+spin = "0.9"

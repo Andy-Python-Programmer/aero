@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 
 [dependencies]
-std = { path = "../aero_std" }
-aero_syscall = { path = "../../src/aero_syscall" }
-aero_ipc = { path = "../aero_ipc" }
+std = { path = "../../libs/aero_std" }
+aero_syscall = { path = "../../../src/aero_syscall" }
+aero_ipc = { path = "../../libs/aero_ipc" }
 utest-proc = { path = "../utest-proc" }
