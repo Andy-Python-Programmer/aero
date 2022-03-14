@@ -17,39 +17,22 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_ipc::{SystemService, WindowService};
 use aero_syscall::*;
 
-fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
-    let pid = sys_fork()?;
+fn discover_service(name: &str) -> Result<usize, AeroSyscallError> {
+    let root_pid = sys_ipc_discover_root()?;
+    let system = SystemService::open(root_pid);
 
-    if pid == 0 {
-        sys_exec(path, argv, envv)?;
-        sys_exit(0);
-    } else {
-        Ok(pid)
-    }
+    system.discover(name).map_err(|_| AeroSyscallError::ENOMSG)
 }
 
 fn main() -> Result<(), AeroSyscallError> {
-    sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
-    sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
-    sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
+    let window_server = WindowService::open(discover_service("WindowServer")?);
 
-    // TODO: make this test case succeed!
-    let _1 = Box::new(0);
-    let pid = sys_fork()?;
-
-    if pid == 0 {
-        let _2 = Box::new(0);
-        println!("from child: {}", _2);
-        return Ok(());
-    } else {
-        let _2 = Box::new(0);
-        println!("from parent: {}", _2);
-    }
-
-    fork_and_exec("/bin/system_server", &[], &[])?;
-    fork_and_exec("/bin/aero_shell", &[], &[])?;
+    window_server.create_window("Test window 1");
+    window_server.create_window("Test window 2");
+    window_server.create_window("Test window 3");
 
     Ok(())
 }

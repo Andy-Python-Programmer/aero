@@ -18,12 +18,28 @@
  */
 
 use aero_ipc::{SystemService, SystemServiceError, SystemServiceResult};
+use aero_syscall::*;
 use hashbrown::{hash_map::Entry, HashMap};
 use spin::RwLock;
 
+// Basically the same thing that's in the init's main.rs
+fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
+    let pid = sys_fork()?;
+
+    if pid == 0 {
+        sys_exec(path, argv, envv)?;
+        sys_exit(0);
+    } else {
+        Ok(pid)
+    }
+}
+
 fn main() {
-    aero_syscall::sys_ipc_become_root().expect("Could not become the root node");
+    sys_ipc_become_root().unwrap();
+
     aero_ipc::listen(SystemService::handler(SystemServer::new()));
+
+    fork_and_exec("/bin/window_server", &[], &[]).unwrap();
 
     loop {
         aero_ipc::service_request();
@@ -49,7 +65,6 @@ impl SystemService::Server for SystemServer {
         match self.services.write().entry(name) {
             Entry::Occupied(_) => Err(SystemServiceError::AlreadyProvided),
             Entry::Vacant(entry) => {
-                println!("[system_server] {} is now {}", pid, entry.key());
                 entry.insert(pid);
                 Ok(())
             }

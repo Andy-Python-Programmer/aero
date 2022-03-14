@@ -1,5 +1,5 @@
 [workspace]
-members = ["aero_shell", "aero_ipc", "init", "system_server", "utest"]
+members = ["apps/*", "servers/*"]
 
 [profile.release]
 debug = true
