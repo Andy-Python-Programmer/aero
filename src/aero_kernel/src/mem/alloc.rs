@@ -204,7 +204,6 @@ impl Allocator {
                                 page,
                                 frame,
                                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                                &mut FRAME_ALLOCATOR,
                             )
                         }
                         .expect("Failed to map frame to extend the heap")
@@ -410,7 +409,6 @@ pub fn init_heap() {
                 Page::containing_address(VirtAddr::new(HEAP_START as _)),
                 frame,
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                &mut FRAME_ALLOCATOR,
             )
             .expect("init_heap: failed to initialize the heap")
             .flush();

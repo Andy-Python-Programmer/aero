@@ -582,7 +582,6 @@ impl HbaPort {
                             | PageTableFlags::WRITABLE
                             | PageTableFlags::WRITE_THROUGH
                             | PageTableFlags::NO_CACHE,
-                        &mut FRAME_ALLOCATOR,
                     )?
                     .flush();
             }
@@ -923,7 +922,6 @@ impl AhciProtected {
                     | PageTableFlags::NO_CACHE
                     | PageTableFlags::WRITABLE
                     | PageTableFlags::WRITE_THROUGH,
-                &mut FRAME_ALLOCATOR,
             )
         }?
         .flush();

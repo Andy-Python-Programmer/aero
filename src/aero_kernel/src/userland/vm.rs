@@ -286,7 +286,6 @@ impl Mapping {
                     PageTableFlags::USER_ACCESSIBLE
                         | PageTableFlags::PRESENT
                         | self.protection.into(),
-                    &mut FRAME_ALLOCATOR,
                 )
             }
             .expect("Failed to identity map userspace private mapping")
@@ -350,7 +349,6 @@ impl Mapping {
                         PageTableFlags::PRESENT
                             | PageTableFlags::USER_ACCESSIBLE
                             | self.protection.into(),
-                        &mut FRAME_ALLOCATOR,
                     )
                 }
                 .expect("failed to map allocated frame for private file read")
@@ -406,7 +404,6 @@ impl Mapping {
                     page,
                     new_frame,
                     PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | protection.into(),
-                    &mut FRAME_ALLOCATOR,
                 )?
                 .flush();
         }

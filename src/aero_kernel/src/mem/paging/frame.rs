@@ -594,7 +594,7 @@ mod tests {
                 .is_free(frame.start_address(), 0));
         }
 
-        unsafe { offset_table.map_to(page, frame, PageTableFlags::PRESENT, &mut FRAME_ALLOCATOR) }
+        unsafe { offset_table.map_to(page, frame, PageTableFlags::PRESENT) }
             .unwrap()
             .flush();
 
