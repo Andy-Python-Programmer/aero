@@ -7,7 +7,7 @@ edition = "2021"
 lib = true
 
 [dependencies]
-aero_syscall = { path = "../../src/aero_syscall" }
+aero_syscall = { path = "../../../src/aero_syscall" }
 postcard = { version = "0.7.3", features = ["alloc"] }
 serde = { version = "1.0.136", default-features = false, features = ["alloc"] }
 spin = "0.9"

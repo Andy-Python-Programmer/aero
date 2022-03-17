@@ -1,9 +1,0 @@
-[package]
-name = "aero_shell"
-version = "0.1.0"
-authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
-edition = "2021"
-
-[dependencies]
-aero_syscall = { path = "../../src/aero_syscall" }
-aero_ipc = { path = "../aero_ipc" }
