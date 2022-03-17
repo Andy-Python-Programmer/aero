@@ -438,7 +438,7 @@ pub fn mark_bsp_ready(value: bool) {
 /// Read from the `io_apic_id` I/O APIC as described by the MADT.
 pub unsafe fn io_apic_read(io_apic_id: usize, register: u32) -> u32 {
     let io_apic = madt::IO_APICS.read()[io_apic_id];
-    let addr = crate::PHYSICAL_MEMORY_OFFSET + io_apic.io_apic_address as usize;
+    let addr = PhysAddr::new(io_apic.io_apic_address as u64).as_hhdm_virt();
     let ptr: *mut u32 = addr.as_mut_ptr();
 
     ptr::write_volatile(ptr, register);
@@ -448,7 +448,7 @@ pub unsafe fn io_apic_read(io_apic_id: usize, register: u32) -> u32 {
 /// Write from the `io_apic_id` I/O APIC as described by the MADT.
 pub unsafe fn io_apic_write(io_apic_id: usize, register: u32, data: u32) {
     let io_apic = madt::IO_APICS.read()[io_apic_id];
-    let addr = crate::PHYSICAL_MEMORY_OFFSET + io_apic.io_apic_address as usize;
+    let addr = PhysAddr::new(io_apic.io_apic_address as u64).as_hhdm_virt();
     let ptr: *mut u32 = addr.as_mut_ptr();
 
     ptr::write_volatile(ptr, register);

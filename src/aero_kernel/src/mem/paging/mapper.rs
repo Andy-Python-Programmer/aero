@@ -1196,10 +1196,8 @@ impl<'a> OffsetPageTable<'a> {
                 created = false;
             }
 
-            let page_table_ptr = unsafe {
-                let addr =
-                    crate::PHYSICAL_MEMORY_OFFSET + entry.frame().unwrap().start_address().as_u64();
-
+            let page_table_ptr = {
+                let addr = entry.frame().unwrap().start_address().as_hhdm_virt();
                 addr.as_mut_ptr::<PageTable>()
             };
 

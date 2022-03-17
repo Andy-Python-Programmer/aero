@@ -382,13 +382,7 @@ impl Mapping {
             core::slice::from_raw_parts(ptr, Size4KiB::SIZE as _)
         };
 
-        let new_slice = unsafe {
-            let phys = new_frame.start_address().as_u64();
-            let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
-            let ptr = virt.as_mut_ptr::<u8>();
-
-            core::slice::from_raw_parts_mut(ptr, Size4KiB::SIZE as _)
-        };
+        let new_slice = new_frame.as_slice_mut::<u8>();
 
         // Copy the contents from the old frame to the newly allocated frame.
         new_slice.copy_from_slice(old_slice);

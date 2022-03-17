@@ -29,6 +29,7 @@ use spin::Once;
 use crate::cmdline::CommandLine;
 use crate::mem;
 use crate::mem::paging::align_up;
+use crate::mem::paging::PhysAddr;
 
 use stivale_boot::v2::StivaleFramebufferTag;
 
@@ -1004,8 +1005,7 @@ pub fn init(framebuffer_tag: &'static StivaleFramebufferTag, cmdline: &CommandLi
         stride: framebuffer_tag.framebuffer_pitch as usize,
     };
 
-    let framebuffer_addr =
-        unsafe { crate::PHYSICAL_MEMORY_OFFSET + framebuffer_tag.framebuffer_addr };
+    let framebuffer_addr = PhysAddr::new(framebuffer_tag.framebuffer_addr).as_hhdm_virt();
 
     let framebuffer = unsafe {
         core::slice::from_raw_parts_mut::<u32>(

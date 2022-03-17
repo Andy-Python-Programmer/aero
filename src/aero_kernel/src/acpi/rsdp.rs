@@ -20,7 +20,7 @@
 use core::marker::PhantomData;
 
 use super::sdt::Sdt;
-use crate::mem::paging::VirtAddr;
+use crate::mem::paging::{PhysAddr, VirtAddr};
 
 pub(super) fn validate_rsdt_checksum<T: RsdtHeader>(header: &'static T) -> bool {
     if header.signature() == b"RSD PTR " {
@@ -124,9 +124,10 @@ impl Rsdt<u32> {
         let header_data_address = self.header.data_address() as *const u32;
 
         for i in 0..self.entries_count() {
-            let item_addr_phys = unsafe { *(header_data_address.add(i)) } as u64;
-            let item_addr_virt = unsafe { crate::PHYSICAL_MEMORY_OFFSET + item_addr_phys };
-
+            let item_addr_virt = unsafe {
+                let ptr = header_data_address.add(i);
+                PhysAddr::new(*ptr as u64).as_hhdm_virt()
+            };
             let item = unsafe { Sdt::from_address(item_addr_virt) };
 
             if item.signature == signature.as_bytes() {
@@ -159,8 +160,10 @@ impl Rsdt<u64> {
         let header_data_address = self.header.data_address() as *const u64;
 
         for i in 0..self.entries_count() {
-            let item_addr_phys = unsafe { *(header_data_address.add(i)) };
-            let item_addr_virt = unsafe { crate::PHYSICAL_MEMORY_OFFSET + item_addr_phys };
+            let item_addr_virt = unsafe {
+                let ptr = header_data_address.add(i);
+                PhysAddr::new(*ptr).as_hhdm_virt()
+            };
 
             let item = unsafe { Sdt::from_address(item_addr_virt) };
 
@@ -187,7 +190,7 @@ pub(super) fn find_rsdt_address(rsdp_address: VirtAddr) -> RsdtAddress {
         let valid = validate_rsdt_checksum(v20);
         assert!(valid, "rsdp: failed to validate RSDP v20 checksum");
 
-        let xsdt_address = unsafe { crate::PHYSICAL_MEMORY_OFFSET + v20.xsdt_address };
+        let xsdt_address = PhysAddr::new(v20.xsdt_address).as_hhdm_virt();
         return RsdtAddress::Xsdt(xsdt_address);
     } else {
         let v10 = unsafe { &*(rsdp_address.as_ptr() as *const Rsdp10) };
@@ -195,7 +198,7 @@ pub(super) fn find_rsdt_address(rsdp_address: VirtAddr) -> RsdtAddress {
 
         assert!(valid, "rsdp: failed to validate RSDP v10 checksum");
 
-        let rsdt_address = unsafe { crate::PHYSICAL_MEMORY_OFFSET + v10.rsdt_address as u64 };
+        let rsdt_address = PhysAddr::new(v10.rsdt_address as u64).as_hhdm_virt();
         return RsdtAddress::Rsdt(rsdt_address);
     }
 }

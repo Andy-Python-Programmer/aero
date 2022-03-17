@@ -300,8 +300,7 @@ impl<S: PageSize> PhysFrame<S> {
     pub fn as_slice_mut<T>(&self) -> &mut [T] {
         assert!(core::mem::size_of::<T>() < S::SIZE as usize);
 
-        // TODO: Move the physical to virtual address translation to the `PhysAddr` structure.
-        let virt = unsafe { crate::PHYSICAL_MEMORY_OFFSET + self.start_address.as_u64() };
+        let virt = self.start_address().as_hhdm_virt();
         let ptr = virt.as_mut_ptr::<T>();
 
         // SAFETY: The size of the slice is equal to the size of the frame and the

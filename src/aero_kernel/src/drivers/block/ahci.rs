@@ -261,8 +261,7 @@ impl DmaRequest {
         for buffer in self.buffer.iter() {
             let count = core::cmp::min(remaning, 0x2000);
 
-            let buffer_address = unsafe { crate::PHYSICAL_MEMORY_OFFSET + buffer.start.as_u64() };
-            let buffer_pointer = buffer_address.as_ptr();
+            let buffer_pointer = buffer.start.as_hhdm_virt().as_ptr();
             let buffer = unsafe { core::slice::from_raw_parts::<u8>(buffer_pointer, count) };
 
             // Copy the data from the buffer into the given buffer with the
@@ -552,7 +551,7 @@ impl HbaPort {
     fn cmd_header_at(&mut self, index: usize) -> &mut HbaCmdHeader {
         // Since the CLB holds the physical address, we make the address mapped
         // before reading it.
-        let clb_mapped = unsafe { crate::PHYSICAL_MEMORY_OFFSET + self.clb.get().as_u64() };
+        let clb_mapped = self.clb.get().as_hhdm_virt();
         // Get the address of the command header at `index`.
         let clb_addr = clb_mapped + core::mem::size_of::<HbaCmdHeader>() * index;
 

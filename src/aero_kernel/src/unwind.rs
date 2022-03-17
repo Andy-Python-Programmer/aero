@@ -25,7 +25,7 @@ use xmas_elf::sections::{SectionData, ShType};
 use xmas_elf::symbol_table::Entry;
 use xmas_elf::ElfFile;
 
-use crate::mem::paging::{Translate, VirtAddr};
+use crate::mem::paging::{PhysAddr, Translate, VirtAddr};
 use crate::mem::AddressSpace;
 
 use crate::logger;
@@ -71,7 +71,9 @@ pub fn unwind_stack_trace() {
 
     let kernel_slice: &[u8] = unsafe {
         core::slice::from_raw_parts(
-            (crate::PHYSICAL_MEMORY_OFFSET + unwind_info.kernel_start).as_ptr(),
+            PhysAddr::new(unwind_info.kernel_start)
+                .as_hhdm_virt()
+                .as_ptr(),
             unwind_info.kernel_size as usize,
         )
     };

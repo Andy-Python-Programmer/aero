@@ -195,10 +195,12 @@ impl ArchTask {
 
         let switch_stack = unsafe {
             let frame: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
-            let phys = frame.start_address();
-            let virt = crate::PHYSICAL_MEMORY_OFFSET + phys.as_u64();
 
-            virt.as_mut_ptr::<u8>().add(Size4KiB::SIZE as usize)
+            frame
+                .start_address()
+                .as_hhdm_virt()
+                .as_mut_ptr::<u8>()
+                .add(Size4KiB::SIZE as usize)
         };
 
         let mut old_stack_ptr = self.context_switch_rsp.as_u64();

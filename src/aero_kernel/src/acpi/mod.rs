@@ -98,7 +98,8 @@ impl aml::Handler for AmlHandler {
         log::trace!("AML: Reading byte from {:#x}", address);
 
         unsafe {
-            (crate::PHYSICAL_MEMORY_OFFSET + address)
+            PhysAddr::new(address as u64)
+                .as_hhdm_virt()
                 .as_ptr::<u8>()
                 .read_volatile()
         }
@@ -221,7 +222,7 @@ impl aml::Handler for AmlHandler {
 
 /// Initialize the ACPI tables.
 pub fn init(rsdp_address: PhysAddr) -> Result<(), aml::AmlError> {
-    let rsdp_address = unsafe { crate::PHYSICAL_MEMORY_OFFSET + rsdp_address.as_u64() };
+    let rsdp_address = rsdp_address.as_hhdm_virt();
     let acpi_table = AcpiTable::new(rsdp_address);
 
     macro init_table($sig:path => $ty:ty) {
@@ -262,7 +263,7 @@ pub fn init(rsdp_address: PhysAddr) -> Result<(), aml::AmlError> {
         // The DSDT table is put inside the FADT table, instead of listing it in another ACPI table. So
         // we need to extract the DSDT table from the FADT table.
         let _dsdt_stream = unsafe {
-            let addr = crate::PHYSICAL_MEMORY_OFFSET + fadt.dsdt as u64;
+            let addr = PhysAddr::new(fadt.dsdt as u64).as_hhdm_virt();
             let sdt = Sdt::from_address(addr);
 
             core::slice::from_raw_parts(sdt.data_address() as *mut u8, sdt.data_len())

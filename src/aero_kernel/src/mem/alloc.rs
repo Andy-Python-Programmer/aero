@@ -59,8 +59,7 @@ impl Slab {
                 .allocate_frame()
                 .expect("slab_init: failed to allocate frame");
 
-            self.first_free = frame.start_address().as_u64() as usize;
-            self.first_free += crate::PHYSICAL_MEMORY_OFFSET.as_u64() as usize;
+            self.first_free = frame.start_address().as_hhdm_virt().as_u64() as usize;
         }
 
         let hdr_size = core::mem::size_of::<SlabHeader>() as u64;

@@ -345,6 +345,13 @@ impl PhysAddr {
         PhysAddr(addr)
     }
 
+    /// Converts this physical address to HHDM (Higher Half Direct Map) virtual address.
+    pub fn as_hhdm_virt(&self) -> VirtAddr {
+        // TODO: Make `PHYSICAL_MEMORY_OFFSET` an atomic usize instead of making it
+        // a mutable static and spamming `unsafe` everywhere; where its not even required.
+        unsafe { crate::PHYSICAL_MEMORY_OFFSET + self.as_u64() }
+    }
+
     /// Converts the address to an `u64`.
     pub const fn as_u64(self) -> u64 {
         self.0

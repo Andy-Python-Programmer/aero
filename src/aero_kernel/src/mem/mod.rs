@@ -28,7 +28,6 @@ use ::alloc::boxed::Box;
 use crate::mem::paging::*;
 
 use self::paging::{active_level_4_table, FRAME_ALLOCATOR};
-use crate::PHYSICAL_MEMORY_OFFSET;
 
 /// Structure representing a *virtual* address space. The address space
 /// contains a reference of the page table allocated for this address space.
@@ -45,9 +44,9 @@ impl AddressSpace {
                 .ok_or(MapToError::FrameAllocationFailed)?;
 
             let phys_addr = frame.start_address();
-            phys_addr.as_vm_frame().unwrap().inc_ref_count();
+            let virt_addr = phys_addr.as_hhdm_virt();
 
-            let virt_addr = PHYSICAL_MEMORY_OFFSET + phys_addr.as_u64();
+            phys_addr.as_vm_frame().unwrap().inc_ref_count();
 
             let page_table: *mut PageTable = virt_addr.as_mut_ptr();
             let page_table = &mut *page_table;
@@ -107,19 +106,13 @@ impl AddressSpace {
     /// Returns a mutable reference to the page table allocated for this
     /// address space.
     pub fn page_table(&mut self) -> &'static mut PageTable {
-        unsafe {
-            let phys_addr = self.cr3.start_address();
-            let virt_addr = PHYSICAL_MEMORY_OFFSET + phys_addr.as_u64();
-            let page_table_ptr: *mut PageTable = virt_addr.as_mut_ptr();
-
-            &mut *page_table_ptr
-        }
+        unsafe { &mut *(self.cr3.start_address().as_hhdm_virt().as_mut_ptr()) }
     }
 
     /// Returns a mutable refernce to the mapper pointing to the page table
     /// allocated for this address space.
     pub fn offset_page_table(&mut self) -> OffsetPageTable {
-        unsafe { OffsetPageTable::new(self.page_table(), PHYSICAL_MEMORY_OFFSET) }
+        unsafe { OffsetPageTable::new(self.page_table(), crate::PHYSICAL_MEMORY_OFFSET) }
     }
 }
 

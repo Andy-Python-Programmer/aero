@@ -128,17 +128,15 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     }
 
     crate::UNWIND_INFO.call_once(move || unsafe {
-        let addr = (kernel_info as *const StivaleKernelFileV2Tag) as u64;
-        let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
-
-        &*new_addr.as_mut_ptr::<StivaleKernelFileV2Tag>()
+        &*(PhysAddr::new((kernel_info as *const StivaleKernelFileV2Tag) as u64)
+            .as_hhdm_virt()
+            .as_mut_ptr::<StivaleKernelFileV2Tag>())
     });
 
     crate::time::EPOCH_TAG.call_once(move || unsafe {
-        let addr = (epoch as *const StivaleEpochTag) as u64;
-        let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
-
-        &*new_addr.as_mut_ptr::<StivaleEpochTag>()
+        &*(PhysAddr::new((epoch as *const StivaleEpochTag) as u64)
+            .as_hhdm_virt()
+            .as_mut_ptr::<StivaleEpochTag>())
     });
 
     crate::INITRD_MODULE.call_once(move || {
@@ -160,7 +158,7 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
 
     // Parse the kernel command line.
     let command_line: &'static _ = boot_info.command_line().map_or("", |cmd| unsafe {
-        let cmdline = crate::PHYSICAL_MEMORY_OFFSET + cmd.command_line;
+        let cmdline = PhysAddr::new(cmd.command_line).as_hhdm_virt();
 
         // SAFETY: The bootloader has provided a pointer that points to a valid C
         // string with a NULL terminator of size less than `usize::MAX`, whose content

@@ -309,7 +309,7 @@ impl PageTable {
             .filter(|(_, e)| e.flags().contains(flags))
             .try_for_each(|(idx, e)| {
                 let table = unsafe {
-                    let addr = crate::PHYSICAL_MEMORY_OFFSET + e.addr().as_u64();
+                    let addr = e.addr().as_hhdm_virt();
                     &mut *addr.as_mut_ptr::<PageTable>()
                 };
 
