@@ -25,9 +25,11 @@ use std::fs::DirEntry;
 use std::path::Path;
 use std::process::Command;
 
+//this is all magic, yes dont ever let anyone see this shit
+
 /// Helper function of walking the provided `dir`, only visiting files and calling
 /// `cb` on each file.
-fn visit_dirs(dir: &Path, cb: &dyn Fn(&DirEntry)) -> std::io::Result<()> {
+fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry)) -> std::io::Result<()> {
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
@@ -45,9 +47,11 @@ fn visit_dirs(dir: &Path, cb: &dyn Fn(&DirEntry)) -> std::io::Result<()> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let mut inc_files = vec![];
+
     // Assemble all of the assembly real files first as they will be included in the
     // source files using `incbin`.
-    visit_dirs(Path::new("src"), &|entry| {
+    visit_dirs(Path::new("src"), &mut |entry| {
         let path = entry.path();
 
         match path.extension() {
@@ -68,13 +72,29 @@ fn main() -> Result<(), Box<dyn Error>> {
                 assert!(success);
             }
 
+            Some(ext) if ext.eq(&OsString::from("inc")) => {
+                let path = path
+                    .to_str()
+                    .expect("invalud UTF-8 for file path (skill issue)");
+                inc_files.push(path.to_string())
+            }
+
             _ => (),
         }
     })?;
 
+    // more magic
+    inc_files = inc_files
+        .iter()
+        .map(|e| {
+            let e = e.split("/").collect::<Vec<_>>();
+            e[..e.len() - 1].join("/").to_string()
+        })
+        .collect::<Vec<_>>();
+
     // Now that we have assembled all of the real files, we can go ahead and assemble the source
     // files.
-    visit_dirs(Path::new("src"), &|entry: &DirEntry| {
+    visit_dirs(Path::new("src"), &mut |entry: &DirEntry| {
         let path = entry.path();
 
         match path.extension() {
@@ -82,12 +102,22 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let object_os = path.file_name().expect("Failed to get file name");
                 let object_file = object_os.to_str().expect("Invalid UTF-8 for file name");
 
-                nasm_rs::Build::new()
+                let mut build = nasm_rs::Build::new();
+
+                build
                     .file(&path)
                     .flag("-felf64")
-                    .target("x86_64-unknown-none")
+                    .target("x86_64-unknown-none");
+
+                println!("{:?}", inc_files);
+
+                for include in &inc_files {
+                    build.include(include);
+                }
+
+                build
                     .compile(object_file)
-                    .expect("Failed to compile assembly source file");
+                    .expect("failed to compile assembly: skill issue");
 
                 // Link it as a static library.
                 println!("cargo:rustc-link-lib=static={}", object_file);

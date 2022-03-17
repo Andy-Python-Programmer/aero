@@ -27,6 +27,8 @@ use alloc::vec::Vec;
 
 use spin::{Mutex, RwLock};
 
+use crate::fs::cache::DirCacheImpl;
+
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::inode::FileType;
 use super::FileSystemError;
@@ -205,9 +207,9 @@ impl FileTable {
         for handle in files.iter() {
             if let Some(handle) = handle {
                 log::debug!(
-                    "file handle: (fd={}, name={})",
+                    "file handle: (fd={}, path=`{}`)",
                     handle.fd,
-                    handle.inode.name()
+                    handle.inode.absolute_path_str()
                 )
             }
         }

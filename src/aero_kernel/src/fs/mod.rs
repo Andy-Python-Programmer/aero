@@ -300,13 +300,13 @@ pub fn init() -> Result<()> {
     root_dir().inode().mkdir("proc")?;
 
     initramfs::init()?;
-    log::info!("Installed initramfs");
+    log::info!("installed initramfs");
 
     devfs::init()?;
-    log::info!("Installed devfs");
+    log::info!("installed devfs");
 
     procfs::init()?;
-    log::info!("Installed procfs");
+    log::info!("installed procfs");
 
     Ok(())
 }

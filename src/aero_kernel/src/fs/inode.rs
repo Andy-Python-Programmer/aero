@@ -29,7 +29,7 @@ use alloc::sync::Weak;
 use alloc::vec::Vec;
 use spin::Once;
 
-use crate::mem::paging::PhysAddr;
+use crate::mem::paging::PhysFrame;
 use crate::utils::sync::Mutex;
 use crate::utils::Downcastable;
 
@@ -137,7 +137,7 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
-    fn mmap(&self, _offset: usize, _flags: MMapFlags) -> Result<PhysAddr> {
+    fn mmap(&self, _offset: usize, _size: usize, _flags: MMapFlags) -> Result<PhysFrame> {
         Err(FileSystemError::NotSupported)
     }
 

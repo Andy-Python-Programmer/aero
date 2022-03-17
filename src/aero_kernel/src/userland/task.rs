@@ -183,6 +183,8 @@ pub struct Task {
     sleep_duration: AtomicUsize,
     signals: Signals,
 
+    executable: Mutex<Option<DirCacheItem>>,
+
     pub(super) link: intrusive_collections::LinkedListLink,
     pub(super) clink: intrusive_collections::LinkedListLink,
 
@@ -214,6 +216,8 @@ impl Task {
 
             tid: pid.clone(),
             pid,
+
+            executable: Mutex::new(None),
 
             vm: Arc::new(Vm::new()),
             state: AtomicU8::new(TaskState::Runnable as _),
@@ -258,6 +262,8 @@ impl Task {
             sleep_duration: AtomicUsize::new(0),
             exit_status: AtomicIsize::new(0),
 
+            executable: Mutex::new(None),
+
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
 
@@ -287,6 +293,8 @@ impl Task {
 
             tid: pid.clone(),
             pid,
+
+            executable: Mutex::new(self.executable.lock().clone()),
 
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
@@ -369,6 +377,13 @@ impl Task {
         self.zombies.waitpid(pid, status)
     }
 
+    pub fn path(&self) -> Option<String> {
+        self.executable
+            .lock()
+            .as_ref()
+            .map(|e| e.absolute_path_str())
+    }
+
     pub fn exec(
         &self,
         executable: DirCacheItem,
@@ -376,6 +391,8 @@ impl Task {
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
     ) -> Result<(), MapToError<Size4KiB>> {
+        *self.executable.lock() = Some(executable.clone());
+
         let vm = self.vm();
         vm.clear();
 

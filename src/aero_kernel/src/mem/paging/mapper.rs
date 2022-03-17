@@ -309,6 +309,8 @@ impl<S: PageSize> MapperFlush<S> {
         MapperFlush(page)
     }
 
+    pub fn ignore(self) {}
+
     /// Flush the page from the TLB to ensure that the newest mapping is used.
     #[inline]
     pub fn flush(self) {
@@ -1263,7 +1265,8 @@ impl<'a> OffsetPageTable<'a> {
         let last_level_fork = |entry: &mut PageTableEntry, n1: &mut PageTable, i: usize| {
             let mut flags = entry.flags();
 
-            flags.remove(PageTableFlags::WRITABLE | PageTableFlags::ACCESSED);
+            // Setup copy on write page.
+            flags.remove(PageTableFlags::WRITABLE);
 
             entry.set_flags(flags);
             n1[i].set_frame(entry.frame().unwrap(), flags);

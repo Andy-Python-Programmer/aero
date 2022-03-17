@@ -56,7 +56,7 @@ impl AcpiTable {
                 let xsdt = rsdp::Rsdt::<u64>::new(xsdt_addr);
                 let header = AcpiHeader::Xsdt(xsdt);
 
-                log::debug!("Found XSDT at {:#x}", xsdt_addr);
+                log::debug!("found XSDT at {:#x}", xsdt_addr);
 
                 Self { header }
             }
@@ -65,7 +65,7 @@ impl AcpiTable {
                 let rsdt = rsdp::Rsdt::<u32>::new(rsdt_addr);
                 let header = AcpiHeader::Rsdt(rsdt);
 
-                log::debug!("Found RSDT at {:#x}", rsdt_addr);
+                log::debug!("found RSDT at {:#x}", rsdt_addr);
 
                 Self { header }
             }

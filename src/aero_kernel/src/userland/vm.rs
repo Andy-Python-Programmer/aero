@@ -280,6 +280,9 @@ impl Mapping {
                 offset_table.map_to(
                     Page::containing_address(addr_aligned),
                     frame,
+                    // NOTE: We dont need to remove the writeable flag from this mapping, since
+                    // the writeable flag will be removed from the parent and child on fork so,
+                    // the mapping gets copied on write.
                     PageTableFlags::USER_ACCESSIBLE
                         | PageTableFlags::PRESENT
                         | self.protection.into(),
@@ -334,13 +337,11 @@ impl Mapping {
                     offset
                 );
 
-                let phys = mmap_file
+                let frame = mmap_file
                     .file
                     .inode()
-                    .mmap(offset as usize, self.flags)
+                    .mmap(offset as _, size as _, self.flags)
                     .expect("handle_pf_file: file does not support mmap");
-
-                let frame: PhysFrame<Size4KiB> = PhysFrame::containing_address(phys);
 
                 unsafe {
                     offset_table.map_to(
@@ -356,6 +357,8 @@ impl Mapping {
                 .flush();
 
                 true
+            } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
+                self.handle_cow(offset_table, address, true)
             } else {
                 log::error!("    - present page read failed");
                 false
@@ -365,49 +368,77 @@ impl Mapping {
         }
     }
 
+    /// Copies the contents of the `page` page to a newly allocated frame and maps it to
+    /// the `page` page with the provided `protection` protection flags.
+    fn map_copied(
+        offset_table: &mut OffsetPageTable,
+        page: Page<Size4KiB>,
+        protection: MMapProt,
+    ) -> Result<(), MapToError<Size4KiB>> {
+        // Allocate a new frame to hold the contents.
+        let new_frame: PhysFrame<Size4KiB> = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+            .expect("map_copied: failed to allocate frame");
+
+        let old_slice = unsafe {
+            let ptr = page.start_address().as_ptr::<u8>();
+            core::slice::from_raw_parts(ptr, Size4KiB::SIZE as _)
+        };
+
+        let new_slice = unsafe {
+            let phys = new_frame.start_address().as_u64();
+            let virt = crate::PHYSICAL_MEMORY_OFFSET + phys;
+            let ptr = virt.as_mut_ptr::<u8>();
+
+            core::slice::from_raw_parts_mut(ptr, Size4KiB::SIZE as _)
+        };
+
+        // Copy the contents from the old frame to the newly allocated frame.
+        new_slice.copy_from_slice(old_slice);
+
+        // Re-map the page to the newly allocated frame and with the provided
+        // protection flags.
+        offset_table.unmap(page).unwrap().1.ignore();
+
+        // NOTE: We operate on an active page table, so we flush the changes.
+        unsafe {
+            offset_table
+                .map_to(
+                    page,
+                    new_frame,
+                    PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | protection.into(),
+                    &mut FRAME_ALLOCATOR,
+                )?
+                .flush();
+        }
+
+        Ok(())
+    }
+
     /// Handler routine for a COW (Copy-On-Write) pages. A COW page is shared between multiple processes
     /// until a write occurs after which a private copy is made for the writing process. A COW page
     /// is recognised because the VMA for the region is marked writable even though the individual page
     /// table entry is not.
+    ///
+    /// ## Panics
+    /// * The provided `address` is not aligned to a page boundary.
     fn handle_cow(
         &mut self,
         offset_table: &mut OffsetPageTable,
         address: VirtAddr,
         copy: bool,
     ) -> bool {
-        if let TranslateResult::Mapped { frame, .. } = offset_table.translate(address) {
-            let addr = frame.start_address();
-            let page: Page<Size4KiB> = Page::containing_address(address);
+        debug_assert!(address.is_aligned(Size4KiB::SIZE));
 
-            if let Some(vm_frame) = addr.as_vm_frame() {
+        let page: Page<Size4KiB> = Page::containing_address(address);
+
+        if let TranslateResult::Mapped { frame, .. } = offset_table.translate(address) {
+            let phys_addr = frame.start_address();
+
+            if let Some(vm_frame) = phys_addr.as_vm_frame() {
                 if vm_frame.ref_count() > 1 || copy {
                     // This page is used by more then one process, so make it a private copy.
                     log::trace!("    - making {:?} into a private copy", page);
-
-                    let frame = pmm_alloc(BuddyOrdering::Size4KiB);
-
-                    unsafe {
-                        address.as_ptr::<u8>().copy_to(
-                            (crate::PHYSICAL_MEMORY_OFFSET + frame.as_u64()).as_mut_ptr(),
-                            Size4KiB::SIZE as _,
-                        );
-                    }
-
-                    offset_table.unmap(page).expect("unmap faild").1.flush();
-                    let frame = PhysFrame::containing_address(frame);
-
-                    unsafe {
-                        offset_table.map_to(
-                            page,
-                            frame,
-                            PageTableFlags::PRESENT
-                                | PageTableFlags::USER_ACCESSIBLE
-                                | self.protection.into(),
-                            &mut FRAME_ALLOCATOR,
-                        )
-                    }
-                    .expect("page mapping failed")
-                    .flush();
+                    Self::map_copied(offset_table, page, self.protection).unwrap();
                 } else {
                     // This page is used by only one process, so make it writable.
                     log::trace!("    - making {:?} writable", page);
@@ -420,7 +451,7 @@ impl Mapping {
                                 | self.protection.into(),
                         )
                     }
-                    .expect("failed to update page table flags")
+                    .unwrap()
                     .flush();
                 }
 
@@ -516,6 +547,30 @@ impl VmProtected {
         }
     }
 
+    fn log(&self) {
+        for mmap in &self.mappings {
+            if let Some(file) = mmap.file.as_ref() {
+                log::debug!(
+                    "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
+                    mmap.start_addr,
+                    mmap.end_addr,
+                    mmap.protection,
+                    mmap.flags,
+                    file.offset,
+                    file.size,
+                );
+            } else {
+                log::debug!(
+                    "{:?}..{:?} => {:?}, {:?}",
+                    mmap.start_addr,
+                    mmap.end_addr,
+                    mmap.protection,
+                    mmap.flags,
+                );
+            }
+        }
+    }
+
     fn handle_page_fault(
         &mut self,
         reason: PageFaultErrorCode,
@@ -565,8 +620,9 @@ impl VmProtected {
             result
         } else {
             log::trace!("mapping not found for address: {:#x}", accessed_address);
+            self.log();
 
-            // Else the mapping does not exist, so return false.
+            // else the mapping does not exist, so return false.
             false
         }
     }
@@ -730,6 +786,137 @@ impl VmProtected {
         })
     }
 
+    fn load_bin<'header>(
+        &mut self,
+        bin: DirCacheItem,
+    ) -> Result<LoadedBinary<'header>, ElfLoadError> {
+        let elf = Elf::new(bin.clone())?;
+        let header = &elf.header;
+
+        let load_offset = VirtAddr::new(
+            if header.pt2.type_().as_type() == header::Type::SharedObject {
+                0x40000000u64
+            } else {
+                0u64
+            },
+        );
+
+        let mut entry_point = load_offset + header.pt2.entry_point();
+
+        log::debug!("entry point: {:#x}", entry_point);
+        log::debug!("entry point type: {:?}", header.pt2.type_().as_type());
+
+        let mut base_addr = VirtAddr::zero();
+
+        for header in elf.program_iter() {
+            let header_type = header
+                .get_type()
+                .expect("load_bin: failed to get program header type");
+
+            let header_flags = header.flags();
+
+            if header_type == xmas_elf::program::Type::Load {
+                let virtual_start = VirtAddr::new(header.virtual_addr()).align_down(Size4KiB::SIZE)
+                    + load_offset.as_u64();
+
+                if base_addr == VirtAddr::zero() {
+                    base_addr = virtual_start;
+                }
+
+                let virtual_end = VirtAddr::new(header.virtual_addr() + header.mem_size())
+                    .align_up(Size4KiB::SIZE)
+                    + load_offset.as_u64();
+
+                let virtual_fend = VirtAddr::new(header.virtual_addr() + header.file_size())
+                    + load_offset.as_u64();
+
+                let data_size = virtual_fend - virtual_start;
+                let aligned_data_size = align_up(data_size, Size4KiB::SIZE);
+
+                let file_offset = align_down(header.offset(), Size4KiB::SIZE);
+
+                let mut prot = MMapProt::empty();
+
+                if header_flags.is_read() {
+                    prot.insert(MMapProt::PROT_READ);
+                }
+
+                if header_flags.is_write() {
+                    prot.insert(MMapProt::PROT_WRITE);
+                }
+
+                if header_flags.is_execute() {
+                    prot.insert(MMapProt::PROT_EXEC);
+                }
+
+                /*
+                 * The last non-bss frame of the segment consists partly of data and partly of bss
+                 * memory, which must be zeroed. Unfortunately, the file representation might have
+                 * reused the part of the frame that should be zeroed to store the next segment. This
+                 * means that we can't simply overwrite that part with zeroes, as we might overwrite
+                 * other data this way.
+                 *
+                 * Example:
+                 *
+                 *   XXXXXXXXXXXXXXX000000YYYYYYY000ZZZZZZZZZZZ     virtual memory (XYZ are data)
+                 *   |·············|     /·····/   /·········/
+                 *   |·············| ___/·····/   /·········/
+                 *   |·············|/·····/‾‾‾   /·········/
+                 *   |·············||·····|/·̅·̅·̅·̅·̅·····/‾‾‾‾
+                 *   XXXXXXXXXXXXXXXYYYYYYYZZZZZZZZZZZ              file memory (zeros are not saved)
+                 *   '       '       '       '        '
+                 *   The areas filled with dots (`·`) indicate a mapping between virtual and file
+                 *   memory. We see that the data regions `X`, `Y`, `Z` have a valid mapping, while
+                 *   the regions that are initialized with 0 have not.
+                 *
+                 *   The ticks (`'`) below the file memory line indicate the start of a new frame. We
+                 *   see that the last frames of the `X` and `Y` regions in the file are followed
+                 *   by the bytes of the next region. So we can't zero these parts of the frame
+                 *   because they are needed by other memory regions.
+                 */
+                let address = self
+                    .mmap(
+                        virtual_start,
+                        data_size as usize,
+                        prot,
+                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED,
+                        file_offset as usize,
+                        Some(bin.clone()),
+                    )
+                    .ok_or(ElfLoadError::MemoryMapError)?;
+
+                let virtual_fend = address + aligned_data_size;
+
+                if virtual_fend < virtual_end {
+                    let bss_size = virtual_end - virtual_fend;
+
+                    self.mmap(
+                        virtual_fend,
+                        bss_size as usize,
+                        prot,
+                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_FIXED,
+                        0,
+                        None,
+                    )
+                    .ok_or(ElfLoadError::MemoryMapError)?;
+                }
+            } else if header_type == xmas_elf::program::Type::Tls {
+            } else if header_type == xmas_elf::program::Type::Interp {
+                let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
+
+                let res = self.load_bin(ld)?;
+                entry_point = res.entry_point;
+            }
+        }
+
+        Ok(LoadedBinary {
+            elf,
+            entry_point,
+
+            base_addr,
+        })
+    }
+
     fn clear(&mut self) {
         let mut cursor = self.mappings.cursor_front_mut();
 
@@ -835,126 +1022,7 @@ impl Vm {
 
     /// Mapping the provided `bin` file into the VM.
     pub fn load_bin(&self, bin: DirCacheItem) -> Result<LoadedBinary, ElfLoadError> {
-        let elf = Elf::new(bin.clone())?;
-        let header = &elf.header;
-
-        let load_offset = VirtAddr::new(
-            if header.pt2.type_().as_type() == header::Type::SharedObject {
-                0x40000000u64
-            } else {
-                0u64
-            },
-        );
-
-        let mut entry_point = load_offset + header.pt2.entry_point();
-
-        log::debug!("entry point: {:#x}", entry_point);
-        log::debug!("entry point type: {:?}", header.pt2.type_().as_type());
-
-        let mut base_addr = VirtAddr::zero();
-
-        for header in elf.program_iter() {
-            let header_type = header
-                .get_type()
-                .expect("load_bin: failed to get program header type");
-
-            let header_flags = header.flags();
-
-            if header_type == xmas_elf::program::Type::Load {
-                let virtual_start = VirtAddr::new(header.virtual_addr()).align_down(Size4KiB::SIZE)
-                    + load_offset.as_u64();
-
-                if base_addr == VirtAddr::zero() {
-                    base_addr = virtual_start;
-                }
-
-                let virtual_end = VirtAddr::new(header.virtual_addr() + header.mem_size())
-                    .align_up(Size4KiB::SIZE)
-                    + load_offset.as_u64();
-
-                let virtual_fend = VirtAddr::new(header.virtual_addr() + header.file_size())
-                    + load_offset.as_u64();
-
-                let data_size = virtual_fend - virtual_start;
-                let file_offset = align_down(header.offset(), Size4KiB::SIZE);
-                let size = (virtual_end - virtual_start) as usize;
-
-                let mut prot = MMapProt::empty();
-
-                if header_flags.is_read() {
-                    prot.insert(MMapProt::PROT_READ);
-                }
-
-                prot.insert(MMapProt::PROT_WRITE);
-
-                if header_flags.is_execute() {
-                    prot.insert(MMapProt::PROT_EXEC);
-                }
-
-                /*
-                 * The last non-bss frame of the segment consists partly of data and partly of bss
-                 * memory, which must be zeroed. Unfortunately, the file representation might have
-                 * reused the part of the frame that should be zeroed to store the next segment. This
-                 * means that we can't simply overwrite that part with zeroes, as we might overwrite
-                 * other data this way.
-                 *
-                 * Example:
-                 *
-                 *   XXXXXXXXXXXXXXX000000YYYYYYY000ZZZZZZZZZZZ     virtual memory (XYZ are data)
-                 *   |·············|     /·····/   /·········/
-                 *   |·············| ___/·····/   /·········/
-                 *   |·············|/·····/‾‾‾   /·········/
-                 *   |·············||·····|/·̅·̅·̅·̅·̅·····/‾‾‾‾
-                 *   XXXXXXXXXXXXXXXYYYYYYYZZZZZZZZZZZ              file memory (zeros are not saved)
-                 *   '       '       '       '        '
-                 *   The areas filled with dots (`·`) indicate a mapping between virtual and file
-                 *   memory. We see that the data regions `X`, `Y`, `Z` have a valid mapping, while
-                 *   the regions that are initialized with 0 have not.
-                 *
-                 *   The ticks (`'`) below the file memory line indicate the start of a new frame. We
-                 *   see that the last frames of the `X` and `Y` regions in the file are followed
-                 *   by the bytes of the next region. So we can't zero these parts of the frame
-                 *   because they are needed by other memory regions.
-                 */
-                let address = self
-                    .inner
-                    .lock()
-                    .mmap(
-                        virtual_start,
-                        size,
-                        prot,
-                        MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED | MMapFlags::MAP_ANONYOMUS,
-                        0,
-                        None,
-                    )
-                    .ok_or(ElfLoadError::MemoryMapError)?;
-
-                let buffer = unsafe {
-                    core::slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), data_size as usize)
-                };
-
-                bin.inode()
-                    .read_at(file_offset as usize, buffer)
-                    .map_err(|err| ElfLoadError::ReadError(err))?;
-
-                if !header.flags().is_write() {
-                    // TODO: Update the protection flags to remove the writable flag.
-                }
-            } else if header_type == xmas_elf::program::Type::Tls {
-            } else if header_type == xmas_elf::program::Type::Interp {
-                let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
-
-                let res = self.load_bin(ld)?;
-                entry_point = res.entry_point;
-            }
-        }
-
-        Ok(LoadedBinary {
-            elf,
-            entry_point,
-
-            base_addr,
-        })
+        self.inner.lock().load_bin(bin)
     }
 
     /// Clears and unmaps all of the mappings in the VM.
@@ -976,28 +1044,6 @@ impl Vm {
     }
 
     pub(crate) fn log(&self) {
-        let this = self.inner.lock();
-
-        for mmap in &this.mappings {
-            if let Some(file) = mmap.file.as_ref() {
-                log::debug!(
-                    "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
-                    mmap.start_addr,
-                    mmap.end_addr,
-                    mmap.protection,
-                    mmap.flags,
-                    file.offset,
-                    file.size,
-                );
-            } else {
-                log::debug!(
-                    "{:?}..{:?} => {:?}, {:?}",
-                    mmap.start_addr,
-                    mmap.end_addr,
-                    mmap.protection,
-                    mmap.flags,
-                );
-            }
-        }
+        self.inner.lock().log()
     }
 }

@@ -15,12 +15,14 @@
 ; You should have received a copy of the GNU General Public License
 ; along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+bits 64
+
+%include "registers.inc"
+
 global jump_userland_exec
 global task_spinup
 global iretq_init
-global sysret_fork_init
-
-extern restore_user_tls
+global fork_init
 
 jump_userland_exec:
     push rdi ; Param: stack
@@ -28,90 +30,66 @@ jump_userland_exec:
     push rdx ; Param: RFLAGS
 
     cli
-    call restore_user_tls
 
     pop r11
     pop rcx
     pop rsp
 
     swapgs
-
     o64 sysret
 
 iretq_init:
-    pop rdi
+    cli
+
+    ; pop the error code
+    add rsp, 8
+
+    pop_preserved
+    pop_scratch
+
     iretq
 
-sysret_fork_init:
+fork_init:
     cli
-    call restore_user_tls
 
-    pop rax
-    mov cr2, rax
-    pop rax
-    pop rbx
-    pop rcx
-    pop rdx
-    pop rsi
-    pop rdi
-    pop rbp
-    pop r8
-    pop r9
-    pop r10
-    pop r11
-    pop r12
-    pop r13
-    pop r14
-    pop r15
+    ; pop the error code
+    add rsp, 8
 
-    pop r11     ; Restore rflags
-    pop rcx     ; Restore rip
-
-    push rdx
-
-    mov rdx, rsp
-    add rdx, 16            ; Skip RDX and user RSP currently on the stack
-    mov [gs:0x04], rdx     ; Stash kernel stack
-
-    pop rdx
-    pop rsp                ; Restore user stack
+    pop_preserved
+    pop_scratch
 
     swapgs
-
-    o64 sysret
+    iretq
 
 ; extern "C" fn task_spinup(prev: &mut Context, next: &mut Context)
 ;
 ; Saves the current context into `prev` and restore the context from `next`.
 task_spinup:
-    pushfq
-
-    cli
-
+    ; save callee-saved registers and this must match
+    ; the ordering of the fields in the `Context` struct.
     push rbp
-    push r15
-    push r14
-    push r13
-    push r12
     push rbx
+    push r12
+    push r13
+    push r14
+    push r15
 
-    mov rax, cr3    ; Save CR3
+    mov rax, cr3    ; save CR3
     push rax
 
-    mov [rdi], rsp	; Update old context pointer with current stack pointer
-    mov rsp, rsi	; Switch to new stack
+    mov [rdi], rsp	; update old context pointer with current stack pointer
+    mov rsp, rsi	; switch to new stack
 
-    pop rax         ; Restore CR3
+    pop rax         ; restore CR3
     mov cr3, rax
 
-    pop rbx
-    pop r12
-    pop r13
-    pop r14
+    ; restore callee-saved registers
     pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
     pop rbp
 
-    popfq
-
-    ; Resume the next thread.
+    ; resume the next thread
     ret

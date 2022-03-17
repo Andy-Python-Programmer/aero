@@ -25,6 +25,7 @@ use core::sync::atomic::Ordering;
 use alloc::alloc::alloc_zeroed;
 
 use alloc::vec::Vec;
+use bit_field::BitField;
 use spin::RwLock;
 
 use crate::apic;
@@ -59,7 +60,7 @@ pub struct Madt {
 
 impl Madt {
     pub(super) fn init(&'static self) {
-        log::debug!("Storing AP trampoline at 0x1000");
+        log::debug!("storing AP trampoline at 0x1000");
 
         let page_index = unsafe { smp_prepare_trampoline() };
 
@@ -110,9 +111,14 @@ impl Madt {
                     // Send the init IPI.
                     unsafe {
                         if bsp.apic_type() == ApicType::X2apic {
-                            bsp.set_icr_x2apic(((local_apic.apic_id as u64) << 32) | 0x4500);
+                            bsp.set_icr(((local_apic.apic_id as u64) << 32) | 0x4500);
                         } else {
-                            bsp.set_icr_xapic((local_apic.apic_id as u32) << 24, 0x4500);
+                            let mut value = 0u64;
+
+                            value.set_bits(..32, (local_apic.apic_id as u64) << 24);
+                            value.set_bits(32.., 0x4500);
+
+                            bsp.set_icr(value);
                         }
                     }
 
@@ -121,14 +127,16 @@ impl Madt {
                     // Send the startup IPI.
                     unsafe {
                         if bsp.apic_type() == ApicType::X2apic {
-                            bsp.set_icr_x2apic(
+                            bsp.set_icr(
                                 ((local_apic.apic_id as u64) << 32) | (page_index | 0x4600) as u64,
                             );
                         } else {
-                            bsp.set_icr_xapic(
-                                ((local_apic.apic_id as u64) << 24) as u32,
-                                (page_index | 0x4600) as u32,
-                            )
+                            let mut value = 0u64;
+
+                            value.set_bits(..32, (local_apic.apic_id as u64) << 24);
+                            value.set_bits(32.., (page_index | 0x4600) as u64);
+
+                            bsp.set_icr(value);
                         }
                     }
 
@@ -220,7 +228,7 @@ impl Iterator for MadtIterator {
                     0x80..=0xff => continue,
 
                     _ => {
-                        log::warn!("Unknown MADT entry with id: {}", header.entry_type);
+                        log::warn!("unknown MADT entry with id: {}", header.entry_type);
 
                         return None;
                     }

@@ -33,7 +33,6 @@ use alloc::vec::Vec;
 
 use super::gdt::*;
 
-use crate::userland::scheduler;
 use crate::utils::io;
 use crate::utils::sync::Mutex;
 
@@ -115,6 +114,7 @@ pub struct CpuInfo {
 
 pub struct PerCpuData {
     pub cpuid: usize,
+    pub lapic_timer_frequency: u32,
 
     pub(super) gdt: &'static mut [GdtEntry],
 }
@@ -188,17 +188,5 @@ where
 
     for info in lock.iter() {
         f(&info);
-    }
-}
-
-#[no_mangle]
-extern "C" fn restore_user_tls() {
-    unsafe {
-        let base = scheduler::get_scheduler()
-            .current_task()
-            .arch_task_mut()
-            .get_fs_base();
-
-        io::wrmsr(io::IA32_FS_BASE, base.as_u64());
     }
 }

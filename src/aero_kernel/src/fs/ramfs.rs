@@ -31,7 +31,7 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::RwLock;
 
-use crate::mem::paging::PhysAddr;
+use crate::mem::paging::*;
 use crate::utils::downcast;
 use crate::utils::sync::Mutex;
 
@@ -311,7 +311,7 @@ impl INodeInterface for LockedRamINode {
         }
     }
 
-    fn mmap(&self, offset: usize, flags: MMapFlags) -> Result<PhysAddr> {
+    fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> Result<PhysFrame> {
         let this = self.0.read();
 
         match &this.contents {
@@ -319,10 +319,20 @@ impl INodeInterface for LockedRamINode {
                 let device = dev.clone();
                 drop(this);
 
-                device.mmap(offset, flags)
+                device.mmap(offset, size, flags)
             }
 
-            // TODO: Support memory mapping ramfs files:
+            FileContents::StaticContent(contents) => {
+                // TODO: Support shared static content ramfs file mappings.
+                assert!(!flags.contains(MMapFlags::MAP_SHARED));
+
+                let private_cp: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
+                private_cp.as_slice_mut()[..size].copy_from_slice(&contents[offset..offset + size]);
+
+                Ok(private_cp)
+            }
+
+            // TODO: Support other memory mapping ramfs files:
             _ => Err(FileSystemError::NotSupported),
         }
     }
