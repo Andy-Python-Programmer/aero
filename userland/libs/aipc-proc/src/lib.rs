@@ -108,7 +108,7 @@ pub fn def(attr: TokenStream, input: TokenStream) -> TokenStream {
         } else {
             // instance method
             quote::quote! {
-                pub async fn #func_name(&self, #(#args2),*) {
+                pub async fn #func_name(&self, #(#args2),*) #ret {
                     let (id, fut) = ::aipc::async_runtime::alloc_reply_id();
                     let req = ::aipc::serialize_buffer((
                         id - 1,
@@ -126,9 +126,9 @@ pub fn def(attr: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     quote::quote! {
-        struct #name(::aipc::ClientObject);
+        pub struct #name(::aipc::ClientObject);
         impl #name {
-            const __OBJECT_PATH: &'static str = #attr;
+            pub const __OBJECT_PATH: &'static str = #attr;
             #(#methods2)*
         }
     }
@@ -166,7 +166,7 @@ pub fn object(attr: TokenStream, input: TokenStream) -> TokenStream {
             })
             .map(|a| {
                 quote::quote! {
-                    ::aipc::deserialize::<#a>(&mut request_deserializer)
+                    ::aipc::deserialize::<#a>(&mut request_deserializer).unwrap()
                 }
             })
             .collect();
@@ -213,7 +213,7 @@ pub fn object(attr: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     let result = quote::quote! {
-        struct #name(::aipc::ServerObject<#data>);
+        pub struct #name(::aipc::ServerObject<#data>);
         impl #data {
             #(#t_items)*
         }
@@ -264,6 +264,7 @@ pub fn object(attr: TokenStream, input: TokenStream) -> TokenStream {
                         ::aipc::serialize_buffer(())
                     },
                     _ => {
+                        println!("[aipc] call to unhandled function {}.{}", call_target, typ);
                         None
                     }
                 }

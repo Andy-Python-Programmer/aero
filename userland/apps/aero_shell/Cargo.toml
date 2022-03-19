@@ -7,4 +7,3 @@ edition = "2021"
 [dependencies]
 std = { path = "../../libs/aero_std" }
 aero_syscall = { path = "../../../src/aero_syscall" }
-aero_ipc = { path = "../../libs/aero_ipc" }

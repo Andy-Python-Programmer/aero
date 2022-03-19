@@ -17,26 +17,34 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_ipc::{SystemService, WindowService};
 use aero_syscall::*;
+use aipc::async_runtime::Listener;
 
 fn main() {
-    let self_pid = sys_getpid().unwrap();
-    let ipc_root = sys_ipc_discover_root().unwrap();
-    let system_client = SystemService::open(ipc_root);
+    let mut rt = aipc::async_runtime::AsyncRuntime::new();
+    
+    rt.spawn(async {
+        let self_pid = sys_getpid().unwrap();
+        let ipc_root = sys_ipc_discover_root().unwrap();
+        let system_client = aipc_api::system_server::SystemServer::open(ipc_root).await;
 
-    system_client.announce(self_pid, "WindowServer").unwrap();
-
-    aero_ipc::listen(WindowService::handler(WindowServer));
-
-    loop {
-        aero_ipc::service_request();
-    }
+        system_client
+            .announce(self_pid, "WindowServer")
+            .await
+            .unwrap();
+        
+        ConcreteWindowServer::listen();
+    });
+    rt.run();
 }
 
-struct WindowServer;
+struct WindowServerData;
 
-impl WindowService::Server for WindowServer {
+#[aipc::object(ConcreteWindowServer as aipc_api::window_server::WindowServer)]
+impl WindowServerData {
+    fn open() -> WindowServerData {
+        WindowServerData
+    }
     fn create_window(&self, name: &str) -> usize {
         println!("[window_server] creating window with name: {}", name);
 

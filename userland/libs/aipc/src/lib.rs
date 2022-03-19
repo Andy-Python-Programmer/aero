@@ -26,6 +26,7 @@ use postcard::Deserializer;
 use serde::Serialize;
 
 pub mod async_runtime;
+
 // private internals needed for the proc macro
 pub mod __private {
     pub use alloc::sync::Arc;

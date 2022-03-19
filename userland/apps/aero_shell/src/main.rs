@@ -21,7 +21,6 @@ extern crate alloc;
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use aero_ipc::SystemService;
 use aero_syscall::signal::*;
 use aero_syscall::*;
 
@@ -126,17 +125,15 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 // if the test kernel is built instead of randomly bloating the shell
                 // with tests :).
 
-                // let fb = sys_open("/dev/fb", OpenFlags::O_RDWR)?;
+                let fb = sys_open("/dev/fb", OpenFlags::O_RDWR)?;
 
-                // let buffer = &[u32::MAX; (1024 * 768)];
-                // let casted = buffer.as_ptr() as *mut u8;
-                // let casted = unsafe { core::slice::from_raw_parts(casted, (1024 * 768) as usize) };
+                let buffer = &[u32::MAX; (1024 * 768)];
+                let casted = buffer.as_ptr() as *mut u8;
+                let casted = unsafe { core::slice::from_raw_parts(casted, (1024 * 768) as usize) };
 
-                // println!("writing to fb");
-                // sys_write(fb, casted)?;
-                // sys_close(fb)?;
-
-                uwutest()?;
+                println!("writing to fb");
+                sys_write(fb, casted)?;
+                sys_close(fb)?;
             }
 
             "pid" => {
@@ -293,21 +290,6 @@ fn print_kernel_log() -> Result<(), AeroSyscallError> {
     // TODO: Add colored output back :^)
 
     cat_file(Some("/dev/kmsg"))
-}
-
-fn uwutest() -> Result<(), AeroSyscallError> {
-    let my_pid = sys_getpid()?;
-    let ipc = SystemService::open(sys_ipc_discover_root()?);
-
-    ipc.announce(my_pid, "TestServer")
-        .expect("Failed to announce");
-
-    println!(
-        "TestServer is at {}",
-        ipc.discover("TestServer").expect("Failed to discover")
-    );
-
-    Ok(())
 }
 
 fn get_uptime() -> Result<String, AeroSyscallError> {
