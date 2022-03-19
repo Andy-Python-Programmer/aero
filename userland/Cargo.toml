@@ -1,5 +1,5 @@
 [workspace]
-members = ["apps/*", "servers/*"]
+members = ["apps/*", "servers/*", "libs/*"]
 
 [profile.release]
 debug = true

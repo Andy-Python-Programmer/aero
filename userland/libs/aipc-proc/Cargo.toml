@@ -1,0 +1,13 @@
+[package]
+name = "aipc-proc"
+version = "0.1.0"
+edition = "2021"
+authors = ["pitust <piotr@stelmaszerk.com>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0.82", features = ["proc-macro", "full"] }
+quote = "1.0.10"
+proc-macro2 = "1.0.36"

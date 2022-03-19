@@ -51,6 +51,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "aipc"
+version = "0.1.0"
+dependencies = [
+ "aero_ipc",
+ "aero_syscall",
+ "aipc-proc",
+ "hashbrown 0.11.2",
+ "postcard",
+ "serde",
+ "spin 0.9.2",
+ "std",
+]
+
+[[package]]
+name = "aipc-proc"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "aipc_test"
+version = "0.1.0"
+dependencies = [
+ "aero_syscall",
+ "aipc",
+ "postcard",
+ "spin 0.9.2",
+ "std",
+]
+
+[[package]]
 name = "atomic-polyfill"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -157,6 +191,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0c35f58762feb77d74ebe43bdbc3210f09be9fe6742234d573bacc26ed92b67"
 dependencies = [
  "byteorder",
+]
+
+[[package]]
+name = "hashbrown"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+dependencies = [
+ "ahash",
 ]
 
 [[package]]
@@ -428,7 +471,7 @@ version = "0.1.0"
 dependencies = [
  "aero_ipc",
  "aero_syscall",
- "hashbrown",
+ "hashbrown 0.12.0",
  "spin 0.9.2",
  "std",
 ]
@@ -496,7 +539,7 @@ version = "0.1.0"
 dependencies = [
  "aero_ipc",
  "aero_syscall",
- "hashbrown",
+ "hashbrown 0.12.0",
  "spin 0.9.2",
  "std",
 ]

@@ -1,0 +1,12 @@
+[package]
+name = "aipc_test"
+version = "0.1.0"
+edition = "2021"
+authors = ["pitust <piotr@stelmaszek.com>"]
+
+[dependencies]
+std = { path = "../../libs/aero_std" }
+aero_syscall = { path = "../../../src/aero_syscall" }
+aipc = { path = "../../libs/aipc" }
+postcard = { version = "0.7.3", features = ["alloc"] }
+spin = "0.9"
