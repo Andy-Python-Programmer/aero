@@ -16,3 +16,9 @@ ipc! {
         fn discover(name: &str) -> crate::SystemServiceResult<usize>;
     }
 }
+
+ipc! {
+    trait WindowService {
+        fn create_window(name: &str) -> usize;
+    }
+}

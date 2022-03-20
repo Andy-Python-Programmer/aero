@@ -29,14 +29,16 @@ use aero_syscall::TimeSpec;
 use stivale_boot::v2::StivaleEpochTag;
 
 use crate::apic;
-use crate::userland::scheduler;
+
+use crate::arch::interrupts;
+use crate::arch::interrupts::InterruptStack;
+
 use crate::utils::io;
 use crate::utils::sync::Mutex;
 
 const PIT_FREQUENCY_HZ: usize = 1000;
-const SCHED_TIMESLICE_MS: usize = 15;
+pub const PIT_DIVIDEND: usize = 1193182;
 
-static SCHED_TICKS: AtomicUsize = AtomicUsize::new(0);
 static UPTIME_RAW: AtomicUsize = AtomicUsize::new(0);
 static UPTIME_SEC: AtomicUsize = AtomicUsize::new(0);
 
@@ -50,7 +52,42 @@ pub fn get_uptime_ticks() -> usize {
     UPTIME_SEC.load(Ordering::SeqCst)
 }
 
-pub fn tick() {
+pub fn get_realtime_clock() -> TimeSpec {
+    REALTIME_CLOCK.lock().clone()
+}
+
+/// Returns the current amount of PIT ticks.
+pub fn get_current_count() -> u16 {
+    unsafe {
+        io::outb(0x43, 0);
+
+        let lower = io::inb(0x40) as u16;
+        let higher = io::inb(0x40) as u16;
+
+        (higher << 8) | lower
+    }
+}
+
+pub fn set_reload_value(new_count: u16) {
+    // Channel 0, lo/hi access mode, mode 2 (rate generator)
+    unsafe {
+        io::outb(0x43, 0x34);
+        io::outb(0x40, new_count as u8);
+        io::outb(0x40, (new_count >> 8) as u8);
+    }
+}
+
+pub fn set_frequency(frequency: usize) {
+    let mut new_divisor = PIT_DIVIDEND / frequency;
+
+    if PIT_DIVIDEND % frequency > frequency / 2 {
+        new_divisor += 1;
+    }
+
+    set_reload_value(new_divisor as u16);
+}
+
+fn pit_irq_handler(_stack: &mut InterruptStack) {
     {
         let interval = aero_syscall::TimeSpec {
             tv_sec: 0,
@@ -76,44 +113,22 @@ pub fn tick() {
     if value % PIT_FREQUENCY_HZ == 0 {
         UPTIME_SEC.fetch_add(1, Ordering::Relaxed); // Increment uptime seconds
     }
-
-    let value = SCHED_TICKS.fetch_add(1, Ordering::Relaxed); // Increment scheduler ticks.
-
-    // Check if the ticks are equal to the scheduler timeslice. If so, then
-    // reschedule.
-    if value == SCHED_TIMESLICE_MS {
-        SCHED_TICKS.store(0, Ordering::Relaxed); // Reset the scheduler ticks counter.
-
-        scheduler::get_scheduler().inner.preempt();
-        return;
-    }
-}
-
-pub fn get_realtime_clock() -> TimeSpec {
-    REALTIME_CLOCK.lock().clone()
 }
 
 /// This function is responsible for initializing the PIT chip and setting
 /// up the IRQ.
 pub fn init() {
+    apic::get_local_apic().timer_calibrate();
+
     REALTIME_CLOCK.lock().tv_sec = EPOCH_TAG
         .get()
         .expect("failed to initialize realtime clock")
         .epoch as isize;
 
-    let mut x = 1193182 / PIT_FREQUENCY_HZ;
+    set_frequency(PIT_FREQUENCY_HZ);
 
-    if (1193182 % PIT_FREQUENCY_HZ) > (PIT_FREQUENCY_HZ / 2) {
-        x += 1;
-    }
+    let pit_vector = interrupts::allocate_vector();
+    interrupts::register_handler(pit_vector, pit_irq_handler);
 
-    unsafe {
-        io::outb(0x40, (x & 0x00ff) as u8);
-        io::wait();
-
-        io::outb(0x40, ((x & 0xff00) >> 8) as u8);
-        io::wait();
-    }
-
-    apic::io_apic_setup_legacy_irq(0, 1); // Set up the IRQ.
+    apic::io_apic_setup_legacy_irq(0, pit_vector, 1); // Set up the IRQ.
 }

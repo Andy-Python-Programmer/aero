@@ -218,7 +218,6 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_IPC_RECV => "ipc_recv",
         prelude::SYS_IPC_DISCOVER_ROOT => "ipc_discover_root",
         prelude::SYS_IPC_BECOME_ROOT => "ipc_become_root",
-        prelude::SYS_TELL => "tell",
 
         _ => unreachable!("unknown syscall"),
     }
@@ -756,11 +755,6 @@ pub fn sys_gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, AeroS
 
 pub fn sys_seek(fd: usize, offset: usize, whence: SeekWhence) -> Result<usize, AeroSyscallError> {
     let value = syscall3(prelude::SYS_SEEK, fd, offset, whence as usize);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_tell(fd: usize) -> Result<usize, AeroSyscallError> {
-    let value = syscall1(prelude::SYS_TELL, fd);
     isize_as_syscall_result(value as _)
 }
 

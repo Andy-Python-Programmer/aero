@@ -34,8 +34,7 @@ struct PrdTable<'a> {
 
 impl<'a> PrdTable<'a> {
     pub fn new(addr: PhysAddr, entries: usize) -> PrdTable<'a> {
-        let mapped_addr = unsafe { crate::PHYSICAL_MEMORY_OFFSET + addr.as_u64() };
-        let ptr = mapped_addr.as_mut_ptr::<PrdEntry>();
+        let ptr = addr.as_hhdm_virt().as_mut_ptr::<PrdEntry>();
         let entries = unsafe { core::slice::from_raw_parts_mut(ptr, entries) };
 
         PrdTable::<'a> { data: entries }

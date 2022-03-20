@@ -78,10 +78,10 @@ pub fn init(
     memory_regions: &'static StivaleMemoryMapTag,
 ) -> Result<OffsetPageTable<'static>, MapToError<Size4KiB>> {
     let memory_regions = unsafe {
-        let addr = (memory_regions as *const StivaleMemoryMapTag) as u64;
-        let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
+        let ptr = memory_regions as *const StivaleMemoryMapTag;
+        let addr = PhysAddr::new(ptr as u64).as_hhdm_virt();
 
-        &*new_addr.as_mut_ptr::<StivaleMemoryMapTag>()
+        &*addr.as_mut_ptr::<StivaleMemoryMapTag>()
     };
 
     let active_level_4 = unsafe { active_level_4_table() };
@@ -98,8 +98,7 @@ pub fn init(
 pub unsafe fn active_level_4_table() -> &'static mut PageTable {
     let (level_4_table_frame, _) = controlregs::read_cr3();
 
-    let physical = level_4_table_frame.start_address();
-    let virtual_address = PHYSICAL_MEMORY_OFFSET + physical.as_u64();
+    let virtual_address = level_4_table_frame.start_address().as_hhdm_virt();
     let page_table_ptr: *mut PageTable = virtual_address.as_mut_ptr();
 
     &mut *page_table_ptr

@@ -204,7 +204,7 @@ impl BootAllocator {
                 range.addr += size;
                 range.size -= size;
 
-                return unsafe { crate::PHYSICAL_MEMORY_OFFSET + addr.as_u64() }.as_mut_ptr();
+                return addr.as_hhdm_virt().as_mut_ptr();
             }
         }
 
@@ -268,8 +268,7 @@ impl GlobalFrameAllocator {
         }
 
         let ranges = unsafe {
-            let phys_addr = region.expect("stivale2: out of memory").as_u64();
-            let virt_addr = crate::PHYSICAL_MEMORY_OFFSET + phys_addr;
+            let virt_addr = region.expect("stivale2: out of memory").as_hhdm_virt();
 
             core::slice::from_raw_parts_mut::<MemoryRange>(
                 virt_addr.as_mut_ptr(),
@@ -552,9 +551,8 @@ impl VmFrame {
     pub fn dec_ref_count(&self) {
         let mut this = self.lock.lock();
 
-        if this.use_count > 0 {
-            this.use_count -= 1;
-        }
+        assert!(this.use_count > 0);
+        this.use_count -= 1;
     }
 
     pub fn inc_ref_count(&self) {
@@ -595,7 +593,7 @@ mod tests {
                 .is_free(frame.start_address(), 0));
         }
 
-        unsafe { offset_table.map_to(page, frame, PageTableFlags::PRESENT, &mut FRAME_ALLOCATOR) }
+        unsafe { offset_table.map_to(page, frame, PageTableFlags::PRESENT) }
             .unwrap()
             .flush();
 

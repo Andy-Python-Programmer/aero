@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 The Aero Project Developers.
+* Copyright (C) 2021-2022 The Aero Project Developers.
  *
  * This file is part of The Aero Project.
  *
@@ -17,24 +17,29 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_ipc::{SystemService, WindowService};
 use aero_syscall::*;
-use core::fmt::{Result as FmtResult, Write};
 
-pub struct Stdout;
-pub struct Stderr;
+fn main() {
+    let self_pid = sys_getpid().unwrap();
+    let ipc_root = sys_ipc_discover_root().unwrap();
+    let system_client = SystemService::open(ipc_root);
 
-impl Write for Stdout {
-    fn write_str(&mut self, str: &str) -> FmtResult {
-        sys_write(1, str.as_bytes()).unwrap();
+    system_client.announce(self_pid, "WindowServer").unwrap();
 
-        Ok(())
+    aero_ipc::listen(WindowService::handler(WindowServer));
+
+    loop {
+        aero_ipc::service_request();
     }
 }
 
-impl Write for Stderr {
-    fn write_str(&mut self, str: &str) -> FmtResult {
-        sys_write(2, str.as_bytes()).unwrap();
+struct WindowServer;
 
-        Ok(())
+impl WindowService::Server for WindowServer {
+    fn create_window(&self, name: &str) -> usize {
+        println!("[window_server] creating window with name: {}", name);
+
+        0
     }
 }

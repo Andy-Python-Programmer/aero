@@ -1,8 +1,11 @@
 use core::num::ParseIntError;
 
+use spin::Once;
 use stivale_boot::v2::StivaleModuleTag;
 
 use crate::rendy;
+
+static RAW_CMDLINE_STR: Once<&'static str> = Once::new();
 
 pub struct CommandLine {
     /// If set, then the kernel logs will be redirected onto the framebuffer until
@@ -47,7 +50,9 @@ fn parse_number(mut string: &str) -> Result<usize, ParseIntError> {
     }
 }
 
-pub fn parse(cmdline: &str, modules: &'static StivaleModuleTag) -> CommandLine {
+pub fn parse(cmdline: &'static str, modules: &'static StivaleModuleTag) -> CommandLine {
+    RAW_CMDLINE_STR.call_once(|| cmdline);
+
     // Chew up the leading spaces.
     let cmdline = cmdline.trim();
     let mut result = CommandLine::new();
@@ -95,6 +100,17 @@ pub fn parse(cmdline: &str, modules: &'static StivaleModuleTag) -> CommandLine {
     }
 
     result
+}
+
+/// Returns the raw kernel command line string.
+///
+/// ## Panics
+/// * If this function was invoked before the kernel command line was
+/// parsed using [`self::parse`].
+pub fn get_raw_cmdline() -> &'static str {
+    RAW_CMDLINE_STR
+        .get()
+        .expect("get_raw_cmdline: called before cmdline was parsed")
 }
 
 #[cfg(test)]

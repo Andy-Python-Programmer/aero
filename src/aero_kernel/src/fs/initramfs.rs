@@ -20,6 +20,7 @@
 use alloc::sync::Arc;
 
 use crate::fs::{FileSystemError, Path};
+use crate::mem::paging::PhysAddr;
 
 use super::cache::DirCacheItem;
 use super::ramfs::RamFs;
@@ -49,7 +50,7 @@ pub(super) fn init() -> Result<()> {
 
     let initrd_module = crate::INITRD_MODULE.get().unwrap();
     let initrd = unsafe {
-        let base = crate::PHYSICAL_MEMORY_OFFSET + initrd_module.start;
+        let base = PhysAddr::new(initrd_module.start).as_hhdm_virt();
         let length = initrd_module.end - initrd_module.start;
 
         core::slice::from_raw_parts(base.as_ptr(), length as usize)

@@ -17,12 +17,11 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::syscall::{RegistersFrame, SyscallFrame};
 use crate::userland;
 use crate::userland::scheduler;
 use crate::utils::StackHelper;
 
-use super::interrupts::{InterruptErrorStack, InterruptStack};
+use super::interrupts::InterruptStack;
 
 const REDZONE_SIZE: u64 = 128;
 const SYSCALL_INSTRUCTION_SIZE: u64 = 2;
@@ -45,16 +44,7 @@ impl SignalFrame {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn interrupt_check_signals_error_stack(stack: &mut InterruptErrorStack) {
-    if stack.stack.iret.is_user() {
-        interrupt_check_signals(&mut stack.stack)
-    }
-}
-
-/// Helper function to check for any pending signals from an interrupt.
-#[no_mangle]
-pub extern "C" fn interrupt_check_signals(stack: &mut InterruptStack) {
+pub fn interrupt_check_signals(stack: &mut InterruptStack) {
     // SAFTEY: If this interrupt did not originate from userland then we cannot
     // check for signals since the scheduler might not be initialized.
     if !stack.iret.is_user() {
@@ -103,11 +93,7 @@ pub extern "C" fn interrupt_check_signals(stack: &mut InterruptStack) {
 }
 
 /// Helper function to check for any pending signals from a sycall.
-pub fn syscall_check_signals(
-    _syscall_result: isize,
-    _syscall: &mut SyscallFrame,
-    _registers: &mut RegistersFrame,
-) {
+pub fn syscall_check_signals(_syscall_result: isize, _stack: &mut InterruptStack) {
     if let Some((_signal, entry)) = userland::signals::check_for_signals() {
         if let aero_syscall::signal::SignalHandler::Handle(_) = entry.handler() {
             todo!()
@@ -115,8 +101,8 @@ pub fn syscall_check_signals(
     }
 }
 
-pub fn sigreturn(sys: &mut SyscallFrame, regs: &mut RegistersFrame) -> usize {
-    let mut writer = StackHelper::new(&mut sys.rsp);
+pub fn sigreturn(stack: &mut InterruptStack) -> usize {
+    let mut writer = StackHelper::new(&mut stack.iret.rsp);
     let signal_frame = unsafe { writer.get::<SignalFrame>() };
 
     let current_task = scheduler::get_scheduler().current_task();
@@ -130,33 +116,11 @@ pub fn sigreturn(sys: &mut SyscallFrame, regs: &mut RegistersFrame) -> usize {
     writer.get_by(REDZONE_SIZE);
 
     let result = signal_frame.frame.scratch.rax;
-
-    let ret_regs = RegistersFrame {
-        cr2: 0, // TODO: we have to fill up the cr2 as well
-        rax: signal_frame.frame.scratch.rax,
-        rbx: signal_frame.frame.preserved.rbx,
-        rcx: signal_frame.frame.scratch.rcx,
-        rdx: signal_frame.frame.scratch.rdx,
-        rsi: signal_frame.frame.scratch.rsi,
-        rdi: signal_frame.frame.scratch.rdi,
-        rbp: signal_frame.frame.preserved.rbp,
-        r8: signal_frame.frame.scratch.r8,
-        r9: signal_frame.frame.scratch.r9,
-        r10: signal_frame.frame.scratch.r10,
-        r11: signal_frame.frame.scratch.r11,
-        r12: signal_frame.frame.preserved.r12,
-        r13: signal_frame.frame.preserved.r13,
-        r14: signal_frame.frame.preserved.r14,
-        r15: signal_frame.frame.preserved.r15,
-    };
-
-    sys.rflags = signal_frame.frame.iret.rflags;
-    sys.rip = signal_frame.frame.iret.rip;
+    *stack = signal_frame.frame;
 
     if signal_frame.restart_syscall != u64::MAX {
-        sys.rip -= SYSCALL_INSTRUCTION_SIZE;
+        stack.iret.rip -= SYSCALL_INSTRUCTION_SIZE;
     }
 
-    *regs = ret_regs;
     result as usize
 }

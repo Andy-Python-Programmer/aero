@@ -28,20 +28,15 @@
 
 #![feature(
     custom_test_frameworks,
-    core_intrinsics,
     alloc_error_handler,
     lang_items,
     panic_info_message,
-    thread_local,
     decl_macro,
     ptr_internals,
-    const_fn_trait_bound,
     linked_list_cursors,
     extern_types,
     new_uninit,
     box_syntax,
-    const_fn_fn_ptr_basics,
-    naked_functions,
     step_trait,
     const_btree_new,
     prelude_import
@@ -111,17 +106,14 @@ fn aero_main() -> ! {
     // NOTE: In this function we only want to initialize essential serivces, including
     // the task scheduler. Rest of the initializing (including kernel modules) should go
     // into the kernel main thread function instead.
-    drivers::mouse::init();
-    log::info!("loaded PS/2 driver");
-
-    time::init();
-    log::info!("loaded PIT");
-
     fs::init().unwrap();
     log::info!("loaded filesystem");
 
-    userland::init();
-    log::info!("loaded userland");
+    time::init();
+    log::info!("loaded timer");
+
+    userland::scheduler::init();
+    log::info!("loaded scheduler");
 
     apic::mark_bsp_ready(true);
 
@@ -173,28 +165,7 @@ fn kernel_main_thread() {
     unreachable!()
 }
 
-#[no_mangle]
-extern "C" fn kernel_ap_startup(ap_id: u64, stack_top_addr: VirtAddr) -> ! {
-    use crate::arch::tls;
-
-    log::debug!("booting CPU {}", ap_id);
-
-    arch::gdt::init_boot();
-    log::info!("AP{}: loaded boot GDT", ap_id);
-
-    tls::init(ap_id as usize);
-    log::info!("AP{}: loaded TLS", ap_id);
-
-    arch::gdt::init(stack_top_addr);
-    log::info!("AP{}: loaded GDT", ap_id);
-
-    apic::mark_ap_ready(true);
-
-    while !apic::is_bsp_ready() {
-        interrupts::pause();
-    }
-
-    userland::init_ap();
+extern "C" fn aero_ap_main(ap_id: usize) -> ! {
     log::info!("AP{}: Loaded userland", ap_id);
 
     loop {

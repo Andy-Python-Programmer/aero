@@ -59,8 +59,7 @@ impl Slab {
                 .allocate_frame()
                 .expect("slab_init: failed to allocate frame");
 
-            self.first_free = frame.start_address().as_u64() as usize;
-            self.first_free += crate::PHYSICAL_MEMORY_OFFSET.as_u64() as usize;
+            self.first_free = frame.start_address().as_hhdm_virt().as_u64() as usize;
         }
 
         let hdr_size = core::mem::size_of::<SlabHeader>() as u64;
@@ -204,7 +203,6 @@ impl Allocator {
                                 page,
                                 frame,
                                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                                &mut FRAME_ALLOCATOR,
                             )
                         }
                         .expect("Failed to map frame to extend the heap")
@@ -410,7 +408,6 @@ pub fn init_heap() {
                 Page::containing_address(VirtAddr::new(HEAP_START as _)),
                 frame,
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                &mut FRAME_ALLOCATOR,
             )
             .expect("init_heap: failed to initialize the heap")
             .flush();

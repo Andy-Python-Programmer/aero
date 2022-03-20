@@ -21,6 +21,7 @@ pub mod controlregs;
 pub mod gdt;
 pub mod interrupts;
 pub mod signals;
+pub mod syscall;
 pub mod task;
 pub mod tls;
 
@@ -68,8 +69,8 @@ static PAGING_TAG: Stivale5LevelPagingHeaderTag = Stivale5LevelPagingHeaderTag::
     .next((&UNMAP_NULL as *const StivaleUnmapNullHeaderTag).cast());
 
 /// The stivale2 specification says we need to define a "header structure".
-/// This structure needs to reside in the .stivale2hdr ELF section in order
-/// for the bootloader to find it. We use the #[linker_section] and #[used] macros to
+/// This structure needs to reside in the `.stivale2hdr` ELF section in order
+/// for the bootloader to find it. We use the `#[linker_section]` and `#[used]` macros to
 /// tell the compiler to put the following structure in said section.
 #[link_section = ".stivale2hdr"]
 #[no_mangle]
@@ -127,17 +128,15 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     }
 
     crate::UNWIND_INFO.call_once(move || unsafe {
-        let addr = (kernel_info as *const StivaleKernelFileV2Tag) as u64;
-        let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
-
-        &*new_addr.as_mut_ptr::<StivaleKernelFileV2Tag>()
+        &*(PhysAddr::new((kernel_info as *const StivaleKernelFileV2Tag) as u64)
+            .as_hhdm_virt()
+            .as_mut_ptr::<StivaleKernelFileV2Tag>())
     });
 
     crate::time::EPOCH_TAG.call_once(move || unsafe {
-        let addr = (epoch as *const StivaleEpochTag) as u64;
-        let new_addr = crate::PHYSICAL_MEMORY_OFFSET + addr;
-
-        &*new_addr.as_mut_ptr::<StivaleEpochTag>()
+        &*(PhysAddr::new((epoch as *const StivaleEpochTag) as u64)
+            .as_hhdm_virt()
+            .as_mut_ptr::<StivaleEpochTag>())
     });
 
     crate::INITRD_MODULE.call_once(move || {
@@ -159,10 +158,12 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
 
     // Parse the kernel command line.
     let command_line: &'static _ = boot_info.command_line().map_or("", |cmd| unsafe {
+        let cmdline = PhysAddr::new(cmd.command_line).as_hhdm_virt();
+
         // SAFETY: The bootloader has provided a pointer that points to a valid C
         // string with a NULL terminator of size less than `usize::MAX`, whose content
         // remain valid and has a static lifetime.
-        mem::c_str_as_str(cmd.command_line as *const u8)
+        mem::c_str_as_str(cmdline.as_ptr())
     });
 
     let command_line = cmdline::parse(command_line, modules);
@@ -184,14 +185,11 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     interrupts::init();
     log::info!("loaded IDT");
 
-    let apic_type = apic::init();
-    log::info!(
-        "Loaded local apic (x2apic={})",
-        apic_type.supports_x2_apic()
-    );
+    apic::init();
+    log::info!("loaded APIC");
 
     acpi::init(rsdp_address).unwrap();
-    log::info!("Loaded ACPI");
+    log::info!("loaded ACPI");
 
     tls::init(0);
     log::info!("loaded TLS");
@@ -201,8 +199,39 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     gdt::init(stack_top_addr);
     log::info!("loaded GDT");
 
-    // Initialize the non-arch specific parts of the kernel.
+    syscall::init();
+
+    // Architecture init is done. Now we can initialize and start the init
+    // process in the non-architecture specific part of the kernel.
     crate::aero_main();
+}
+
+#[no_mangle]
+extern "C" fn x86_64_aero_ap_main(ap_id: usize, stack_top_addr: VirtAddr) {
+    log::debug!("booting CPU {}", ap_id);
+
+    gdt::init_boot();
+    log::info!("AP{}: loaded boot GDT", ap_id);
+
+    tls::init(ap_id);
+    log::info!("AP{}: loaded TLS", ap_id);
+
+    gdt::init(stack_top_addr);
+    log::info!("AP{}: loaded GDT", ap_id);
+
+    syscall::init();
+
+    apic::mark_ap_ready(true);
+
+    // Wait for the BSP to be ready (after the BSP has initialized
+    // the scheduler).
+    while !apic::is_bsp_ready() {
+        core::hint::spin_loop();
+    }
+
+    // Architecture init is done. Now move on to the non-architecture specific
+    // initialization of the AP.
+    crate::aero_ap_main(ap_id);
 }
 
 pub fn init_cpu() {

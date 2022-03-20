@@ -20,8 +20,6 @@
 use crate::fs;
 use crate::fs::Path;
 
-use crate::syscall;
-
 pub mod scheduler;
 pub mod signals;
 pub mod task;
@@ -42,13 +40,4 @@ pub fn run_tests() -> fs::Result<()> {
 
     scheduler::get_scheduler().exec(utest_inode, None, None);
     Ok(())
-}
-
-pub fn init_ap() {
-    syscall::init();
-}
-
-pub fn init() {
-    scheduler::init();
-    syscall::init();
 }

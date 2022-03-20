@@ -173,29 +173,24 @@ pub trait Mapper<S: PageSize> {
     /// because of TLB races. It's worth noting that all the above requirements
     /// also apply to shared mappings, including the aliasing requirements.
     #[inline]
-    unsafe fn map_to<A>(
+    unsafe fn map_to(
         &mut self,
         page: Page<S>,
         frame: PhysFrame<S>,
         flags: PageTableFlags,
-        frame_allocator: &mut A,
     ) -> Result<MapperFlush<S>, MapToError<S>>
     where
         Self: Sized,
-        A: FrameAllocator<Size4KiB> + ?Sized,
     {
         let parent_table_flags = flags
             & (PageTableFlags::PRESENT
                 | PageTableFlags::WRITABLE
                 | PageTableFlags::USER_ACCESSIBLE);
 
-        self.map_to_with_table_flags(page, frame, flags, parent_table_flags, frame_allocator)
+        self.map_to_with_table_flags(page, frame, flags, parent_table_flags)
     }
 
     /// Creates a new mapping in the page table.
-    ///
-    /// This function might need additional physical frames to create new page tables. These
-    /// frames are allocated from the `allocator` argument. At most three frames are required.
     ///
     /// The flags of the parent table(s) can be explicitly specified. Those flags are used for
     /// newly created table entries, and for existing entries the flags are added.
@@ -231,17 +226,15 @@ pub trait Mapper<S: PageSize> {
     /// the same in all address spaces, otherwise undefined behavior can occur
     /// because of TLB races. It's worth noting that all the above requirements
     /// also apply to shared mappings, including the aliasing requirements.
-    unsafe fn map_to_with_table_flags<A>(
+    unsafe fn map_to_with_table_flags(
         &mut self,
         page: Page<S>,
         frame: PhysFrame<S>,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        frame_allocator: &mut A,
     ) -> Result<MapperFlush<S>, MapToError<S>>
     where
-        Self: Sized,
-        A: FrameAllocator<Size4KiB> + ?Sized;
+        Self: Sized;
 
     /// Removes a mapping from the page table and returns the frame that used to be mapped.
     ///
@@ -276,20 +269,18 @@ pub trait Mapper<S: PageSize> {
     /// This is a convencience function that invokes [`Mapper::map_to`] internally, so
     /// all safety requirements of it also apply for this function.
     #[inline]
-    unsafe fn identity_map<A>(
+    unsafe fn identity_map(
         &mut self,
         frame: PhysFrame<S>,
         flags: PageTableFlags,
-        frame_allocator: &mut A,
     ) -> Result<MapperFlush<S>, MapToError<S>>
     where
         Self: Sized,
-        A: FrameAllocator<Size4KiB> + ?Sized,
         S: PageSize,
         Self: Mapper<S>,
     {
         let page = Page::containing_address(VirtAddr::new(frame.start_address().as_u64()));
-        self.map_to(page, frame, flags, frame_allocator)
+        self.map_to(page, frame, flags)
     }
 }
 
@@ -308,6 +299,8 @@ impl<S: PageSize> MapperFlush<S> {
     fn new(page: Page<S>) -> Self {
         MapperFlush(page)
     }
+
+    pub fn ignore(self) {}
 
     /// Flush the page from the TLB to ensure that the newest mapping is used.
     #[inline]
@@ -410,28 +403,22 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
         }
     }
 
-    fn map_to_2mib<A>(
+    fn map_to_2mib(
         &mut self,
         page: Page<Size2MiB>,
         frame: PhysFrame<Size2MiB>,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        allocator: &mut A,
-    ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>>
-    where
-        A: FrameAllocator<Size4KiB> + ?Sized,
-    {
+    ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>> {
         let mut is_alloc_4 = false;
 
         let p4;
 
         if self.level_5_paging_enabled {
             let p5 = &mut self.page_table;
-            let (alloc, yes) = self.page_table_walker.create_next_table(
-                &mut p5[page.p5_index()],
-                parent_table_flags,
-                allocator,
-            )?;
+            let (alloc, yes) = self
+                .page_table_walker
+                .create_next_table(&mut p5[page.p5_index()], parent_table_flags)?;
 
             p4 = yes;
             is_alloc_4 = alloc;
@@ -439,17 +426,13 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
             p4 = &mut self.page_table;
         }
 
-        let (is_alloc_3, p3) = self.page_table_walker.create_next_table(
-            &mut p4[page.p4_index()],
-            parent_table_flags,
-            allocator,
-        )?;
+        let (is_alloc_3, p3) = self
+            .page_table_walker
+            .create_next_table(&mut p4[page.p4_index()], parent_table_flags)?;
 
-        let (is_alloc_2, p2) = self.page_table_walker.create_next_table(
-            &mut p3[page.p3_index()],
-            parent_table_flags,
-            allocator,
-        )?;
+        let (is_alloc_2, p2) = self
+            .page_table_walker
+            .create_next_table(&mut p3[page.p3_index()], parent_table_flags)?;
 
         if !p2[page.p2_index()].is_unused() {
             return Err(MapToError::PageAlreadyMapped(frame));
@@ -473,28 +456,22 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
         Ok(MapperFlush::new(page))
     }
 
-    fn map_to_4kib<A>(
+    fn map_to_4kib(
         &mut self,
         page: Page<Size4KiB>,
         frame: PhysFrame<Size4KiB>,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        allocator: &mut A,
-    ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>>
-    where
-        A: FrameAllocator<Size4KiB> + ?Sized,
-    {
+    ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>> {
         let p4;
 
         let mut is_alloc_4 = false;
 
         if self.level_5_paging_enabled {
             let p5 = &mut self.page_table;
-            let (alloc, yes) = self.page_table_walker.create_next_table(
-                &mut p5[page.p5_index()],
-                parent_table_flags,
-                allocator,
-            )?;
+            let (alloc, yes) = self
+                .page_table_walker
+                .create_next_table(&mut p5[page.p5_index()], parent_table_flags)?;
 
             p4 = yes;
             is_alloc_4 = alloc;
@@ -502,23 +479,17 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
             p4 = &mut self.page_table;
         }
 
-        let (is_alloc_3, p3) = self.page_table_walker.create_next_table(
-            &mut p4[page.p4_index()],
-            parent_table_flags,
-            allocator,
-        )?;
+        let (is_alloc_3, p3) = self
+            .page_table_walker
+            .create_next_table(&mut p4[page.p4_index()], parent_table_flags)?;
 
-        let (is_alloc_2, p2) = self.page_table_walker.create_next_table(
-            &mut p3[page.p3_index()],
-            parent_table_flags,
-            allocator,
-        )?;
+        let (is_alloc_2, p2) = self
+            .page_table_walker
+            .create_next_table(&mut p3[page.p3_index()], parent_table_flags)?;
 
-        let (is_alloc_1, p1) = self.page_table_walker.create_next_table(
-            &mut p2[page.p2_index()],
-            parent_table_flags,
-            allocator,
-        )?;
+        let (is_alloc_1, p1) = self
+            .page_table_walker
+            .create_next_table(&mut p2[page.p2_index()], parent_table_flags)?;
 
         if !p1[page.p1_index()].is_unused() {
             return Err(MapToError::PageAlreadyMapped(frame));
@@ -549,18 +520,14 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
 
 impl<'a, P: PageTableFrameMapping> Mapper<Size2MiB> for MappedPageTable<'a, P> {
     #[inline]
-    unsafe fn map_to_with_table_flags<A>(
+    unsafe fn map_to_with_table_flags(
         &mut self,
         page: Page<Size2MiB>,
         frame: PhysFrame<Size2MiB>,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        allocator: &mut A,
-    ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>>
-    where
-        A: FrameAllocator<Size4KiB> + ?Sized,
-    {
-        self.map_to_2mib(page, frame, flags, parent_table_flags, allocator)
+    ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>> {
+        self.map_to_2mib(page, frame, flags, parent_table_flags)
     }
 
     fn unmap(
@@ -673,18 +640,14 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size2MiB> for MappedPageTable<'a, P> {
 
 impl<'a, P: PageTableFrameMapping> Mapper<Size4KiB> for MappedPageTable<'a, P> {
     #[inline]
-    unsafe fn map_to_with_table_flags<A>(
+    unsafe fn map_to_with_table_flags(
         &mut self,
         page: Page<Size4KiB>,
         frame: PhysFrame<Size4KiB>,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        allocator: &mut A,
-    ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>>
-    where
-        A: FrameAllocator<Size4KiB> + ?Sized,
-    {
-        self.map_to_4kib(page, frame, flags, parent_table_flags, allocator)
+    ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>> {
+        self.map_to_4kib(page, frame, flags, parent_table_flags)
     }
 
     fn unmap(
@@ -931,19 +894,15 @@ impl<P: PageTableFrameMapping> PageTableWalker<P> {
     /// Returns `MapToError::FrameAllocationFailed` if the entry is unused and the allocator
     /// returned `None`. Returns `MapToError::ParentEntryHugePage` if the `HUGE_PAGE` flag is set
     /// in the passed entry.
-    fn create_next_table<'b, A>(
+    fn create_next_table<'b>(
         &self,
         entry: &'b mut PageTableEntry,
         insert_flags: PageTableFlags,
-        allocator: &mut A,
-    ) -> Result<(bool, &'b mut PageTable), PageTableCreateError>
-    where
-        A: FrameAllocator<Size4KiB> + ?Sized,
-    {
+    ) -> Result<(bool, &'b mut PageTable), PageTableCreateError> {
         let created;
 
         if entry.is_unused() {
-            if let Some(frame) = allocator.allocate_frame() {
+            if let Some(frame) = unsafe { FRAME_ALLOCATOR.allocate_frame() } {
                 entry.set_frame(frame, insert_flags);
                 created = true;
             } else {
@@ -1118,19 +1077,15 @@ unsafe impl PageTableFrameMapping for PhysOffset {
 
 impl<'a> Mapper<Size2MiB> for OffsetPageTable<'a> {
     #[inline]
-    unsafe fn map_to_with_table_flags<A>(
+    unsafe fn map_to_with_table_flags(
         &mut self,
         page: Page<Size2MiB>,
         frame: PhysFrame<Size2MiB>,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        allocator: &mut A,
-    ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>>
-    where
-        A: FrameAllocator<Size4KiB> + ?Sized,
-    {
+    ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>> {
         self.inner
-            .map_to_with_table_flags(page, frame, flags, parent_table_flags, allocator)
+            .map_to_with_table_flags(page, frame, flags, parent_table_flags)
     }
 
     #[inline]
@@ -1158,19 +1113,15 @@ impl<'a> Mapper<Size2MiB> for OffsetPageTable<'a> {
 
 impl<'a> Mapper<Size4KiB> for OffsetPageTable<'a> {
     #[inline]
-    unsafe fn map_to_with_table_flags<A>(
+    unsafe fn map_to_with_table_flags(
         &mut self,
         page: Page<Size4KiB>,
         frame: PhysFrame<Size4KiB>,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        allocator: &mut A,
-    ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>>
-    where
-        A: FrameAllocator<Size4KiB> + ?Sized,
-    {
+    ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>> {
         self.inner
-            .map_to_with_table_flags(page, frame, flags, parent_table_flags, allocator)
+            .map_to_with_table_flags(page, frame, flags, parent_table_flags)
     }
 
     #[inline]
@@ -1245,10 +1196,8 @@ impl<'a> OffsetPageTable<'a> {
                 created = false;
             }
 
-            let page_table_ptr = unsafe {
-                let addr =
-                    crate::PHYSICAL_MEMORY_OFFSET + entry.frame().unwrap().start_address().as_u64();
-
+            let page_table_ptr = {
+                let addr = entry.frame().unwrap().start_address().as_hhdm_virt();
                 addr.as_mut_ptr::<PageTable>()
             };
 
@@ -1263,7 +1212,8 @@ impl<'a> OffsetPageTable<'a> {
         let last_level_fork = |entry: &mut PageTableEntry, n1: &mut PageTable, i: usize| {
             let mut flags = entry.flags();
 
-            flags.remove(PageTableFlags::WRITABLE | PageTableFlags::ACCESSED);
+            // Setup copy on write page.
+            flags.remove(PageTableFlags::WRITABLE);
 
             entry.set_flags(flags);
             n1[i].set_frame(entry.frame().unwrap(), flags);

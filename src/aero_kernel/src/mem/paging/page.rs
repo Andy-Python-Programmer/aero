@@ -296,6 +296,19 @@ impl<S: PageSize> PhysFrame<S> {
     pub fn start_address(self) -> PhysAddr {
         self.start_address
     }
+
+    pub fn as_slice_mut<T>(&self) -> &mut [T] {
+        assert!(core::mem::size_of::<T>() < S::SIZE as usize);
+
+        let virt = self.start_address().as_hhdm_virt();
+        let ptr = virt.as_mut_ptr::<T>();
+
+        // SAFETY: The size of the slice is equal to the size of the frame and the
+        // pointer is valid.
+        unsafe {
+            core::slice::from_raw_parts_mut(ptr, S::SIZE as usize / core::mem::size_of::<T>())
+        }
+    }
 }
 
 impl<S: PageSize> fmt::Debug for PhysFrame<S> {

@@ -17,16 +17,30 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use super::{interrupt_stack, INTERRUPT_CONTROLLER};
+use aero_syscall::*;
+use core::fmt::{Result as FmtResult, Write};
 
-interrupt_stack!(
-    pub unsafe fn reschedule(stack: &mut InterruptStack) {
-        INTERRUPT_CONTROLLER.eoi(); // Signal end of interrupt
-    }
-);
+pub struct Stdout;
+pub struct Stderr;
 
-interrupt_stack!(
-    pub unsafe fn abort(stack: &mut InterruptStack) {
-        INTERRUPT_CONTROLLER.eoi(); // Signal end of interrupt
+impl Write for Stdout {
+    fn write_str(&mut self, str: &str) -> FmtResult {
+        sys_write(1, str.as_bytes()).unwrap();
+
+        Ok(())
     }
-);
+}
+
+impl Write for Stderr {
+    fn write_str(&mut self, str: &str) -> FmtResult {
+        sys_write(2, str.as_bytes()).unwrap();
+
+        Ok(())
+    }
+}
+
+/// This function tells the current value of the file position indicator for the provided
+/// file descriptor (`fd`).
+pub fn tell(fd: usize) -> Result<usize, AeroSyscallError> {
+    sys_seek(fd, 0, SeekWhence::SeekCur)
+}

@@ -56,6 +56,20 @@
 //! | 32     | access                  |
 //! | 33     | pipe                    |
 //! | 34     | unlink                  |
+//! | 35     | gethostname             |
+//! | 36     | sethostname             |
+//! | 37     | info                    |
+//! | 38     | clone                   |
+//! | 39     | sigreturn               |
+//! | 40     | sigaction               |
+//! | 41     | sigprocmask             |
+//! | 42     | dup                     |
+//! | 43     | fcntl                   |
+//! | 44     | dup2                    |
+//! | 45     | ipc_send                |
+//! | 46     | ipc_recv                |
+//! | 47     | ipc_discover_root       |
+//! | 48     | ipc_become_root         |
 
 use core::mem::MaybeUninit;
 
@@ -73,12 +87,9 @@ use alloc::vec::Vec;
 pub use fs::*;
 pub use ipc::*;
 pub use process::*;
-use raw_cpuid::CpuId;
 pub use time::*;
 
-use crate::arch::signals;
-use crate::arch::{gdt::GdtEntryType, interrupts};
-use crate::utils::{io, StackHelper};
+use crate::utils::StackHelper;
 
 pub struct ExecArgs {
     inner: Vec<Box<[u8]>>,
@@ -128,62 +139,20 @@ pub fn exec_args_from_slice(args: usize, size: usize) -> ExecArgs {
     ExecArgs { inner: result }
 }
 
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
-pub struct SyscallFrame {
-    pub rflags: u64,
-    pub rip: u64,
-    pub rsp: u64,
-}
-
-#[derive(Debug, Copy, Clone, Default)]
-#[repr(C)]
-pub struct RegistersFrame {
-    pub cr2: u64,
-    pub rax: u64,
-    pub rbx: u64,
-    pub rcx: u64,
-    pub rdx: u64,
-    pub rsi: u64,
-    pub rdi: u64,
-    pub rbp: u64,
-    pub r8: u64,
-    pub r9: u64,
-    pub r10: u64,
-    pub r11: u64,
-    pub r12: u64,
-    pub r13: u64,
-    pub r14: u64,
-    pub r15: u64,
-}
-
-#[no_mangle]
-extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame) {
-    let a = stack.rax as usize;
-    let b = stack.rdi as usize;
-    let c = stack.rsi as usize;
-    let d = stack.rdx as usize;
-    let e = stack.r10 as usize;
-    let f = stack.r8 as usize;
-    let g = stack.r9 as usize;
-
-    match a {
-        SYS_EXIT => {}
-        _ => unsafe { interrupts::enable_interrupts() },
-    }
-
-    if a == SYS_SIGRETURN {
-        let result = signals::sigreturn(sys, stack);
-        stack.rax = result as u64;
-        return;
-    }
-
+pub fn generic_do_syscall(
+    a: usize,
+    b: usize,
+    c: usize,
+    d: usize,
+    e: usize,
+    f: usize,
+    g: usize,
+) -> usize {
     let result = match a {
         SYS_EXIT => process::exit(b),
         SYS_SHUTDOWN => process::shutdown(),
         SYS_FORK => process::fork(),
         SYS_MMAP => process::mmap(b, c, d, e, f, g),
-        SYS_ARCH_PRCTL => process::arch_prctl(b, c),
         SYS_MUNMAP => process::munmap(b, c),
         SYS_EXEC => process::exec(b, c, d, e, f, g),
         SYS_LOG => process::log(b, c),
@@ -209,7 +178,6 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         SYS_RMDIR => fs::rmdir(b, c),
         SYS_IOCTL => fs::ioctl(b, c, d),
         SYS_SEEK => fs::seek(b, c, d),
-        SYS_TELL => fs::tell(b),
         SYS_ACCESS => fs::access(b, c, d, e, f),
         SYS_PIPE => fs::pipe(b, c),
         SYS_UNLINK => fs::unlink(b, c, d, e),
@@ -234,7 +202,7 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         }
     };
 
-    let result_usize = aero_syscall::syscall_result_as_usize(result) as _;
+    let result_usize = aero_syscall::syscall_result_as_usize(result);
 
     #[cfg(feature = "syslog")]
     {
@@ -272,40 +240,5 @@ extern "C" fn __inner_syscall(sys: &mut SyscallFrame, stack: &mut RegistersFrame
         uart_16550::serial_println!("{}", result_v);
     }
 
-    crate::arch::signals::syscall_check_signals(result_usize as isize, sys, stack);
-    stack.rax = result_usize;
-}
-
-extern "C" {
-    fn syscall_handler();
-}
-
-pub fn init() {
-    // Check if syscall is supported as it is a required CPU feature for aero to run.
-    let has_syscall = CpuId::new()
-        .get_extended_processor_and_feature_identifiers()
-        .map_or(false, |i| i.has_syscall_sysret());
-
-    assert!(has_syscall);
-
-    unsafe {
-        /*
-         * Enable support for `syscall` and `sysret` instructions if the current
-         * CPU supports them and the target pointer width is 64.
-         */
-        let syscall_base = GdtEntryType::KERNEL_CODE << 3;
-        let sysret_base = (GdtEntryType::USER_CODE32_UNUSED << 3) | 3;
-
-        let star_hi = syscall_base as u32 | ((sysret_base as u32) << 16);
-
-        io::wrmsr(io::IA32_STAR, (star_hi as u64) << 32);
-        io::wrmsr(io::IA32_LSTAR, syscall_handler as u64);
-
-        // Clear the trap flag and enable interrupts.
-        io::wrmsr(io::IA32_FMASK, 0x300);
-
-        // Set the EFER.SCE bit to enable the syscall feature
-        let efer = io::rdmsr(io::IA32_EFER);
-        io::wrmsr(io::IA32_EFER, efer | 1);
-    }
+    result_usize
 }

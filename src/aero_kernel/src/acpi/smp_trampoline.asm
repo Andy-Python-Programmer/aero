@@ -19,7 +19,7 @@ global smp_prepare_trampoline
 global smp_prepare_launch
 global smp_check_ap_flag
 
-extern kernel_ap_startup
+extern x86_64_aero_ap_main
 
 section .data
 
@@ -51,7 +51,7 @@ smp_prepare_trampoline:
 ; use 0x2500 + OFFSET to store the AP info.
 smp_prepare_launch:
     mov byte [0x2510], 0                     ; Info: AP Ready Flag 
-    mov qword [0x2520], kernel_ap_startup    ; Info: Entry point
+    mov qword [0x2520], x86_64_aero_ap_main  ; Info: Entry point
 
     mov qword [0x2540], rdi                  ; Param: Page Table
     mov qword [0x2550], rsi                  ; Param: Stack Top

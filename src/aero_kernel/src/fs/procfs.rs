@@ -25,6 +25,19 @@ fn push_string_if_some(map: &mut serde_json::Value, key: &str, value: Option<Str
     }
 }
 
+fn get_cmdline_cached() -> &'static str {
+    static CACHED: Once<String> = Once::new();
+
+    CACHED.call_once(|| {
+        use serde_json::*;
+
+        json!({
+            "cmdline": crate::cmdline::get_raw_cmdline(),
+        })
+        .to_string()
+    })
+}
+
 fn get_cpuinfo_cached() -> &'static str {
     static CACHED: Once<String> = Once::new();
 
@@ -78,6 +91,8 @@ struct ProcINode {
 
 enum FileContents {
     CpuInfo,
+    CmdLine,
+
     None,
 }
 
@@ -90,7 +105,6 @@ impl Default for FileContents {
 struct LockedProcINode(RwLock<ProcINode>);
 
 impl LockedProcINode {
-    #[inline]
     fn new(node: ProcINode) -> Self {
         Self(RwLock::new(node))
     }
@@ -123,16 +137,13 @@ impl LockedProcINode {
             return Err(FileSystemError::EntryExists);
         }
 
-        let filesystem = this
-            .filesystem
-            .upgrade()
-            .expect("Failed to upgrade to strong filesystem");
+        let filesystem = this.filesystem.upgrade().unwrap();
 
         let inode = filesystem.allocate_inode(file_type, contents);
         let inode_cached = icache.make_item_no_cache(CachedINode::new(inode));
 
         downcast::<dyn INodeInterface, LockedProcINode>(&inode_cached.inner())
-            .expect("Failed to downcast cached inode on creation")
+            .unwrap()
             .init(
                 &this.node,
                 &inode_cached.downgrade(),
@@ -151,18 +162,17 @@ impl INodeInterface for LockedProcINode {
     fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
         let this = self.0.read();
 
-        match &this.contents {
-            FileContents::CpuInfo => {
-                let data = get_cpuinfo_cached();
-
-                let count = core::cmp::min(buffer.len(), data.len() - offset);
-                buffer[..count].copy_from_slice(&data.as_bytes()[offset..]);
-
-                Ok(count)
-            }
+        let data = match &this.contents {
+            FileContents::CpuInfo => Ok(get_cpuinfo_cached()),
+            FileContents::CmdLine => Ok(get_cmdline_cached()),
 
             _ => Err(FileSystemError::NotSupported),
-        }
+        }?;
+
+        let count = core::cmp::min(buffer.len(), data.len() - offset);
+        buffer[..count].copy_from_slice(&data.as_bytes()[offset..offset + count]);
+
+        Ok(count)
     }
 
     fn lookup(&self, dir: DirCacheItem, name: &str) -> Result<DirCacheItem> {
@@ -253,8 +263,7 @@ impl ProcFs {
 
         root_dir.filesystem.call_once(|| Arc::downgrade(&copy));
 
-        let down = downcast::<dyn INodeInterface, LockedProcINode>(root_cached.inner())
-            .expect("cannot downcast inode to ram inode");
+        let down = downcast::<dyn INodeInterface, LockedProcINode>(root_cached.inner()).unwrap();
 
         down.init(
             &ramfs.root_inode.downgrade(),
@@ -264,6 +273,8 @@ impl ProcFs {
         );
 
         down.make_inode("cpuinfo", FileType::File, FileContents::CpuInfo)?;
+        down.make_inode("cmdline", FileType::File, FileContents::CmdLine)?;
+
         Ok(ramfs)
     }
 
