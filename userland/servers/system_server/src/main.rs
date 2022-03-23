@@ -27,7 +27,7 @@ fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, Aero
     let pid = sys_fork()?;
 
     if pid == 0 {
-        sys_exec(path, argv, envv)?;
+        sys_execve(path, argv, envv)?;
         sys_exit(0);
     } else {
         Ok(pid)
