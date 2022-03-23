@@ -186,7 +186,7 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_MKDIR => "mkdir",
         prelude::SYS_MKDIR_AT => "mkdir_at",
         prelude::SYS_RMDIR => "rmdir",
-        prelude::SYS_EXEC => "exec",
+        prelude::SYS_EXEVE => "execve",
         prelude::SYS_LOG => "log",
         prelude::SYS_UNAME => "uname",
         prelude::SYS_WAITPID => "waitpid",
@@ -546,9 +546,9 @@ pub fn sys_mkdirat(dfd: isize, path: &str) -> Result<usize, AeroSyscallError> {
     isize_as_syscall_result(value as _)
 }
 
-pub fn sys_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
+pub fn sys_execve(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
     let value = syscall6(
-        prelude::SYS_EXEC,
+        prelude::SYS_EXECVE,
         path.as_ptr() as usize,
         path.len(),
         argv.as_ptr() as usize,
