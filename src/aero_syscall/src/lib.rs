@@ -186,7 +186,7 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_MKDIR => "mkdir",
         prelude::SYS_MKDIR_AT => "mkdir_at",
         prelude::SYS_RMDIR => "rmdir",
-        prelude::SYS_EXEVE => "execve",
+        prelude::SYS_EXECVE => "execve",
         prelude::SYS_LOG => "log",
         prelude::SYS_UNAME => "uname",
         prelude::SYS_WAITPID => "waitpid",
