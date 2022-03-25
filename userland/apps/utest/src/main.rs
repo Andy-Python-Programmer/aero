@@ -34,6 +34,7 @@ pub struct Test<'a> {
 static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
     // TODO: Why does clone process fail?
     // &clone_process,
+    &sysenter_test,
     &rpc_test,
     &forked_pipe,
     &signal_handler,
@@ -310,6 +311,32 @@ fn rpc_test() -> Result<(), AeroSyscallError> {
     aero_ipc::listen(Hello::handler(HelloServer {}));
     let c = Hello::open(sys_getpid().unwrap());
     c.hello(3);
+
+    Ok(())
+}
+
+#[utest_proc::test]
+fn sysenter_test() -> Result<(), AeroSyscallError> {
+    let msg = "sysenter works!\n";
+    let ptr = msg.as_ptr();
+    let len = msg.len();
+
+    unsafe {
+        core::arch::asm! {
+            "
+            mov     r11, rsp
+            lea     rcx, [rip + 1f]
+            sysenter
+            1:
+            ",
+            in("rax") consts::SYS_WRITE,
+            in("rdi") 1,
+            in("rsi") ptr,
+            inout("rdx") len => _,
+            out("r11") _,
+            out("rcx") _,
+        }
+    }
 
     Ok(())
 }
