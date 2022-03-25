@@ -20,6 +20,7 @@
 #[cfg(feature = "round-robin")]
 pub mod round_robin;
 
+use alloc::string::String;
 use alloc::sync::Arc;
 
 use crate::apic;
@@ -59,24 +60,19 @@ pub trait SchedulerInterface: Send + Sync + Downcastable {
     fn exit(&self, status: isize) -> !;
 }
 
-/// Container or a transparent struct containing a hashmap of all of the taskes
-/// in the scheduler's queue protected by mutex. The hashmap has a key
-/// of `ProcessId` and a value of a reference-counting pointer
-/// to the task or task.
-#[repr(transparent)]
 struct TaskContainer(Mutex<hashbrown::HashMap<TaskId, Arc<Task>>>);
 
 impl TaskContainer {
-    /// Creates a new task container with no taskes by default.
-    #[inline]
     fn new() -> Self {
         Self(Mutex::new(hashbrown::HashMap::new()))
     }
 
-    /// Registers the provided `task` in the task container.
-    #[inline]
     fn register_task(&self, task_id: TaskId, task: Arc<Task>) {
         self.0.lock().insert(task_id, task);
+    }
+
+    fn remove_task(&self, task: Arc<Task>) {
+        self.0.lock().remove(&task.pid());
     }
 }
 
@@ -118,6 +114,22 @@ impl Scheduler {
     #[inline]
     pub fn current_task(&self) -> Arc<Task> {
         self.inner.current_task()
+    }
+
+    pub fn exit(&self, status: isize) -> ! {
+        let current_task = self.inner.current_task();
+        self.tasks.remove_task(current_task);
+
+        self.inner.exit(status)
+    }
+
+    pub fn log_ptable(&self) {
+        self.tasks.0.lock().iter().for_each(|(pid, task)| {
+            log::info!(
+                "task(pid={pid:?}, path={:?})",
+                task.path().unwrap_or(String::from("<unknown>"))
+            )
+        });
     }
 
     /// Lookup a task by ID

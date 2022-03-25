@@ -26,6 +26,8 @@ use crate::unwind;
 use crate::userland::scheduler;
 use crate::utils::io;
 
+const LOG_PF_PTABLE: bool = true;
+
 macro interrupt_exception(fn $name:ident() => $message:expr) {
     pub fn $name(stack: &mut InterruptErrorStack) {
         unwind::prepare_panic();
@@ -110,7 +112,7 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
             let task = scheduler::get_scheduler().current_task();
 
             log::error!(
-                "process: (pid={}, pid={})",
+                "process: (tid={}, pid={})",
                 task.tid().as_usize(),
                 task.pid().as_usize()
             );
@@ -121,8 +123,12 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
                     .expect("userland application does not have a path set")
             );
 
-            scheduler::get_scheduler().current_task().vm.log();
-            scheduler::get_scheduler().current_task().file_table.log();
+            task.vm.log();
+            task.file_table.log();
+
+            if LOG_PF_PTABLE {
+                scheduler::get_scheduler().log_ptable();
+            }
 
             unwind::unwind_stack_trace();
 

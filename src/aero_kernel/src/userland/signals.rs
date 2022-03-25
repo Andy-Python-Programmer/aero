@@ -81,7 +81,7 @@ mod default {
     ];
 
     fn terminate() {
-        scheduler::get_scheduler().inner.exit(1);
+        scheduler::get_scheduler().exit(1);
     }
 
     fn terminate_thread() {
@@ -421,7 +421,7 @@ pub fn check_for_signals() -> Option<(usize, SignalEntry)> {
     // Check if a SIGKILL is pending, and if so, kill the task.
     if signals.is_pending(SIGKILL as u64) {
         signals.clear_pending(SIGKILL as u64);
-        scheduler::get_scheduler().inner.exit(1);
+        scheduler::get_scheduler().exit(1);
     }
 
     for i in 0..SIGNAL_COUNT {

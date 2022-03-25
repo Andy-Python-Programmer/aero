@@ -48,7 +48,7 @@ pub fn exit(status: usize) -> ! {
             status = status
         );
 
-        scheduler::get_scheduler().inner.exit(status as isize);
+        scheduler::get_scheduler().exit(status as isize);
     }
 }
 
