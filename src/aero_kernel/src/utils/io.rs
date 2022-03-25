@@ -39,6 +39,10 @@ pub const IA32_LSTAR: u32 = 0xc0000082;
 /// System Call Flag Mask (R/W).
 pub const IA32_FMASK: u32 = 0xc0000084;
 
+pub const IA32_SYSENTER_CS: u32 = 0x174;
+pub const IA32_SYSENTER_ESP: u32 = 0x175;
+pub const IA32_SYSENTER_EIP: u32 = 0x176;
+
 /// APIC Location and Status (R/W).
 ///
 /// ```text

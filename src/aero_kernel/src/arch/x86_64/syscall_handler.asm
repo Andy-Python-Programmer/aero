@@ -28,6 +28,8 @@ global x86_64_syscall_handler
 %define USERLAND_SS         0x23
 %define USERLAND_CS         0x2b
 
+%define FMASK               0x300  ; TF | DF
+
 ; 64-bit SYSCALL instruction entry point. The instruction supports
 ; to to 6 arguments in registers.
 ;
@@ -92,3 +94,66 @@ x86_64_syscall_handler:
 
     swapgs
     o64 sysret
+
+; 64-bit SYSENTER entry point
+;
+; The SYSENTER mechanism performs a fast transition to the kernel.
+; The new CS is loaded from the IA32_SYSENTER_CS MSR, and the new instruction
+; and stack pointers are loaded from IA32_SYSENTER_EIP and IA32_SYSENTER_ESP,
+; respectively. RFLAGS.IF is cleared, but other flags are unchanged.
+;
+; As the instruction does not save *any* state, the user is required to provide
+; the return RIP and RSP in the RCX and R11 registers, respectively. These
+; addresses must be canonical.
+;
+; The instruction expects the call number and arguments in the same registers as
+; for SYSCALL.
+;
+section .text.x86_64_sysenter_handler
+global  x86_64_sysenter_handler:function (x86_64_sysenter_handler.end - x86_64_sysenter_handler)
+align   16
+x86_64_sysenter_handler:
+    swapgs
+
+    ; Build the interrupt frame expected by the kernel.
+    push    USERLAND_SS
+    push    r11
+    pushfq
+    push    USERLAND_CS
+    push    rcx
+
+    ; Mask the same flags as for SYSCALL.
+    ; Note that up to this pont the code can be single-stepped if the user sets TF.
+    pushfq
+    and     dword [rsp], 0x300
+    popfq
+
+    push    rax
+    push_scratch
+    push_preserved
+    push    0
+
+    ; Sore the stack pointer (interrupt frame pointer) in RBP for save keeping,
+    ; and align the stack as specified by the SysV calling convention.
+    mov     rbp, rsp
+    and     rsp, ~0xf
+
+    mov     rdi, rbp
+    call    x86_64_do_syscall
+
+    ; Reload the stack pointer, skipping the error code.
+    lea     rsp, [rbp + 8]
+    pop_preserved
+    pop_scratch
+
+    ; Restore RFLAGS
+    add     rsp, 16
+    popfq
+
+    ; Move the return RIP and RSP into the registers expected by SYSEXIT.
+    mov     rdx, rcx
+    mov     rcx, r11
+
+    swapgs
+    o64 sysexit
+.end:

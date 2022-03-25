@@ -375,7 +375,11 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
     }
 
     unsafe {
-        super::gdt::get_task_state_segement().rsp[0] = to.context_switch_rsp.as_u64();
+        // Load the new thread's kernel stack pointer everywhere it's needed.
+        let kstackp = to.context_switch_rsp.as_u64();
+        super::gdt::get_task_state_segement().rsp[0] = kstackp;
+        io::wrmsr(io::IA32_SYSENTER_ESP, kstackp);
+
         task_spinup(&mut from.context, to.context.as_ref());
 
         // make a restore point for the current FS base.
