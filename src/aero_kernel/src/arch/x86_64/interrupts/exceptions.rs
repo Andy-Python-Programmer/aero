@@ -50,7 +50,6 @@ interrupt_exception!(fn debug() => "Debug");
 interrupt_exception!(fn non_maskable() => "Non Maskable");
 interrupt_exception!(fn overflow() => "Stack Overflow");
 interrupt_exception!(fn bound_range() => "Out of Bounds");
-interrupt_exception!(fn invalid_opcode() => "Invalid Opcode");
 interrupt_exception!(fn device_not_available() => "Device not Avaliable");
 interrupt_exception!(fn double_fault() => "Double Fault");
 interrupt_exception!(fn invalid_tss() => "Invalid TSS");
@@ -63,6 +62,38 @@ interrupt_exception!(fn machine_check() => "Machine check fault");
 interrupt_exception!(fn simd() => "SIMD floating point fault");
 interrupt_exception!(fn virtualization() => "Virtualization fault");
 interrupt_exception!(fn security() => "Security exception");
+
+pub fn invalid_opcode(stack: &mut InterruptErrorStack) {
+    // Catch SYSENTER on AMD CPUs.
+    //
+    // The RIP on the stack for #UD points to the instruction which generated the exception.
+    // The return RIP and RSP need to be changed to the user-provided values in RCX and R11.
+    const SYSENTER_OPCODE: [u8; 2] = [0x0f, 0x34];
+    
+    let opcode = unsafe { *(stack.stack.iret.rip as *const [u8; 2]) };
+    if opcode == SYSENTER_OPCODE {
+        stack.stack.iret.rip = stack.stack.scratch.rcx;
+        stack.stack.iret.rsp = stack.stack.scratch.r11;
+
+        super::super::syscall::x86_64_do_syscall(stack);
+        return;
+    }
+
+    // Otherwise handle the exception as normal.
+
+    unwind::prepare_panic();
+
+    log::error!("EXCEPTION: Invalid Opcode");
+    log::error!("Stack: {:#x?}", stack);
+
+    unwind::unwind_stack_trace();
+
+    unsafe {
+        loop {
+            super::halt();
+        }
+    }
+}
 
 pub fn breakpoint(stack: &mut InterruptErrorStack) {
     // We will need to prevent RIP from going out of sync with
