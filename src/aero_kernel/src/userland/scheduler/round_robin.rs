@@ -194,10 +194,8 @@ impl SchedulerInterface for RoundRobin {
         queue.push_runnable(task);
     }
 
-    fn current_task(&self) -> Arc<Task> {
-        let queue = self.queue.get();
-
-        queue.current_task.as_ref().unwrap().clone()
+    fn current_task_optional(&self) -> Option<Arc<Task>> {
+        self.queue.get().current_task.as_ref().cloned()
     }
 
     fn init(&self) {

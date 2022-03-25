@@ -44,8 +44,12 @@ pub trait SchedulerInterface: Send + Sync + Downcastable {
     /// Register the provided task into the task scheduler queue.
     fn register_task(&self, task: Arc<Task>);
 
-    /// Get a reference-counting pointer to the current task.
-    fn current_task(&self) -> Arc<Task>;
+    fn current_task(&self) -> Arc<Task> {
+        self.current_task_optional()
+            .expect("current_task: current task not found")
+    }
+
+    fn current_task_optional(&self) -> Option<Arc<Task>>;
 
     fn init(&self);
     fn wake_up(&self, task: Arc<Task>);

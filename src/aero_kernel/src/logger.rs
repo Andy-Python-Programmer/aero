@@ -24,6 +24,7 @@ use alloc::string::String;
 use log::{Level, LevelFilter, Metadata, Record};
 use spin::Once;
 
+use crate::userland::scheduler;
 use crate::utils::buffer::RingBuffer;
 use crate::utils::sync::Mutex;
 
@@ -70,6 +71,20 @@ impl log::Log for AeroLogger {
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
             serial_print!("\x1b[37;1m{file}:{line} ");
+
+            if scheduler::is_initialized() {
+                // fetch the current task, grab the TID and PID.
+                scheduler::get_scheduler()
+                    .inner
+                    .current_task_optional()
+                    .map(|task| {
+                        serial_print!(
+                            "(tid={}, pid={}) ",
+                            task.tid().as_usize(),
+                            task.pid().as_usize()
+                        );
+                    });
+            }
 
             match record.level() {
                 Level::Info => serial_print!("\x1b[32;1minfo "), // green info
