@@ -10,6 +10,7 @@ use super::interrupts::InterruptErrorStack;
 
 extern "C" {
     fn x86_64_syscall_handler();
+    fn x86_64_sysenter_handler();
 }
 
 const ARCH_SET_GS: usize = 0x1001;
@@ -54,7 +55,7 @@ fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError>
 }
 
 #[no_mangle]
-extern "C" fn x86_64_do_syscall(stack: &mut InterruptErrorStack) {
+pub(super) extern "C" fn x86_64_do_syscall(stack: &mut InterruptErrorStack) {
     let stack = &mut stack.stack;
 
     let syscall_number = stack.scratch.rax as usize; // syscall number
@@ -94,8 +95,10 @@ extern "C" fn x86_64_do_syscall(stack: &mut InterruptErrorStack) {
 /// Initializes support for the `syscall` and `sysret` instructions for the
 /// current CPU.
 pub(super) fn init() {
+    let cpuid = CpuId::new();
+
     // Check if syscall is supported as it is a required CPU feature for aero to run.
-    let has_syscall = CpuId::new()
+    let has_syscall = cpuid
         .get_extended_processor_and_feature_identifiers()
         .map_or(false, |i| i.has_syscall_sysret());
 
@@ -107,7 +110,7 @@ pub(super) fn init() {
          * CPU supports them and the target pointer width is 64.
          */
         let syscall_base = GdtEntryType::KERNEL_CODE << 3;
-        let sysret_base = (GdtEntryType::USER_CODE32_UNUSED << 3) | 3;
+        let sysret_base = (GdtEntryType::KERNEL_TLS << 3) | 3;
 
         let star_hi = syscall_base as u32 | ((sysret_base as u32) << 16);
 
@@ -120,5 +123,27 @@ pub(super) fn init() {
         // Set the EFER.SCE bit to enable the syscall feature
         let efer = io::rdmsr(io::IA32_EFER);
         io::wrmsr(io::IA32_EFER, efer | 1);
+    }
+
+    /*
+     * Enable support for the `sysenter` instruction for system calls.
+     *
+     * This instruction is only supported on AMD processors in Legacy mode,
+     * not in Long mode (Compatibility or 64-bit modes), so still report support
+     * for it via `cpuid`. In this case the #UD exception is caught to handle the
+     * system call.
+     */
+    let has_sysenter = cpuid
+        .get_feature_info()
+        .map_or(false, |i| i.has_sysenter_sysexit());
+
+    if has_sysenter {
+        unsafe {
+            io::wrmsr(
+                io::IA32_SYSENTER_CS,
+                (GdtEntryType::KERNEL_CODE << 3) as u64,
+            );
+            io::wrmsr(io::IA32_SYSENTER_EIP, x86_64_sysenter_handler as u64);
+        }
     }
 }
