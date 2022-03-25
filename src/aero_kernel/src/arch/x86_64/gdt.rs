@@ -126,16 +126,7 @@ static GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
             | GdtAccessFlags::PRIVILEGE,
         GdtEntryFlags::LONG_MODE,
     ),
-    // GDT dummy user code descriptor. Required for SYSEXIT.
-    GdtEntry::new(
-        GdtAccessFlags::PRESENT
-            | GdtAccessFlags::RING_0
-            | GdtAccessFlags::SYSTEM
-            | GdtAccessFlags::EXECUTABLE
-            | GdtAccessFlags::PRIVILEGE,
-        GdtEntryFlags::PROTECTED_MODE,
-    ),
-    // GDT user data descriptor.
+    // GDT user data descriptor. (used by SYSCALL)
     GdtEntry::new(
         GdtAccessFlags::PRESENT
             | GdtAccessFlags::RING_3
@@ -149,6 +140,14 @@ static GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
             | GdtAccessFlags::RING_3
             | GdtAccessFlags::SYSTEM
             | GdtAccessFlags::EXECUTABLE
+            | GdtAccessFlags::PRIVILEGE,
+        GdtEntryFlags::LONG_MODE,
+    ),
+    // GDT user data descriptor. (used by SYSENTER)
+    GdtEntry::new(
+        GdtAccessFlags::PRESENT
+            | GdtAccessFlags::RING_3
+            | GdtAccessFlags::SYSTEM
             | GdtAccessFlags::PRIVILEGE,
         GdtEntryFlags::LONG_MODE,
     ),
@@ -189,7 +188,6 @@ impl GdtEntryType {
     pub const KERNEL_CODE: u16 = 1;
     pub const KERNEL_DATA: u16 = 2;
     pub const KERNEL_TLS: u16 = 3;
-    pub const USER_CODE32_UNUSED: u16 = 4;
     pub const TSS: u16 = 8;
     pub const TSS_HI: u16 = 9;
 }

@@ -25,8 +25,8 @@ global x86_64_syscall_handler
 %define TSS_TEMP_USTACK_OFF 0x1c
 %define TSS_RSP0_OFF        0x04
 
-%define USERLAND_SS         0x2b
-%define USERLAND_CS         0x33
+%define USERLAND_SS         0x23
+%define USERLAND_CS         0x2b
 
 ; 64-bit SYSCALL instruction entry point. The instruction supports
 ; to to 6 arguments in registers.
@@ -51,7 +51,7 @@ global x86_64_syscall_handler
 ; The instruction also does not save anything on the stack and does
 ; *not* change the RSP.
 x86_64_syscall_handler:
-    ; swap the GS base to ensure that it points to the 
+    ; swap the GS base to ensure that it points to the
     ; kernel PCR.
     swapgs
 
