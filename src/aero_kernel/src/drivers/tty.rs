@@ -28,6 +28,7 @@ use crate::fs::inode;
 use crate::fs::inode::INodeInterface;
 use crate::mem::paging::VirtAddr;
 use crate::utils::sync::{BlockQueue, Mutex};
+use crate::arch::controlregs;
 
 use super::keyboard::KeyCode;
 use super::keyboard::KeyboardListener;
@@ -234,11 +235,11 @@ impl INodeInterface for Tty {
 
         if buffer.len() > stdin.front_buffer.len() {
             for (i, c) in stdin.front_buffer.drain(..).enumerate() {
-                buffer[i] = c;
+                controlregs::with_userspace_access(||buffer[i] = c);
             }
         } else {
             for (i, c) in stdin.front_buffer.drain(..buffer.len()).enumerate() {
-                buffer[i] = c;
+                controlregs::with_userspace_access(||buffer[i] = c);
             }
         }
 
