@@ -97,6 +97,23 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
         log::error!("stack: {:#x?}", stack);
     };
 
+    if reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION) && !reason.contains(PageFaultErrorCode::USER_MODE) {
+        if controlregs::smap_enabled() {
+            unwind::prepare_panic();
+
+            log::error!("SMAP violation page fault");
+            print_info();
+
+            controlregs::with_userspace_access(||unwind::unwind_stack_trace());
+
+            unsafe {
+                loop {
+                    super::halt();
+                }
+            }
+        }
+    }
+
     if accessed_address < userland_last_address && scheduler::is_initialized()
         || stack.stack.iret.is_user()
     {
@@ -130,7 +147,7 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
                 scheduler::get_scheduler().log_ptable();
             }
 
-            unwind::unwind_stack_trace();
+            controlregs::with_userspace_access(||unwind::unwind_stack_trace());
 
             let task = scheduler::get_scheduler().current_task();
             task.signal(aero_syscall::signal::SIGSEGV);
@@ -147,7 +164,7 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
     log::error!("Page fault");
     print_info();
 
-    unwind::unwind_stack_trace();
+    controlregs::with_userspace_access(||unwind::unwind_stack_trace());
 
     unsafe {
         loop {
