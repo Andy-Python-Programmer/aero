@@ -151,7 +151,7 @@ pub fn chdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
 }
 
 pub fn mkdirat(dfd: usize, path: usize, size: usize) -> Result<usize, AeroSyscallError> {
-    let path_str = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let path_str = controlregs::with_userspace_access(||validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path_str);
 
     // NOTE: If the pathname given in pathname is relative, then it is interpreted
