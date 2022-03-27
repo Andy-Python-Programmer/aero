@@ -27,6 +27,7 @@ use xmas_elf::header::*;
 use xmas_elf::program::*;
 use xmas_elf::*;
 
+use crate::arch::controlregs;
 use crate::arch::task::userland_last_address;
 use crate::fs;
 use crate::fs::cache::DirCacheItem;
@@ -385,7 +386,7 @@ impl Mapping {
         let new_slice = new_frame.as_slice_mut::<u8>();
 
         // Copy the contents from the old frame to the newly allocated frame.
-        new_slice.copy_from_slice(old_slice);
+        controlregs::with_userspace_access(||new_slice.copy_from_slice(old_slice));
 
         // Re-map the page to the newly allocated frame and with the provided
         // protection flags.
