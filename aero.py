@@ -422,32 +422,24 @@ def prepare_iso(args, kernel_bin, user_bins):
 
         return None
 
-    limine_install = None
+    limine_s2deploy = os.path.join(limine_path, 'limine-s2deploy')
 
-    if platform.system() == 'Windows':
-        limine_install = 'limine-install-win32.exe'
-    elif platform.system() == 'Linux':
-        limine_install = 'limine-install-linux-x86_64'
-    elif platform.system() == 'Darwin':
-        limine_install = 'limine-install'
-        # Limine doesn't provide pre-built binaries, so we have to build from source
+    if not os.path.exists(limine_s2deploy):
         code, _, limine_build_stderr = run_command(['make', '-C', limine_path],
                                                    stdout=subprocess.PIPE,
                                                    stderr=subprocess.PIPE)
         if code != 0:
-            print('Failed to build `limine-install`')
+            print('Failed to build `limine-s2deploy`')
             print(limine_build_stderr.decode('utf8'))
             exit(1)
 
-    limine_install = os.path.join(limine_path, limine_install)
-
-    code, _, limine_install_stderr = run_command([limine_install, iso_path],
+    code, _, limine_s2deploy_stderr = run_command([limine_s2deploy, iso_path],
                                                  stdout=subprocess.PIPE,
                                                  stderr=subprocess.PIPE)
 
     if code != 0:
         print('Failed to install Limine')
-        print(limine_install_stderr)
+        print(limine_s2deploy_stderr)
 
         return None
 
