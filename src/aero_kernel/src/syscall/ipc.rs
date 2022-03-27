@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::arch::controlregs;
 use crate::userland::scheduler::get_scheduler;
 use crate::userland::task::TaskId;
 
@@ -60,11 +61,10 @@ fn handle_recieve(
     let output =
         validate_slice_mut(message_ptr as *mut u8, message_size).ok_or(AeroSyscallError::EINVAL)?;
 
-    output[0..msg.data.len()].copy_from_slice(&msg.data);
-
-    unsafe {
+    controlregs::with_userspace_access(||unsafe {
+        output[0..msg.data.len()].copy_from_slice(&msg.data);
         pid_ptr.write(msg.from);
-    }
+    });
 
     Ok(msg.data.len())
 }
@@ -82,9 +82,11 @@ pub fn send(pid: usize, message: usize, message_size: usize) -> Result<usize, Ae
     let mut queue = message_queue.queue.lock();
 
     // Push the message to the message queue of the provided task.
-    queue.push_back(Message {
-        from: get_scheduler().current_task().pid().as_usize(),
-        data: payload.to_vec(),
+    controlregs::with_userspace_access(|| {
+        queue.push_back(Message {
+            from: get_scheduler().current_task().pid().as_usize(),
+            data: payload.to_vec(),
+        })
     });
 
     // Notify the task that it has a new message if its awaiting for one!
