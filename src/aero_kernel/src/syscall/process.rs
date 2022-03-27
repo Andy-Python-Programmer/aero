@@ -59,7 +59,7 @@ pub fn uname(buffer: usize) -> Result<usize, AeroSyscallError> {
         let init_bytes = init.as_bytes();
         let len = init.len();
 
-        fixed[..len].copy_from_slice(init_bytes)
+        controlregs::with_userspace_access(||fixed[..len].copy_from_slice(init_bytes))
     }
 
     // TODO: Safety checks!
