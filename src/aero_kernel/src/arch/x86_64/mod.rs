@@ -256,7 +256,19 @@ pub fn init_cpu() {
         }
 
         {
+            // Check if SMAP is supported.
+            let has_smap = CpuId::new()
+                .get_extended_feature_info()
+                .map_or(false, |i| i.has_smap());
+
             let mut cr4 = controlregs::read_cr4();
+
+            if has_smap {
+                log::info!("SMAP is supported, enabling SMAP.");
+                cr4.insert(controlregs::Cr4Flags::SUPERVISOR_MODE_ACCESS_PREVENTION);
+            } else {
+                log::info!("SMAP is not supported.");
+            }
 
             cr4.insert(controlregs::Cr4Flags::OSFXSR);
             cr4.insert(controlregs::Cr4Flags::OSXMMEXCPT_ENABLE);
