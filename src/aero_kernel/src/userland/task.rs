@@ -30,6 +30,7 @@ use crate::fs::{self, FileSystem};
 use crate::mem::paging::*;
 
 use crate::arch::task::ArchTask;
+use crate::arch::controlregs;
 use crate::fs::file_table::FileTable;
 use crate::syscall::{ExecArgs, MessageQueue};
 use crate::utils::sync::{BlockQueue, Mutex};
@@ -154,9 +155,9 @@ impl Zombies {
 
         // WIFEXITED: The child process has been terminated normally by
         // either calling sys_exit() or returning from the main function.
-        *status = 0x200;
+        controlregs::with_userspace_access(||*status = 0x200);
         // The lower 8-bits are used to store the exit status.
-        *status |= st as u32 & 0xff;
+        controlregs::with_userspace_access(||*status |= st as u32 & 0xff);
 
         Ok(tid.as_usize())
     }
@@ -399,7 +400,7 @@ impl Task {
         // Clear the signals that are pending for this task on exec.
         self.signals().clear();
 
-        self.arch_task_mut().exec(vm, executable, argv, envv)
+        controlregs::with_userspace_access(||self.arch_task_mut().exec(vm, executable, argv, envv))
     }
 
     pub fn vm(&self) -> &Arc<Vm> {
