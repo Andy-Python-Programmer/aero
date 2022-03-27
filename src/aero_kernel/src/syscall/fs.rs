@@ -199,7 +199,7 @@ pub fn mkdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
 }
 
 pub fn rmdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
-    let path_str = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let path_str = controlregs::with_userspace_access(||validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path_str);
 
     let (_, child) = path.parent_and_basename();
