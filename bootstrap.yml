@@ -236,9 +236,9 @@ tools:
         # -g blows up the binary size.
         - 'CFLAGS=-pipe'
     compile:
-      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', '-j@PARALLELISM@', 'all-binutils', 'all-gas', 'all-ld']
     install:
-      - args: ['make', 'install']
+      - args: ['make', 'install-binutils', 'install-gas', 'install-ld']
 
   - name: host-gcc
     from_source: gcc
