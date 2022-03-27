@@ -138,7 +138,7 @@ pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
 }
 
 pub fn chdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
-    let buffer = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let buffer = controlregs::with_userspace_access(||validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL))?;
     let inode = fs::lookup_path(Path::new(buffer))?;
 
     if !inode.inode().metadata()?.is_directory() {
