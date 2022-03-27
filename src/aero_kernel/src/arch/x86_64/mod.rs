@@ -146,15 +146,15 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
             .unwrap()
     });
 
-    // Initialize the CPU specific features.
-    init_cpu();
-
     // We initialize the COM ports before doing anything else.
     //
     // This will help printing panics and logs before or when the debug renderer
     // is initialized and if serial output is avaliable.
     drivers::uart_16550::init();
     logger::init();
+
+    // Initialize the CPU specific features.
+    init_cpu();
 
     // Parse the kernel command line.
     let command_line: &'static _ = boot_info.command_line().map_or("", |cmd| unsafe {
