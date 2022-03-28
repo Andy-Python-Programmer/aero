@@ -267,6 +267,11 @@ pub fn init_cpu() {
                 .get_extended_feature_info()
                 .map_or(false, |i| i.has_smep());
 
+            // Check if UMIP is supported.
+            let has_umip = CpuId::new()
+                .get_extended_feature_info()
+                .map_or(false, |i| i.has_umip());
+
             let mut cr4 = controlregs::read_cr4();
 
             if has_smap {
@@ -281,6 +286,13 @@ pub fn init_cpu() {
                 cr4.insert(controlregs::Cr4Flags::SUPERVISOR_MODE_EXECUTION_PROTECTION);
             } else {
                 log::info!("SMEP is not supported.");
+            }
+
+            if has_umip {
+                log::info!("UMIP is supported, enabling UMIP.");
+                cr4.insert(controlregs::Cr4Flags::USER_MODE_INSTRUCTION_PREVENTION);
+            } else {
+                log::info!("UMIP is not supported.");
             }
 
             cr4.insert(controlregs::Cr4Flags::OSFXSR);
