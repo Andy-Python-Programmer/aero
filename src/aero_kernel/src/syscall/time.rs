@@ -19,6 +19,7 @@
 
 use aero_syscall::AeroSyscallError;
 
+use crate::arch::controlregs;
 use crate::utils::CeilDiv;
 use crate::{mem::paging::VirtAddr, userland::scheduler};
 
@@ -28,7 +29,7 @@ const CLOCK_TYPE_MONOTONIC: usize = 1;
 pub fn sleep(timespec: usize) -> Result<usize, AeroSyscallError> {
     let timespec = VirtAddr::new(timespec as u64);
     let timespec = unsafe { &*(timespec.as_mut_ptr::<aero_syscall::TimeSpec>()) };
-    let duration = (timespec.tv_nsec as usize).ceil_div(1000000000) + timespec.tv_sec as usize;
+    let duration = controlregs::with_userspace_access(||(timespec.tv_nsec as usize).ceil_div(1000000000) + timespec.tv_sec as usize);
 
     scheduler::get_scheduler().inner.sleep(Some(duration))?;
 
@@ -43,8 +44,8 @@ pub fn gettime(clock: usize, timespec: usize) -> Result<usize, AeroSyscallError>
         CLOCK_TYPE_REALTIME => {
             let clock = crate::time::get_realtime_clock();
 
-            timespec.tv_sec = clock.tv_sec;
-            timespec.tv_nsec = clock.tv_nsec;
+            controlregs::with_userspace_access(||timespec.tv_sec = clock.tv_sec);
+            controlregs::with_userspace_access(||timespec.tv_nsec = clock.tv_nsec);
 
             Ok(0x00)
         }
