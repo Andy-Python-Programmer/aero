@@ -251,6 +251,7 @@ pub fn init_cpu() {
 
             cr0.remove(controlregs::Cr0Flags::EMULATE_COPROCESSOR);
             cr0.insert(controlregs::Cr0Flags::MONITOR_COPROCESSOR);
+            cr0.insert(controlregs::Cr0Flags::WRITE_PROTECT);
 
             controlregs::write_cr0(cr0);
         }
