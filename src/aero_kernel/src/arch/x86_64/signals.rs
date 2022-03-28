@@ -20,6 +20,7 @@
 use crate::userland;
 use crate::userland::scheduler;
 use crate::utils::StackHelper;
+use crate::arch::controlregs;
 
 use super::interrupts::InterruptStack;
 
@@ -107,11 +108,11 @@ pub fn sigreturn(stack: &mut InterruptStack) -> usize {
 
     let current_task = scheduler::get_scheduler().current_task();
 
-    current_task.signals().set_mask(
+    controlregs::with_userspace_access(||current_task.signals().set_mask(
         aero_syscall::signal::SigProcMask::Set,
         signal_frame.sigmask,
         None,
-    );
+    ));
 
     writer.get_by(REDZONE_SIZE);
 

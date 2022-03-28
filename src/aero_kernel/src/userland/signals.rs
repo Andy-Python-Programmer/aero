@@ -29,6 +29,7 @@ use bit_field::BitField;
 use aero_syscall::AeroSyscallError;
 
 use super::scheduler;
+use crate::arch::controlregs;
 use crate::fs::FileSystemError;
 use crate::utils::sync::{Mutex, MutexGuard};
 
@@ -391,7 +392,7 @@ impl Signals {
             *old = self.blocked_mask.load(Ordering::SeqCst);
         }
 
-        let set = set & !IMMUTABLE_MASK;
+        let set = controlregs::with_userspace_access(||set & !IMMUTABLE_MASK);
 
         match how {
             SigProcMask::Block => {
