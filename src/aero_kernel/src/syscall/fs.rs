@@ -277,8 +277,8 @@ pub fn pipe(fds: usize, flags: usize) -> Result<usize, AeroSyscallError> {
         Ok(fd2) => fd2,
     };
 
-    fds[0] = fd1;
-    fds[1] = fd2;
+    controlregs::with_userspace_access(||fds[0] = fd1);
+    controlregs::with_userspace_access(||fds[1] = fd2);
 
     Ok(0x00)
 }
@@ -321,7 +321,7 @@ pub fn access(
     _mode: usize,
     _flags: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path_str = controlregs::with_userspace_access(||validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path_str);
 
     if fd as isize == aero_syscall::AT_FDCWD {
