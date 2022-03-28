@@ -289,7 +289,7 @@ pub fn unlink(
     path_size: usize,
     flags: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path_str = controlregs::with_userspace_access(||validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path_str);
 
     // TODO: Make use of the open flags.
