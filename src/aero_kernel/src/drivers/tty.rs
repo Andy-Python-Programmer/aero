@@ -265,13 +265,13 @@ impl INodeInterface for Tty {
 
                 let (rows, cols) = crate::rendy::get_rows_cols();
 
-                winsize.ws_row = rows as u16;
-                winsize.ws_col = cols as u16;
+                controlregs::with_userspace_access(||winsize.ws_row = rows as u16);
+                controlregs::with_userspace_access(||winsize.ws_col = cols as u16);
 
                 let (xpixel, ypixel) = crate::rendy::get_resolution();
 
-                winsize.ws_xpixel = xpixel as u16;
-                winsize.ws_ypixel = ypixel as u16;
+                controlregs::with_userspace_access(||winsize.ws_xpixel = xpixel as u16);
+                controlregs::with_userspace_access(||winsize.ws_ypixel = ypixel as u16);
 
                 Ok(0x00)
             }
@@ -283,7 +283,7 @@ impl INodeInterface for Tty {
                 let lock = TERMIOS.lock_irq();
                 let this = &*lock;
 
-                *termios = this.clone();
+                controlregs::with_userspace_access(||*termios = this.clone());
                 Ok(0x00)
             }
 
@@ -300,7 +300,7 @@ impl INodeInterface for Tty {
                 let mut lock = TERMIOS.lock_irq();
                 let this = &mut *lock;
 
-                *this = termios.clone();
+                controlregs::with_userspace_access(||*this = termios.clone());
                 Ok(0x00)
             }
 
