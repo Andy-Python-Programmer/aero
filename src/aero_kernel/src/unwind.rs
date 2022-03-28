@@ -32,6 +32,7 @@ use crate::logger;
 use crate::rendy;
 
 use crate::arch::interrupts;
+use crate::arch::controlregs;
 
 static PANIC_HOOK_READY: AtomicBool = AtomicBool::new(false);
 
@@ -186,7 +187,7 @@ extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     // Add a new line to make the stack trace more readable.
     log::error!("");
 
-    unwind_stack_trace();
+    controlregs::with_userspace_access(||unwind_stack_trace());
 
     #[cfg(feature = "ci")]
     emu::exit_qemu(emu::ExitStatus::Success);
