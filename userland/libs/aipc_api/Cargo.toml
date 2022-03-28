@@ -1,0 +1,11 @@
+[package]
+name = "aipc-api"
+version = "0.1.0"
+edition = "2021"
+authors = ["pitust <piotr@stelmaszek.com>"]
+
+[dependencies]
+std = { path = "../../libs/aero_std" }
+aero_syscall = { path = "../../../src/aero_syscall" }
+aipc = { path = "../aipc" }
+serde = { version = "1.0.136", default-features = false, features = ["alloc"] }

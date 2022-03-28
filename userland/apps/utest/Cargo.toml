@@ -7,5 +7,5 @@ authors = ["Anhad Singh <andypythonappdeveloper@gmail.com>"]
 [dependencies]
 std = { path = "../../libs/aero_std" }
 aero_syscall = { path = "../../../src/aero_syscall" }
-aero_ipc = { path = "../../libs/aero_ipc" }
+aipc = { path = "../../libs/aipc" }
 utest-proc = { path = "../utest-proc" }

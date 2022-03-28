@@ -17,22 +17,30 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_ipc::{SystemService, WindowService};
 use aero_syscall::*;
+use aipc_api::{system_server::SystemServer, window_server::WindowServer};
 
-fn discover_service(name: &str) -> Result<usize, AeroSyscallError> {
+async fn discover_service(name: &str) -> Result<usize, AeroSyscallError> {
     let root_pid = sys_ipc_discover_root()?;
-    let system = SystemService::open(root_pid);
+    let system = SystemServer::open(root_pid).await;
 
-    system.discover(name).map_err(|_| AeroSyscallError::ENOMSG)
+    system
+        .discover(name)
+        .await
+        .map_err(|_| AeroSyscallError::ENOMSG)
 }
 
-fn main() -> Result<(), AeroSyscallError> {
-    let window_server = WindowService::open(discover_service("WindowServer")?);
+fn main() {
+    let mut rt = aipc::async_runtime::AsyncRuntime::new();
 
-    window_server.create_window("Test window 1");
-    window_server.create_window("Test window 2");
-    window_server.create_window("Test window 3");
+    rt.spawn(async {
+        let window_server = WindowServer::open(discover_service("WindowServer").await.unwrap()).await;
 
-    Ok(())
+        window_server.create_window("Test window 1").await;
+        window_server.create_window("Test window 2").await;
+        window_server.create_window("Test window 3").await;
+
+        sys_exit(0);
+    });
+    rt.run();
 }

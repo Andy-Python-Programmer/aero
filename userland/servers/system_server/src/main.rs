@@ -1,3 +1,4 @@
+use aipc::async_runtime::Listener;
 /*
 * Copyright (C) 2021-2022 The Aero Project Developers.
  *
@@ -16,11 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
-
-use aero_ipc::{SystemService, SystemServiceError, SystemServiceResult};
 use aero_syscall::*;
+use aipc_api::system_server::Error;
 use hashbrown::{hash_map::Entry, HashMap};
-use spin::RwLock;
+use spin::{Once, RwLock};
 
 // Basically the same thing that's in the init's main.rs
 fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
@@ -37,33 +37,29 @@ fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, Aero
 fn main() {
     sys_ipc_become_root().unwrap();
 
-    aero_ipc::listen(SystemService::handler(SystemServer::new()));
-
     fork_and_exec("/bin/window_server", &[], &[]).unwrap();
 
-    loop {
-        aero_ipc::service_request();
+    let mut rt = aipc::async_runtime::AsyncRuntime::new();
+    ConcreteSystemServer::listen();
+    rt.run();
+}
+
+static SERVICES: Once<RwLock<HashMap<String, usize>>> = Once::new();
+
+struct SystemServerData;
+
+#[aipc::object(ConcreteSystemServer as aipc_api::system_server::SystemServer)]
+impl SystemServerData {
+    fn open() -> SystemServerData {
+        SERVICES.call_once(|| RwLock::new(HashMap::new()));
+        SystemServerData
     }
-}
 
-struct SystemServer {
-    services: RwLock<HashMap<String, usize>>,
-}
-
-impl SystemServer {
-    fn new() -> Self {
-        Self {
-            services: RwLock::new(HashMap::with_capacity(24)),
-        }
-    }
-}
-
-impl SystemService::Server for SystemServer {
-    fn announce(&self, pid: usize, name: &str) -> SystemServiceResult<()> {
+    fn announce(&self, pid: usize, name: &str) -> Result<(), Error> {
         let name = name.to_string();
 
-        match self.services.write().entry(name) {
-            Entry::Occupied(_) => Err(SystemServiceError::AlreadyProvided),
+        match SERVICES.get().unwrap().write().entry(name) {
+            Entry::Occupied(_) => Err(Error::AlreadyProvided),
             Entry::Vacant(entry) => {
                 entry.insert(pid);
                 Ok(())
@@ -71,13 +67,15 @@ impl SystemService::Server for SystemServer {
         }
     }
 
-    fn discover(&self, name: &str) -> SystemServiceResult<usize> {
+    fn discover(&self, name: &str) -> Result<usize, Error> {
         let name = name.to_string();
 
-        self.services
+        SERVICES
+            .get()
+            .unwrap()
             .read()
             .get(&name)
             .map(|pid| *pid)
-            .ok_or(SystemServiceError::NotFound)
+            .ok_or(Error::NotFound)
     }
 }
