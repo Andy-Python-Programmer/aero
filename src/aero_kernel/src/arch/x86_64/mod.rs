@@ -262,6 +262,11 @@ pub fn init_cpu() {
                 .get_extended_feature_info()
                 .map_or(false, |i| i.has_smap());
 
+            // Check if SMEP is supported.
+            let has_smep = CpuId::new()
+                .get_extended_feature_info()
+                .map_or(false, |i| i.has_smep());
+
             let mut cr4 = controlregs::read_cr4();
 
             if has_smap {
@@ -269,6 +274,13 @@ pub fn init_cpu() {
                 cr4.insert(controlregs::Cr4Flags::SUPERVISOR_MODE_ACCESS_PREVENTION);
             } else {
                 log::info!("SMAP is not supported.");
+            }
+
+            if has_smep {
+                log::info!("SMEP is supported, enabling SMEP.");
+                cr4.insert(controlregs::Cr4Flags::SUPERVISOR_MODE_EXECUTION_PROTECTION);
+            } else {
+                log::info!("SMEP is not supported.");
             }
 
             cr4.insert(controlregs::Cr4Flags::OSFXSR);
