@@ -54,6 +54,24 @@ fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError>
     }
 }
 
+/// Check the user-provided return addresses for system calls via SYSENTER
+///
+/// We cannot execute `sysexit` on return with non-canonical return addresses, or we
+/// will take a fault in the kernel with the user's GS base already swapped back.
+#[no_mangle]
+pub(super) extern "sysv64" fn x86_64_check_sysenter(stack: &mut InterruptErrorStack) {
+    let rip = stack.stack.iret.rip;
+    let rsp = stack.stack.iret.rsp;
+    let max_user_addr = super::task::userland_last_address().as_u64();
+
+    if rip > max_user_addr || rsp > max_user_addr {
+        log::error!("bad sysenter: rip={:#018x},rsp={:#018x}", rip, rsp);
+
+        // Forcibly kill the process, we have nowhere to return to.
+        scheduler::get_scheduler().exit(-1);
+    }
+}
+
 #[no_mangle]
 pub(super) extern "C" fn x86_64_do_syscall(stack: &mut InterruptErrorStack) {
     let stack = &mut stack.stack;
