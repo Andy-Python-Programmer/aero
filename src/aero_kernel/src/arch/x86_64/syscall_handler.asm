@@ -20,6 +20,7 @@ bits 64
 %include "registers.inc"
 
 extern x86_64_do_syscall
+extern x86_64_check_sysenter
 global x86_64_syscall_handler
 
 %define TSS_TEMP_USTACK_OFF 0x1c
@@ -123,7 +124,7 @@ x86_64_sysenter_handler:
     push    rcx
 
     ; Mask the same flags as for SYSCALL.
-    ; Note that up to this pont the code can be single-stepped if the user sets TF.
+    ; Note that up to this point the code can be single-stepped if the user sets TF.
     pushfq
     and     dword [rsp], 0x300
     popfq
@@ -133,10 +134,13 @@ x86_64_sysenter_handler:
     push_preserved
     push    0
 
-    ; Sore the stack pointer (interrupt frame pointer) in RBP for save keeping,
+    ; Store the stack pointer (interrupt frame pointer) in RBP for safe keeping,
     ; and align the stack as specified by the SysV calling convention.
     mov     rbp, rsp
     and     rsp, ~0xf
+
+    mov     rdi, rbp
+    call    x86_64_check_sysenter
 
     mov     rdi, rbp
     call    x86_64_do_syscall
@@ -146,14 +150,15 @@ x86_64_sysenter_handler:
     pop_preserved
     pop_scratch
 
-    ; Restore RFLAGS
-    add     rsp, 16
-    popfq
+    ; Pop the IRET frame into the registers expected by SYSEXIT.
+    pop     rdx     ; return RIP in RDX
+    add     rsp, 8
+    popfq           ; restore saved RFLAGS
+    pop     rcx     ; return RSP in RCX
 
-    ; Move the return RIP and RSP into the registers expected by SYSEXIT.
-    mov     rdx, rcx
-    mov     rcx, r11
-
+    ; SAFETY: The above call to `x86_64_check_sysenter` is guarantees that we
+    ; execute `sysexit` with canonical addresses in RCX and RDX. Otherwise we would
+    ; fault in the kernel having already swapped back to the user's GS.
     swapgs
     o64 sysexit
 .end:

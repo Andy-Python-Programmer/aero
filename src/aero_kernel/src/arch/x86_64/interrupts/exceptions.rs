@@ -69,12 +69,15 @@ pub fn invalid_opcode(stack: &mut InterruptErrorStack) {
     // The RIP on the stack for #UD points to the instruction which generated the exception.
     // The return RIP and RSP need to be changed to the user-provided values in RCX and R11.
     const SYSENTER_OPCODE: [u8; 2] = [0x0f, 0x34];
-    
+
     let opcode = unsafe { *(stack.stack.iret.rip as *const [u8; 2]) };
     if opcode == SYSENTER_OPCODE {
+        log::debug!("handling SYSENTER via #UD");
+
         stack.stack.iret.rip = stack.stack.scratch.rcx;
         stack.stack.iret.rsp = stack.stack.scratch.r11;
 
+        super::super::syscall::x86_64_check_sysenter(stack);
         super::super::syscall::x86_64_do_syscall(stack);
         return;
     }

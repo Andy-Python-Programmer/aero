@@ -317,6 +317,23 @@ fn rpc_test() -> Result<(), AeroSyscallError> {
 
 #[utest_proc::test]
 fn sysenter_test() -> Result<(), AeroSyscallError> {
+    let pid = sys_fork()?;
+
+    if pid == 0 {
+        unsafe {
+            core::arch::asm! {
+                "sysenter",
+                in("rcx") 0xf0f0usize << 48,
+                in("r11") 0x0f0fusize << 48,
+            }
+        }
+
+        core::unreachable!();
+    } else {
+        let mut status = 0;
+        sys_waitpid(pid, &mut status, 0)?;
+    }
+
     let msg = "sysenter works!\n";
     let ptr = msg.as_ptr();
     let len = msg.len();
