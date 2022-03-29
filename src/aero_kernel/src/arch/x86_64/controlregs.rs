@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 use crate::mem::paging::{PhysAddr, PhysFrame, VirtAddr};
 
 bitflags::bitflags! {
@@ -272,4 +274,35 @@ pub fn read_cr2() -> VirtAddr {
 
         VirtAddr::new(value)
     }
+}
+
+/// Returns true if Supervisor Mode Access Prevention (SMAP) is supported by the CPU and is enabled in Cr4.
+#[inline]
+pub fn smap_enabled() -> bool {
+    read_cr4().contains(Cr4Flags::SUPERVISOR_MODE_ACCESS_PREVENTION)
+}
+
+#[inline]
+pub fn with_userspace_access<F, R>(f: F) -> R
+where
+  F: FnOnce() -> R,
+{
+    static REF_COUNT: AtomicUsize = AtomicUsize::new(0);
+    if smap_enabled() {
+        unsafe {
+            asm!("stac");
+        }
+        REF_COUNT.fetch_add(1, Ordering::Acquire);
+    };
+    let r = f();
+    if smap_enabled() {
+        REF_COUNT.fetch_sub(1, Ordering::Release);
+
+        if REF_COUNT.load(Ordering::Relaxed) == 0 {
+            unsafe {
+                asm!("clac");
+            }
+        }
+    };
+    r
 }

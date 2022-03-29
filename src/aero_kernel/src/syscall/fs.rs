@@ -20,6 +20,8 @@
 use aero_syscall::prelude::FdFlags;
 use aero_syscall::{AeroSyscallError, OpenFlags};
 
+use crate::arch::controlregs;
+
 use crate::fs::inode::DirEntry;
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
@@ -39,8 +41,8 @@ pub fn write(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSyscall
         .flags
         .intersects(OpenFlags::O_WRONLY | OpenFlags::O_RDWR)
     {
-        let buffer = validate_slice(buffer as *const u8, size).ok_or(AeroSyscallError::EINVAL)?;
-        Ok(handle.write(buffer)?)
+        let buffer = controlregs::with_userspace_access(||validate_slice(buffer as *const u8, size).ok_or(AeroSyscallError::EINVAL))?;
+        Ok(controlregs::with_userspace_access(||handle.write(buffer))?)
     } else {
         Err(AeroSyscallError::EACCES)
     }
@@ -57,8 +59,8 @@ pub fn read(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSyscallE
         .flags
         .intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR)
     {
-        let buffer = validate_slice_mut(buffer as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
-        Ok(handle.read(buffer)?)
+        let buffer = controlregs::with_userspace_access(||validate_slice_mut(buffer as *mut u8, size).ok_or(AeroSyscallError::EINVAL))?;
+        Ok(controlregs::with_userspace_access(||handle.read(buffer))?)
     } else {
         Err(AeroSyscallError::EACCES)
     }
@@ -71,7 +73,7 @@ pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, A
         flags.insert(OpenFlags::O_RDONLY);
     }
 
-    let path = validate_str(path as *const u8, len).ok_or(AeroSyscallError::EINVAL)?;
+    let path = controlregs::with_userspace_access(||validate_str(path as *const u8, len).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path);
 
     let mut lookup_mode = LookupMode::None;
@@ -80,7 +82,7 @@ pub fn open(_fd: usize, path: usize, len: usize, mode: usize) -> Result<usize, A
         lookup_mode = LookupMode::Create;
     }
 
-    let inode = fs::lookup_path_with_mode(path, lookup_mode)?;
+    let inode = controlregs::with_userspace_access(||fs::lookup_path_with_mode(path, lookup_mode))?;
 
     if flags.contains(OpenFlags::O_DIRECTORY) && !inode.inode().metadata()?.is_directory() {
         return Err(AeroSyscallError::ENOTDIR);
@@ -118,7 +120,7 @@ pub fn getdents(fd: usize, buffer: usize, size: usize) -> Result<usize, AeroSysc
         .ok_or(AeroSyscallError::EBADFD)?;
 
     let buffer = validate_slice_mut(buffer as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
-    Ok(handle.get_dents(buffer)?)
+    Ok(controlregs::with_userspace_access(||handle.get_dents(buffer))?)
 }
 
 pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
@@ -136,7 +138,7 @@ pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
 }
 
 pub fn chdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
-    let buffer = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let buffer = controlregs::with_userspace_access(||validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL))?;
     let inode = fs::lookup_path(Path::new(buffer))?;
 
     if !inode.inode().metadata()?.is_directory() {
@@ -149,7 +151,7 @@ pub fn chdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
 }
 
 pub fn mkdirat(dfd: usize, path: usize, size: usize) -> Result<usize, AeroSyscallError> {
-    let path_str = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let path_str = controlregs::with_userspace_access(||validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path_str);
 
     // NOTE: If the pathname given in pathname is relative, then it is interpreted
@@ -197,7 +199,7 @@ pub fn mkdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
 }
 
 pub fn rmdir(path: usize, size: usize) -> Result<usize, AeroSyscallError> {
-    let path_str = validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
+    let path_str = controlregs::with_userspace_access(||validate_str(path as *mut u8, size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path_str);
 
     let (_, child) = path.parent_and_basename();
@@ -224,7 +226,7 @@ pub fn getcwd(buffer: usize, size: usize) -> Result<usize, AeroSyscallError> {
     let buffer = validate_slice_mut(buffer as *mut u8, size).ok_or(AeroSyscallError::EINVAL)?;
     let cwd = scheduler::get_scheduler().current_task().get_cwd();
 
-    buffer[..cwd.len()].copy_from_slice(cwd.as_bytes());
+    controlregs::with_userspace_access(||buffer[..cwd.len()].copy_from_slice(cwd.as_bytes()));
     Ok(cwd.len())
 }
 
@@ -275,8 +277,8 @@ pub fn pipe(fds: usize, flags: usize) -> Result<usize, AeroSyscallError> {
         Ok(fd2) => fd2,
     };
 
-    fds[0] = fd1;
-    fds[1] = fd2;
+    controlregs::with_userspace_access(||fds[0] = fd1);
+    controlregs::with_userspace_access(||fds[1] = fd2);
 
     Ok(0x00)
 }
@@ -287,7 +289,7 @@ pub fn unlink(
     path_size: usize,
     flags: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path_str = controlregs::with_userspace_access(||validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path_str);
 
     // TODO: Make use of the open flags.
@@ -319,7 +321,7 @@ pub fn access(
     _mode: usize,
     _flags: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let path_str = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path_str = controlregs::with_userspace_access(||validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path_str);
 
     if fd as isize == aero_syscall::AT_FDCWD {

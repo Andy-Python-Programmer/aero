@@ -144,7 +144,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
             }
 
             "uptime" => {
-                print!("{}", get_uptime()?);
+                println!("{}", get_uptime()?);
             }
 
             "sleep" => {

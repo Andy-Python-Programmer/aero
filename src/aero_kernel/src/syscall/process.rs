@@ -22,6 +22,8 @@ use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
 use alloc::string::String;
 use spin::{Mutex, Once};
 
+use crate::arch::controlregs;
+
 use crate::fs;
 use crate::fs::Path;
 
@@ -57,7 +59,7 @@ pub fn uname(buffer: usize) -> Result<usize, AeroSyscallError> {
         let init_bytes = init.as_bytes();
         let len = init.len();
 
-        fixed[..len].copy_from_slice(init_bytes)
+        controlregs::with_userspace_access(||fixed[..len].copy_from_slice(init_bytes))
     }
 
     // TODO: Safety checks!
@@ -104,10 +106,10 @@ pub fn exec(
     envs: usize,
     envc: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let path = validate_str(path as *const u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path = controlregs::with_userspace_access(||validate_str(path as *const u8, path_size).ok_or(AeroSyscallError::EINVAL))?;
     let path = Path::new(path);
 
-    let executable = fs::lookup_path(path)?;
+    let executable = controlregs::with_userspace_access(||fs::lookup_path(path))?;
 
     if executable.inode().metadata()?.is_directory() {
         return Err(AeroSyscallError::EISDIR);
@@ -135,7 +137,7 @@ pub fn exec(
 }
 
 pub fn log(msg_start: usize, msg_size: usize) -> Result<usize, AeroSyscallError> {
-    let message = validate_str(msg_start as *const u8, msg_size).ok_or(AeroSyscallError::EINVAL)?;
+    let message = controlregs::with_userspace_access(||validate_str(msg_start as *const u8, msg_size).ok_or(AeroSyscallError::EINVAL))?;
     log::debug!("{}", message);
 
     Ok(0x00)
@@ -145,7 +147,7 @@ pub fn waitpid(pid: usize, status: usize, _flags: usize) -> Result<usize, AeroSy
     let current_task = scheduler::get_scheduler().current_task();
     let status = unsafe { &mut *(status as *mut u32) };
 
-    Ok(current_task.waitpid(pid, status)?)
+    Ok(controlregs::with_userspace_access(||current_task.waitpid(pid, status))?)
 }
 
 pub fn mmap(
@@ -215,7 +217,7 @@ pub fn gethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError>
     if bytes.len() > slice.len() {
         Err(AeroSyscallError::ENAMETOOLONG)
     } else {
-        slice[0..bytes.len()].copy_from_slice(bytes);
+        controlregs::with_userspace_access(||slice[0..bytes.len()].copy_from_slice(bytes));
 
         Ok(bytes.len())
     }
@@ -225,7 +227,7 @@ pub fn info(struc: usize) -> Result<usize, AeroSyscallError> {
     let struc = unsafe { &mut *(struc as *mut aero_syscall::SysInfo) };
 
     // TODO: Fill in the rest of the struct.
-    struc.uptime = crate::time::get_uptime_ticks() as i64;
+    controlregs::with_userspace_access(||struc.uptime = crate::time::get_uptime_ticks() as i64);
 
     Ok(0x00)
 }
@@ -235,7 +237,7 @@ pub fn sethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError>
 
     match core::str::from_utf8(slice) {
         Ok(new_hostname) => {
-            *hostname().lock() = String::from(new_hostname);
+            controlregs::with_userspace_access(||*hostname().lock() = String::from(new_hostname));
             Ok(0)
         }
         Err(_) => Err(AeroSyscallError::EINVAL),
@@ -259,7 +261,7 @@ pub fn sigaction(
     };
 
     let entry = if let Some(new) = new {
-        Some(SignalEntry::from_sigaction(*new, sigreturn)?)
+        Some(controlregs::with_userspace_access(||SignalEntry::from_sigaction(*new, sigreturn))?)
     } else {
         None
     };
@@ -278,7 +280,7 @@ pub fn sigaction(
     let task = scheduler.current_task();
     let signals = task.signals();
 
-    signals.set_signal(sig, entry, old);
+    controlregs::with_userspace_access(||signals.set_signal(sig, entry, old));
 
     Ok(0)
 }

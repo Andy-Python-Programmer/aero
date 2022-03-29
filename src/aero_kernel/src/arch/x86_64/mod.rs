@@ -146,15 +146,15 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
             .unwrap()
     });
 
-    // Initialize the CPU specific features.
-    init_cpu();
-
     // We initialize the COM ports before doing anything else.
     //
     // This will help printing panics and logs before or when the debug renderer
     // is initialized and if serial output is avaliable.
     drivers::uart_16550::init();
     logger::init();
+
+    // Initialize the CPU specific features.
+    init_cpu();
 
     // Parse the kernel command line.
     let command_line: &'static _ = boot_info.command_line().map_or("", |cmd| unsafe {
@@ -251,12 +251,49 @@ pub fn init_cpu() {
 
             cr0.remove(controlregs::Cr0Flags::EMULATE_COPROCESSOR);
             cr0.insert(controlregs::Cr0Flags::MONITOR_COPROCESSOR);
+            cr0.insert(controlregs::Cr0Flags::WRITE_PROTECT);
 
             controlregs::write_cr0(cr0);
         }
 
         {
+            // Check if SMAP is supported.
+            let has_smap = CpuId::new()
+                .get_extended_feature_info()
+                .map_or(false, |i| i.has_smap());
+
+            // Check if SMEP is supported.
+            let has_smep = CpuId::new()
+                .get_extended_feature_info()
+                .map_or(false, |i| i.has_smep());
+
+            // Check if UMIP is supported.
+            let has_umip = CpuId::new()
+                .get_extended_feature_info()
+                .map_or(false, |i| i.has_umip());
+
             let mut cr4 = controlregs::read_cr4();
+
+            if has_smap {
+                log::info!("SMAP is supported, enabling SMAP.");
+                cr4.insert(controlregs::Cr4Flags::SUPERVISOR_MODE_ACCESS_PREVENTION);
+            } else {
+                log::info!("SMAP is not supported.");
+            }
+
+            if has_smep {
+                log::info!("SMEP is supported, enabling SMEP.");
+                cr4.insert(controlregs::Cr4Flags::SUPERVISOR_MODE_EXECUTION_PROTECTION);
+            } else {
+                log::info!("SMEP is not supported.");
+            }
+
+            if has_umip {
+                log::info!("UMIP is supported, enabling UMIP.");
+                cr4.insert(controlregs::Cr4Flags::USER_MODE_INSTRUCTION_PREVENTION);
+            } else {
+                log::info!("UMIP is not supported.");
+            }
 
             cr4.insert(controlregs::Cr4Flags::OSFXSR);
             cr4.insert(controlregs::Cr4Flags::OSXMMEXCPT_ENABLE);
