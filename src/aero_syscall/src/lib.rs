@@ -284,7 +284,7 @@ impl Default for Utsname {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 #[repr(C)]
 pub struct TimeSpec {
     pub tv_sec: isize,
@@ -873,4 +873,69 @@ pub fn sys_ipc_discover_root() -> Result<usize, AeroSyscallError> {
 pub fn sys_ipc_become_root() -> Result<(), AeroSyscallError> {
     let value = syscall0(prelude::SYS_IPC_BECOME_ROOT);
     isize_as_syscall_result(value as _).map(|_| ())
+}
+
+// sysdeps/aero/include/abi-bits/stat.h
+bitflags::bitflags! {
+    #[derive(Default)]
+    pub struct Mode: u32 {
+        const S_IFMT   = 0x0F000;
+        const S_IFBLK  = 0x06000;
+        const S_IFCHR  = 0x02000;
+        const S_IFIFO  = 0x01000;
+        const S_IFREG  = 0x08000;
+        const S_IFDIR  = 0x04000;
+        const S_IFLNK  = 0x0A000;
+        const S_IFSOCK = 0x0C000;
+
+        const S_IRWXU = 0700;
+        const S_IRUSR = 0400;
+        const S_IWUSR = 0200;
+        const S_IXUSR = 0100;
+        const S_IRWXG = 070;
+        const S_IRGRP = 040;
+        const S_IWGRP = 020;
+        const S_IXGRP = 010;
+        const S_IRWXO = 07;
+        const S_IROTH = 04;
+        const S_IWOTH = 02;
+        const S_IXOTH = 01;
+        const S_ISUID = 04000;
+        const S_ISGID = 02000;
+        const S_ISVTX = 01000;
+
+        const S_IREAD  = Self::S_IRUSR.bits();
+        const S_IWRITE = Self::S_IWUSR.bits();
+        const S_IEXEC  = Self::S_IXUSR.bits();
+    }
+}
+
+// sysdeps/aero/include/abi-bits/stat.h
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct Stat {
+    pub st_dev: u64,
+    pub st_ino: u64,
+    pub st_mode: Mode,
+    pub st_nlink: u32,
+    pub st_uid: u32,
+    pub st_gid: u32,
+    pub st_rdev: u64,
+    pub st_size: i64,
+    pub st_atim: TimeSpec,
+    pub st_mtim: TimeSpec,
+    pub st_ctim: TimeSpec,
+    pub st_blksize: u64,
+    pub st_blocks: u64,
+}
+
+pub fn sys_stat(path: &str, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
+    let value = syscall3(
+        prelude::SYS_STAT,
+        path.as_ptr() as usize,
+        path.len(),
+        stat as *mut Stat as usize,
+    );
+
+    isize_as_syscall_result(value as _)
 }

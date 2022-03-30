@@ -94,6 +94,39 @@ impl VirtAddr {
         self.as_ptr::<T>() as *mut T
     }
 
+    /// If the virtual address is a valid userland address, the [`Some`] varient is returned
+    /// contaning the address, else the [`None`] variant is returned.
+    ///
+    /// ## Example
+    /// ```no_run
+    /// let address: VirtAddr = VirtAddr::new(stat)
+    ///     .validate_user()
+    ///     .ok_or(AeroSyscallError::EFAULT)?;
+    /// ```
+    pub fn validate_user(self) -> Option<Self> {
+        if self <= crate::arch::task::userland_last_address() {
+            Some(self)
+        } else {
+            None
+        }
+    }
+
+    /// Reads `sizeof(T)` bytes from the virtual address and returns a mutable reference
+    /// to the value (`&mut T`).
+    ///
+    /// ## Example
+    /// ```no_run
+    /// let address: SomeStruct = VirtAddr::new(0xcafebabe)
+    ///     .read_mut::<SomeStruct>();
+    /// ```
+    ///
+    /// ## Safety
+    /// * The virtual address must be valid.
+    /// * It must be safe to read `sizeof(T)` bytes from the virtual address.
+    pub unsafe fn read_mut<'struc, T>(&self) -> &'struc mut T {
+        &mut *(self.as_mut_ptr() as *mut T)
+    }
+
     /// Aligns the virtual address downwards to the given alignment.
     ///
     /// See the `align_down` function for more information.

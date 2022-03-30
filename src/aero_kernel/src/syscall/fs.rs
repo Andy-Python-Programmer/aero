@@ -23,6 +23,7 @@ use aero_syscall::{AeroSyscallError, OpenFlags};
 use crate::fs::inode::DirEntry;
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
+use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 
 use crate::fs::Path;
@@ -361,4 +362,23 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscall
 
         _ => unimplemented!(),
     }
+}
+
+pub fn stat(path: usize, path_size: usize, stat_struct: usize) -> Result<usize, AeroSyscallError> {
+    let stat_struct = VirtAddr::new(stat_struct as _)
+        .validate_user()
+        .ok_or(AeroSyscallError::EFAULT)?;
+
+    // SAFETY: The user provided address is validated above.
+    let stat_struct = unsafe { stat_struct.read_mut::<aero_syscall::Stat>() };
+
+    let path = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    log::debug!("sys_stat: {path}");
+
+    let path = Path::new(path);
+
+    let file = fs::lookup_path(path)?;
+    *stat_struct = file.inode().stat()?;
+
+    Ok(0)
 }

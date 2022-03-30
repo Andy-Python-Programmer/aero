@@ -114,6 +114,12 @@ impl LockedRamINode {
 }
 
 impl INodeInterface for LockedRamINode {
+    fn stat(&self) -> Result<aero_syscall::Stat> {
+        // todo(andy): implement `stat` for ramfs files. This is a workaround
+        // to make not programs crash when they try to stat a ramfs file.
+        Ok(aero_syscall::Stat::default())
+    }
+
     fn touch(&self, parent: DirCacheItem, name: &str) -> Result<DirCacheItem> {
         Ok(DirEntry::new(
             parent,

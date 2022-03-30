@@ -184,6 +184,7 @@ pub fn generic_do_syscall(
         SYS_DUP => fs::dup(b, c),
         SYS_DUP2 => fs::dup2(b, c, d),
         SYS_FCNTL => fs::fcntl(b, c, d),
+        SYS_STAT => fs::stat(b, c, d),
 
         SYS_SOCKET => net::socket(b, c, d),
         SYS_BIND => net::bind(b, c, d),
