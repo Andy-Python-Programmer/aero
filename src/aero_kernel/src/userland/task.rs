@@ -516,8 +516,9 @@ impl Task {
             parent.remove_child(self);
             parent.zombies.add_zombie(self.this());
 
-            // TODO: If the parent process is the process leader then
-            // signal SIGCHLD to the parent process.
+            if self.is_process_leader() {
+                parent.signal(aero_syscall::signal::SIGCHLD);
+            }
         }
     }
 }
