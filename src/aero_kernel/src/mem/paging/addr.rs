@@ -94,37 +94,40 @@ impl VirtAddr {
         self.as_ptr::<T>() as *mut T
     }
 
-    /// If the virtual address is a valid userland address, the [`Some`] varient is returned
-    /// contaning the address, else the [`None`] variant is returned.
+    /// Validate reads `sizeof(T)` bytes from the virtual address and returns a mutable
+    /// reference to the value (`&mut T`).
     ///
     /// ## Example
     /// ```no_run
-    /// let address: VirtAddr = VirtAddr::new(stat)
-    ///     .validate_user()
-    ///     .ok_or(AeroSyscallError::EFAULT)?;
+    /// let address: &mut SomeStruct = VirtAddr::new(0xcafebabe)
+    ///    .read_mut::<SomeStruct>();
+    ///    .ok_or(AeroSyscallError::EFAULT)?;
     /// ```
-    pub fn validate_user(self) -> Option<Self> {
-        if self <= crate::arch::task::userland_last_address() {
-            Some(self)
+    pub fn read_mut<'struc, T>(&self) -> Option<&'struc mut T> {
+        if self.validate_read::<T>() {
+            Some(unsafe { &mut *(self.as_mut_ptr() as *mut T) })
         } else {
             None
         }
     }
 
-    /// Reads `sizeof(T)` bytes from the virtual address and returns a mutable reference
-    /// to the value (`&mut T`).
+    /// Returns if the address is valid to read `sizeof(T)` bytes at the address.
+    fn validate_read<T: Sized>(&self) -> bool {
+        *self < crate::arch::task::userland_last_address()
+            && (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address()
+    }
+
+    /// Validate reads `sizeof(T)` bytes from the virtual address and returns a copy
+    /// of the value (`T`).
     ///
     /// ## Example
     /// ```no_run
-    /// let address: SomeStruct = VirtAddr::new(0xcafebabe)
-    ///     .read_mut::<SomeStruct>();
+    /// let value: u64 = VirtAddr::new(0xcafebabe)
+    ///    .copied_read::<u64>()
+    ///    .ok_or(AeroSyscallError::EFAULT)?;
     /// ```
-    ///
-    /// ## Safety
-    /// * The virtual address must be valid.
-    /// * It must be safe to read `sizeof(T)` bytes from the virtual address.
-    pub unsafe fn read_mut<'struc, T>(&self) -> &'struc mut T {
-        &mut *(self.as_mut_ptr() as *mut T)
+    pub fn copied_read<T: Copy + Sized>(&self) -> Option<T> {
+        self.read_mut().map(|t| *t)
     }
 
     /// Aligns the virtual address downwards to the given alignment.

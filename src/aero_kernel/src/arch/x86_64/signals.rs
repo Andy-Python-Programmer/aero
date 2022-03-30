@@ -92,7 +92,6 @@ pub fn interrupt_check_signals(stack: &mut InterruptStack) {
     }
 }
 
-/// Helper function to check for any pending signals from a sycall.
 pub fn syscall_check_signals(_syscall_result: isize, _stack: &mut InterruptStack) {
     if let Some((_signal, entry)) = userland::signals::check_for_signals() {
         if let aero_syscall::signal::SignalHandler::Handle(_) = entry.handler() {

@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::signal::SigAction;
+use aero_syscall::signal::{SigAction, SigProcMask};
 use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
 use alloc::string::String;
 use spin::{Mutex, Once};
@@ -240,6 +240,31 @@ pub fn sethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError>
         }
         Err(_) => Err(AeroSyscallError::EINVAL),
     }
+}
+
+pub fn sigprocmask(how: usize, set: usize, old_set: usize) -> Result<usize, AeroSyscallError> {
+    let set = VirtAddr::new(set as _)
+        .copied_read::<u64>()
+        .ok_or(AeroSyscallError::EFAULT)?;
+
+    let old_set = if old_set > 0 {
+        Some(
+            VirtAddr::new(old_set as _)
+                .read_mut::<u64>()
+                .ok_or(AeroSyscallError::EFAULT)?,
+        )
+    } else {
+        None
+    };
+
+    let how = SigProcMask::from(how as u64);
+
+    scheduler::get_scheduler()
+        .current_task()
+        .signals()
+        .set_mask(how, set, old_set);
+
+    Ok(0)
 }
 
 pub fn sigaction(

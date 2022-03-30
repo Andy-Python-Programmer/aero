@@ -370,12 +370,9 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscall
 fn validate_stat_struct<'struc>(
     stat_struct: usize,
 ) -> Result<&'struc mut aero_syscall::Stat, AeroSyscallError> {
-    let stat_struct = VirtAddr::new(stat_struct as _)
-        .validate_user()
-        .ok_or(AeroSyscallError::EFAULT)?;
-
-    // SAFETY: The user provided address is validated above.
-    Ok(unsafe { stat_struct.read_mut::<aero_syscall::Stat>() })
+    VirtAddr::new(stat_struct as _)
+        .read_mut::<aero_syscall::Stat>()
+        .ok_or(AeroSyscallError::EFAULT)
 }
 
 pub fn fstat(fd: usize, stat_struct: usize) -> Result<usize, AeroSyscallError> {
