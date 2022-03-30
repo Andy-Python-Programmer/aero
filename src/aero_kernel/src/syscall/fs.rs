@@ -364,17 +364,36 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscall
     }
 }
 
-pub fn stat(path: usize, path_size: usize, stat_struct: usize) -> Result<usize, AeroSyscallError> {
+/// Validates the [`aero_syscall::Stat`] struct provided by the user and returns a mutable
+/// reference to it. [`AeroSyscallError::EFAULT`] is returned if the provided pointer is outside
+/// of the user's address space.
+fn validate_stat_struct<'struc>(
+    stat_struct: usize,
+) -> Result<&'struc mut aero_syscall::Stat, AeroSyscallError> {
     let stat_struct = VirtAddr::new(stat_struct as _)
         .validate_user()
         .ok_or(AeroSyscallError::EFAULT)?;
 
     // SAFETY: The user provided address is validated above.
-    let stat_struct = unsafe { stat_struct.read_mut::<aero_syscall::Stat>() };
+    Ok(unsafe { stat_struct.read_mut::<aero_syscall::Stat>() })
+}
+
+pub fn fstat(fd: usize, stat_struct: usize) -> Result<usize, AeroSyscallError> {
+    let stat_struct = validate_stat_struct(stat_struct)?;
+    let handle = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    *stat_struct = handle.inode().stat()?;
+    Ok(0)
+}
+
+pub fn stat(path: usize, path_size: usize, stat_struct: usize) -> Result<usize, AeroSyscallError> {
+    let stat_struct = validate_stat_struct(stat_struct)?;
 
     let path = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
-    log::debug!("sys_stat: {path}");
-
     let path = Path::new(path);
 
     let file = fs::lookup_path(path)?;

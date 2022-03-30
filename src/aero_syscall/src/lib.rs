@@ -939,3 +939,8 @@ pub fn sys_stat(path: &str, stat: &mut Stat) -> Result<usize, AeroSyscallError> 
 
     isize_as_syscall_result(value as _)
 }
+
+pub fn sys_fstat(fd: usize, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
+    let value = syscall2(prelude::SYS_FSTAT, fd, stat as *mut Stat as usize);
+    isize_as_syscall_result(value as _)
+}

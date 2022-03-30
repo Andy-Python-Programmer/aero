@@ -70,6 +70,8 @@
 //! | 46     | ipc_recv                |
 //! | 47     | ipc_discover_root       |
 //! | 48     | ipc_become_root         |
+//! | 49     | stat                    |
+//! | 50     | fstat                   |
 
 use core::mem::MaybeUninit;
 
@@ -185,6 +187,7 @@ pub fn generic_do_syscall(
         SYS_DUP2 => fs::dup2(b, c, d),
         SYS_FCNTL => fs::fcntl(b, c, d),
         SYS_STAT => fs::stat(b, c, d),
+        SYS_FSTAT => fs::fstat(b, c),
 
         SYS_SOCKET => net::socket(b, c, d),
         SYS_BIND => net::bind(b, c, d),
