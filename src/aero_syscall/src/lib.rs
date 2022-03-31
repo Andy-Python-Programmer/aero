@@ -218,8 +218,10 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_IPC_RECV => "ipc_recv",
         prelude::SYS_IPC_DISCOVER_ROOT => "ipc_discover_root",
         prelude::SYS_IPC_BECOME_ROOT => "ipc_become_root",
+        prelude::SYS_STAT => "stat",
+        prelude::SYS_FSTAT => "fstat",
 
-        _ => unreachable!("unknown syscall"),
+        _ => unreachable!("unknown syscall {syscall}"),
     }
 }
 
@@ -441,7 +443,7 @@ pub fn syscall_result_as_usize(result: Result<usize, AeroSyscallError>) -> usize
 
 /// Inner helper function that converts the syscall result value into the
 /// Rust [`Result`] type.
-fn isize_as_syscall_result(value: isize) -> Result<usize, AeroSyscallError> {
+pub fn isize_as_syscall_result(value: isize) -> Result<usize, AeroSyscallError> {
     if value >= 0 {
         Ok(value as usize)
     } else {
