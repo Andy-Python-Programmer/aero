@@ -339,7 +339,7 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join('src', '.cargo', 'term_background.bmp'), iso_root)
     shutil.copy(os.path.join(limine_path, 'limine.sys'), iso_root)
     shutil.copy(os.path.join(limine_path, 'limine-cd.bin'), iso_root)
-    shutil.copy(os.path.join(limine_path, 'limine-eltorito-efi.bin'), iso_root)
+    shutil.copy(os.path.join(limine_path, 'limine-cd-efi.bin'), iso_root)
 
     initramfs_root = os.path.join(BUILD_DIR, 'initramfs_root')
 
@@ -412,13 +412,13 @@ def prepare_iso(args, kernel_bin, user_bins):
 
     code, _, xorriso_stderr = run_command([
         'xorriso', '-as', 'mkisofs', '-b', 'limine-cd.bin', '-no-emul-boot', '-boot-load-size', '4',
-        '-boot-info-table', '--efi-boot', 'limine-eltorito-efi.bin', '-efi-boot-part',
+        '-boot-info-table', '--efi-boot', 'limine-cd-efi.bin', '-efi-boot-part',
         '--efi-boot-image', '--protective-msdos-label', iso_root, '-o', iso_path
     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if code != 0:
         print('Failed to create the ISO image')
-        print(xorriso_stderr)
+        print(xorriso_stderr.decode('utf-8'))
 
         return None
 
