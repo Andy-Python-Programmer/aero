@@ -145,7 +145,7 @@ pub fn waitpid(pid: usize, status: usize, _flags: usize) -> Result<usize, AeroSy
     let current_task = scheduler::get_scheduler().current_task();
     let status = unsafe { &mut *(status as *mut u32) };
 
-    Ok(current_task.waitpid(pid, status)?)
+    Ok(current_task.waitpid(pid as isize, status)?)
 }
 
 pub fn mmap(

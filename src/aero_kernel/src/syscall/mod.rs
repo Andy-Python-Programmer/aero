@@ -211,7 +211,6 @@ pub fn generic_do_syscall(
 
     #[cfg(feature = "syslog")]
     {
-        use crate::drivers::uart_16550;
         use alloc::string::String;
 
         let name = aero_syscall::syscall_as_str(a);
@@ -242,7 +241,7 @@ pub fn generic_do_syscall(
         let result_str = alloc::format!("{:?}", result);
         result_v.push_str(&result_str);
 
-        uart_16550::serial_println!("{}", result_v);
+        log::trace!("{}", result_v);
     }
 
     result_usize
