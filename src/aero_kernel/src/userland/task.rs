@@ -130,21 +130,23 @@ impl Zombies {
         self.block.notify_complete();
     }
 
-    fn waitpid(&self, pid: usize, status: &mut u32) -> SignalResult<usize> {
+    fn waitpid(&self, pids: &[usize], status: &mut u32) -> SignalResult<usize> {
         let mut captured = (TaskId(0), 0);
 
         self.block.block_on(&self.list, |l| {
             let mut cursor = l.front_mut();
 
             while let Some(t) = cursor.get() {
-                if t.pid().as_usize() == pid {
-                    captured = (t.pid(), t.exit_status());
-                    cursor.remove();
+                for pid in pids {
+                    if t.pid().as_usize() == *pid {
+                        captured = (t.pid(), t.exit_status());
+                        cursor.remove();
 
-                    return true;
-                } else {
-                    cursor.move_next();
+                        return true;
+                    }
                 }
+
+                cursor.move_next();
             }
 
             false
@@ -344,7 +346,7 @@ impl Task {
     }
 
     fn remove_child(&self, child: &Task) {
-        let mut children = self.children.lock();
+        let mut children = self.children.lock_irq();
 
         if child.clink.is_linked() {
             let mut cursor = unsafe { children.cursor_mut_from_ptr(child) };
@@ -355,7 +357,7 @@ impl Task {
     }
 
     fn add_child(&self, child: Arc<Task>) {
-        let mut children = self.children.lock();
+        let mut children = self.children.lock_irq();
 
         child.set_parent(Some(self.this()));
         children.push_back(child);
@@ -373,8 +375,25 @@ impl Task {
         self.sleep_duration.load(Ordering::SeqCst)
     }
 
-    pub fn waitpid(&self, pid: usize, status: &mut u32) -> SignalResult<usize> {
-        self.zombies.waitpid(pid, status)
+    pub fn waitpid(&self, pid: isize, status: &mut u32) -> SignalResult<usize> {
+        if pid == -1 {
+            // wait for any child process if no specific process is requested.
+            //
+            // NOTE: we collect all of the zombie list's process IDs instead of the children
+            // list since the child could have been removed from the children list and become a zombie
+            // before the parent had a chance to wait for it.
+            let pids = self
+                .zombies
+                .list
+                .lock_irq()
+                .iter()
+                .map(|e| e.pid().as_usize())
+                .collect::<alloc::vec::Vec<_>>();
+
+            self.zombies.waitpid(&pids, status)
+        } else {
+            self.zombies.waitpid(&[pid as _], status)
+        }
     }
 
     pub fn path(&self) -> Option<String> {
