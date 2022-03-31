@@ -169,6 +169,10 @@ impl SignalEntry {
             sa_sigaction: 0,
         }
     }
+
+    pub fn flags(&self) -> SignalFlags {
+        self.flags
+    }
 }
 
 impl SignalEntry {
