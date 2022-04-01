@@ -1,4 +1,4 @@
-From dc0eb6086c635232cf3fee338dbbaa8915938e4e Mon Sep 17 00:00:00 2001
+From 4642a80de4f0c967d553e020347cf042d367c381 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -7,9 +7,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                          |  7 ++++++
  sysdeps/aero/generic/filesystem.cpp | 34 +++++++++++++++++++++++------
- sysdeps/aero/generic/signals.cpp    | 14 ++++++++++--
+ sysdeps/aero/generic/signals.cpp    |  8 +++++--
  sysdeps/aero/include/aero/syscall.h |  6 +++++
- 4 files changed, 52 insertions(+), 9 deletions(-)
+ 4 files changed, 46 insertions(+), 9 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..384b3395 100644
@@ -91,22 +91,16 @@ index 6a13f19c..69833ae5 100644
  }
  
 diff --git a/sysdeps/aero/generic/signals.cpp b/sysdeps/aero/generic/signals.cpp
-index 3527370c..67f23202 100644
+index 3527370c..a6f69fff 100644
 --- a/sysdeps/aero/generic/signals.cpp
 +++ b/sysdeps/aero/generic/signals.cpp
-@@ -42,8 +42,18 @@ int sys_sigaction(int how, const struct sigaction *__restrict action,
+@@ -42,8 +42,12 @@ int sys_sigaction(int how, const struct sigaction *__restrict action,
  
  int sys_sigprocmask(int how, const sigset_t *__restrict set,
                      sigset_t *__restrict retrieve) {
 -    mlibc::infoLogger() << "sys_sigprocmask() is not implemented"
 -                        << frg::endlog;
-+	auto old_set = 0;
-+
-+    if (retrieve) {
-+        old_set = reinterpret_cast<sc_word_t>(retrieve);
-+    }
-+
-+    auto result = syscall(SYS_SIGPROCMASK, how, set, old_set);
++    auto result = syscall(SYS_SIGPROCMASK, how, set, retrieve);
 +
 +    if (result < 0) {
 +        return -result;

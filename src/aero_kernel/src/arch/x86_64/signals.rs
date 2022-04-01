@@ -79,7 +79,7 @@ pub fn interrupt_check_signals(stack: &mut InterruptStack) {
             let old_mask = signals.blocked_mask();
 
             let signal_frame = SignalFrame::from_interrupt(stack, old_mask);
-            signals.set_mask(SigProcMask::Block, 1u64 << signal, None);
+            signals.set_mask(SigProcMask::Block, Some(1u64 << signal), None);
 
             // We cannot straight away update the stack pointer from the stack
             // helper, since it will created a reference to a packed field which
@@ -124,7 +124,7 @@ pub fn syscall_check_signals(syscall_result: isize, stack: &mut InterruptStack) 
 
             let signal_frame =
                 SignalFrame::from_syscall(restart_syscall, syscall_result as _, stack, old_mask);
-            signals.set_mask(SigProcMask::Block, 1u64 << signal, None);
+            signals.set_mask(SigProcMask::Block, Some(1u64 << signal), None);
 
             // We cannot straight away update the stack pointer from the stack
             // helper, since it will created a reference to a packed field which
@@ -160,7 +160,7 @@ pub fn sigreturn(stack: &mut InterruptStack) -> usize {
 
     current_task.signals().set_mask(
         aero_syscall::signal::SigProcMask::Set,
-        signal_frame.sigmask,
+        Some(signal_frame.sigmask),
         None,
     );
 

@@ -103,7 +103,7 @@ impl VirtAddr {
     ///    .read_mut::<SomeStruct>();
     ///    .ok_or(AeroSyscallError::EFAULT)?;
     /// ```
-    pub fn read_mut<'struc, T>(&self) -> Option<&'struc mut T> {
+    pub fn read_mut<'struc, T: Sized>(&self) -> Option<&'struc mut T> {
         if self.validate_read::<T>() {
             Some(unsafe { &mut *(self.as_mut_ptr() as *mut T) })
         } else {
@@ -113,8 +113,7 @@ impl VirtAddr {
 
     /// Returns if the address is valid to read `sizeof(T)` bytes at the address.
     fn validate_read<T: Sized>(&self) -> bool {
-        *self < crate::arch::task::userland_last_address()
-            && (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address()
+        (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address()
     }
 
     /// Validate reads `sizeof(T)` bytes from the virtual address and returns a copy
@@ -127,7 +126,7 @@ impl VirtAddr {
     ///    .ok_or(AeroSyscallError::EFAULT)?;
     /// ```
     pub fn copied_read<T: Copy + Sized>(&self) -> Option<T> {
-        self.read_mut().map(|t| *t)
+        self.read_mut::<T>().map(|t| *t)
     }
 
     /// Aligns the virtual address downwards to the given alignment.

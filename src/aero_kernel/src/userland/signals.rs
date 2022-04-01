@@ -390,24 +390,35 @@ impl Signals {
         );
     }
 
-    pub fn set_mask(&self, how: SigProcMask, set: u64, old_set: Option<&mut u64>) {
+    /// Used to update or read the signal mask of a task.
+    ///
+    /// ## Notes
+    /// * If `old_set` is not `None`, the previous value of the signal mask is
+    /// stored in oldset.
+    ///
+    /// * NOTE: If `set` is `None`, then the signal mask is unchanged (i.e., `how` is
+    /// ignored), but the current value of the signal mask is returned in `old_set`
+    /// (if it is not `None`).
+    pub fn set_mask(&self, how: SigProcMask, set: Option<u64>, old_set: Option<&mut u64>) {
         if let Some(old) = old_set {
             *old = self.blocked_mask.load(Ordering::SeqCst);
         }
 
-        let set = set & !IMMUTABLE_MASK;
+        if let Some(set) = set {
+            let set = set & !IMMUTABLE_MASK;
 
-        match how {
-            SigProcMask::Block => {
-                self.blocked_mask.fetch_or(set, Ordering::SeqCst);
-            }
+            match how {
+                SigProcMask::Block => {
+                    self.blocked_mask.fetch_or(set, Ordering::SeqCst);
+                }
 
-            SigProcMask::Unblock => {
-                self.blocked_mask.fetch_and(!set, Ordering::SeqCst);
-            }
+                SigProcMask::Unblock => {
+                    self.blocked_mask.fetch_and(!set, Ordering::SeqCst);
+                }
 
-            SigProcMask::Set => {
-                self.blocked_mask.store(set, Ordering::SeqCst);
+                SigProcMask::Set => {
+                    self.blocked_mask.store(set, Ordering::SeqCst);
+                }
             }
         }
     }

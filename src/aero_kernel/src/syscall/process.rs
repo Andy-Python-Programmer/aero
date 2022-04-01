@@ -243,9 +243,15 @@ pub fn sethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError>
 }
 
 pub fn sigprocmask(how: usize, set: usize, old_set: usize) -> Result<usize, AeroSyscallError> {
-    let set = VirtAddr::new(set as _)
-        .copied_read::<u64>()
-        .ok_or(AeroSyscallError::EFAULT)?;
+    let set = if set > 0 {
+        Some(
+            VirtAddr::new(set as _)
+                .copied_read::<u64>()
+                .ok_or(AeroSyscallError::EFAULT)?,
+        )
+    } else {
+        None
+    };
 
     let old_set = if old_set > 0 {
         Some(
