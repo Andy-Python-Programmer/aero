@@ -126,14 +126,6 @@ impl PageTableEntry {
         self.set_entry_count(entry_count + 1);
     }
 
-    /// Decrements the page table entry counter by one.
-    pub fn dec_entry_count(&mut self) {
-        let entry_count = self.get_entry_count();
-        assert!(entry_count != 0);
-
-        self.set_entry_count(entry_count - 1);
-    }
-
     /// Returns the physical frame mapped by this entry.
     ///
     /// Returns the following errors:

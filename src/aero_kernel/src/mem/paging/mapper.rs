@@ -569,14 +569,6 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size2MiB> for MappedPageTable<'a, P> {
         p2_entry.unref_vm_frame();
         p2_entry.set_unused();
 
-        let p3_entry = &mut p3[page.p3_index()];
-        p3_entry.dec_entry_count();
-
-        if p3_entry.get_entry_count() == 0 {
-            p3_entry.unref_vm_frame();
-            p3_entry.set_unused();
-        }
-
         Ok((frame, MapperFlush::new(page)))
     }
 
@@ -685,14 +677,6 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size4KiB> for MappedPageTable<'a, P> {
 
         p1_entry.unref_vm_frame();
         p1_entry.set_unused();
-
-        let p2_entry = &mut p2[page.p2_index()];
-        p2_entry.dec_entry_count();
-
-        if p2_entry.get_entry_count() == 0 {
-            p2_entry.unref_vm_frame();
-            p2_entry.set_unused();
-        }
 
         Ok((frame, MapperFlush::new(page)))
     }
