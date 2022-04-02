@@ -177,7 +177,7 @@ def download_bundled():
                 file.write(response.content)
 
     if not os.path.exists(limine_path):
-        run_command(['git', 'clone', '--branch', 'latest-binary',
+        run_command(['git', 'clone', '--branch', 'v3.0-branch-binary',
                     '--depth', '1', LIMINE_URL, limine_path])
 
 
@@ -422,24 +422,24 @@ def prepare_iso(args, kernel_bin, user_bins):
 
         return None
 
-    limine_s2deploy = os.path.join(limine_path, 'limine-s2deploy')
+    limine_deploy = os.path.join(limine_path, 'limine-deploy')
 
-    if not os.path.exists(limine_s2deploy):
+    if not os.path.exists(limine_deploy):
         code, _, limine_build_stderr = run_command(['make', '-C', limine_path],
                                                    stdout=subprocess.PIPE,
                                                    stderr=subprocess.PIPE)
         if code != 0:
-            print('Failed to build `limine-s2deploy`')
+            print('Failed to build `limine-deploy`')
             print(limine_build_stderr.decode('utf8'))
             exit(1)
 
-    code, _, limine_s2deploy_stderr = run_command([limine_s2deploy, iso_path],
-                                                 stdout=subprocess.PIPE,
-                                                 stderr=subprocess.PIPE)
+    code, _, limine_deploy_stderr = run_command([limine_deploy, iso_path],
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
 
     if code != 0:
         print('Failed to install Limine')
-        print(limine_s2deploy_stderr)
+        print(limine_deploy_stderr)
 
         return None
 
