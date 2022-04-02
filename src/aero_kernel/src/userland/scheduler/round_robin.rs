@@ -213,6 +213,8 @@ impl SchedulerInterface for RoundRobin {
             if let Some(task) = cursor.remove() {
                 queue.push_runnable(task);
             }
+        } else {
+            task.set_pending_io(true)
         }
     }
 
@@ -226,7 +228,10 @@ impl SchedulerInterface for RoundRobin {
             .expect("IDLE task should not await for anything")
             .clone();
 
-        // TODO: Make sure the task has no pending IO.
+        if task.has_pending_io() {
+            task.set_pending_io(false);
+            return Ok(());
+        }
 
         if let Some(duration) = duration {
             queue.push_deadline_awaiting(task, duration);

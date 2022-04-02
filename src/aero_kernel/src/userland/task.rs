@@ -23,7 +23,7 @@ use alloc::sync::{Arc, Weak};
 use spin::RwLock;
 
 use core::cell::UnsafeCell;
-use core::sync::atomic::{AtomicIsize, AtomicU8, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicIsize, AtomicU8, AtomicUsize, Ordering};
 
 use crate::fs::cache::{DirCacheImpl, DirCacheItem};
 use crate::fs::{self, FileSystem};
@@ -186,6 +186,7 @@ pub struct Task {
     signals: Signals,
 
     executable: Mutex<Option<DirCacheItem>>,
+    pending_io: AtomicBool,
 
     pub(super) link: intrusive_collections::LinkedListLink,
     pub(super) clink: intrusive_collections::LinkedListLink,
@@ -227,6 +228,8 @@ impl Task {
             link: Default::default(),
             clink: Default::default(),
 
+            pending_io: AtomicBool::new(false),
+
             sleep_duration: AtomicUsize::new(0),
             exit_status: AtomicIsize::new(0),
 
@@ -265,6 +268,7 @@ impl Task {
             exit_status: AtomicIsize::new(0),
 
             executable: Mutex::new(None),
+            pending_io: AtomicBool::new(false),
 
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
@@ -297,6 +301,7 @@ impl Task {
             pid,
 
             executable: Mutex::new(self.executable.lock().clone()),
+            pending_io: AtomicBool::new(false),
 
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
@@ -311,6 +316,14 @@ impl Task {
         this.vm.fork_from(self.vm());
         this.vm.log();
         this
+    }
+
+    pub fn has_pending_io(&self) -> bool {
+        self.pending_io.load(Ordering::SeqCst)
+    }
+
+    pub fn set_pending_io(&self, yes: bool) {
+        self.pending_io.store(yes, Ordering::SeqCst)
     }
 
     pub fn signals(&self) -> &Signals {
@@ -379,10 +392,10 @@ impl Task {
         if pid == -1 {
             // wait for any child process if no specific process is requested.
             //
-            // NOTE: we collect all of the zombie list's process IDs instead of the children
-            // list since the child could have been removed from the children list and become a zombie
-            // before the parent had a chance to wait for it.
-            let pids = self
+            // NOTE: we collect all of the zombie list's process IDs with the children
+            // list since the child could have been removed from the children list and
+            // become a zombie before the parent had a chance to wait for it.
+            let mut pids = self
                 .zombies
                 .list
                 .lock_irq()
@@ -390,6 +403,7 @@ impl Task {
                 .map(|e| e.pid().as_usize())
                 .collect::<alloc::vec::Vec<_>>();
 
+            pids.extend(self.children.lock_irq().iter().map(|e| e.pid().as_usize()));
             self.zombies.waitpid(&pids, status)
         } else {
             self.zombies.waitpid(&[pid as _], status)
@@ -536,7 +550,7 @@ impl Task {
             parent.zombies.add_zombie(self.this());
 
             if self.is_process_leader() {
-                parent.signal(aero_syscall::signal::SIGCHLD);
+                // parent.signal(aero_syscall::signal::SIGCHLD);
             }
         }
     }
