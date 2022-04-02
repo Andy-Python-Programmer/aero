@@ -76,7 +76,7 @@ static PAGING_TAG: Stivale5LevelPagingHeaderTag = Stivale5LevelPagingHeaderTag::
 #[no_mangle]
 #[used]
 static STIVALE_HDR: StivaleHeader = StivaleHeader::new()
-    .stack(&STACK.0[STACK_SIZE - 4096] as *const u8)
+    .stack(STACK.0.as_ptr_range().end)
     .tags((&FRAMEBUFFER_TAG as *const StivaleFramebufferHeaderTag).cast());
 
 #[no_mangle]
