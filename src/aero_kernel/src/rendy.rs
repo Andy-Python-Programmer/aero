@@ -605,6 +605,11 @@ impl<'this> DebugRendy<'this> {
     }
 
     fn plot_char(&mut self, x: usize, y: usize, char: Character) {
+        let ch = match char.char {
+            ch if ch.is_ascii() => ch,
+            _ => '?' as char,
+        };
+
         if x >= self.cols || y >= self.rows {
             return;
         }
@@ -615,7 +620,7 @@ impl<'this> DebugRendy<'this> {
         let glyph = unsafe {
             self.vga_font_bool
                 .as_ptr()
-                .add(char.char as usize * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH)
+                .add(ch as usize * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH)
         };
 
         // naming: fx, fy for font coordinates and gx, gy for glyph coordinates
