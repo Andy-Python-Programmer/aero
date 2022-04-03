@@ -51,15 +51,13 @@ static FONT: &[u8] = include_bytes!("../../font.bin");
 // -----------------------------------------------------|
 // ```
 
-const DEFAULT_FONT_WIDTH: usize = 8;
-const DEFAULT_FONT_HEIGHT: usize = 16;
+const FONT_WIDTH: usize = 8;
+const FONT_HEIGHT: usize = 16;
 
 const DEFAULT_MARGIN: usize = 64 / 2;
-
 const TAB_SIZE: usize = 4;
 
 /// The amount of VGA font glyphs.
-const VGA_FONT_GLYPHS: usize = 256;
 
 const MARGIN_GRADIENT: usize = 4;
 const DWORD_SIZE: usize = core::mem::size_of::<u32>();
@@ -216,12 +214,7 @@ pub struct DebugRendy<'this> {
     map: Box<[Option<*mut QueueCharacter>]>,
     bg_canvas: Box<[u32]>,
 
-    vga_font_bool: Box<[bool]>,
-
     queue_cursor: usize,
-
-    glyph_width: usize,
-    glyph_height: usize,
 
     offset_x: usize,
     offset_y: usize,
@@ -237,17 +230,11 @@ impl<'this> DebugRendy<'this> {
         let width = info.horizontal_resolution;
         let height = info.vertical_resolution;
 
-        let glyph_width = DEFAULT_FONT_WIDTH;
-        let glyph_height = DEFAULT_FONT_HEIGHT;
+        let offset_x = DEFAULT_MARGIN + ((width - DEFAULT_MARGIN * 2) % FONT_WIDTH) / 2;
+        let offset_y = DEFAULT_MARGIN + ((height - DEFAULT_MARGIN * 2) % FONT_HEIGHT) / 2;
 
-        let offset_x =
-            DEFAULT_MARGIN + ((info.horizontal_resolution - DEFAULT_MARGIN * 2) % glyph_width) / 2;
-
-        let offset_y =
-            DEFAULT_MARGIN + ((info.horizontal_resolution - DEFAULT_MARGIN * 2) % glyph_height) / 2;
-
-        let cols = (info.horizontal_resolution - DEFAULT_MARGIN * 2) / glyph_width;
-        let rows = (info.vertical_resolution - DEFAULT_MARGIN * 2) / glyph_height;
+        let cols = (width - DEFAULT_MARGIN * 2) / FONT_WIDTH;
+        let rows = (height - DEFAULT_MARGIN * 2) / FONT_HEIGHT;
 
         let grid_size = rows * cols * core::mem::size_of::<Character>();
         let grid = mem::alloc_boxed_buffer::<Character>(grid_size);
@@ -260,50 +247,6 @@ impl<'this> DebugRendy<'this> {
 
         let bg_canvas_size = width * height * core::mem::size_of::<u32>();
         let bg_canvas = mem::alloc_boxed_buffer::<u32>(bg_canvas_size);
-
-        let vga_font_bool_size = VGA_FONT_GLYPHS
-            * DEFAULT_FONT_HEIGHT
-            * DEFAULT_FONT_WIDTH
-            * core::mem::size_of::<bool>();
-
-        let mut vga_font_bool = mem::alloc_boxed_buffer::<bool>(vga_font_bool_size);
-
-        for i in 0..VGA_FONT_GLYPHS {
-            // Each glyph is a bitmap:
-            let glyph = &FONT[i * DEFAULT_FONT_HEIGHT] as *const u8;
-
-            for y in 0..DEFAULT_FONT_HEIGHT {
-                // NOTE: the characters in VGA fonts are always one byte wide.
-                // 9 dot wide fonts have 8 dots and one empty column, except
-                // characters 0xC0-0xDF replicate column 9.
-                for x in 0..8 {
-                    let offset =
-                        i * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH + y * DEFAULT_FONT_WIDTH + x;
-
-                    unsafe {
-                        if (*glyph.offset(y as isize) & (0x80 >> x)) != 0 {
-                            vga_font_bool[offset] = true;
-                        } else {
-                            vga_font_bool[offset] = false;
-                        }
-                    }
-                }
-
-                // Fill columns above 8 like VGA Line Graphics Mode does:
-                for x in 8..DEFAULT_FONT_WIDTH {
-                    let offset =
-                        i * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH + y * DEFAULT_FONT_WIDTH + x;
-
-                    if i >= 0xC0 && i <= 0xDF {
-                        unsafe {
-                            vga_font_bool[offset] = (*glyph.offset(y as isize) & 1) != 0;
-                        }
-                    } else {
-                        vga_font_bool[offset] = false;
-                    }
-                }
-            }
-        }
 
         let mut this = Self {
             buffer,
@@ -326,23 +269,18 @@ impl<'this> DebugRendy<'this> {
             map,
             bg_canvas,
 
-            glyph_height,
-            glyph_width,
+            queue_cursor: 0,
 
             offset_x,
             offset_y,
-
-            vga_font_bool,
-
-            queue_cursor: 0,
 
             cursor_visibility: true,
             auto_flush: true,
         };
 
         let image = cmdline.term_background.map(|a| parse_bmp_image(a));
-        this.generate_canvas(image);
 
+        this.generate_canvas(image);
         this.clear(true);
         this.double_buffer_flush();
 
@@ -366,8 +304,7 @@ impl<'this> DebugRendy<'this> {
 
         let width = self.info.horizontal_resolution;
         let height = self.info.vertical_resolution;
-
-        let colsize = image.bpp / 8;
+        let col_size = image.bpp / 8;
 
         // Tiled Image:
         // for y in ystart..yend {
@@ -412,7 +349,7 @@ impl<'this> DebugRendy<'this> {
 
             for x in xstart..xend {
                 let img_pixel = unsafe {
-                    (image.image.as_ptr()).add(fixedp6_to_int(img_x) * colsize + off) as *const u32
+                    (image.image.as_ptr()).add(fixedp6_to_int(img_x) * col_size + off) as *const u32
                 };
 
                 let i = blender(x, y, unsafe { *img_pixel });
@@ -474,14 +411,15 @@ impl<'this> DebugRendy<'this> {
         let height = self.info.vertical_resolution;
 
         if let Some(image) = image {
-            let frame_height = height / 2 - (self.glyph_height * self.rows) / 2;
-            let frame_width = width / 2 - (self.glyph_width * self.cols) / 2;
+            let frame_width = width / 2 - (FONT_WIDTH * self.cols) / 2;
+            let frame_height = height / 2 - (FONT_HEIGHT * self.rows) / 2;
 
-            let frame_height_end = frame_height + self.glyph_height * self.rows;
-            let frame_width_end = frame_width + self.glyph_width * self.cols;
+            let frame_width_end = frame_width + FONT_WIDTH * self.cols;
+            let frame_height_end = frame_height + FONT_HEIGHT * self.rows;
 
             let fheight = frame_height - MARGIN_GRADIENT;
             let fheight_end = frame_height_end + MARGIN_GRADIENT;
+
             let fwidth = frame_width - MARGIN_GRADIENT;
             let fwidth_end = frame_width_end + MARGIN_GRADIENT;
 
@@ -489,7 +427,6 @@ impl<'this> DebugRendy<'this> {
             self.loop_external(&image, 0, width, fheight_end, height);
             self.loop_external(&image, 0, fwidth, fheight, fheight_end);
             self.loop_external(&image, fwidth_end, width, fheight, fheight_end);
-
             self.loop_internal(
                 &image,
                 frame_width,
@@ -614,17 +551,17 @@ impl<'this> DebugRendy<'this> {
             return;
         }
 
-        let x = self.offset_x + x * self.glyph_width;
-        let y = self.offset_y + y * self.glyph_height;
-
+        let x = self.offset_x + x * FONT_WIDTH;
+        let y = self.offset_y + y * FONT_HEIGHT;
         let glyph = unsafe {
-            self.vga_font_bool
-                .as_ptr()
-                .add(ch as usize * DEFAULT_FONT_HEIGHT * DEFAULT_FONT_WIDTH)
+            core::slice::from_raw_parts(
+                FONT.as_ptr().offset(ch as isize * FONT_HEIGHT as isize) as *const u8,
+                FONT_HEIGHT,
+            )
         };
 
         // naming: fx, fy for font coordinates and gx, gy for glyph coordinates
-        for gy in 0..self.glyph_height {
+        for gy in 0..FONT_HEIGHT {
             let fb_line = unsafe {
                 self.buffer
                     .as_mut_ptr()
@@ -637,23 +574,18 @@ impl<'this> DebugRendy<'this> {
                     .add(x + (y + gy) * self.info.horizontal_resolution)
             };
 
-            for fx in 0..DEFAULT_FONT_WIDTH {
-                let draw = unsafe { *glyph.add(gy * DEFAULT_FONT_WIDTH + fx) };
-
-                let bg = if char.bg == u32::MAX {
-                    unsafe { *canvas_line.add(fx) }
+            for gx in 0..FONT_WIDTH {
+                let draw = glyph[gy] & (1 << (FONT_WIDTH - gx)) != 0;
+                let color = if draw {
+                    char.fg
+                } else if char.bg == u32::MAX {
+                    unsafe { *canvas_line.add(gx) }
                 } else {
                     char.bg
                 };
 
-                let fg = char.fg;
-
                 unsafe {
-                    if draw {
-                        *fb_line.add(fx) = fg;
-                    } else {
-                        *fb_line.add(fx) = bg;
-                    }
+                    *fb_line.add(gx) = color;
                 }
             }
         }
