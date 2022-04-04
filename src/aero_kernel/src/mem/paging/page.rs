@@ -118,6 +118,12 @@ impl<S: PageSize> Page<S> {
     pub fn range_inclusive(start: Self, end: Self) -> PageRangeInclusive<S> {
         PageRangeInclusive { start, end }
     }
+
+    /// Returns a range of pages, exclusive `end`.
+    #[inline]
+    pub const fn range(start: Self, end: Self) -> PageRange<S> {
+        PageRange { start, end }
+    }
 }
 
 impl<S: NotGiantPageSize> Page<S> {

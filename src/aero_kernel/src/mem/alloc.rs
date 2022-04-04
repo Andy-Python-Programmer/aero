@@ -19,20 +19,12 @@
 
 use core::alloc;
 use core::alloc::{GlobalAlloc, Layout};
-use core::ptr::NonNull;
-
-use linked_list_allocator::Heap;
 
 use crate::utils::sync::Mutex;
-use crate::AERO_SYSTEM_ALLOCATOR;
 
 use super::paging::FRAME_ALLOCATOR;
-use super::AddressSpace;
+use super::vmalloc;
 use crate::mem::paging::*;
-
-const HEAP_MAX_SIZE: usize = 128 * 1024 * 1024; // 128 GiB
-const HEAP_START: usize = 0xfffff80000000000;
-const HEAP_END: usize = HEAP_START + HEAP_MAX_SIZE;
 
 #[repr(C)]
 struct SlabHeader {
@@ -125,7 +117,6 @@ impl Slab {
 
 struct ProtectedAllocator {
     slabs: [Slab; 10],
-    linked_list_heap: Heap,
 }
 
 struct Allocator {
@@ -148,8 +139,6 @@ impl Allocator {
                     Slab::new(512),
                     Slab::new(1024),
                 ],
-
-                linked_list_heap: Heap::empty(),
             }),
         }
     }
@@ -165,71 +154,21 @@ impl Allocator {
         if let Some(slab) = slab {
             slab.alloc()
         } else {
-            inner
-                .linked_list_heap
-                .allocate_first_fit(layout)
-                .or_else(|_| {
-                    let heap_top = inner.linked_list_heap.top();
-                    let size = align_up(layout.size() as u64, 0x1000);
+            let size = align_up(layout.size() as _, layout.align() as _) / Size4KiB::SIZE;
 
-                    // Check if our heap has not increased beyond the maximum allowed size.
-                    if heap_top + size as usize > HEAP_END {
-                        panic!("the heap size has increased more then {:#x}", HEAP_END)
-                    }
-
-                    // Else we just have to extend the heap.
-                    let mut address_space = AddressSpace::this();
-                    let mut offset_table = address_space.offset_page_table();
-
-                    let page_range = {
-                        let heap_start = VirtAddr::new(heap_top as _);
-                        let heap_end = heap_start + size - 1u64;
-
-                        let heap_start_page: Page = Page::containing_address(heap_start);
-                        let heap_end_page = Page::containing_address(heap_end);
-
-                        Page::range_inclusive(heap_start_page, heap_end_page)
-                    };
-
-                    for page in page_range {
-                        let frame = unsafe {
-                            FRAME_ALLOCATOR
-                                .allocate_frame()
-                                .expect("Failed to allocate frame to extend heap")
-                        };
-
-                        unsafe {
-                            offset_table.map_to(
-                                page,
-                                frame,
-                                PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                            )
-                        }
-                        .expect("Failed to map frame to extend the heap")
-                        .flush();
-                    }
-
-                    unsafe {
-                        inner.linked_list_heap.extend(size as usize); // Now extend the heap.
-                        inner.linked_list_heap.allocate_first_fit(layout) // And try again.
-                    }
-                })
-                .expect("alloc: memory exhausted")
-                .as_ptr()
+            vmalloc::get_vmalloc()
+                .alloc(size as usize)
+                .map(|addr| addr.as_mut_ptr::<u8>())
+                .unwrap_or(core::ptr::null_mut())
         }
     }
 
     fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        let mut inner = self.inner.lock_irq();
-        let address = ptr as usize;
+        let _inner = self.inner.lock_irq();
+        let address = VirtAddr::new(ptr as u64);
 
-        if address >= HEAP_START && address < HEAP_END {
-            unsafe {
-                inner
-                    .linked_list_heap
-                    .deallocate(NonNull::new_unchecked(ptr), layout);
-            }
-
+        if address >= vmalloc::VMALLOC_START && address < vmalloc::VMALLOC_END {
+            vmalloc::get_vmalloc().dealloc(address, layout.size() / Size4KiB::SIZE as usize);
             return;
         }
 
@@ -395,30 +334,7 @@ fn alloc_error_handler(layout: alloc::Layout) -> ! {
 
 /// Initialize the heap at the [HEAP_START].
 pub fn init_heap() {
-    unsafe {
-        let mut address_space = AddressSpace::this();
-        let mut offset_table = address_space.offset_page_table();
-
-        let frame: PhysFrame = FRAME_ALLOCATOR
-            .allocate_frame()
-            .expect("init_heap: failed to allocate frame for the linked list allocator");
-
-        offset_table
-            .map_to(
-                Page::containing_address(VirtAddr::new(HEAP_START as _)),
-                frame,
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-            )
-            .expect("init_heap: failed to initialize the heap")
-            .flush();
-
-        AERO_SYSTEM_ALLOCATOR
-            .0
-            .inner
-            .lock_irq()
-            .linked_list_heap
-            .init(HEAP_START, Size4KiB::SIZE as usize);
-    }
+    vmalloc::init();
 
     #[cfg(feature = "kmemleak")]
     kmemleak::MEM_LEAK_CATCHER.init();
