@@ -572,7 +572,7 @@ impl<'this> DebugRendy<'this> {
             };
 
             for gx in 0..FONT_WIDTH {
-                let draw = glyph[gy] & (1 << (FONT_WIDTH - gx)) != 0;
+                let draw = glyph[gy] & (1 << (FONT_WIDTH - gx - 1)) != 0;
                 let color = if draw {
                     char.fg
                 } else if char.bg == u32::MAX {
