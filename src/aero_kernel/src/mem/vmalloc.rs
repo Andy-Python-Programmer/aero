@@ -100,11 +100,9 @@ impl Vmalloc {
 
         // map the pages at the allocated address.
         for page in page_range {
-            let frame: PhysFrame<Size4KiB> = unsafe {
-                FRAME_ALLOCATOR
-                    .allocate_frame()
-                    .expect("vmalloc: physical memory exhausted")
-            };
+            let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
+                .allocate_frame()
+                .expect("vmalloc: physical memory exhausted");
 
             unsafe {
                 offset_table.map_to(

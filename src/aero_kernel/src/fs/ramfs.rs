@@ -332,7 +332,7 @@ impl INodeInterface for LockedRamINode {
                 // TODO: Support shared static content ramfs file mappings.
                 assert!(!flags.contains(MMapFlags::MAP_SHARED));
 
-                let private_cp: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
+                let private_cp: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
                 private_cp.as_slice_mut()[..size].copy_from_slice(&contents[offset..offset + size]);
 
                 Ok(private_cp)

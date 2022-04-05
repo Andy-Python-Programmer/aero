@@ -374,7 +374,8 @@ impl Mapping {
         protection: MMapProt,
     ) -> Result<(), MapToError<Size4KiB>> {
         // Allocate a new frame to hold the contents.
-        let new_frame: PhysFrame<Size4KiB> = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+        let new_frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
+            .allocate_frame()
             .expect("map_copied: failed to allocate frame");
 
         let old_slice = unsafe {

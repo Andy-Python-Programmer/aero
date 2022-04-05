@@ -38,8 +38,8 @@ use super::{
 /// the `allocate_frame` method returns only unique unused frames.
 pub unsafe trait FrameAllocator<S: PageSize> {
     /// Allocate a frame of the appropriate size and return it if possible.
-    fn allocate_frame(&mut self) -> Option<PhysFrame<S>>;
-    fn deallocate_frame(&mut self, frame: PhysFrame<S>);
+    fn allocate_frame(&self) -> Option<PhysFrame<S>>;
+    fn deallocate_frame(&self, frame: PhysFrame<S>);
 }
 
 /// An empty convencience trait that requires the `Mapper` trait for all page sizes.
@@ -886,7 +886,7 @@ impl<P: PageTableFrameMapping> PageTableWalker<P> {
         let created;
 
         if entry.is_unused() {
-            if let Some(frame) = unsafe { FRAME_ALLOCATOR.allocate_frame() } {
+            if let Some(frame) = FRAME_ALLOCATOR.allocate_frame() {
                 entry.set_frame(frame, insert_flags);
                 created = true;
             } else {
@@ -1159,7 +1159,8 @@ impl<'a> OffsetPageTable<'a> {
             let created;
 
             if !entry.flags().contains(PageTableFlags::PRESENT) {
-                let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
+                let frame = FRAME_ALLOCATOR
+                    .allocate_frame()
                     .ok_or(MapToError::FrameAllocationFailed)?;
 
                 entry.set_frame(

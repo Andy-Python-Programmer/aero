@@ -46,13 +46,11 @@ impl Slab {
     }
 
     fn init(&mut self) {
-        unsafe {
-            let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
-                .allocate_frame()
-                .expect("slab_init: failed to allocate frame");
+        let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
+            .allocate_frame()
+            .expect("slab_init: failed to allocate frame");
 
-            self.first_free = frame.start_address().as_hhdm_virt().as_u64() as usize;
-        }
+        self.first_free = frame.start_address().as_hhdm_virt().as_u64() as usize;
 
         let hdr_size = core::mem::size_of::<SlabHeader>() as u64;
         let aligned_hdr_size = align_up(hdr_size, self.size as u64) as usize;

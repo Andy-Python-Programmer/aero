@@ -52,7 +52,7 @@ impl LockedFrameAllocator {
 }
 
 unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
+    fn allocate_frame(&self) -> Option<PhysFrame<Size4KiB>> {
         self.0
             .get()
             .map(|m| {
@@ -63,7 +63,7 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
             .unwrap_or(None)
     }
 
-    fn deallocate_frame(&mut self, frame: PhysFrame<Size4KiB>) {
+    fn deallocate_frame(&self, frame: PhysFrame<Size4KiB>) {
         self.0
             .get()
             .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 0))
@@ -72,7 +72,7 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
 }
 
 unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame<Size2MiB>> {
+    fn allocate_frame(&self) -> Option<PhysFrame<Size2MiB>> {
         self.0
             .get()
             .map(|m| {
@@ -83,7 +83,7 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
             .unwrap_or(None)
     }
 
-    fn deallocate_frame(&mut self, frame: PhysFrame<Size2MiB>) {
+    fn deallocate_frame(&self, frame: PhysFrame<Size2MiB>) {
         self.0
             .get()
             .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 1))
@@ -142,31 +142,29 @@ impl Iterator for RangeMemoryIter {
 pub enum BuddyOrdering {
     Size4KiB = 0,
     Size8KiB = 1,
-    Size2MiB = 2,
 }
 
 pub fn pmm_alloc(ordering: BuddyOrdering) -> PhysAddr {
     let ordering = ordering as usize;
     debug_assert!(ordering <= BUDDY_SIZE.len());
 
-    unsafe {
-        let addr = super::FRAME_ALLOCATOR
-            .0
-            .get()
-            .expect("pmm: frame allocator not initialized")
-            .lock()
-            .allocate_frame_inner(ordering)
-            .expect("pmm: out of memory");
+    let addr = super::FRAME_ALLOCATOR
+        .0
+        .get()
+        .expect("pmm: frame allocator not initialized")
+        .lock()
+        .allocate_frame_inner(ordering)
+        .expect("pmm: out of memory");
 
-        let virt = crate::PHYSICAL_MEMORY_OFFSET + addr.as_u64();
-        let fill_size = BUDDY_SIZE[ordering] as usize;
-        let slice = core::slice::from_raw_parts_mut(virt.as_mut_ptr::<u8>(), fill_size);
+    let virt = addr.as_hhdm_virt();
 
-        // We always zero out memory for security reasons.
-        slice.fill(0x00);
+    let fill_size = BUDDY_SIZE[ordering] as usize;
+    let slice = unsafe { core::slice::from_raw_parts_mut(virt.as_mut_ptr::<u8>(), fill_size) };
 
-        addr
-    }
+    // We always zero out memory for security reasons.
+    slice.fill(0x00);
+
+    addr
 }
 
 #[derive(Debug)]
@@ -514,14 +512,12 @@ impl GlobalFrameAllocator {
 
 pub fn init_vm_frames() {
     VM_FRAMES.call_once(|| {
-        let frame_count = unsafe {
-            super::FRAME_ALLOCATOR
-                .0
-                .get()
-                .unwrap()
-                .lock_irq()
-                .frame_count()
-        };
+        let frame_count = super::FRAME_ALLOCATOR
+            .0
+            .get()
+            .unwrap()
+            .lock_irq()
+            .frame_count();
 
         let mut frames = Vec::<VmFrame>::new();
         frames.resize_with(frame_count, VmFrame::new);
@@ -585,14 +581,12 @@ mod tests {
         // The frame is not mapped yet, so the ref count should be 0.
         assert_eq!(vm_frame.ref_count(), 0);
 
-        unsafe {
-            assert!(!FRAME_ALLOCATOR
-                .0
-                .get()
-                .unwrap()
-                .lock()
-                .is_free(frame.start_address(), 0));
-        }
+        assert!(!FRAME_ALLOCATOR
+            .0
+            .get()
+            .unwrap()
+            .lock()
+            .is_free(frame.start_address(), 0));
 
         unsafe { offset_table.map_to(page, frame, PageTableFlags::PRESENT) }
             .unwrap()
@@ -607,13 +601,11 @@ mod tests {
         // the frame should be deallocated.
         assert_eq!(vm_frame.ref_count(), 0);
 
-        unsafe {
-            assert!(FRAME_ALLOCATOR
-                .0
-                .get()
-                .unwrap()
-                .lock()
-                .is_free(frame.start_address(), 0));
-        }
+        assert!(FRAME_ALLOCATOR
+            .0
+            .get()
+            .unwrap()
+            .lock()
+            .is_free(frame.start_address(), 0));
     }
 }

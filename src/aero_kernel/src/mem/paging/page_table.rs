@@ -82,11 +82,8 @@ impl PageTableEntry {
 
                 if count == 0 {
                     // No references to this frame, deallocate it.
-                    unsafe {
-                        FRAME_ALLOCATOR.deallocate_frame(
-                            PhysFrame::<Size4KiB>::containing_address(self.addr()),
-                        );
-                    }
+                    FRAME_ALLOCATOR
+                        .deallocate_frame(PhysFrame::<Size4KiB>::containing_address(self.addr()));
 
                     return true;
                 }

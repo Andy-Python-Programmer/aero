@@ -37,7 +37,7 @@ pub use frame::LockedFrameAllocator;
 use crate::arch::controlregs;
 use crate::PHYSICAL_MEMORY_OFFSET;
 
-pub static mut FRAME_ALLOCATOR: LockedFrameAllocator = LockedFrameAllocator::new_uninit();
+pub static FRAME_ALLOCATOR: LockedFrameAllocator = LockedFrameAllocator::new_uninit();
 
 bitflags::bitflags! {
     /// Describes an page fault error code.
@@ -87,10 +87,7 @@ pub fn init(
     let active_level_4 = unsafe { active_level_4_table() };
     let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };
 
-    unsafe {
-        FRAME_ALLOCATOR.init(memory_regions);
-    }
-
+    FRAME_ALLOCATOR.init(memory_regions);
     Ok(offset_table)
 }
 
