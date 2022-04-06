@@ -108,16 +108,22 @@ impl Vmalloc {
             .iter()
             .find(|area| area.protected.lock().size >= size_bytes)?;
 
-        let mut area = area.protected.lock();
-        let address = area.addr.clone();
+        let mut area_p = area.protected.lock();
+        let address = area_p.addr.clone();
 
-        if area.size > size_bytes {
-            area.addr = area.addr + size_bytes;
-            area.size -= size_bytes;
+        if area_p.size > size_bytes {
+            area_p.addr = area_p.addr + size_bytes;
+            area_p.size -= size_bytes;
         } else {
-            // the size of the area is exactly the size we need, so remove it from
-            // the free list.
-            log::warn!("todo: implement this")
+            // NOTE: the area is has exactly the requested size, so we can remove it
+            // from the free list.
+            core::mem::drop(area_p); // unlock
+
+            let area_ptr = area as *const VmallocArea;
+
+            // SAFETY: The constructed pointer is a valid object that is in the tree,
+            let mut area_cursor = unsafe { self.free_list.cursor_mut_from_ptr(area_ptr) };
+            area_cursor.remove();
         }
 
         let mut address_space = AddressSpace::this();

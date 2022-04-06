@@ -152,6 +152,9 @@ impl Allocator {
         if let Some(slab) = slab {
             slab.alloc()
         } else {
+            // the vmalloc allocator may require reverse dependency
+            core::mem::drop(inner);
+
             let size = align_up(layout.size() as _, Size4KiB::SIZE) / Size4KiB::SIZE;
 
             vmalloc::get_vmalloc()
@@ -162,7 +165,6 @@ impl Allocator {
     }
 
     fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        let _inner = self.inner.lock_irq();
         let address = VirtAddr::new(ptr as u64);
 
         if address >= vmalloc::VMALLOC_START && address < vmalloc::VMALLOC_END {
