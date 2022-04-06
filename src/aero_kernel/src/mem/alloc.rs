@@ -152,7 +152,7 @@ impl Allocator {
         if let Some(slab) = slab {
             slab.alloc()
         } else {
-            let size = align_up(layout.size() as _, layout.align() as _) / Size4KiB::SIZE;
+            let size = align_up(layout.size() as _, Size4KiB::SIZE) / Size4KiB::SIZE;
 
             vmalloc::get_vmalloc()
                 .alloc(size as usize)
