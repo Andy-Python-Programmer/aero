@@ -19,17 +19,20 @@
 
 //! Due to internal-fragmentation in the buddy frame allocator, we cannot allocate large
 //! amount of contiguous physical memory. We instead use [`vmalloc`] to allocate virtually
-//! contiguous memory.
+//! contiguous memory. The allocator uses a red-black tree to keep track of the free memory
+//! so we can allocate and free memory efficiently.
 //!
-//! An area is reserved for [`vmalloc`] in the kernel address space, starting at [`VMALLOC_VIRT_START`] and
-//! ending at [`VMALLOC_VIRT_END`].
+//! An area is reserved for [`vmalloc`] in the kernel address space, starting
+//! at [`VMALLOC_VIRT_START`] and ending at [`VMALLOC_VIRT_END`].
 
-use alloc::collections::LinkedList;
+use alloc::boxed::Box;
+use intrusive_collections::*;
 use spin::Once;
 
 use crate::utils::sync::{Mutex, MutexGuard};
 
-use super::{paging::*, AddressSpace};
+use super::paging::*;
+use super::AddressSpace;
 
 pub(super) const VMALLOC_MAX_SIZE: usize = 128 * 1024 * 1024; // 128 GiB
 pub(super) const VMALLOC_START: VirtAddr = VirtAddr::new(0xfffff80000000000);
@@ -38,29 +41,59 @@ pub(super) const VMALLOC_END: VirtAddr =
 
 static VMALLOC: Once<Mutex<Vmalloc>> = Once::new();
 
-struct VmallocArea {
+struct VmallocAreaProtected {
     addr: VirtAddr,
     size: usize,
 }
 
-impl VmallocArea {
+impl VmallocAreaProtected {
     fn new(addr: VirtAddr, size: usize) -> Self {
         Self { addr, size }
     }
 }
 
+struct VmallocArea {
+    // NOTE: Since there are equal amount of read and write operations we are going to
+    // protect the data using a [`Mutex`].
+    protected: Mutex<VmallocAreaProtected>,
+    link: RBTreeLink,
+}
+
+impl VmallocArea {
+    fn new(addr: VirtAddr, size: usize) -> Self {
+        Self {
+            protected: Mutex::new(VmallocAreaProtected::new(addr, size)),
+            link: Default::default(),
+        }
+    }
+}
+
+impl<'a> KeyAdapter<'a> for VmallocAreaAdaptor {
+    type Key = usize;
+
+    fn get_key(&self, this: &'a VmallocArea) -> Self::Key {
+        // NOTE: We use the size of the vmalloc area as the key for the red-black tree
+        // so when we are allocating or deallocating memory we can find a large enough, free
+        // vmalloc area efficiently.
+        this.protected.lock().size
+    }
+}
+
+intrusive_collections::intrusive_adapter!(VmallocAreaAdaptor = Box<VmallocArea>: VmallocArea { link: RBTreeLink });
+
 pub(super) struct Vmalloc {
-    free_list: LinkedList<VmallocArea>,
+    free_list: RBTree<VmallocAreaAdaptor>,
 }
 
 impl Vmalloc {
     fn new() -> Self {
         let mut this = Self {
-            free_list: LinkedList::new(),
+            free_list: RBTree::new(Default::default()),
         };
 
         this.free_list
-            .push_front(VmallocArea::new(VMALLOC_START, VMALLOC_MAX_SIZE));
+            .insert(box VmallocArea::new(VMALLOC_START, VMALLOC_MAX_SIZE));
+
         this
     }
 
@@ -72,9 +105,10 @@ impl Vmalloc {
 
         let area = self
             .free_list
-            .iter_mut()
-            .find(|area| area.size >= size_bytes)?;
+            .iter()
+            .find(|area| area.protected.lock().size >= size_bytes)?;
 
+        let mut area = area.protected.lock();
         let address = area.addr.clone();
 
         if area.size > size_bytes {
@@ -126,15 +160,17 @@ impl Vmalloc {
         // check if this block can be merged into another block.
         let merge = self
             .free_list
-            .iter_mut()
-            .find(|area| addr + size == area.addr);
+            .iter()
+            .find(|area| addr + size == area.protected.lock().addr);
 
         if let Some(merge) = merge {
+            let mut merge = merge.protected.lock();
+
             merge.addr = addr;
             merge.size += size;
         } else {
             // the block cannot be merged, so add it to the free list.
-            self.free_list.push_back(VmallocArea::new(addr, size));
+            self.free_list.insert(box VmallocArea::new(addr, size));
         }
 
         let mut address_space = AddressSpace::this();
