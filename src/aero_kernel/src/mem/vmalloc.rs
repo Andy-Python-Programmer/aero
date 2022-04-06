@@ -86,8 +86,6 @@ impl Vmalloc {
             log::warn!("todo: implement this")
         }
 
-        log::debug!("{:?}", address);
-
         let mut address_space = AddressSpace::this();
         let mut offset_table = address_space.offset_page_table();
 

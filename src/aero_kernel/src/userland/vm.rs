@@ -909,20 +909,10 @@ impl VmProtected {
         })
     }
 
+    /// Clears all of the mappings without unmapping them. The caller is responsible
+    /// for going through the page table and unmapping all of the pages.
     fn clear(&mut self) {
-        let mut cursor = self.mappings.cursor_front_mut();
-
-        let mut address_space = AddressSpace::this();
-        let mut offset_table = address_space.offset_page_table();
-
-        while let Some(map) = cursor.current() {
-            // now this should automatically free the physical page backed by this mapping
-            // if the reference count of that frame is 0 since we have now unmapped it.
-            map.unmap(&mut offset_table, map.start_addr, map.end_addr)
-                .expect("vm_clear: unexpected error while unmapping");
-
-            cursor.remove_current();
-        }
+        self.mappings.clear()
     }
 
     fn munmap(&mut self, address: VirtAddr, size: usize) -> bool {
