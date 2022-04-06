@@ -35,7 +35,8 @@ use stivale_boot::v2::StivaleFramebufferTag;
 
 use crate::utils::sync::Mutex;
 
-static FONT: &[u8] = include_bytes!("../../font.bin");
+static FONT: &[[u8; FONT_HEIGHT]; FONT_GLYPHS] =
+    unsafe { &core::mem::transmute(*include_bytes!("../../font.bin")) };
 
 // This is an example of how the rendered screen will look like:
 //
@@ -53,6 +54,7 @@ static FONT: &[u8] = include_bytes!("../../font.bin");
 
 const FONT_WIDTH: usize = 8;
 const FONT_HEIGHT: usize = 16;
+const FONT_GLYPHS: usize = 256;
 
 const DEFAULT_MARGIN: usize = 64 / 2;
 const TAB_SIZE: usize = 4;
@@ -553,12 +555,7 @@ impl<'this> DebugRendy<'this> {
 
         let x = self.offset_x + x * FONT_WIDTH;
         let y = self.offset_y + y * FONT_HEIGHT;
-        let glyph = unsafe {
-            core::slice::from_raw_parts(
-                FONT.as_ptr().offset(ch as isize * FONT_HEIGHT as isize) as *const u8,
-                FONT_HEIGHT,
-            )
-        };
+        let glyph = &FONT[ch as usize];
 
         // naming: fx, fy for font coordinates and gx, gy for glyph coordinates
         for gy in 0..FONT_HEIGHT {
@@ -575,7 +572,7 @@ impl<'this> DebugRendy<'this> {
             };
 
             for gx in 0..FONT_WIDTH {
-                let draw = glyph[gy] & (1 << (FONT_WIDTH - gx)) != 0;
+                let draw = glyph[gy] & (1 << (FONT_WIDTH - gx - 1)) != 0;
                 let color = if draw {
                     char.fg
                 } else if char.bg == u32::MAX {
