@@ -1045,6 +1045,10 @@ impl<'a> OffsetPageTable<'a> {
             inner: MappedPageTable::new(page_table, phys_offset),
         }
     }
+
+    pub fn page_table(&mut self) -> &mut PageTable {
+        self.inner.page_table
+    }
 }
 
 #[derive(Debug)]

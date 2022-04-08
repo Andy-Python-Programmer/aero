@@ -61,6 +61,10 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
                     .map(|f| PhysFrame::containing_address(f))
             })
             .unwrap_or(None)
+            .map(|frame| {
+                frame.as_slice_mut().fill(0);
+                frame
+            })
     }
 
     fn deallocate_frame(&self, frame: PhysFrame<Size4KiB>) {
@@ -81,6 +85,10 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
                     .map(|f| PhysFrame::containing_address(f))
             })
             .unwrap_or(None)
+            .map(|frame| {
+                frame.as_slice_mut().fill(0);
+                frame
+            })
     }
 
     fn deallocate_frame(&self, frame: PhysFrame<Size2MiB>) {
@@ -548,8 +556,9 @@ impl VmFrame {
     pub fn dec_ref_count(&self) {
         let mut this = self.lock.lock();
 
-        assert!(this.use_count > 0);
-        this.use_count -= 1;
+        if this.use_count > 0 {
+            this.use_count -= 1;
+        }
     }
 
     pub fn inc_ref_count(&self) {
@@ -574,6 +583,14 @@ mod tests {
         let mut offset_table = address_space.offset_page_table();
 
         let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
+
+        assert!(!FRAME_ALLOCATOR
+            .0
+            .get()
+            .unwrap()
+            .lock()
+            .is_free(frame.start_address(), 0));
+
         let page = Page::<Size4KiB>::containing_address(VirtAddr::new(0xcafebabedea));
 
         let vm_frame = frame.start_address().as_vm_frame().unwrap();

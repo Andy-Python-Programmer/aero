@@ -111,6 +111,11 @@ impl VirtAddr {
         }
     }
 
+    /// Converts this HHDM (Higher Half Direct Map) virtual address to its physical address.
+    pub fn as_hhdm_phys(&self) -> PhysAddr {
+        unsafe { PhysAddr::new(self.clone() - crate::PHYSICAL_MEMORY_OFFSET) }
+    }
+
     /// Returns if the address is valid to read `sizeof(T)` bytes at the address.
     fn validate_read<T: Sized>(&self) -> bool {
         (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address()

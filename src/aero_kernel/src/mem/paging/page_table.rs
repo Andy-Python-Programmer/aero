@@ -283,6 +283,23 @@ impl PageTable {
         }
     }
 
+    pub fn for_each_entry(
+        &mut self,
+        flags: PageTableFlags,
+        mut fun: impl FnMut(&mut PageTableEntry) -> Result<(), MapToError<Size4KiB>>,
+    ) -> Result<(), MapToError<Size4KiB>> {
+        self.for_entries_mut(flags, |_, _entry, table| {
+            table.for_entries_mut(flags, |_, _entry, table| {
+                table.for_entries_mut(flags, |_, _entry, table| {
+                    table.for_entries_mut(flags, |_, entry, _| fun(entry))?;
+                    Ok(())
+                })?;
+                Ok(())
+            })?;
+            Ok(())
+        })
+    }
+
     pub fn for_entries_mut(
         &mut self,
         flags: PageTableFlags,

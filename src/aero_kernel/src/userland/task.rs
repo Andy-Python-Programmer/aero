@@ -543,7 +543,7 @@ impl Task {
     }
 
     pub(super) fn into_zombie(&self) {
-        // TODO: Deallocate the arch task's resources.
+        self.arch_task_mut().dealloc();
 
         if let Some(parent) = self.get_parent() {
             parent.remove_child(self);

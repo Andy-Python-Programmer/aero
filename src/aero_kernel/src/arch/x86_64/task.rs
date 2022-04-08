@@ -114,8 +114,10 @@ const USERLAND_STACK_BOTTOM: VirtAddr = USERLAND_STACK_TOP.const_sub_u64(USERLAN
 
 pub struct ArchTask {
     context: Unique<Context>,
+
     address_space: AddressSpace,
     context_switch_rsp: VirtAddr,
+    user: bool,
 
     fs_base: VirtAddr,
     gs_base: VirtAddr,
@@ -130,6 +132,7 @@ impl ArchTask {
             // Since the IDLE task is a special kernel task, we use the kernel's
             // address space here and we also use the kernel privilage level here.
             address_space: AddressSpace::this(),
+            user: false,
 
             fs_base: VirtAddr::zero(),
             gs_base: VirtAddr::zero(),
@@ -137,6 +140,8 @@ impl ArchTask {
     }
 
     pub fn new_kernel(entry_point: VirtAddr, enable_interrupts: bool) -> Self {
+        let switch_stack = Self::alloc_switch_stack().unwrap().as_mut_ptr::<u8>();
+
         let task_stack = unsafe {
             let layout = Layout::from_size_align_unchecked(4096 * 16, 0x1000);
             alloc_zeroed(layout).add(layout.size())
@@ -144,7 +149,7 @@ impl ArchTask {
 
         let address_space = AddressSpace::this();
 
-        let mut stack_ptr = task_stack as u64;
+        let mut stack_ptr = switch_stack as u64;
         let mut stack = StackHelper::new(&mut stack_ptr);
 
         let kframe = unsafe { stack.offset::<InterruptErrorStack>() };
@@ -152,7 +157,7 @@ impl ArchTask {
         kframe.stack.iret.ss = 0x10; // kernel stack segment
         kframe.stack.iret.cs = 0x08; // kernel code segment
         kframe.stack.iret.rip = entry_point.as_u64();
-        kframe.stack.iret.rsp = unsafe { task_stack.sub(8) as u64 };
+        kframe.stack.iret.rsp = task_stack as u64;
         kframe.stack.iret.rflags = if enable_interrupts { 0x200 } else { 0x00 };
 
         extern "C" {
@@ -168,7 +173,8 @@ impl ArchTask {
         Self {
             context: unsafe { Unique::new_unchecked(context) },
             address_space,
-            context_switch_rsp: VirtAddr::new(task_stack as u64),
+            context_switch_rsp: VirtAddr::new(switch_stack as u64),
+            user: false,
 
             fs_base: VirtAddr::zero(),
             gs_base: VirtAddr::zero(),
@@ -184,6 +190,8 @@ impl ArchTask {
     }
 
     pub fn fork(&self) -> Result<Self, MapToError<Size4KiB>> {
+        assert!(self.user, "cannot fork a kernel task");
+
         let new_address_space = AddressSpace::this().offset_page_table().fork()?;
 
         // Since the fork function marks all of the userspace entries in both the forked
@@ -193,15 +201,7 @@ impl ArchTask {
             asm!("mov cr3, {}", in(reg) controlregs::read_cr3_raw(), options(nostack));
         }
 
-        let switch_stack = unsafe {
-            let frame: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
-
-            frame
-                .start_address()
-                .as_hhdm_virt()
-                .as_mut_ptr::<u8>()
-                .add(Size4KiB::SIZE as usize)
-        };
+        let switch_stack = Self::alloc_switch_stack()?.as_mut_ptr::<u8>();
 
         let mut old_stack_ptr = self.context_switch_rsp.as_u64();
         let mut old_stack = StackHelper::new(&mut old_stack_ptr);
@@ -232,6 +232,7 @@ impl ArchTask {
             context: unsafe { Unique::new_unchecked(context) },
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
             address_space: new_address_space,
+            user: false,
 
             // The FS and GS bases are inherited from the parent process.
             fs_base: self.fs_base.clone(),
@@ -247,8 +248,17 @@ impl ArchTask {
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
     ) -> Result<(), MapToError<Size4KiB>> {
-        let address_space = AddressSpace::new()?;
+        let address_space = if self.user {
+            self.unref_pt();
+            AddressSpace::new()?
+        } else {
+            AddressSpace::new()?
+        };
+
         let loaded_binary = vm.load_bin(executable).expect("exec: failed to load ELF");
+
+        // a kernel task can only execute a user executable
+        self.user = true;
 
         // mmap the userland stack...
         vm.mmap(
@@ -333,6 +343,49 @@ impl ArchTask {
         }
 
         Ok(())
+    }
+
+    /// Allocates a new context switch stack for the process and returns the stack
+    /// top address. See the module level documentation for more information.
+    fn alloc_switch_stack() -> Result<VirtAddr, MapToError<Size4KiB>> {
+        let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
+            .allocate_frame()
+            .ok_or(MapToError::FrameAllocationFailed)?;
+
+        Ok(frame.start_address().as_hhdm_virt() + Size4KiB::SIZE)
+    }
+
+    fn unref_pt(&mut self) {
+        self.address_space
+            .offset_page_table()
+            .page_table()
+            .for_each_entry(
+                PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
+                |entry| {
+                    entry.unref_vm_frame();
+                    entry.set_unused();
+
+                    Ok(())
+                },
+            )
+            .expect("dealloc: failed to unref the page table");
+    }
+
+    /// Deallocates the architecture-specific task resources. This function is called
+    /// when the process is turned into a zombie.
+    pub fn dealloc(&mut self) {
+        if self.user {
+            self.unref_pt();
+        }
+
+        // deallocate the switch stack
+        {
+            let frame: PhysFrame<Size4KiB> = PhysFrame::containing_address(
+                (self.context_switch_rsp - Size4KiB::SIZE).as_hhdm_phys(),
+            );
+
+            FRAME_ALLOCATOR.deallocate_frame(frame);
+        }
     }
 
     /// Returns the saved GS base for this task.
