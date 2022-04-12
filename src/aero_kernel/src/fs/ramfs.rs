@@ -338,6 +338,17 @@ impl INodeInterface for LockedRamINode {
                 Ok(private_cp)
             }
 
+            FileContents::Content(contents) => {
+                // TODO: Support shared content ramfs file mappings.
+                assert!(!flags.contains(MMapFlags::MAP_SHARED));
+
+                let private_cp: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
+                private_cp.as_slice_mut()[..size]
+                    .copy_from_slice(&contents.lock()[offset..offset + size]);
+
+                Ok(private_cp)
+            }
+
             // TODO: Support other memory mapping ramfs files:
             _ => Err(FileSystemError::NotSupported),
         }
