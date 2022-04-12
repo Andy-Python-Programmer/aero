@@ -24,6 +24,7 @@ use alloc::vec::Vec;
 use crate::fs;
 use crate::fs::devfs;
 use crate::fs::inode;
+use crate::rendy;
 
 use crate::fs::inode::INodeInterface;
 use crate::mem::paging::VirtAddr;
@@ -262,12 +263,12 @@ impl INodeInterface for Tty {
                 let winsize = VirtAddr::new(arg as u64);
                 let winsize = unsafe { &mut *(winsize.as_mut_ptr::<aero_syscall::WinSize>()) };
 
-                let (rows, cols) = crate::rendy::get_rows_cols();
+                let (rows, cols) = rendy::get_rows_cols();
 
                 winsize.ws_row = rows as u16;
                 winsize.ws_col = cols as u16;
 
-                let (xpixel, ypixel) = crate::rendy::get_resolution();
+                let (xpixel, ypixel) = rendy::get_resolution();
 
                 winsize.ws_xpixel = xpixel as u16;
                 winsize.ws_ypixel = ypixel as u16;
@@ -371,7 +372,7 @@ impl KeyboardListener for Tty {
             }
 
             if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
-                crate::rendy::print!("{}", character);
+                rendy::print!("{}", character);
             }
         };
 
@@ -381,7 +382,7 @@ impl KeyboardListener for Tty {
 
                 if stdin.back_buffer.pop().is_some() {
                     if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
-                        crate::rendy::backspace();
+                        rendy::backspace();
                         stdin.cursor -= 1;
                     }
                 }
@@ -428,7 +429,7 @@ impl KeyboardListener for Tty {
                 stdin.cursor = 0;
 
                 if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
-                    crate::rendy::print!("\n");
+                    rendy::print!("\n");
                 }
 
                 self.block_queue.notify_complete();
@@ -454,8 +455,8 @@ impl KeyboardListener for Tty {
                     return;
                 }
 
-                let (x, y) = crate::rendy::get_cursor_position();
-                crate::rendy::set_cursor_position(x - 1, y);
+                let (x, y) = rendy::get_cursor_position();
+                rendy::set_cursor_position(x - 1, y);
 
                 stdin.cursor -= 1;
             }
@@ -469,8 +470,8 @@ impl KeyboardListener for Tty {
                     return;
                 }
 
-                let (x, y) = crate::rendy::get_cursor_position();
-                crate::rendy::set_cursor_position(x + 1, y);
+                let (x, y) = rendy::get_cursor_position();
+                rendy::set_cursor_position(x + 1, y);
 
                 stdin.advance_cursor();
             }
@@ -523,22 +524,22 @@ struct AnsiEscape;
 
 impl vte::Perform for AnsiEscape {
     fn print(&mut self, char: char) {
-        crate::rendy::print!("{}", char);
+        rendy::print!("{}", char);
     }
 
     fn execute(&mut self, byte: u8) {
         let char = byte as char;
 
         match char {
-            '\n' | '\t' => crate::rendy::print!("{}", char),
+            '\n' | '\t' => rendy::print!("{}", char),
 
             '\r' => {
-                let (_, y) = crate::rendy::get_cursor_position();
-                crate::rendy::set_cursor_position(0, y)
+                let (_, y) = rendy::get_cursor_position();
+                rendy::set_cursor_position(0, y)
             }
 
             '\u{8}' => {
-                crate::rendy::backspace();
+                rendy::backspace();
             }
 
             _ => {}
@@ -568,7 +569,7 @@ impl vte::Perform for AnsiEscape {
                 let mut x = if x != 0 { x - 1 } else { x };
                 let mut y = if y != 0 { y - 1 } else { y };
 
-                let (rows, cols) = crate::rendy::get_term_info();
+                let (rows, cols) = rendy::get_term_info();
 
                 // Make sure the provided coordinates are valid.
                 if x >= cols {
@@ -580,14 +581,14 @@ impl vte::Perform for AnsiEscape {
                 }
 
                 // Move the cursor to the position.
-                crate::rendy::set_cursor_position(x, y);
+                rendy::set_cursor_position(x, y);
             }
 
             'l' | 'h' => match params.iter().next() {
                 Some([25]) => {
                     // Disable the cursor if action == 'l` and enable it if action
                     // == 'h'.
-                    crate::rendy::set_cursor_visibility(action == 'h')
+                    rendy::set_cursor_visibility(action == 'h')
                 }
 
                 _ => unimplemented!(),
@@ -595,30 +596,28 @@ impl vte::Perform for AnsiEscape {
 
             // Clears parts of the screen.
             'J' => {
-                let mut iter = params.iter();
-
                 // If `n` is missing, it defaults to 0.
-                let n = iter.next().unwrap_or(&[0])[0] as usize;
+                let n = params.iter().next().unwrap_or(&[0])[0] as usize;
 
                 match n {
                     // If `n` is 0 (or missing), clear from cursor to end of screen.
                     0 => {
-                        let (x, y) = crate::rendy::get_cursor_position();
-                        let (term_rows, term_cols) = crate::rendy::get_rows_cols();
+                        let (x, y) = rendy::get_cursor_position();
+                        let (term_rows, term_cols) = rendy::get_rows_cols();
 
                         let rows_remaining = term_rows - (y + 1);
                         let cols_diff = term_cols - (x + 1);
                         let to_clear = rows_remaining * term_cols + cols_diff;
 
-                        crate::rendy::set_auto_flush(false);
+                        rendy::set_auto_flush(false);
 
                         for _ in 0..to_clear {
-                            crate::rendy::print!(" ");
+                            rendy::print!(" ");
                         }
 
-                        crate::rendy::set_cursor_position(x, y);
-                        crate::rendy::double_buffer_flush();
-                        crate::rendy::set_auto_flush(true);
+                        rendy::set_cursor_position(x, y);
+                        rendy::double_buffer_flush();
+                        rendy::set_auto_flush(true);
                     }
 
                     1 => unimplemented!(),
@@ -627,7 +626,7 @@ impl vte::Perform for AnsiEscape {
                     //
                     // TODO(Andy-Python-Programmer): When we support scrollback buffer, if `n` is
                     // 3, clear the entire scrollback buffer as well.
-                    2 | 3 => crate::rendy::clear_screen(false),
+                    2 | 3 => rendy::clear_screen(false),
 
                     // Unknown value, do nothing.
                     _ => unimplemented!(),
@@ -635,13 +634,11 @@ impl vte::Perform for AnsiEscape {
             }
 
             'C' => {
-                let mut iter = params.iter();
-
                 // If `n` is missing, it defaults to 1.
-                let mut n = iter.next().unwrap_or(&[1])[0] as usize;
+                let mut n = params.iter().next().unwrap_or(&[1])[0] as usize;
 
-                let (x, y) = crate::rendy::get_cursor_position();
-                let (_, term_cols) = crate::rendy::get_rows_cols();
+                let (x, y) = rendy::get_cursor_position();
+                let (_, term_cols) = rendy::get_rows_cols();
 
                 if x + n > term_cols - 1 {
                     n = (term_cols - 1) - x;
@@ -651,16 +648,61 @@ impl vte::Perform for AnsiEscape {
                     n = 1;
                 }
 
-                crate::rendy::set_cursor_position(x + n, y);
+                rendy::set_cursor_position(x + n, y);
+            }
+
+            'K' => {
+                // If `n` is missing, it defaults to 0.
+                let n = params.iter().next().unwrap_or(&[0])[0] as usize;
+
+                // NOTE: The cursor position does not change.
+                match n {
+                    // If `n` is 0 (or missing), clear from cursor to the end of the line.
+                    0 => {
+                        let (x, y) = rendy::get_cursor_position();
+                        let (_, term_cols) = rendy::get_rows_cols();
+
+                        for _ in x..term_cols {
+                            rendy::print!(" ");
+                        }
+
+                        rendy::set_cursor_position(x, y);
+                    }
+
+                    // If `n` is 1, clear from cursor to beginning of the line.
+                    1 => {
+                        let (x, y) = rendy::get_cursor_position();
+
+                        rendy::set_cursor_position(0, y);
+
+                        for _ in 0..x {
+                            rendy::print!(" ")
+                        }
+                    }
+
+                    // If `n` is 2, clear entire line.
+                    2 => {
+                        let (_, term_cols) = rendy::get_rows_cols();
+                        let (x, y) = rendy::get_cursor_position();
+
+                        rendy::set_cursor_position(0, y);
+
+                        for _ in 0..term_cols {
+                            rendy::print!(" ")
+                        }
+
+                        rendy::set_cursor_position(x, y);
+                    }
+
+                    _ => unimplemented!(),
+                }
             }
 
             'D' => {
-                let mut iter = params.iter();
-
                 // If `n` is missing, it defaults to 1.
-                let mut n = iter.next().unwrap_or(&[1])[0] as usize;
+                let mut n = params.iter().next().unwrap_or(&[1])[0] as usize;
 
-                let (x, y) = crate::rendy::get_cursor_position();
+                let (x, y) = rendy::get_cursor_position();
 
                 // If the cursor is already at the edge of the screen, this has no effect.
                 if n > x {
@@ -671,13 +713,12 @@ impl vte::Perform for AnsiEscape {
                     n = 1;
                 }
 
-                crate::rendy::set_cursor_position(x - n, y);
+                rendy::set_cursor_position(x - n, y);
             }
 
             // Sets colors and style of the characters following this code.
             'm' => {
                 let mut piter = params.iter();
-
                 let mut bright = false;
 
                 while let Some(param) = piter.next() {
@@ -690,7 +731,7 @@ impl vte::Perform for AnsiEscape {
                                 bright = false;
                                 // TODO: Turn off dim.
 
-                                crate::rendy::reset_default();
+                                rendy::reset_default();
                             }
 
                             // Bold or increased intensity:
@@ -726,7 +767,7 @@ impl vte::Perform for AnsiEscape {
                                             ANSI_COLORS[color as usize]
                                         };
 
-                                        crate::rendy::set_text_fg(ccode);
+                                        rendy::set_text_fg(ccode);
                                     }
 
                                     ParsedColor::Background(color) => {
@@ -736,7 +777,7 @@ impl vte::Perform for AnsiEscape {
                                             ANSI_COLORS[color as usize]
                                         };
 
-                                        crate::rendy::set_text_bg(ccode);
+                                        rendy::set_text_bg(ccode);
                                     }
 
                                     ParsedColor::Unknown => {
@@ -787,17 +828,11 @@ impl vte::Perform for AnsiEscape {
 
                                         // Background
                                         if code == 48 {
-                                            run_special_parser(
-                                                crate::rendy::set_text_bg,
-                                                &mut piter,
-                                            );
+                                            run_special_parser(rendy::set_text_bg, &mut piter);
                                         }
                                         // Foreground
                                         else if code == 38 {
-                                            run_special_parser(
-                                                crate::rendy::set_text_fg,
-                                                &mut piter,
-                                            );
+                                            run_special_parser(rendy::set_text_fg, &mut piter);
                                         }
                                     }
                                 }
