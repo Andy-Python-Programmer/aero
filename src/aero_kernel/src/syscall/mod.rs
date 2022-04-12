@@ -93,11 +93,22 @@ pub use time::*;
 
 use crate::utils::StackHelper;
 
+#[derive(Default)]
 pub struct ExecArgs {
-    inner: Vec<Box<[u8]>>,
+    pub inner: Vec<Box<[u8]>>,
 }
 
 impl ExecArgs {
+    pub fn push(&mut self, arg: &[u8]) {
+        self.inner.push(arg.into());
+    }
+
+    pub fn extend(&mut self, args: &[Box<[u8]>]) {
+        for arg in args {
+            self.push(arg);
+        }
+    }
+
     pub fn push_into_stack(&self, stack: &mut StackHelper) -> Vec<u64> {
         let mut tops = Vec::with_capacity(self.inner.len());
 
@@ -124,6 +135,7 @@ pub fn exec_args_from_slice(args: usize, size: usize) -> ExecArgs {
     let data = args as *const [usize; 2];
     let slice = unsafe { core::slice::from_raw_parts(data, size) };
 
+    // todo(andy): use `with_capacity` to avoid reallocation.
     let mut result = Vec::new();
 
     for inner in slice {

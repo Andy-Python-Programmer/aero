@@ -40,6 +40,7 @@ use crate::mem;
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
 
+use crate::syscall::ExecArgs;
 use crate::utils::sync::Mutex;
 
 const ELF_HEADER_MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];
@@ -321,6 +322,9 @@ pub struct LoadedBinary<'header> {
 
     pub entry_point: VirtAddr,
     pub base_addr: VirtAddr,
+
+    pub argv: Option<ExecArgs>,
+    pub envv: Option<ExecArgs>,
 }
 
 #[derive(Clone)]
@@ -874,6 +878,8 @@ impl VmProtected {
     fn load_bin<'header>(
         &mut self,
         bin: DirCacheItem,
+        argv: Option<ExecArgs>,
+        envv: Option<ExecArgs>,
     ) -> Result<LoadedBinary<'header>, ElfLoadError> {
         // check for a shebang before proceeding.
         if let Some(shebang) = parse_shebang(bin.clone())? {
@@ -883,7 +889,18 @@ impl VmProtected {
                 shebang.argument
             );
 
-            unimplemented!()
+            let mut largv = ExecArgs::default();
+
+            largv.push(shebang.interpreter.absolute_path_str().as_bytes());
+
+            if !shebang.argument.is_empty() {
+                largv.push(shebang.argument.as_bytes());
+            }
+
+            largv.push(bin.absolute_path_str().as_bytes());
+            argv.map(|argv| largv.extend(&argv.inner[1..]));
+
+            return self.load_bin(shebang.interpreter, Some(largv), envv);
         }
 
         let elf = Elf::new(bin.clone())?;
@@ -1000,7 +1017,7 @@ impl VmProtected {
             } else if header_type == xmas_elf::program::Type::Interp {
                 let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
 
-                let res = self.load_bin(ld)?;
+                let res = self.load_bin(ld, None, None)?;
                 entry_point = res.entry_point;
             }
         }
@@ -1010,6 +1027,9 @@ impl VmProtected {
             entry_point,
 
             base_addr,
+
+            argv,
+            envv,
         })
     }
 
@@ -1107,8 +1127,13 @@ impl Vm {
     }
 
     /// Mapping the provided `bin` file into the VM.
-    pub fn load_bin(&self, bin: DirCacheItem) -> Result<LoadedBinary, ElfLoadError> {
-        self.inner.lock().load_bin(bin)
+    pub fn load_bin(
+        &self,
+        bin: DirCacheItem,
+        argv: Option<ExecArgs>,
+        envv: Option<ExecArgs>,
+    ) -> Result<LoadedBinary, ElfLoadError> {
+        self.inner.lock().load_bin(bin, argv, envv)
     }
 
     /// Clears and unmaps all of the mappings in the VM.

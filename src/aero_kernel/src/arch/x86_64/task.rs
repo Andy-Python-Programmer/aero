@@ -255,7 +255,9 @@ impl ArchTask {
             AddressSpace::new()?
         };
 
-        let loaded_binary = vm.load_bin(executable).expect("exec: failed to load ELF");
+        let loaded_binary = vm
+            .load_bin(executable, argv, envv)
+            .expect("exec: failed to load ELF");
 
         // a kernel task can only execute a user executable
         self.user = true;
@@ -289,8 +291,13 @@ impl ArchTask {
         let mut envp = Vec::new();
         let mut argp = Vec::new();
 
-        envv.map(|envv| envp = envv.push_into_stack(&mut stack));
-        argv.map(|argv| argp = argv.push_into_stack(&mut stack));
+        loaded_binary
+            .envv
+            .map(|envv| envp = envv.push_into_stack(&mut stack));
+
+        loaded_binary
+            .argv
+            .map(|argv| argp = argv.push_into_stack(&mut stack));
 
         stack.align_down();
 
