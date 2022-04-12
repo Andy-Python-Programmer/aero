@@ -72,6 +72,7 @@
 //! | 48     | ipc_become_root         |
 //! | 49     | stat                    |
 //! | 50     | fstat                   |
+//! | 51     | read_link               |
 
 use core::mem::MaybeUninit;
 
@@ -201,6 +202,7 @@ pub fn generic_do_syscall(
         SYS_FCNTL => fs::fcntl(b, c, d),
         SYS_STAT => fs::stat(b, c, d),
         SYS_FSTAT => fs::fstat(b, c),
+        SYS_READ_LINK => fs::read_link(b, c, d, e),
 
         SYS_SOCKET => net::socket(b, c, d),
         SYS_BIND => net::bind(b, c, d),

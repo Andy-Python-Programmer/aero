@@ -398,3 +398,16 @@ pub fn stat(path: usize, path_size: usize, stat_struct: usize) -> Result<usize, 
 
     Ok(0)
 }
+
+pub fn read_link(
+    path: usize,
+    path_size: usize,
+    _buffer: usize,
+    _buffer_size: usize,
+) -> Result<usize, AeroSyscallError> {
+    let path = validate_str(path as *mut u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
+    let path = Path::new(path);
+
+    log::warn!("read_link: is a stub! (path={path:?})");
+    Err(AeroSyscallError::EINVAL)
+}

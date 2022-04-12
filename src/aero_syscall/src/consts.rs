@@ -69,6 +69,7 @@ pub const SYS_IPC_DISCOVER_ROOT: usize = 47;
 pub const SYS_IPC_BECOME_ROOT: usize = 48;
 pub const SYS_STAT: usize = 49;
 pub const SYS_FSTAT: usize = 50;
+pub const SYS_READ_LINK: usize = 51;
 
 // fcntl constants:
 pub const F_GETFD: usize = 3;
