@@ -17,20 +17,25 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::fmt::Write;
+
 use aero_syscall::{MMapFlags, MMapProt};
 
 use alloc::boxed::Box;
 use alloc::collections::linked_list::CursorMut;
 use alloc::collections::LinkedList;
 
+use alloc::string::String;
 use xmas_elf::header::*;
 use xmas_elf::program::*;
 use xmas_elf::*;
 
 use crate::arch::task::userland_last_address;
 use crate::fs;
+use crate::fs::cache::DirCacheImpl;
 use crate::fs::cache::DirCacheItem;
 use crate::fs::FileSystemError;
+use crate::fs::Path;
 use crate::mem;
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
@@ -44,8 +49,8 @@ const ELF_PT2_64_SIZE: usize = core::mem::size_of::<HeaderPt2_<P64>>();
 
 #[derive(Debug)]
 pub enum ElfLoadError {
-    /// Unexpected file system error occured when reading the file.
-    ReadError(FileSystemError),
+    /// Unexpected file system error occured on an IO operation on the file.
+    IOError(FileSystemError),
     /// The PT1 header has an invalid magic number.
     InvalidMagic,
     /// The ELF header contains an invalid class.
@@ -63,7 +68,7 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfL
 
     file.inode()
         .read_at(0, &mut pt1_hdr_slice)
-        .map_err(|err| ElfLoadError::ReadError(err))?;
+        .map_err(|err| ElfLoadError::IOError(err))?;
 
     let pt1_header: &'header _ = unsafe { &*(pt1_hdr_slice.as_ptr() as *const HeaderPt1) };
 
@@ -79,7 +84,7 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfL
 
             file.inode()
                 .read_at(ELF_PT1_SIZE, &mut pt2_hdr_slice)
-                .map_err(|err| ElfLoadError::ReadError(err))?;
+                .map_err(|err| ElfLoadError::IOError(err))?;
 
             let pt2_header_ptr = pt2_hdr_slice.as_ptr();
             let pt2_header: &'header _ = unsafe { &*(pt2_header_ptr as *const HeaderPt2_<P64>) };
@@ -123,7 +128,7 @@ fn parse_program_header<'pheader>(
 
     file.inode()
         .read_at(start, &mut phdr_buffer)
-        .map_err(|err| ElfLoadError::ReadError(err))?;
+        .map_err(|err| ElfLoadError::IOError(err))?;
 
     let phdr_ptr = phdr_buffer.as_ptr();
 
@@ -142,6 +147,94 @@ fn parse_program_header<'pheader>(
 
         // SAFTEY: ensure the PT1 header has a valid class.
         Class::None | Class::Other(_) => Err(ElfLoadError::InvalidClass),
+    }
+}
+
+struct Shebang {
+    interpreter: DirCacheItem,
+    argument: String,
+}
+
+impl Shebang {
+    fn new(path: String, argument: String) -> Result<Self, ElfLoadError> {
+        let path = Path::new(&path);
+        let interpreter = fs::lookup_path(path).map_err(|err| ElfLoadError::IOError(err))?;
+
+        Ok(Self {
+            interpreter,
+            argument,
+        })
+    }
+}
+
+/// Returns [`true`] if the provided executable (`bin`) contains a shebang
+/// at the start.
+fn contains_shebang(bin: DirCacheItem) -> Result<bool, ElfLoadError> {
+    let shebang = &mut [0u8; 2];
+
+    bin.inode()
+        .read_at(0, shebang)
+        .map_err(|err| ElfLoadError::IOError(err))?;
+
+    Ok(shebang[0] == '#' as u8 && shebang[1] == '!' as u8)
+}
+
+fn parse_shebang(bin: DirCacheItem) -> Result<Option<Shebang>, ElfLoadError> {
+    if !contains_shebang(bin.clone())? {
+        return Ok(None);
+    }
+
+    // Syntax: #![whitespace]interpreter_path [single-argument][new-line]
+    //
+    // NOTE: We set the position to `2` since we skip the `#!` prefix.
+    let mut idx = 2;
+
+    let read_at_index = |idx: usize| -> Result<char, ElfLoadError> {
+        let c = &mut [0u8; 1];
+
+        bin.inode()
+            .read_at(idx, c)
+            .map_err(|err| ElfLoadError::IOError(err))?;
+
+        Ok(c[0] as char)
+    };
+
+    // 1. check for the optional whitespace (ignore it):
+    if read_at_index(idx)? == ' ' {
+        idx += 1;
+    }
+
+    // we build the string with `16` capicity to avoid reallocations.
+    let mut path = String::with_capacity(16);
+    let mut arg = String::with_capacity(16);
+
+    // 2. parse the interpreter path:
+    loop {
+        let char = read_at_index(idx)?;
+
+        if char == ' ' {
+            idx += 1;
+            break;
+        } else if char == '\n' {
+            // there is no argument, early return:
+            return Ok(Some(Shebang::new(path, arg)?));
+        }
+
+        idx += 1;
+        path.write_char(char)
+            .expect("parse_shebang: internal error");
+    }
+
+    // 3. parse the argument:
+    loop {
+        let char = read_at_index(idx)?;
+        idx += 1;
+
+        if char == '\n' || char == ' ' {
+            return Ok(Some(Shebang::new(path, arg)?));
+        }
+
+        arg.write_char(char).expect("parse_shebang: internal error");
     }
 }
 
@@ -782,6 +875,17 @@ impl VmProtected {
         &mut self,
         bin: DirCacheItem,
     ) -> Result<LoadedBinary<'header>, ElfLoadError> {
+        // check for a shebang before proceeding.
+        if let Some(shebang) = parse_shebang(bin.clone())? {
+            log::debug!(
+                "shebang: (interpreter={}, argument={})",
+                shebang.interpreter.absolute_path_str(),
+                shebang.argument
+            );
+
+            unimplemented!()
+        }
+
         let elf = Elf::new(bin.clone())?;
         let header = &elf.header;
 
