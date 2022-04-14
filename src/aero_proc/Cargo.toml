@@ -1,0 +1,16 @@
+[package]
+name = "aero_proc"
+version = "0.1.0"
+authors = ["czapek1337 <czapek1337@gmail.com>"]
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.37"
+quote = "1.0.18"
+
+[dependencies.syn]
+features = ["full"]
+version = "1.0.91"

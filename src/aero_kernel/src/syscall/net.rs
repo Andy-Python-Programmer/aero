@@ -2,6 +2,7 @@ use aero_syscall::*;
 
 use crate::{fs::inode::DirEntry, socket::unix::*, userland::scheduler};
 
+#[aero_proc::syscall]
 pub fn socket(
     domain: usize,
     socket_type: usize,
@@ -30,6 +31,8 @@ pub fn socket(
     Ok(fd)
 }
 
+// TODO: Figure out how to handle this.
+#[aero_proc::syscall]
 pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
     let address = unsafe { &*(address as *const SocketAddr) };
     let current_task = scheduler::get_scheduler().current_task();

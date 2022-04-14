@@ -21,7 +21,6 @@ use crate::userland::scheduler::get_scheduler;
 use crate::userland::task::TaskId;
 
 use crate::utils::sync::{BlockQueue, Mutex};
-use crate::utils::validate_slice_mut;
 
 use aero_syscall::AeroSyscallError;
 use alloc::{collections::VecDeque, vec::Vec};
@@ -51,29 +50,19 @@ impl MessageQueue {
 }
 
 fn handle_recieve(
-    pid: usize,
-    message_ptr: usize,
-    message_size: usize,
+    pid_ptr: &mut usize,
+    output: &mut [u8],
     msg: Message,
 ) -> Result<usize, AeroSyscallError> {
-    let pid_ptr = pid as *mut usize;
-    let output =
-        validate_slice_mut(message_ptr as *mut u8, message_size).ok_or(AeroSyscallError::EINVAL)?;
-
     output[0..msg.data.len()].copy_from_slice(&msg.data);
 
-    unsafe {
-        pid_ptr.write(msg.from);
-    }
+    *pid_ptr = msg.from;
 
     Ok(msg.data.len())
 }
 
-pub fn send(pid: usize, message: usize, message_size: usize) -> Result<usize, AeroSyscallError> {
-    // Verify and convert the provided message into a slice.
-    let payload =
-        validate_slice_mut(message as *mut u8, message_size).ok_or(AeroSyscallError::EINVAL)?;
-
+#[aero_proc::syscall]
+pub fn send(pid: usize, payload: &[u8]) -> Result<usize, AeroSyscallError> {
     let target = get_scheduler()
         .find_task(TaskId::new(pid))
         .ok_or(AeroSyscallError::EINVAL)?;
@@ -93,10 +82,10 @@ pub fn send(pid: usize, message: usize, message_size: usize) -> Result<usize, Ae
     Ok(0)
 }
 
+#[aero_proc::syscall]
 pub fn recv(
-    pidptr: usize,
-    message_ptr: usize,
-    message_max: usize,
+    pid_ptr: &mut usize,
+    output: &mut [u8],
     block: usize,
 ) -> Result<usize, AeroSyscallError> {
     let current = get_scheduler().current_task();
@@ -108,12 +97,12 @@ pub fn recv(
             .pop_front()
             .expect("empty message queues should always be deleted!");
 
-        if item.data.len() > message_max {
+        if item.data.len() > output.len() {
             msgqueue.push_front(item);
             return Err(AeroSyscallError::E2BIG);
         }
 
-        return handle_recieve(pidptr, message_ptr, message_max, item);
+        return handle_recieve(pid_ptr, output, item);
     }
 
     let mq = &current.message_queue;
@@ -126,14 +115,15 @@ pub fn recv(
         .pop_front()
         .expect("ipc_recieve: someone else stole our message!");
 
-    if msg.data.len() > message_max {
+    if msg.data.len() > output.len() {
         our_queue.push_front(msg);
         Err(AeroSyscallError::E2BIG)
     } else {
-        handle_recieve(pidptr, message_ptr, message_max, msg)
+        handle_recieve(pid_ptr, output, msg)
     }
 }
 
+#[aero_proc::syscall]
 pub fn discover_root() -> Result<usize, AeroSyscallError> {
     match IPC_ROOT_NODE.get() {
         Some(pid) => Ok(*pid),
@@ -141,6 +131,7 @@ pub fn discover_root() -> Result<usize, AeroSyscallError> {
     }
 }
 
+#[aero_proc::syscall]
 pub fn become_root() -> Result<usize, AeroSyscallError> {
     if IPC_ROOT_NODE.is_completed() {
         Err(AeroSyscallError::EINVAL)
