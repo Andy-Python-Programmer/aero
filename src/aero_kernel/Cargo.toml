@@ -44,8 +44,11 @@ features = ["no_std"]
 version = "1.4.0"
 features = ["spin_no_std"]
 
+[dependencies.aero_proc]
+path = "../aero_proc"
+
 [dependencies.aero_syscall]
-path = "../aero_syscall/"
+path = "../aero_syscall"
 
 [dependencies.cpio_reader]
 git = "https://github.com/czapek1337/cpio_reader"

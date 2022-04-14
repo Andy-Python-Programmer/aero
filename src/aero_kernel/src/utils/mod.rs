@@ -27,6 +27,22 @@ pub mod io;
 pub mod linker;
 pub mod sync;
 
+pub fn validate_ptr<T>(ptr: *const T) -> Option<&'static T> {
+    if ptr.is_null() {
+        None
+    } else {
+        unsafe { Some(&*ptr) }
+    }
+}
+
+pub fn validate_mut_ptr<T>(ptr: *mut T) -> Option<&'static mut T> {
+    if ptr.is_null() {
+        None
+    } else {
+        unsafe { Some(&mut *ptr) }
+    }
+}
+
 pub fn validate_slice<T>(ptr: *const T, len: usize) -> Option<&'static [T]> {
     if len == 0 {
         Some(&[])

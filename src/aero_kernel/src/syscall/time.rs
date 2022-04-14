@@ -17,17 +17,16 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::AeroSyscallError;
+use aero_syscall::{AeroSyscallError, TimeSpec};
 
+use crate::userland::scheduler;
 use crate::utils::CeilDiv;
-use crate::{mem::paging::VirtAddr, userland::scheduler};
 
 const CLOCK_TYPE_REALTIME: usize = 0;
 const CLOCK_TYPE_MONOTONIC: usize = 1;
 
-pub fn sleep(timespec: usize) -> Result<usize, AeroSyscallError> {
-    let timespec = VirtAddr::new(timespec as u64);
-    let timespec = unsafe { &*(timespec.as_mut_ptr::<aero_syscall::TimeSpec>()) };
+#[aero_proc::syscall]
+pub fn sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
     let duration = (timespec.tv_nsec as usize).ceil_div(1000000000) + timespec.tv_sec as usize;
 
     scheduler::get_scheduler().inner.sleep(Some(duration))?;
@@ -35,10 +34,8 @@ pub fn sleep(timespec: usize) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
-pub fn gettime(clock: usize, timespec: usize) -> Result<usize, AeroSyscallError> {
-    let timespec = VirtAddr::new(timespec as u64);
-    let timespec = unsafe { &mut *(timespec.as_mut_ptr::<aero_syscall::TimeSpec>()) };
-
+#[aero_proc::syscall]
+pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, AeroSyscallError> {
     match clock {
         CLOCK_TYPE_REALTIME => {
             let clock = crate::time::get_realtime_clock();

@@ -189,13 +189,12 @@ pub fn generic_do_syscall(
         SYS_GETDENTS => fs::getdents(b, c, d),
         SYS_GETCWD => fs::getcwd(b, c),
         SYS_CHDIR => fs::chdir(b, c),
-        SYS_MKDIR => fs::mkdir(b, c),
         SYS_MKDIR_AT => fs::mkdirat(b, c, d),
         SYS_RMDIR => fs::rmdir(b, c),
         SYS_IOCTL => fs::ioctl(b, c, d),
         SYS_SEEK => fs::seek(b, c, d),
         SYS_ACCESS => fs::access(b, c, d, e, f),
-        SYS_PIPE => fs::pipe(b, c),
+        SYS_PIPE => fs::pipe(b, 2, c), // TODO: We shouldn't have to pass 2 here.
         SYS_UNLINK => fs::unlink(b, c, d, e),
         SYS_DUP => fs::dup(b, c),
         SYS_DUP2 => fs::dup2(b, c, d),
@@ -214,6 +213,9 @@ pub fn generic_do_syscall(
         SYS_IPC_RECV => ipc::recv(b, c, d, e),
         SYS_IPC_DISCOVER_ROOT => ipc::discover_root(),
         SYS_IPC_BECOME_ROOT => ipc::become_root(),
+
+        // Syscall aliases (this should be handled in aero_syscall)
+        SYS_MKDIR => fs::mkdirat(aero_syscall::AT_FDCWD as _, c, d),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);

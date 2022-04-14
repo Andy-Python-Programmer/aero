@@ -18,7 +18,7 @@
  */
 
 use aero_syscall::signal::{SigAction, SigProcMask};
-use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt};
+use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt, SysInfo, Utsname};
 use alloc::string::String;
 use spin::{Mutex, Once};
 
@@ -28,7 +28,6 @@ use crate::fs::Path;
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::signals::SignalEntry;
-use crate::utils::validate_str;
 
 static HOSTNAME: Once<Mutex<String>> = Once::new();
 
@@ -36,6 +35,7 @@ fn hostname() -> &'static Mutex<String> {
     HOSTNAME.call_once(|| Mutex::new(String::from("aero")))
 }
 
+#[aero_proc::syscall]
 pub fn exit(status: usize) -> ! {
     #[cfg(all(test, feature = "ci"))]
     crate::emu::exit_qemu(crate::emu::ExitStatus::Success);
@@ -52,7 +52,8 @@ pub fn exit(status: usize) -> ! {
     }
 }
 
-pub fn uname(buffer: usize) -> Result<usize, AeroSyscallError> {
+#[aero_proc::syscall]
+pub fn uname(buffer: &mut Utsname) -> Result<usize, AeroSyscallError> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
         let init_bytes = init.as_bytes();
         let len = init.len();
@@ -60,26 +61,24 @@ pub fn uname(buffer: usize) -> Result<usize, AeroSyscallError> {
         fixed[..len].copy_from_slice(init_bytes)
     }
 
-    // TODO: Safety checks!
-    let struc = unsafe { &mut *(buffer as *mut aero_syscall::Utsname) };
-
-    init_array(&mut struc.name, "Aero");
-    init_array(&mut struc.nodename, "unknown");
-    init_array(&mut struc.version, env!("CARGO_PKG_VERSION"));
+    init_array(&mut buffer.name, "Aero");
+    init_array(&mut buffer.nodename, "unknown");
+    init_array(&mut buffer.version, env!("CARGO_PKG_VERSION"));
     init_array(
-        &mut struc.release,
+        &mut buffer.release,
         concat!(env!("CARGO_PKG_VERSION"), "-aero"),
     );
 
     #[cfg(target_arch = "x86_64")]
-    init_array(&mut struc.machine, "x86_64");
+    init_array(&mut buffer.machine, "x86_64");
 
     #[cfg(not(target_arch = "x86_64"))]
-    init_array(&mut struc.machine, "unknown");
+    init_array(&mut buffer.machine, "unknown");
 
     Ok(0x00)
 }
 
+#[aero_proc::syscall]
 pub fn fork() -> Result<usize, AeroSyscallError> {
     let scheduler = scheduler::get_scheduler();
     let forked = scheduler.current_task().fork();
@@ -88,6 +87,7 @@ pub fn fork() -> Result<usize, AeroSyscallError> {
     Ok(forked.pid().as_usize())
 }
 
+#[aero_proc::syscall]
 pub fn clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
     let scheduler = scheduler::get_scheduler();
     let cloned = scheduler.current_task().clone_process(entry, stack);
@@ -96,17 +96,14 @@ pub fn clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
     Ok(cloned.pid().as_usize())
 }
 
+#[aero_proc::syscall]
 pub fn exec(
-    path: usize,
-    path_size: usize,
+    path: &Path,
     args: usize,
     argc: usize,
     envs: usize,
     envc: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let path = validate_str(path as *const u8, path_size).ok_or(AeroSyscallError::EINVAL)?;
-    let path = Path::new(path);
-
     let executable = fs::lookup_path(path)?;
 
     if executable.inode().metadata()?.is_directory() {
@@ -134,20 +131,21 @@ pub fn exec(
     unreachable!()
 }
 
-pub fn log(msg_start: usize, msg_size: usize) -> Result<usize, AeroSyscallError> {
-    let message = validate_str(msg_start as *const u8, msg_size).ok_or(AeroSyscallError::EINVAL)?;
-    log::debug!("{}", message);
+#[aero_proc::syscall]
+pub fn log(msg: &str) -> Result<usize, AeroSyscallError> {
+    log::debug!("{}", msg);
 
     Ok(0x00)
 }
 
-pub fn waitpid(pid: usize, status: usize, _flags: usize) -> Result<usize, AeroSyscallError> {
+#[aero_proc::syscall]
+pub fn waitpid(pid: usize, status: &mut u32, _flags: usize) -> Result<usize, AeroSyscallError> {
     let current_task = scheduler::get_scheduler().current_task();
-    let status = unsafe { &mut *(status as *mut u32) };
 
     Ok(current_task.waitpid(pid as isize, status)?)
 }
 
+#[aero_proc::syscall]
 pub fn mmap(
     address: usize,
     size: usize,
@@ -157,7 +155,6 @@ pub fn mmap(
     offset: usize,
 ) -> Result<usize, AeroSyscallError> {
     let address = VirtAddr::new(address as u64);
-
     let protection = MMapProt::from_bits(protection).ok_or(AeroSyscallError::EINVAL)?;
     let flags = MMapFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
 
@@ -185,6 +182,7 @@ pub fn mmap(
     }
 }
 
+#[aero_proc::syscall]
 pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
     let address = VirtAddr::new(address as u64);
 
@@ -199,68 +197,65 @@ pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
     }
 }
 
+#[aero_proc::syscall]
 pub fn getpid() -> Result<usize, AeroSyscallError> {
     Ok(scheduler::get_scheduler().current_task().pid().as_usize())
 }
 
+#[aero_proc::syscall]
 pub fn gettid() -> Result<usize, AeroSyscallError> {
     Ok(scheduler::get_scheduler().current_task().tid().as_usize())
 }
 
-pub fn gethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError> {
-    let slice = unsafe { core::slice::from_raw_parts_mut(ptr as *mut u8, length) };
+#[aero_proc::syscall]
+pub fn gethostname(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     let hostname = hostname().lock();
     let bytes = hostname.as_bytes();
 
-    if bytes.len() > slice.len() {
+    if bytes.len() > buffer.len() {
         Err(AeroSyscallError::ENAMETOOLONG)
     } else {
-        slice[0..bytes.len()].copy_from_slice(bytes);
+        buffer[0..bytes.len()].copy_from_slice(bytes);
 
         Ok(bytes.len())
     }
 }
 
-pub fn info(struc: usize) -> Result<usize, AeroSyscallError> {
-    let struc = unsafe { &mut *(struc as *mut aero_syscall::SysInfo) };
-
-    // TODO: Fill in the rest of the struct.
+#[aero_proc::syscall]
+pub fn info(struc: &mut SysInfo) -> Result<usize, AeroSyscallError> {
     struc.uptime = crate::time::get_uptime_ticks() as i64;
 
     Ok(0x00)
 }
 
-pub fn sethostname(ptr: usize, length: usize) -> Result<usize, AeroSyscallError> {
-    let slice = unsafe { core::slice::from_raw_parts(ptr as *const u8, length) };
+#[aero_proc::syscall]
+pub fn sethostname(name: &[u8]) -> Result<usize, AeroSyscallError> {
+    match core::str::from_utf8(name) {
+        Ok(name) => {
+            *hostname().lock() = name.into();
 
-    match core::str::from_utf8(slice) {
-        Ok(new_hostname) => {
-            *hostname().lock() = String::from(new_hostname);
             Ok(0)
         }
         Err(_) => Err(AeroSyscallError::EINVAL),
     }
 }
 
-pub fn sigprocmask(how: usize, set: usize, old_set: usize) -> Result<usize, AeroSyscallError> {
-    let set = if set > 0 {
-        Some(
-            VirtAddr::new(set as _)
-                .copied_read::<u64>()
-                .ok_or(AeroSyscallError::EFAULT)?,
-        )
-    } else {
+#[aero_proc::syscall]
+pub fn sigprocmask(
+    how: usize,
+    set: *const u64,
+    old_set: *mut u64,
+) -> Result<usize, AeroSyscallError> {
+    let set = if set.is_null() {
         None
+    } else {
+        Some(unsafe { *set })
     };
 
-    let old_set = if old_set > 0 {
-        Some(
-            VirtAddr::new(old_set as _)
-                .read_mut::<u64>()
-                .ok_or(AeroSyscallError::EFAULT)?,
-        )
-    } else {
+    let old_set = if old_set.is_null() {
         None
+    } else {
+        Some(unsafe { &mut *old_set })
     };
 
     let how = SigProcMask::from(how as u64);
@@ -273,20 +268,17 @@ pub fn sigprocmask(how: usize, set: usize, old_set: usize) -> Result<usize, Aero
     Ok(0)
 }
 
+#[aero_proc::syscall]
 pub fn sigaction(
     sig: usize,
-    sigact: usize,
+    sigact: *mut SigAction,
     sigreturn: usize,
-    old: usize,
+    old: *mut SigAction,
 ) -> Result<usize, AeroSyscallError> {
-    let new = if sigact == 0 {
+    let new = if sigact.is_null() {
         None
     } else {
-        let address = VirtAddr::new(sigact as u64);
-        let raw = address.as_mut_ptr::<SigAction>();
-        let sigact = unsafe { &mut *raw };
-
-        Some(sigact)
+        Some(unsafe { &mut *sigact })
     };
 
     let entry = if let Some(new) = new {
@@ -295,14 +287,10 @@ pub fn sigaction(
         None
     };
 
-    let old = if old == 0 {
+    let old = if old.is_null() {
         None
     } else {
-        let address = VirtAddr::new(old as u64);
-        let raw = address.as_mut_ptr::<SigAction>();
-        let sigact = unsafe { &mut *raw };
-
-        Some(sigact)
+        Some(unsafe { &mut *old })
     };
 
     let scheduler = scheduler::get_scheduler();
@@ -314,6 +302,7 @@ pub fn sigaction(
     Ok(0)
 }
 
+#[aero_proc::syscall]
 pub fn shutdown() -> ! {
     fs::cache::dcache().log();
 
