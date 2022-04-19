@@ -14,6 +14,11 @@ enum ArgType {
     Path,
 }
 
+/// Validates input buffers, structures, path and strings auto-magically.
+///
+/// Functions that use this macro are not allowed to be `async`, `unsafe`, or `const` and must
+/// have a valid return-type of `Result<usize, AeroSyscallError>`. In addition, the function cannot
+/// have generic parameters.
 #[proc_macro_attribute]
 pub fn syscall(_: TokenStream, item: TokenStream) -> TokenStream {
     let parsed_fn = syn::parse_macro_input!(item as syn::ItemFn);
