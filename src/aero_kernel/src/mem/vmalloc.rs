@@ -99,7 +99,6 @@ impl Vmalloc {
 
     pub(super) fn alloc(&mut self, mut npages: usize) -> Option<VirtAddr> {
         npages += 1; // allocate a guard page
-        log::debug!("vmalloc: (npages={npages})");
 
         let size_bytes = npages * Size4KiB::SIZE as usize;
 
@@ -158,8 +157,6 @@ impl Vmalloc {
 
     pub(super) fn dealloc(&mut self, addr: VirtAddr, mut npages: usize) {
         npages += 1; // deallocate the vmalloc guard page
-
-        log::debug!("vmdealloc: (npages={npages})");
 
         let size = npages * Size4KiB::SIZE as usize;
 
