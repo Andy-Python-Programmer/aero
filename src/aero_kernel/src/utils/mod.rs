@@ -71,46 +71,6 @@ pub fn validate_array_mut<T, const COUNT: usize>(ptr: *mut T) -> Option<&'static
     slice.map(|e| unsafe { &mut *(e.as_ptr() as *mut [T; COUNT]) })
 }
 
-pub macro intel_asm($($code:expr,)+) {
-   core::arch::global_asm!(concat!($($code),+,));
-}
-
-pub macro const_unsafe($($vis:vis const $name:ident: $ty:ty = $value:expr;)*) {
-    $(
-        $vis const $name: $ty = unsafe { $value };
-    )*
-}
-
-pub macro intel_fn {
-    (
-        $(#![$total:meta])*
-
-        $(#[$outer:meta])* $fn_vis:vis extern "asm" fn $name:ident($($arg_name:ident : $arg_type:ty),*) { $($body:expr,)+ }
-        $(pub extern "asm" $label_name:expr => { $($label_body:expr,)+ })*
-    ) => {
-        $(#[$total])*
-        $crate::utils::intel_asm!(
-            ".global ", stringify!($name), "\n",
-            ".type ", stringify!($name), ", @function\n",
-            ".section .text.", stringify!($name), ", \"ax\", @progbits\n",
-            stringify!($name), ":\n",
-            $($body),+,
-            $(
-                stringify!($label_name), ":\n",
-                $($label_body),+,
-            )*
-            ".size ", stringify!($name), ", . - ", stringify!($name), "\n",
-            ".text\n",
-        );
-
-        $(#[$total])*
-        extern "C" {
-            $(#[$outer])*
-            $fn_vis fn $name($($arg_name : $arg_type),*);
-        }
-    }
-}
-
 pub trait Downcastable: Any + Send + Sync {
     fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
 }
