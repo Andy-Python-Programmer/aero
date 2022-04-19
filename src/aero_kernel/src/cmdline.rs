@@ -117,7 +117,7 @@ pub fn get_raw_cmdline() -> &'static str {
 mod tests {
     use super::*;
 
-    #[aero_test::test]
+    #[aero_proc::test]
     fn number_parser_test() {
         assert_eq!(parse_number("0xdeadbeef").unwrap(), 0xdeadbeef);
         assert_eq!(parse_number("0o546").unwrap(), 0o546);

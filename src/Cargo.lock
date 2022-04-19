@@ -8,7 +8,6 @@ version = "0.1.0"
 dependencies = [
  "aero_proc",
  "aero_syscall",
- "aero_test",
  "aml",
  "bit_field",
  "bitflags",
@@ -41,14 +40,6 @@ name = "aero_syscall"
 version = "0.1.0"
 dependencies = [
  "bitflags",
-]
-
-[[package]]
-name = "aero_test"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn",
 ]
 
 [[package]]

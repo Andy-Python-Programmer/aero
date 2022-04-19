@@ -564,13 +564,13 @@ pub fn is_aligned(addr: u64, align: u64) -> bool {
 mod tests {
     use super::*;
 
-    #[aero_test::test]
+    #[aero_proc::test]
     pub fn test_is_aligned() {
         assert!(is_aligned(0x1000, 0x1000));
         assert!(!is_aligned(69, 0x1000));
     }
 
-    #[aero_test::test]
+    #[aero_proc::test]
     pub fn test_align_up() {
         // align 1
         assert_eq!(align_up(0, 1), 0);

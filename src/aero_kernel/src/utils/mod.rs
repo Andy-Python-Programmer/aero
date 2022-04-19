@@ -281,7 +281,7 @@ ceil_div_impl!(u8 u16 u32 u64 usize u128);
 mod tests {
     use super::*;
 
-    #[aero_test::test]
+    #[aero_proc::test]
     fn unsigned_div_ceil() {
         assert_eq!((8usize).ceil_div(3), 3);
         assert_eq!((7usize).ceil_div(4), 2);

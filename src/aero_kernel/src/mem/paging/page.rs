@@ -437,7 +437,7 @@ impl<S: PageSize> fmt::Debug for PhysFrameRangeInclusive<S> {
 mod tests {
     use super::*;
 
-    #[aero_test::test]
+    #[aero_proc::test]
     pub fn test_page_ranges() {
         let page_size = Size4KiB::SIZE;
         let number = 1000;
