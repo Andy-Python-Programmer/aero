@@ -238,9 +238,7 @@ pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, AeroSyscal
 }
 
 #[aero_proc::syscall]
-pub fn pipe(fds: &mut [usize], flags: usize) -> Result<usize, AeroSyscallError> {
-    assert!(fds.len() == 2);
-
+pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, AeroSyscallError> {
     let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
     let pipe = Pipe::new();
 

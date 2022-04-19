@@ -194,7 +194,7 @@ pub fn generic_do_syscall(
         SYS_IOCTL => fs::ioctl(b, c, d),
         SYS_SEEK => fs::seek(b, c, d),
         SYS_ACCESS => fs::access(b, c, d, e, f),
-        SYS_PIPE => fs::pipe(b, 2, c), // TODO: We shouldn't have to pass 2 here.
+        SYS_PIPE => fs::pipe(b, c),
         SYS_UNLINK => fs::unlink(b, c, d, e),
         SYS_DUP => fs::dup(b, c),
         SYS_DUP2 => fs::dup2(b, c, d),

@@ -68,6 +68,14 @@ pub fn validate_str(ptr: *const u8, len: usize) -> Option<&'static str> {
     }
 }
 
+pub fn validate_array_mut<T, const COUNT: usize>(ptr: *mut T) -> Option<&'static mut [T; COUNT]> {
+    // We use the `validate_slice_mut` function to validate if it safe to read `COUNT` amount
+    // of memory from `ptr`. Then we convert the slice to an array.
+    let slice = validate_slice_mut::<T>(ptr, COUNT);
+    // SAFETY: We know that `slice` is a valid slice of `COUNT` elements.
+    slice.map(|e| unsafe { &mut *(e.as_ptr() as *mut [T; COUNT]) })
+}
+
 pub macro intel_asm($($code:expr,)+) {
    core::arch::global_asm!(concat!($($code),+,));
 }
