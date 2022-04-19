@@ -3,13 +3,13 @@
 use proc_macro::{Diagnostic, Level, TokenStream};
 use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::{punctuated::Punctuated, spanned::Spanned, Expr, FnArg, Lit, Pat, Type};
+use syn::{punctuated::Punctuated, spanned::Spanned, Expr, FnArg, Pat, Type};
 
 enum ArgType {
-    Array(bool, usize),
-    Slice(bool),
-    Pointer(bool),
-    Reference(bool),
+    Array(bool),     // mutable?
+    Slice(bool),     // mutable?
+    Pointer(bool),   // mutable?
+    Reference(bool), // mutable?
     String,
     Path,
 }
@@ -82,48 +82,7 @@ pub fn syscall(_: TokenStream, item: TokenStream) -> TokenStream {
 fn determine_arg_type(typ: &Type) -> Option<ArgType> {
     match typ {
         Type::Reference(typ) => match typ.elem.as_ref() {
-            Type::Array(array) => match &array.len {
-                Expr::Lit(lit) => match &lit.lit {
-                    Lit::Int(lit) => match lit.base10_parse() {
-                        Ok(len) => Some(ArgType::Array(typ.mutability.is_some(), len)),
-                        Err(err) => {
-                            Diagnostic::spanned(
-                                lit.span().unwrap(),
-                                Level::Error,
-                                &format!("failed to parse array length: {}", err),
-                            )
-                            .emit();
-
-                            // If we can't parse the array length, we just give it an arbitrary length.
-                            // This is probably not the best way to do this, but it won't cause any
-                            // further errors to be emitted.
-                            Some(ArgType::Array(typ.mutability.is_some(), 0))
-                        }
-                    },
-                    _ => {
-                        Diagnostic::spanned(
-                            lit.span().unwrap(),
-                            Level::Error,
-                            "array length must be a constant integer",
-                        )
-                        .emit();
-
-                        // Same as above.
-                        Some(ArgType::Array(typ.mutability.is_some(), 0))
-                    }
-                },
-                _ => {
-                    Diagnostic::spanned(
-                        array.span().unwrap(),
-                        Level::Error,
-                        "array length must be a constant integer",
-                    )
-                    .emit();
-
-                    // Same as above.
-                    Some(ArgType::Array(typ.mutability.is_some(), 0))
-                }
-            },
+            Type::Array(_) => Some(ArgType::Array(typ.mutability.is_some())),
             Type::Slice(_) => Some(ArgType::Slice(typ.mutability.is_some())),
             Type::Path(path) => {
                 if path.path.segments.last().unwrap().ident == "str" {
@@ -161,7 +120,7 @@ fn process_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<FnArg> {
                             result.push(syn::parse_quote!(#data: usize));
                             result.push(syn::parse_quote!(#len: usize));
                         }
-                        Some(ArgType::Array(_, _)) => {
+                        Some(ArgType::Array(_)) => {
                             let data = Ident::new(&format!("{}_data", ident), Span::call_site());
 
                             result.push(syn::parse_quote!(#data: usize));
@@ -225,21 +184,13 @@ fn process_call_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<Expr> {
 
                                 result.push(slice_expr);
                             }
-                            ArgType::Array(is_mut, length) => {
+                            ArgType::Array(is_mut) => {
                                 let array_expr: Expr = if is_mut {
                                     syn::parse_quote! {
-                                        {
-                                            let slice = crate::utils::validate_slice_mut(#data_ident as *mut _, #length).ok_or(AeroSyscallError::EINVAL)?;
-                                            &mut slice[0..#length]
-                                        }
+                                        crate::utils::validate_array_mut(#data_ident as *mut _).ok_or(AeroSyscallError::EINVAL)?
                                     }
                                 } else {
-                                    syn::parse_quote! {
-                                        {
-                                            let slice = crate::utils::validate_slice(#data_ident as *const _, #length).ok_or(AeroSyscallError::EINVAL)?;
-                                            &slice[0..#length]
-                                        }
-                                    }
+                                    unimplemented!()
                                 };
 
                                 result.push(array_expr);
