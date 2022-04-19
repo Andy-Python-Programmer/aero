@@ -97,10 +97,9 @@ impl Vmalloc {
         this
     }
 
-    pub(super) fn alloc(&mut self, mut npages: usize) -> Option<VirtAddr> {
-        npages += 1; // allocate a guard page
-
-        let size_bytes = npages * Size4KiB::SIZE as usize;
+    pub(super) fn alloc(&mut self, npages: usize) -> Option<VirtAddr> {
+        // +1: area for the guard page.
+        let size_bytes = (npages + 1) * Size4KiB::SIZE as usize;
 
         let area = self
             .free_list
@@ -124,6 +123,10 @@ impl Vmalloc {
             let mut area_cursor = unsafe { self.free_list.cursor_mut_from_ptr(area_ptr) };
             area_cursor.remove();
         }
+
+        // subtract the size of the guard page since we are not required to allocate
+        // a frame for that area.
+        let size_bytes = size_bytes - Size4KiB::SIZE as usize;
 
         let mut address_space = AddressSpace::this();
         let mut offset_table = address_space.offset_page_table();
@@ -155,10 +158,9 @@ impl Vmalloc {
         Some(address)
     }
 
-    pub(super) fn dealloc(&mut self, addr: VirtAddr, mut npages: usize) {
-        npages += 1; // deallocate the vmalloc guard page
-
-        let size = npages * Size4KiB::SIZE as usize;
+    pub(super) fn dealloc(&mut self, addr: VirtAddr, npages: usize) {
+        // +1: area for the guard page.
+        let size = (npages + 1) * Size4KiB::SIZE as usize;
 
         // check if this block can be merged into another block.
         let merge = self
@@ -175,6 +177,9 @@ impl Vmalloc {
             // the block cannot be merged, so add it to the free list.
             self.free_list.insert(box VmallocArea::new(addr, size));
         }
+
+        // subtract the size of the guard page since its not mapped.
+        let size = size - Size4KiB::SIZE as usize;
 
         let mut address_space = AddressSpace::this();
         let mut offset_table = address_space.offset_page_table();
