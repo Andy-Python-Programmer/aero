@@ -118,20 +118,8 @@ impl VirtAddr {
 
     /// Returns if the address is valid to read `sizeof(T)` bytes at the address.
     fn validate_read<T: Sized>(&self) -> bool {
-        (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address()
-    }
-
-    /// Validate reads `sizeof(T)` bytes from the virtual address and returns a copy
-    /// of the value (`T`).
-    ///
-    /// ## Example
-    /// ```no_run
-    /// let value: u64 = VirtAddr::new(0xcafebabe)
-    ///    .copied_read::<u64>()
-    ///    .ok_or(AeroSyscallError::EFAULT)?;
-    /// ```
-    pub fn copied_read<T: Copy + Sized>(&self) -> Option<T> {
-        self.read_mut::<T>().map(|t| *t)
+        (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address() // in-range
+            && self.0 != 0 // non-null
     }
 
     /// Aligns the virtual address downwards to the given alignment.
