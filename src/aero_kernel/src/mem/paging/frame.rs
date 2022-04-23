@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 use alloc::vec::Vec;
 use bit_field::BitField;
 use spin::Once;
@@ -538,35 +540,31 @@ pub fn get_vm_frames() -> Option<&'static Vec<VmFrame>> {
     VM_FRAMES.get()
 }
 
-struct VmFrameInner {
-    use_count: usize,
-}
-
 pub struct VmFrame {
-    lock: Mutex<VmFrameInner>,
+    ref_count: AtomicUsize,
 }
 
 impl VmFrame {
     fn new() -> Self {
         Self {
-            lock: Mutex::new(VmFrameInner { use_count: 0 }),
+            ref_count: AtomicUsize::new(0),
         }
     }
 
     pub fn dec_ref_count(&self) {
-        let mut this = self.lock.lock();
+        let ref_count = self.ref_count.load(Ordering::SeqCst);
 
-        if this.use_count > 0 {
-            this.use_count -= 1;
+        if ref_count != 0 {
+            self.ref_count.store(ref_count - 1, Ordering::SeqCst);
         }
     }
 
     pub fn inc_ref_count(&self) {
-        self.lock.lock().use_count += 1;
+        self.ref_count.fetch_add(1, Ordering::SeqCst);
     }
 
     pub fn ref_count(&self) -> usize {
-        self.lock.lock().use_count
+        self.ref_count.load(Ordering::SeqCst)
     }
 }
 
