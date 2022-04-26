@@ -61,24 +61,23 @@ pub fn prepare_panic() {
     }
 }
 
+// todo: return `ElfLoadResult` (defined in `vm.rs`) instead of returning an optional value.
+fn get_kernel_elf() -> Option<ElfFile<'static>> {
+    let unwind_info = crate::UNWIND_INFO.get()?;
+
+    let elf_start = PhysAddr::new(unwind_info.kernel_start).as_hhdm_virt();
+    let elf_size = unwind_info.kernel_size as usize;
+
+    // SAFETY: The kernel start and end addresses are valid.
+    let elf_slice = unsafe { core::slice::from_raw_parts(elf_start.as_ptr::<u8>(), elf_size) };
+    ElfFile::new(elf_slice).ok()
+}
+
 pub fn unwind_stack_trace() {
     let mut address_space = AddressSpace::this();
     let offset_table = address_space.offset_page_table();
 
-    let unwind_info = crate::UNWIND_INFO
-        .get()
-        .expect("unwind: failed to retrieve the unwind information");
-
-    let kernel_slice: &[u8] = unsafe {
-        core::slice::from_raw_parts(
-            PhysAddr::new(unwind_info.kernel_start)
-                .as_hhdm_virt()
-                .as_ptr(),
-            unwind_info.kernel_size as usize,
-        )
-    };
-
-    let kernel_elf = ElfFile::new(kernel_slice).expect("unwind: invalid kernel slice");
+    let kernel_elf = get_kernel_elf().unwrap();
     let mut symbol_table = None;
 
     for section in kernel_elf.section_iter() {

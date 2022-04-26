@@ -54,7 +54,11 @@ impl LockedFrameAllocator {
 }
 
 unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
+    #[track_caller]
     fn allocate_frame(&self) -> Option<PhysFrame<Size4KiB>> {
+        // let caller = core::panic::Location::caller();
+        // log::debug!("allocation request of 4KiB by {:?}", caller);
+
         self.0
             .get()
             .map(|m| {
@@ -69,7 +73,11 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
             })
     }
 
+    #[track_caller]
     fn deallocate_frame(&self, frame: PhysFrame<Size4KiB>) {
+        // let caller = core::panic::Location::caller();
+        // log::debug!("deallocation request of 4KiB by {:?}", caller);
+
         self.0
             .get()
             .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 0))
@@ -78,7 +86,11 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
 }
 
 unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
+    #[track_caller]
     fn allocate_frame(&self) -> Option<PhysFrame<Size2MiB>> {
+        // let caller = core::panic::Location::caller();
+        // log::debug!("allocation request of 2MiB by {:?}", caller);
+
         self.0
             .get()
             .map(|m| {
@@ -93,7 +105,11 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
             })
     }
 
+    #[track_caller]
     fn deallocate_frame(&self, frame: PhysFrame<Size2MiB>) {
+        // let caller = core::panic::Location::caller();
+        // log::debug!("deallocation request of 2MiB by {:?}", caller);
+
         self.0
             .get()
             .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 1))
@@ -230,6 +246,25 @@ const CONVENTIONAL_MEM_END: PhysAddr = unsafe { PhysAddr::new_unchecked(Size4KiB
 
 static VM_FRAMES: Once<Vec<VmFrame>> = Once::new();
 
+/// Buddy allocator combines power-of-two allocator with free buffer
+/// coalescing.
+///
+/// ## Overview
+///
+/// Overview of the buddy allocation algorithm:
+///
+/// * Memory is broken up into large blocks of pages where each block
+///   is a power of two number of pages.
+///
+/// * If a block of the desired size is not available, a larger block is
+///   broken up in half and the two blocks are marked as buddies then one half
+///   is used for the allocation and the other half is marked free.
+///
+/// * The blocks are continuously halved as necessary until a block of the
+///   desired size is available.
+///
+/// * When a block is later freed, the buddy is examined and the two coalesced
+///   if it is free.
 pub struct GlobalFrameAllocator {
     buddies: [&'static mut [u64]; 3],
     free: [usize; 3],
