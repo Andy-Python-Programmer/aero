@@ -25,6 +25,7 @@ use crate::{
     mem::paging::{align_down, VirtAddr},
 };
 
+pub mod bitmap;
 pub mod buffer;
 pub mod io;
 pub mod linker;

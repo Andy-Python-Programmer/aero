@@ -17,10 +17,11 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::alloc::{AllocError, Allocator, Layout};
+use core::ptr::NonNull;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::vec::Vec;
-use bit_field::BitField;
 use spin::Once;
 use stivale_boot::v2::StivaleMemoryMapEntry;
 use stivale_boot::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapIter, StivaleMemoryMapTag};
@@ -31,9 +32,8 @@ use super::page::*;
 use super::addr::PhysAddr;
 
 use crate::mem::paging::align_up;
+use crate::utils::bitmap::Bitmap;
 use crate::utils::sync::Mutex;
-
-const BUDDY_BITS: u64 = (core::mem::size_of::<usize>() * 8) as u64;
 
 static BUDDY_SIZE: [u64; 3] = [Size4KiB::SIZE, Size4KiB::SIZE * 2, Size2MiB::SIZE];
 
@@ -170,21 +170,21 @@ pub enum BuddyOrdering {
     Size8KiB = 1,
 }
 
-pub fn pmm_alloc(ordering: BuddyOrdering) -> PhysAddr {
-    let ordering = ordering as usize;
-    debug_assert!(ordering <= BUDDY_SIZE.len());
+pub fn pmm_alloc(order: BuddyOrdering) -> PhysAddr {
+    let order = order as usize;
+    debug_assert!(order <= BUDDY_SIZE.len());
 
     let addr = super::FRAME_ALLOCATOR
         .0
         .get()
         .expect("pmm: frame allocator not initialized")
         .lock()
-        .allocate_frame_inner(ordering)
+        .allocate_frame_inner(order)
         .expect("pmm: out of memory");
 
     let virt = addr.as_hhdm_virt();
 
-    let fill_size = BUDDY_SIZE[ordering] as usize;
+    let fill_size = BUDDY_SIZE[order] as usize;
     let slice = unsafe { core::slice::from_raw_parts_mut(virt.as_mut_ptr::<u8>(), fill_size) };
 
     // We always zero out memory for security reasons.
@@ -206,19 +206,20 @@ enum MemoryRangeType {
     Conventional,
 }
 
-struct BootAllocator {
-    memory_ranges: &'static mut [MemoryRange],
+struct BootAlloc {
+    memory_ranges: Mutex<&'static mut [MemoryRange]>,
 }
 
-impl BootAllocator {
+impl BootAlloc {
     fn new(memory_ranges: &'static mut [MemoryRange]) -> Self {
-        Self { memory_ranges }
+        Self {
+            memory_ranges: Mutex::new(memory_ranges),
+        }
     }
 
-    fn allocate(&mut self, size: usize) -> *mut u8 {
+    fn allocate_inner(&self, size: usize) -> *mut u8 {
         let size = align_up(size as u64, Size4KiB::SIZE);
-
-        for range in self.memory_ranges.iter_mut().rev() {
+        for range in self.memory_ranges.lock().iter_mut().rev() {
             if range.typee == MemoryRangeType::Conventional {
                 continue;
             }
@@ -236,6 +237,42 @@ impl BootAllocator {
         unreachable!("pmm: bootstrap allocator is out of memory")
     }
 }
+
+#[derive(Debug, Clone)]
+struct BootAllocRef {
+    inner: *const BootAlloc,
+}
+
+impl BootAllocRef {
+    fn new(inner: &BootAlloc) -> Self {
+        Self {
+            inner: inner as *const _,
+        }
+    }
+
+    fn get_inner(&self) -> &BootAlloc {
+        unsafe { &*self.inner }
+    }
+}
+
+unsafe impl Allocator for BootAllocRef {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        let this = self.get_inner();
+
+        let aligned_size = align_up(layout.size() as _, layout.align() as _) as usize;
+        let ptr = this.allocate_inner(aligned_size);
+
+        // SAFETY: `allocate_inner` is garunteed to return a valid, non-null pointer.
+        let ptr = unsafe { NonNull::new_unchecked(ptr) };
+        Ok(NonNull::slice_from_raw_parts(ptr, aligned_size))
+    }
+
+    unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {
+        unreachable!("pmm: bootstrap allocator cannot deallocate")
+    }
+}
+
+unsafe impl Send for BootAllocRef {}
 
 const CONVENTIONAL_MEM_START: PhysAddr = unsafe { PhysAddr::new_unchecked(0x00) };
 
@@ -266,7 +303,7 @@ static VM_FRAMES: Once<Vec<VmFrame>> = Once::new();
 /// * When a block is later freed, the buddy is examined and the two coalesced
 ///   if it is free.
 pub struct GlobalFrameAllocator {
-    buddies: [&'static mut [u64]; 3],
+    buddies: [Bitmap<BootAllocRef>; 3],
     free: [usize; 3],
 
     base: PhysAddr,
@@ -341,13 +378,18 @@ impl GlobalFrameAllocator {
         let base = ranges[0].addr;
         let end = ranges[i - 1].addr + ranges[i - 1].size;
 
-        let mut bootstrapper = BootAllocator::new(&mut ranges[..i]);
+        let bootstrapper = BootAlloc::new(&mut ranges[..i]);
+        let bref = BootAllocRef::new(&bootstrapper);
 
         let mut this = Self {
             base,
             end,
 
-            buddies: [&mut [], &mut [], &mut []],
+            buddies: [
+                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
+            ],
             free: [0; 3],
         };
 
@@ -355,17 +397,11 @@ impl GlobalFrameAllocator {
 
         // Allocate the buddies using prealloc:
         for (i, bsize) in BUDDY_SIZE.iter().enumerate() {
-            let chunk = ((size / bsize) + BUDDY_BITS - 1) / BUDDY_BITS;
-            let chunk_size = chunk * 8;
-
-            let chunk_ptr = bootstrapper.allocate(chunk_size as usize) as *mut u64;
-            let chunk_slice = unsafe { core::slice::from_raw_parts_mut(chunk_ptr, chunk as usize) };
-
-            chunk_slice.fill(0x00);
-            this.buddies[i] = chunk_slice;
+            let chunk = size / bsize;
+            this.buddies[i] = Bitmap::new_in(bref.clone(), chunk as usize);
         }
 
-        for region in bootstrapper.memory_ranges.iter() {
+        for region in bref.get_inner().memory_ranges.lock().iter() {
             if region.typee == MemoryRangeType::Usable {
                 this.insert_range(region.addr, region.addr + region.size);
             }
@@ -378,58 +414,53 @@ impl GlobalFrameAllocator {
         (self.end.as_u64() / Size4KiB::SIZE) as usize
     }
 
-    /// Find the perfect buddy ordering for the provided address range.
-    fn find_ordering(&self, address: PhysAddr, chunk_size: u64) -> usize {
-        for ordering in (0..BUDDY_SIZE.len()).rev() {
-            let size = BUDDY_SIZE[ordering];
+    /// Find the perfect buddy order for the provided address range.
+    fn find_order(&self, address: PhysAddr, chunk_size: u64) -> usize {
+        for order in (0..BUDDY_SIZE.len()).rev() {
+            let size = BUDDY_SIZE[order];
 
             // Too big...
             if size > chunk_size {
                 continue;
             }
 
-            let mask = BUDDY_SIZE[ordering] - 1;
+            let mask = BUDDY_SIZE[order] - 1;
 
             if mask & address.as_u64() != 0 {
                 continue;
             } else {
-                return ordering;
+                return order;
             }
         }
 
         return 0;
     }
 
-    /// Helper function that translates a address to it's part in the map. This
-    /// function returns a tuple of (index, bit) where index is the index on the
-    /// `u64` array and `bit` is the bit over the `u64`.
-    fn get_byte_bit(&self, addr: PhysAddr, order: usize) -> (u64, u64) {
+    fn get_bit_idx(&self, addr: PhysAddr, order: usize) -> usize {
         let offset = addr - self.base;
-        let id = offset / BUDDY_SIZE[order];
-
-        (id / BUDDY_BITS, id % BUDDY_BITS)
+        (offset / BUDDY_SIZE[order]) as usize
     }
 
-    fn set_bit(&mut self, address: PhysAddr, ordering: usize) -> bool {
-        let (byte, bit) = self.get_byte_bit(address, ordering);
+    fn set_bit(&mut self, addr: PhysAddr, order: usize) -> bool {
+        let idx = self.get_bit_idx(addr, order);
 
-        let chunk = &mut self.buddies[ordering][byte as usize];
-        let change = (*chunk).get_bit(bit as usize) == false;
+        let buddy = &mut self.buddies[order];
+        let change = !buddy.is_set(idx);
 
         if change {
-            (*chunk).set_bit(bit as usize, true);
-            self.free[ordering] += 1;
+            buddy.set(idx, true);
+            self.free[order] += 1;
         }
 
         change
     }
 
     #[cfg(test)]
-    fn is_free(&self, address: PhysAddr, ordering: usize) -> bool {
-        let (byte, bit) = self.get_byte_bit(address, ordering);
+    fn is_free(&self, addr: PhysAddr, order: usize) -> bool {
+        let idx = self.get_bit_idx(addr, order);
 
-        let chunk = &self.buddies[ordering][byte as usize];
-        (*chunk).get_bit(bit as usize)
+        let buddy = &self.buddies[order];
+        buddy.is_set(idx)
     }
 
     /// Inserts the provided memory range.
@@ -438,64 +469,43 @@ impl GlobalFrameAllocator {
         let mut current = base;
 
         while remaning > 0 {
-            let ordering = self.find_ordering(current, remaning);
-            let size = BUDDY_SIZE[ordering];
+            let order = self.find_order(current, remaning);
+            let size = BUDDY_SIZE[order];
 
-            self.set_bit(current, ordering);
+            self.set_bit(current, order);
 
             current += size;
             remaning -= size;
         }
     }
 
-    /// Finds a free chunk with the provided `ordering`.
-    fn find_free(&mut self, ordering: usize) -> Option<PhysAddr> {
-        for (i, chunk) in self.buddies[ordering].iter_mut().enumerate() {
-            let mut chunk_value = *chunk;
+    /// Finds a free chunk with the provided `order`.
+    fn find_free(&mut self, order: usize) -> Option<PhysAddr> {
+        let buddy = &mut self.buddies[order];
+        let first_free = buddy.find_first_set()?;
 
-            if chunk_value != 0 {
-                let mut bit = 0;
+        buddy.set(first_free, false);
+        self.free[order] -= 1;
 
-                while !chunk_value.get_bit(0) {
-                    chunk_value >>= 1;
-                    bit += 1;
-                }
-
-                (*chunk).set_bit(bit, false);
-                self.free[ordering] -= 1;
-
-                return Some(
-                    self.base.align_up(BUDDY_SIZE[ordering])
-                        + (BUDDY_SIZE[ordering] * BUDDY_BITS * i as u64)
-                        + BUDDY_SIZE[ordering] * bit as u64,
-                );
-            }
-        }
-
-        None
+        Some(self.base.align_up(BUDDY_SIZE[order]) + (BUDDY_SIZE[order] * first_free as u64))
     }
 
-    fn clear_bit(&mut self, addr: PhysAddr, ordering: usize) -> bool {
-        if addr < self.base {
-            return false;
-        }
+    fn clear_bit(&mut self, addr: PhysAddr, order: usize) -> bool {
+        let idx = self.get_bit_idx(addr, order);
 
-        let (byte, bit) = self.get_byte_bit(addr, ordering);
-        let chunk = &mut self.buddies[ordering][byte as usize];
-
-        let change = (*chunk).get_bit(bit as usize) == true;
+        let buddy = &mut self.buddies[order];
+        let change = buddy.is_set(idx) == true;
 
         if change {
-            (*chunk).set_bit(bit as usize, false);
-
-            self.free[ordering] -= 1;
+            buddy.set(idx, false);
+            self.free[order] -= 1;
         }
 
         change
     }
 
-    fn get_buddy(&self, addr: PhysAddr, ordering: usize) -> PhysAddr {
-        let size = BUDDY_SIZE[ordering];
+    fn get_buddy(&self, addr: PhysAddr, order: usize) -> PhysAddr {
+        let size = BUDDY_SIZE[order];
         let base = addr.align_down(size * 2);
 
         if base == addr {
@@ -505,32 +515,32 @@ impl GlobalFrameAllocator {
         }
     }
 
-    fn deallocate_frame_inner(&mut self, mut addr: PhysAddr, mut ordering: usize) {
-        while ordering < BUDDY_SIZE.len() {
-            if ordering < BUDDY_SIZE.len() - 1 {
-                let buddy = self.get_buddy(addr, ordering);
+    fn deallocate_frame_inner(&mut self, mut addr: PhysAddr, mut order: usize) {
+        while order < BUDDY_SIZE.len() {
+            if order < BUDDY_SIZE.len() - 1 {
+                let buddy = self.get_buddy(addr, order);
 
-                if self.clear_bit(buddy, ordering) {
+                if self.clear_bit(buddy, order) {
                     addr = core::cmp::min(addr, buddy);
-                    ordering += 1;
+                    order += 1;
                 } else {
-                    self.set_bit(addr, ordering);
+                    self.set_bit(addr, order);
                     break;
                 }
             } else {
-                self.set_bit(addr, ordering);
+                self.set_bit(addr, order);
                 break;
             }
         }
     }
 
-    fn allocate_frame_inner(&mut self, ordering: usize) -> Option<PhysAddr> {
-        let size = BUDDY_SIZE[ordering];
+    fn allocate_frame_inner(&mut self, order: usize) -> Option<PhysAddr> {
+        let size = BUDDY_SIZE[order];
 
         // Loop through the list of buddies until we can find one that can give us
         // the requested memory.
-        for (i, &bsize) in BUDDY_SIZE[ordering..].iter().enumerate() {
-            let i = i + ordering;
+        for (i, &bsize) in BUDDY_SIZE[order..].iter().enumerate() {
+            let i = i + order;
 
             if self.free[i] > 0 {
                 let result = self.find_free(i)?;
@@ -615,7 +625,7 @@ mod tests {
         let mut address_space = AddressSpace::this();
         let mut offset_table = address_space.offset_page_table();
 
-        let frame: PhysFrame = unsafe { FRAME_ALLOCATOR.allocate_frame().unwrap() };
+        let frame: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
 
         assert!(!FRAME_ALLOCATOR
             .0
@@ -645,7 +655,7 @@ mod tests {
         // We just mapped the frame to `0xcafebabe` so the ref count should be 1.
         assert_eq!(vm_frame.ref_count(), 1);
 
-        unsafe { offset_table.unmap(page) }.unwrap().1.flush();
+        offset_table.unmap(page).unwrap().1.flush();
 
         // We just unmapped the frame from `0xcafebabe` so the ref count should be 0 and
         // the frame should be deallocated.

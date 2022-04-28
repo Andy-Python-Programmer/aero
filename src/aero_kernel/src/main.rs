@@ -39,7 +39,9 @@
     box_syntax,
     step_trait,
     const_btree_new,
-    prelude_import
+    prelude_import,
+    allocator_api,
+    nonnull_slice_from_raw_parts
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]
