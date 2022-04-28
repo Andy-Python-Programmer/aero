@@ -550,7 +550,7 @@ impl GlobalFrameAllocator {
                     for j in (0..=i).rev() {
                         let sizee = BUDDY_SIZE[j];
 
-                        if remaning >= sizee {
+                        while remaning >= sizee {
                             self.set_bit(result + (remaning - sizee) + size, j);
                             remaning -= sizee;
                         }

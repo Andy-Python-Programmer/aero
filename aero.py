@@ -451,7 +451,7 @@ def run_in_emulator(args, iso_path):
 
     qemu_args = ['-cdrom', iso_path,
                  '-M', 'q35',
-                 '-m', '5G',
+                 '-m', '512M',
                  '-smp', '5',
                  '-serial', 'stdio']
 
