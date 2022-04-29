@@ -1,4 +1,4 @@
-From 9c5cf9aa5c8997984bdfb1f5973b5061755d5454 Mon Sep 17 00:00:00 2001
+From e9929a6a8a87538970ecdda70078ec207852aecc Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -6,10 +6,11 @@ Subject: [PATCH] yes
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                          |  3 ++
+ sysdeps/aero/generic/aero.cpp       | 10 ++++++-
  sysdeps/aero/generic/filesystem.cpp | 46 ++++++++++++++++++++++++-----
  sysdeps/aero/generic/signals.cpp    |  8 +++--
  sysdeps/aero/include/aero/syscall.h |  7 +++++
- 4 files changed, 54 insertions(+), 10 deletions(-)
+ 5 files changed, 63 insertions(+), 11 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -22,6 +23,27 @@ index dbb35e8b..20c8d4c3 100644
 +
 +# clangd cache
 +.cache
+diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
+index 7de909f5..1a752c47 100644
+--- a/sysdeps/aero/generic/aero.cpp
++++ b/sysdeps/aero/generic/aero.cpp
+@@ -173,7 +173,15 @@ int sys_getcwd(char *buffer, size_t size) {
+     return 0;
+ }
+ 
+-int sys_chdir(const char *path) UNIMPLEMENTED("sys_chdir")
++int sys_chdir(const char *path) {
++    auto result = syscall(SYS_CHDIR, path, strlen(path));
++
++    if (result < 0) {
++        return -result;
++    }
++
++    return 0;
++}
+ 
+ int sys_gethostname(char *buffer, size_t bufsize) {
+     auto result = syscall(SYS_GETHOSTNAME, buffer, bufsize);
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
 index 6a13f19c..53223dc6 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
