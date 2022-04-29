@@ -215,7 +215,7 @@ pub fn generic_do_syscall(
         SYS_IPC_BECOME_ROOT => ipc::become_root(),
 
         // Syscall aliases (this should be handled in aero_syscall)
-        SYS_MKDIR => fs::mkdirat(aero_syscall::AT_FDCWD as _, c, d),
+        SYS_MKDIR => fs::mkdirat(aero_syscall::AT_FDCWD as _, b, c),
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);
