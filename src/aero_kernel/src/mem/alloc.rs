@@ -321,6 +321,24 @@ unsafe impl GlobalAlloc for LockedHeap {
 
         self.0.dealloc(ptr, layout)
     }
+
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        // SAFETY: the caller must ensure that the `new_size` does not overflow.
+        // `layout.align()` comes from a `Layout` and is thus guaranteed to be valid.
+        let new_layout = Layout::from_size_align_unchecked(new_size, layout.align());
+        // SAFETY: the caller must ensure that `new_layout` is greater than zero.
+        let new_ptr = self.alloc(new_layout);
+
+        // NOTE: It is fine to pass a NULL pointer to `realloc` so, we need to check for that.
+        if !new_ptr.is_null() && !ptr.is_null() {
+            // SAFETY: the previously allocated block cannot overlap the newly allocated block.
+            // The safety contract for `dealloc` must be upheld by the caller.
+            core::ptr::copy_nonoverlapping(ptr, new_ptr, core::cmp::min(layout.size(), new_size));
+            self.dealloc(ptr, layout);
+        }
+
+        new_ptr
+    }
 }
 
 #[alloc_error_handler]
