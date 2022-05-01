@@ -22,7 +22,7 @@ use core::mem;
 use crate::mem::paging::VirtAddr;
 
 #[repr(C, packed)]
-pub(super) struct Sdt {
+pub struct Sdt {
     pub(super) signature: [u8; 4],
     pub(super) length: u32,
     pub(super) revision: u8,
@@ -73,7 +73,7 @@ impl Sdt {
     }
 
     #[inline]
-    pub(super) unsafe fn as_ptr<T>(&self) -> &'static T {
+    pub unsafe fn as_ref<T>(&self) -> &'static T {
         &*(self as *const _ as *const T)
     }
 }

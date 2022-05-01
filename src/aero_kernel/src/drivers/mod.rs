@@ -19,6 +19,7 @@
 
 pub mod block;
 pub mod keyboard;
+pub mod lai;
 pub mod pci;
 pub mod tty;
 pub mod uart_16550;

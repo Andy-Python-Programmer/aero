@@ -147,7 +147,7 @@ impl Allocator {
         let slab = inner
             .slabs
             .iter_mut()
-            .find(|slab| slab.size >= layout.size());
+            .find(|slab| slab.size >= (8 + layout.size()));
 
         if let Some(slab) = slab {
             slab.alloc()

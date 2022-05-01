@@ -26,7 +26,7 @@ use super::sdt::Sdt;
 pub const SIGNATURE: &str = "FACP";
 
 #[repr(C, packed)]
-pub(super) struct Fadt {
+pub struct Fadt {
     pub header: Sdt,
     pub firmware_ctrl: u32,
     pub dsdt: u32,

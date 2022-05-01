@@ -188,7 +188,7 @@ extern "C" fn x86_64_aero_main(boot_info: &'static StivaleStruct) -> ! {
     apic::init();
     log::info!("loaded APIC");
 
-    acpi::init(rsdp_address).unwrap();
+    acpi::init(rsdp_address);
     log::info!("loaded ACPI");
 
     tls::init(0);
