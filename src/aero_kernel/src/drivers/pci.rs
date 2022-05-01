@@ -419,7 +419,7 @@ impl PciHeader {
         self.0.get_bits(0..3) as u8
     }
 
-    unsafe fn read<T>(&self, offset: u32) -> u32 {
+    pub unsafe fn read<T>(&self, offset: u32) -> u32 {
         let bus = self.bus() as u32;
         let device = self.device() as u32;
         let func = self.function() as u32;
@@ -488,10 +488,6 @@ impl PciHeader {
 
     pub fn has_multiple_functions(&self) -> bool {
         unsafe { self.read::<u32>(0x0c) }.get_bit(23)
-    }
-
-    pub fn pin(&self) -> u8 {
-        unsafe { (self.read::<u32>(0x3D) >> (0x3D & 0b11) * 8) as u8 }
     }
 
     /// Returnes the value stored in the PCI header type register which is used to

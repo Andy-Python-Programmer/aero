@@ -8,6 +8,8 @@ use crate::mem::paging::PhysAddr;
 use crate::userland::scheduler;
 use crate::utils::io;
 
+use super::pci::PciHeader;
+
 struct LaiHost;
 
 impl lai::Host for LaiHost {
@@ -67,6 +69,24 @@ impl lai::Host for LaiHost {
     #[inline]
     fn ind(&self, port: u16) -> u32 {
         unsafe { io::inl(port) }
+    }
+
+    // PCI read functions:
+    //
+    // todo: do not ignore the segment once we use MCFG.
+    fn pci_readb(&self, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -> u8 {
+        let header = PciHeader::new(bus, slot, fun);
+        unsafe { header.read::<u8>(offset as u32) as u8 }
+    }
+
+    fn pci_readw(&self, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -> u16 {
+        let header = PciHeader::new(bus, slot, fun);
+        unsafe { header.read::<u16>(offset as u32) as u16 }
+    }
+
+    fn pci_readd(&self, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -> u32 {
+        let header = PciHeader::new(bus, slot, fun);
+        unsafe { header.read::<u32>(offset as u32) }
     }
 }
 
