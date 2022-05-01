@@ -93,7 +93,7 @@ pub unsafe fn outw(port: u16, value: u16) {
 }
 
 /// Wrapper function to the `outl` assembly instruction used to do the
-/// low level port output.
+/// 32-bit low level port output.
 #[inline]
 pub unsafe fn outl(port: u16, value: u32) {
     asm!(

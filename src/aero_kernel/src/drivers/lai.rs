@@ -1,7 +1,12 @@
+use alloc::sync::Arc;
+
 use crate::acpi::fadt;
 use crate::acpi::get_acpi_table;
 
 use crate::mem::paging::PhysAddr;
+
+use crate::userland::scheduler;
+use crate::utils::io;
 
 struct LaiHost;
 
@@ -25,16 +30,55 @@ impl lai::Host for LaiHost {
         }
         .unwrap_or(core::ptr::null())
     }
+
+    fn sleep(&self, ms: u64) {
+        scheduler::get_scheduler()
+            .inner
+            .sleep(Some(ms as usize * 1_000_000))
+            .expect("lai: unexpected signal during sleep")
+    }
+
+    // Port I/O functions:
+    #[inline]
+    fn outb(&self, port: u16, value: u8) {
+        unsafe { io::outb(port, value) }
+    }
+
+    #[inline]
+    fn outw(&self, port: u16, value: u16) {
+        unsafe { io::outw(port, value) }
+    }
+
+    #[inline]
+    fn outd(&self, port: u16, value: u32) {
+        unsafe { io::outl(port, value) }
+    }
+
+    #[inline]
+    fn inb(&self, port: u16) -> u8 {
+        unsafe { io::inb(port) }
+    }
+
+    #[inline]
+    fn inw(&self, port: u16) -> u16 {
+        unsafe { io::inw(port) }
+    }
+
+    #[inline]
+    fn ind(&self, port: u16) -> u32 {
+        unsafe { io::inl(port) }
+    }
 }
 
 pub fn init_lai() {
-    let lai_host = box LaiHost;
+    let lai_host = Arc::new(LaiHost);
     lai::init(lai_host);
 
-    unsafe {
-        lai::lai_set_acpi_revision(get_acpi_table().revision() as _);
-        lai::lai_create_namespace();
-    }
+    lai::set_acpi_revision(get_acpi_table().revision() as _);
+    lai::create_namespace();
+
+    lai::enable_acpi(1);
+    lai::enter_sleep(5);
 }
 
 crate::module_init!(init_lai);
