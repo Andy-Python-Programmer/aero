@@ -194,6 +194,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "lai"
 version = "0.1.0"
+source = "git+https://github.com/aero-os/lai-rs#51a12b6329636b3bfd249324a6d931b170b839a7"
 dependencies = [
  "cc",
  "log",
