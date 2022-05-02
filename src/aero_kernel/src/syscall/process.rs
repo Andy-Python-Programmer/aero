@@ -28,6 +28,7 @@ use crate::fs::Path;
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::signals::SignalEntry;
+use crate::utils::sync::IrqGuard;
 
 static HOSTNAME: Once<Mutex<String>> = Once::new();
 
@@ -309,6 +310,8 @@ pub fn shutdown() -> ! {
     fs::cache::clear_inode_cache();
     fs::cache::clear_dir_cache();
 
-    // TODO
-    loop {}
+    let _guard = IrqGuard::new();
+    lai::enter_sleep(5);
+
+    unreachable!("aml: failed to shutdown (enter state S5)")
 }

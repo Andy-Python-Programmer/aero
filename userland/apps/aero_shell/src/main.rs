@@ -157,6 +157,8 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 sys_sleep(&timespec)?;
             }
 
+            "shutdown" => sys_shutdown(),
+
             "doom" => {
                 let child = sys_fork()?;
 

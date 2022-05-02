@@ -36,7 +36,7 @@ impl lai::Host for LaiHost {
     fn sleep(&self, ms: u64) {
         scheduler::get_scheduler()
             .inner
-            .sleep(Some(ms as usize * 1_000_000))
+            .sleep(Some(ms as usize / 1000))
             .expect("lai: unexpected signal during sleep")
     }
 
@@ -88,6 +88,14 @@ impl lai::Host for LaiHost {
         let header = PciHeader::new(bus, slot, fun);
         unsafe { header.read::<u32>(offset as u32) }
     }
+
+    // Memory functions:
+    #[inline]
+    fn map(&self, address: usize, _count: usize) -> *mut u8 {
+        PhysAddr::new(address as u64)
+            .as_hhdm_virt()
+            .as_mut_ptr::<u8>()
+    }
 }
 
 pub fn init_lai() {
@@ -98,7 +106,6 @@ pub fn init_lai() {
     lai::create_namespace();
 
     lai::enable_acpi(1);
-    lai::enter_sleep(5);
 }
 
 crate::module_init!(init_lai);
