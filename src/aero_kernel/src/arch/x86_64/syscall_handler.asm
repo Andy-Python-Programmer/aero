@@ -160,5 +160,10 @@ x86_64_sysenter_handler:
     ; execute `sysexit` with canonical addresses in RCX and RDX. Otherwise we would
     ; fault in the kernel having already swapped back to the user's GS.
     swapgs
+
+    ; SYSEXIT does *not* restore IF to re-enable interrupts.
+    ; This is done here, rather then when restoring RFLAGS above, since STI will
+    ; keep interrupts inhibited until after the *following* instruction executes.
+    sti
     o64 sysexit
 .end:
