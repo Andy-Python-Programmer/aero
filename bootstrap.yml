@@ -350,6 +350,35 @@ packages:
         - '@THIS_COLLECT_DIR@/usr'
         - '-j@PARALLELISM@'
 
+  - name: hex
+    source:
+      subdir: hex
+      git: 'https://github.com/sitkevij/hex'
+      tag: 'v0.4.2'
+      version: '0.4.2'
+    tools_required:
+      - host-cargo
+    sources_required:
+      - rust-patched-libs
+    pkgs_required:
+      - mlibc
+    configure:
+      # cc: https://github.com/rust-lang/cargo/issues/10283
+      # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
+      - args:
+        - 'cargo'
+        - 'install'
+        - '--locked'
+        - '--path'
+        - '.'
+        - '--root'
+        - '@THIS_COLLECT_DIR@/usr'
+        - '-j@PARALLELISM@'
+
+
   - name: quickjs
     source:
       subdir: bundled
