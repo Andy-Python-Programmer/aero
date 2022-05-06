@@ -352,7 +352,7 @@ packages:
 
   - name: hex
     source:
-      subdir: hex
+      subdir: bundled
       git: 'https://github.com/sitkevij/hex'
       tag: 'v0.4.2'
       version: '0.4.2'
