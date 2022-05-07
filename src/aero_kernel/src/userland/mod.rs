@@ -26,7 +26,7 @@ pub mod task;
 pub mod vm;
 
 pub fn run() -> fs::Result<()> {
-    let init_path = Path::new("/bin/init");
+    let init_path = Path::new("/usr/bin/init");
     let init_inode = fs::lookup_path(init_path)?;
 
     scheduler::get_scheduler().exec(init_inode, None, None);
@@ -35,7 +35,7 @@ pub fn run() -> fs::Result<()> {
 
 #[cfg(test)]
 pub fn run_tests() -> fs::Result<()> {
-    let utest_path = Path::new("/bin/utest");
+    let utest_path = Path::new("/usr/bin/utest");
     let utest_inode = fs::lookup_path(utest_path)?;
 
     scheduler::get_scheduler().exec(utest_inode, None, None);

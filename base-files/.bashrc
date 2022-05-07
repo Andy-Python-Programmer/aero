@@ -6,3 +6,5 @@ HISTFILESIZE=-1
 
 alias ls="ls --color=auto"
 alias clear='printf "\e[2J\e[H"'
+
+export PYTHONHOME="/usr/lib"

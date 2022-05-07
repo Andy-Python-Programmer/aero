@@ -166,14 +166,14 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     let args = args.collect::<Vec<_>>();
                     let mut argv = Vec::new();
 
-                    argv.push("/bin/doomgeneric");
+                    argv.push("/usr/bin/doomgeneric");
 
                     argv.extend(&["-iwad", "./doom1.wad"]);
                     argv.extend(args);
 
                     let argv = argv.as_slice();
 
-                    if sys_exec("/bin/doomgeneric", argv, &["TERM=linux"]).is_err() {
+                    if sys_exec("/usr/bin/doomgeneric", argv, &["TERM=linux"]).is_err() {
                         println!("{}: command not found", cmd);
                         sys_exit(1);
                     }

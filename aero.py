@@ -342,17 +342,12 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join(limine_path, 'limine-cd-efi.bin'), iso_root)
 
     initramfs_root = os.path.join(BUILD_DIR, 'initramfs_root')
-
-    initramfs_bin = os.path.join(initramfs_root, 'bin')
-    initramfs_lib = os.path.join(initramfs_root, 'usr', 'lib')
-    initramfs_include = os.path.join(initramfs_root, 'usr', 'include')
+    initramfs_bin = os.path.join(initramfs_root, 'usr', 'bin')
 
     if os.path.exists(initramfs_root):
         shutil.rmtree(initramfs_root)
 
-    os.makedirs(initramfs_root)
-    os.makedirs(initramfs_bin)
-    os.makedirs(initramfs_lib)
+    shutil.copytree(os.path.join(SYSROOT_DIR, 'system-root'), initramfs_root)
 
     def find(path) -> List[str]:
         _, find_output, _ = run_command(['find', '.', '-type', 'f'],
@@ -376,19 +371,6 @@ def prepare_iso(args, kernel_bin, user_bins):
 
             os.makedirs(os.path.dirname(dest_file), exist_ok=True)
             shutil.copy(file, dest_file)
-
-    bin_src = os.path.join(SYSROOT_DIR, 'system-root/usr/bin')
-    lib_src = os.path.join(SYSROOT_DIR, 'system-root/usr/lib')
-    inc_src = os.path.join(SYSROOT_DIR, 'system-root/usr/include')
-
-    if os.path.exists(bin_src):
-        cp(bin_src, initramfs_bin)
-
-    if os.path.exists(lib_src):
-        cp(lib_src, initramfs_lib)
-
-    if os.path.exists(inc_src):
-        cp(inc_src, initramfs_include)
 
     cp(BASE_FILES_DIR, initramfs_root)
 

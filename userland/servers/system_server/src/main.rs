@@ -39,7 +39,7 @@ fn main() {
 
     aero_ipc::listen(SystemService::handler(SystemServer::new()));
 
-    fork_and_exec("/bin/window_server", &[], &[]).unwrap();
+    fork_and_exec("/usr/bin/window_server", &[], &[]).unwrap();
 
     loop {
         aero_ipc::service_request();

@@ -35,8 +35,8 @@ fn main() -> Result<(), AeroSyscallError> {
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
     sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
 
-    fork_and_exec("/bin/system_server", &[], &[])?;
-    fork_and_exec("/bin/aero_shell", &[], &[])?;
+    fork_and_exec("/usr/bin/system_server", &[], &[])?;
+    fork_and_exec("/usr/bin/aero_shell", &[], &[])?;
 
     Ok(())
 }
