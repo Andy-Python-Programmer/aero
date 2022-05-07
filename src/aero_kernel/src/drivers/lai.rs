@@ -1,5 +1,6 @@
 use alloc::sync::Arc;
 
+use crate::acpi::aml;
 use crate::acpi::fadt;
 use crate::acpi::get_acpi_table;
 
@@ -98,6 +99,14 @@ impl lai::Host for LaiHost {
     }
 }
 
+struct LaiSubsystem;
+
+impl aml::AmlSubsystem for LaiSubsystem {
+    fn enter_state(&self, state: aml::SleepState) {
+        lai::enter_sleep(state as u8)
+    }
+}
+
 pub fn init_lai() {
     let lai_host = Arc::new(LaiHost);
     lai::init(lai_host);
@@ -106,6 +115,9 @@ pub fn init_lai() {
     lai::create_namespace();
 
     lai::enable_acpi(1);
+
+    let subsystem = Arc::new(LaiSubsystem);
+    aml::init(subsystem);
 }
 
 crate::module_init!(init_lai);

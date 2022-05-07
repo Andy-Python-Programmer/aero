@@ -31,6 +31,7 @@ use crate::{
 
 use self::{hpet::Hpet, madt::Madt, mcfg::Mcfg, sdt::Sdt};
 
+pub mod aml;
 pub mod fadt;
 pub mod hpet;
 pub mod madt;

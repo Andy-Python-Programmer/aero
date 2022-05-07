@@ -22,6 +22,7 @@ use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt, SysInfo, Utsname};
 use alloc::string::String;
 use spin::{Mutex, Once};
 
+use crate::acpi::aml;
 use crate::fs;
 use crate::fs::Path;
 
@@ -311,7 +312,7 @@ pub fn shutdown() -> ! {
     fs::cache::clear_dir_cache();
 
     let _guard = IrqGuard::new();
-    lai::enter_sleep(5);
+    aml::get_subsystem().enter_state(aml::SleepState::S5);
 
     unreachable!("aml: failed to shutdown (enter state S5)")
 }
