@@ -67,6 +67,10 @@ impl InterruptController {
         }
     }
 
+    pub fn method(&self) -> usize {
+        self.method.load(Ordering::SeqCst)
+    }
+
     /// Send EOI, indicating the completion of an interrupt.
     pub fn eoi(&self) {
         match self.method.load(Ordering::Acquire) {

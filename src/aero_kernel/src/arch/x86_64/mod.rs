@@ -26,6 +26,7 @@ pub mod task;
 pub mod tls;
 
 use crate::acpi;
+use crate::acpi::aml;
 use crate::apic;
 use crate::cmdline;
 use crate::mem;
@@ -41,6 +42,8 @@ use crate::utils::io;
 
 use raw_cpuid::CpuId;
 use stivale_boot::v2::*;
+
+use self::interrupts::INTERRUPT_CONTROLLER;
 
 #[repr(C, align(4096))]
 struct P2Align12<T>(T);
@@ -232,6 +235,10 @@ extern "C" fn x86_64_aero_ap_main(ap_id: usize, stack_top_addr: VirtAddr) {
     // Architecture init is done. Now move on to the non-architecture specific
     // initialization of the AP.
     crate::aero_ap_main(ap_id);
+}
+
+pub fn enable_acpi() {
+    aml::get_subsystem().enable_acpi(INTERRUPT_CONTROLLER.method() as _);
 }
 
 pub fn init_cpu() {

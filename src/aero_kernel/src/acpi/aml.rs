@@ -10,6 +10,13 @@ pub enum SleepState {
 
 pub trait AmlSubsystem: Send + Sync {
     fn enter_state(&self, state: SleepState);
+    /// Ensures that the system control interrupt (SCI) is properly
+    /// configured, disables SCI event sources, installs the SCI handler, and
+    /// transfers the system hardware into ACPI mode.
+    ///
+    /// ## Parameters
+    /// * `mode` - IRQ mode (ACPI spec section 5.8.1)
+    fn enable_acpi(&self, mode: u32);
 }
 
 static AML_SUBSYSTEM: Once<Arc<dyn AmlSubsystem>> = Once::new();

@@ -144,6 +144,8 @@ fn kernel_main_thread() {
     modules::init();
     log::info!("loaded kernel modules");
 
+    arch::enable_acpi();
+
     drivers::pci::init(&mut offset_table);
     log::info!("loaded PCI driver");
 
