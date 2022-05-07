@@ -1,4 +1,4 @@
-From e9929a6a8a87538970ecdda70078ec207852aecc Mon Sep 17 00:00:00 2001
+From 28c6ccbbb161f92ac13fddcc5978bfa1d54e0f80 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -6,11 +6,11 @@ Subject: [PATCH] yes
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                          |  3 ++
- sysdeps/aero/generic/aero.cpp       | 10 ++++++-
+ sysdeps/aero/generic/aero.cpp       | 12 ++++++--
  sysdeps/aero/generic/filesystem.cpp | 46 ++++++++++++++++++++++++-----
  sysdeps/aero/generic/signals.cpp    |  8 +++--
  sysdeps/aero/include/aero/syscall.h |  7 +++++
- 5 files changed, 63 insertions(+), 11 deletions(-)
+ 5 files changed, 64 insertions(+), 12 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -24,7 +24,7 @@ index dbb35e8b..20c8d4c3 100644
 +# clangd cache
 +.cache
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 7de909f5..1a752c47 100644
+index 7de909f5..4281beb9 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
 @@ -173,7 +173,15 @@ int sys_getcwd(char *buffer, size_t size) {
@@ -44,6 +44,15 @@ index 7de909f5..1a752c47 100644
  
  int sys_gethostname(char *buffer, size_t bufsize) {
      auto result = syscall(SYS_GETHOSTNAME, buffer, bufsize);
+@@ -286,7 +294,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]) {
+     __builtin_unreachable();
+ }
+ 
+-int sys_getentropy(void *buffer, size_t length) UNIMPLEMENTED("sys_getentropy")
++// int sys_getentropy(void *buffer, size_t length) UNIMPLEMENTED("sys_getentropy")
+ 
+ #endif
+ } // namespace mlibc
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
 index 6a13f19c..53223dc6 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
