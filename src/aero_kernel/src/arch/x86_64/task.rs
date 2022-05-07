@@ -232,7 +232,7 @@ impl ArchTask {
             context: unsafe { Unique::new_unchecked(context) },
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
             address_space: new_address_space,
-            user: false,
+            user: true,
 
             // The FS and GS bases are inherited from the parent process.
             fs_base: self.fs_base.clone(),
@@ -280,6 +280,7 @@ impl ArchTask {
         self.address_space = address_space; // Update the address space reference
 
         self.fs_base = VirtAddr::zero();
+        self.gs_base = VirtAddr::zero();
 
         extern "C" {
             fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
@@ -363,6 +364,8 @@ impl ArchTask {
     }
 
     fn unref_pt(&mut self) {
+        assert!(self.user);
+
         self.address_space
             .offset_page_table()
             .page_table()
