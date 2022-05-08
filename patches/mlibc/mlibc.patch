@@ -1,4 +1,4 @@
-From 28c6ccbbb161f92ac13fddcc5978bfa1d54e0f80 Mon Sep 17 00:00:00 2001
+From 24705254fa6a345836ecb28f39bcb10b4bec280c Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -6,11 +6,12 @@ Subject: [PATCH] yes
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                          |  3 ++
+ options/rtdl/generic/linker.cpp     |  2 +-
  sysdeps/aero/generic/aero.cpp       | 12 ++++++--
  sysdeps/aero/generic/filesystem.cpp | 46 ++++++++++++++++++++++++-----
  sysdeps/aero/generic/signals.cpp    |  8 +++--
  sysdeps/aero/include/aero/syscall.h |  7 +++++
- 5 files changed, 64 insertions(+), 12 deletions(-)
+ 6 files changed, 65 insertions(+), 13 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -23,6 +24,19 @@ index dbb35e8b..20c8d4c3 100644
 +
 +# clangd cache
 +.cache
+diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
+index 53264175..38ba8c9f 100644
+--- a/options/rtdl/generic/linker.cpp
++++ b/options/rtdl/generic/linker.cpp
+@@ -14,7 +14,7 @@ uintptr_t libraryBase = 0x41000000;
+ 
+ bool verbose = false;
+ bool stillSlightlyVerbose = false;
+-bool logBaseAddresses = false;
++bool logBaseAddresses = true;
+ bool eagerBinding = true;
+ 
+ #if defined(__x86_64__)
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
 index 7de909f5..4281beb9 100644
 --- a/sysdeps/aero/generic/aero.cpp
