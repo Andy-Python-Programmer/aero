@@ -347,7 +347,10 @@ def prepare_iso(args, kernel_bin, user_bins):
     if os.path.exists(initramfs_root):
         shutil.rmtree(initramfs_root)
 
-    shutil.copytree(os.path.join(SYSROOT_DIR, 'system-root'), initramfs_root)
+    sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
+
+    if os.path.exists(sysroot_dir):
+        shutil.copytree(sysroot_dir, initramfs_root)
 
     def find(path) -> List[str]:
         _, find_output, _ = run_command(['find', '.', '-type', 'f'],
