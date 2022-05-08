@@ -350,7 +350,10 @@ def prepare_iso(args, kernel_bin, user_bins):
     sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
 
     if os.path.exists(sysroot_dir):
+        # copying the sysroot will auto-magically create the bin directory.
         shutil.copytree(sysroot_dir, initramfs_root)
+    else:
+        os.makedirs(initramfs_bin)
 
     def find(path) -> List[str]:
         _, find_output, _ = run_command(['find', '.', '-type', 'f'],
