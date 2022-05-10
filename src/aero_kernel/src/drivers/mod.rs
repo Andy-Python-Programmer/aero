@@ -18,6 +18,7 @@
  */
 
 pub mod block;
+pub mod drm;
 pub mod keyboard;
 pub mod lai;
 pub mod pci;
