@@ -34,7 +34,7 @@ use crate::logger;
 use crate::mem::paging::*;
 use crate::rendy::RendyInfo;
 
-use super::cache::DirCacheItem;
+use super::cache::{DirCacheItem, INodeCacheItem};
 use super::inode::INodeInterface;
 use super::ramfs::RamFs;
 use super::FileSystemError;
@@ -43,7 +43,7 @@ use super::{FileSystem, Result, MOUNT_MANAGER};
 use aero_syscall::{prelude::*, MMapFlags};
 
 lazy_static::lazy_static! {
-    static ref DEV_FILESYSTEM: Arc<DevFs> = DevFs::new();
+    pub static ref DEV_FILESYSTEM: Arc<DevFs> = DevFs::new();
 }
 
 static DEVICES: RwLock<BTreeMap<usize, Arc<dyn Device>>> = RwLock::new(BTreeMap::new());
@@ -69,6 +69,10 @@ pub trait Device: Send + Sync {
 /// Installs the provided `device` in the device filesystem (ie. in /dev/) and the
 /// global [DEVICES] btree map.
 pub fn install_device(device: Arc<dyn Device>) -> Result<()> {
+    install_device_at(DEV_FILESYSTEM.root_dir().inode(), device)
+}
+
+pub fn install_device_at(at: INodeCacheItem, device: Arc<dyn Device>) -> Result<()> {
     let devices = DEVICES.read();
 
     let device_marker = device.device_marker();
@@ -83,11 +87,7 @@ pub fn install_device(device: Arc<dyn Device>) -> Result<()> {
 
     DEVICES.write().insert(device_marker, device.clone());
 
-    DEV_FILESYSTEM
-        .root_dir()
-        .inode()
-        .make_dev_inode(&device_name, device_marker)?;
-
+    at.make_dev_inode(&device_name, device_marker)?;
     log::debug!("installed device `{}`", device_name);
 
     Ok(())
@@ -132,7 +132,7 @@ impl INodeInterface for DevINode {
 
 /// Implementation of dev filesystem. (See the module-level documentation for more
 /// information).
-struct DevFs(Arc<RamFs>);
+pub struct DevFs(Arc<RamFs>);
 
 impl DevFs {
     fn new() -> Arc<Self> {
