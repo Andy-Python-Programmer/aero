@@ -22,6 +22,7 @@ dependencies = [
  "serde_json",
  "spin 0.9.2",
  "stivale-boot",
+ "uapi",
  "vte",
  "xmas-elf",
 ]
@@ -397,6 +398,10 @@ dependencies = [
  "quote",
  "unicode-xid",
 ]
+
+[[package]]
+name = "uapi"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-xid"
