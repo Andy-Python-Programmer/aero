@@ -542,6 +542,26 @@ packages:
       environ:
         DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: drm_test
+    source:
+      subdir: 'bundled'
+      # copied from https://github.com/dvdhrm/docs/tree/master/drm-howto
+      #
+      # changes: compile to the aero target instead of the linux one.
+      git: 'https://github.com/aero-os/drm_test'
+      branch: 'master'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - libdrm
+      - mlibc
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['make']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/bin']
+      - args: ['mv', 'drm', '@THIS_COLLECT_DIR@/usr/bin']
+
   - name: nyancat
     source:
       subdir: 'bundled'
