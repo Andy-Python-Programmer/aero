@@ -68,5 +68,31 @@ pub struct DrmVersion {
     pub desc: *mut u8, // buffer to hold desc
 }
 
+// Refer to the `libdrm` documentation for more information about the
+// capabilities.
+pub const DRM_CAP_DUMB_BUFFER: u64 = 0x01;
+pub const DRM_CAP_VBLANK_HIGH_CRTC: u64 = 0x02;
+pub const DRM_CAP_DUMB_PREFERRED_DEPTH: u64 = 0x03;
+pub const DRM_CAP_DUMB_PREFER_SHADOW: u64 = 0x04;
+pub const DRM_CAP_PRIME: u64 = 0x05;
+pub const DRM_PRIME_CAP_IMPORT: u64 = 0x01;
+pub const DRM_PRIME_CAP_EXPORT: u64 = 0x02;
+pub const DRM_CAP_TIMESTAMP_MONOTONIC: u64 = 0x06;
+pub const DRM_CAP_ASYNC_PAGE_FLIP: u64 = 0x07;
+pub const DRM_CAP_CURSOR_WIDTH: u64 = 0x08;
+pub const DRM_CAP_CURSOR_HEIGHT: u64 = 0x09;
+pub const DRM_CAP_ADDFB2_MODIFIERS: u64 = 0x10;
+pub const DRM_CAP_PAGE_FLIP_TARGET: u64 = 0x11;
+pub const DRM_CAP_CRTC_IN_VBLANK_EVENT: u64 = 0x12;
+pub const DRM_CAP_SYNCOBJ: u64 = 0x13;
+pub const DRM_CAP_SYNCOBJ_TIMELINE: u64 = 0x14;
+
+#[repr(C)]
+pub struct DrmGetCap {
+    pub capability: u64,
+    pub value: u64,
+}
+
 // DRM IOCTL constants:
 pub const DRM_IOCTL_VERSION: usize = drm_iowr::<DrmVersion>(0x00);
+pub const DRM_IOCTL_GET_CAP: usize = drm_iowr::<DrmGetCap>(0x0c);
