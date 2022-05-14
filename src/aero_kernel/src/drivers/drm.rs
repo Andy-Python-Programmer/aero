@@ -21,11 +21,12 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
+use bit_field::BitField;
 
-use crate::fs;
 use crate::fs::devfs;
 use crate::fs::inode::INodeInterface;
 use crate::fs::FileSystem;
+use crate::fs::{self, FileSystemError};
 
 use crate::mem::paging::VirtAddr;
 
@@ -105,7 +106,17 @@ impl INodeInterface for Drm {
                 Ok(0)
             }
 
-            _ => unimplemented!(),
+            _ => {
+                // command[8..16] is the ASCII character supposedly unique to each driver.
+                if command.get_bits(8..16) == DRM_IOCTL_BASE {
+                    // command[0..8] is the function number.
+                    let function = command.get_bits(0..8);
+                    unimplemented!("drm: function (`{function}`) not supported")
+                }
+
+                log::warn!("drm: unknown ioctl (`{command}`) called");
+                Err(FileSystemError::NotSupported)
+            }
         }
     }
 }
