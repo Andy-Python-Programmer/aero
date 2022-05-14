@@ -36,6 +36,11 @@ trait DrmDevice: Send + Sync {
     /// Returns weather the DRM device supports creating dumb buffers.
     fn dumb_create(&self) -> bool;
 
+    /// Returns tuple containing the minumum dimensions (`xmin`, `ymin`).
+    fn min_dim(&self) -> (usize, usize);
+    /// Returns tuple containing the miximum dimensions (`xmax`, `ymax`).
+    fn max_dim(&self) -> (usize, usize);
+
     /// Returns a tuple containg the driver major, minor and patch level respectively.
     fn driver_version(&self) -> (usize, usize, usize);
     /// Returns a tuple contaning the driver name, desc and date respectively.
@@ -129,12 +134,35 @@ impl INodeInterface for Drm {
                 Ok(0)
             }
 
+            DRM_IOCTL_MODE_GETRESOURCES => {
+                let struc = VirtAddr::new(arg as u64)
+                    .read_mut::<DrmModeCardRes>()
+                    .unwrap();
+
+                // todo: set DRM CRTC ids
+                // todo: set DRM encoder ids
+                // todo: set DRM connector ids
+                // todo: set DRM framebuffer ids
+
+                let (xmin, ymin) = self.device.min_dim();
+
+                struc.min_width = xmin as _;
+                struc.min_height = ymin as _;
+
+                let (xmax, ymax) = self.device.max_dim();
+
+                struc.max_width = xmax as _;
+                struc.max_height = ymax as _;
+
+                Ok(0)
+            }
+
             _ => {
                 // command[8..16] is the ASCII character supposedly unique to each driver.
                 if command.get_bits(8..16) == DRM_IOCTL_BASE {
                     // command[0..8] is the function number.
                     let function = command.get_bits(0..8);
-                    unimplemented!("drm: function (`{function}`) not supported")
+                    unimplemented!("drm: function (`{function:#x}`) not supported")
                 }
 
                 log::warn!("drm: unknown ioctl command (`{command}`)");
@@ -161,6 +189,10 @@ impl devfs::Device for Drm {
 struct RawFramebuffer {}
 
 impl DrmDevice for RawFramebuffer {
+    fn dumb_create(&self) -> bool {
+        true
+    }
+
     fn driver_version(&self) -> (usize, usize, usize) {
         (0, 0, 1)
     }
@@ -169,8 +201,12 @@ impl DrmDevice for RawFramebuffer {
         ("rawfb_gpu", "rawfb gpu", "0")
     }
 
-    fn dumb_create(&self) -> bool {
-        true
+    fn min_dim(&self) -> (usize, usize) {
+        todo!()
+    }
+
+    fn max_dim(&self) -> (usize, usize) {
+        todo!()
     }
 }
 

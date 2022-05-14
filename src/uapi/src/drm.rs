@@ -93,6 +93,23 @@ pub struct DrmGetCap {
     pub value: u64,
 }
 
+#[repr(C)]
+pub struct DrmModeCardRes {
+    pub fb_id_ptr: u64,
+    pub crtc_id_ptr: u64,
+    pub connector_id_ptr: u64,
+    pub encoder_id_ptr: u64,
+    pub count_fbs: u32,
+    pub count_crtcs: u32,
+    pub count_connectors: u32,
+    pub count_encoders: u32,
+    pub min_width: u32,
+    pub max_width: u32,
+    pub min_height: u32,
+    pub max_height: u32,
+}
+
 // DRM IOCTL constants:
 pub const DRM_IOCTL_VERSION: usize = drm_iowr::<DrmVersion>(0x00);
 pub const DRM_IOCTL_GET_CAP: usize = drm_iowr::<DrmGetCap>(0x0c);
+pub const DRM_IOCTL_MODE_GETRESOURCES: usize = drm_iowr::<DrmModeCardRes>(0xa0);
