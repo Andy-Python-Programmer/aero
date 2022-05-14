@@ -508,6 +508,40 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: libdrm
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/mesa/drm'
+      tag: 'libdrm-2.4.110'
+      version: '2.4.110'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Dintel=false'
+        - '-Dvmwgfx=false'
+        - '-Dradeon=false'
+        - '-Damdgpu=false'
+        - '-Dnouveau=false'
+        - '-Dman-pages=false'
+        # We might want to build cairo with OpenGL support.
+        # Doing so would introduce a circular dependency here.
+        - '-Dcairo-tests=false'
+        - '@THIS_SOURCE_DIR@'
+    build:
+    - args: ['ninja']
+    - args: ['ninja', 'install']
+      environ:
+        DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: nyancat
     source:
       subdir: 'bundled'
