@@ -33,6 +33,9 @@ use crate::mem::paging::VirtAddr;
 use uapi::drm::*;
 
 trait DrmDevice: Send + Sync {
+    /// Returns weather the DRM device supports creating dumb buffers.
+    fn dumb_create(&self) -> bool;
+
     /// Returns a tuple containg the driver major, minor and patch level respectively.
     fn driver_version(&self) -> (usize, usize, usize);
     /// Returns a tuple contaning the driver name, desc and date respectively.
@@ -106,6 +109,26 @@ impl INodeInterface for Drm {
                 Ok(0)
             }
 
+            DRM_IOCTL_GET_CAP => {
+                let struc = VirtAddr::new(arg as u64).read_mut::<DrmGetCap>().unwrap();
+
+                // NOTE: The user is responsible for zeroing out the structure.
+                match struc.capability {
+                    DRM_CAP_DUMB_BUFFER => {
+                        if self.device.dumb_create() {
+                            struc.value = 1;
+                        }
+                    }
+
+                    cap => {
+                        log::warn!("drm: unknown capability (`{cap}`)");
+                        return Err(FileSystemError::NotSupported);
+                    }
+                }
+
+                Ok(0)
+            }
+
             _ => {
                 // command[8..16] is the ASCII character supposedly unique to each driver.
                 if command.get_bits(8..16) == DRM_IOCTL_BASE {
@@ -114,7 +137,7 @@ impl INodeInterface for Drm {
                     unimplemented!("drm: function (`{function}`) not supported")
                 }
 
-                log::warn!("drm: unknown ioctl (`{command}`) called");
+                log::warn!("drm: unknown ioctl command (`{command}`)");
                 Err(FileSystemError::NotSupported)
             }
         }
@@ -144,6 +167,10 @@ impl DrmDevice for RawFramebuffer {
 
     fn driver_info(&self) -> (&'static str, &'static str, &'static str) {
         ("rawfb_gpu", "rawfb gpu", "0")
+    }
+
+    fn dumb_create(&self) -> bool {
+        true
     }
 }
 
