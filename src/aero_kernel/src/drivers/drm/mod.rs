@@ -23,6 +23,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
+use alloc::vec::Vec;
 use bit_field::BitField;
 
 use crate::fs;
@@ -31,6 +32,7 @@ use crate::fs::inode::INodeInterface;
 use crate::fs::FileSystemError;
 
 use crate::mem::paging::VirtAddr;
+use crate::utils::sync::Mutex;
 
 use uapi::drm::*;
 
@@ -56,6 +58,21 @@ use uapi::drm::*;
 // Plane -> CRTCs -> Encoder -> Connector
 //                |============ LCD connector
 
+#[derive(Default)]
+struct Crtc {
+    id: usize,
+}
+
+#[derive(Default)]
+struct Encoder {
+    id: usize,
+}
+
+#[derive(Default)]
+struct Connector {
+    id: usize,
+}
+
 trait DrmDevice: Send + Sync {
     /// Returns weather the DRM device supports creating dumb buffers.
     fn dumb_create(&self) -> bool;
@@ -71,7 +88,7 @@ trait DrmDevice: Send + Sync {
     fn driver_info(&self) -> (&'static str, &'static str, &'static str);
 }
 
-fn copy_field(buffer: *mut u8, buffer_size: &mut usize, value: &[u8]) {
+fn copy_field<T>(buffer: *mut T, buffer_size: &mut usize, value: &[T]) {
     // do not overflow the user buffer.
     let mut copy_len = value.len();
 
@@ -102,6 +119,10 @@ struct Drm {
     inode: usize,
     card_id: usize,
     device: Arc<dyn DrmDevice>,
+
+    crtcs: Mutex<Vec<Crtc>>,
+    encoders: Mutex<Vec<Encoder>>,
+    connectors: Mutex<Vec<Connector>>,
 }
 
 impl Drm {
@@ -112,7 +133,19 @@ impl Drm {
             inode: devfs::alloc_device_marker(),
             card_id: DRM_CARD_ID.fetch_add(1, Ordering::SeqCst),
             device,
+
+            crtcs: Mutex::new(alloc::vec![]),
+            encoders: Mutex::new(alloc::vec![]),
+            connectors: Mutex::new(alloc::vec![]),
         })
+    }
+
+    /// Installs and initializes the CRTC identifier.
+    pub fn install_crtc(&self, mut crtc: Crtc) {
+        let mut crtcs = self.crtcs.lock();
+
+        crtc.id = crtcs.len();
+        crtcs.push(crtc);
     }
 }
 
@@ -131,9 +164,9 @@ impl INodeInterface for Drm {
                 struc.version_minor = minor as _;
                 struc.version_patch_level = patch_level as _;
 
-                copy_field(struc.name, &mut struc.name_len, name.as_bytes());
-                copy_field(struc.desc, &mut struc.desc_len, desc.as_bytes());
-                copy_field(struc.date, &mut struc.date_len, date.as_bytes());
+                copy_field::<u8>(struc.name, &mut struc.name_len, name.as_bytes());
+                copy_field::<u8>(struc.desc, &mut struc.desc_len, desc.as_bytes());
+                copy_field::<u8>(struc.date, &mut struc.date_len, date.as_bytes());
 
                 Ok(0)
             }
@@ -163,7 +196,22 @@ impl INodeInterface for Drm {
                     .read_mut::<DrmModeCardRes>()
                     .unwrap();
 
-                // todo: set DRM CRTC ids
+                {
+                    let crts = self.crtcs.lock();
+                    let mut count_crtcs = 0;
+
+                    copy_field::<u32>(
+                        struc.crtc_id_ptr as *mut u32,
+                        &mut count_crtcs,
+                        crts.iter()
+                            .map(|e| e.id as u32)
+                            .collect::<Vec<_>>()
+                            .as_slice(),
+                    );
+
+                    struc.count_crtcs = count_crtcs as _;
+                }
+
                 // todo: set DRM encoder ids
                 // todo: set DRM connector ids
                 // todo: set DRM framebuffer ids
