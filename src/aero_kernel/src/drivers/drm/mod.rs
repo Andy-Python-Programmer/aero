@@ -102,6 +102,8 @@ impl ModeObject for Encoder {
     }
 }
 
+/// Represents a display connector; transmits the signal to the display, detects
+/// display connection, removal and exposes the display's supported modes.
 #[derive(Default)]
 struct Connector {
     id: u32,
@@ -187,6 +189,14 @@ impl Drm {
 
         crtc.id = crtcs.len() as u32;
         crtcs.push(crtc);
+    }
+
+    /// Installs and initializes the connector identifier.
+    pub fn install_connector(&self, mut connector: Connector) {
+        let mut connectors = self.connectors.lock();
+
+        connector.id = connectors.len() as u32;
+        connectors.push(connector);
     }
 }
 

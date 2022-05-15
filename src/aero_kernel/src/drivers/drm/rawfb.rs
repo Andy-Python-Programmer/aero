@@ -53,6 +53,7 @@ impl DrmDevice for RawFramebuffer {
 
 fn init() {
     let crtc = Crtc::default();
+    let connector = Connector::default();
 
     let dri = devfs::DEV_FILESYSTEM
         .root_dir()
@@ -63,6 +64,7 @@ fn init() {
     let rfb = Drm::new(Arc::new(RawFramebuffer {}));
 
     rfb.install_crtc(crtc);
+    rfb.install_connector(connector);
 
     devfs::install_device_at(dri, rfb).expect("ramfs: failed to install DRM device");
 }
