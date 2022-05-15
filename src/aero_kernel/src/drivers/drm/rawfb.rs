@@ -21,8 +21,9 @@ use alloc::sync::Arc;
 
 use crate::fs::devfs;
 use crate::fs::FileSystem;
+use crate::rendy;
 
-use super::{Drm, DrmDevice};
+use super::*;
 
 struct RawFramebuffer {}
 
@@ -40,15 +41,19 @@ impl DrmDevice for RawFramebuffer {
     }
 
     fn min_dim(&self) -> (usize, usize) {
-        todo!()
+        // NOTE: for rawfb drm device, the max and min dimensions are the same.
+        self.max_dim()
     }
 
     fn max_dim(&self) -> (usize, usize) {
-        todo!()
+        let info = rendy::get_rendy_info();
+        (info.horizontal_resolution, info.vertical_resolution)
     }
 }
 
 fn init() {
+    let crtc = Crtc::default();
+
     let dri = devfs::DEV_FILESYSTEM
         .root_dir()
         .inode()
@@ -56,6 +61,9 @@ fn init() {
         .expect("devfs: failed to create DRM directory");
 
     let rfb = Drm::new(Arc::new(RawFramebuffer {}));
+
+    rfb.install_crtc(crtc);
+
     devfs::install_device_at(dri, rfb).expect("ramfs: failed to install DRM device");
 }
 
