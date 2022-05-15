@@ -17,20 +17,44 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod rawfb;
+
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use bit_field::BitField;
 
+use crate::fs;
 use crate::fs::devfs;
 use crate::fs::inode::INodeInterface;
-use crate::fs::FileSystem;
-use crate::fs::{self, FileSystemError};
+use crate::fs::FileSystemError;
 
 use crate::mem::paging::VirtAddr;
 
 use uapi::drm::*;
+
+// ## Notes:
+//
+// Plane: Image source
+//      - one or more framebuffers.
+//      - contains cropped/resized version of the framebuffer.
+//
+// CRTCs:
+//      - takes the plane and performs the composition.
+//      - has the display mode and params.
+//
+// Encoders:
+//      - takes the raw data from the CRTCs and converts it into a
+//        specific format.
+//
+// Connectors:
+//      - outputs the encoded data to an external display.
+//      - handles hotplug events.
+//      - reads EDIDs.
+//
+// Plane -> CRTCs -> Encoder -> Connector
+//                |============ LCD connector
 
 trait DrmDevice: Send + Sync {
     /// Returns weather the DRM device supports creating dumb buffers.
@@ -185,40 +209,3 @@ impl devfs::Device for Drm {
         self.sref.upgrade().unwrap()
     }
 }
-
-struct RawFramebuffer {}
-
-impl DrmDevice for RawFramebuffer {
-    fn dumb_create(&self) -> bool {
-        true
-    }
-
-    fn driver_version(&self) -> (usize, usize, usize) {
-        (0, 0, 1)
-    }
-
-    fn driver_info(&self) -> (&'static str, &'static str, &'static str) {
-        ("rawfb_gpu", "rawfb gpu", "0")
-    }
-
-    fn min_dim(&self) -> (usize, usize) {
-        todo!()
-    }
-
-    fn max_dim(&self) -> (usize, usize) {
-        todo!()
-    }
-}
-
-fn init() {
-    let dri = devfs::DEV_FILESYSTEM
-        .root_dir()
-        .inode()
-        .mkdir("dri")
-        .expect("devfs: failed to create DRM directory");
-
-    let rfb = Drm::new(Arc::new(RawFramebuffer {}));
-    devfs::install_device_at(dri, rfb).expect("ramfs: failed to install DRM device");
-}
-
-crate::module_init!(init);
