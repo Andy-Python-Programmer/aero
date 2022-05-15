@@ -25,11 +25,15 @@ use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use bit_field::BitField;
+use hashbrown::HashMap;
 
 use crate::fs;
 use crate::fs::devfs;
 use crate::fs::inode::INodeInterface;
 use crate::fs::FileSystemError;
+
+use crate::utils;
+use crate::utils::Downcastable;
 
 use crate::mem::paging::VirtAddr;
 use crate::utils::sync::Mutex;
@@ -38,9 +42,20 @@ use uapi::drm::*;
 
 /// Represents modset objects visible to userspace; this includes connectors,
 /// CRTCs, encoders, frambuffers and planes.
-trait ModeObject: Send + Sync {
+trait ModeObject: Send + Sync + Downcastable {
     /// Returns the mode object's ID.
     fn id(&self) -> u32;
+    fn object(&self) -> Arc<dyn ModeObject>;
+
+    // Conversion methods:
+
+    /// Converts this mode object into a connector.
+    ///
+    /// # Panics
+    /// * Called on a non-connector mode object.
+    fn as_connector(&self) -> Arc<Connector> {
+        utils::downcast::<dyn ModeObject, Connector>(&self.object()).unwrap()
+    }
 }
 
 trait DrmDevice: Send + Sync {
@@ -80,38 +95,74 @@ trait DrmDevice: Send + Sync {
 // Plane -> CRTCs -> Encoder -> Connector
 //                |============ LCD connector
 
-#[derive(Default)]
 struct Crtc {
-    id: u32,
+    sref: Weak<Self>,
+
+    object_id: u32,
+    index: u32,
+}
+
+impl Crtc {
+    pub fn new(drm: &Drm, object_id: u32) -> Arc<Self> {
+        Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+
+            object_id,
+            index: drm.crtcs.lock().len() as _,
+        })
+    }
 }
 
 impl ModeObject for Crtc {
     fn id(&self) -> u32 {
-        self.id
+        self.object_id
+    }
+
+    fn object(&self) -> Arc<dyn ModeObject> {
+        self.sref.upgrade().unwrap().clone()
     }
 }
 
-#[derive(Default)]
 struct Encoder {
-    id: u32,
+    sref: Weak<Self>,
+    object_id: u32,
+    // index: u32,
 }
 
 impl ModeObject for Encoder {
     fn id(&self) -> u32 {
-        self.id
+        self.object_id
+    }
+
+    fn object(&self) -> Arc<dyn ModeObject> {
+        self.sref.upgrade().unwrap().clone()
     }
 }
 
 /// Represents a display connector; transmits the signal to the display, detects
 /// display connection, removal and exposes the display's supported modes.
-#[derive(Default)]
 struct Connector {
-    id: u32,
+    sref: Weak<Self>,
+
+    object_id: u32,
+}
+
+impl Connector {
+    pub fn new(object_id: u32) -> Arc<Self> {
+        Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+            object_id,
+        })
+    }
 }
 
 impl ModeObject for Connector {
     fn id(&self) -> u32 {
-        self.id
+        self.object_id
+    }
+
+    fn object(&self) -> Arc<dyn ModeObject> {
+        self.sref.upgrade().unwrap().clone()
     }
 }
 
@@ -119,12 +170,17 @@ impl ModeObject for Connector {
 /// size and pixel format.
 #[derive(Default)]
 struct Framebuffer {
-    id: u32,
+    sref: Weak<Self>,
+    object_id: u32,
 }
 
 impl ModeObject for Framebuffer {
     fn id(&self) -> u32 {
-        self.id
+        self.object_id
+    }
+
+    fn object(&self) -> Arc<dyn ModeObject> {
+        self.sref.upgrade().unwrap().clone()
     }
 }
 
@@ -150,6 +206,18 @@ fn copy_field<T>(buffer: *mut T, buffer_size: &mut usize, value: &[T]) {
 
 static DRM_CARD_ID: AtomicUsize = AtomicUsize::new(0);
 
+struct IdAllocator(AtomicUsize);
+
+impl IdAllocator {
+    pub fn new() -> Self {
+        Self(AtomicUsize::new(0))
+    }
+
+    pub fn alloc(&self) -> usize {
+        self.0.fetch_add(1, Ordering::SeqCst)
+    }
+}
+
 /// The direct rendering manager (DRM) exposes the GPUs through the device filesystem. Each
 /// GPU detected by the DRM is referred to as a DRM device and a device file (`/dev/dri/cardX`)
 /// is created to interface with it; where X is a sequential number.
@@ -160,11 +228,14 @@ struct Drm {
     card_id: usize,
     device: Arc<dyn DrmDevice>,
 
+    id_alloc: IdAllocator,
+    mode_objs: Mutex<HashMap<u32, Arc<dyn ModeObject>>>,
+
     // All of the mode objects:
-    crtcs: Mutex<Vec<Crtc>>,
-    encoders: Mutex<Vec<Encoder>>,
-    connectors: Mutex<Vec<Connector>>,
-    framebuffers: Mutex<Vec<Framebuffer>>,
+    crtcs: Mutex<Vec<Arc<Crtc>>>,
+    encoders: Mutex<Vec<Arc<Encoder>>>,
+    connectors: Mutex<Vec<Arc<Connector>>>,
+    framebuffers: Mutex<Vec<Arc<Framebuffer>>>,
 }
 
 impl Drm {
@@ -176,6 +247,9 @@ impl Drm {
             card_id: DRM_CARD_ID.fetch_add(1, Ordering::SeqCst),
             device,
 
+            id_alloc: IdAllocator::new(),
+            mode_objs: Mutex::new(HashMap::new()),
+
             crtcs: Mutex::new(alloc::vec![]),
             encoders: Mutex::new(alloc::vec![]),
             connectors: Mutex::new(alloc::vec![]),
@@ -184,19 +258,27 @@ impl Drm {
     }
 
     /// Installs and initializes the CRTC identifier.
-    pub fn install_crtc(&self, mut crtc: Crtc) {
-        let mut crtcs = self.crtcs.lock();
-
-        crtc.id = crtcs.len() as u32;
-        crtcs.push(crtc);
+    pub fn install_crtc(&self, crtc: Arc<Crtc>) {
+        self.crtcs.lock().push(crtc.clone());
+        self.install_object(crtc)
     }
 
     /// Installs and initializes the connector identifier.
-    pub fn install_connector(&self, mut connector: Connector) {
-        let mut connectors = self.connectors.lock();
+    pub fn install_connector(&self, connector: Arc<Connector>) {
+        self.connectors.lock().push(connector.clone());
+        self.install_object(connector)
+    }
 
-        connector.id = connectors.len() as u32;
-        connectors.push(connector);
+    pub fn allocate_object_id(&self) -> u32 {
+        self.id_alloc.alloc() as _
+    }
+
+    fn install_object(&self, object: Arc<dyn ModeObject>) {
+        self.mode_objs.lock().insert(object.id(), object.clone());
+    }
+
+    fn find_object(&self, id: u32) -> Option<Arc<dyn ModeObject>> {
+        self.mode_objs.lock().get(&id).map(|obj| obj.clone())
     }
 }
 
@@ -250,7 +332,7 @@ impl INodeInterface for Drm {
                 /// Copies the mode object IDs into the user provided buffer. For saftey, checkout
                 /// the [`copy_field`] function.
                 fn copy_mode_obj_id<T: ModeObject>(
-                    obj: &Mutex<Vec<T>>,
+                    obj: &Mutex<Vec<Arc<T>>>,
                     buffer: *mut u32,
                     buffer_size: &mut u32,
                 ) {
@@ -293,6 +375,8 @@ impl INodeInterface for Drm {
                 let struc = VirtAddr::new(arg as u64)
                     .read_mut::<DrmModeGetConnector>()
                     .unwrap();
+
+                let object = self.find_object(struc.connector_id).unwrap().as_connector();
 
                 Ok(0)
             }
