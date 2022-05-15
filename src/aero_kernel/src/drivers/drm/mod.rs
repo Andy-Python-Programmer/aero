@@ -36,6 +36,28 @@ use crate::utils::sync::Mutex;
 
 use uapi::drm::*;
 
+/// Represents modset objects visible to userspace; this includes connectors,
+/// CRTCs, encoders, frambuffers and planes.
+trait ModeObject: Send + Sync {
+    /// Returns the mode object's ID.
+    fn id(&self) -> u32;
+}
+
+trait DrmDevice: Send + Sync {
+    /// Returns weather the DRM device supports creating dumb buffers.
+    fn dumb_create(&self) -> bool;
+
+    /// Returns tuple containing the minumum dimensions (`xmin`, `ymin`).
+    fn min_dim(&self) -> (usize, usize);
+    /// Returns tuple containing the miximum dimensions (`xmax`, `ymax`).
+    fn max_dim(&self) -> (usize, usize);
+
+    /// Returns a tuple containg the driver major, minor and patch level respectively.
+    fn driver_version(&self) -> (usize, usize, usize);
+    /// Returns a tuple contaning the driver name, desc and date respectively.
+    fn driver_info(&self) -> (&'static str, &'static str, &'static str);
+}
+
 // ## Notes:
 //
 // Plane: Image source
@@ -60,32 +82,48 @@ use uapi::drm::*;
 
 #[derive(Default)]
 struct Crtc {
-    id: usize,
+    id: u32,
+}
+
+impl ModeObject for Crtc {
+    fn id(&self) -> u32 {
+        self.id
+    }
 }
 
 #[derive(Default)]
 struct Encoder {
-    id: usize,
+    id: u32,
+}
+
+impl ModeObject for Encoder {
+    fn id(&self) -> u32 {
+        self.id
+    }
 }
 
 #[derive(Default)]
 struct Connector {
-    id: usize,
+    id: u32,
 }
 
-trait DrmDevice: Send + Sync {
-    /// Returns weather the DRM device supports creating dumb buffers.
-    fn dumb_create(&self) -> bool;
+impl ModeObject for Connector {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
 
-    /// Returns tuple containing the minumum dimensions (`xmin`, `ymin`).
-    fn min_dim(&self) -> (usize, usize);
-    /// Returns tuple containing the miximum dimensions (`xmax`, `ymax`).
-    fn max_dim(&self) -> (usize, usize);
+/// Holds information in relation to the framebuffer; this includes the
+/// size and pixel format.
+#[derive(Default)]
+struct Framebuffer {
+    id: u32,
+}
 
-    /// Returns a tuple containg the driver major, minor and patch level respectively.
-    fn driver_version(&self) -> (usize, usize, usize);
-    /// Returns a tuple contaning the driver name, desc and date respectively.
-    fn driver_info(&self) -> (&'static str, &'static str, &'static str);
+impl ModeObject for Framebuffer {
+    fn id(&self) -> u32 {
+        self.id
+    }
 }
 
 fn copy_field<T>(buffer: *mut T, buffer_size: &mut usize, value: &[T]) {
@@ -120,9 +158,11 @@ struct Drm {
     card_id: usize,
     device: Arc<dyn DrmDevice>,
 
+    // All of the mode objects:
     crtcs: Mutex<Vec<Crtc>>,
     encoders: Mutex<Vec<Encoder>>,
     connectors: Mutex<Vec<Connector>>,
+    framebuffers: Mutex<Vec<Framebuffer>>,
 }
 
 impl Drm {
@@ -137,6 +177,7 @@ impl Drm {
             crtcs: Mutex::new(alloc::vec![]),
             encoders: Mutex::new(alloc::vec![]),
             connectors: Mutex::new(alloc::vec![]),
+            framebuffers: Mutex::new(alloc::vec![]),
         })
     }
 
@@ -144,7 +185,7 @@ impl Drm {
     pub fn install_crtc(&self, mut crtc: Crtc) {
         let mut crtcs = self.crtcs.lock();
 
-        crtc.id = crtcs.len();
+        crtc.id = crtcs.len() as u32;
         crtcs.push(crtc);
     }
 }
@@ -196,25 +237,34 @@ impl INodeInterface for Drm {
                     .read_mut::<DrmModeCardRes>()
                     .unwrap();
 
-                {
-                    let crts = self.crtcs.lock();
-                    let mut count_crtcs = 0;
+                /// Copies the mode object IDs into the user provided buffer. For saftey, checkout
+                /// the [`copy_field`] function.
+                fn copy_mode_obj_id<T: ModeObject>(
+                    obj: &Mutex<Vec<T>>,
+                    buffer: *mut u32,
+                    buffer_size: &mut u32,
+                ) {
+                    let objs = obj.lock();
+                    let mut count_objs = 0;
 
                     copy_field::<u32>(
-                        struc.crtc_id_ptr as *mut u32,
-                        &mut count_crtcs,
-                        crts.iter()
-                            .map(|e| e.id as u32)
-                            .collect::<Vec<_>>()
-                            .as_slice(),
+                        buffer,
+                        &mut count_objs,
+                        objs.iter().map(|e| e.id()).collect::<Vec<_>>().as_slice(),
                     );
 
-                    struc.count_crtcs = count_crtcs as _;
+                    *buffer_size = count_objs as _;
                 }
 
-                // todo: set DRM encoder ids
-                // todo: set DRM connector ids
-                // todo: set DRM framebuffer ids
+                let crtc_id_ptr = struc.crtc_id_ptr as *mut u32;
+                let encoder_id_ptr = struc.encoder_id_ptr as *mut u32;
+                let con_id_ptr = struc.connector_id_ptr as *mut u32;
+                let fb_id_ptr = struc.fb_id_ptr as *mut u32;
+
+                copy_mode_obj_id(&self.crtcs, crtc_id_ptr, &mut struc.count_crtcs);
+                copy_mode_obj_id(&self.encoders, encoder_id_ptr, &mut struc.count_encoders);
+                copy_mode_obj_id(&self.connectors, con_id_ptr, &mut struc.count_connectors);
+                copy_mode_obj_id(&self.framebuffers, fb_id_ptr, &mut struc.count_fbs);
 
                 let (xmin, ymin) = self.device.min_dim();
 
