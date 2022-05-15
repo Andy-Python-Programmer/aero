@@ -109,7 +109,60 @@ pub struct DrmModeCardRes {
     pub max_height: u32,
 }
 
+const DRM_DISPLAY_MODE_LEN: usize = 32;
+
+#[repr(C)]
+pub struct DrmModeInfo {
+    pub clock: u32,                                // pixel clock in kHz
+    pub hdisplay: u16,                             // horizontal display size
+    pub hsync_start: u16,                          // horizontal sync start
+    pub hsync_end: u16,                            // horizontal sync end
+    pub htotal: u16,                               // horizontal total size
+    pub hskew: u16,                                // horizontal skew
+    pub vdisplay: u16,                             // vertical display size
+    pub vsync_start: u16,                          // vertical sync start
+    pub vsync_end: u16,                            // vertical sync end
+    pub vtotal: u16,                               // vertical total size
+    pub vscan: u16,                                // vertical scan
+    pub vrefresh: u32,                             // approximate vertical refresh rate in Hz
+    pub flags: u32,                                // bitmask of misc flags
+    pub typ: u32,                                  // bitmask of type flags
+    pub name: [ffi::c_char; DRM_DISPLAY_MODE_LEN], // string describing the mode resolution
+}
+
+#[repr(C)]
+pub struct DrmModeGetConnector {
+    pub encoders_ptr: u64,    // pointer to `u32` array of object IDs
+    pub modes_ptr: u64,       // pointer to `DrmModeInfo` array
+    pub props_ptr: u64,       // pointer to `u32` array of property IDs
+    pub prop_values_ptr: u64, // pointer to `u64` array of property values
+
+    pub count_modes: u32,    // number of modes
+    pub count_props: u32,    // number of properties
+    pub count_encoders: u32, // number of encoders
+
+    pub encoder_id: u32,     // object id of the current encoder
+    pub connector_id: u32,   // object id of the connector
+    pub connector_type: u32, // type of the connector
+
+    /// Type-specific connector number.
+    ///
+    /// This is not an object ID. This is a per-type connector number. Each
+    /// (`type`, `type_id`) combination is unique across all connectors of a DRM
+    /// device.
+    pub connector_type_id: u32,
+
+    pub connection: u32, // status of the connector
+    pub mm_width: u32,   // width of the connected sink in millimeters
+    pub mm_height: u32,  // height of the connected sink in millimeters
+
+    pub subpixel: u32, // subpixel order of the connected sink
+
+    pub pad: u32, // padding; must be zero
+}
+
 // DRM IOCTL constants:
 pub const DRM_IOCTL_VERSION: usize = drm_iowr::<DrmVersion>(0x00);
 pub const DRM_IOCTL_GET_CAP: usize = drm_iowr::<DrmGetCap>(0x0c);
 pub const DRM_IOCTL_MODE_GETRESOURCES: usize = drm_iowr::<DrmModeCardRes>(0xa0);
+pub const DRM_IOCTL_GET_CONNECTOR: usize = drm_iowr::<DrmModeGetConnector>(0xa7);
