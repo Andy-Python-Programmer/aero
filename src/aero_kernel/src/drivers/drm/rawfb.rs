@@ -55,7 +55,14 @@ fn init() {
     let rfb = Drm::new(Arc::new(RawFramebuffer {}));
 
     let crtc = Crtc::new(&rfb, rfb.allocate_object_id());
-    let connector = Connector::new(rfb.allocate_object_id());
+    let encoder = Encoder::new(rfb.allocate_object_id());
+
+    let connector = Connector::new(
+        encoder.clone(),
+        alloc::vec![encoder.clone()],
+        DrmModeConStatus::Connected,
+        rfb.allocate_object_id(),
+    );
 
     let dri = devfs::DEV_FILESYSTEM
         .root_dir()

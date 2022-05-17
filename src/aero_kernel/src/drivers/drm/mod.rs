@@ -129,6 +129,16 @@ struct Encoder {
     // index: u32,
 }
 
+impl Encoder {
+    pub fn new(object_id: u32) -> Arc<Self> {
+        Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+
+            object_id,
+        })
+    }
+}
+
 impl ModeObject for Encoder {
     fn id(&self) -> u32 {
         self.object_id
@@ -144,13 +154,31 @@ impl ModeObject for Encoder {
 struct Connector {
     sref: Weak<Self>,
 
+    /// The current status of the connector.
+    status: DrmModeConStatus,
+    /// The current encoder for this connector.
+    current_encoder: Arc<Encoder>,
+    /// A vector contaning all the possible encoders for this connector.
+    possible_encoders: Vec<Arc<Encoder>>,
+    connector_typ: u32,
+
     object_id: u32,
 }
 
 impl Connector {
-    pub fn new(object_id: u32) -> Arc<Self> {
+    pub fn new(
+        current_encoder: Arc<Encoder>,
+        possible_encoders: Vec<Arc<Encoder>>,
+        status: DrmModeConStatus,
+        object_id: u32,
+    ) -> Arc<Self> {
         Arc::new_cyclic(|sref| Self {
             sref: sref.clone(),
+
+            status,
+            current_encoder,
+            possible_encoders,
+            connector_typ: 0, // todo
             object_id,
         })
     }
@@ -377,6 +405,35 @@ impl INodeInterface for Drm {
                     .unwrap();
 
                 let object = self.find_object(struc.connector_id).unwrap().as_connector();
+
+                // Fill in the array contaning all of the possible encoders and its length.
+                let encoder_ids_ptr = struc.encoders_ptr as *mut u32;
+                let mut encoder_count = 0;
+
+                copy_field::<u32>(
+                    encoder_ids_ptr,
+                    &mut encoder_count,
+                    object
+                        .possible_encoders
+                        .iter()
+                        .map(|e| e.id())
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                );
+
+                struc.count_encoders = encoder_count as _;
+
+                struc.encoder_id = object.current_encoder.id();
+                struc.connector_type = object.connector_typ;
+                struc.connector_type_id = 0; // todo
+                struc.connection = object.status as _;
+
+                // NOTE: The physical size will come from the EDID.
+                struc.mm_width = 0; // todo
+                struc.mm_height = 0; // todo
+                struc.subpixel = 0; // todo
+                struc.count_modes = 0; // todo
+                struc.modes_ptr = 0; // todo
 
                 Ok(0)
             }
