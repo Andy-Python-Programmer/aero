@@ -56,6 +56,14 @@ trait ModeObject: Send + Sync + Downcastable {
     fn as_connector(&self) -> Arc<Connector> {
         utils::downcast::<dyn ModeObject, Connector>(&self.object()).unwrap()
     }
+
+    /// Converts this mode object into an encoder.
+    ///
+    /// # Panics
+    /// * Called on a non-encoder mode object.
+    fn as_encoder(&self) -> Arc<Encoder> {
+        utils::downcast::<dyn ModeObject, Encoder>(&self.object()).unwrap()
+    }
 }
 
 trait DrmDevice: Send + Sync {
@@ -125,16 +133,34 @@ impl ModeObject for Crtc {
 
 struct Encoder {
     sref: Weak<Self>,
+
+    /// The current CRTC for this encoder.
+    current_crtc: Arc<Crtc>,
+    /// A vector contaning all the possible CRTCs for this encoder.
+    possible_crtcs: Vec<Arc<Crtc>>,
+    /// A vector contaning all the possible sibling encoders for cloning.
+    possible_clones: Vec<Arc<Encoder>>,
+
     object_id: u32,
-    // index: u32,
+    index: u32,
 }
 
 impl Encoder {
-    pub fn new(object_id: u32) -> Arc<Self> {
+    pub fn new(
+        drm: &Drm,
+        current_crtc: Arc<Crtc>,
+        possible_crtcs: Vec<Arc<Crtc>>,
+        object_id: u32,
+    ) -> Arc<Self> {
         Arc::new_cyclic(|sref| Self {
             sref: sref.clone(),
 
+            current_crtc,
+            possible_crtcs,
+            possible_clones: alloc::vec![], // todo: add self as possible clone.
+
             object_id,
+            index: drm.encoders.lock().len() as _,
         })
     }
 }
@@ -164,7 +190,6 @@ struct Connector {
     modes: Vec<DrmModeInfo>,
 
     connector_typ: u32,
-
     object_id: u32,
 }
 
@@ -302,6 +327,12 @@ impl Drm {
         self.install_object(connector)
     }
 
+    /// Installs and initializes the encoder identifier.
+    pub fn install_encoder(&self, encoder: Arc<Encoder>) {
+        self.encoders.lock().push(encoder.clone());
+        self.install_object(encoder)
+    }
+
     pub fn allocate_object_id(&self) -> u32 {
         self.id_alloc.alloc() as _
     }
@@ -408,6 +439,24 @@ impl INodeInterface for Drm {
                 let struc = VirtAddr::new(arg as u64)
                     .read_mut::<DrmModeGetEncoder>()
                     .unwrap();
+
+                let object = self.find_object(struc.encoder_id).unwrap().as_encoder();
+                struc.crtc_id = object.current_crtc.id();
+
+                let mut crtc_mask = 0;
+                for crtc in object.possible_crtcs.iter() {
+                    crtc_mask = 1 << crtc.index;
+                }
+
+                struc.possible_crtcs = crtc_mask;
+
+                let mut clone_mask = 0;
+                for clone in object.possible_clones.iter() {
+                    clone_mask = 1 << clone.index;
+                }
+
+                struc.possible_clones = clone_mask;
+                struc.encoder_typ = 0; // todo: fill in the encoder typ.
 
                 Ok(0)
             }

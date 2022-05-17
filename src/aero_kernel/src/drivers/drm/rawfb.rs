@@ -57,7 +57,13 @@ fn init() {
     let rfb = Drm::new(Arc::new(RawFramebuffer {}));
 
     let crtc = Crtc::new(&rfb, rfb.allocate_object_id());
-    let encoder = Encoder::new(rfb.allocate_object_id());
+
+    let encoder = Encoder::new(
+        &rfb,
+        crtc.clone(),
+        alloc::vec![crtc.clone()],
+        rfb.allocate_object_id(),
+    );
 
     let connector = Connector::new(
         encoder.clone(),
@@ -78,6 +84,7 @@ fn init() {
 
     rfb.install_crtc(crtc);
     rfb.install_connector(connector);
+    rfb.install_encoder(encoder);
 
     devfs::install_device_at(dri, rfb).expect("ramfs: failed to install DRM device");
 }
