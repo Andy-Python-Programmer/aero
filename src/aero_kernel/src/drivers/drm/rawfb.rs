@@ -21,15 +21,22 @@ use alloc::sync::Arc;
 
 use crate::fs::devfs;
 use crate::fs::FileSystem;
-use crate::rendy;
+
+use crate::mem::paging::*;
 
 use super::*;
+use crate::rendy;
 
 struct RawFramebuffer {}
 
 impl DrmDevice for RawFramebuffer {
-    fn dumb_create(&self) -> bool {
+    fn can_dumb_create(&self) -> bool {
         true
+    }
+
+    fn dumb_create(&self, width: u32, height: u32, bpp: u32) -> BufferObject {
+        let size = align_up((width * height * bpp / 8) as _, Size4KiB::SIZE);
+        BufferObject::new(width, height, size as usize)
     }
 
     fn driver_version(&self) -> (usize, usize, usize) {

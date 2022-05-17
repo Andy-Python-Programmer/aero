@@ -68,7 +68,8 @@ trait ModeObject: Send + Sync + Downcastable {
 
 trait DrmDevice: Send + Sync {
     /// Returns weather the DRM device supports creating dumb buffers.
-    fn dumb_create(&self) -> bool;
+    fn can_dumb_create(&self) -> bool;
+    fn dumb_create(&self, width: u32, height: u32, bpp: u32) -> BufferObject;
 
     /// Returns tuple containing the minumum dimensions (`xmin`, `ymin`).
     fn min_dim(&self) -> (usize, usize);
@@ -79,6 +80,24 @@ trait DrmDevice: Send + Sync {
     fn driver_version(&self) -> (usize, usize, usize);
     /// Returns a tuple contaning the driver name, desc and date respectively.
     fn driver_info(&self) -> (&'static str, &'static str, &'static str);
+}
+
+struct BufferObject {
+    width: u32,
+    height: u32,
+    size: usize,
+    mapping: usize,
+}
+
+impl BufferObject {
+    pub fn new(width: u32, height: u32, size: usize) -> Self {
+        Self {
+            width,
+            height,
+            size,
+            mapping: 0,
+        }
+    }
 }
 
 // ## Notes:
@@ -287,6 +306,10 @@ struct Drm {
     device: Arc<dyn DrmDevice>,
 
     id_alloc: IdAllocator,
+    mapping_alloc: IdAllocator,
+    buffer_alloc: IdAllocator,
+
+    buffers: Mutex<HashMap<u32, BufferObject>>,
     mode_objs: Mutex<HashMap<u32, Arc<dyn ModeObject>>>,
 
     // All of the mode objects:
@@ -305,7 +328,11 @@ impl Drm {
             card_id: DRM_CARD_ID.fetch_add(1, Ordering::SeqCst),
             device,
 
+            buffer_alloc: IdAllocator::new(),
             id_alloc: IdAllocator::new(),
+            mapping_alloc: IdAllocator::new(),
+
+            buffers: Mutex::new(HashMap::new()),
             mode_objs: Mutex::new(HashMap::new()),
 
             crtcs: Mutex::new(alloc::vec![]),
@@ -344,6 +371,13 @@ impl Drm {
     fn find_object(&self, id: u32) -> Option<Arc<dyn ModeObject>> {
         self.mode_objs.lock().get(&id).map(|obj| obj.clone())
     }
+
+    fn create_handle(&self, buffer: BufferObject) -> u32 {
+        let handle = self.buffer_alloc.alloc() as u32;
+
+        self.buffers.lock().insert(handle, buffer);
+        handle
+    }
 }
 
 impl INodeInterface for Drm {
@@ -374,7 +408,7 @@ impl INodeInterface for Drm {
                 // NOTE: The user is responsible for zeroing out the structure.
                 match struc.capability {
                     DRM_CAP_DUMB_BUFFER => {
-                        if self.device.dumb_create() {
+                        if self.device.can_dumb_create() {
                             struc.value = 1;
                         }
                     }
@@ -501,6 +535,23 @@ impl INodeInterface for Drm {
 
                 copy_field::<DrmModeInfo>(modes_ptr, &mut modes_count, object.modes.as_slice());
                 struc.count_modes = modes_count as _;
+
+                Ok(0)
+            }
+
+            DRM_IOCTL_MODE_CREATE_DUMB => {
+                let struc = VirtAddr::new(arg as u64)
+                    .read_mut::<DrmModeCreateDumb>()
+                    .unwrap();
+
+                let mut buffer = self
+                    .device
+                    .dumb_create(struc.width, struc.height, struc.bpp);
+
+                assert!(buffer.size < (1usize << 32));
+
+                buffer.mapping = self.mapping_alloc.alloc() << 32;
+                struc.handle = self.create_handle(buffer);
 
                 Ok(0)
             }
