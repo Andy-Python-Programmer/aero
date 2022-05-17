@@ -198,9 +198,25 @@ pub struct DrmModeGetConnector {
     pub pad: u32, // padding; must be zero
 }
 
+#[repr(C)]
+pub struct DrmModeCreateDumb {
+    pub height: u32,
+    pub width: u32,
+    pub bpp: u32,
+    pub flags: u32,
+
+    // the following will be returned:
+    pub handle: u32,
+    pub pitch: u32,
+    pub size: u64,
+}
+
 // DRM IOCTL constants:
 pub const DRM_IOCTL_VERSION: usize = drm_iowr::<DrmVersion>(0x00);
 pub const DRM_IOCTL_GET_CAP: usize = drm_iowr::<DrmGetCap>(0x0c);
+
 pub const DRM_IOCTL_MODE_GETRESOURCES: usize = drm_iowr::<DrmModeCardRes>(0xa0);
 pub const DRM_IOCTL_GET_ENCODER: usize = drm_iowr::<DrmModeGetEncoder>(0xa6);
 pub const DRM_IOCTL_GET_CONNECTOR: usize = drm_iowr::<DrmModeGetConnector>(0xa7);
+
+pub const DRM_IOCTL_MODE_CREATE_DUMB: usize = drm_iowr::<DrmModeCreateDumb>(0xb2);
