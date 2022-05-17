@@ -117,8 +117,37 @@ pub enum DrmModeConStatus {
     Unknown = 3,
 }
 
-const DRM_DISPLAY_MODE_LEN: usize = 32;
+#[repr(C)]
+pub struct DrmModeGetEncoder {
+    pub encoder_id: u32,
+    pub encoder_typ: u32,
 
+    pub crtc_id: u32, // ID of the CRTC
+
+    pub possible_crtcs: u32,
+    pub possible_clones: u32,
+}
+
+pub const DRM_MODE_TYPE_DRIVER: u32 = 1 << 6;
+
+pub const DRM_MODE_FLAG_PHSYNC: u32 = 1 << 0;
+pub const DRM_MODE_FLAG_NHSYNC: u32 = 1 << 1;
+pub const DRM_MODE_FLAG_PVSYNC: u32 = 1 << 2;
+pub const DRM_MODE_FLAG_NVSYNC: u32 = 1 << 3;
+pub const DRM_MODE_FLAG_INTERLACE: u32 = 1 << 4;
+pub const DRM_MODE_FLAG_DBLSCAN: u32 = 1 << 5;
+pub const DRM_MODE_FLAG_CSYNC: u32 = 1 << 6;
+pub const DRM_MODE_FLAG_PCSYNC: u32 = 1 << 7;
+pub const DRM_MODE_FLAG_NCSYNC: u32 = 1 << 8;
+pub const DRM_MODE_FLAG_HSKEW: u32 = 1 << 9; // hskew provided
+pub const DRM_MODE_FLAG_BCAST: u32 = 1 << 10; // deprecated
+pub const DRM_MODE_FLAG_PIXMUX: u32 = 1 << 11; // deprecated
+pub const DRM_MODE_FLAG_DBLCLK: u32 = 1 << 12;
+pub const DRM_MODE_FLAG_CLKDIV2: u32 = 1 << 13;
+
+pub const DRM_DISPLAY_MODE_LEN: usize = 32;
+
+#[derive(Clone)]
 #[repr(C)]
 pub struct DrmModeInfo {
     pub clock: u32,                                // pixel clock in kHz
@@ -173,4 +202,5 @@ pub struct DrmModeGetConnector {
 pub const DRM_IOCTL_VERSION: usize = drm_iowr::<DrmVersion>(0x00);
 pub const DRM_IOCTL_GET_CAP: usize = drm_iowr::<DrmGetCap>(0x0c);
 pub const DRM_IOCTL_MODE_GETRESOURCES: usize = drm_iowr::<DrmModeCardRes>(0xa0);
+pub const DRM_IOCTL_GET_ENCODER: usize = drm_iowr::<DrmModeGetEncoder>(0xa6);
 pub const DRM_IOCTL_GET_CONNECTOR: usize = drm_iowr::<DrmModeGetConnector>(0xa7);

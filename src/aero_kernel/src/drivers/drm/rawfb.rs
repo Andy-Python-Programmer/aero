@@ -52,6 +52,8 @@ impl DrmDevice for RawFramebuffer {
 }
 
 fn init() {
+    let info = rendy::get_rendy_info();
+
     let rfb = Drm::new(Arc::new(RawFramebuffer {}));
 
     let crtc = Crtc::new(&rfb, rfb.allocate_object_id());
@@ -60,6 +62,10 @@ fn init() {
     let connector = Connector::new(
         encoder.clone(),
         alloc::vec![encoder.clone()],
+        make_dmt_modes(
+            info.horizontal_resolution as u16,
+            info.vertical_resolution as u16,
+        ),
         DrmModeConStatus::Connected,
         rfb.allocate_object_id(),
     );
