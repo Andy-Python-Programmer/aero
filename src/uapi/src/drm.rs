@@ -109,6 +109,14 @@ pub struct DrmModeCardRes {
     pub max_height: u32,
 }
 
+#[repr(u32)]
+#[derive(Copy, Clone, Debug)]
+pub enum DrmModeConStatus {
+    Connected = 1, // connector has the sink plugged in
+    Disconnected = 2,
+    Unknown = 3,
+}
+
 const DRM_DISPLAY_MODE_LEN: usize = 32;
 
 #[repr(C)]
