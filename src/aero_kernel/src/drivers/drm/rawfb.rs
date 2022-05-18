@@ -39,6 +39,17 @@ impl DrmDevice for RawFramebuffer {
         BufferObject::new(width, height, size as usize)
     }
 
+    fn framebuffer_create(
+        &self,
+        buffer_object: &BufferObject,
+        _width: u32,
+        height: u32,
+        pitch: u32,
+    ) {
+        assert!(pitch % 4 == 0);
+        assert!(buffer_object.size >= pitch as usize * height as usize);
+    }
+
     fn driver_version(&self) -> (usize, usize, usize) {
         (0, 0, 1)
     }
@@ -62,7 +73,6 @@ fn init() {
     let info = rendy::get_rendy_info();
 
     let rfb = Drm::new(Arc::new(RawFramebuffer {}));
-
     let crtc = Crtc::new(&rfb, rfb.allocate_object_id());
 
     let encoder = Encoder::new(

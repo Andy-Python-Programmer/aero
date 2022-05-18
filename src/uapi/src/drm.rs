@@ -199,6 +199,17 @@ pub struct DrmModeGetConnector {
 }
 
 #[repr(C)]
+pub struct DrmModeFbCmd {
+    pub fb_id: u32,
+    pub width: u32,
+    pub height: u32,
+    pub pitch: u32,
+    pub bpp: u32,
+    pub depth: u32,
+    pub handle: u32, // driver specific handle
+}
+
+#[repr(C)]
 pub struct DrmModeCreateDumb {
     pub height: u32,
     pub width: u32,
@@ -218,5 +229,6 @@ pub const DRM_IOCTL_GET_CAP: usize = drm_iowr::<DrmGetCap>(0x0c);
 pub const DRM_IOCTL_MODE_GETRESOURCES: usize = drm_iowr::<DrmModeCardRes>(0xa0);
 pub const DRM_IOCTL_GET_ENCODER: usize = drm_iowr::<DrmModeGetEncoder>(0xa6);
 pub const DRM_IOCTL_GET_CONNECTOR: usize = drm_iowr::<DrmModeGetConnector>(0xa7);
+pub const DRM_IOCTL_MODE_ADDFB: usize = drm_iowr::<DrmModeFbCmd>(0xae);
 
 pub const DRM_IOCTL_MODE_CREATE_DUMB: usize = drm_iowr::<DrmModeCreateDumb>(0xb2);
