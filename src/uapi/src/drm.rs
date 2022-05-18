@@ -222,6 +222,15 @@ pub struct DrmModeCreateDumb {
     pub size: u64,
 }
 
+#[repr(C)]
+pub struct DrmModeMapDumb {
+    pub handle: u32, // handle for the object being mapped
+    pub pad: u32,
+    // Fake offset to use for subsequent mmap call. This is a fixed-size
+    // type for 32/64 compatibility.
+    pub offset: u64,
+}
+
 // DRM IOCTL constants:
 pub const DRM_IOCTL_VERSION: usize = drm_iowr::<DrmVersion>(0x00);
 pub const DRM_IOCTL_GET_CAP: usize = drm_iowr::<DrmGetCap>(0x0c);
@@ -232,3 +241,4 @@ pub const DRM_IOCTL_GET_CONNECTOR: usize = drm_iowr::<DrmModeGetConnector>(0xa7)
 pub const DRM_IOCTL_MODE_ADDFB: usize = drm_iowr::<DrmModeFbCmd>(0xae);
 
 pub const DRM_IOCTL_MODE_CREATE_DUMB: usize = drm_iowr::<DrmModeCreateDumb>(0xb2);
+pub const DRM_IOCTL_MODE_MAP_DUMB: usize = drm_iowr::<DrmModeMapDumb>(0xb3);

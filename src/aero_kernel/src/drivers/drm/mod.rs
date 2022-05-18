@@ -594,6 +594,16 @@ impl INodeInterface for Drm {
                 Ok(0)
             }
 
+            DRM_IOCTL_MODE_MAP_DUMB => {
+                let struc = VirtAddr::new(arg as u64)
+                    .read_mut::<DrmModeMapDumb>()
+                    .unwrap();
+
+                let handle = self.find_handle(struc.handle).unwrap();
+                struc.offset = handle.mapping as _;
+                Ok(0)
+            }
+
             _ => {
                 // command[8..16] is the ASCII character supposedly unique to each driver.
                 if command.get_bits(8..16) == DRM_IOCTL_BASE {
