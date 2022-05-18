@@ -69,7 +69,9 @@ trait ModeObject: Send + Sync + Downcastable {
 trait DrmDevice: Send + Sync {
     /// Returns weather the DRM device supports creating dumb buffers.
     fn can_dumb_create(&self) -> bool;
+
     fn dumb_create(&self, width: u32, height: u32, bpp: u32) -> BufferObject;
+    fn framebuffer_create(&self, buffer_object: &BufferObject, width: u32, height: u32, pitch: u32);
 
     /// Returns tuple containing the minumum dimensions (`xmin`, `ymin`).
     fn min_dim(&self) -> (usize, usize);
@@ -82,6 +84,7 @@ trait DrmDevice: Send + Sync {
     fn driver_info(&self) -> (&'static str, &'static str, &'static str);
 }
 
+#[derive(Clone)]
 struct BufferObject {
     width: u32,
     height: u32,
@@ -251,6 +254,15 @@ struct Framebuffer {
     object_id: u32,
 }
 
+impl Framebuffer {
+    pub fn new(object_id: u32) -> Arc<Self> {
+        Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+            object_id,
+        })
+    }
+}
+
 impl ModeObject for Framebuffer {
     fn id(&self) -> u32 {
         self.object_id
@@ -360,6 +372,12 @@ impl Drm {
         self.install_object(encoder)
     }
 
+    /// Installs and initializes the framebuffer identifier.
+    pub fn install_framebuffer(&self, fb: Arc<Framebuffer>) {
+        self.framebuffers.lock().push(fb.clone());
+        self.install_object(fb)
+    }
+
     pub fn allocate_object_id(&self) -> u32 {
         self.id_alloc.alloc() as _
     }
@@ -369,7 +387,11 @@ impl Drm {
     }
 
     fn find_object(&self, id: u32) -> Option<Arc<dyn ModeObject>> {
-        self.mode_objs.lock().get(&id).map(|obj| obj.clone())
+        self.mode_objs.lock().get(&id).cloned()
+    }
+
+    fn find_handle(&self, handle: u32) -> Option<BufferObject> {
+        self.buffers.lock().get(&handle).cloned()
     }
 
     fn create_handle(&self, buffer: BufferObject) -> u32 {
@@ -553,6 +575,22 @@ impl INodeInterface for Drm {
                 buffer.mapping = self.mapping_alloc.alloc() << 32;
                 struc.handle = self.create_handle(buffer);
 
+                Ok(0)
+            }
+
+            DRM_IOCTL_MODE_ADDFB => {
+                let struc = VirtAddr::new(arg as u64)
+                    .read_mut::<DrmModeFbCmd>()
+                    .unwrap();
+
+                let handle = self.find_handle(struc.handle).unwrap();
+                self.device
+                    .framebuffer_create(&handle, struc.width, struc.height, struc.pitch);
+
+                let fb = Framebuffer::new(self.allocate_object_id());
+                self.install_framebuffer(fb.clone());
+
+                struc.fb_id = fb.id();
                 Ok(0)
             }
 
