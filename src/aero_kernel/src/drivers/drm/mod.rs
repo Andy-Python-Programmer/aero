@@ -35,7 +35,7 @@ use crate::fs::FileSystemError;
 use crate::utils;
 use crate::utils::Downcastable;
 
-use crate::mem::paging::VirtAddr;
+use crate::mem::paging::*;
 use crate::utils::sync::Mutex;
 
 use uapi::drm::*;
@@ -50,19 +50,23 @@ trait ModeObject: Send + Sync + Downcastable {
     // Conversion methods:
 
     /// Converts this mode object into a connector.
-    ///
-    /// # Panics
-    /// * Called on a non-connector mode object.
-    fn as_connector(&self) -> Arc<Connector> {
-        utils::downcast::<dyn ModeObject, Connector>(&self.object()).unwrap()
+    fn as_connector(&self) -> Option<Arc<Connector>> {
+        utils::downcast::<dyn ModeObject, Connector>(&self.object())
     }
 
     /// Converts this mode object into an encoder.
-    ///
-    /// # Panics
-    /// * Called on a non-encoder mode object.
-    fn as_encoder(&self) -> Arc<Encoder> {
-        utils::downcast::<dyn ModeObject, Encoder>(&self.object()).unwrap()
+    fn as_encoder(&self) -> Option<Arc<Encoder>> {
+        utils::downcast::<dyn ModeObject, Encoder>(&self.object())
+    }
+
+    /// Converts this mode object into a CRTC.
+    fn as_crtc(&self) -> Option<Arc<Crtc>> {
+        utils::downcast::<dyn ModeObject, Crtc>(&self.object())
+    }
+
+    /// Converts this mode object into a framebuffer.
+    fn as_framebuffer(&self) -> Option<Arc<Framebuffer>> {
+        utils::downcast::<dyn ModeObject, Framebuffer>(&self.object())
     }
 }
 
@@ -70,8 +74,9 @@ trait DrmDevice: Send + Sync {
     /// Returns weather the DRM device supports creating dumb buffers.
     fn can_dumb_create(&self) -> bool;
 
-    fn dumb_create(&self, width: u32, height: u32, bpp: u32) -> BufferObject;
+    fn dumb_create(&self, width: u32, height: u32, bpp: u32) -> (BufferObject, u32);
     fn framebuffer_create(&self, buffer_object: &BufferObject, width: u32, height: u32, pitch: u32);
+    fn commit(&self, buffer_obj: &BufferObject);
 
     /// Returns tuple containing the minumum dimensions (`xmin`, `ymin`).
     fn min_dim(&self) -> (usize, usize);
@@ -84,21 +89,23 @@ trait DrmDevice: Send + Sync {
     fn driver_info(&self) -> (&'static str, &'static str, &'static str);
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct BufferObject {
     width: u32,
     height: u32,
     size: usize,
     mapping: usize,
+    memory: Vec<PhysFrame>,
 }
 
 impl BufferObject {
-    pub fn new(width: u32, height: u32, size: usize) -> Self {
+    pub fn new(width: u32, height: u32, size: usize, memory: Vec<PhysFrame>) -> Self {
         Self {
             width,
             height,
             size,
-            mapping: 0,
+            mapping: usize::MAX,
+            memory,
         }
     }
 }
@@ -248,17 +255,18 @@ impl ModeObject for Connector {
 
 /// Holds information in relation to the framebuffer; this includes the
 /// size and pixel format.
-#[derive(Default)]
 struct Framebuffer {
     sref: Weak<Self>,
     object_id: u32,
+    buffer_obj: BufferObject, // todo: this should be a reference not a clone.
 }
 
 impl Framebuffer {
-    pub fn new(object_id: u32) -> Arc<Self> {
+    pub fn new(object_id: u32, buffer_obj: BufferObject) -> Arc<Self> {
         Arc::new_cyclic(|sref| Self {
             sref: sref.clone(),
             object_id,
+            buffer_obj,
         })
     }
 }
@@ -491,12 +499,41 @@ impl INodeInterface for Drm {
                 Ok(0)
             }
 
+            DRM_IOCTL_GET_CRTC => {
+                let struc = VirtAddr::new(arg as u64).read_mut::<DrmModeCrtc>().unwrap();
+                let _object = self.find_object(struc.crtc_id).unwrap().as_crtc().unwrap();
+
+                log::warn!("drm::get_crtc: is a stub!");
+                Ok(0)
+            }
+
+            DRM_IOCTL_SET_CRTC => {
+                let struc = VirtAddr::new(arg as u64).read_mut::<DrmModeCrtc>().unwrap();
+                let _object = self.find_object(struc.crtc_id).unwrap().as_crtc().unwrap();
+
+                let object = self
+                    .find_object(struc.fb_id)
+                    .unwrap()
+                    .as_framebuffer()
+                    .unwrap();
+
+                self.device.commit(&object.buffer_obj);
+                log::warn!("drm::set_crtc: is a stub!");
+
+                Ok(0)
+            }
+
             DRM_IOCTL_GET_ENCODER => {
                 let struc = VirtAddr::new(arg as u64)
                     .read_mut::<DrmModeGetEncoder>()
                     .unwrap();
 
-                let object = self.find_object(struc.encoder_id).unwrap().as_encoder();
+                let object = self
+                    .find_object(struc.encoder_id)
+                    .unwrap()
+                    .as_encoder()
+                    .unwrap();
+
                 struc.crtc_id = object.current_crtc.id();
 
                 let mut crtc_mask = 0;
@@ -522,7 +559,11 @@ impl INodeInterface for Drm {
                     .read_mut::<DrmModeGetConnector>()
                     .unwrap();
 
-                let object = self.find_object(struc.connector_id).unwrap().as_connector();
+                let object = self
+                    .find_object(struc.connector_id)
+                    .unwrap()
+                    .as_connector()
+                    .unwrap();
 
                 // Fill in the array contaning all of the possible encoders and its length.
                 let encoder_ids_ptr = struc.encoders_ptr as *mut u32;
@@ -566,13 +607,16 @@ impl INodeInterface for Drm {
                     .read_mut::<DrmModeCreateDumb>()
                     .unwrap();
 
-                let mut buffer = self
-                    .device
-                    .dumb_create(struc.width, struc.height, struc.bpp);
+                let (mut buffer, pitch) =
+                    self.device
+                        .dumb_create(struc.width, struc.height, struc.bpp);
 
                 assert!(buffer.size < (1usize << 32));
 
                 buffer.mapping = self.mapping_alloc.alloc() << 32;
+
+                struc.pitch = pitch;
+                struc.size = buffer.size as _;
                 struc.handle = self.create_handle(buffer);
 
                 Ok(0)
@@ -587,7 +631,7 @@ impl INodeInterface for Drm {
                 self.device
                     .framebuffer_create(&handle, struc.width, struc.height, struc.pitch);
 
-                let fb = Framebuffer::new(self.allocate_object_id());
+                let fb = Framebuffer::new(self.allocate_object_id(), handle.clone());
                 self.install_framebuffer(fb.clone());
 
                 struc.fb_id = fb.id();
@@ -616,6 +660,22 @@ impl INodeInterface for Drm {
                 Err(FileSystemError::NotSupported)
             }
         }
+    }
+
+    fn mmap(
+        &self,
+        offset: usize,
+        _size: usize,
+        _flags: aero_syscall::MMapFlags,
+    ) -> fs::Result<PhysFrame> {
+        let buffers = self.buffers.lock();
+        let (_, handle) = buffers
+            .iter()
+            .find(|(_, h)| offset <= h.mapping + h.size && offset >= h.mapping)
+            .unwrap();
+
+        let index = (offset - handle.mapping) / Size4KiB::SIZE as usize;
+        Ok(handle.memory[index])
     }
 }
 
@@ -1032,9 +1092,18 @@ fn make_dmt_modes(max_width: u16, max_height: u16) -> Vec<DrmModeInfo> {
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC)
     ];
 
-    modes
+    let mut result = modes
         .iter()
         .filter(|e| e.hdisplay <= max_width && e.vdisplay <= max_height)
         .cloned()
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+
+    // Sort the modes by display size:
+    result.sort_by(|e, f| {
+        (e.hdisplay * e.vdisplay)
+            .partial_cmp(&(f.hdisplay * f.vdisplay))
+            .unwrap() // unreachable
+    });
+
+    result
 }
