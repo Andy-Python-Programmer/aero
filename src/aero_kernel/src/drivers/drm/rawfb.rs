@@ -34,9 +34,40 @@ impl DrmDevice for RawFramebuffer {
         true
     }
 
-    fn dumb_create(&self, width: u32, height: u32, bpp: u32) -> BufferObject {
+    fn dumb_create(&self, width: u32, height: u32, bpp: u32) -> (BufferObject, u32) {
         let size = align_up((width * height * bpp / 8) as _, Size4KiB::SIZE);
-        BufferObject::new(width, height, size as usize)
+        let mut memory = alloc::vec![];
+
+        for _ in (0..size).step_by(Size4KiB::SIZE as usize) {
+            let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR.allocate_frame().unwrap();
+            memory.push(frame);
+        }
+
+        (
+            BufferObject::new(width, height, size as usize, memory),
+            width * bpp / 8,
+        )
+    }
+
+    fn commit(&self, buffer_obj: &BufferObject) {
+        crate::rendy::DEBUG_RENDY
+            .get()
+            .map(|e| {
+                let mut lock = e.lock_irq();
+                let fb = lock.get_framebuffer();
+
+                for (i, frame) in buffer_obj.memory.iter().enumerate() {
+                    unsafe {
+                        core::ptr::copy_nonoverlapping(
+                            frame.as_slice_mut::<u8>().as_mut_ptr(),
+                            (fb.as_mut_ptr() as *mut u8)
+                                .offset(i as isize * Size4KiB::SIZE as isize),
+                            4096,
+                        )
+                    }
+                }
+            })
+            .unwrap();
     }
 
     fn framebuffer_create(
