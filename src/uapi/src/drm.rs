@@ -109,6 +109,23 @@ pub struct DrmModeCardRes {
     pub max_height: u32,
 }
 
+#[repr(C)]
+pub struct DrmModeCrtc {
+    pub set_connectors_ptr: u64,
+    pub count_connectors: u32,
+
+    pub crtc_id: u32, // crtc ID
+    pub fb_id: u32,   // framebuffer ID
+
+    pub x: u32, // x position on the framebuffer
+    pub y: u32, // y position on the framebuffer
+
+    pub gamma_size: u32,
+    pub mode_valid: u32,
+
+    pub mode: DrmModeInfo,
+}
+
 #[repr(u32)]
 #[derive(Copy, Clone, Debug)]
 pub enum DrmModeConStatus {
@@ -236,6 +253,8 @@ pub const DRM_IOCTL_VERSION: usize = drm_iowr::<DrmVersion>(0x00);
 pub const DRM_IOCTL_GET_CAP: usize = drm_iowr::<DrmGetCap>(0x0c);
 
 pub const DRM_IOCTL_MODE_GETRESOURCES: usize = drm_iowr::<DrmModeCardRes>(0xa0);
+pub const DRM_IOCTL_GET_CRTC: usize = drm_iowr::<DrmModeCrtc>(0xa1);
+pub const DRM_IOCTL_SET_CRTC: usize = drm_iowr::<DrmModeCrtc>(0xa2);
 pub const DRM_IOCTL_GET_ENCODER: usize = drm_iowr::<DrmModeGetEncoder>(0xa6);
 pub const DRM_IOCTL_GET_CONNECTOR: usize = drm_iowr::<DrmModeGetConnector>(0xa7);
 pub const DRM_IOCTL_MODE_ADDFB: usize = drm_iowr::<DrmModeFbCmd>(0xae);
