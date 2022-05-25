@@ -342,6 +342,33 @@ tools:
       - args: ['ninja', 'install', '-j@PARALLELISM@']
         # quiet: true
 
+  - name: host-libtool
+    exports_aclocal: true
+    source:
+      name: libtool
+      subdir: 'bundled'
+      git: 'https://git.savannah.gnu.org/git/libtool.git'
+      tag: 'v2.4.6'
+      version: '2.4.6'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+      regenerate:
+        # libtool's ./bootstrap does a shallow clone with insufficient depth.
+        - args: ['git', 'submodule', 'update', '--init']
+        - args: ['./bootstrap']
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+
   - name: wayland-scanner
     from_source: wayland
     configure:
@@ -889,7 +916,7 @@ packages:
         - '-j@PARALLELISM@'
       - args: ['make', 'install', 'INSTALL_TOP=@THIS_COLLECT_DIR@/usr']
 
-  # -------------------- wayland (wayland-protocols, wayland-scanner) --------------------
+  # -------------------- wayland (wayland-protocols, wayland-scanner, wayland, libexpat, host-libtool, libffi) --------------------
   - name: wayland-protocols
     source:
       subdir: 'bundled'
@@ -914,6 +941,100 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
         quiet: true
+
+  - name: libexpat
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/libexpat/libexpat.git'
+      tag: 'R_2_4_1'
+      version: '2.4.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['./buildconf.sh']
+          workdir: '@THIS_SOURCE_DIR@/expat'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/expat/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        # We disable xmlwf to avoid building its documentation.
+        - '--without-xmlwf'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+        quiet: true
+
+  # - name: libffi
+  #   source:
+  #     subdir: 'bundled'
+  #     git: 'https://github.com/libffi/libffi.git'
+  #     tag: 'v3.4.2'
+  #     version: '3.4.2'
+  #     tools_required:
+  #       - host-autoconf-v2.69
+  #       - host-automake-v1.16
+  #     regenerate:
+  #       - args: ['./autogen.sh']
+  #       - args: ['cp',
+  #           '@BUILD_ROOT@/tools/host-automake-v1.11/share/automake-1.11/config.sub',
+  #           '@THIS_SOURCE_DIR@/']
+  #   tools_required:
+  #     - host-gcc
+  #   pkgs_required:
+  #     - mlibc
+  #   configure:
+  #     - args:
+  #       - '@THIS_SOURCE_DIR@/configure'
+  #       - '--host=x86_64-aero'
+  #       - '--prefix=/usr'
+  #       - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+  #   build:
+  #     - args: ['make', '-j@PARALLELISM@']
+  #     - args: ['make', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'
+  #       quiet: true
+
+  # - name: wayland
+  #   from_source: wayland
+  #   tools_required:
+  #     - host-gcc
+  #     - wayland-scanner
+  #     - host-libtool
+  #   pkgs_required:
+  #     - mlibc
+  #     - libexpat
+  #     - libffi
+  #   configure:
+  #     - args:
+  #       - 'meson'
+  #       - '--cross-file'
+  #       - '@SOURCE_ROOT@/userland/cross-file.ini'
+  #       - '--prefix=/usr'
+  #       - '--buildtype=debugoptimized'
+  #       - '-Ddtd_validation=false'
+  #       - '-Ddocumentation=false'
+  #       - '-Dscanner=false'
+  #       - '@THIS_SOURCE_DIR@'
+  #       environ:
+  #         PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+  #   build:
+  #     - args: ['ninja']
+  #     - args: ['ninja', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'
 
 tasks:
   - name: sysroot
