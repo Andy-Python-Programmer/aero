@@ -124,6 +124,12 @@ sources:
     regenerate:
       - args: ['autoreconf', '-f', '-i']
 
+  - name: wayland
+    subdir: 'bundled'
+    git: 'https://github.com/wayland-project/wayland.git'
+    tag: '1.20.0'
+    version: '1.20.0'
+
 tools:
   - name: host-autoconf-v2.69
     source:
@@ -335,6 +341,22 @@ tools:
     install:
       - args: ['ninja', 'install', '-j@PARALLELISM@']
         # quiet: true
+
+  - name: wayland-scanner
+    from_source: wayland
+    configure:
+      - args:
+        - 'meson'
+        - '--prefix=@PREFIX@'
+        - '-Ddtd_validation=false'
+        - '-Ddocumentation=false'
+        - '-Dscanner=true'
+        - '-Dlibraries=false'
+        - '@THIS_SOURCE_DIR@'
+    compile:
+      - args: ['ninja']
+    install:
+      - args: ['ninja', 'install']
 
 packages:
   - name: ripgrep
@@ -866,6 +888,32 @@ packages:
         - 'RANLIB=x86_64-aero-ranlib'
         - '-j@PARALLELISM@'
       - args: ['make', 'install', 'INSTALL_TOP=@THIS_COLLECT_DIR@/usr']
+
+  # -------------------- wayland (wayland-protocols, wayland-scanner) --------------------
+  - name: wayland-protocols
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/wayland-project/wayland-protocols.git'
+      tag: '1.24'
+      version: '1.24'
+    tools_required:
+      - host-gcc
+      - wayland-scanner
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--buildtype=release'
+        - '-Dtests=false'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+        quiet: true
 
 tasks:
   - name: sysroot
