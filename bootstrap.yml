@@ -124,6 +124,20 @@ sources:
     regenerate:
       - args: ['autoreconf', '-f', '-i']
 
+  - name: 'pkg-config'
+    subdir: 'bundled'
+    git: 'https://gitlab.freedesktop.org/pkg-config/pkg-config.git'
+    tag: 'pkg-config-0.29.2'
+    version: '0.29.2'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+    regenerate:
+      - args: ['./autogen.sh']
+        environ:
+          'NOCONFIGURE': 'yes'
+
   - name: wayland
     subdir: 'bundled'
     git: 'https://github.com/wayland-project/wayland.git'
@@ -131,6 +145,21 @@ sources:
     version: '1.20.0'
 
 tools:
+  # We could run an external pkg-config; however, we need the aclocal files.
+  # The easiest way to ensure that they are available is to just install pkg-config.
+  - name: host-pkg-config
+    exports_aclocal: true
+    from_source: pkg-config
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+        - '--with-internal-glib'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+
   - name: host-autoconf-v2.69
     source:
       name: autoconf-v2.69
@@ -371,9 +400,14 @@ tools:
 
   - name: wayland-scanner
     from_source: wayland
+    tools_required:
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
     configure:
       - args:
         - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
         - '--prefix=@PREFIX@'
         - '-Ddtd_validation=false'
         - '-Ddocumentation=false'
@@ -916,7 +950,7 @@ packages:
         - '-j@PARALLELISM@'
       - args: ['make', 'install', 'INSTALL_TOP=@THIS_COLLECT_DIR@/usr']
 
-  # -------------------- wayland (wayland-protocols, wayland-scanner, wayland, libexpat, host-libtool, libffi) --------------------
+  # -------------------- wayland --------------------
   - name: wayland-protocols
     source:
       subdir: 'bundled'
@@ -1003,39 +1037,111 @@ packages:
         - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
     build:
       - args: ['make', '-j@PARALLELISM@']
-      - args: ['make', 'install']
+      - args: ['make', 'install-strip']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
-        quiet: true
 
-  # - name: wayland
-  #   from_source: wayland
+  - name: wayland
+    from_source: wayland
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - wayland-scanner
+      - host-libtool
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+    pkgs_required:
+      - mlibc
+      - libexpat
+      - libffi
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--buildtype=debugoptimized'
+        - '-Ddtd_validation=false'
+        - '-Ddocumentation=false'
+        - '-Dscanner=false'
+        - '@THIS_SOURCE_DIR@'
+        environ:
+          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # - name: weston
+  #   labels: [aarch64]
+  #   architecture: '@OPTION:arch@'
+  #   source:
+  #     subdir: 'ports'
+  #     git: 'https://github.com/wayland-project/weston.git'
+  #     tag: '10.0.0'
+  #     version: '10.0.0'
   #   tools_required:
-  #     - host-gcc
-  #     - wayland-scanner
+  #     - host-autoconf-v2.69
+  #     - host-automake-v1.15
   #     - host-libtool
+  #     - host-pkg-config
+  #     - system-gcc
+  #     - wayland-scanner
+  #     - virtual: pkgconfig-for-target
+  #       triple: "@OPTION:arch-triple@"
+  #     - virtual: pkgconfig-for-host
+  #       program_name: host-pkg-config
   #   pkgs_required:
   #     - mlibc
-  #     - libexpat
-  #     - libffi
+  #     - cairo
+  #     - libinput
+  #     - libxkbcommon
+  #     - mesa
+  #     - wayland
+  #     - wayland-protocols
+  #     - dejavu
+  #     - libxcursor
+  #     - xorg-server
+  #     - pango
+  #     - glib
+  #     - libjpeg-turbo
   #   configure:
   #     - args:
   #       - 'meson'
+  #       - '--native-file'
+  #       - '@SOURCE_ROOT@/scripts/meson.native-file'
   #       - '--cross-file'
-  #       - '@SOURCE_ROOT@/userland/cross-file.ini'
+  #       - '@SOURCE_ROOT@/scripts/meson-@OPTION:arch-triple@.cross-file'
   #       - '--prefix=/usr'
+  #       - '--libdir=lib'
   #       - '--buildtype=debugoptimized'
-  #       - '-Ddtd_validation=false'
-  #       - '-Ddocumentation=false'
-  #       - '-Dscanner=false'
+  #       - '-Dbackend-x11=false'
+  #       - '-Dsimple-clients=damage,im,egl,shm,touch'
+  #       - '-Dimage-jpeg=true'
+  #       - '-Dimage-webp=false'
+  #       - '-Dlauncher-logind=false'
+  #       - '-Dbackend-drm-screencast-vaapi=false'
+  #       - '-Dbackend-rdp=false'
+  #       - '-Dcolor-management-colord=false'
+  #       - '-Dcolor-management-lcms=false'
+  #       - '-Dsystemd=false'
+  #       - '-Dremoting=false'
+  #       - '-Dpipewire=false'
   #       - '@THIS_SOURCE_DIR@'
   #       environ:
   #         PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+  #         PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
   #   build:
   #     - args: ['ninja']
   #     - args: ['ninja', 'install']
   #       environ:
   #         DESTDIR: '@THIS_COLLECT_DIR@'
+  #       quiet: true
 
 tasks:
   - name: sysroot
