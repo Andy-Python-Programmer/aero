@@ -1,0 +1,71 @@
+From 845a4f951b9165576f6b930385bfef82b61394fc Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Thu, 26 May 2022 19:09:39 +1000
+Subject: [PATCH] wayland: aero specific changes
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ .gitignore           | 2 ++
+ src/wayland-os.c     | 1 +
+ src/wayland-server.c | 2 ++
+ tests/test-runner.c  | 1 +
+ 4 files changed, 6 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+index 4fefe5d..7013a49 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -6,3 +6,5 @@
+ *~
+ cscope.out
+ ctags
++
++.vscode
+\ No newline at end of file
+diff --git a/src/wayland-os.c b/src/wayland-os.c
+index 27c6035..43f7b00 100644
+--- a/src/wayland-os.c
++++ b/src/wayland-os.c
+@@ -27,6 +27,7 @@
+ 
+ #include "../config.h"
+ 
++#include <stddef.h>
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <unistd.h>
+diff --git a/src/wayland-server.c b/src/wayland-server.c
+index 02f1365..d4cf79b 100644
+--- a/src/wayland-server.c
++++ b/src/wayland-server.c
+@@ -1490,6 +1490,7 @@ wl_socket_lock(struct wl_socket *socket)
+ {
+ 	struct stat socket_stat;
+ 
++	/* lockfiles are currently not supported on aero.
+ 	snprintf(socket->lock_addr, sizeof socket->lock_addr,
+ 		 "%s%s", socket->addr.sun_path, LOCK_SUFFIX);
+ 
+@@ -1518,6 +1519,7 @@ wl_socket_lock(struct wl_socket *socket)
+ 		   socket_stat.st_mode & S_IWGRP) {
+ 		unlink(socket->addr.sun_path);
+ 	}
++	*/
+ 
+ 	return 0;
+ err_fd:
+diff --git a/tests/test-runner.c b/tests/test-runner.c
+index c0247b5..47280d1 100644
+--- a/tests/test-runner.c
++++ b/tests/test-runner.c
+@@ -27,6 +27,7 @@
+ #define _GNU_SOURCE
+ 
+ #include <unistd.h>
++#include <signal.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <sys/types.h>
+-- 
+2.25.1
+
