@@ -23,12 +23,13 @@ use aero_syscall::{AeroSyscallError, OpenFlags, Stat};
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::DuplicateHint;
-use crate::fs::inode::DirEntry;
+use crate::fs::inode::{DirEntry, INodeInterface};
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
 use crate::userland::scheduler;
 
 use crate::fs::Path;
+use crate::utils::downcast;
 
 #[aero_proc::syscall]
 pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, AeroSyscallError> {
@@ -275,6 +276,8 @@ pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, AeroSyscallErro
 
 #[aero_proc::syscall]
 pub fn unlink(fd: usize, path: &Path, flags: usize) -> Result<usize, AeroSyscallError> {
+    log::debug!("{path:?}");
+
     // TODO: Make use of the open flags.
     let _flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
     let name = path.container();
@@ -402,6 +405,35 @@ pub fn epoll_create(flags: usize) -> Result<usize, AeroSyscallError> {
     Ok(current_task
         .file_table
         .open_file(entry, OpenFlags::O_RDWR)?)
+}
+
+/// Used to add, modify, or remove entries in the interest list of the
+/// epoll instance referred to by the file descriptor. It requests that
+/// the operation be performed for the target file descriptor.
+#[aero_proc::syscall]
+pub fn epoll_ctl(
+    epfd: usize,
+    mode: usize,
+    fd: usize,
+    event: &mut EPollEvent,
+) -> Result<usize, AeroSyscallError> {
+    let current_task = scheduler::get_scheduler().current_task();
+    let epfd = current_task
+        .file_table
+        .get_handle(epfd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    match mode {
+        EPOLL_CTL_ADD => {
+            let epoll = downcast::<dyn INodeInterface, EPoll>(&epfd.inode())
+                .ok_or(AeroSyscallError::EINVAL)?;
+
+            epoll.add_event(fd, event.clone())?;
+            Ok(0)
+        }
+
+        _ => unreachable!("epoll_ctl: unknown mode {mode}"),
+    }
 }
 
 #[aero_proc::syscall]

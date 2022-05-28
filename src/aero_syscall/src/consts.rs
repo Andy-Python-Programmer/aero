@@ -105,6 +105,27 @@ bitflags::bitflags! {
     }
 }
 
+pub const EPOLL_CTL_ADD: usize = 1;
+pub const EPOLL_CTL_DEL: usize = 2;
+pub const EPOLL_CTL_MOD: usize = 3;
+
+// structures and uninons for the epoll API:
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union EPollData {
+    pub ptr: *mut u8,
+    pub fd: i32,
+    pub u32: u32,
+    pub u64: u64,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct EPollEvent {
+    pub events: u32,
+    pub data: EPollData,
+}
+
 // constants for event fd:
 bitflags::bitflags! {
     // mlibc/options/linux/include/sys/eventfd.h

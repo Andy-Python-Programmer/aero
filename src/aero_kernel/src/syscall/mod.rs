@@ -206,6 +206,7 @@ pub fn generic_do_syscall(
 
         // epoll calls:
         SYS_EPOLL_CREATE => fs::epoll_create(b),
+        SYS_EPOLL_CTL => fs::epoll_ctl(b, c, d, e),
 
         SYS_SOCKET => net::socket(b, c, d),
         SYS_BIND => net::bind(b, c, d),
