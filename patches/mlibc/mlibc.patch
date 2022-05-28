@@ -1,4 +1,4 @@
-From c11445241f6016b07ed89c0be2617488cfb79265 Mon Sep 17 00:00:00 2001
+From 1f388ec59a355c18a21aa23226159d90fcb35912 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -8,10 +8,10 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  .gitignore                          |  3 ++
  options/rtdl/generic/linker.cpp     |  2 +-
  sysdeps/aero/generic/aero.cpp       | 12 ++++-
- sysdeps/aero/generic/filesystem.cpp | 68 +++++++++++++++++++++++++----
- sysdeps/aero/generic/signals.cpp    |  8 +++-
+ sysdeps/aero/generic/filesystem.cpp | 79 ++++++++++++++++++++++++++---
+ sysdeps/aero/generic/signals.cpp    |  8 ++-
  sysdeps/aero/include/aero/syscall.h | 12 +++++
- 6 files changed, 92 insertions(+), 13 deletions(-)
+ 6 files changed, 103 insertions(+), 13 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -68,7 +68,7 @@ index 7de909f5..4281beb9 100644
  #endif
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index 6a13f19c..8679b28a 100644
+index 6a13f19c..d34dfce3 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -1,3 +1,4 @@
@@ -150,11 +150,12 @@ index 6a13f19c..8679b28a 100644
      return 0;
  }
  
-@@ -267,4 +297,26 @@ int sys_pipe(int *fds, int flags) {
+@@ -267,4 +297,37 @@ int sys_pipe(int *fds, int flags) {
  
      return 0;
  }
 +
++// epoll API syscalls:
 +int sys_epoll_create(int flags, int *fd) { 
 +    auto result = syscall(SYS_EPOLL_CREATE, flags);
 +
@@ -163,6 +164,16 @@ index 6a13f19c..8679b28a 100644
 +    }
 +
 +    *fd = result;
++    return 0;
++}
++
++int sys_epoll_ctl(int epfd, int mode, int fd, struct epoll_event *ev) {
++    auto result = syscall(SYS_EPOLL_CTL, epfd, mode, fd, ev);
++
++    if (result < 0) {
++        return -result;
++    }
++
 +    return 0;
 +}
 +

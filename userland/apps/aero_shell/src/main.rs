@@ -203,7 +203,17 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
 
                     let argv = argv.as_slice();
 
-                    match sys_exec(cmd, argv, &["TERM=linux"]) {
+                    match sys_exec(
+                        cmd,
+                        argv,
+                        &[
+                            "TERM=linux",
+                            // The `XDG_RUNTIME_DIR` enviornment variable tells the tells any program you
+                            // run where to find a user-specific directory in which it can store small
+                            // temporary files.
+                            "XDG_RUNTIME_DIR=temp",
+                        ],
+                    ) {
                         Ok(_) => core::unreachable!(),
                         Err(AeroSyscallError::EISDIR) => error!("{}: is a directory", cmd),
                         Err(AeroSyscallError::ENOENT) => error!("{}: command not found", cmd),

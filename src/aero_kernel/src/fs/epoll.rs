@@ -17,16 +17,42 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::{prelude::EPollEvent, AeroSyscallError};
 use alloc::sync::Arc;
+use hashbrown::HashMap;
+
+use crate::utils::sync::Mutex;
 
 use super::inode::INodeInterface;
 
-pub struct EPoll {}
+pub struct EPoll {
+    events: Mutex<HashMap<usize, EPollEvent>>,
+}
 
 impl EPoll {
     pub fn new() -> Arc<Self> {
-        Arc::new(Self {})
+        Arc::new(Self {
+            events: Mutex::new(HashMap::new()),
+        })
+    }
+
+    /// Adds an event to the epoll instance.
+    ///
+    /// ## Errors
+    /// * `EEXIST`: The event already exists at `fd`.
+    pub fn add_event(&self, fd: usize, event: EPollEvent) -> Result<(), AeroSyscallError> {
+        let mut events = self.events.lock_irq();
+
+        if events.get(&fd).is_some() {
+            return Err(AeroSyscallError::EEXIST);
+        }
+
+        events.insert(fd, event);
+        Ok(())
     }
 }
+
+unsafe impl Send for EPoll {}
+unsafe impl Sync for EPoll {}
 
 impl INodeInterface for EPoll {}
