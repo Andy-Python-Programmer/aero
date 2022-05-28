@@ -36,6 +36,8 @@ use self::{cache::DirCacheItem, ramfs::RamFs};
 pub mod block;
 pub mod cache;
 pub mod devfs;
+pub mod epoll;
+pub mod eventfd;
 pub mod file_table;
 pub mod initramfs;
 pub mod inode;
