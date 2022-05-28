@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::OpenFlags;
+
 // syscall number constants:
 pub const SYS_READ: usize = 0;
 pub const SYS_WRITE: usize = 1;
@@ -70,8 +72,15 @@ pub const SYS_IPC_BECOME_ROOT: usize = 48;
 pub const SYS_STAT: usize = 49;
 pub const SYS_FSTAT: usize = 50;
 pub const SYS_READ_LINK: usize = 51;
+pub const SYS_EPOLL_CREATE: usize = 52;
+pub const SYS_EPOLL_PWAIT: usize = 53;
+pub const SYS_EPOLL_CTL: usize = 54;
+pub const SYS_EPOLL_WAIT: usize = 55;
+pub const SYS_EVENT_FD: usize = 56;
 
-// fcntl constants:
+// constants for fcntl()'s command argument:
+pub const F_DUPFD: usize = 1;
+pub const F_DUPFD_CLOEXEC: usize = 2;
 pub const F_GETFD: usize = 3;
 pub const F_SETFD: usize = 4;
 pub const F_GETFL: usize = 5;
@@ -86,6 +95,23 @@ pub const F_SETOWN: usize = 11;
 bitflags::bitflags! {
     pub struct FdFlags: usize {
         const CLOEXEC = 1;
+    }
+}
+
+// constants for the epoll API:
+bitflags::bitflags! {
+    pub struct EPollFlags: usize {
+        const CLOEXEC  = 1;
+    }
+}
+
+// constants for event fd:
+bitflags::bitflags! {
+    // mlibc/options/linux/include/sys/eventfd.h
+    pub struct EventFdFlags: usize {
+        const SEMAPHORE = 1;
+        const CLOEXEC   = OpenFlags::O_CLOEXEC.bits();
+        const NONBLOCK  = OpenFlags::O_NONBLOCK.bits();
     }
 }
 

@@ -33,6 +33,12 @@ use super::cache::{DirCacheItem, INodeCacheItem};
 use super::inode::FileType;
 use super::FileSystemError;
 
+pub enum DuplicateHint {
+    Exact(usize),
+    Any,
+    GreatorOrEqual(usize),
+}
+
 pub struct FileHandle {
     pub fd: usize,
     pub inode: DirCacheItem,
@@ -215,51 +221,67 @@ impl FileTable {
         }
     }
 
-    pub fn duplicate_at(
-        &self,
-        fd: usize,
-        new_fd: usize,
-        flags: OpenFlags,
-    ) -> Result<usize, aero_syscall::AeroSyscallError> {
-        let handle = self
-            .get_handle(fd)
-            .ok_or(aero_syscall::AeroSyscallError::EINVAL)?;
-
-        let mut files = self.0.write();
-
-        if files[new_fd].is_none() {
-            files[new_fd] = Some(handle.duplicate(flags)?);
-            Ok(0x00)
-        } else {
-            let handle = handle.duplicate(flags)?;
-            let old = files[new_fd]
-                .take()
-                .expect("duplicate_at: failed to take the value at new_fd");
-
-            old.inode.inode().close(old.flags);
-            files[new_fd] = Some(handle);
-
-            Ok(0x00)
-        }
-    }
-
+    /// Duplicates the provided file descriptor based on the provided duplicate
+    /// descriptor hint. Check out the documentation for [`DuplicateHint`] for more
+    /// information.
     pub fn duplicate(
         &self,
         fd: usize,
+        hint: DuplicateHint,
         flags: OpenFlags,
     ) -> Result<usize, aero_syscall::AeroSyscallError> {
         let handle = self
             .get_handle(fd)
             .ok_or(aero_syscall::AeroSyscallError::EINVAL)?;
 
-        let mut files = self.0.write();
+        let find_from = |files: &mut Vec<Option<Arc<FileHandle>>>, start: usize| {
+            let array = &mut files[start..];
 
-        if let Some((index, f)) = files.iter_mut().enumerate().find(|e| e.1.is_none()) {
-            *f = Some(handle.duplicate(flags)?);
-            Ok(index)
-        } else {
+            // Loop over the current file descriptor table and find the first
+            // avaliable file descriptor.
+            for (i, file) in array.iter_mut().enumerate() {
+                if file.is_none() {
+                    *file = Some(handle.duplicate(flags)?);
+                    return Ok(i);
+                }
+            }
+
+            // We ran out of file descriptors. Grow the table and add the
+            // file descriptor.
             files.push(Some(handle.duplicate(flags)?));
             Ok(files.len() - 1)
+        };
+
+        match hint {
+            DuplicateHint::Exact(new_fd) => {
+                let mut files = self.0.write();
+
+                // Ensure the file descriptor is available.
+                if files[new_fd].is_none() {
+                    files[new_fd] = Some(handle.duplicate(flags)?);
+                    Ok(0x00)
+                } else {
+                    // If the file descriptor is not available, then we close the
+                    // old one and set its handle to the new duplicate handle.
+                    let handle = handle.duplicate(flags)?;
+                    let old = files[new_fd].take().unwrap();
+
+                    old.inode.inode().close(old.flags);
+                    files[new_fd] = Some(handle);
+
+                    Ok(0x00)
+                }
+            }
+
+            DuplicateHint::Any => {
+                let mut files = self.0.write();
+                find_from(&mut files, 0)
+            }
+
+            DuplicateHint::GreatorOrEqual(hint_fd) => {
+                let mut files = self.0.write();
+                find_from(&mut files, hint_fd)
+            }
         }
     }
 
