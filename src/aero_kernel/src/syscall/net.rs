@@ -12,10 +12,7 @@ pub fn socket(
         (AF_UNIX, SOCK_STREAM, 0) => UnixSocket::new(),
         (_, _, _) => {
             log::warn!(
-                "unsupported socket type: domain={}, socket_type={}, protocol={}",
-                domain,
-                socket_type,
-                protocol
+                "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol}"
             );
 
             return Err(AeroSyscallError::EINVAL);

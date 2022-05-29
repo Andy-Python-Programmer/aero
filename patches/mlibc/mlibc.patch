@@ -1,4 +1,4 @@
-From 1f388ec59a355c18a21aa23226159d90fcb35912 Mon Sep 17 00:00:00 2001
+From ded2749ee28c99c1ec8a6fe4dbb6423a5287bf91 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -10,8 +10,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/generic/aero.cpp       | 12 ++++-
  sysdeps/aero/generic/filesystem.cpp | 79 ++++++++++++++++++++++++++---
  sysdeps/aero/generic/signals.cpp    |  8 ++-
+ sysdeps/aero/generic/sockets.cpp    | 18 +++++++
  sysdeps/aero/include/aero/syscall.h | 12 +++++
- 6 files changed, 103 insertions(+), 13 deletions(-)
+ 7 files changed, 121 insertions(+), 13 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -208,6 +209,29 @@ index 3527370c..a6f69fff 100644
  }
  } // namespace mlibc
 \ No newline at end of file
+diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
+index e69de29b..347556cd 100644
+--- a/sysdeps/aero/generic/sockets.cpp
++++ b/sysdeps/aero/generic/sockets.cpp
+@@ -0,0 +1,18 @@
++#include <mlibc/all-sysdeps.hpp>
++#include <mlibc/thread-entry.hpp>
++
++#include <aero/syscall.h>
++#include <stdint.h>
++
++namespace mlibc {
++int sys_socket(int family, int type, int protocol, int *fd) {
++    auto result = syscall(SYS_SOCKET, family, type, protocol);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    *fd = result;
++    return 0;
++}
++} // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 index 07b1b51b..ef797e40 100644
 --- a/sysdeps/aero/include/aero/syscall.h
