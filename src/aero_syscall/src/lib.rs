@@ -680,14 +680,31 @@ pub enum SocketAddr {
     Inet(SocketAddrInet),
 }
 
-pub const AF_UNIX: usize = 1;
-pub const AF_INET: usize = 2;
+// constants for the socket types:
+//
+// mlibc/sysdeps/aero/include/abi-bits/socket.h
+pub const SOCK_DGRAM: usize = 1;
+pub const SOCK_RAW: usize = 2;
+pub const SOCK_SEQPACKET: usize = 3;
+pub const SOCK_STREAM: usize = 4;
+pub const SOCK_NONBLOCK: usize = 0x10000;
+pub const SOCK_CLOEXEC: usize = 0x20000;
 
-pub const SOCK_STREAM: usize = 1;
-pub const SOCK_DGRAM: usize = 2;
+pub const PF_INET: usize = 1;
+pub const PF_INET6: usize = 2;
+pub const PF_UNIX: usize = 3;
+pub const PF_LOCAL: usize = 3;
+pub const PF_UNSPEC: usize = 4;
+pub const PF_NETLINK: usize = 5;
+pub const PF_BRIDGE: usize = 6;
 
-pub const IPPROTO_TCP: usize = 6;
-pub const IPPROTO_UDP: usize = 17;
+pub const AF_INET: usize = PF_INET;
+pub const AF_INET6: usize = PF_INET6;
+pub const AF_UNIX: usize = PF_UNIX;
+pub const AF_LOCAL: usize = PF_LOCAL;
+pub const AF_UNSPEC: usize = PF_UNSPEC;
+pub const AF_NETLINK: usize = PF_NETLINK;
+pub const AF_BRIDGE: usize = PF_BRIDGE;
 
 pub fn sys_socket(
     domain: usize,
