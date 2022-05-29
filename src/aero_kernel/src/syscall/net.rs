@@ -31,7 +31,17 @@ pub fn socket(
 // TODO: Figure out how to handle this.
 #[aero_proc::syscall]
 pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
-    let address = unsafe { &*(address as *const SocketAddr) };
+    let family = unsafe { *(address as *const i32) };
+    let address = match family as usize {
+        AF_UNIX => SocketAddr::Unix(unsafe { &*(address as *const SocketAddrUnix) }),
+
+        _ => {
+            log::warn!("unsupported address family: {}", family);
+            return Err(AeroSyscallError::EINVAL);
+        }
+    };
+
+    // let address = unsafe { &*(address as *const SocketAddr) };
     let current_task = scheduler::get_scheduler().current_task();
     let file = current_task.file_table.get_handle(fd);
 

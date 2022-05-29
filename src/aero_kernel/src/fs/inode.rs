@@ -82,6 +82,7 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     fn stat(&self) -> Result<aero_syscall::Stat> {
         Err(FileSystemError::NotSupported)
     }
+
     /// Creates a new dev inode with the provided `name` and the device `marker` in
     /// the filesystem.
     ///
@@ -145,7 +146,7 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     }
 
     // Socket operations
-    fn bind(&self, _address: &SocketAddr, _length: usize) -> Result<()> {
+    fn bind(&self, _address: SocketAddr, _length: usize) -> Result<()> {
         Err(FileSystemError::NotSupported)
     }
 }
