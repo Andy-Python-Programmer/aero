@@ -1,3 +1,10 @@
+// simple wayland test server
+//
+// ```sh
+// sysroot/tools/host-gcc/bin/x86_64-aero-gcc server.c -lwayland-server -o
+// ../base-files/server.exe
+// ```
+
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
