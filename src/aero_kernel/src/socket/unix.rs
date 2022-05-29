@@ -49,7 +49,7 @@ impl INodeInterface for UnixSocket {
         })
     }
 
-    fn bind(&self, address: &SocketAddr, _length: usize) -> Result<()> {
+    fn bind(&self, address: SocketAddr, _length: usize) -> Result<()> {
         if let SocketAddr::Unix(address) = address {
             let path_len = address
                 .path

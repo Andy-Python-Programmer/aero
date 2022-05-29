@@ -674,10 +674,9 @@ pub struct SocketAddrInet {
     pub padding: [u8; 8],
 }
 
-#[derive(Debug, Clone)]
-pub enum SocketAddr {
-    Unix(SocketAddrUnix),
-    Inet(SocketAddrInet),
+pub enum SocketAddr<'a> {
+    Unix(&'a SocketAddrUnix),
+    Inet(&'a SocketAddrInet),
 }
 
 // constants for the socket types:
@@ -712,32 +711,6 @@ pub fn sys_socket(
     protocol: usize,
 ) -> Result<usize, AeroSyscallError> {
     let value = syscall3(prelude::SYS_SOCKET, domain, socket_type, protocol);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_connect(
-    fd: usize,
-    address: &SocketAddr,
-    length: u32,
-) -> Result<usize, AeroSyscallError> {
-    let value = syscall3(
-        prelude::SYS_CONNECT,
-        fd,
-        address as *const SocketAddr as usize,
-        length as usize,
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_bind(fd: usize, address: &SocketAddr, length: u32) -> Result<usize, AeroSyscallError> {
-    let value = syscall3(
-        prelude::SYS_BIND,
-        fd,
-        address as *const SocketAddr as usize,
-        length as usize,
-    );
-
     isize_as_syscall_result(value as _)
 }
 
