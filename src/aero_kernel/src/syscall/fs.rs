@@ -276,8 +276,6 @@ pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, AeroSyscallErro
 
 #[aero_proc::syscall]
 pub fn unlink(fd: usize, path: &Path, flags: usize) -> Result<usize, AeroSyscallError> {
-    log::debug!("{path:?}");
-
     // TODO: Make use of the open flags.
     let _flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
     let name = path.container();

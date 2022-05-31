@@ -131,6 +131,7 @@ pub enum FileSystemError {
     IsPipe,
     Interrupted,
     TooSmall,
+    InvalidPath,
 }
 
 impl From<FileSystemError> for AeroSyscallError {
@@ -144,6 +145,7 @@ impl From<FileSystemError> for AeroSyscallError {
             FileSystemError::IsPipe => AeroSyscallError::ESPIPE,
             FileSystemError::Interrupted => AeroSyscallError::EINTR,
             FileSystemError::TooSmall => AeroSyscallError::E2BIG,
+            FileSystemError::InvalidPath => AeroSyscallError::EINVAL,
         }
     }
 }

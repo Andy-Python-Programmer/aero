@@ -661,14 +661,14 @@ pub fn sys_sethostname(name: &str) -> Result<usize, AeroSyscallError> {
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct SocketAddrUnix {
-    pub family: i16,
+    pub family: u32,
     pub path: [u8; 108],
 }
 
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct SocketAddrInet {
-    pub family: i16,
+    pub family: u32,
     pub port: [u8; 2],
     pub address: [u8; 4],
     pub padding: [u8; 8],
