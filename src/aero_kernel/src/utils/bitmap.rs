@@ -124,7 +124,7 @@ mod test {
     use super::*;
     use alloc::alloc::Global;
 
-    #[aero_proc::test]
+    #[test]
     fn bitmap_first_set_idx() {
         let mut bitmap = Bitmap::new_in(Global, 4096);
 
@@ -132,7 +132,7 @@ mod test {
         assert_eq!(bitmap.find_first_set(), Some(69));
     }
 
-    #[aero_proc::test]
+    #[test]
     fn bitmap_set_and_test() {
         let mut bitmap = Bitmap::new_in(Global, 4096);
 

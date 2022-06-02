@@ -620,7 +620,7 @@ mod tests {
 
     use crate::mem::AddressSpace;
 
-    #[aero_proc::test]
+    #[test]
     fn vm_frame_ref_count() {
         let mut address_space = AddressSpace::this();
         let mut offset_table = address_space.offset_page_table();

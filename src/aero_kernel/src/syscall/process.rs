@@ -37,7 +37,7 @@ fn hostname() -> &'static Mutex<String> {
     HOSTNAME.call_once(|| Mutex::new(String::from("aero")))
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn exit(status: usize) -> ! {
     #[cfg(all(test, feature = "ci"))]
     crate::emu::exit_qemu(crate::emu::ExitStatus::Success);
@@ -54,7 +54,7 @@ pub fn exit(status: usize) -> ! {
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn uname(buffer: &mut Utsname) -> Result<usize, AeroSyscallError> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
         let init_bytes = init.as_bytes();
@@ -80,7 +80,7 @@ pub fn uname(buffer: &mut Utsname) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn fork() -> Result<usize, AeroSyscallError> {
     let scheduler = scheduler::get_scheduler();
     let forked = scheduler.current_task().fork();
@@ -89,7 +89,7 @@ pub fn fork() -> Result<usize, AeroSyscallError> {
     Ok(forked.pid().as_usize())
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
     let scheduler = scheduler::get_scheduler();
     let cloned = scheduler.current_task().clone_process(entry, stack);
@@ -98,7 +98,7 @@ pub fn clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
     Ok(cloned.pid().as_usize())
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn exec(
     path: &Path,
     args: usize,
@@ -133,21 +133,21 @@ pub fn exec(
     unreachable!()
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn log(msg: &str) -> Result<usize, AeroSyscallError> {
     log::debug!("{}", msg);
 
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn waitpid(pid: usize, status: &mut u32, _flags: usize) -> Result<usize, AeroSyscallError> {
     let current_task = scheduler::get_scheduler().current_task();
 
     Ok(current_task.waitpid(pid as isize, status)?)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn mmap(
     address: usize,
     size: usize,
@@ -184,7 +184,7 @@ pub fn mmap(
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
     let address = VirtAddr::new(address as u64);
 
@@ -199,17 +199,17 @@ pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn getpid() -> Result<usize, AeroSyscallError> {
     Ok(scheduler::get_scheduler().current_task().pid().as_usize())
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn gettid() -> Result<usize, AeroSyscallError> {
     Ok(scheduler::get_scheduler().current_task().tid().as_usize())
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn gethostname(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     let hostname = hostname().lock();
     let bytes = hostname.as_bytes();
@@ -223,14 +223,14 @@ pub fn gethostname(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn info(struc: &mut SysInfo) -> Result<usize, AeroSyscallError> {
     struc.uptime = crate::time::get_uptime_ticks() as i64;
 
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn sethostname(name: &[u8]) -> Result<usize, AeroSyscallError> {
     match core::str::from_utf8(name) {
         Ok(name) => {
@@ -242,7 +242,7 @@ pub fn sethostname(name: &[u8]) -> Result<usize, AeroSyscallError> {
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn sigprocmask(
     how: usize,
     set: *const u64,
@@ -270,7 +270,7 @@ pub fn sigprocmask(
     Ok(0)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn sigaction(
     sig: usize,
     sigact: *mut SigAction,
@@ -304,7 +304,7 @@ pub fn sigaction(
     Ok(0)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn shutdown() -> ! {
     fs::cache::dcache().log();
 

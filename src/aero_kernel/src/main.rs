@@ -49,6 +49,9 @@
 #![no_main]
 #![reexport_test_harness_main = "test_main"]
 
+#[macro_use]
+extern crate aero_proc;
+
 mod prelude {
     pub mod rust_2021 {
         // Since asm is used almost all over the kernel, its a better idea

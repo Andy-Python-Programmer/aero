@@ -25,7 +25,7 @@ use crate::utils::CeilDiv;
 const CLOCK_TYPE_REALTIME: usize = 0;
 const CLOCK_TYPE_MONOTONIC: usize = 1;
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
     let duration = (timespec.tv_nsec as usize).ceil_div(1000000000) + timespec.tv_sec as usize;
 
@@ -34,7 +34,7 @@ pub fn sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, AeroSyscallError> {
     match clock {
         CLOCK_TYPE_REALTIME => {

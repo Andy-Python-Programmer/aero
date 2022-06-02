@@ -20,7 +20,7 @@ fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddr<'sys>, Ae
 }
 
 /// Connects the socket to the specified address.
-#[aero_proc::syscall]
+#[syscall]
 pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
     let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
     let file = scheduler::get_scheduler()
@@ -35,7 +35,7 @@ pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, AeroSy
 
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
 /// connection requests).
-#[aero_proc::syscall]
+#[syscall]
 pub fn listen(fd: usize, backlog: usize) -> Result<usize, AeroSyscallError> {
     let file = scheduler::get_scheduler()
         .current_task()
@@ -47,7 +47,7 @@ pub fn listen(fd: usize, backlog: usize) -> Result<usize, AeroSyscallError> {
     Ok(0)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn socket(
     domain: usize,
     socket_type: usize,
@@ -73,7 +73,7 @@ pub fn socket(
     Ok(fd)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
     let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
 

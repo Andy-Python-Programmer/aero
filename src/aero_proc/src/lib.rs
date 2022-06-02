@@ -28,7 +28,7 @@ use proc_macro::TokenStream;
 ///
 /// ## Example
 /// ```rust,no_run
-/// #[aero_proc::test]
+/// #[test]
 /// fn some_test() {
 ///     assert_eq!(2 + 2, 4);
 /// }

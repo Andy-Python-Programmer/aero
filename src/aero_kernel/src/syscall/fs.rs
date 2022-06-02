@@ -31,7 +31,7 @@ use crate::userland::scheduler;
 use crate::fs::Path;
 use crate::utils::downcast;
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, AeroSyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
@@ -49,7 +49,7 @@ pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, AeroSyscallError> {
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
@@ -67,7 +67,7 @@ pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, AeroSyscallError> {
     let mut flags = OpenFlags::from_bits(mode).ok_or(AeroSyscallError::EINVAL)?;
 
@@ -97,7 +97,7 @@ pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, AeroSyscallEr
         .open_file(inode, flags)?)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn dup(fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
     let task = scheduler::get_scheduler().current_task();
     let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
@@ -105,7 +105,7 @@ pub fn dup(fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
     task.file_table.duplicate(fd, DuplicateHint::Any, flags)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn dup2(fd: usize, new_fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
     let task = scheduler::get_scheduler().current_task();
     let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
@@ -114,7 +114,7 @@ pub fn dup2(fd: usize, new_fd: usize, flags: usize) -> Result<usize, AeroSyscall
         .duplicate(fd, DuplicateHint::Exact(new_fd), flags)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn getdents(fd: usize, buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
@@ -125,7 +125,7 @@ pub fn getdents(fd: usize, buffer: &mut [u8]) -> Result<usize, AeroSyscallError>
     Ok(handle.get_dents(buffer)?)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
     let res = scheduler::get_scheduler()
         .current_task()
@@ -140,7 +140,7 @@ pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn chdir(path: &str) -> Result<usize, AeroSyscallError> {
     let inode = fs::lookup_path(Path::new(path))?;
 
@@ -153,7 +153,7 @@ pub fn chdir(path: &str) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, AeroSyscallError> {
     // NOTE: If the pathname given in pathname is relative, then it is interpreted
     // relative to the directory referred to by the file descriptor (rather than relative
@@ -194,7 +194,7 @@ pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn rmdir(path: &str) -> Result<usize, AeroSyscallError> {
     let path = Path::new(path);
 
@@ -212,7 +212,7 @@ pub fn rmdir(path: &str) -> Result<usize, AeroSyscallError> {
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn getcwd(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     let cwd = scheduler::get_scheduler().current_task().get_cwd();
 
@@ -220,7 +220,7 @@ pub fn getcwd(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     Ok(cwd.len())
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
@@ -231,7 +231,7 @@ pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSy
     Ok(handle.inode().ioctl(command, argument)?)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, AeroSyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
@@ -242,7 +242,7 @@ pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, AeroSyscal
     Ok(handle.seek(offset as isize, aero_syscall::SeekWhence::from(whence))?)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, AeroSyscallError> {
     let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
     let pipe = Pipe::new();
@@ -274,7 +274,7 @@ pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, AeroSyscallErro
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn unlink(fd: usize, path: &Path, flags: usize) -> Result<usize, AeroSyscallError> {
     // TODO: Make use of the open flags.
     let _flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
@@ -298,7 +298,7 @@ pub fn unlink(fd: usize, path: &Path, flags: usize) -> Result<usize, AeroSyscall
     Ok(0x00)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn access(
     fd: usize,
     path: &Path,
@@ -314,7 +314,7 @@ pub fn access(
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
@@ -361,7 +361,7 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscall
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn fstat(fd: usize, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
     let file = scheduler::get_scheduler()
         .current_task()
@@ -374,7 +374,7 @@ pub fn fstat(fd: usize, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
     Ok(0)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn stat(path: &Path, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
     let file = fs::lookup_path(path)?;
 
@@ -383,7 +383,7 @@ pub fn stat(path: &Path, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
     Ok(0)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn read_link(path: &Path, _buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     log::warn!("read_link: is a stub! (path={path:?})");
 
@@ -391,16 +391,15 @@ pub fn read_link(path: &Path, _buffer: &mut [u8]) -> Result<usize, AeroSyscallEr
 }
 
 /// Returns a file descriptor referring to the new epoll instance.
-#[aero_proc::syscall]
+#[syscall]
 pub fn epoll_create(flags: usize) -> Result<usize, AeroSyscallError> {
     let _flags = EPollFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
 
     let epoll_file = EPoll::new();
     let entry = DirEntry::from_inode(epoll_file);
 
-    let current_task = scheduler::get_scheduler().current_task();
-
-    Ok(current_task
+    Ok(scheduler::get_scheduler()
+        .current_task()
         .file_table
         .open_file(entry, OpenFlags::O_RDWR)?)
 }
@@ -408,7 +407,7 @@ pub fn epoll_create(flags: usize) -> Result<usize, AeroSyscallError> {
 /// Used to add, modify, or remove entries in the interest list of the
 /// epoll instance referred to by the file descriptor. It requests that
 /// the operation be performed for the target file descriptor.
-#[aero_proc::syscall]
+#[syscall]
 pub fn epoll_ctl(
     epfd: usize,
     mode: usize,
@@ -434,7 +433,7 @@ pub fn epoll_ctl(
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn event_fd(_initval: usize, flags: usize) -> Result<usize, AeroSyscallError> {
     let flags = EventFdFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
     assert!(!flags.contains(EventFdFlags::SEMAPHORE)); // todo: implement event fd semaphore support.

@@ -61,7 +61,7 @@ fn handle_recieve(
     Ok(msg.data.len())
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn send(pid: usize, payload: &[u8]) -> Result<usize, AeroSyscallError> {
     let target = get_scheduler()
         .find_task(TaskId::new(pid))
@@ -82,7 +82,7 @@ pub fn send(pid: usize, payload: &[u8]) -> Result<usize, AeroSyscallError> {
     Ok(0)
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn recv(
     pid_ptr: &mut usize,
     output: &mut [u8],
@@ -123,7 +123,7 @@ pub fn recv(
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn discover_root() -> Result<usize, AeroSyscallError> {
     match IPC_ROOT_NODE.get() {
         Some(pid) => Ok(*pid),
@@ -131,7 +131,7 @@ pub fn discover_root() -> Result<usize, AeroSyscallError> {
     }
 }
 
-#[aero_proc::syscall]
+#[syscall]
 pub fn become_root() -> Result<usize, AeroSyscallError> {
     if IPC_ROOT_NODE.is_completed() {
         Err(AeroSyscallError::EINVAL)
