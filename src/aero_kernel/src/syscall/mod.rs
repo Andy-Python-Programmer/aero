@@ -210,6 +210,7 @@ pub fn generic_do_syscall(
 
         SYS_SOCKET => net::socket(b, c, d),
         SYS_BIND => net::bind(b, c, d),
+        SYS_CONNECT => net::connect(b, c, d),
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),

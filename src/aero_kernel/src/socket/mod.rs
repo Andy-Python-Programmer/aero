@@ -17,4 +17,25 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::*;
+
+use crate::mem::paging::VirtAddr;
+
+#[derive(Debug)]
+pub enum SocketAddr<'a> {
+    Unix(&'a SocketAddrUnix),
+    INet(&'a SocketAddrInet),
+}
+
+impl<'a> SocketAddr<'a> {
+    pub fn from_family(address: VirtAddr, family: u32) -> Option<Self> {
+        match family {
+            AF_UNIX => Some(SocketAddr::Unix(address.read_mut::<SocketAddrUnix>()?)),
+            AF_INET => Some(SocketAddr::INet(address.read_mut::<SocketAddrInet>()?)),
+
+            _ => None,
+        }
+    }
+}
+
 pub mod unix;

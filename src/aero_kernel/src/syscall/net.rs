@@ -1,6 +1,37 @@
 use aero_syscall::*;
 
-use crate::{fs::inode::DirEntry, socket::unix::*, userland::scheduler};
+use crate::fs::inode::DirEntry;
+use crate::mem::paging::VirtAddr;
+
+use crate::socket::unix::*;
+use crate::socket::SocketAddr;
+
+use crate::userland::scheduler;
+
+/// Creates a [`SocketAddr`] from the provided userland socket structure address. This
+/// is done by looking at the family field present in every socket address structure.
+fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddr<'sys>, AeroSyscallError> {
+    let family = address
+        .read_mut::<u32>()
+        .ok_or(AeroSyscallError::EINVAL)?
+        .clone();
+
+    Ok(SocketAddr::from_family(address, family).ok_or(AeroSyscallError::EINVAL)?)
+}
+
+/// Connects the socket referred to by the file descriptor, to the specified address.
+#[aero_proc::syscall]
+pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
+    let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
+    let file = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EINVAL)?;
+
+    file.inode().connect(address, length)?;
+    Ok(0)
+}
 
 #[aero_proc::syscall]
 pub fn socket(
@@ -8,7 +39,7 @@ pub fn socket(
     socket_type: usize,
     protocol: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let socket = match (domain, socket_type, protocol) {
+    let socket = match (domain as u32, socket_type, protocol) {
         (AF_UNIX, SOCK_STREAM, 0) => UnixSocket::new(),
         (_, _, _) => {
             log::warn!(
@@ -28,20 +59,10 @@ pub fn socket(
     Ok(fd)
 }
 
-// TODO: Figure out how to handle this.
 #[aero_proc::syscall]
 pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
-    let family = unsafe { *(address as *const i32) };
-    let address = match family as usize {
-        AF_UNIX => SocketAddr::Unix(unsafe { &*(address as *const SocketAddrUnix) }),
+    let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
 
-        _ => {
-            log::warn!("unsupported address family: {}", family);
-            return Err(AeroSyscallError::EINVAL);
-        }
-    };
-
-    // let address = unsafe { &*(address as *const SocketAddr) };
     let current_task = scheduler::get_scheduler().current_task();
     let file = current_task.file_table.get_handle(fd);
 

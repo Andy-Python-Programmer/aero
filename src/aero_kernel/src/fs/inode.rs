@@ -19,8 +19,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use aero_syscall::MMapFlags;
-use aero_syscall::{OpenFlags, SocketAddr};
+use aero_syscall::{MMapFlags, OpenFlags};
 
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -30,6 +29,7 @@ use alloc::vec::Vec;
 use spin::Once;
 
 use crate::mem::paging::PhysFrame;
+use crate::socket::SocketAddr;
 use crate::utils::sync::Mutex;
 use crate::utils::Downcastable;
 
@@ -147,7 +147,11 @@ pub trait INodeInterface: Send + Sync + Downcastable {
 
     // Socket operations
     fn bind(&self, _address: SocketAddr, _length: usize) -> Result<()> {
-        Err(FileSystemError::NotSupported)
+        Err(FileSystemError::NotSocket)
+    }
+
+    fn connect(&self, _address: SocketAddr, _length: usize) -> Result<()> {
+        Err(FileSystemError::NotSocket)
     }
 }
 

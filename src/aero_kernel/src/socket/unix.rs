@@ -17,7 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::SocketAddr;
 use alloc::{
     string::String,
     sync::{Arc, Weak},
@@ -28,6 +27,8 @@ use crate::fs::{
     inode::{DirEntry, FileType, INodeInterface, Metadata},
     FileSystemError, Path, Result,
 };
+
+use super::SocketAddr;
 
 pub struct UnixSocket {
     weak: Weak<UnixSocket>,
@@ -85,5 +86,9 @@ impl INodeInterface for UnixSocket {
         } else {
             Err(FileSystemError::NotSupported)
         }
+    }
+
+    fn connect(&self, _address: SocketAddr, _length: usize) -> Result<()> {
+        todo!("{_address:?}")
     }
 }

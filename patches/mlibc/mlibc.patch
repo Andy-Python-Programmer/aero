@@ -1,4 +1,4 @@
-From fb279173f0a97399a112bd8a5c2d3ec96f450374 Mon Sep 17 00:00:00 2001
+From f76727cfa3db5f15b030a3cdc4535ea1eea31ac4 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -10,9 +10,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/generic/aero.cpp       | 12 ++++-
  sysdeps/aero/generic/filesystem.cpp | 79 ++++++++++++++++++++++++++---
  sysdeps/aero/generic/signals.cpp    |  8 ++-
- sysdeps/aero/generic/sockets.cpp    | 28 ++++++++++
+ sysdeps/aero/generic/sockets.cpp    | 38 ++++++++++++++
  sysdeps/aero/include/aero/syscall.h | 12 +++++
- 7 files changed, 131 insertions(+), 13 deletions(-)
+ 7 files changed, 141 insertions(+), 13 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -210,10 +210,10 @@ index 3527370c..a6f69fff 100644
  } // namespace mlibc
 \ No newline at end of file
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index e69de29b..e4040629 100644
+index e69de29b..c1375859 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,38 @@
 +#include <mlibc/all-sysdeps.hpp>
 +#include <mlibc/thread-entry.hpp>
 +
@@ -234,6 +234,16 @@ index e69de29b..e4040629 100644
 +
 +int sys_bind(int fd, const struct sockaddr *addr_ptr, socklen_t addr_length) {
 +    auto result = syscall(SYS_BIND, fd, addr_ptr, (sc_word_t)addr_length);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    return 0;
++}
++
++int sys_connect(int fd, const struct sockaddr *addr_ptr, socklen_t addr_length) {
++    auto result = syscall(SYS_CONNECT, fd, addr_ptr, (sc_word_t)addr_length);
 +
 +    if (result < 0) {
 +        return -result;

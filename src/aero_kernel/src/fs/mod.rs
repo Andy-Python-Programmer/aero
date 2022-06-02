@@ -132,20 +132,22 @@ pub enum FileSystemError {
     Interrupted,
     TooSmall,
     InvalidPath,
+    NotSocket,
 }
 
 impl From<FileSystemError> for AeroSyscallError {
     fn from(error: FileSystemError) -> Self {
         match error {
-            FileSystemError::NotSupported => AeroSyscallError::EACCES,
-            FileSystemError::EntryExists => AeroSyscallError::EEXIST,
-            FileSystemError::EntryNotFound => AeroSyscallError::ENOENT,
-            FileSystemError::Busy => AeroSyscallError::EBUSY,
-            FileSystemError::NotDirectory => AeroSyscallError::ENOTDIR,
-            FileSystemError::IsPipe => AeroSyscallError::ESPIPE,
-            FileSystemError::Interrupted => AeroSyscallError::EINTR,
-            FileSystemError::TooSmall => AeroSyscallError::E2BIG,
-            FileSystemError::InvalidPath => AeroSyscallError::EINVAL,
+            FileSystemError::NotSupported => Self::EACCES,
+            FileSystemError::EntryExists => Self::EEXIST,
+            FileSystemError::EntryNotFound => Self::ENOENT,
+            FileSystemError::Busy => Self::EBUSY,
+            FileSystemError::NotDirectory => Self::ENOTDIR,
+            FileSystemError::IsPipe => Self::ESPIPE,
+            FileSystemError::Interrupted => Self::EINTR,
+            FileSystemError::TooSmall => Self::E2BIG,
+            FileSystemError::InvalidPath => Self::EINVAL,
+            FileSystemError::NotSocket => Self::ENOTSOCK,
         }
     }
 }

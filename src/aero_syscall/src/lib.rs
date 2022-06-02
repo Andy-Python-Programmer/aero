@@ -674,11 +674,6 @@ pub struct SocketAddrInet {
     pub padding: [u8; 8],
 }
 
-pub enum SocketAddr<'a> {
-    Unix(&'a SocketAddrUnix),
-    Inet(&'a SocketAddrInet),
-}
-
 // constants for the socket types:
 //
 // mlibc/sysdeps/aero/include/abi-bits/socket.h
@@ -689,21 +684,21 @@ pub const SOCK_STREAM: usize = 4;
 pub const SOCK_NONBLOCK: usize = 0x10000;
 pub const SOCK_CLOEXEC: usize = 0x20000;
 
-pub const PF_INET: usize = 1;
-pub const PF_INET6: usize = 2;
-pub const PF_UNIX: usize = 3;
-pub const PF_LOCAL: usize = 3;
-pub const PF_UNSPEC: usize = 4;
-pub const PF_NETLINK: usize = 5;
-pub const PF_BRIDGE: usize = 6;
+pub const PF_INET: u32 = 1;
+pub const PF_INET6: u32 = 2;
+pub const PF_UNIX: u32 = 3;
+pub const PF_LOCAL: u32 = 3;
+pub const PF_UNSPEC: u32 = 4;
+pub const PF_NETLINK: u32 = 5;
+pub const PF_BRIDGE: u32 = 6;
 
-pub const AF_INET: usize = PF_INET;
-pub const AF_INET6: usize = PF_INET6;
-pub const AF_UNIX: usize = PF_UNIX;
-pub const AF_LOCAL: usize = PF_LOCAL;
-pub const AF_UNSPEC: usize = PF_UNSPEC;
-pub const AF_NETLINK: usize = PF_NETLINK;
-pub const AF_BRIDGE: usize = PF_BRIDGE;
+pub const AF_INET: u32 = PF_INET;
+pub const AF_INET6: u32 = PF_INET6;
+pub const AF_UNIX: u32 = PF_UNIX;
+pub const AF_LOCAL: u32 = PF_LOCAL;
+pub const AF_UNSPEC: u32 = PF_UNSPEC;
+pub const AF_NETLINK: u32 = PF_NETLINK;
+pub const AF_BRIDGE: u32 = PF_BRIDGE;
 
 pub fn sys_socket(
     domain: usize,
@@ -716,21 +711,6 @@ pub fn sys_socket(
 
 pub fn sys_listen(fd: usize, backlog: usize) -> Result<usize, AeroSyscallError> {
     let value = syscall2(prelude::SYS_LISTEN, fd, backlog);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_accept(
-    fd: usize,
-    address: &mut SocketAddr,
-    length: &mut u32,
-) -> Result<usize, AeroSyscallError> {
-    let value = syscall3(
-        prelude::SYS_ACCEPT,
-        fd,
-        address as *const SocketAddr as usize,
-        length as *mut u32 as usize,
-    );
-
     isize_as_syscall_result(value as _)
 }
 
