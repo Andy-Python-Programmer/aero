@@ -89,6 +89,12 @@ impl INodeInterface for UnixSocket {
     }
 
     fn connect(&self, _address: SocketAddr, _length: usize) -> Result<()> {
-        todo!("{_address:?}")
+        log::error!("UnixSocket::connect() is not implemented");
+        Ok(())
+    }
+
+    fn listen(&self, _backlog: usize) -> Result<()> {
+        log::error!("UnixSocket::listen() not implemented");
+        Ok(())
     }
 }

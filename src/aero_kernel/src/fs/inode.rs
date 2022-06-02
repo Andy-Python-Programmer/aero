@@ -145,12 +145,16 @@ pub trait INodeInterface: Send + Sync + Downcastable {
         Err(FileSystemError::NotSupported)
     }
 
-    // Socket operations
+    // Socket operations:
     fn bind(&self, _address: SocketAddr, _length: usize) -> Result<()> {
         Err(FileSystemError::NotSocket)
     }
 
     fn connect(&self, _address: SocketAddr, _length: usize) -> Result<()> {
+        Err(FileSystemError::NotSocket)
+    }
+
+    fn listen(&self, _backlog: usize) -> Result<()> {
         Err(FileSystemError::NotSocket)
     }
 }

@@ -19,7 +19,7 @@ fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddr<'sys>, Ae
     Ok(SocketAddr::from_family(address, family).ok_or(AeroSyscallError::EINVAL)?)
 }
 
-/// Connects the socket referred to by the file descriptor, to the specified address.
+/// Connects the socket to the specified address.
 #[aero_proc::syscall]
 pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
     let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
@@ -30,6 +30,20 @@ pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, AeroSy
         .ok_or(AeroSyscallError::EINVAL)?;
 
     file.inode().connect(address, length)?;
+    Ok(0)
+}
+
+/// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
+/// connection requests).
+#[aero_proc::syscall]
+pub fn listen(fd: usize, backlog: usize) -> Result<usize, AeroSyscallError> {
+    let file = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(AeroSyscallError::EINVAL)?;
+
+    file.inode().listen(backlog)?;
     Ok(0)
 }
 
