@@ -2,7 +2,7 @@
 //
 // ```sh
 // sysroot/tools/host-gcc/bin/x86_64-aero-gcc server.c -lwayland-server -o
-// ../base-files/server.exe
+// ../base-files/server
 // ```
 
 #include <errno.h>
