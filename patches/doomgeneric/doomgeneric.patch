@@ -630,7 +630,7 @@ index 0000000..1172db3
 +    handle_keyboard_input();
 +}
 +
-+void DG_SleepMs(uint32_t ms) { usleep(ms * 1000000); }
++void DG_SleepMs(uint32_t ms) { usleep(ms * 1000); }
 +
 +uint32_t DG_GetTicksMs() {
 +    struct timeval tp;
