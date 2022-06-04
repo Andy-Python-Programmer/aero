@@ -192,10 +192,19 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
             }
 
             _ => {
+                let mut args = args.collect::<Vec<_>>();
+
+                // If the command ends with an `&`, then we have to run the command in the background.
+                let run_background = args.last().map(|&e| e == "&").unwrap_or(false);
+
+                // Remove the `&` from the arguments array if present.
+                if run_background {
+                    args.pop();
+                }
+
                 let child = sys_fork()?;
 
                 if child == 0 {
-                    let args = args.collect::<Vec<_>>();
                     let mut argv = Vec::new();
 
                     argv.push(cmd);
@@ -221,8 +230,8 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                     }
 
                     sys_exit(0);
-                } else {
-                    // Wait for the child
+                } else if !run_background {
+                    // We are not running the command in the background, so wait for the child.
                     let mut status = 0;
                     sys_waitpid(child, &mut status, 0)?;
 
