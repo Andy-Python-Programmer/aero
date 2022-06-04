@@ -75,8 +75,7 @@ pub const SYS_READ_LINK: usize = 51;
 pub const SYS_EPOLL_CREATE: usize = 52;
 pub const SYS_EPOLL_PWAIT: usize = 53;
 pub const SYS_EPOLL_CTL: usize = 54;
-pub const SYS_EPOLL_WAIT: usize = 55;
-pub const SYS_EVENT_FD: usize = 56;
+pub const SYS_EVENT_FD: usize = 55;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

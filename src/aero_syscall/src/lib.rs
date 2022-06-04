@@ -224,7 +224,6 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_EPOLL_CREATE => "epoll_create",
         prelude::SYS_EPOLL_PWAIT => "epoll_pwait",
         prelude::SYS_EPOLL_CTL => "epoll_ctl",
-        prelude::SYS_EPOLL_WAIT => "epoll_wait",
         prelude::SYS_EVENT_FD => "event_fd",
 
         _ => unreachable!("unknown syscall {syscall}"),

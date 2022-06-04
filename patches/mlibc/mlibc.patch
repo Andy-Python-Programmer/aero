@@ -1,18 +1,18 @@
-From 5d484b1a17191d7ce795a2d773e4a72d8fc7490e Mon Sep 17 00:00:00 2001
+From a649d90c5073ef1f8a9eadb4773fe5f832a3e87c Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
 
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
- .gitignore                          |  3 ++
+ .gitignore                          |  3 +
  options/rtdl/generic/linker.cpp     |  2 +-
- sysdeps/aero/generic/aero.cpp       | 12 ++++-
- sysdeps/aero/generic/filesystem.cpp | 79 ++++++++++++++++++++++++++---
+ sysdeps/aero/generic/aero.cpp       | 12 +++-
+ sysdeps/aero/generic/filesystem.cpp | 97 ++++++++++++++++++++++++++---
  sysdeps/aero/generic/signals.cpp    |  8 ++-
- sysdeps/aero/generic/sockets.cpp    | 48 ++++++++++++++++++
- sysdeps/aero/include/aero/syscall.h | 12 +++++
- 7 files changed, 151 insertions(+), 13 deletions(-)
+ sysdeps/aero/generic/sockets.cpp    | 48 ++++++++++++++
+ sysdeps/aero/include/aero/syscall.h | 11 ++++
+ 7 files changed, 168 insertions(+), 13 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -69,7 +69,7 @@ index 7de909f5..4281beb9 100644
  #endif
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index 6a13f19c..d34dfce3 100644
+index 6a13f19c..8f700a38 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -1,3 +1,4 @@
@@ -151,7 +151,7 @@ index 6a13f19c..d34dfce3 100644
      return 0;
  }
  
-@@ -267,4 +297,37 @@ int sys_pipe(int *fds, int flags) {
+@@ -267,4 +297,55 @@ int sys_pipe(int *fds, int flags) {
  
      return 0;
  }
@@ -175,6 +175,24 @@ index 6a13f19c..d34dfce3 100644
 +        return -result;
 +    }
 +
++    return 0;
++}
++
++int sys_epoll_pwait(
++    int epfd, 
++    struct epoll_event *ev, 
++    int n,
++    int timeout, 
++    const sigset_t *sigmask, 
++    int *raised
++) {
++    auto result = syscall(SYS_EPOLL_PWAIT, epfd, ev, n, timeout, sigmask);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    *raised = result;
 +    return 0;
 +}
 +
@@ -263,10 +281,10 @@ index e69de29b..4e6bd608 100644
 +}
 +} // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 07b1b51b..ef797e40 100644
+index 07b1b51b..6487cd85 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -49,6 +49,18 @@
+@@ -49,6 +49,17 @@
  #define SYS_DUP 42
  #define SYS_FCNTL 43
  #define SYS_DUP2 44
@@ -280,8 +298,7 @@ index 07b1b51b..ef797e40 100644
 +#define SYS_EPOLL_CREATE 52
 +#define SYS_EPOLL_PWAIT 53
 +#define SYS_EPOLL_CTL 54
-+#define SYS_EPOLL_WAIT 55
-+#define SYS_EVENT_FD 56
++#define SYS_EVENT_FD 55
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.

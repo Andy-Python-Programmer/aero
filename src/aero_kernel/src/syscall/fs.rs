@@ -414,8 +414,8 @@ pub fn epoll_ctl(
     fd: usize,
     event: &mut EPollEvent,
 ) -> Result<usize, AeroSyscallError> {
-    let current_task = scheduler::get_scheduler().current_task();
-    let epfd = current_task
+    let epfd = scheduler::get_scheduler()
+        .current_task()
         .file_table
         .get_handle(epfd)
         .ok_or(AeroSyscallError::EBADFD)?;
@@ -431,6 +431,23 @@ pub fn epoll_ctl(
 
         _ => unreachable!("epoll_ctl: unknown mode {mode}"),
     }
+}
+
+#[syscall]
+pub fn epoll_pwait(
+    epfd: usize,
+    _event: &mut EPollEvent,
+    _max_events: usize,
+    _timeout: usize,
+    _sigmask: usize,
+) -> Result<usize, AeroSyscallError> {
+    let _epfd = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(epfd)
+        .ok_or(AeroSyscallError::EBADFD)?;
+
+    Ok(0)
 }
 
 #[syscall]
