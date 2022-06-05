@@ -53,9 +53,9 @@ pub fn socket(
     socket_type: usize,
     protocol: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let socket = match (domain as u32, socket_type, protocol) {
-        (AF_UNIX, SOCK_STREAM, 0) => UnixSocket::new(),
-        (_, _, _) => {
+    let socket = match domain as u32 {
+        AF_UNIX => UnixSocket::new(),
+        _ => {
             log::warn!(
                 "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol}"
             );
@@ -64,11 +64,11 @@ pub fn socket(
         }
     };
 
+    let sockfd_flags = SocketFlags::from_bits_truncate(socket_type).into();
+
     let entry = DirEntry::from_inode(socket);
     let current_task = scheduler::get_scheduler().current_task();
-    let fd = current_task
-        .file_table
-        .open_file(entry, OpenFlags::empty())?;
+    let fd = current_task.file_table.open_file(entry, sockfd_flags)?;
 
     Ok(fd)
 }

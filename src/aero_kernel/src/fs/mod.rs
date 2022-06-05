@@ -133,6 +133,7 @@ pub enum FileSystemError {
     TooSmall,
     InvalidPath,
     NotSocket,
+    ConnectionRefused,
 }
 
 impl From<FileSystemError> for AeroSyscallError {
@@ -148,6 +149,7 @@ impl From<FileSystemError> for AeroSyscallError {
             FileSystemError::TooSmall => Self::E2BIG,
             FileSystemError::InvalidPath => Self::EINVAL,
             FileSystemError::NotSocket => Self::ENOTSOCK,
+            FileSystemError::ConnectionRefused => Self::ECONNREFUSED,
         }
     }
 }

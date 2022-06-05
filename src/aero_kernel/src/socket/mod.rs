@@ -36,6 +36,15 @@ impl<'a> SocketAddr<'a> {
             _ => None,
         }
     }
+
+    /// Converts the socket address into a unix socket address. Returns [`None`] if
+    /// the address is not a unix socket address.
+    pub fn as_unix(&self) -> Option<&'a SocketAddrUnix> {
+        match self {
+            SocketAddr::Unix(address) => Some(address),
+            _ => None,
+        }
+    }
 }
 
 pub mod unix;

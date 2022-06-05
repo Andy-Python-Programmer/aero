@@ -382,6 +382,15 @@ impl INodeInterface for LockedRamINode {
         ))
     }
 
+    fn as_unix_socket(&self) -> Result<Arc<dyn INodeInterface>> {
+        let this = self.0.read();
+
+        match &this.contents {
+            FileContents::Socket(socket) => Ok(socket.clone()),
+            _ => Err(FileSystemError::NotSocket),
+        }
+    }
+
     #[inline]
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
         Some(self.0.read().filesystem.clone())

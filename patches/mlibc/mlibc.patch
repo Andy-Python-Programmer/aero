@@ -1,4 +1,4 @@
-From a649d90c5073ef1f8a9eadb4773fe5f832a3e87c Mon Sep 17 00:00:00 2001
+From 989da4c4aa01ce3ad7a52986f0492a6b565add28 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -10,9 +10,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/generic/aero.cpp       | 12 +++-
  sysdeps/aero/generic/filesystem.cpp | 97 ++++++++++++++++++++++++++---
  sysdeps/aero/generic/signals.cpp    |  8 ++-
- sysdeps/aero/generic/sockets.cpp    | 48 ++++++++++++++
+ sysdeps/aero/generic/sockets.cpp    | 59 ++++++++++++++++++
  sysdeps/aero/include/aero/syscall.h | 11 ++++
- 7 files changed, 168 insertions(+), 13 deletions(-)
+ 7 files changed, 179 insertions(+), 13 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -228,10 +228,10 @@ index 3527370c..a6f69fff 100644
  } // namespace mlibc
 \ No newline at end of file
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index e69de29b..4e6bd608 100644
+index e69de29b..b6b18fe7 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,59 @@
 +#include <mlibc/all-sysdeps.hpp>
 +#include <mlibc/thread-entry.hpp>
 +
@@ -277,6 +277,17 @@ index e69de29b..4e6bd608 100644
 +        return -result;
 +    }
 +
++    return 0;
++}
++
++int sys_accept(int fd, int *newfd) {
++    auto result = syscall(SYS_ACCEPT, fd);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    *newfd = result;
 +    return 0;
 +}
 +} // namespace mlibc

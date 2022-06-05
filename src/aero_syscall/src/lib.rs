@@ -680,8 +680,29 @@ pub const SOCK_DGRAM: usize = 1;
 pub const SOCK_RAW: usize = 2;
 pub const SOCK_SEQPACKET: usize = 3;
 pub const SOCK_STREAM: usize = 4;
-pub const SOCK_NONBLOCK: usize = 0x10000;
-pub const SOCK_CLOEXEC: usize = 0x20000;
+
+bitflags::bitflags! {
+    pub struct SocketFlags: usize {
+        const NONBLOCK = 0x10000;
+        const CLOEXEC = 0x20000;
+    }
+}
+
+impl From<SocketFlags> for OpenFlags {
+    fn from(flags: SocketFlags) -> Self {
+        let mut result = OpenFlags::empty();
+
+        if flags.contains(SocketFlags::NONBLOCK) {
+            result.insert(OpenFlags::O_NONBLOCK);
+        }
+
+        if flags.contains(SocketFlags::CLOEXEC) {
+            result.insert(OpenFlags::O_CLOEXEC);
+        }
+
+        result
+    }
+}
 
 pub const PF_INET: u32 = 1;
 pub const PF_INET6: u32 = 2;
