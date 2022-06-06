@@ -1,4 +1,4 @@
-From 989da4c4aa01ce3ad7a52986f0492a6b565add28 Mon Sep 17 00:00:00 2001
+From 7483398f8048d7b25eae2015a6d67fc1feb061e6 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -7,12 +7,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                          |  3 +
  options/rtdl/generic/linker.cpp     |  2 +-
- sysdeps/aero/generic/aero.cpp       | 12 +++-
+ sysdeps/aero/generic/aero.cpp       | 26 ++++++--
  sysdeps/aero/generic/filesystem.cpp | 97 ++++++++++++++++++++++++++---
  sysdeps/aero/generic/signals.cpp    |  8 ++-
  sysdeps/aero/generic/sockets.cpp    | 59 ++++++++++++++++++
- sysdeps/aero/include/aero/syscall.h | 11 ++++
- 7 files changed, 179 insertions(+), 13 deletions(-)
+ sysdeps/aero/include/aero/syscall.h | 12 ++++
+ 7 files changed, 191 insertions(+), 16 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dbb35e8b..20c8d4c3 100644
@@ -39,10 +39,34 @@ index 53264175..38ba8c9f 100644
  
  #if defined(__x86_64__)
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 7de909f5..4281beb9 100644
+index 7de909f5..c8d076a5 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
-@@ -173,7 +173,15 @@ int sys_getcwd(char *buffer, size_t size) {
+@@ -131,12 +131,20 @@ void sys_exit(int status) {
+ pid_t sys_getpid() {
+     auto result = syscall(SYS_GETPID);
+ 
+-    // SAFETY: getpid does not return any errors (ie. the call is always
+-    // successful).
+-    __ensure(result >= 0);
++    __ensure(result >= 0); // getpid() cannot fail.
+     return result;
+ }
+ 
++int sys_kill(int pid, int sig) {
++    auto result = syscall(SYS_KILL, pid, sig);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    return 0;
++}
++
+ pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
+     mlibc::infoLogger() << "sys_getpgid() is unimplemented" << frg::endlog;
+     *pgid = 0;
+@@ -173,7 +181,15 @@ int sys_getcwd(char *buffer, size_t size) {
      return 0;
  }
  
@@ -59,7 +83,7 @@ index 7de909f5..4281beb9 100644
  
  int sys_gethostname(char *buffer, size_t bufsize) {
      auto result = syscall(SYS_GETHOSTNAME, buffer, bufsize);
-@@ -286,7 +294,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]) {
+@@ -286,7 +302,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]) {
      __builtin_unreachable();
  }
  
@@ -292,10 +316,10 @@ index e69de29b..b6b18fe7 100644
 +}
 +} // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 07b1b51b..6487cd85 100644
+index 07b1b51b..b6763b63 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -49,6 +49,17 @@
+@@ -49,6 +49,18 @@
  #define SYS_DUP 42
  #define SYS_FCNTL 43
  #define SYS_DUP2 44
@@ -310,6 +334,7 @@ index 07b1b51b..6487cd85 100644
 +#define SYS_EPOLL_PWAIT 53
 +#define SYS_EPOLL_CTL 54
 +#define SYS_EVENT_FD 55
++#define SYS_KILL 56
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.

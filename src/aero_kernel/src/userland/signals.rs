@@ -49,7 +49,7 @@ mod default {
         Action::Handle(terminate),        // SIGQUIT
         Action::Handle(terminate),        // SIGILL
         Action::Ignore,                   // UNUSED
-        Action::Ignore,                   // UNUSED
+        Action::Handle(terminate),        // SIGABRT
         Action::Handle(terminate),        // SIGBUS
         Action::Handle(terminate),        // SIGFPE
         Action::Handle(terminate),        // SIGKILL

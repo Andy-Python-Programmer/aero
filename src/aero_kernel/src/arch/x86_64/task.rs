@@ -443,16 +443,12 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
         super::gdt::get_task_state_segement().rsp[0] = kstackp;
         io::wrmsr(io::IA32_SYSENTER_ESP, kstackp);
 
-        task_spinup(&mut from.context, to.context.as_ref());
-
-        // make a restore point for the current FS base.
-        from.fs_base = VirtAddr::new(io::rdmsr(io::IA32_FS_BASE));
         // switch to the new FS base.
         io::wrmsr(io::IA32_FS_BASE, to.fs_base.as_u64());
 
-        // make a restore point for the current GS base.
-        from.gs_base = VirtAddr::new(io::rdmsr(io::IA32_KERNEL_GSBASE));
         // update the swap GS target to point to the new GS base.
         io::wrmsr(io::IA32_KERNEL_GSBASE, to.gs_base.as_u64());
+
+        task_spinup(&mut from.context, to.context.as_ref());
     }
 }

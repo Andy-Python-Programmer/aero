@@ -4,9 +4,9 @@
         "./userland/Cargo.toml"
     ],
     "rust-analyzer.checkOnSave.allTargets": false,
-    "rust-analyzer.checkOnSave.extraArgs": [
-        "-Zbuild-std=core,alloc"
-    ],
+    // "rust-analyzer.checkOnSave.extraArgs": [
+    //     "-Zbuild-std=core,alloc"
+    // ],
     "editor.formatOnSave": true,
     "files.associations": {
         "stdio.h": "c",

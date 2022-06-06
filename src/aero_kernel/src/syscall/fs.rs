@@ -228,7 +228,17 @@ pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSy
         .get_handle(fd)
         .ok_or(AeroSyscallError::EBADFD)?;
 
-    Ok(handle.inode().ioctl(command, argument)?)
+    match command {
+        // Sets the close-on-exec file descriptor flag. This is equivalent
+        // to `fcntl(fd, F_SETFD, FD_CLOEXEC)`
+        FIOCLEX => {
+            handle.fd_flags.lock().insert(FdFlags::CLOEXEC);
+            return Ok(0x00);
+        }
+
+        // Handle file specific ioctl:
+        _ => Ok(handle.inode().ioctl(command, argument)?),
+    }
 }
 
 #[syscall]

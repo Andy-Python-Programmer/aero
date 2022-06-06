@@ -181,6 +181,7 @@ pub fn generic_do_syscall(
         SYS_SIGACTION => process::sigaction(b, c, d, e),
         SYS_SIGPROCMASK => process::sigprocmask(b, c, d),
         SYS_CLONE => process::clone(b, c),
+        SYS_KILL => process::kill(b, c),
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),

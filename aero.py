@@ -71,6 +71,54 @@ MODULE_STRING=initramfs
 """
 
 
+def log_info(msg):
+    """
+    Logs a message with info log level.
+    """
+    print(f"\033[1m\033[92minfo\033[0m: {msg}")
+
+
+def download_userland_host_rust():
+    out_file = os.path.join(BUNDLED_DIR, "host-rust-prebuilt.tar.gz")
+
+    # we have already cloned the toolchain
+    if os.path.exists(out_file):
+        return
+
+    log_info("downloading prebuilt userland host rust toolchain")
+
+    cmd = r"""
+    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate "https://docs.google.com/uc?export=download&id=FILE_HASH" -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=FILE_HASH" -O OUTPUT_FILE && rm -rf /tmp/cookies.txt
+    """.replace("FILE_HASH", "1TTC9qa1z-KdLaQkhgMCYxLE5nuKg4gcx").replace("OUTPUT_FILE", out_file)
+
+    subprocess.run(cmd, shell=True)
+
+    log_info("extracting prebuilt userland host rust toolchain")
+
+    # the toolchain is compressed, so we need to extract it
+    file = tarfile.open(out_file)
+    file.extractall(os.path.join(BUNDLED_DIR, "host-rust-prebuilt"))
+    file.close()
+
+
+def get_userland_tool():
+    toolchain = os.path.join(SYSROOT_DIR, "tools")
+
+    if os.path.exists(toolchain):
+        return toolchain
+
+    return os.path.join(BUNDLED_DIR, "host-rust-prebuilt/aero")
+
+
+def get_userland_package():
+    toolchain = os.path.join(SYSROOT_DIR, "packages")
+
+    if os.path.exists(toolchain):
+        return toolchain
+
+    return os.path.join(BUNDLED_DIR, "host-rust-prebuilt/aero")
+
+
 def remove_prefix(string: str, prefix: str):
     if string.startswith(prefix):
         return string[len(prefix):]
@@ -180,6 +228,9 @@ def download_bundled():
         run_command(['git', 'clone', '--branch', 'v3.0-branch-binary',
                     '--depth', '1', LIMINE_URL, limine_path])
 
+    if not os.path.exists(SYSROOT_DIR):
+        download_userland_host_rust()
+
 
 def extract_artifacts(stdout):
     result = []
@@ -195,13 +246,13 @@ def extract_artifacts(stdout):
     return result
 
 
-def build_cargo_workspace(cwd, command, args):
-    code, _, _ = run_command(['cargo', command, *args], cwd=cwd)
+def build_cargo_workspace(cwd, command, args, cargo="cargo"):
+    code, _, _ = run_command([cargo, command, *args], cwd=cwd)
 
     if code != 0:
         return None
 
-    _, stdout, _ = run_command(['cargo', command, *args, '--message-format=json'],
+    _, stdout, _ = run_command([cargo, command, *args, '--message-format=json'],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL,
                                cwd=cwd)
@@ -292,8 +343,31 @@ def build_userland_sysroot(args):
 
 
 def build_userland(args):
+    HOST_CARGO = "host-cargo/bin/cargo"
+    HOST_RUST = "host-rust/bin/rustc"
+    HOST_GCC = "host-gcc/bin/x86_64-aero-gcc"
+    HOST_BINUTILS = "host-binutils/x86_64-aero/bin"
+    PACKAGE_MLIBC = "mlibc"
+
+    tool_dir = get_userland_tool()
+    pkg_dir = get_userland_package()
+
+    def get_cargo(): return os.path.join('..', tool_dir, HOST_CARGO)
+    def get_rustc(): return os.path.join('..', tool_dir, HOST_RUST)
+    def get_gcc(): return os.path.join('..', tool_dir, HOST_GCC)
+    def get_binutils(): return os.path.join("..", tool_dir, HOST_BINUTILS)
+    def get_mlibc(): return os.path.join("..", pkg_dir, PACKAGE_MLIBC)
+
     command = 'build'
-    cmd_args = []
+    cmd_args = ["--target", "x86_64-unknown-aero-system",
+
+                # cargo config
+                "--config", f"build.rustc = '{get_rustc()}'",
+                "--config", "build.target = 'x86_64-unknown-aero-system'",
+                "--config", f"build.rustflags = ['-C', 'link-args=-no-pie -B {get_binutils()} --sysroot {get_mlibc()}', '-lc']",
+                "--config", f"target.x86_64-unknown-aero-system.linker = '{get_gcc()}'",
+
+                "-Z", "unstable-options"]
 
     if not args.debug:
         cmd_args += ['--release']
@@ -302,9 +376,9 @@ def build_userland(args):
         command = 'check'
 
     if args.test:
-        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args])
+        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args], get_cargo())
     else:
-        return build_cargo_workspace('userland', command, cmd_args)
+        return build_cargo_workspace('userland', command, cmd_args, get_cargo())
 
     # TODO: Userland check
     # elif args.check:
@@ -377,6 +451,15 @@ def prepare_iso(args, kernel_bin, user_bins):
 
             os.makedirs(os.path.dirname(dest_file), exist_ok=True)
             shutil.copy(file, dest_file)
+
+    # dynamic linker (ld.so)
+    mlibc = os.path.join(get_userland_package(), "mlibc")
+    # gcc libraries required for rust programs
+    gcc = os.path.join(get_userland_package(), "gcc")
+
+    if "host-rust-prebuilt" in str(mlibc):
+        cp(mlibc, initramfs_root)
+        cp(gcc, initramfs_root)
 
     cp(BASE_FILES_DIR, initramfs_root)
 

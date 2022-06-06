@@ -17,26 +17,25 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::*;
+use std::error::Error;
+use std::fs::OpenOptions;
+use std::process::Command;
 
-fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
-    let pid = sys_fork()?;
+use std::mem;
 
-    if pid == 0 {
-        sys_exec(path, argv, envv)?;
-        sys_exit(0);
-    } else {
-        Ok(pid)
-    }
-}
+const DEFAULT_SHELL_PATH: &str = "/usr/bin/aero_shell";
+const TTY_PATH: &str = "/dev/tty";
 
-fn main() -> Result<(), AeroSyscallError> {
-    sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
-    sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
-    sys_open("/dev/tty", OpenFlags::O_WRONLY)?;
+fn main() -> Result<(), Box<dyn Error>> {
+    // Open the stdin, stdout and stderr file descriptors.
+    //
+    // mem::forget(): don't drop the object which in turn will close the
+    // file.
+    mem::forget(OpenOptions::new().read(true).open(TTY_PATH)?); // fd=0 for stdin
+    mem::forget(OpenOptions::new().write(true).open(TTY_PATH)?); // fd=1 for stdout
+    mem::forget(OpenOptions::new().write(true).open(TTY_PATH)?); // fd=2 for stderr
 
-    fork_and_exec("/usr/bin/system_server", &[], &[])?;
-    fork_and_exec("/usr/bin/aero_shell", &[], &[])?;
+    Command::new(DEFAULT_SHELL_PATH).spawn()?;
 
     Ok(())
 }

@@ -76,6 +76,7 @@ pub const SYS_EPOLL_CREATE: usize = 52;
 pub const SYS_EPOLL_PWAIT: usize = 53;
 pub const SYS_EPOLL_CTL: usize = 54;
 pub const SYS_EVENT_FD: usize = 55;
+pub const SYS_KILL: usize = 56;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;
@@ -124,6 +125,12 @@ pub struct EPollEvent {
     pub events: u32,
     pub data: EPollData,
 }
+
+// constants for generic ioctls (applicable to any file descriptor):
+pub const FIONREAD: usize = 0x541b;
+pub const FIONBIO: usize = 0x5421;
+pub const FIONCLEX: usize = 0x5450;
+pub const FIOCLEX: usize = 0x5451;
 
 // constants for event fd:
 bitflags::bitflags! {
