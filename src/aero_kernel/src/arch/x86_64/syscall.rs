@@ -5,6 +5,7 @@ use crate::arch::gdt::GdtEntryType;
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::utils::io;
+use crate::utils::sync::IrqGuard;
 
 use super::interrupts::InterruptErrorStack;
 
@@ -21,6 +22,8 @@ const ARCH_GET_GS: usize = 0x1004;
 fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError> {
     match command {
         ARCH_SET_FS => unsafe {
+            let _guard = IrqGuard::new();
+
             scheduler::get_scheduler()
                 .current_task()
                 .arch_task_mut()
@@ -36,6 +39,8 @@ fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError>
             .as_u64() as usize),
 
         ARCH_SET_GS => unsafe {
+            let _guard = IrqGuard::new();
+
             scheduler::get_scheduler()
                 .current_task()
                 .arch_task_mut()

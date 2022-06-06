@@ -29,6 +29,7 @@ use crate::fs::Path;
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::signals::SignalEntry;
+use crate::userland::task::TaskId;
 use crate::utils::sync::IrqGuard;
 
 static HOSTNAME: Once<Mutex<String>> = Once::new();
@@ -96,6 +97,21 @@ pub fn clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
 
     scheduler.register_task(cloned.clone());
     Ok(cloned.pid().as_usize())
+}
+
+#[syscall]
+pub fn kill(pid: usize, signal: usize) -> Result<usize, AeroSyscallError> {
+    // If pid is positive, then signal is sent to the process with that pid.
+    if pid > 0 {
+        let task = scheduler::get_scheduler()
+            .find_task(TaskId::new(pid))
+            .ok_or(AeroSyscallError::ESRCH)?;
+
+        task.signal(signal);
+        Ok(0)
+    } else {
+        unimplemented!()
+    }
 }
 
 #[syscall]

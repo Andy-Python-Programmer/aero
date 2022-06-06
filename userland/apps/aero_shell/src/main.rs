@@ -17,13 +17,13 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-extern crate alloc;
-
 use core::sync::atomic::{AtomicU32, Ordering};
 
 use aero_ipc::SystemService;
 use aero_syscall::signal::*;
 use aero_syscall::*;
+
+use std::io::Write;
 
 const MAGENTA_FG: &str = "\x1b[1;35m";
 const RESET: &str = "\x1b[0m";
@@ -62,10 +62,16 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     let pwd_length = sys_getcwd(&mut pwd_buffer)?;
     let pwd = unsafe { core::str::from_utf8_unchecked(&pwd_buffer[0..pwd_length]) };
 
-    print!(
+    let mut stdout = std::io::stdout();
+
+    write!(
+        stdout,
         "\x1b[1;32m{}@{}\x1b[0m:\x1b[1;34m{}\x1b[0m ",
         username, hostname, pwd
-    );
+    )
+    .unwrap();
+
+    stdout.flush().unwrap();
 
     let cmd_length = sys_read(0, &mut cmd_buffer)?;
     let cmd_string = unsafe { core::str::from_utf8_unchecked(&cmd_buffer[0..cmd_length]).trim() };

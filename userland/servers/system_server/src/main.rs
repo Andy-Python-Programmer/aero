@@ -17,29 +17,20 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::error::Error;
+use std::process::Command;
+
 use aero_ipc::{SystemService, SystemServiceError, SystemServiceResult};
 use aero_syscall::*;
 use hashbrown::{hash_map::Entry, HashMap};
 use spin::RwLock;
 
-// Basically the same thing that's in the init's main.rs
-fn fork_and_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, AeroSyscallError> {
-    let pid = sys_fork()?;
-
-    if pid == 0 {
-        sys_exec(path, argv, envv)?;
-        sys_exit(0);
-    } else {
-        Ok(pid)
-    }
-}
-
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     sys_ipc_become_root().unwrap();
 
     aero_ipc::listen(SystemService::handler(SystemServer::new()));
 
-    fork_and_exec("/usr/bin/window_server", &[], &[]).unwrap();
+    Command::new("/usr/bin/window_server").spawn()?;
 
     loop {
         aero_ipc::service_request();
