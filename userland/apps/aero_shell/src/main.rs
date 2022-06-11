@@ -17,7 +17,13 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, Ordering};
+
+use std::error::Error;
+use std::io::{BufRead, BufReader};
+
+use std::fs;
+use std::fs::File;
 
 use aero_ipc::SystemService;
 use aero_syscall::signal::*;
@@ -86,13 +92,13 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 let message = args.collect::<Vec<_>>().join(" ");
                 let message = message.replace(
                     "$?",
-                    LAST_EXIT_CODE.load(Ordering::Relaxed).to_string().as_str(),
+                    LAST_EXIT_CODE.load(Ordering::SeqCst).to_string().as_str(),
                 );
 
                 println!("{}", message);
             }
 
-            "ls" => list_directory(args.next().unwrap_or("."))?,
+            "ls" => list_directory(args.next().unwrap_or(".")).unwrap(),
             "pwd" => println!("{}", pwd),
             "cd" => {
                 sys_chdir(args.next().unwrap_or(".."))?;
@@ -116,9 +122,9 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                 },
                 None => sys_exit(0),
             },
-            "cat" => cat_file(args.next())?,
+            "cat" => cat_file(args.next()).unwrap(),
             "clear" => print!("{esc}[2J{esc}[1;1H", esc = 27 as char),
-            "dmsg" => print_kernel_log()?,
+            "dmsg" => print_kernel_log().unwrap(),
             "uwufetch" => uwufetch()?,
             "uname" => uname()?,
             "history" => {
@@ -255,67 +261,46 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
-fn list_directory(path: &str) -> Result<(), AeroSyscallError> {
-    let dir_fd = sys_open(path, OpenFlags::O_DIRECTORY)?;
+fn list_directory(path: &str) -> Result<(), Box<dyn Error>> {
+    let rdir = fs::read_dir(path)?;
+
+    for file in rdir {
+        let name = file?.file_name();
+        let name_str = name.to_str().ok_or("ls: invalid filename")?;
+
+        print!("{name_str} ");
+    }
+
+    println!();
+    Ok(())
+}
+
+fn cat_file(path: Option<&str>) -> Result<(), Box<dyn Error>> {
+    let file = path
+        .map(|e| File::open(e))
+        // On the `None` arm, we take input from stdin until we get interrupted. This is the
+        // behaviour of `cat` that comes with any modern Linux distro.
+        .unwrap_or_else(|| File::open("/dev/tty"))?;
+
+    let mut reader = BufReader::new(file);
 
     loop {
-        let mut dir_ents_buffer = [0; 1024];
+        let mut line = String::new();
+        let size = reader.read_line(&mut line)?;
 
-        let size = sys_getdents(dir_fd, &mut dir_ents_buffer)?;
-
+        // We have reached the end of the file.
         if size == 0 {
             break;
         }
 
-        let dir_entry = unsafe { &*(dir_ents_buffer.as_ptr() as *const SysDirEntry) };
-
-        let name_start = core::mem::size_of::<SysDirEntry>();
-        let name_end = dir_entry.reclen;
-
-        let name =
-            unsafe { core::str::from_utf8_unchecked(&dir_ents_buffer[name_start..name_end]) };
-
-        print!("{} ", name);
+        print!("{line}");
     }
 
     println!();
-
     Ok(())
 }
 
-fn cat_file(path: Option<&str>) -> Result<(), AeroSyscallError> {
-    // On the `None` arm we default to 0 to take input from stdin.
-    // This is the behaviour of `cat` that comes with any modern Linux distro.
-    let fd = match path {
-        Some(path) => sys_open(path, OpenFlags::O_RDONLY)?,
-        None => 0,
-    };
-
-    sys_seek(fd, 0, SeekWhence::SeekSet)?;
-
-    let mut buffer = [0; 1024];
-
-    loop {
-        let length = sys_read(fd, &mut buffer)?;
-
-        if length == 0 {
-            break;
-        }
-
-        let contents = unsafe { core::str::from_utf8_unchecked(&buffer[0..length]) };
-
-        print!("{}", contents);
-    }
-
-    if fd != 0 {
-        sys_close(fd)?;
-    }
-
-    print!("\n");
-    Ok(())
-}
-
-fn print_kernel_log() -> Result<(), AeroSyscallError> {
+fn print_kernel_log() -> Result<(), Box<dyn Error>> {
     // dmsg is just a wrapper around `cat /dev/kmsg`
     // TODO: Add colored output back :^)
 
