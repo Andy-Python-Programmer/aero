@@ -119,10 +119,35 @@ pub union EPollData {
     pub u64: u64,
 }
 
+bitflags::bitflags! {
+    /// A bit mask composed by ORing together, zero or more of the following available event types.
+    #[derive(Default)]
+    pub struct EPollEventFlags: u32 {
+        /// The associated file is available for read operations.
+        const IN        = 0x001;
+        /// There is an exceptional condition on the file descriptor.
+        const PRI       = 0x002;
+        /// The associated file is available for write operations.
+        const OUT       = 0x004;
+        const RDNORM    = 0x040;
+        const RDBAND    = 0x080;
+        const WRNORM    = 0x100;
+        const WRBAND    = 0x200;
+        const MSG       = 0x400;
+        const ERR       = 0x008;
+        const HUP       = 0x010;
+        const RDHUP     = 0x2000;
+        const EXCLUSIVE = 1 << 28;
+        const WAKEUP    = 1 << 29;
+        const ONESHOT   = 1 << 30;
+        const ET        = 1 << 31;
+    }
+}
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct EPollEvent {
-    pub events: u32,
+    pub events: EPollEventFlags,
     pub data: EPollData,
 }
 

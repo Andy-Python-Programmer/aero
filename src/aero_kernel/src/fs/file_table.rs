@@ -122,10 +122,10 @@ impl FileHandle {
         self.inode.inode()
     }
 
-    pub fn duplicate(&self, flags: OpenFlags) -> super::Result<Arc<FileHandle>> {
+    pub fn duplicate(&self, dupfd: usize, flags: OpenFlags) -> super::Result<Arc<FileHandle>> {
         let flags = self.flags | flags;
         let new = Arc::new(Self {
-            fd: self.fd,
+            fd: dupfd,
             inode: self.inode.clone(),
             offset: self.offset.clone(),
             flags,
@@ -241,15 +241,15 @@ impl FileTable {
             // avaliable file descriptor.
             for (i, file) in array.iter_mut().enumerate() {
                 if file.is_none() {
-                    *file = Some(handle.duplicate(flags)?);
+                    *file = Some(handle.duplicate(i, flags)?);
                     return Ok(i);
                 }
             }
 
-            // We ran out of file descriptors. Grow the table and add the
-            // file descriptor.
-            files.push(Some(handle.duplicate(flags)?));
-            Ok(files.len() - 1)
+            // We ran out of file descriptors. Grow the FD table and insert the FD.
+            let fd = files.len();
+            files.push(Some(handle.duplicate(fd, flags)?));
+            Ok(fd)
         };
 
         match hint {
@@ -258,12 +258,12 @@ impl FileTable {
 
                 // Ensure the file descriptor is available.
                 if files[new_fd].is_none() {
-                    files[new_fd] = Some(handle.duplicate(flags)?);
+                    files[new_fd] = Some(handle.duplicate(new_fd, flags)?);
                     Ok(0x00)
                 } else {
                     // If the file descriptor is not available, then we close the
                     // old one and set its handle to the new duplicate handle.
-                    let handle = handle.duplicate(flags)?;
+                    let handle = handle.duplicate(new_fd, flags)?;
                     let old = files[new_fd].take().unwrap();
 
                     old.inode.inode().close(old.flags);

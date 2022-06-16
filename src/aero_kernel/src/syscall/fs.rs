@@ -18,6 +18,7 @@
  */
 
 use aero_syscall::prelude::*;
+use aero_syscall::signal::SigProcMask;
 use aero_syscall::{AeroSyscallError, OpenFlags, Stat};
 
 use crate::fs::epoll::EPoll;
@@ -446,18 +447,33 @@ pub fn epoll_ctl(
 #[syscall]
 pub fn epoll_pwait(
     epfd: usize,
-    _event: &mut EPollEvent,
-    _max_events: usize,
-    _timeout: usize,
-    _sigmask: usize,
+    event: &mut [&mut EPollEvent],
+    timeout: usize,
+    sigmask: usize,
 ) -> Result<usize, AeroSyscallError> {
-    let _epfd = scheduler::get_scheduler()
-        .current_task()
+    let max_events = event.len();
+
+    let current_task = scheduler::get_scheduler().current_task();
+    let signals = current_task.signals();
+
+    let epfd = current_task
         .file_table
         .get_handle(epfd)
         .ok_or(AeroSyscallError::EBADFD)?;
 
-    Ok(0)
+    let epfd =
+        downcast::<dyn INodeInterface, EPoll>(&epfd.inode()).ok_or(AeroSyscallError::EINVAL)?;
+
+    let mut old_mask = 0;
+
+    // Update the signal mask.
+    signals.set_mask(SigProcMask::Set, Some(sigmask as u64), Some(&mut old_mask));
+
+    let result = epfd.wait(event, max_events, timeout)?;
+
+    // Restore the orignal signal mask.
+    signals.set_mask(SigProcMask::Set, Some(old_mask), None);
+    Ok(result)
 }
 
 #[syscall]

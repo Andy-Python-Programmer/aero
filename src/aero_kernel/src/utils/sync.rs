@@ -6,6 +6,7 @@ use crate::userland::scheduler;
 use crate::userland::signals::SignalResult;
 use crate::userland::task::Task;
 
+/// Used to manage and block threads that are waiting for a condition to be true.
 pub struct BlockQueue {
     queue: Mutex<Vec<Arc<Task>>>,
 }
@@ -47,12 +48,15 @@ impl BlockQueue {
             lock = mutex.lock_irq();
         }
 
-        self.remove_task(task);
+        self.remove(task);
         Ok(lock)
     }
 
-    /// Inner helper function which removes a task from the block queue.
-    fn remove_task(&self, task: Arc<Task>) {
+    pub fn insert(&self, task: Arc<Task>) {
+        self.queue.lock_irq().push(task);
+    }
+
+    pub fn remove(&self, task: Arc<Task>) {
         let mut tasks = self.queue.lock_irq();
 
         tasks

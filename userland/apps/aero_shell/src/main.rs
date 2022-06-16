@@ -22,11 +22,12 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::error::Error;
 use std::io::{BufRead, BufReader};
 
-use std::fs;
 use std::fs::File;
 
+use std::fs;
+use std::process;
+
 use aero_ipc::SystemService;
-use aero_syscall::signal::*;
 use aero_syscall::*;
 
 use std::io::Write;
@@ -440,15 +441,17 @@ fn uname() -> Result<(), AeroSyscallError> {
 
 fn handle_segmentation_fault(_fault: usize) {
     error!("segmentation fault");
-    sys_exit(0x1);
+    process::exit(1);
+}
+
+/// Sets the disposition of the signal number to handler.
+fn install_sighandler(signum: libc::c_int, handler: fn(usize)) -> libc::sighandler_t {
+    unsafe { libc::signal(signum, handler as libc::sighandler_t) }
 }
 
 fn main() {
-    let handler = SignalHandler::Handle(handle_segmentation_fault);
-    let sigaction = SigAction::new(handler, 0, SignalFlags::empty());
-
-    sys_sigaction(SIGSEGV, Some(&sigaction), None)
-        .expect("failed to install the segmentation fault handler");
+    // install all the necessary signal handlers.
+    install_sighandler(libc::SIGSEGV, handle_segmentation_fault);
 
     let mut history = vec![];
 

@@ -19,6 +19,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::prelude::EPollEventFlags;
 use aero_syscall::{MMapFlags, OpenFlags};
 
 use alloc::string::String;
@@ -26,10 +27,13 @@ use alloc::sync::Arc;
 use alloc::sync::Weak;
 
 use alloc::vec::Vec;
+use intrusive_collections::UnsafeRef;
 use spin::Once;
 
 use crate::mem::paging::PhysFrame;
 use crate::socket::SocketAddr;
+use crate::userland::scheduler;
+use crate::utils::sync::BlockQueue;
 use crate::utils::sync::Mutex;
 use crate::utils::Downcastable;
 
@@ -42,13 +46,31 @@ use super::{FileSystem, FileSystemError, Result};
 
 static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 
+#[derive(Default)]
+pub struct PollTable {
+    pub queues: Vec<UnsafeRef<BlockQueue>>,
+}
+
+impl PollTable {
+    pub fn insert(&mut self, queue: &BlockQueue) {
+        queue.insert(scheduler::get_scheduler().current_task());
+        unsafe { self.queues.push(UnsafeRef::from_raw(queue as *const _)) }
+    }
+}
+
+impl Drop for PollTable {
+    fn drop(&mut self) {
+        let ctask = scheduler::get_scheduler().current_task();
+        for queue in self.queues.iter() {
+            queue.remove(ctask.clone());
+        }
+    }
+}
+
 /// An inode describes a file. An inode structure holds metadata of the
 /// inode which includes its type, size, the number of links referring to it,
 /// and the list of blocks holding the file's content. For example device files,
 /// files on the disk, etc...
-///
-/// This trait requires the implementor to implement [Send], [Sync] and [Downcastable] on
-/// the inode structure.
 pub trait INodeInterface: Send + Sync + Downcastable {
     /// Returns the inode metadata of `this` inode.
     fn metadata(&self) -> Result<Metadata> {
@@ -161,6 +183,10 @@ pub trait INodeInterface: Send + Sync + Downcastable {
     /// Returns the inner UNIX socket inode if bound to one.
     fn as_unix_socket(&self) -> Result<Arc<dyn INodeInterface>> {
         Err(FileSystemError::NotSocket)
+    }
+
+    fn poll(&self, _table: Option<&mut PollTable>) -> Result<EPollEventFlags> {
+        Err(FileSystemError::NotSupported)
     }
 }
 

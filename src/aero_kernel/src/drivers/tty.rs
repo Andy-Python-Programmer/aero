@@ -17,13 +17,14 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::prelude::EPollEventFlags;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
 use crate::fs;
 use crate::fs::devfs;
-use crate::fs::inode;
+use crate::fs::inode::{self, PollTable};
 use crate::rendy;
 
 use crate::fs::inode::INodeInterface;
@@ -255,6 +256,17 @@ impl INodeInterface for Tty {
         }
 
         Ok(buffer.len())
+    }
+
+    fn poll(&self, table: Option<&mut PollTable>) -> fs::Result<EPollEventFlags> {
+        table.map(|e| e.insert(&self.block_queue));
+        let mut events = EPollEventFlags::default();
+
+        if self.stdin.lock_irq().is_complete() {
+            events.insert(EPollEventFlags::IN);
+        }
+
+        Ok(events)
     }
 
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {

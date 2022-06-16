@@ -17,13 +17,17 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::{prelude::EPollEvent, AeroSyscallError};
+use aero_syscall::prelude::EPollEvent;
+use aero_syscall::AeroSyscallError;
+
 use alloc::sync::Arc;
 use hashbrown::HashMap;
 
+use crate::userland::scheduler;
 use crate::utils::sync::Mutex;
 
-use super::inode::INodeInterface;
+use super::inode::{INodeInterface, PollTable};
+use super::FileSystemError;
 
 pub struct EPoll {
     events: Mutex<HashMap<usize, EPollEvent>>,
@@ -49,6 +53,99 @@ impl EPoll {
 
         events.insert(fd, event);
         Ok(())
+    }
+
+    /// Retrieves ready events, and delivers them to the caller-supplied event buffer.
+    ///
+    /// ## Arguments
+    ///
+    /// * `events`: Used to return information from the ready list about file descriptors in the
+    /// interest list that have some events available.
+    ///
+    /// * `max_events`: Maximum number of events.
+    ///
+    /// * `timeout`: specifies the minimum number of milliseconds that epoll wait will block. Specifying
+    /// a timeout of `-1` will block indefinitely. While specifing a timeout of `0` will return immediately
+    /// even if there are available no events.
+    ///
+    /// ## Return
+    /// Returns the number of ready events if the call was successful.
+    ///
+    /// ## Blocking
+    /// Blocks the current task until either:
+    ///
+    /// * A file descriptor delivers an event.
+    /// * The call is interrupted by a signal handler.
+    /// * The timeout expires.
+    pub fn wait(
+        &self,
+        ret_events: &mut [&mut EPollEvent],
+        max_events: usize,
+        _timeout: usize,
+    ) -> Result<usize, FileSystemError> {
+        let current_task = scheduler::get_scheduler().current_task();
+        let file_table = &current_task.file_table;
+
+        let mut table = self.events.lock();
+        let mut n = 0;
+
+        let mut fds = alloc::vec![];
+        let mut poll_table = PollTable::default();
+
+        // Iterate over all the registered events and check if they are ready.
+        for (fd, epoll_event) in table.iter_mut() {
+            if n == max_events {
+                break;
+            }
+
+            let fd = file_table
+                .get_handle(*fd)
+                .ok_or(FileSystemError::NotSupported)?; // EINVAL
+
+            let flags = epoll_event.events;
+            let ready = fd.inode().poll(None)?;
+
+            if ready.contains(flags) {
+                // The registered event is ready; increment the number of ready events
+                // and set event flags mask for this event in the caller-supplied event
+                // buffer.
+                ret_events[n].events = ready & flags;
+                n += 1;
+                continue;
+            }
+
+            // Not ready; add the event to the poll table.
+            fd.inode().poll(Some(&mut poll_table))?;
+            fds.push(fd);
+        }
+
+        // If all events are ready, we can return now.
+        if n > 0 {
+            debug_assert!(fds.len() == 0);
+            return Ok(n);
+        }
+
+        'search: loop {
+            // Wait till one of the file descriptor deliever an event.
+            scheduler::get_scheduler().inner.await_io()?;
+
+            for fd in fds.iter() {
+                let ready = fd.inode().poll(None)?;
+                let flags = table
+                    .get(&fd.fd)
+                    .ok_or(FileSystemError::NotSupported)?
+                    .events;
+
+                if ready.contains(flags) {
+                    // The event is ready; break out of the search loop and set ready
+                    // events to 1.
+                    n = 1;
+                    break 'search;
+                }
+            }
+        }
+
+        Ok(n)
     }
 }
 

@@ -23,6 +23,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::prelude::EPollEventFlags;
 use aero_syscall::MMapFlags;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
@@ -38,7 +39,7 @@ use crate::utils::sync::Mutex;
 use super::cache::{self, CacheWeak};
 use super::cache::{CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem};
 use super::devfs::DevINode;
-use super::inode::{DirEntry, FileType, INodeInterface};
+use super::inode::{DirEntry, FileType, INodeInterface, PollTable};
 use super::inode::{FileContents, Metadata};
 use super::{FileSystem, FileSystemError, Result};
 
@@ -388,6 +389,21 @@ impl INodeInterface for LockedRamINode {
         match &this.contents {
             FileContents::Socket(socket) => Ok(socket.clone()),
             _ => Err(FileSystemError::NotSocket),
+        }
+    }
+
+    fn poll(&self, table: Option<&mut PollTable>) -> Result<EPollEventFlags> {
+        let this = self.0.read();
+
+        match &this.contents {
+            FileContents::Device(device) => {
+                let device = device.clone();
+                drop(this);
+
+                device.poll(table)
+            }
+
+            _ => Err(FileSystemError::NotSupported),
         }
     }
 

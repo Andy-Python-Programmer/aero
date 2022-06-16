@@ -19,15 +19,17 @@
 
 use aero_syscall::SocketAddrUnix;
 
+use aero_syscall::prelude::EPollEventFlags;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::RwLock;
 
 use crate::fs;
-use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata};
+use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollTable};
 use crate::fs::{FileSystemError, Path, Result};
 use crate::utils::downcast;
+use crate::utils::sync::BlockQueue;
 
 use super::SocketAddr;
 
@@ -63,6 +65,10 @@ impl UnixSocketBacklog {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.backlog.as_ref().map(|e| e.len()).unwrap_or(0)
+    }
+
     pub fn update_capacity(&mut self, capacity: usize) {
         assert!(
             self.backlog.is_none(),
@@ -81,6 +87,7 @@ struct UnixSocketInner {
 
 pub struct UnixSocket {
     inner: RwLock<UnixSocketInner>,
+    wq: BlockQueue,
     weak: Weak<UnixSocket>,
 }
 
@@ -88,6 +95,7 @@ impl UnixSocket {
     pub fn new() -> Arc<UnixSocket> {
         Arc::new_cyclic(|weak| UnixSocket {
             inner: RwLock::new(UnixSocketInner::default()),
+            wq: BlockQueue::new(),
             weak: weak.clone(),
         })
     }
@@ -140,6 +148,8 @@ impl INodeInterface for UnixSocket {
         }
 
         target.backlog.push(self.sref());
+        self.wq.notify_complete();
+
         Ok(())
     }
 
@@ -150,5 +160,19 @@ impl INodeInterface for UnixSocket {
         this.listening = true;
 
         Ok(())
+    }
+
+    fn poll(&self, table: Option<&mut PollTable>) -> Result<EPollEventFlags> {
+        log::warn!("UnixSocket::poll() is a stub");
+
+        table.map(|e| e.insert(&self.wq));
+
+        let mut events = EPollEventFlags::default();
+
+        if self.inner.read().backlog.len() > 0 {
+            events.insert(EPollEventFlags::OUT);
+        }
+
+        Ok(events)
     }
 }

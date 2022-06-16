@@ -35,7 +35,7 @@ use crate::mem::paging::*;
 use crate::rendy::RendyInfo;
 
 use super::cache::{DirCacheItem, INodeCacheItem};
-use super::inode::INodeInterface;
+use super::inode::{INodeInterface, PollTable};
 use super::ramfs::RamFs;
 use super::FileSystemError;
 use super::{FileSystem, Result, MOUNT_MANAGER};
@@ -127,6 +127,10 @@ impl INodeInterface for DevINode {
 
     fn ioctl(&self, command: usize, arg: usize) -> Result<usize> {
         self.0.inode().ioctl(command, arg)
+    }
+
+    fn poll(&self, table: Option<&mut PollTable>) -> Result<EPollEventFlags> {
+        self.0.inode().poll(table)
     }
 }
 
