@@ -38,6 +38,7 @@ use proc_macro::TokenStream;
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
     test::parse(attr, item)
 }
@@ -48,6 +49,7 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// have a valid return-type of `Result<usize, AeroSyscallError>`. In addition, the function cannot
 /// have generic parameters.
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn syscall(attr: TokenStream, item: TokenStream) -> TokenStream {
     syscall::parse(attr, item)
 }

@@ -17,10 +17,14 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use proc_macro::{Diagnostic, Level, TokenStream};
+use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
+
 use quote::quote;
-use syn::{punctuated::Punctuated, spanned::Spanned, Expr, FnArg, Pat, Type};
+
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::{Expr, FnArg, Pat, Type};
 
 enum ArgType {
     Array(bool),     // mutable?
@@ -33,53 +37,42 @@ enum ArgType {
 
 pub fn parse(_: TokenStream, item: TokenStream) -> TokenStream {
     let parsed_fn = syn::parse_macro_input!(item as syn::ItemFn);
+    let signature = &parsed_fn.sig;
 
-    if let Some(constness) = parsed_fn.sig.constness {
-        Diagnostic::spanned(
-            constness.span().unwrap(),
-            Level::Error,
-            "syscall functions cannot be const",
-        )
-        .emit();
-    }
+    signature
+        .constness
+        .map(|e| emit_error!(e.span(), "syscall functions cannot be `const`"));
 
-    if let Some(asyncness) = parsed_fn.sig.asyncness {
-        Diagnostic::spanned(
-            asyncness.span().unwrap(),
-            Level::Error,
-            "syscall functions cannot be async",
-        )
-        .emit();
-    }
+    signature
+        .asyncness
+        .map(|e| emit_error!(e.span(), "syscall functions cannot be `async`"));
 
-    if let Some(unsafety) = parsed_fn.sig.unsafety {
-        Diagnostic::spanned(
-            unsafety.span().unwrap(),
-            Level::Error,
-            "syscall functions cannot be unsafe",
-        )
-        .emit();
-    }
+    signature
+        .unsafety
+        .map(|e| emit_error!(e.span(), "syscalls functions cannot be `unsafe`"));
 
-    if let Some(_) = parsed_fn.sig.generics.lt_token {
-        let lt_span = parsed_fn.sig.generics.lt_token.span().unwrap();
-        let gt_span = parsed_fn.sig.generics.gt_token.span().unwrap();
+    let generics = &signature.generics;
 
-        Diagnostic::spanned(
-            lt_span.join(gt_span).unwrap(),
-            Level::Error,
-            "syscall functions cannot have generic parameters",
-        )
-        .emit();
+    // NOTE: if `lt_token` is present then `gt_token` will also be present (else invalid syntax).
+    if generics.lt_token.is_some() {
+        let lt_span = generics.lt_token.span().unwrap();
+        let gt_span = generics.gt_token.span().unwrap();
+
+        let span_range = lt_span.join(gt_span).unwrap();
+
+        emit_error!(
+            span_range,
+            "syscall functions cannot have generic parameters"
+        );
     }
 
     let attrs = &parsed_fn.attrs;
     let vis = &parsed_fn.vis;
-    let name = &parsed_fn.sig.ident;
-    let orig_args = &parsed_fn.sig.inputs;
+    let name = &signature.ident;
+    let orig_args = &signature.inputs;
     let processed_args = process_args(orig_args);
     let call_args = process_call_args(orig_args);
-    let ret = &parsed_fn.sig.output;
+    let ret = &signature.output;
     let body = &parsed_fn.block;
 
     let result = quote! {
@@ -150,21 +143,17 @@ fn process_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<FnArg> {
                     };
                 }
                 _ => {
-                    Diagnostic::spanned(
-                        arg.span().unwrap(),
-                        Level::Error,
-                        "syscall function arguments cannot have non-ident patterns",
-                    )
-                    .emit();
+                    emit_error!(
+                        arg.span(),
+                        "syscall function arguments cannot have non-ident patterns"
+                    );
                 }
             },
             FnArg::Receiver(_) => {
-                Diagnostic::spanned(
-                    arg.span().unwrap(),
-                    Level::Error,
-                    "syscall functions cannot have receiver arguments",
-                )
-                .emit();
+                emit_error!(
+                    arg.span(),
+                    "syscall functions cannot have receiver arguments"
+                );
             }
         }
     }
