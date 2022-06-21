@@ -33,7 +33,6 @@ use alloc::vec::Vec;
 use spin::RwLock;
 
 use crate::mem::paging::*;
-use crate::utils::downcast;
 use crate::utils::sync::Mutex;
 
 use super::cache::{self, CacheWeak};
@@ -98,8 +97,10 @@ impl LockedRamINode {
         let inode = filesystem.allocate_inode(file_type, contents);
         let inode_cached = icache.make_item_no_cache(CachedINode::new(inode));
 
-        downcast::<dyn INodeInterface, LockedRamINode>(&inode_cached.inner())
-            .expect("Failed to downcast cached inode on creation")
+        inode_cached
+            .inner()
+            .downcast_arc::<LockedRamINode>()
+            .unwrap()
             .init(
                 &this.node,
                 &inode_cached.downgrade(),
@@ -440,8 +441,10 @@ impl RamFs {
 
         root_dir.filesystem.call_once(|| Arc::downgrade(&copy));
 
-        downcast::<dyn INodeInterface, LockedRamINode>(root_cached.inner())
-            .expect("cannot downcast inode to ram inode")
+        root_cached
+            .inner()
+            .downcast_arc::<LockedRamINode>()
+            .unwrap()
             .init(
                 &ramfs.root_inode.downgrade(),
                 &&root_cached.downgrade(),

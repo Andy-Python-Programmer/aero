@@ -35,7 +35,6 @@ use crate::socket::SocketAddr;
 use crate::userland::scheduler;
 use crate::utils::sync::BlockQueue;
 use crate::utils::sync::Mutex;
-use crate::utils::Downcastable;
 
 use super::cache;
 use super::cache::Cacheable;
@@ -71,7 +70,8 @@ impl Drop for PollTable {
 /// inode which includes its type, size, the number of links referring to it,
 /// and the list of blocks holding the file's content. For example device files,
 /// files on the disk, etc...
-pub trait INodeInterface: Send + Sync + Downcastable {
+#[downcastable]
+pub trait INodeInterface: Send + Sync {
     /// Returns the inode metadata of `this` inode.
     fn metadata(&self) -> Result<Metadata> {
         Err(FileSystemError::NotSupported)

@@ -19,8 +19,12 @@
 
 #![feature(proc_macro_diagnostic, proc_macro_span)]
 
-mod syscall_macro;
-mod test_macro;
+#[macro_use]
+extern crate proc_macro_error;
+
+mod downcastable;
+mod syscall;
+mod test;
 
 use proc_macro::TokenStream;
 
@@ -35,7 +39,7 @@ use proc_macro::TokenStream;
 /// ```
 #[proc_macro_attribute]
 pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
-    test_macro::parse(attr, item)
+    test::parse(attr, item)
 }
 
 /// Validates input buffers, structures, path and strings auto-magically.
@@ -45,5 +49,11 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// have generic parameters.
 #[proc_macro_attribute]
 pub fn syscall(attr: TokenStream, item: TokenStream) -> TokenStream {
-    syscall_macro::parse(attr, item)
+    syscall::parse(attr, item)
+}
+
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn downcastable(attr: TokenStream, item: TokenStream) -> TokenStream {
+    downcastable::parse(attr, item)
 }

@@ -30,17 +30,14 @@ use crate::{fs::cache::DirCacheItem, syscall::ExecArgs};
 
 use spin::Once;
 
-use crate::utils::Downcastable;
-
 use self::round_robin::RoundRobin;
 use super::signals::SignalResult;
 use super::task::{Task, TaskId};
 
 static SCHEDULER: Once<Scheduler> = Once::new();
 
-/// Scheduler interface for each scheduling algorithm. The struct implementing
-/// this trait has to implement [Send], [Sync] and [Downcastable].
-pub trait SchedulerInterface: Send + Sync + Downcastable {
+#[downcastable]
+pub trait SchedulerInterface: Send + Sync {
     /// Register the provided task into the task scheduler queue.
     fn register_task(&self, task: Arc<Task>);
 

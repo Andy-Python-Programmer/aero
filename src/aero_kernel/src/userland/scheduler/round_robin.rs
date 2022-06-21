@@ -26,7 +26,7 @@ use crate::userland::signals::{SignalError, SignalResult};
 use crate::userland::task::{SchedTaskAdapter, Task, TaskState};
 
 use crate::utils::sync::IrqGuard;
-use crate::utils::{downcast, PerCpu};
+use crate::utils::PerCpu;
 
 use super::SchedulerInterface;
 
@@ -314,9 +314,10 @@ unsafe impl Sync for RoundRobin {}
 /// the child process is sweeped, it will be listed in the process table as a zombie
 /// or defunct process.
 fn sweeper() {
-    let scheduler = super::get_scheduler();
-    let round_robin: Option<Arc<RoundRobin>> = downcast(&scheduler.inner);
-    let scheduler_ref = round_robin.expect("Failed to downcast the scheduler");
+    let scheduler_ref = super::get_scheduler()
+        .inner
+        .downcast_arc::<RoundRobin>()
+        .unwrap();
 
     loop {
         scheduler_ref.sweep_dead();
@@ -324,9 +325,10 @@ fn sweeper() {
 }
 
 fn preempter() {
-    let scheduler = super::get_scheduler();
-    let round_robin: Option<Arc<RoundRobin>> = downcast(&scheduler.inner);
-    let scheduler_ref = round_robin.expect("Failed to downcast the scheduler");
+    let scheduler_ref = super::get_scheduler()
+        .inner
+        .downcast_arc::<RoundRobin>()
+        .unwrap();
 
     loop {
         scheduler_ref.schedule_next_task();

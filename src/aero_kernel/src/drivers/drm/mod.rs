@@ -32,9 +32,6 @@ use crate::fs::devfs;
 use crate::fs::inode::INodeInterface;
 use crate::fs::FileSystemError;
 
-use crate::utils;
-use crate::utils::Downcastable;
-
 use crate::mem::paging::*;
 use crate::utils::sync::Mutex;
 
@@ -42,7 +39,8 @@ use uapi::drm::*;
 
 /// Represents modset objects visible to userspace; this includes connectors,
 /// CRTCs, encoders, frambuffers and planes.
-trait ModeObject: Send + Sync + Downcastable {
+#[downcastable]
+trait ModeObject: Send + Sync {
     /// Returns the mode object's ID.
     fn id(&self) -> u32;
     fn object(&self) -> Arc<dyn ModeObject>;
@@ -51,22 +49,22 @@ trait ModeObject: Send + Sync + Downcastable {
 
     /// Converts this mode object into a connector.
     fn as_connector(&self) -> Option<Arc<Connector>> {
-        utils::downcast::<dyn ModeObject, Connector>(&self.object())
+        self.object().downcast_arc::<Connector>()
     }
 
     /// Converts this mode object into an encoder.
     fn as_encoder(&self) -> Option<Arc<Encoder>> {
-        utils::downcast::<dyn ModeObject, Encoder>(&self.object())
+        self.object().downcast_arc::<Encoder>()
     }
 
     /// Converts this mode object into a CRTC.
     fn as_crtc(&self) -> Option<Arc<Crtc>> {
-        utils::downcast::<dyn ModeObject, Crtc>(&self.object())
+        self.object().downcast_arc::<Crtc>()
     }
 
     /// Converts this mode object into a framebuffer.
     fn as_framebuffer(&self) -> Option<Arc<Framebuffer>> {
-        utils::downcast::<dyn ModeObject, Framebuffer>(&self.object())
+        self.object().downcast_arc::<Framebuffer>()
     }
 }
 

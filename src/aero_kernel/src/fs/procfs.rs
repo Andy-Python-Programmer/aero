@@ -4,7 +4,6 @@ use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
 use alloc::sync::{Arc, Weak};
 
-use crate::utils::downcast;
 use spin::{Once, RwLock};
 
 use crate::fs::inode::FileType;
@@ -142,7 +141,9 @@ impl LockedProcINode {
         let inode = filesystem.allocate_inode(file_type, contents);
         let inode_cached = icache.make_item_no_cache(CachedINode::new(inode));
 
-        downcast::<dyn INodeInterface, LockedProcINode>(&inode_cached.inner())
+        inode_cached
+            .inner()
+            .downcast_arc::<LockedProcINode>()
             .unwrap()
             .init(
                 &this.node,
@@ -263,17 +264,20 @@ impl ProcFs {
 
         root_dir.filesystem.call_once(|| Arc::downgrade(&copy));
 
-        let down = downcast::<dyn INodeInterface, LockedProcINode>(root_cached.inner()).unwrap();
+        let inode = root_cached
+            .inner()
+            .downcast_arc::<LockedProcINode>()
+            .unwrap();
 
-        down.init(
+        inode.init(
             &ramfs.root_inode.downgrade(),
             &&root_cached.downgrade(),
             &Arc::downgrade(&ramfs),
             FileType::Directory,
         );
 
-        down.make_inode("cpuinfo", FileType::File, FileContents::CpuInfo)?;
-        down.make_inode("cmdline", FileType::File, FileContents::CmdLine)?;
+        inode.make_inode("cpuinfo", FileType::File, FileContents::CpuInfo)?;
+        inode.make_inode("cmdline", FileType::File, FileContents::CmdLine)?;
 
         Ok(ramfs)
     }

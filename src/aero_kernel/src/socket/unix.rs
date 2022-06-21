@@ -28,7 +28,6 @@ use spin::RwLock;
 use crate::fs;
 use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollTable};
 use crate::fs::{FileSystemError, Path, Result};
-use crate::utils::downcast;
 use crate::utils::sync::BlockQueue;
 
 use super::SocketAddr;
@@ -137,7 +136,10 @@ impl INodeInterface for UnixSocket {
         let path = path_from_unix_sock(address)?;
         let socket = fs::lookup_path(path)?;
 
-        let target = downcast::<dyn INodeInterface, UnixSocket>(&socket.inode().as_unix_socket()?)
+        let target = socket
+            .inode()
+            .as_unix_socket()?
+            .downcast_arc::<UnixSocket>()
             .ok_or(FileSystemError::NotSocket)?; // NOTE: the provided socket was not a unix socket.
 
         let mut target = target.inner.write();

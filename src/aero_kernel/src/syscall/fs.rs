@@ -24,13 +24,12 @@ use aero_syscall::{AeroSyscallError, OpenFlags, Stat};
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::DuplicateHint;
-use crate::fs::inode::{DirEntry, INodeInterface};
+use crate::fs::inode::DirEntry;
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
 use crate::userland::scheduler;
 
 use crate::fs::Path;
-use crate::utils::downcast;
 
 #[syscall]
 pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, AeroSyscallError> {
@@ -433,7 +432,9 @@ pub fn epoll_ctl(
 
     match mode {
         EPOLL_CTL_ADD => {
-            let epoll = downcast::<dyn INodeInterface, EPoll>(&epfd.inode())
+            let epoll = epfd
+                .inode()
+                .downcast_arc::<EPoll>()
                 .ok_or(AeroSyscallError::EINVAL)?;
 
             epoll.add_event(fd, event.clone())?;
@@ -461,8 +462,10 @@ pub fn epoll_pwait(
         .get_handle(epfd)
         .ok_or(AeroSyscallError::EBADFD)?;
 
-    let epfd =
-        downcast::<dyn INodeInterface, EPoll>(&epfd.inode()).ok_or(AeroSyscallError::EINVAL)?;
+    let epfd = epfd
+        .inode()
+        .downcast_arc::<EPoll>()
+        .ok_or(AeroSyscallError::EINVAL)?;
 
     let mut old_mask = 0;
 
