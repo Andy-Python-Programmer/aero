@@ -65,7 +65,7 @@ impl UnixSocketBacklog {
     }
 
     pub fn len(&self) -> usize {
-        self.backlog.as_ref().map(|e| e.len()).unwrap_or(0)
+        self.backlog.as_ref().map(|e| e.len()).unwrap()
     }
 
     pub fn update_capacity(&mut self, capacity: usize) {
@@ -142,15 +142,15 @@ impl INodeInterface for UnixSocket {
             .downcast_arc::<UnixSocket>()
             .ok_or(FileSystemError::NotSocket)?; // NOTE: the provided socket was not a unix socket.
 
-        let mut target = target.inner.write();
+        let mut itarget = target.inner.write();
 
         // ensure that the target socket is listening for new connections.
-        if !target.listening {
+        if !itarget.listening {
             return Err(FileSystemError::ConnectionRefused);
         }
 
-        target.backlog.push(self.sref());
-        self.wq.notify_complete();
+        itarget.backlog.push(self.sref());
+        target.wq.notify_complete();
 
         Ok(())
     }
@@ -165,8 +165,6 @@ impl INodeInterface for UnixSocket {
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> Result<EPollEventFlags> {
-        log::warn!("UnixSocket::poll() is a stub");
-
         table.map(|e| e.insert(&self.wq));
 
         let mut events = EPollEventFlags::default();
