@@ -82,6 +82,10 @@ impl BlockQueue {
             scheduler.inner.wake_up(task.clone());
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.queue.lock_irq().is_empty()
+    }
 }
 
 /// Helper guard structure used to lock interrupts. When dropped, interrupts

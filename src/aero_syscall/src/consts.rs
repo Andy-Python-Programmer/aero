@@ -77,6 +77,8 @@ pub const SYS_EPOLL_PWAIT: usize = 53;
 pub const SYS_EPOLL_CTL: usize = 54;
 pub const SYS_EVENT_FD: usize = 55;
 pub const SYS_KILL: usize = 56;
+pub const SYS_FUTEX_WAIT: usize = 59;
+pub const SYS_FUTEX_WAKE: usize = 60;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

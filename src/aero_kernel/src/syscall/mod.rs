@@ -78,11 +78,12 @@ use core::mem::MaybeUninit;
 
 use aero_syscall::prelude::*;
 
-pub mod fs;
-pub mod ipc;
+mod fs;
+mod futex;
+mod ipc;
 mod net;
-pub mod process;
-pub mod time;
+mod process;
+mod time;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -222,6 +223,9 @@ pub fn generic_do_syscall(
         SYS_IPC_RECV => ipc::recv(b, c, d, e),
         SYS_IPC_DISCOVER_ROOT => ipc::discover_root(),
         SYS_IPC_BECOME_ROOT => ipc::become_root(),
+
+        SYS_FUTEX_WAIT => futex::wait(b, c, d),
+        SYS_FUTEX_WAKE => futex::wake(b),
 
         // Syscall aliases (this should be handled in aero_syscall)
         SYS_MKDIR => fs::mkdirat(aero_syscall::AT_FDCWD as _, b, c),
