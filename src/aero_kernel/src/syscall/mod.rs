@@ -232,7 +232,7 @@ pub fn generic_do_syscall(
 
         _ => {
             log::error!("invalid syscall: {:#x}", a);
-            Err(AeroSyscallError::ENOSYS)
+            Err(SyscallError::ENOSYS)
         }
     };
 

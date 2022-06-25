@@ -1,4 +1,4 @@
-use aero_syscall::AeroSyscallError;
+use aero_syscall::SyscallError;
 use raw_cpuid::CpuId;
 
 use crate::arch::gdt::GdtEntryType;
@@ -19,7 +19,7 @@ const ARCH_SET_FS: usize = 0x1002;
 const ARCH_GET_FS: usize = 0x1003;
 const ARCH_GET_GS: usize = 0x1004;
 
-fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError> {
+fn arch_prctl(command: usize, address: usize) -> Result<usize, SyscallError> {
     match command {
         ARCH_SET_FS => unsafe {
             let _guard = IrqGuard::new();
@@ -55,7 +55,7 @@ fn arch_prctl(command: usize, address: usize) -> Result<usize, AeroSyscallError>
             .get_gs_base()
             .as_u64() as usize),
 
-        _ => Err(AeroSyscallError::EINVAL),
+        _ => Err(SyscallError::EINVAL),
     }
 }
 

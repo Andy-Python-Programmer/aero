@@ -18,7 +18,7 @@
  */
 
 use aero_syscall::signal::{SigAction, SigProcMask};
-use aero_syscall::{AeroSyscallError, MMapFlags, MMapProt, SysInfo, Utsname};
+use aero_syscall::{MMapFlags, MMapProt, SysInfo, SyscallError, Utsname};
 use alloc::string::String;
 use spin::{Mutex, Once};
 
@@ -56,7 +56,7 @@ pub fn exit(status: usize) -> ! {
 }
 
 #[syscall]
-pub fn uname(buffer: &mut Utsname) -> Result<usize, AeroSyscallError> {
+pub fn uname(buffer: &mut Utsname) -> Result<usize, SyscallError> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
         let init_bytes = init.as_bytes();
         let len = init.len();
@@ -82,7 +82,7 @@ pub fn uname(buffer: &mut Utsname) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn fork() -> Result<usize, AeroSyscallError> {
+pub fn fork() -> Result<usize, SyscallError> {
     let scheduler = scheduler::get_scheduler();
     let forked = scheduler.current_task().fork();
 
@@ -91,7 +91,7 @@ pub fn fork() -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
+pub fn clone(entry: usize, stack: usize) -> Result<usize, SyscallError> {
     let scheduler = scheduler::get_scheduler();
     let cloned = scheduler.current_task().clone_process(entry, stack);
 
@@ -100,12 +100,12 @@ pub fn clone(entry: usize, stack: usize) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn kill(pid: usize, signal: usize) -> Result<usize, AeroSyscallError> {
+pub fn kill(pid: usize, signal: usize) -> Result<usize, SyscallError> {
     // If pid is positive, then signal is sent to the process with that pid.
     if pid > 0 {
         let task = scheduler::get_scheduler()
             .find_task(TaskId::new(pid))
-            .ok_or(AeroSyscallError::ESRCH)?;
+            .ok_or(SyscallError::ESRCH)?;
 
         task.signal(signal);
         Ok(0)
@@ -121,11 +121,11 @@ pub fn exec(
     argc: usize,
     envs: usize,
     envc: usize,
-) -> Result<usize, AeroSyscallError> {
+) -> Result<usize, SyscallError> {
     let executable = fs::lookup_path(path)?;
 
     if executable.inode().metadata()?.is_directory() {
-        return Err(AeroSyscallError::EISDIR);
+        return Err(SyscallError::EISDIR);
     }
 
     // NOTE: Neither args nor envs should be used after this point, the kernel
@@ -150,14 +150,14 @@ pub fn exec(
 }
 
 #[syscall]
-pub fn log(msg: &str) -> Result<usize, AeroSyscallError> {
+pub fn log(msg: &str) -> Result<usize, SyscallError> {
     log::debug!("{}", msg);
 
     Ok(0x00)
 }
 
 #[syscall]
-pub fn waitpid(pid: usize, status: &mut u32, _flags: usize) -> Result<usize, AeroSyscallError> {
+pub fn waitpid(pid: usize, status: &mut u32, _flags: usize) -> Result<usize, SyscallError> {
     let current_task = scheduler::get_scheduler().current_task();
 
     Ok(current_task.waitpid(pid as isize, status)?)
@@ -171,10 +171,10 @@ pub fn mmap(
     flags: usize,
     fd: usize,
     offset: usize,
-) -> Result<usize, AeroSyscallError> {
+) -> Result<usize, SyscallError> {
     let address = VirtAddr::new(address as u64);
-    let protection = MMapProt::from_bits(protection).ok_or(AeroSyscallError::EINVAL)?;
-    let flags = MMapFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+    let protection = MMapProt::from_bits(protection).ok_or(SyscallError::EINVAL)?;
+    let flags = MMapFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     let mut file = None;
 
@@ -184,7 +184,7 @@ pub fn mmap(
                 .current_task()
                 .file_table
                 .get_handle(fd)
-                .ok_or(AeroSyscallError::EBADF)?
+                .ok_or(SyscallError::EBADF)?
                 .dirnode(),
         );
     }
@@ -196,12 +196,12 @@ pub fn mmap(
     {
         Ok(alloc.as_u64() as usize)
     } else {
-        Err(AeroSyscallError::EFAULT)
+        Err(SyscallError::EFAULT)
     }
 }
 
 #[syscall]
-pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
+pub fn munmap(address: usize, size: usize) -> Result<usize, SyscallError> {
     let address = VirtAddr::new(address as u64);
 
     if scheduler::get_scheduler()
@@ -211,27 +211,27 @@ pub fn munmap(address: usize, size: usize) -> Result<usize, AeroSyscallError> {
     {
         Ok(0x00)
     } else {
-        Err(AeroSyscallError::EFAULT)
+        Err(SyscallError::EFAULT)
     }
 }
 
 #[syscall]
-pub fn getpid() -> Result<usize, AeroSyscallError> {
+pub fn getpid() -> Result<usize, SyscallError> {
     Ok(scheduler::get_scheduler().current_task().pid().as_usize())
 }
 
 #[syscall]
-pub fn gettid() -> Result<usize, AeroSyscallError> {
+pub fn gettid() -> Result<usize, SyscallError> {
     Ok(scheduler::get_scheduler().current_task().tid().as_usize())
 }
 
 #[syscall]
-pub fn gethostname(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
+pub fn gethostname(buffer: &mut [u8]) -> Result<usize, SyscallError> {
     let hostname = hostname().lock();
     let bytes = hostname.as_bytes();
 
     if bytes.len() > buffer.len() {
-        Err(AeroSyscallError::ENAMETOOLONG)
+        Err(SyscallError::ENAMETOOLONG)
     } else {
         buffer[0..bytes.len()].copy_from_slice(bytes);
 
@@ -240,30 +240,26 @@ pub fn gethostname(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn info(struc: &mut SysInfo) -> Result<usize, AeroSyscallError> {
+pub fn info(struc: &mut SysInfo) -> Result<usize, SyscallError> {
     struc.uptime = crate::time::get_uptime_ticks() as i64;
 
     Ok(0x00)
 }
 
 #[syscall]
-pub fn sethostname(name: &[u8]) -> Result<usize, AeroSyscallError> {
+pub fn sethostname(name: &[u8]) -> Result<usize, SyscallError> {
     match core::str::from_utf8(name) {
         Ok(name) => {
             *hostname().lock() = name.into();
 
             Ok(0)
         }
-        Err(_) => Err(AeroSyscallError::EINVAL),
+        Err(_) => Err(SyscallError::EINVAL),
     }
 }
 
 #[syscall]
-pub fn sigprocmask(
-    how: usize,
-    set: *const u64,
-    old_set: *mut u64,
-) -> Result<usize, AeroSyscallError> {
+pub fn sigprocmask(how: usize, set: *const u64, old_set: *mut u64) -> Result<usize, SyscallError> {
     let set = if set.is_null() {
         None
     } else {
@@ -292,7 +288,7 @@ pub fn sigaction(
     sigact: *mut SigAction,
     sigreturn: usize,
     old: *mut SigAction,
-) -> Result<usize, AeroSyscallError> {
+) -> Result<usize, SyscallError> {
     let new = if sigact.is_null() {
         None
     } else {

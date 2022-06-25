@@ -19,7 +19,7 @@
 
 use core::mem;
 
-use aero_syscall::AeroSyscallError;
+use aero_syscall::SyscallError;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -136,7 +136,7 @@ pub enum FileSystemError {
     ConnectionRefused,
 }
 
-impl From<FileSystemError> for AeroSyscallError {
+impl From<FileSystemError> for SyscallError {
     fn from(error: FileSystemError) -> Self {
         match error {
             FileSystemError::NotSupported => Self::EACCES,

@@ -26,7 +26,7 @@ use core::sync::atomic::{AtomicU64, Ordering};
 
 use bit_field::BitField;
 
-use aero_syscall::AeroSyscallError;
+use aero_syscall::SyscallError;
 
 use super::scheduler;
 use crate::fs::FileSystemError;
@@ -129,10 +129,10 @@ impl From<SignalError> for FileSystemError {
     }
 }
 
-impl From<SignalError> for AeroSyscallError {
+impl From<SignalError> for SyscallError {
     fn from(s: SignalError) -> Self {
         match s {
-            SignalError::Interrupted => AeroSyscallError::EINTR,
+            SignalError::Interrupted => SyscallError::EINTR,
         }
     }
 }
@@ -150,10 +150,10 @@ impl SignalEntry {
     pub fn from_sigaction(
         sigaction: SigAction,
         sigreturn: usize,
-    ) -> Result<SignalEntry, AeroSyscallError> {
+    ) -> Result<SignalEntry, SyscallError> {
         Ok(SignalEntry {
             handler: SignalHandler::from(sigaction.sa_handler),
-            flags: SignalFlags::from_bits(sigaction.sa_flags).ok_or(AeroSyscallError::EINVAL)?,
+            flags: SignalFlags::from_bits(sigaction.sa_flags).ok_or(SyscallError::EINVAL)?,
             mask: sigaction.sa_mask,
             sigreturn,
         })

@@ -20,14 +20,14 @@
 use aero_ipc::{SystemService, WindowService};
 use aero_syscall::*;
 
-fn discover_service(name: &str) -> Result<usize, AeroSyscallError> {
+fn discover_service(name: &str) -> Result<usize, SyscallError> {
     let root_pid = sys_ipc_discover_root()?;
     let system = SystemService::open(root_pid);
 
-    system.discover(name).map_err(|_| AeroSyscallError::ENOMSG)
+    system.discover(name).map_err(|_| SyscallError::ENOMSG)
 }
 
-fn main() -> Result<(), AeroSyscallError> {
+fn main() -> Result<(), SyscallError> {
     let window_server = WindowService::open(discover_service("WindowServer")?);
 
     window_server.create_window("Test window 1");

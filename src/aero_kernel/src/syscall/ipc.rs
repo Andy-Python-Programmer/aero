@@ -22,7 +22,7 @@ use crate::userland::task::TaskId;
 
 use crate::utils::sync::{BlockQueue, Mutex};
 
-use aero_syscall::AeroSyscallError;
+use aero_syscall::SyscallError;
 use alloc::{collections::VecDeque, vec::Vec};
 use spin::Once;
 
@@ -53,7 +53,7 @@ fn handle_recieve(
     pid_ptr: &mut usize,
     output: &mut [u8],
     msg: Message,
-) -> Result<usize, AeroSyscallError> {
+) -> Result<usize, SyscallError> {
     output[0..msg.data.len()].copy_from_slice(&msg.data);
 
     *pid_ptr = msg.from;
@@ -62,10 +62,10 @@ fn handle_recieve(
 }
 
 #[syscall]
-pub fn send(pid: usize, payload: &[u8]) -> Result<usize, AeroSyscallError> {
+pub fn send(pid: usize, payload: &[u8]) -> Result<usize, SyscallError> {
     let target = get_scheduler()
         .find_task(TaskId::new(pid))
-        .ok_or(AeroSyscallError::EINVAL)?;
+        .ok_or(SyscallError::EINVAL)?;
 
     let message_queue = &target.message_queue;
     let mut queue = message_queue.queue.lock();
@@ -83,11 +83,7 @@ pub fn send(pid: usize, payload: &[u8]) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn recv(
-    pid_ptr: &mut usize,
-    output: &mut [u8],
-    block: usize,
-) -> Result<usize, AeroSyscallError> {
+pub fn recv(pid_ptr: &mut usize, output: &mut [u8], block: usize) -> Result<usize, SyscallError> {
     let current = get_scheduler().current_task();
 
     if block == 0 {
@@ -99,7 +95,7 @@ pub fn recv(
 
         if item.data.len() > output.len() {
             msgqueue.push_front(item);
-            return Err(AeroSyscallError::E2BIG);
+            return Err(SyscallError::E2BIG);
         }
 
         return handle_recieve(pid_ptr, output, item);
@@ -117,24 +113,24 @@ pub fn recv(
 
     if msg.data.len() > output.len() {
         our_queue.push_front(msg);
-        Err(AeroSyscallError::E2BIG)
+        Err(SyscallError::E2BIG)
     } else {
         handle_recieve(pid_ptr, output, msg)
     }
 }
 
 #[syscall]
-pub fn discover_root() -> Result<usize, AeroSyscallError> {
+pub fn discover_root() -> Result<usize, SyscallError> {
     match IPC_ROOT_NODE.get() {
         Some(pid) => Ok(*pid),
-        None => Err(AeroSyscallError::EINVAL),
+        None => Err(SyscallError::EINVAL),
     }
 }
 
 #[syscall]
-pub fn become_root() -> Result<usize, AeroSyscallError> {
+pub fn become_root() -> Result<usize, SyscallError> {
     if IPC_ROOT_NODE.is_completed() {
-        Err(AeroSyscallError::EINVAL)
+        Err(SyscallError::EINVAL)
     } else {
         IPC_ROOT_NODE.call_once(|| get_scheduler().current_task().pid().as_usize());
 

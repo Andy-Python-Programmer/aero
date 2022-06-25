@@ -28,7 +28,7 @@ mod mmap;
 
 pub struct Test<'a> {
     path: &'a str,
-    func: fn() -> Result<(), AeroSyscallError>,
+    func: fn() -> Result<(), SyscallError>,
 }
 
 static TEST_FUNCTIONS: &[&'static Test<'static>] = &[
@@ -59,7 +59,7 @@ fn main() {
 }
 
 #[utest_proc::test]
-fn fcntl_get_set_fdflags() -> Result<(), AeroSyscallError> {
+fn fcntl_get_set_fdflags() -> Result<(), SyscallError> {
     let fd = sys_open("/dev/tty", OpenFlags::O_RDONLY)?;
     let flags = prelude::FdFlags::CLOEXEC;
 
@@ -73,7 +73,7 @@ fn fcntl_get_set_fdflags() -> Result<(), AeroSyscallError> {
 }
 
 #[utest_proc::test]
-fn dup2_redirect_stdout() -> Result<(), AeroSyscallError> {
+fn dup2_redirect_stdout() -> Result<(), SyscallError> {
     let utest_fd = sys_open("utest.txt", OpenFlags::O_WRONLY | OpenFlags::O_CREAT)?;
 
     // We set the new_fd to the file descriptor of stdout (i.e. 1)
@@ -100,7 +100,7 @@ fn dup2_redirect_stdout() -> Result<(), AeroSyscallError> {
 }
 
 #[utest_proc::test]
-fn dup_fds() -> Result<(), AeroSyscallError> {
+fn dup_fds() -> Result<(), SyscallError> {
     let utest_fd = sys_open("utest.txt", OpenFlags::O_WRONLY | OpenFlags::O_CREAT)?;
 
     // dup() will create a copy of the utest fd as cutest_fd then both can
@@ -127,7 +127,7 @@ fn dup_fds() -> Result<(), AeroSyscallError> {
 }
 
 #[utest_proc::test]
-fn signal_handler() -> Result<(), AeroSyscallError> {
+fn signal_handler() -> Result<(), SyscallError> {
     let child = sys_fork()?;
 
     // We perform the test in a forked process since then we dont
@@ -186,7 +186,7 @@ fn signal_handler() -> Result<(), AeroSyscallError> {
 }
 
 #[utest_proc::test]
-fn forked_pipe() -> Result<(), AeroSyscallError> {
+fn forked_pipe() -> Result<(), SyscallError> {
     let mut pipe = [0usize; 2];
     sys_pipe(&mut pipe, OpenFlags::empty())?;
 
@@ -218,7 +218,7 @@ fn forked_pipe() -> Result<(), AeroSyscallError> {
 
 // Emulates how mlibc under the hood does clone()
 #[utest_proc::test]
-fn clone_process() -> Result<(), AeroSyscallError> {
+fn clone_process() -> Result<(), SyscallError> {
     const STACK_SIZE: usize = 4096;
 
     #[naked]
@@ -307,7 +307,7 @@ impl Hello::Server for HelloServer {
 }
 
 #[utest_proc::test]
-fn rpc_test() -> Result<(), AeroSyscallError> {
+fn rpc_test() -> Result<(), SyscallError> {
     aero_ipc::listen(Hello::handler(HelloServer {}));
     let c = Hello::open(sys_getpid().unwrap());
     c.hello(3);
@@ -316,7 +316,7 @@ fn rpc_test() -> Result<(), AeroSyscallError> {
 }
 
 #[utest_proc::test]
-fn sysenter_test() -> Result<(), AeroSyscallError> {
+fn sysenter_test() -> Result<(), SyscallError> {
     let pid = sys_fork()?;
 
     if pid == 0 {

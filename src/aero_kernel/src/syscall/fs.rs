@@ -19,7 +19,7 @@
 
 use aero_syscall::prelude::*;
 use aero_syscall::signal::SigProcMask;
-use aero_syscall::{AeroSyscallError, OpenFlags, Stat};
+use aero_syscall::{OpenFlags, Stat, SyscallError};
 
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
@@ -32,12 +32,12 @@ use crate::userland::scheduler;
 use crate::fs::Path;
 
 #[syscall]
-pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, AeroSyscallError> {
+pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, SyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     if handle
         .flags
@@ -45,17 +45,17 @@ pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, AeroSyscallError> {
     {
         Ok(handle.write(buffer)?)
     } else {
-        Err(AeroSyscallError::EACCES)
+        Err(SyscallError::EACCES)
     }
 }
 
 #[syscall]
-pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
+pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, SyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     if handle
         .flags
@@ -63,13 +63,13 @@ pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
     {
         Ok(handle.read(buffer)?)
     } else {
-        Err(AeroSyscallError::EACCES)
+        Err(SyscallError::EACCES)
     }
 }
 
 #[syscall]
-pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, AeroSyscallError> {
-    let mut flags = OpenFlags::from_bits(mode).ok_or(AeroSyscallError::EINVAL)?;
+pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> {
+    let mut flags = OpenFlags::from_bits(mode).ok_or(SyscallError::EINVAL)?;
 
     if !flags.intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR | OpenFlags::O_WRONLY) {
         flags.insert(OpenFlags::O_RDONLY);
@@ -84,7 +84,7 @@ pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, AeroSyscallEr
     let inode = fs::lookup_path_with_mode(path, lookup_mode)?;
 
     if flags.contains(OpenFlags::O_DIRECTORY) && !inode.inode().metadata()?.is_directory() {
-        return Err(AeroSyscallError::ENOTDIR);
+        return Err(SyscallError::ENOTDIR);
     }
 
     if flags.contains(OpenFlags::O_TRUNC) {
@@ -98,35 +98,35 @@ pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, AeroSyscallEr
 }
 
 #[syscall]
-pub fn dup(fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
+pub fn dup(fd: usize, flags: usize) -> Result<usize, SyscallError> {
     let task = scheduler::get_scheduler().current_task();
-    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
+    let flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
 
     task.file_table.duplicate(fd, DuplicateHint::Any, flags)
 }
 
 #[syscall]
-pub fn dup2(fd: usize, new_fd: usize, flags: usize) -> Result<usize, AeroSyscallError> {
+pub fn dup2(fd: usize, new_fd: usize, flags: usize) -> Result<usize, SyscallError> {
     let task = scheduler::get_scheduler().current_task();
-    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
+    let flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
 
     task.file_table
         .duplicate(fd, DuplicateHint::Exact(new_fd), flags)
 }
 
 #[syscall]
-pub fn getdents(fd: usize, buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
+pub fn getdents(fd: usize, buffer: &mut [u8]) -> Result<usize, SyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     Ok(handle.get_dents(buffer)?)
 }
 
 #[syscall]
-pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
+pub fn close(fd: usize) -> Result<usize, SyscallError> {
     let res = scheduler::get_scheduler()
         .current_task()
         .file_table
@@ -136,17 +136,17 @@ pub fn close(fd: usize) -> Result<usize, AeroSyscallError> {
         Ok(0x00)
     } else {
         // FD isn't a valid open file descriptor.
-        Err(AeroSyscallError::EBADFD)
+        Err(SyscallError::EBADFD)
     }
 }
 
 #[syscall]
-pub fn chdir(path: &str) -> Result<usize, AeroSyscallError> {
+pub fn chdir(path: &str) -> Result<usize, SyscallError> {
     let inode = fs::lookup_path(Path::new(path))?;
 
     if !inode.inode().metadata()?.is_directory() {
         // A component of path is not a directory.
-        return Err(AeroSyscallError::ENOTDIR);
+        return Err(SyscallError::ENOTDIR);
     }
 
     scheduler::get_scheduler().current_task().set_cwd(inode);
@@ -154,7 +154,7 @@ pub fn chdir(path: &str) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, AeroSyscallError> {
+pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, SyscallError> {
     // NOTE: If the pathname given in pathname is relative, then it is interpreted
     // relative to the directory referred to by the file descriptor (rather than relative
     // to the current working directory of the calling task, as is done by mkdir() for a
@@ -174,7 +174,7 @@ pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, AeroSyscallError> {
                 .current_task()
                 .file_table
                 .get_handle(dfd)
-                .ok_or(AeroSyscallError::EBADFD)?;
+                .ok_or(SyscallError::EBADFD)?;
 
             (handle.inode(), path.as_str())
         }
@@ -182,12 +182,12 @@ pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, AeroSyscallError> {
 
     if !parent_inode.metadata()?.is_directory() {
         // A component of path is not a directory.
-        return Err(AeroSyscallError::ENOTDIR);
+        return Err(SyscallError::ENOTDIR);
     }
 
     if ["", ".", ".."].contains(&path.as_str()) {
         // Cannot create a directory with a name of "", ".", or "..".
-        return Err(AeroSyscallError::EEXIST);
+        return Err(SyscallError::EEXIST);
     }
 
     parent_inode.mkdir(child)?;
@@ -195,7 +195,7 @@ pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn rmdir(path: &str) -> Result<usize, AeroSyscallError> {
+pub fn rmdir(path: &str) -> Result<usize, SyscallError> {
     let path = Path::new(path);
 
     let (_, child) = path.parent_and_basename();
@@ -204,7 +204,7 @@ pub fn rmdir(path: &str) -> Result<usize, AeroSyscallError> {
     if !inode.inode().metadata()?.is_directory() {
         // ENOTDIR: A component used as a directory in pathname, is not in fact,
         // a directory.
-        return Err(AeroSyscallError::ENOTDIR);
+        return Err(SyscallError::ENOTDIR);
     }
 
     inode.inode().rmdir(child)?;
@@ -213,7 +213,7 @@ pub fn rmdir(path: &str) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn getcwd(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
+pub fn getcwd(buffer: &mut [u8]) -> Result<usize, SyscallError> {
     let cwd = scheduler::get_scheduler().current_task().get_cwd();
 
     buffer[..cwd.len()].copy_from_slice(cwd.as_bytes());
@@ -221,12 +221,12 @@ pub fn getcwd(buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSyscallError> {
+pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, SyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     match command {
         // Sets the close-on-exec file descriptor flag. This is equivalent
@@ -242,19 +242,19 @@ pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, AeroSy
 }
 
 #[syscall]
-pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, AeroSyscallError> {
+pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, SyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     Ok(handle.seek(offset as isize, aero_syscall::SeekWhence::from(whence))?)
 }
 
 #[syscall]
-pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, AeroSyscallError> {
-    let flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, SyscallError> {
+    let flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
     let pipe = Pipe::new();
 
     let entry = DirEntry::from_inode(pipe);
@@ -285,9 +285,9 @@ pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, AeroSyscallErro
 }
 
 #[syscall]
-pub fn unlink(fd: usize, path: &Path, flags: usize) -> Result<usize, AeroSyscallError> {
+pub fn unlink(fd: usize, path: &Path, flags: usize) -> Result<usize, SyscallError> {
     // TODO: Make use of the open flags.
-    let _flags = OpenFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+    let _flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
     let name = path.container();
 
     if fd as isize == aero_syscall::AT_FDCWD {
@@ -309,12 +309,7 @@ pub fn unlink(fd: usize, path: &Path, flags: usize) -> Result<usize, AeroSyscall
 }
 
 #[syscall]
-pub fn access(
-    fd: usize,
-    path: &Path,
-    _mode: usize,
-    _flags: usize,
-) -> Result<usize, AeroSyscallError> {
+pub fn access(fd: usize, path: &Path, _mode: usize, _flags: usize) -> Result<usize, SyscallError> {
     if fd as isize == aero_syscall::AT_FDCWD {
         lookup_path(path)?;
         Ok(0x00)
@@ -325,12 +320,12 @@ pub fn access(
 }
 
 #[syscall]
-pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscallError> {
+pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallError> {
     let handle = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     match command {
         // F_DUPFD_CLOEXEC and F_DUPFD:
@@ -355,7 +350,7 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscall
 
         // Set the value of file descriptor flags:
         aero_syscall::prelude::F_SETFD => {
-            let flags = FdFlags::from_bits(arg).ok_or(AeroSyscallError::EINVAL)?;
+            let flags = FdFlags::from_bits(arg).ok_or(SyscallError::EINVAL)?;
             handle.fd_flags.lock().insert(flags);
 
             Ok(0x00)
@@ -372,12 +367,12 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, AeroSyscall
 }
 
 #[syscall]
-pub fn fstat(fd: usize, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
+pub fn fstat(fd: usize, stat: &mut Stat) -> Result<usize, SyscallError> {
     let file = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     *stat = file.inode().stat()?;
 
@@ -385,7 +380,7 @@ pub fn fstat(fd: usize, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn stat(path: &Path, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
+pub fn stat(path: &Path, stat: &mut Stat) -> Result<usize, SyscallError> {
     let file = fs::lookup_path(path)?;
 
     *stat = file.inode().stat()?;
@@ -394,16 +389,16 @@ pub fn stat(path: &Path, stat: &mut Stat) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn read_link(path: &Path, _buffer: &mut [u8]) -> Result<usize, AeroSyscallError> {
+pub fn read_link(path: &Path, _buffer: &mut [u8]) -> Result<usize, SyscallError> {
     log::warn!("read_link: is a stub! (path={path:?})");
 
-    Err(AeroSyscallError::EINVAL)
+    Err(SyscallError::EINVAL)
 }
 
 /// Returns a file descriptor referring to the new epoll instance.
 #[syscall]
-pub fn epoll_create(flags: usize) -> Result<usize, AeroSyscallError> {
-    let _flags = EPollFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+pub fn epoll_create(flags: usize) -> Result<usize, SyscallError> {
+    let _flags = EPollFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     let epoll_file = EPoll::new();
     let entry = DirEntry::from_inode(epoll_file);
@@ -423,19 +418,19 @@ pub fn epoll_ctl(
     mode: usize,
     fd: usize,
     event: &mut EPollEvent,
-) -> Result<usize, AeroSyscallError> {
+) -> Result<usize, SyscallError> {
     let epfd = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(epfd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     match mode {
         EPOLL_CTL_ADD => {
             let epoll = epfd
                 .inode()
                 .downcast_arc::<EPoll>()
-                .ok_or(AeroSyscallError::EINVAL)?;
+                .ok_or(SyscallError::EINVAL)?;
 
             epoll.add_event(fd, event.clone())?;
             Ok(0)
@@ -451,7 +446,7 @@ pub fn epoll_pwait(
     event: &mut [&mut EPollEvent],
     timeout: usize,
     sigmask: usize,
-) -> Result<usize, AeroSyscallError> {
+) -> Result<usize, SyscallError> {
     let max_events = event.len();
 
     let current_task = scheduler::get_scheduler().current_task();
@@ -460,12 +455,12 @@ pub fn epoll_pwait(
     let epfd = current_task
         .file_table
         .get_handle(epfd)
-        .ok_or(AeroSyscallError::EBADFD)?;
+        .ok_or(SyscallError::EBADFD)?;
 
     let epfd = epfd
         .inode()
         .downcast_arc::<EPoll>()
-        .ok_or(AeroSyscallError::EINVAL)?;
+        .ok_or(SyscallError::EINVAL)?;
 
     let mut old_mask = 0;
 
@@ -480,8 +475,8 @@ pub fn epoll_pwait(
 }
 
 #[syscall]
-pub fn event_fd(_initval: usize, flags: usize) -> Result<usize, AeroSyscallError> {
-    let flags = EventFdFlags::from_bits(flags).ok_or(AeroSyscallError::EINVAL)?;
+pub fn event_fd(_initval: usize, flags: usize) -> Result<usize, SyscallError> {
+    let flags = EventFdFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
     assert!(!flags.contains(EventFdFlags::SEMAPHORE)); // todo: implement event fd semaphore support.
 
     let eventfd_file = EventFd::new();

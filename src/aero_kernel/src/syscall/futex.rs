@@ -19,7 +19,7 @@
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use aero_syscall::{AeroSyscallError, TimeSpec};
+use aero_syscall::{SyscallError, TimeSpec};
 use alloc::sync::Arc;
 use spin::Once;
 
@@ -41,11 +41,11 @@ impl FutexContainer {
 
     /// Ensures the user-provided futex pointer is non-null and aligned to the alignment of
     /// a futex word (32-bits).
-    fn validate_futex_ptr(ptr: VirtAddr) -> Result<(), AeroSyscallError> {
+    fn validate_futex_ptr(ptr: VirtAddr) -> Result<(), SyscallError> {
         let raw = ptr.as_u64() as usize;
 
         if raw == 0 || (raw & (core::mem::size_of::<u32>() - 1)) == 0 {
-            Err(AeroSyscallError::EINVAL)
+            Err(SyscallError::EINVAL)
         } else {
             Ok(())
         }
@@ -85,13 +85,11 @@ impl FutexContainer {
         uaddr: VirtAddr,
         expected: u32,
         _timeout: &TimeSpec,
-    ) -> Result<(), AeroSyscallError> {
+    ) -> Result<(), SyscallError> {
         Self::validate_futex_ptr(uaddr)?;
 
-        let key = Self::addr_as_futex_key(uaddr).ok_or(AeroSyscallError::EINVAL)?;
-        let value = uaddr
-            .read_mut::<AtomicU32>()
-            .ok_or(AeroSyscallError::EINVAL)?;
+        let key = Self::addr_as_futex_key(uaddr).ok_or(SyscallError::EINVAL)?;
+        let value = uaddr.read_mut::<AtomicU32>().ok_or(SyscallError::EINVAL)?;
 
         if value.load(Ordering::SeqCst) == expected {
             let futex = self.get_alloc(key);
@@ -109,15 +107,15 @@ impl FutexContainer {
 
             Ok(())
         } else {
-            Err(AeroSyscallError::EAGAIN)
+            Err(SyscallError::EAGAIN)
         }
     }
 
-    fn wake(&self, uaddr: VirtAddr) -> Result<(), AeroSyscallError> {
+    fn wake(&self, uaddr: VirtAddr) -> Result<(), SyscallError> {
         Self::validate_futex_ptr(uaddr)?;
 
-        let key = Self::addr_as_futex_key(uaddr).ok_or(AeroSyscallError::EINVAL)?;
-        let futex = self.get(key).ok_or(AeroSyscallError::EINVAL)?;
+        let key = Self::addr_as_futex_key(uaddr).ok_or(SyscallError::EINVAL)?;
+        let futex = self.get(key).ok_or(SyscallError::EINVAL)?;
 
         futex.notify_complete();
 
@@ -134,7 +132,7 @@ fn get_futex_conatiner() -> &'static FutexContainer {
 }
 
 #[syscall]
-pub fn wait(ptr: usize, expected: usize, timeout: &TimeSpec) -> Result<usize, AeroSyscallError> {
+pub fn wait(ptr: usize, expected: usize, timeout: &TimeSpec) -> Result<usize, SyscallError> {
     let ptr = VirtAddr::new(ptr as u64);
 
     let futex_container = get_futex_conatiner();
@@ -144,7 +142,7 @@ pub fn wait(ptr: usize, expected: usize, timeout: &TimeSpec) -> Result<usize, Ae
 }
 
 #[syscall]
-pub fn wake(ptr: usize) -> Result<usize, AeroSyscallError> {
+pub fn wake(ptr: usize) -> Result<usize, SyscallError> {
     let ptr = VirtAddr::new(ptr as u64);
 
     let futex_container = get_futex_conatiner();

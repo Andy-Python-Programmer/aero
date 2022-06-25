@@ -18,7 +18,7 @@
  */
 
 use aero_syscall::prelude::EPollEvent;
-use aero_syscall::AeroSyscallError;
+use aero_syscall::SyscallError;
 
 use alloc::sync::Arc;
 use hashbrown::HashMap;
@@ -44,11 +44,11 @@ impl EPoll {
     ///
     /// ## Errors
     /// * `EEXIST`: The event already exists at `fd`.
-    pub fn add_event(&self, fd: usize, event: EPollEvent) -> Result<(), AeroSyscallError> {
+    pub fn add_event(&self, fd: usize, event: EPollEvent) -> Result<(), SyscallError> {
         let mut events = self.events.lock_irq();
 
         if events.get(&fd).is_some() {
-            return Err(AeroSyscallError::EEXIST);
+            return Err(SyscallError::EEXIST);
         }
 
         events.insert(fd, event);

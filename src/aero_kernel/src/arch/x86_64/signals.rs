@@ -18,7 +18,7 @@
  */
 
 use aero_syscall::signal::{SigProcMask, SignalFlags};
-use aero_syscall::AeroSyscallError;
+use aero_syscall::SyscallError;
 
 use crate::userland;
 use crate::userland::scheduler;
@@ -116,7 +116,7 @@ pub fn syscall_check_signals(syscall_result: isize, stack: &mut InterruptStack) 
             let old_mask = signals.blocked_mask();
 
             let syscall_rresult = aero_syscall::isize_as_syscall_result(syscall_result);
-            let restart_syscall = syscall_rresult == Err(AeroSyscallError::EINTR)
+            let restart_syscall = syscall_rresult == Err(SyscallError::EINTR)
                 && entry.flags().contains(SignalFlags::SA_RESTART);
 
             #[cfg(feature = "syslog")]

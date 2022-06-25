@@ -57,7 +57,7 @@ macro_rules! error {
 
 static LAST_EXIT_CODE: AtomicU32 = AtomicU32::new(0);
 
-fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
+fn repl(history: &mut Vec<String>) -> Result<(), SyscallError> {
     let mut hostname_buf = [0; 64];
     let mut pwd_buffer = [0; 1024];
     let mut cmd_buffer = [0; 1024];
@@ -237,8 +237,8 @@ fn repl(history: &mut Vec<String>) -> Result<(), AeroSyscallError> {
                         ],
                     ) {
                         Ok(_) => core::unreachable!(),
-                        Err(AeroSyscallError::EISDIR) => error!("{}: is a directory", cmd),
-                        Err(AeroSyscallError::ENOENT) => error!("{}: command not found", cmd),
+                        Err(SyscallError::EISDIR) => error!("{}: is a directory", cmd),
+                        Err(SyscallError::ENOENT) => error!("{}: command not found", cmd),
                         Err(err) => error!("{}: {:?}", cmd, err),
                     }
 
@@ -308,7 +308,7 @@ fn print_kernel_log() -> Result<(), Box<dyn Error>> {
     cat_file(Some("/dev/kmsg"))
 }
 
-fn uwutest() -> Result<(), AeroSyscallError> {
+fn uwutest() -> Result<(), SyscallError> {
     let my_pid = sys_getpid()?;
     let ipc = SystemService::open(sys_ipc_discover_root()?);
 
@@ -323,7 +323,7 @@ fn uwutest() -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
-fn get_uptime() -> Result<String, AeroSyscallError> {
+fn get_uptime() -> Result<String, SyscallError> {
     let mut info = unsafe { core::mem::zeroed() };
 
     sys_info(&mut info)?;
@@ -368,7 +368,7 @@ fn get_uptime() -> Result<String, AeroSyscallError> {
     Ok(uptime)
 }
 
-fn uwufetch() -> Result<(), AeroSyscallError> {
+fn uwufetch() -> Result<(), SyscallError> {
     let print_prefix = |prefix| {
         print!("{}{}{}: ", MAGENTA_FG, prefix, RESET);
     };
@@ -422,7 +422,7 @@ fn uwufetch() -> Result<(), AeroSyscallError> {
     Ok(())
 }
 
-fn uname() -> Result<(), AeroSyscallError> {
+fn uname() -> Result<(), SyscallError> {
     let mut uname_info = Utsname::default();
 
     sys_uname(&mut uname_info)?;

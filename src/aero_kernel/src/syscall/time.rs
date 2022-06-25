@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::{AeroSyscallError, TimeSpec};
+use aero_syscall::{SyscallError, TimeSpec};
 
 use crate::userland::scheduler;
 use crate::utils::CeilDiv;
@@ -26,7 +26,7 @@ const CLOCK_TYPE_REALTIME: usize = 0;
 const CLOCK_TYPE_MONOTONIC: usize = 1;
 
 #[syscall]
-pub fn sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
+pub fn sleep(timespec: &TimeSpec) -> Result<usize, SyscallError> {
     let duration = (timespec.tv_nsec as usize).ceil_div(1000000000) + timespec.tv_sec as usize;
 
     scheduler::get_scheduler().inner.sleep(Some(duration))?;
@@ -35,7 +35,7 @@ pub fn sleep(timespec: &TimeSpec) -> Result<usize, AeroSyscallError> {
 }
 
 #[syscall]
-pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, AeroSyscallError> {
+pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, SyscallError> {
     match clock {
         CLOCK_TYPE_REALTIME => {
             let clock = crate::time::get_realtime_clock();
@@ -51,6 +51,6 @@ pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, AeroSysca
             Ok(0x00)
         }
 
-        _ => Err(AeroSyscallError::EINVAL),
+        _ => Err(SyscallError::EINVAL),
     }
 }

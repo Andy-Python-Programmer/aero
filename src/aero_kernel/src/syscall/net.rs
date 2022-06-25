@@ -10,24 +10,24 @@ use crate::userland::scheduler;
 
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
-fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddr<'sys>, AeroSyscallError> {
+fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddr<'sys>, SyscallError> {
     let family = address
         .read_mut::<u32>()
-        .ok_or(AeroSyscallError::EINVAL)?
+        .ok_or(SyscallError::EINVAL)?
         .clone();
 
-    Ok(SocketAddr::from_family(address, family).ok_or(AeroSyscallError::EINVAL)?)
+    Ok(SocketAddr::from_family(address, family).ok_or(SyscallError::EINVAL)?)
 }
 
 /// Connects the socket to the specified address.
 #[syscall]
-pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
+pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, SyscallError> {
     let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
     let file = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EINVAL)?;
+        .ok_or(SyscallError::EINVAL)?;
 
     file.inode().connect(address, length)?;
     Ok(0)
@@ -36,23 +36,19 @@ pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, AeroSy
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
 /// connection requests).
 #[syscall]
-pub fn listen(fd: usize, backlog: usize) -> Result<usize, AeroSyscallError> {
+pub fn listen(fd: usize, backlog: usize) -> Result<usize, SyscallError> {
     let file = scheduler::get_scheduler()
         .current_task()
         .file_table
         .get_handle(fd)
-        .ok_or(AeroSyscallError::EINVAL)?;
+        .ok_or(SyscallError::EINVAL)?;
 
     file.inode().listen(backlog)?;
     Ok(0)
 }
 
 #[syscall]
-pub fn socket(
-    domain: usize,
-    socket_type: usize,
-    protocol: usize,
-) -> Result<usize, AeroSyscallError> {
+pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usize, SyscallError> {
     let socket = match domain as u32 {
         AF_UNIX => UnixSocket::new(),
         _ => {
@@ -60,7 +56,7 @@ pub fn socket(
                 "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol}"
             );
 
-            return Err(AeroSyscallError::EINVAL);
+            return Err(SyscallError::EINVAL);
         }
     };
 
@@ -74,7 +70,7 @@ pub fn socket(
 }
 
 #[syscall]
-pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, AeroSyscallError> {
+pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, SyscallError> {
     let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
 
     let current_task = scheduler::get_scheduler().current_task();
@@ -87,9 +83,9 @@ pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, AeroSysca
 
                 Ok(0)
             } else {
-                Err(AeroSyscallError::ENOTSOCK)
+                Err(SyscallError::ENOTSOCK)
             }
         }
-        None => Err(AeroSyscallError::ENOENT),
+        None => Err(SyscallError::ENOENT),
     }
 }

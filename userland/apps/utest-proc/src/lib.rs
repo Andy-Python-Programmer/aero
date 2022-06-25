@@ -39,7 +39,7 @@ pub fn test(_: TokenStream, input: TokenStream) -> TokenStream {
             path: concat!(module_path!(), "::", stringify!(#name))
         };
 
-        fn #marker_name() -> Result<(), AeroSyscallError> {
+        fn #marker_name() -> Result<(), SyscallError> {
             #body
         }
     };

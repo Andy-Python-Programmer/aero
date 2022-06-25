@@ -229,10 +229,10 @@ impl FileTable {
         fd: usize,
         hint: DuplicateHint,
         flags: OpenFlags,
-    ) -> Result<usize, aero_syscall::AeroSyscallError> {
+    ) -> Result<usize, aero_syscall::SyscallError> {
         let handle = self
             .get_handle(fd)
-            .ok_or(aero_syscall::AeroSyscallError::EINVAL)?;
+            .ok_or(aero_syscall::SyscallError::EINVAL)?;
 
         let find_from = |files: &mut Vec<Option<Arc<FileHandle>>>, start: usize| {
             let array = &mut files[start..];
