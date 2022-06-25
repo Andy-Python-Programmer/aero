@@ -1,0 +1,123 @@
+packages:
+  - name: libxml
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/libxml2.git'
+      tag: 'v2.9.12'
+      version: '2.9.12'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+      - host-python
+    pkgs_required:
+      - mlibc
+      - python
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-python=@SYSROOT_DIR@/usr/bin/python3.8'
+        - '--disable-static'
+        - '--with-threads'
+        - '--disable-ipv6'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libxkbcommon
+    source:
+      subdir: 'bundled'
+      git: 'http://github.com/xkbcommon/libxkbcommon.git'
+      tag: 'xkbcommon-1.3.1'
+      version: '1.3.1'
+    tools_required:
+      - host-gcc
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - wayland
+      - wayland-protocols
+      - libxml
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Denable-docs=false'
+        - '-Denable-x11=false'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: weston
+    source:
+      subdir: 'bundled'
+      git: 'http://github.com/wayland-project/weston.git'
+      tag: '10.0.0'
+      version: '10.0.0'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+      - wayland-scanner
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+    pkgs_required:
+      - libxkbcommon
+      - wayland
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Dbackend-x11=false'
+        - '-Dsimple-clients=damage,im,egl,shm,touch'
+        - '-Dimage-jpeg=true'
+        - '-Dimage-webp=false'
+        - '-Dlauncher-logind=false'
+        - '-Dbackend-drm-screencast-vaapi=false'
+        - '-Dbackend-rdp=false'
+        - '-Dcolor-management-colord=false'
+        - '-Dcolor-management-lcms=false'
+        - '-Dsystemd=false'
+        - '-Dremoting=false'
+        - '-Dpipewire=false'
+        - '@THIS_SOURCE_DIR@'
+        environ:
+          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+          PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
