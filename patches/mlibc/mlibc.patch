@@ -1,4 +1,4 @@
-From 60f70d42c981a6c2645201d2d0997d48f91c53a0 Mon Sep 17 00:00:00 2001
+From d5f5dc7cf4d3da60a3b941aa6ad6b763ff401469 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 10 Feb 2022 19:12:25 +1100
 Subject: [PATCH] yes
@@ -341,7 +341,7 @@ index e69de29b..b6b18fe7 100644
 +}
 +} // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 07b1b51b..4576d268 100644
+index 07b1b51b..1e2be2fb 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
 @@ -49,6 +49,20 @@
@@ -360,8 +360,8 @@ index 07b1b51b..4576d268 100644
 +#define SYS_EPOLL_CTL 54
 +#define SYS_EVENT_FD 55
 +#define SYS_KILL 56
-+#define SYS_FUTEX_WAIT 59
-+#define SYS_FUTEX_WAKE 60
++#define SYS_FUTEX_WAIT 57
++#define SYS_FUTEX_WAKE 58
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.

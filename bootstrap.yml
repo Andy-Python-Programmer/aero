@@ -1077,27 +1077,26 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
-  # - name: weston
-  #   labels: [aarch64]
-  #   architecture: '@OPTION:arch@'
-  #   source:
-  #     subdir: 'ports'
-  #     git: 'https://github.com/wayland-project/weston.git'
-  #     tag: '10.0.0'
-  #     version: '10.0.0'
-  #   tools_required:
+  - name: weston
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/wayland-project/weston.git'
+      tag: '10.0.0'
+      version: '10.0.0'
+    tools_required:
+      - host-gcc
   #     - host-autoconf-v2.69
   #     - host-automake-v1.15
   #     - host-libtool
   #     - host-pkg-config
   #     - system-gcc
   #     - wayland-scanner
-  #     - virtual: pkgconfig-for-target
-  #       triple: "@OPTION:arch-triple@"
-  #     - virtual: pkgconfig-for-host
-  #       program_name: host-pkg-config
-  #   pkgs_required:
-  #     - mlibc
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+    pkgs_required:
+      - mlibc
   #     - cairo
   #     - libinput
   #     - libxkbcommon
@@ -1110,38 +1109,37 @@ packages:
   #     - pango
   #     - glib
   #     - libjpeg-turbo
-  #   configure:
-  #     - args:
-  #       - 'meson'
-  #       - '--native-file'
-  #       - '@SOURCE_ROOT@/scripts/meson.native-file'
-  #       - '--cross-file'
-  #       - '@SOURCE_ROOT@/scripts/meson-@OPTION:arch-triple@.cross-file'
-  #       - '--prefix=/usr'
-  #       - '--libdir=lib'
-  #       - '--buildtype=debugoptimized'
-  #       - '-Dbackend-x11=false'
-  #       - '-Dsimple-clients=damage,im,egl,shm,touch'
-  #       - '-Dimage-jpeg=true'
-  #       - '-Dimage-webp=false'
-  #       - '-Dlauncher-logind=false'
-  #       - '-Dbackend-drm-screencast-vaapi=false'
-  #       - '-Dbackend-rdp=false'
-  #       - '-Dcolor-management-colord=false'
-  #       - '-Dcolor-management-lcms=false'
-  #       - '-Dsystemd=false'
-  #       - '-Dremoting=false'
-  #       - '-Dpipewire=false'
-  #       - '@THIS_SOURCE_DIR@'
-  #       environ:
-  #         PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
-  #         PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
-  #   build:
-  #     - args: ['ninja']
-  #     - args: ['ninja', 'install']
-  #       environ:
-  #         DESTDIR: '@THIS_COLLECT_DIR@'
-  #       quiet: true
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Dbackend-x11=false'
+        - '-Dsimple-clients=damage,im,egl,shm,touch'
+        - '-Dimage-jpeg=true'
+        - '-Dimage-webp=false'
+        - '-Dlauncher-logind=false'
+        - '-Dbackend-drm-screencast-vaapi=false'
+        - '-Dbackend-rdp=false'
+        - '-Dcolor-management-colord=false'
+        - '-Dcolor-management-lcms=false'
+        - '-Dsystemd=false'
+        - '-Dremoting=false'
+        - '-Dpipewire=false'
+        - '@THIS_SOURCE_DIR@'
+        environ:
+          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+          PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
 
 tasks:
   - name: sysroot
