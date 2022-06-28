@@ -1,0 +1,604 @@
+sources:
+  - name: xorg-util-macros
+    subdir: 'bundled'
+    git: 'https://gitlab.freedesktop.org/xorg/util/macros.git'
+    tag: 'util-macros-1.19.3'
+    version: '1.19.3'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+    regenerate:
+      - args: ['./autogen.sh']
+        environ:
+          NOCONFIGURE: 'yes'
+
+  - name: xorg-font-util
+    subdir: 'bundled'
+    git: 'https://gitlab.freedesktop.org/xorg/font/util.git'
+    tag: 'font-util-1.3.2'
+    version: '1.3.2'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+      - host-xorg-macros
+    regenerate:
+      - args: ['./autogen.sh']
+        environ:
+          NOCONFIGURE: 'yes'
+
+tools:
+  - name: host-xorg-macros
+    exports_aclocal: true
+    from_source: xorg-util-macros
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install-strip']
+
+  - name: host-xtrans
+    exports_aclocal: true
+    from_source: libxtrans
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install-strip']
+
+  - name: host-xorg-font-util
+    exports_aclocal: true
+    from_source: xorg-font-util
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install-strip']
+
+packages:
+  # `xorg-util-macros` is a set of autoconf macros used by the configure.ac scripts in
+  # other Xorg modular packages, and is needed to generate new versions
+  # of their configure scripts with autoconf.
+  - name: xorg-util-macros
+    from_source: xorg-util-macros
+    tools_required:
+      - host-gcc
+      - host-xorg-macros
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `xorg-proto` provides the headers and specification documents defining the core protocol
+  # and extensions for the X Window System. 
+  - name: xorg-proto
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/proto/xorgproto.git'
+      tag: 'xorgproto-2022.1'
+      version: '2022.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `xcb-proto` provides the XML-XCB protocol descriptions that libxcb uses to
+  # generate the majority of its code and API.
+  - name: xcb-proto
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/proto/xcbproto.git'
+      tag: 'xcb-proto-1.15'
+      version: '1.15'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libxau
+      - libxdmcp
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['sed', '-i', 's|${pc_sysrootdir}${PYTHON_PREFIX}|/usr|g', '@THIS_COLLECT_DIR@/usr/lib/pkgconfig/xcb-proto.pc']
+
+  # `libxdmcp` is X Display Manager Control Protocol library.
+  - name: libxdmcp
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxdmcp.git'
+      tag: 'libXdmcp-1.1.3'
+      version: '1.1.3'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libxau
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `xtrans` is a library of code that is shared among various X packages to
+  # handle network protocol transport in a modular fashion.
+  - name: libxtrans
+    from_source: libxtrans
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libxcb
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `libxau` is a sample authorization protocol for X
+  - name: libxau
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxau.git'
+      tag: 'libXau-1.0.9'
+      version: '1.0.9'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `libxcb` provides an interface to the X Window System protocol, which
+  # replaces the traditional Xlib interface. 
+  - name: libxcb
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxcb.git'
+      tag: 'libxcb-1.15'
+      version: '1.15'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libxau
+      - libxdmcp
+      - xcb-proto
+    configure:
+      - args: ['sed', '-i', "s/pthread-stubs//", '@THIS_SOURCE_DIR@/configure']
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+        - '--without-doxygen'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `libx11` is core X11 protocol client library.
+  - name: libx11
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libx11.git'
+      tag: 'libX11-1.8'
+      version: '1.8'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-xtrans
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libxcb
+      - libxtrans
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+        - '--disable-ipv6'
+        - '--disable-malloc0returnsnull'
+        - '--with-keysymdefdir=@SYSROOT_DIR@/usr/include/X11'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `libxkbfile` is used by the X servers and utilities to parse the XKB
+  # configuration data files.
+  - name: libxkbfile
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git'
+      tag: 'libxkbfile-1.1.0'
+      version: '1.1.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libx11
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: xorg-font-util
+    from_source: xorg-font-util
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `libfontenc` is a font encoding library.
+  - name: libfontenc
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libfontenc.git'
+      tag: 'libfontenc-1.1.4'
+      version: '1.1.4'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-xorg-font-util
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libx11
+      - libxtrans
+      - xorg-font-util
+      - zlib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # `libxfont` provides the core of the legacy X11 font system, handling the index
+  # files
+  - name: libxfont2
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxfont.git'
+      tag: 'libXfont2-2.0.5'
+      version: '2.0.5'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-xtrans
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+      - host-xtrans
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libx11
+      - libxtrans
+      - freetype
+      - libfontenc
+      - fontconfig
+      - zlib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+        - '--disable-devel-docs'
+        # strcasecmp is implicitly declared, probably an missing include somewhere, so disable -Werror for that
+        - '--disable-selective-werror'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # The X server accepts requests from client applications to create windows,
+  # which are (normally rectangular) "virtual screens" that the client program
+  # can draw into.
+  - name: xorg-server
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/xserver.git'
+      tag: 'xorg-server-1.20.14'
+      version: '1.20.14'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-xorg-font-util
+        - host-xtrans
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - openssl
+      - libxkbfile
+      - libxfont2
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        - '--with-xkb-output=/var/lib/xkb'
+        - '--enable-xorg'
+        - '--enable-xv'
+        - '--enable-xvfb'
+        - '--disable-xephyr'
+        - '--disable-xwayland'
+        - '--disable-xnest'
+        - '--disable-dmx'
+        - '--disable-suid-wrapper'
+        - '--disable-pciaccess'
+        - '--disable-dpms'
+        - '--disable-screensaver'
+        - '--disable-xres'
+        - '--disable-xinerama'
+        - '--disable-xvmc'
+        - '--disable-systemd-logind'
+        - '--disable-secure-rpc'
+        - '--disable-config-udev'
+        - '--disable-dri'
+        - '--disable-dri2'
+        - '--disable-dri3'
+        - '--disable-vbe'
+        - '--disable-int10-module'
+        - '--disable-vgahw'
+        - '--disable-libdrm'
+        - '--disable-glamor'
+        - '--disable-glx'
+        environ:
+          CFLAGS: '-Wno-error=array-bounds -O2 -pipe'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/etc/X11']
+      - args: ['cp', '@SOURCE_ROOT@/extra-files/xorg/xorg.conf', '@THIS_COLLECT_DIR@/etc/X11/']

@@ -1,3 +1,6 @@
+imports:
+  - file: bootstrap/xorg.yml
+
 general:
   cargo:
     config_toml: 'extra-files/rust/config.toml'
@@ -143,6 +146,22 @@ sources:
     git: 'https://github.com/wayland-project/wayland.git'
     tag: '1.20.0'
     version: '1.20.0'
+
+  - name: libxtrans
+    subdir: 'bundled'
+    git: 'https://gitlab.freedesktop.org/xorg/lib/libxtrans.git'
+    tag: 'xtrans-1.4.0'
+    version: '1.4.0'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+      - host-xorg-macros
+    regenerate:
+      - args: ['./autogen.sh']
+        environ:
+          NOCONFIGURE: 'yes'
 
 tools:
   # We could run an external pkg-config; however, we need the aclocal files.
@@ -1084,6 +1103,277 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: zlib
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/madler/zlib.git'
+      tag: 'v1.2.12'
+      version: '1.2.12'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        environ:
+          CHOST: 'x86_64-aero'
+          prefix: '/usr'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: openssl
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/openssl/openssl.git'
+      tag: 'OpenSSL_1_1_1o'
+      version: '1.1.1o'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - zlib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/Configure'
+        - '--prefix=/usr'
+        - '--openssldir=/etc/ssl'
+        - '--libdir=lib'
+        - 'x86_64-aero'
+        - 'shared'
+        - 'zlib-dynamic'
+        - 'no-afalgeng'
+        environ:
+          CC: 'x86_64-aero-gcc'
+          CXX: 'x86_64-aero-g++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      # Disable installing static libraries
+      - args: ['sed', '-i', '/INSTALL_LIBS/s/libcrypto.a libssl.a//', '@THIS_BUILD_DIR@/Makefile']
+      # Suffix all man pages with ssl
+      - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'MANSUFFIX=ssl', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      # Move the doc dir to a versioned directory
+      - args: ['mv', '@THIS_COLLECT_DIR@/usr/share/doc/openssl', '@THIS_COLLECT_DIR@/usr/share/doc/openssl-1.1.1o']
+
+  - name: libpng
+    source:
+      subdir: 'bundled'
+      git: 'https://git.code.sf.net/p/libpng/code'
+      tag: 'v1.6.37'
+      version: '1.6.37'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['git', 'clean', '-xf', '-e', '*.xbstrap']
+        - args: ['autoreconf', '-fvi']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - zlib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: freetype
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/freetype/freetype.git'
+      tag: 'VER-2-12-1'
+      version: '2.12.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: '1'
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
+            '@THIS_SOURCE_DIR@/builds/unix/']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libpng
+      - zlib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--with-harfbuzz=no'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: fontconfig
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/fontconfig/fontconfig.git'
+      tag: '2.14.0'
+      version: '2.14.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+        # Make sure we regenerate this file
+        - args: ['rm', '-f', 'src/fcobjshash.h']
+    pkgs_required:
+      - mlibc
+      - freetype
+      - libxml
+      - libiconv
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-gcc
+      - host-libtool
+      - host-pkg-config
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-docs'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        - '--enable-libxml2'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libxml
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/libxml2.git'
+      tag: 'v2.9.14'
+      version: '2.9.14'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - zlib
+      - python
+      - libiconv
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-python=@SYSROOT_DIR@/usr/bin/python3.8'
+        - '--disable-static'
+        - '--with-threads'
+        - '--disable-ipv6'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libiconv
+    source:
+      subdir: 'bundled'
+      git: 'https://git.savannah.gnu.org/git/libiconv.git'
+      # Last release tag is broken for us, use current master (07-12-2020)
+      branch: 'master'
+      commit: '0eb1068ceb77ba383c3ce2fc391ab40ef686c491'
+      version: '1.16'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./gitsub.sh', 'pull']
+        # Gnulib broke on commit e3174b6d1fdbe6ea2297bf8c8333f65f9d9d9588, so check out the one before that.
+        - args: ['git', 'checkout', '766ec17a90f67e8cda78394e58a7fffb00f5a4b7']
+          workdir: '@THIS_SOURCE_DIR@/gnulib'
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
+            '@THIS_SOURCE_DIR@/build-aux/']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
+            '@THIS_SOURCE_DIR@/libcharset/build-aux/']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-libtool/share/aclocal/libtool.m4',
+            '@THIS_SOURCE_DIR@/m4/']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-libtool/share/aclocal/libtool.m4',
+            '@THIS_SOURCE_DIR@/libcharset/m4/']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-libtool/share/libtool/build-aux/ltmain.sh',
+            '@THIS_SOURCE_DIR@/libcharset/build-aux/']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-libtool/share/libtool/build-aux/ltmain.sh',
+            '@THIS_SOURCE_DIR@/build-aux/']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-libtool/share/aclocal/ltversion.m4',
+            '@THIS_SOURCE_DIR@/m4/']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-libtool/share/aclocal/ltversion.m4',
+            '@THIS_SOURCE_DIR@/libcharset/m4/']
+        - args: ['autoreconf', '-fvi', '-I@THIS_SOURCE_DIR@/m4', '-I@THIS_SOURCE_DIR@/srcm4']
+    tools_required:
+      - host-gcc
+      - host-libtool
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        - '--disable-nls'
+        - '--enable-shared'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   # - name: weston
   #   labels: [aarch64]
   #   architecture: '@OPTION:arch@'
@@ -1094,7 +1384,7 @@ packages:
   #     version: '10.0.0'
   #   tools_required:
   #     - host-autoconf-v2.69
-  #     - host-automake-v1.15
+  #     - host-automake-v1.16
   #     - host-libtool
   #     - host-pkg-config
   #     - system-gcc

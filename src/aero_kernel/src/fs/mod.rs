@@ -304,7 +304,7 @@ pub fn init() -> Result<()> {
 
     root_dir().inode().mkdir("dev")?;
     root_dir().inode().mkdir("home")?;
-    root_dir().inode().mkdir("temp")?;
+    root_dir().inode().mkdir("tmp")?;
     root_dir().inode().mkdir("proc")?;
 
     initramfs::init()?;

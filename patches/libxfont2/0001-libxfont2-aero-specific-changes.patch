@@ -1,0 +1,37 @@
+From 0da59aec1e86152858f47e12da033883e4b16852 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Thu, 30 Jun 2022 10:46:56 +1000
+Subject: [PATCH] libxfont2: aero specific changes
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ .gitignore       | 2 ++
+ src/fc/fslibos.h | 2 +-
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/.gitignore b/.gitignore
+index 2efa153..4370b7e 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -79,3 +79,5 @@ core
+ *.sig
+ *.announce
+ TAGS
++# editor configs:
++.vscode
+diff --git a/src/fc/fslibos.h b/src/fc/fslibos.h
+index 1ef362d..a9935d1 100644
+--- a/src/fc/fslibos.h
++++ b/src/fc/fslibos.h
+@@ -60,7 +60,7 @@ from The Open Group.
+ #   endif
+ #  endif
+ #  ifndef OPEN_MAX
+-#   if defined(SVR4)
++#   if defined(SVR4) || defined(__aero__)
+ #    define OPEN_MAX 256
+ #   else
+ #    include <sys/param.h>
+-- 
+2.25.1
+
