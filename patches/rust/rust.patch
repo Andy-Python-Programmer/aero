@@ -1,10 +1,11 @@
-From 2715ced0aff01caaf662446d45c1be976eb4657d Mon Sep 17 00:00:00 2001
+From 13f0d6bc6ed1ccf0155e27be832ec121cf138b85 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Wed, 12 Jan 2022 15:57:15 +1100
 Subject: [PATCH] targets: add aero target and port std to it
 
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
+ Cargo.lock                                    |   4 +-
  Cargo.toml                                    |   1 +
  .../rustc_target/src/spec/aero_system_base.rs |  35 +++++
  compiler/rustc_target/src/spec/mod.rs         |   3 +
@@ -14,39 +15,54 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  library/std/src/os/aero/mod.rs                |   6 +
  library/std/src/os/aero/raw.rs                |  66 ++++++++
  library/std/src/os/mod.rs                     |   2 +
+ library/std/src/os/unix/mod.rs                |   2 +
  library/std/src/sys/unix/args.rs              |   3 +-
  library/std/src/sys/unix/env.rs               |  11 ++
  library/std/src/sys/unix/fs.rs                |   6 +-
- library/std/src/sys/unix/mod.rs               |   2 +
- library/std/src/sys/unix/os.rs                |  34 +++-
+ library/std/src/sys/unix/os.rs                |  39 ++++-
  library/std/src/sys/unix/thread.rs            |   7 +
  library/std/src/sys/unix/thread_local_dtor.rs |   3 +-
  library/std/src/sys/unix/time.rs              |   7 +-
  library/unwind/build.rs                       |   2 +
  src/bootstrap/bootstrap.py                    |   8 +-
  src/bootstrap/builder.rs                      |   6 +-
- 21 files changed, 354 insertions(+), 20 deletions(-)
+ 21 files changed, 359 insertions(+), 20 deletions(-)
  create mode 100644 compiler/rustc_target/src/spec/aero_system_base.rs
  create mode 100644 compiler/rustc_target/src/spec/x86_64_unknown_aero_system.rs
  create mode 100644 library/std/src/os/aero/fs.rs
  create mode 100644 library/std/src/os/aero/mod.rs
  create mode 100644 library/std/src/os/aero/raw.rs
 
+diff --git a/Cargo.lock b/Cargo.lock
+index ef9f91fd..e303ef85 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1950,9 +1950,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
+ 
+ [[package]]
+ name = "libc"
+-version = "0.2.108"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "8521a1b57e76b1ec69af7599e75e38e7b7fad6610f037db8c79b127201b5d119"
++version = "0.2.125"
+ dependencies = [
+  "rustc-std-workspace-core",
+ ]
 diff --git a/Cargo.toml b/Cargo.toml
-index f961d3e9..9b7a31f9 100644
+index cae48d79..a3328ea6 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -105,6 +105,7 @@ rustc-workspace-hack = { path = 'src/tools/rustc-workspace-hack' }
+@@ -130,6 +130,7 @@ rustc-workspace-hack = { path = 'src/tools/rustc-workspace-hack' }
  rustc-std-workspace-core = { path = 'library/rustc-std-workspace-core' }
  rustc-std-workspace-alloc = { path = 'library/rustc-std-workspace-alloc' }
  rustc-std-workspace-std = { path = 'library/rustc-std-workspace-std' }
 +libc = { path = '../rust-libc' }
-
+ 
  [patch."https://github.com/rust-lang/rust-clippy"]
  clippy_lints = { path = "src/tools/clippy/clippy_lints" }
 diff --git a/compiler/rustc_target/src/spec/aero_system_base.rs b/compiler/rustc_target/src/spec/aero_system_base.rs
 new file mode 100644
-index 00000000..a46d4d88
+index 00000000..795047af
 --- /dev/null
 +++ b/compiler/rustc_target/src/spec/aero_system_base.rs
 @@ -0,0 +1,35 @@
@@ -86,10 +102,10 @@ index 00000000..a46d4d88
 +    }
 +}
 diff --git a/compiler/rustc_target/src/spec/mod.rs b/compiler/rustc_target/src/spec/mod.rs
-index 7a93bac7..19ad072c 100644
+index 2c149318..81c93277 100644
 --- a/compiler/rustc_target/src/spec/mod.rs
 +++ b/compiler/rustc_target/src/spec/mod.rs
-@@ -60,6 +60,7 @@
+@@ -62,6 +62,7 @@
  mod freebsd_base;
  mod fuchsia_base;
  mod haiku_base;
@@ -97,10 +113,10 @@ index 7a93bac7..19ad072c 100644
  mod hermit_base;
  mod hermit_kernel_base;
  mod illumos_base;
-@@ -706,6 +707,8 @@ fn to_json(&self) -> Json {
+@@ -889,6 +890,8 @@ fn $module() {
      ("i686-unknown-haiku", i686_unknown_haiku),
      ("x86_64-unknown-haiku", x86_64_unknown_haiku),
-
+ 
 +    ("x86_64-unknown-aero-system", x86_64_unknown_aero_system),
 +
      ("aarch64-apple-darwin", aarch64_apple_darwin),
@@ -132,7 +148,7 @@ index 00000000..51c44ef8
 +    }
 +}
 diff --git a/library/std/build.rs b/library/std/build.rs
-index 43168e77296..5a6e296c19b 100644
+index 43168e77..5a6e296c 100644
 --- a/library/std/build.rs
 +++ b/library/std/build.rs
 @@ -23,6 +23,7 @@ fn main() {
@@ -311,7 +327,7 @@ index 00000000..ea3291a2
 +pub mod raw;
 diff --git a/library/std/src/os/aero/raw.rs b/library/std/src/os/aero/raw.rs
 new file mode 100644
-index 00000000..5124020d
+index 00000000..c5e56b8b
 --- /dev/null
 +++ b/library/std/src/os/aero/raw.rs
 @@ -0,0 +1,66 @@
@@ -381,24 +397,11 @@ index 00000000..5124020d
 +    #[stable(feature = "raw_ext", since = "1.1.0")]
 +    pub st_blocks: libc::blkcnt_t,
 +}
-diff --git a/library/std/src/os/unix/mod.rs b/library/std/src/os/unix/mod.rs
-index 62f750fa607..1b9f823deca 100644
---- a/library/std/src/os/unix/mod.rs
-+++ b/library/std/src/os/unix/mod.rs
-@@ -37,6 +37,8 @@
-
- #[cfg(not(doc))]
- mod platform {
-+    #[cfg(target_os = "aero")]
-+    pub use crate::os::aero::*;
-     #[cfg(target_os = "android")]
-     pub use crate::os::android::*;
-     #[cfg(target_os = "dragonfly")]
 diff --git a/library/std/src/os/mod.rs b/library/std/src/os/mod.rs
-index fd6ee088..2d818959 100644
+index 90c30313..bf76ad34 100644
 --- a/library/std/src/os/mod.rs
 +++ b/library/std/src/os/mod.rs
-@@ -58,6 +58,8 @@
+@@ -129,6 +129,8 @@ pub mod windows {}
  pub mod ios;
  #[cfg(target_os = "macos")]
  pub mod macos;
@@ -407,11 +410,24 @@ index fd6ee088..2d818959 100644
  #[cfg(target_os = "netbsd")]
  pub mod netbsd;
  #[cfg(target_os = "openbsd")]
+diff --git a/library/std/src/os/unix/mod.rs b/library/std/src/os/unix/mod.rs
+index 62f750fa..a69d31b5 100644
+--- a/library/std/src/os/unix/mod.rs
++++ b/library/std/src/os/unix/mod.rs
+@@ -37,6 +37,8 @@
+ 
+ #[cfg(not(doc))]
+ mod platform {
++    #[cfg(target_os = "aero")]
++    pub use crate::os::aero::*;
+     #[cfg(target_os = "android")]
+     pub use crate::os::android::*;
+     #[cfg(target_os = "dragonfly")]
 diff --git a/library/std/src/sys/unix/args.rs b/library/std/src/sys/unix/args.rs
-index 69676472..dfa4cdc5 100644
+index ee5e3983..5ad752ab 100644
 --- a/library/std/src/sys/unix/args.rs
 +++ b/library/std/src/sys/unix/args.rs
-@@ -71,7 +71,8 @@ fn next_back(&mut self) -> Option<OsString> {
+@@ -68,7 +68,8 @@ fn next_back(&mut self) -> Option<OsString> {
      target_os = "l4re",
      target_os = "fuchsia",
      target_os = "redox",
@@ -422,10 +438,10 @@ index 69676472..dfa4cdc5 100644
  mod imp {
      use super::Args;
 diff --git a/library/std/src/sys/unix/env.rs b/library/std/src/sys/unix/env.rs
-index 7f5e9b04..544bd3b3 100644
+index 60551aeb..fabb5e63 100644
 --- a/library/std/src/sys/unix/env.rs
 +++ b/library/std/src/sys/unix/env.rs
-@@ -173,3 +173,14 @@ pub mod os {
+@@ -195,3 +195,14 @@ pub mod os {
      pub const EXE_SUFFIX: &str = "";
      pub const EXE_EXTENSION: &str = "";
  }
@@ -441,7 +457,7 @@ index 7f5e9b04..544bd3b3 100644
 +    pub const EXE_EXTENSION: &str = "";
 +}
 diff --git a/library/std/src/sys/unix/fs.rs b/library/std/src/sys/unix/fs.rs
-index bcf2be0e95f..f523f5c5bb1 100644
+index bcf2be0e..f523f5c5 100644
 --- a/library/std/src/sys/unix/fs.rs
 +++ b/library/std/src/sys/unix/fs.rs
 @@ -612,7 +612,8 @@ pub fn file_type(&self) -> io::Result<FileType> {
@@ -465,12 +481,12 @@ index bcf2be0e95f..f523f5c5bb1 100644
      fn name_bytes(&self) -> &[u8] {
          unsafe { CStr::from_ptr(self.entry.d_name.as_ptr()).to_bytes() }
 diff --git a/library/std/src/sys/unix/os.rs b/library/std/src/sys/unix/os.rs
-index 8a028d99306..7e0a25f8b7f 100644
+index 8a028d99..7e0a25f8 100644
 --- a/library/std/src/sys/unix/os.rs
 +++ b/library/std/src/sys/unix/os.rs
 @@ -39,7 +39,7 @@
  }
-
+ 
  extern "C" {
 -    #[cfg(not(any(target_os = "dragonfly", target_os = "vxworks")))]
 +    #[cfg(not(any(target_os = "dragonfly", target_os = "vxworks", target_os = "aero")))]
@@ -479,14 +495,14 @@ index 8a028d99306..7e0a25f8b7f 100644
              target_os = "linux",
 @@ -69,13 +69,18 @@
  }
-
+ 
  /// Returns the platform-specific value of errno
 -#[cfg(not(any(target_os = "dragonfly", target_os = "vxworks")))]
 +#[cfg(not(any(target_os = "dragonfly", target_os = "vxworks", target_os = "aero")))]
  pub fn errno() -> i32 {
      unsafe { (*errno_location()) as i32 }
  }
-
+ 
  /// Sets the platform-specific value of errno
 -#[cfg(all(not(target_os = "linux"), not(target_os = "dragonfly"), not(target_os = "vxworks")))] // needed for readdir and syscall!
 +#[cfg(all(
@@ -501,7 +517,7 @@ index 8a028d99306..7e0a25f8b7f 100644
 @@ -109,6 +114,29 @@ pub fn set_errno(e: i32) {
      }
  }
-
+ 
 +#[cfg(target_os = "aero")]
 +pub fn errno() -> i32 {
 +    extern "C" {
@@ -531,7 +547,7 @@ index 8a028d99306..7e0a25f8b7f 100644
 @@ -454,6 +482,11 @@ pub fn current_exe() -> io::Result<PathBuf> {
      super::unsupported::unsupported()
  }
-
+ 
 +#[cfg(target_os = "aero")]
 +pub fn current_exe() -> io::Result<PathBuf> {
 +    unimplemented!()
@@ -541,13 +557,13 @@ index 8a028d99306..7e0a25f8b7f 100644
      iter: vec::IntoIter<(OsString, OsString)>,
  }
 diff --git a/library/std/src/sys/unix/thread.rs b/library/std/src/sys/unix/thread.rs
-index cda17eb4..5d9df175 100644
+index 9e02966b..b6e326d8 100644
 --- a/library/std/src/sys/unix/thread.rs
 +++ b/library/std/src/sys/unix/thread.rs
-@@ -103,6 +103,13 @@ pub fn set_name(name: &CStr) {
+@@ -140,6 +140,13 @@ pub fn set_name(name: &CStr) {
          }
      }
-
+ 
 +    #[cfg(target_os = "aero")]
 +    pub fn set_name(name: &CStr) {
 +        unsafe {
@@ -559,7 +575,7 @@ index cda17eb4..5d9df175 100644
      pub fn set_name(name: &CStr) {
          use crate::ffi::CString;
 diff --git a/library/std/src/sys/unix/thread_local_dtor.rs b/library/std/src/sys/unix/thread_local_dtor.rs
-index c3275eb6..bf0dc0ec 100644
+index c3f41035..cf0139b1 100644
 --- a/library/std/src/sys/unix/thread_local_dtor.rs
 +++ b/library/std/src/sys/unix/thread_local_dtor.rs
 @@ -15,7 +15,8 @@
@@ -573,13 +589,13 @@ index c3275eb6..bf0dc0ec 100644
  pub unsafe fn register_dtor(t: *mut u8, dtor: unsafe extern "C" fn(*mut u8)) {
      use crate::mem;
 diff --git a/library/std/src/sys/unix/time.rs b/library/std/src/sys/unix/time.rs
-index 824283ef6c4..de405297929 100644
+index 824283ef..de405297 100644
 --- a/library/std/src/sys/unix/time.rs
 +++ b/library/std/src/sys/unix/time.rs
 @@ -362,12 +362,7 @@ fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
          }
      }
-
+ 
 -    #[cfg(not(any(target_os = "dragonfly", target_os = "espidf")))]
 -    pub type clock_t = libc::c_int;
 -    #[cfg(any(target_os = "dragonfly", target_os = "espidf"))]
@@ -591,7 +607,7 @@ index 824283ef6c4..de405297929 100644
          cvt(unsafe { libc::clock_gettime(clock, &mut t.t) }).unwrap();
          t
 diff --git a/library/unwind/build.rs b/library/unwind/build.rs
-index a3f5224151d..2e3bf0d39fd 100644
+index a3f52241..2e3bf0d3 100644
 --- a/library/unwind/build.rs
 +++ b/library/unwind/build.rs
 @@ -46,5 +46,7 @@ fn main() {
@@ -603,19 +619,19 @@ index a3f5224151d..2e3bf0d39fd 100644
      }
  }
 diff --git a/src/bootstrap/bootstrap.py b/src/bootstrap/bootstrap.py
-index 6708b27b..0a8a5c49 100644
+index 7c36bb26..c22ac54c 100644
 --- a/src/bootstrap/bootstrap.py
 +++ b/src/bootstrap/bootstrap.py
-@@ -796,7 +796,7 @@ class RustBuild(object):
+@@ -972,7 +972,7 @@ class RustBuild(object):
          ... "debug", "bootstrap")
          True
          """
 -        return os.path.join(self.build_dir, "bootstrap", "debug", "bootstrap")
 +        return os.path.join(self.build_dir, "bootstrap", self.build, "debug", "bootstrap")
-
+ 
      def build_bootstrap(self):
          """Build bootstrap"""
-@@ -804,7 +804,7 @@ class RustBuild(object):
+@@ -981,7 +981,7 @@ class RustBuild(object):
          if self.clean and os.path.exists(build_dir):
              shutil.rmtree(build_dir)
          env = os.environ.copy()
@@ -624,7 +640,7 @@ index 6708b27b..0a8a5c49 100644
          # See also: <https://github.com/rust-lang/rust/issues/70208>.
          if "CARGO_BUILD_TARGET" in env:
              del env["CARGO_BUILD_TARGET"]
-@@ -852,6 +852,10 @@ class RustBuild(object):
+@@ -1028,6 +1028,10 @@ class RustBuild(object):
              args.append("--locked")
          if self.use_vendored_sources:
              args.append("--frozen")
@@ -633,22 +649,22 @@ index 6708b27b..0a8a5c49 100644
 +        args.append(self.build)
 +
          run(args, env=env, verbose=self.verbose)
-
+ 
      def build_triple(self):
 diff --git a/src/bootstrap/builder.rs b/src/bootstrap/builder.rs
-index f1a16025..c00cf4cd 100644
+index 6ccf8b1d..0bbe8685 100644
 --- a/src/bootstrap/builder.rs
 +++ b/src/bootstrap/builder.rs
-@@ -1023,6 +1023,8 @@ pub fn cargo(
+@@ -1120,6 +1120,8 @@ pub fn cargo(
              self.clear_if_dirty(&out_dir, &self.rustc(compiler));
          }
-
+ 
 +        let artifact_dir = self.out.join("bootstrap/").join(self.build.build.triple).join("debug/");
 +
          // Customize the compiler we're running. Specify the compiler to cargo
          // as our shim and then pass it some various options used to configure
          // how the actual compiler itself is called.
-@@ -1035,7 +1037,7 @@ pub fn cargo(
+@@ -1132,7 +1134,7 @@ pub fn cargo(
              .env("RUSTC_STAGE", stage.to_string())
              .env("RUSTC_SYSROOT", &sysroot)
              .env("RUSTC_LIBDIR", &libdir)
@@ -657,15 +673,15 @@ index f1a16025..c00cf4cd 100644
              .env(
                  "RUSTDOC_REAL",
                  if cmd == "doc" || cmd == "rustdoc" || (cmd == "test" && want_rustdoc) {
-@@ -1049,7 +1051,7 @@ pub fn cargo(
+@@ -1146,7 +1148,7 @@ pub fn cargo(
          // Clippy support is a hack and uses the default `cargo-clippy` in path.
          // Don't override RUSTC so that the `cargo-clippy` in path will be run.
          if cmd != "clippy" {
 -            cargo.env("RUSTC", self.out.join("bootstrap/debug/rustc"));
 +            cargo.env("RUSTC", artifact_dir.join("rustc"));
          }
-
+ 
          // Dealing with rpath here is a little special, so let's go into some
---
+-- 
 2.25.1
 
