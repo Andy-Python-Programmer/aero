@@ -55,6 +55,22 @@ impl EPoll {
         Ok(())
     }
 
+    /// Change the settings associated with file derscriptor in the interest list to the
+    /// new settings specified in event.
+    ///
+    /// ## Errors
+    /// * `ENOENT`: The event does not exist at `fd`.
+    pub fn update_event(&self, fd: usize, event: EPollEvent) -> Result<(), SyscallError> {
+        let mut events = self.events.lock_irq();
+
+        if !events.contains_key(&fd) {
+            return Err(SyscallError::ENOENT);
+        }
+
+        events.insert(fd, event);
+        Ok(())
+    }
+
     /// Retrieves ready events, and delivers them to the caller-supplied event buffer.
     ///
     /// ## Arguments

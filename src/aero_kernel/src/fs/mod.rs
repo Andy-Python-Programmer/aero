@@ -219,7 +219,7 @@ pub fn lookup_path_with(
     mode: LookupMode,
 ) -> Result<DirCacheItem> {
     // Iterate and resolve each component. For example `a`, `b`, and `c` in `a/b/c`.
-    for (i, component) in path.components().enumerate() {
+    for component in path.components() {
         match component {
             // Handle some special cases that might occur in a relative path.
             "." => continue,
@@ -248,7 +248,6 @@ pub fn lookup_path_with(
 
                         Err(err)
                             if err == FileSystemError::EntryNotFound
-                                && i == path.components().count() - 1
                                 && mode == LookupMode::Create =>
                         {
                             cwd = cwd.inode().touch(cwd.clone(), component)?;
@@ -306,6 +305,7 @@ pub fn init() -> Result<()> {
     root_dir().inode().mkdir("home")?;
     root_dir().inode().mkdir("tmp")?;
     root_dir().inode().mkdir("proc")?;
+    root_dir().inode().mkdir("var")?;
 
     initramfs::init()?;
     log::info!("installed initramfs");

@@ -425,14 +425,19 @@ pub fn epoll_ctl(
         .get_handle(epfd)
         .ok_or(SyscallError::EBADFD)?;
 
+    let epoll = epfd
+        .inode()
+        .downcast_arc::<EPoll>()
+        .ok_or(SyscallError::EINVAL)?;
+
     match mode {
         EPOLL_CTL_ADD => {
-            let epoll = epfd
-                .inode()
-                .downcast_arc::<EPoll>()
-                .ok_or(SyscallError::EINVAL)?;
-
             epoll.add_event(fd, event.clone())?;
+            Ok(0)
+        }
+
+        EPOLL_CTL_MOD => {
+            epoll.update_event(fd, event.clone())?;
             Ok(0)
         }
 
@@ -487,4 +492,10 @@ pub fn event_fd(_initval: usize, flags: usize) -> Result<usize, SyscallError> {
     Ok(current_task
         .file_table
         .open_file(entry, OpenFlags::O_RDWR)?)
+}
+
+#[syscall]
+pub fn link(src_path: &Path, dest_path: &Path) -> Result<usize, SyscallError> {
+    log::warn!("sys_link: is a stub! (src_path={src_path:?}, dest_path={dest_path:?})");
+    Ok(0)
 }
