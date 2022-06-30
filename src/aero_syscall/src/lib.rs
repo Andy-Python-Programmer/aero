@@ -228,6 +228,7 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
         prelude::SYS_KILL => "kill",
         prelude::SYS_FUTEX_WAIT => "futex_wait",
         prelude::SYS_FUTEX_WAKE => "futex_wake",
+        prelude::SYS_LINK => "link",
 
         _ => unreachable!("unknown syscall {syscall}"),
     }
