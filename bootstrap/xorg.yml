@@ -149,6 +149,7 @@ packages:
             NOCONFIGURE: 'yes'
     tools_required:
       - host-gcc
+      - host-python
     pkgs_required:
       - mlibc
       - xorg-util-macros
@@ -162,12 +163,13 @@ packages:
         - '--prefix=/usr'
         - '--sysconfdir=/etc'
         - '--localstatedir=/var'
+        environ:
+          PYTHON: '@BUILD_ROOT@/tools/host-python/bin/python3.8'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install-strip']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
-      - args: ['sed', '-i', 's|${pc_sysrootdir}${PYTHON_PREFIX}|/usr|g', '@THIS_COLLECT_DIR@/usr/lib/pkgconfig/xcb-proto.pc']
 
   # `libxdmcp` is X Display Manager Control Protocol library.
   - name: libxdmcp
@@ -298,6 +300,7 @@ packages:
       - host-autoconf-v2.69
       - host-automake-v1.16
       - host-pkg-config
+      - host-python
     pkgs_required:
       - mlibc
       - xorg-util-macros
@@ -316,6 +319,8 @@ packages:
         - '--disable-static'
         - '--without-doxygen'
         - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        environ:
+            PYTHON: '@BUILD_ROOT@/tools/host-python/bin/python3.8'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install-strip']
