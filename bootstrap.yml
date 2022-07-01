@@ -48,11 +48,15 @@ sources:
 
   - name: mlibc
     subdir: 'bundled'
-    url: 'https://github.com/managarm/mlibc/archive/bbac41bcb782662646c7ccef88e8ebc08330741e.tar.gz'
-    format: 'tar.gz'
-    extract_path: 'mlibc-bbac41bcb782662646c7ccef88e8ebc08330741e'
-    patch-path-strip: 1
-    version: '12.rolling'
+    git: 'https://github.com/managarm/mlibc'
+    # ABI-breakage:
+    #   - #452: The functions `FD_{CLR,ISSET,SET,ZERO}` were renamed to __FD_{CLR,ISSET,SET,ZERO} 
+    #           and replaced by macros to match Wine's assumptions.
+    #   - #511: Musl's regex engine was added, implementing regcomp and regexec. This required some 
+    #           changes to the regex_t struct.
+    #   - #504: A domainname member was added to struct utsname, which is a glibc extension.
+    branch: 'abi-break'
+    commit: 'cd3d0359c6ef646d31e1caa539a60f5418994410'
 
   - name: tzcode
     subdir: 'bundled'
