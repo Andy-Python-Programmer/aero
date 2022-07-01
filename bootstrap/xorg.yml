@@ -532,6 +532,42 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: pixman
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/pixman/pixman.git'
+      tag: 'pixman-0.40.0'
+      version: '0.40.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libpng
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   # The X server accepts requests from client applications to create windows,
   # which are (normally rectangular) "virtual screens" that the client program
   # can draw into.
@@ -562,6 +598,7 @@ packages:
       - openssl
       - libxkbfile
       - libxfont2
+      - pixman
     configure:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
