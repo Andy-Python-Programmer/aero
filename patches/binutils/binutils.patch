@@ -1,17 +1,16 @@
-From 08714ccec4e803f6cba4790f4b84fd2810834ae5 Mon Sep 17 00:00:00 2001
+From 23c517e8985baa0b4a788186d53e6299f72d48d0 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Tue, 31 Aug 2021 11:15:02 +1000
 Subject: [PATCH] targets: add aero target port
 
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
- .vscode/settings.json     | 6 ++++++
- bfd/config.bfd            | 5 +++++
- config.sub                | 2 +-
- gas/configure.tgt         | 1 +
- ld/configure.tgt          | 4 ++++
- libiberty/rust-demangle.c | 4 ++++
- 6 files changed, 21 insertions(+), 1 deletion(-)
+ .vscode/settings.json | 6 ++++++
+ bfd/config.bfd        | 5 +++++
+ config.sub            | 2 +-
+ gas/configure.tgt     | 1 +
+ ld/configure.tgt      | 4 ++++
+ 5 files changed, 17 insertions(+), 1 deletion(-)
  create mode 100644 .vscode/settings.json
 
 diff --git a/.vscode/settings.json b/.vscode/settings.json
@@ -28,10 +27,10 @@ index 00000000..7a72e53f
 +}
 \ No newline at end of file
 diff --git a/bfd/config.bfd b/bfd/config.bfd
-index 50e356d2..4d6d850a 100644
+index 30087e3b..5f204466 100644
 --- a/bfd/config.bfd
 +++ b/bfd/config.bfd
-@@ -729,6 +729,11 @@ case "${targ}" in
+@@ -719,6 +719,11 @@ case "${targ}" in
      targ_defvec=i386_elf32_vec
      targ_selvecs="iamcu_elf32_vec i386_pe_vec i386_pei_vec"
      ;;
@@ -57,7 +56,7 @@ index 7384e919..e1e5c644 100755
  	     | amigaos* | amigados* | msdos* | newsos* | unicos* | aof* \
  	     | aos* | aros* | cloudabi* | sortix* | twizzler* \
 diff --git a/gas/configure.tgt b/gas/configure.tgt
-index 68ee0468..4bd8ef91 100644
+index 338892ad..d1a9ac68 100644
 --- a/gas/configure.tgt
 +++ b/gas/configure.tgt
 @@ -221,6 +221,7 @@ case ${generic_target} in
@@ -69,7 +68,7 @@ index 68ee0468..4bd8ef91 100644
    i386-*-genode*)			fmt=elf ;;
    i386-*-bsd*)				fmt=aout em=386bsd ;;
 diff --git a/ld/configure.tgt b/ld/configure.tgt
-index d46ed620..4d0ff2a6 100644
+index 6205d7c9..5cd3f070 100644
 --- a/ld/configure.tgt
 +++ b/ld/configure.tgt
 @@ -323,6 +323,10 @@ i[3-7]86-*-linux-*)	targ_emul=elf_i386
@@ -83,21 +82,6 @@ index d46ed620..4d0ff2a6 100644
  i[3-7]86-*-redox*)	targ_emul=elf_i386
  			targ_extra_emuls=elf_x86_64
  			;;
-diff --git a/libiberty/rust-demangle.c b/libiberty/rust-demangle.c
-index 449941b5..20dee408 100644
---- a/libiberty/rust-demangle.c
-+++ b/libiberty/rust-demangle.c
-@@ -32,6 +32,10 @@ If not, see <http://www.gnu.org/licenses/>.  */
- #include "config.h"
- #endif
- 
-+#if defined(__aero__)
-+#define uint unsigned int
-+#endif
-+
- #include "safe-ctype.h"
- 
- #include <inttypes.h>
 -- 
 2.25.1
 
