@@ -397,6 +397,8 @@ def generate_docs(args):
 
 
 def prepare_iso(args, kernel_bin, user_bins):
+    log_info("preparing ISO")
+
     if not os.path.exists(BUILD_DIR):
         os.makedirs(BUILD_DIR)
 
