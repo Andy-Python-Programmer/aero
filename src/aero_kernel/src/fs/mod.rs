@@ -129,6 +129,7 @@ pub enum FileSystemError {
     Busy,
     NotDirectory,
     IsPipe,
+    IsDir,
     Interrupted,
     TooSmall,
     InvalidPath,
@@ -150,6 +151,7 @@ impl From<FileSystemError> for SyscallError {
             FileSystemError::InvalidPath => Self::EINVAL,
             FileSystemError::NotSocket => Self::ENOTSOCK,
             FileSystemError::ConnectionRefused => Self::ECONNREFUSED,
+            FileSystemError::IsDir => Self::EISDIR,
         }
     }
 }
@@ -219,7 +221,7 @@ pub fn lookup_path_with(
     mode: LookupMode,
 ) -> Result<DirCacheItem> {
     // Iterate and resolve each component. For example `a`, `b`, and `c` in `a/b/c`.
-    for component in path.components() {
+    for (i, component) in path.components().enumerate() {
         match component {
             // Handle some special cases that might occur in a relative path.
             "." => continue,
@@ -250,7 +252,14 @@ pub fn lookup_path_with(
                             if err == FileSystemError::EntryNotFound
                                 && mode == LookupMode::Create =>
                         {
-                            cwd = cwd.inode().touch(cwd.clone(), component)?;
+                            if i == path.components().count() - 1 {
+                                cwd = cwd.inode().touch(cwd.clone(), component)?;
+                            } else {
+                                // todo: fix this shit
+                                cwd.inode().mkdir(component)?;
+                                cwd =
+                                    lookup_path_with(cwd, Path::new(component), LookupMode::None)?;
+                            }
                         }
 
                         Err(err) => return Err(err),

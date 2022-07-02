@@ -188,6 +188,10 @@ pub trait INodeInterface: Send + Sync {
     fn poll(&self, _table: Option<&mut PollTable>) -> Result<EPollEventFlags> {
         Err(FileSystemError::NotSupported)
     }
+
+    fn link(&self, _name: &str, _src: INodeCacheItem) -> Result<()> {
+        Err(FileSystemError::NotSupported)
+    }
 }
 
 /// Structure representing the curcial, characteristics of an inode. The metadata

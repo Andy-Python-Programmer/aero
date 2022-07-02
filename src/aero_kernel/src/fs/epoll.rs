@@ -40,7 +40,7 @@ impl EPoll {
         })
     }
 
-    /// Adds an event to the epoll instance.
+    /// Adds an event to the interest list.
     ///
     /// ## Errors
     /// * `EEXIST`: The event already exists at `fd`.
@@ -55,7 +55,22 @@ impl EPoll {
         Ok(())
     }
 
-    /// Change the settings associated with file derscriptor in the interest list to the
+    /// Removes an event from the interest list.
+    ///
+    /// ## Errors
+    /// * `ENOENT`: The event does not exist at `fd`.
+    pub fn remove_event(&self, fd: usize) -> Result<(), SyscallError> {
+        let mut events = self.events.lock_irq();
+
+        if events.get(&fd).is_none() {
+            return Err(SyscallError::ENOENT);
+        }
+
+        events.remove(&fd);
+        Ok(())
+    }
+
+    /// Change the settings associated with file descriptor in the interest list to the
     /// new settings specified in event.
     ///
     /// ## Errors

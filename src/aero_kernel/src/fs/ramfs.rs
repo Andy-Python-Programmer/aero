@@ -26,7 +26,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use aero_syscall::prelude::EPollEventFlags;
 use aero_syscall::MMapFlags;
 use alloc::collections::BTreeMap;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::sync::{Arc, Weak};
 
 use alloc::vec::Vec;
@@ -411,6 +411,34 @@ impl INodeInterface for LockedRamINode {
     #[inline]
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
         Some(self.0.read().filesystem.clone())
+    }
+
+    fn link(&self, name: &str, src: INodeCacheItem) -> Result<()> {
+        // ensure: The dest inode (self) is a directory.
+        if self.metadata()?.file_type() != FileType::Directory {
+            return Err(FileSystemError::NotDirectory);
+        }
+
+        // ensure: The src inode is not a directory.
+        if src.metadata()?.file_type() == FileType::Directory {
+            return Err(FileSystemError::IsDir);
+        }
+
+        // ensure: The dest directory does not already contain a
+        // file with the same name.
+        {
+            let this = self.0.read();
+
+            if this.children.iter().find(|(e, _)| e == &name).is_some() {
+                return Err(FileSystemError::EntryExists);
+            }
+        }
+
+        let mut this = self.0.write();
+
+        // Create the link!
+        this.children.insert(name.to_string(), src.clone());
+        Ok(())
     }
 }
 

@@ -436,6 +436,11 @@ pub fn epoll_ctl(
             Ok(0)
         }
 
+        EPOLL_CTL_DEL => {
+            epoll.remove_event(fd)?;
+            Ok(0)
+        }
+
         EPOLL_CTL_MOD => {
             epoll.update_event(fd, event.clone())?;
             Ok(0)
@@ -494,8 +499,25 @@ pub fn event_fd(_initval: usize, flags: usize) -> Result<usize, SyscallError> {
         .open_file(entry, OpenFlags::O_RDWR)?)
 }
 
+/// Creates a new link (also known as a hard link) to an existing
+/// file.
 #[syscall]
 pub fn link(src_path: &Path, dest_path: &Path) -> Result<usize, SyscallError> {
-    log::warn!("sys_link: is a stub! (src_path={src_path:?}, dest_path={dest_path:?})");
+    let src = fs::lookup_path(src_path)?.inode();
+    let (dest_dir, dest_name) = dest_path.parent_and_basename();
+
+    let dest_dir = fs::lookup_path(dest_dir)?.inode();
+
+    // Cannot create a hardlink to a file on a different filesystem.
+    //
+    // SAFTEY: The pointers to the file system are valid since we know that there are
+    // strong references to it.
+    //
+    // TODO: Should this be moved to the inode impl?
+    if dest_dir.weak_filesystem().unwrap().as_ptr() != src.weak_filesystem().unwrap().as_ptr() {
+        return Err(SyscallError::EINVAL);
+    }
+
+    dest_dir.link(dest_name, src)?;
     Ok(0)
 }
