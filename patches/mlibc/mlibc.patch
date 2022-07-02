@@ -1,0 +1,53 @@
+From b4160476f4d1f02e0ea4550b66c9f9b478ab55fa Mon Sep 17 00:00:00 2001
+From: Matt Taylor <mstaveleytaylor@gmail.com>
+Date: Fri, 17 Jun 2022 15:28:34 +0100
+Subject: [PATCH] abi-bits: add domainname to utsname
+
+---
+ ABI_BREAKS.md                      | 1 +
+ abis/linux/utsname.h               | 1 +
+ options/glibc/generic/execinfo.cpp | 6 ++++--
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/ABI_BREAKS.md b/ABI_BREAKS.md
+index 0cd3993b..d2a0bb7d 100644
+--- a/ABI_BREAKS.md
++++ b/ABI_BREAKS.md
+@@ -6,3 +6,4 @@ This document lists the ABI breaks that were made in each mlibc major version.
+ 
+ - [#452](https://github.com/managarm/mlibc/pull/452): The functions `FD_{CLR,ISSET,SET,ZERO}` were renamed to `__FD_{CLR,ISSET,SET,ZERO}` and replaced by macros to match Wine's assumptions.
+ - [#511](https://github.com/managarm/mlibc/pull/511): Musl's regex engine was added, implementing `regcomp` and `regexec`. This required some changes to the `regex_t` struct.
++- [#504](https://github.com/managarm/mlibc/pull/504): A `domainname` member was added to `struct utsname`, which is a glibc extension.
+diff --git a/abis/linux/utsname.h b/abis/linux/utsname.h
+index 2cd22265..9875a46e 100644
+--- a/abis/linux/utsname.h
++++ b/abis/linux/utsname.h
+@@ -7,6 +7,7 @@ struct utsname {
+ 	char release[65];
+ 	char version[65];
+ 	char machine[65];
++	char domainname[65];
+ };
+ 
+ #endif // _ABIBITS_UTSNAME_T_H
+diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
+index 3474615e..c0081e30 100644
+--- a/options/glibc/generic/execinfo.cpp
++++ b/options/glibc/generic/execinfo.cpp
+@@ -1,9 +1,11 @@
+ #include <execinfo.h>
+ #include <bits/ensure.h>
++#include <mlibc/debug.hpp>
+ 
+ int backtrace(void **, int) {
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	mlibc::infoLogger() << "backtrace() is unimplemented" << frg::endlog;
++	// __ensure(!"Not implemented");
++	// __builtin_unreachable();
+ }
+ 
+ char **backtrace_symbols(void *const *, int) {
+-- 
+2.25.1
+
