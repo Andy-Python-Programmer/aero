@@ -222,23 +222,56 @@ impl INodeInterface for DevKmsg {
 
 struct DevFb {
     marker: usize,
-    vinfo: FramebufferVScreenInfo,
+    vinfo: RwLock<FramebufferVScreenInfo>,
+    finfo: FramebufferFScreenInfo,
 }
 
 impl DevFb {
     fn new(info: RendyInfo) -> Arc<Self> {
         Arc::new(Self {
             marker: alloc_device_marker(),
-            vinfo: FramebufferVScreenInfo {
+            vinfo: RwLock::new(FramebufferVScreenInfo {
                 xres: info.horizontal_resolution as u32,
                 yres: info.vertical_resolution as u32,
 
                 xres_virtual: info.horizontal_resolution as u32,
                 yres_virtual: info.vertical_resolution as u32,
 
+                width: u32::MAX,  // -1
+                height: u32::MAX, // -1
+
+                red: FramebufferBitField::new(
+                    info.red_mask_shift as u32,
+                    info.red_mask_size as u32,
+                ),
+
+                green: FramebufferBitField::new(
+                    info.green_mask_shift as u32,
+                    info.green_mask_size as u32,
+                ),
+
+                blue: FramebufferBitField::new(
+                    info.blue_mask_shift as u32,
+                    info.blue_mask_size as u32,
+                ),
+
+                transp: FramebufferBitField::new(0, 0),
                 bits_per_pixel: info.bits_per_pixel as u32,
 
+                activate: FB_ACTIVATE_NOW,
+                vmode: FB_VMODE_NONINTERLACED,
+
                 // TODO: Implement rest of the members
+                ..Default::default()
+            }),
+
+            finfo: FramebufferFScreenInfo {
+                smem_len: (info.stride * info.vertical_resolution) as u32,
+                line_length: info.stride as u32,
+
+                typee: FB_TYPE_PACKED_PIXELS,
+                visual: FB_VISUAL_TRUECOLOR,
+
                 ..Default::default()
             },
         })
@@ -251,7 +284,7 @@ impl Device for DevFb {
     }
 
     fn device_name(&self) -> String {
-        String::from("fb")
+        String::from("fb0")
     }
 
     fn inode(&self) -> Arc<dyn INodeInterface> {
@@ -325,11 +358,28 @@ impl INodeInterface for DevFb {
             FBIOGET_VSCREENINFO => {
                 let struc = unsafe { &mut *(arg as *mut FramebufferVScreenInfo) };
 
-                *struc = self.vinfo.clone();
+                *struc = self.vinfo.read().clone();
                 Ok(0x00)
             }
 
-            _ => Err(FileSystemError::NotSupported),
+            FBIOPUT_VSCREENINFO => {
+                let struc = unsafe { &mut *(arg as *mut FramebufferVScreenInfo) };
+                *self.vinfo.write() = struc.clone();
+
+                Ok(0x00)
+            }
+
+            FBIOGET_FSCREENINFO => {
+                let struc = unsafe { &mut *(arg as *mut FramebufferFScreenInfo) };
+
+                *struc = self.finfo.clone();
+                Ok(0x00)
+            }
+
+            _ => {
+                log::warn!("fbdev: ioctl unknown command: {command:#x}");
+                Err(FileSystemError::NotSupported)
+            }
         }
     }
 }
