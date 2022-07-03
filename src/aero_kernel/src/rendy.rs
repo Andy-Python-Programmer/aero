@@ -132,6 +132,15 @@ pub struct RendyInfo {
     /// value might be larger than `horizontal_resolution`. It is
     /// therefore recommended to use this field for calculating the start address of a line.
     pub stride: usize,
+
+    pub red_mask_shift: u8,
+    pub red_mask_size: u8,
+
+    pub green_mask_shift: u8,
+    pub green_mask_size: u8,
+
+    pub blue_mask_shift: u8,
+    pub blue_mask_size: u8,
 }
 
 #[repr(C, packed)]
@@ -937,6 +946,15 @@ pub fn init(framebuffer_tag: &'static StivaleFramebufferTag, cmdline: &CommandLi
         vertical_resolution: framebuffer_tag.framebuffer_height as usize,
         pixel_format: PixelFormat::BGR,
         stride: framebuffer_tag.framebuffer_pitch as usize,
+
+        red_mask_shift: framebuffer_tag.red_mask_shift,
+        red_mask_size: framebuffer_tag.red_mask_size,
+
+        green_mask_shift: framebuffer_tag.green_mask_shift,
+        green_mask_size: framebuffer_tag.green_mask_size,
+
+        blue_mask_shift: framebuffer_tag.blue_mask_shift,
+        blue_mask_size: framebuffer_tag.blue_mask_size,
     };
 
     let framebuffer_addr = PhysAddr::new(framebuffer_tag.framebuffer_addr).as_hhdm_virt();

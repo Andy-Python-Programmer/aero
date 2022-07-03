@@ -1,4 +1,4 @@
-From 58219693860f53ac12dd1849e5457bf30126a8ce Mon Sep 17 00:00:00 2001
+From ec91d28586ecf3df66e23da1ce94dbba3042cd86 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 30 Jun 2022 11:10:21 +1000
 Subject: [PATCH] xserver: aero specific changes
@@ -7,6 +7,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                               |  2 ++
  configure.ac                             |  2 ++
+ hw/xfree86/common/xf86Bus.c              |  2 ++
  hw/xfree86/common/xf86Config.c           |  2 ++
  hw/xfree86/common/xf86Configure.c        |  1 +
  hw/xfree86/common/xf86Events.c           |  1 +
@@ -20,7 +21,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  mi/mibitblt.c                            |  2 ++
  os/access.c                              |  2 +-
  os/utils.c                               |  4 +--
- 15 files changed, 47 insertions(+), 19 deletions(-)
+ 16 files changed, 49 insertions(+), 19 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dc56b46..81d9886 100644
@@ -45,6 +46,26 @@ index 0909cc5..080b906 100644
  	AC_SUBST([XORG_LIBS])
  	AC_SUBST([XORG_SYS_LIBS])
  	AC_SUBST([XORG_INCS])
+diff --git a/hw/xfree86/common/xf86Bus.c b/hw/xfree86/common/xf86Bus.c
+index a8f1073..d7399aa 100644
+--- a/hw/xfree86/common/xf86Bus.c
++++ b/hw/xfree86/common/xf86Bus.c
+@@ -536,6 +536,7 @@ xf86GetDevFromEntity(int entityIndex, int instance)
+ void
+ xf86PostProbe(void)
+ {
++#if 0
+     if (fbSlotClaimed && (
+ #if (defined(__sparc__) || defined(__sparc)) && !defined(__OpenBSD__)
+                              sbusSlotClaimed ||
+@@ -551,6 +552,7 @@ xf86PostProbe(void)
+         ))
+         FatalError("Cannot run in framebuffer mode. Please specify busIDs "
+                    "       for all framebuffer devices\n");
++#endif
+ }
+ 
+ int
 diff --git a/hw/xfree86/common/xf86Config.c b/hw/xfree86/common/xf86Config.c
 index 09d27ec..83be062 100644
 --- a/hw/xfree86/common/xf86Config.c

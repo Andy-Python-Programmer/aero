@@ -23,7 +23,7 @@ use std::process::Command;
 
 use std::mem;
 
-const DEFAULT_SHELL_PATH: &str = "/usr/bin/aero_shell";
+const DEFAULT_SHELL_PATH: &str = "/usr/bin/bash";
 const TTY_PATH: &str = "/dev/tty";
 
 fn main() -> Result<(), Box<dyn Error>> {

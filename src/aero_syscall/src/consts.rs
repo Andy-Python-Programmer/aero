@@ -176,17 +176,59 @@ bitflags::bitflags! {
 // of these constants and structs in the linux usermode API.
 //
 // https://github.com/torvalds/linux/blob/master/include/uapi/linux/fb.h
+//
+// TODO: Move these constants and structures to the Aero UAPI crate.
 pub const FBIOGET_VSCREENINFO: usize = 0x4600;
+pub const FBIOPUT_VSCREENINFO: usize = 0x4601;
+pub const FBIOGET_FSCREENINFO: usize = 0x4602;
 
-#[derive(Default, Clone)]
+pub const FB_TYPE_PACKED_PIXELS: u32 = 0;
+pub const FB_TYPE_PLANES: u32 = 1;
+pub const FB_TYPE_INTERLEAVED_PLANES: u32 = 2;
+pub const FB_TYPE_TEXT: u32 = 3;
+pub const FB_TYPE_VGA_PLANES: u32 = 4;
+pub const FB_TYPE_FOURCC: u32 = 5;
+
+pub const FB_VISUAL_MONO01: u32 = 0;
+pub const FB_VISUAL_MONO10: u32 = 1;
+pub const FB_VISUAL_TRUECOLOR: u32 = 2;
+pub const FB_VISUAL_PSEUDOCOLOR: u32 = 3;
+pub const FB_VISUAL_DIRECTCOLOR: u32 = 4;
+pub const FB_VISUAL_STATIC_PSEUDOCOLOR: u32 = 5;
+pub const FB_VISUAL_FOURCC: u32 = 6;
+
+pub const FB_ACTIVATE_NOW: u32 = 0;
+pub const FB_ACTIVATE_NXTOPEN: u32 = 1;
+pub const FB_ACTIVATE_TEST: u32 = 2;
+pub const FB_ACTIVATE_MASK: u32 = 15;
+
+pub const FB_VMODE_NONINTERLACED: u32 = 0;
+pub const FB_VMODE_INTERLACED: u32 = 1;
+pub const FB_VMODE_DOUBLE: u32 = 2;
+pub const FB_VMODE_ODD_FLD_FIRST: u32 = 4;
+pub const FB_VMODE_MASK: u32 = 255;
+
+#[derive(Default, Debug, Clone)]
+#[repr(C)]
 pub struct FramebufferBitField {
     pub offset: u32,
     pub length: u32,
     pub msb_right: u32,
 }
 
+impl FramebufferBitField {
+    pub fn new(shift: u32, size: u32) -> Self {
+        Self {
+            offset: shift,
+            length: size,
+            msb_right: 0,
+        }
+    }
+}
+
 // framebuffer variable screen info:
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone)]
+#[repr(C)]
 pub struct FramebufferVScreenInfo {
     pub xres: u32,
     pub yres: u32,
@@ -217,4 +259,25 @@ pub struct FramebufferVScreenInfo {
     pub rotate: u32,
     pub colorspace: u32,
     pub reserved: [u32; 4],
+}
+
+// framebuffer fixed screen info:
+#[derive(Default, Debug, Clone)]
+#[repr(C)]
+pub struct FramebufferFScreenInfo {
+    pub id: [u8; 16],
+    pub smem_start: u64,
+    pub smem_len: u32,
+    pub typee: u32,
+    pub type_aux: u32,
+    pub visual: u32,
+    pub xpanstep: u16,
+    pub ypanstep: u16,
+    pub ywrapstep: u16,
+    pub line_length: u32,
+    pub mmio_start: u64,
+    pub mmio_len: u32,
+    pub accel: u32,
+    pub capabilities: u16,
+    pub reserved: [u16; 2],
 }
