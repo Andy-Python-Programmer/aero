@@ -80,6 +80,7 @@ pub const SYS_KILL: usize = 56;
 pub const SYS_FUTEX_WAIT: usize = 57;
 pub const SYS_FUTEX_WAKE: usize = 58;
 pub const SYS_LINK: usize = 59;
+pub const SYS_BACKTRACE: usize = 60;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

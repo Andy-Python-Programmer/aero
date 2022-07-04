@@ -122,6 +122,13 @@ pub fn exec(
     envs: usize,
     envc: usize,
 ) -> Result<usize, SyscallError> {
+    let mut path = path;
+
+    // fixme!!!! before MERGE!!!! ANDYYYY
+    if path.as_str() == "/bin/sh" {
+        path = Path::new("/usr/bin/bash");
+    }
+
     let executable = fs::lookup_path(path)?;
 
     if executable.inode().metadata()?.is_directory() {
@@ -213,6 +220,12 @@ pub fn munmap(address: usize, size: usize) -> Result<usize, SyscallError> {
     } else {
         Err(SyscallError::EFAULT)
     }
+}
+
+#[syscall]
+pub fn backtrace() -> Result<usize, SyscallError> {
+    crate::unwind::unwind_stack_trace();
+    Ok(0)
 }
 
 #[syscall]

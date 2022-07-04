@@ -669,7 +669,7 @@ packages:
         - '--disable-glamor'
         - '--disable-glx'
         environ:
-          CFLAGS: '-Wno-error=array-bounds -O2 -pipe'
+          CFLAGS: '-Wno-error=array-bounds -O0 -g -pipe'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install-strip']
@@ -1293,6 +1293,168 @@ packages:
         - '--localstatedir=/var'
         - '--disable-static'
         - '--disable-malloc0returnsnull'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: xkbcomp
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/app/xkbcomp.git'
+      tag: 'xkbcomp-1.4.5'
+      version: '1.4.5'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - libx11
+      - libxkbfile
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libxkbcommon
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/xkbcommon/libxkbcommon.git'
+      tag: 'xkbcommon-1.4.0'
+      version: '1.4.0'
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - libxcb
+      - libxml
+      - xkeyboard-config
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=release'
+        - '-Denable-docs=false'
+        - '-Denable-x11=true'
+        - '-Denable-wayland=false'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['mkdir', '-p', "@THIS_COLLECT_DIR@/usr/share/X11/xkb"]
+
+
+  - name: xkeyboard-config
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config.git'
+      tag: 'xkeyboard-config-2.34'
+      version: '2.34'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+      - host-xorg-macros
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libx11
+      - xorg-proto
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--with-xkb-rules-symlink=xorg'
+        - '--disable-nls'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: xf86-input-keyboard
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/driver/xf86-input-keyboard.git'
+      tag: 'xf86-input-keyboard-1.9.0'
+      version: '1.9.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-server
+      - xorg-util-macros
+      - libx11
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install-strip']
