@@ -1,4 +1,4 @@
-From 10e4288b75bcaa72e84cabe7af331cb95cbb1c86 Mon Sep 17 00:00:00 2001
+From d3bcf4e954ce27b14f5ffdb994486c984d1773ad Mon Sep 17 00:00:00 2001
 From: Matt Taylor <mstaveleytaylor@gmail.com>
 Date: Fri, 17 Jun 2022 15:28:34 +0100
 Subject: [PATCH] abi-bits: add domainname to utsname
@@ -8,7 +8,10 @@ Subject: [PATCH] abi-bits: add domainname to utsname
  abis/linux/utsname.h                  |   1 +
  options/ansi/generic/stdlib-stubs.cpp | 100 ++++++++++++++++++++++----
  options/glibc/generic/execinfo.cpp    |   6 +-
- 4 files changed, 94 insertions(+), 14 deletions(-)
+ options/rtdl/generic/linker.cpp       |   2 +-
+ sysdeps/aero/generic/aero.cpp         |  10 ++-
+ sysdeps/aero/include/aero/syscall.h   |   1 +
+ 7 files changed, 104 insertions(+), 17 deletions(-)
 
 diff --git a/ABI_BREAKS.md b/ABI_BREAKS.md
 index 0cd3993b..d2a0bb7d 100644
@@ -160,6 +163,59 @@ index 3474615e..c0081e30 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
+diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
+index c2eceff6..d2d91b13 100644
+--- a/options/rtdl/generic/linker.cpp
++++ b/options/rtdl/generic/linker.cpp
+@@ -15,7 +15,7 @@ uintptr_t libraryBase = 0x41000000;
+ 
+ bool verbose = false;
+ bool stillSlightlyVerbose = false;
+-bool logBaseAddresses = false;
++bool logBaseAddresses = true;
+ bool eagerBinding = true;
+ 
+ #if defined(__x86_64__)
+diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
+index 43ddb906..f4fe182f 100644
+--- a/sysdeps/aero/generic/aero.cpp
++++ b/sysdeps/aero/generic/aero.cpp
+@@ -124,7 +124,9 @@ int sys_anon_free(void *pointer, size_t size) {
+ }
+ 
+ void sys_libc_panic() {
+-    sys_libc_log("libc panic!");
++    mlibc::infoLogger() << "libc_panic: panicked at 'unknown'" << frg::endlog;
++    __ensure(!syscall(SYS_BACKTRACE));
++    
+     sys_exit(1);
+ }
+ 
+@@ -233,7 +235,11 @@ uid_t sys_geteuid() {
+     return 0;
+ }
+ 
+-int sys_setuid(uid_t uid) UNIMPLEMENTED("sys_setuid")
++// int sys_setuid(uid_t uid) {
++//     mlibc::infoLogger() << "mlibc: sys_setuid is a stub" << frg::endlog;
++//     return 0;
++// }
++
+ int sys_seteuid(uid_t euid) UNIMPLEMENTED("sys_seteuid")
+ 
+ gid_t sys_getgid() {
+diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
+index 12f8dc61..cf57bd3d 100644
+--- a/sysdeps/aero/include/aero/syscall.h
++++ b/sysdeps/aero/include/aero/syscall.h
+@@ -64,6 +64,7 @@
+ #define SYS_FUTEX_WAIT 57
+ #define SYS_FUTEX_WAKE 58
+ #define SYS_LINK 59
++#define SYS_BACKTRACE 60
+ 
+ // Invalid syscall used to trigger a log error in the kernel (as a hint)
+ // so, that we can implement the syscall in the kernel.
 -- 
 2.25.1
 
