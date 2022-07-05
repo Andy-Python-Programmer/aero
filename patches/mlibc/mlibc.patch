@@ -1,4 +1,4 @@
-From d3bcf4e954ce27b14f5ffdb994486c984d1773ad Mon Sep 17 00:00:00 2001
+From a1c97a1acc4f67a2add919e2dbf8a7f35d1a107a Mon Sep 17 00:00:00 2001
 From: Matt Taylor <mstaveleytaylor@gmail.com>
 Date: Fri, 17 Jun 2022 15:28:34 +0100
 Subject: [PATCH] abi-bits: add domainname to utsname
@@ -10,8 +10,9 @@ Subject: [PATCH] abi-bits: add domainname to utsname
  options/glibc/generic/execinfo.cpp    |   6 +-
  options/rtdl/generic/linker.cpp       |   2 +-
  sysdeps/aero/generic/aero.cpp         |  10 ++-
- sysdeps/aero/include/aero/syscall.h   |   1 +
- 7 files changed, 104 insertions(+), 17 deletions(-)
+ sysdeps/aero/generic/filesystem.cpp   |  19 ++++-
+ sysdeps/aero/include/aero/syscall.h   |   2 +
+ 8 files changed, 122 insertions(+), 19 deletions(-)
 
 diff --git a/ABI_BREAKS.md b/ABI_BREAKS.md
 index 0cd3993b..d2a0bb7d 100644
@@ -204,15 +205,49 @@ index 43ddb906..f4fe182f 100644
  int sys_seteuid(uid_t euid) UNIMPLEMENTED("sys_seteuid")
  
  gid_t sys_getgid() {
+diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
+index a3e2aca2..a56438f0 100644
+--- a/sysdeps/aero/generic/filesystem.cpp
++++ b/sysdeps/aero/generic/filesystem.cpp
+@@ -158,11 +158,26 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
+     return 0;
+ }
+ 
+-int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
+-    mlibc::infoLogger() << "sys_poll() is not implemented" << frg::endlog;
++int sys_ppoll(struct pollfd *fds, int nfds, const struct timespec *timeout,
++		const sigset_t *sigmask, int *num_events) {
++    auto result = syscall(SYS_POLL, fds, nfds, timeout, sigmask);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    *num_events = result;
+     return 0;
+ }
+ 
++int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
++    struct timespec ts;
++	ts.tv_sec = timeout / 1000;
++	ts.tv_nsec = (timeout % 1000) * 1000000;
++
++    return sys_ppoll(fds, count, &ts, NULL, num_events);
++}
++
+ int sys_mkdir(const char *path, mode_t) {
+     auto result = syscall(SYS_MKDIR, path, strlen(path));
+ 
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc61..cf57bd3d 100644
+index 12f8dc61..fcc219a9 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -64,6 +64,7 @@
+@@ -64,6 +64,8 @@
  #define SYS_FUTEX_WAIT 57
  #define SYS_FUTEX_WAKE 58
  #define SYS_LINK 59
 +#define SYS_BACKTRACE 60
++#define SYS_POLL 61
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.
