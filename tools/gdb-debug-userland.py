@@ -26,7 +26,7 @@ def gdb_main(program: str, is_lib: bool):
         print("setting a breakpoint at the entry point")
 
         # set a breakpoint at the entry point of the program
-        gdb.execute("b main")
+        gdb.execute("b _start")
 
 
 def wait_for_process(process):

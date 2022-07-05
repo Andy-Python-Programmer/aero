@@ -669,7 +669,7 @@ packages:
         - '--disable-glamor'
         - '--disable-glx'
         environ:
-          CFLAGS: '-Wno-error=array-bounds -O0 -g -pipe'
+          CFLAGS: '-Wno-error=array-bounds -O2 -pipe'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install-strip']
@@ -1377,6 +1377,44 @@ packages:
           DESTDIR: '@THIS_COLLECT_DIR@'
       - args: ['mkdir', '-p', "@THIS_COLLECT_DIR@/usr/share/X11/xkb"]
 
+  - name: xkbutils
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/app/xkbutils.git'
+      tag: 'xkbutils-1.0.4'
+      version: '1.0.4'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['autoreconf', '-vfi']
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libx11
+      - libxt
+      - libxaw
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
 
   - name: xkeyboard-config
     source:
