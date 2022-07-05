@@ -19,7 +19,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use aero_syscall::prelude::EPollEventFlags;
+use aero_syscall::prelude::{EPollEventFlags, PollEventFlags};
 use aero_syscall::{MMapFlags, OpenFlags};
 
 use alloc::string::String;
@@ -63,6 +63,53 @@ impl Drop for PollTable {
         for queue in self.queues.iter() {
             queue.remove(ctask.clone());
         }
+    }
+}
+
+bitflags::bitflags! {
+    pub struct PollFlags: usize {
+        /// The associated file is available for read operations.
+        const IN   = 1 << 1;
+        /// The associated file is available for write operations.
+        const OUT = 1 << 2;
+        /// Error condition happened on the associated file descriptor.
+        const ERR = 1 << 3;
+    }
+}
+
+impl From<PollFlags> for EPollEventFlags {
+    fn from(poll: PollFlags) -> Self {
+        let mut flags = Self::empty();
+
+        if poll.contains(PollFlags::IN) {
+            flags |= Self::IN;
+        }
+        if poll.contains(PollFlags::OUT) {
+            flags |= Self::OUT;
+        }
+        if poll.contains(PollFlags::ERR) {
+            flags |= Self::ERR;
+        }
+
+        flags
+    }
+}
+
+impl From<PollFlags> for PollEventFlags {
+    fn from(poll: PollFlags) -> Self {
+        let mut flags = Self::empty();
+
+        if poll.contains(PollFlags::IN) {
+            flags |= Self::IN;
+        }
+        if poll.contains(PollFlags::OUT) {
+            flags |= Self::OUT;
+        }
+        if poll.contains(PollFlags::ERR) {
+            flags |= Self::ERR;
+        }
+
+        flags
     }
 }
 
@@ -185,7 +232,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSocket)
     }
 
-    fn poll(&self, _table: Option<&mut PollTable>) -> Result<EPollEventFlags> {
+    fn poll(&self, _table: Option<&mut PollTable>) -> Result<PollFlags> {
         Err(FileSystemError::NotSupported)
     }
 

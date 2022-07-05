@@ -19,14 +19,13 @@
 
 use aero_syscall::SocketAddrUnix;
 
-use aero_syscall::prelude::EPollEventFlags;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::RwLock;
 
 use crate::fs;
-use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollTable};
+use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollFlags, PollTable};
 use crate::fs::{FileSystemError, Path, Result};
 use crate::utils::sync::BlockQueue;
 
@@ -65,7 +64,7 @@ impl UnixSocketBacklog {
     }
 
     pub fn len(&self) -> usize {
-        self.backlog.as_ref().map(|e| e.len()).unwrap()
+        self.backlog.as_ref().map(|e| e.len()).unwrap_or_default()
     }
 
     pub fn update_capacity(&mut self, capacity: usize) {
@@ -164,13 +163,13 @@ impl INodeInterface for UnixSocket {
         Ok(())
     }
 
-    fn poll(&self, table: Option<&mut PollTable>) -> Result<EPollEventFlags> {
+    fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {
         table.map(|e| e.insert(&self.wq));
 
-        let mut events = EPollEventFlags::default();
+        let mut events = PollFlags::empty();
 
         if self.inner.read().backlog.len() > 0 {
-            events.insert(EPollEventFlags::OUT);
+            events.insert(PollFlags::OUT);
         }
 
         Ok(events)

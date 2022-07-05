@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::prelude::EPollEvent;
+use aero_syscall::prelude::{EPollEvent, EPollEventFlags};
 use aero_syscall::SyscallError;
 
 use alloc::sync::Arc;
@@ -134,7 +134,7 @@ impl EPoll {
                 .ok_or(FileSystemError::NotSupported)?; // EINVAL
 
             let flags = epoll_event.events;
-            let ready = fd.inode().poll(None)?;
+            let ready: EPollEventFlags = fd.inode().poll(None)?.into();
 
             if ready.contains(flags) {
                 // The registered event is ready; increment the number of ready events
@@ -161,7 +161,7 @@ impl EPoll {
             scheduler::get_scheduler().inner.await_io()?;
 
             for fd in fds.iter() {
-                let ready = fd.inode().poll(None)?;
+                let ready: EPollEventFlags = fd.inode().poll(None)?.into();
                 let flags = table
                     .get(&fd.fd)
                     .ok_or(FileSystemError::NotSupported)?
@@ -170,6 +170,7 @@ impl EPoll {
                 if ready.contains(flags) {
                     // The event is ready; break out of the search loop and set ready
                     // events to 1.
+                    ret_events[0].events = ready & flags;
                     n = 1;
                     break 'search;
                 }

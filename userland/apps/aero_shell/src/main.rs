@@ -234,6 +234,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), SyscallError> {
                             // run where to find a user-specific directory in which it can store small
                             // temporary files.
                             "XDG_RUNTIME_DIR=tmp",
+                            "DISPLAY=:0",
                         ],
                     ) {
                         Ok(_) => core::unreachable!(),

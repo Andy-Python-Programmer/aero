@@ -17,14 +17,14 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::prelude::*;
 use aero_syscall::signal::SigProcMask;
+use aero_syscall::{prelude::*, TimeSpec};
 use aero_syscall::{OpenFlags, Stat, SyscallError};
 
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::DuplicateHint;
-use crate::fs::inode::DirEntry;
+use crate::fs::inode::{DirEntry, PollTable};
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
 use crate::userland::scheduler;
@@ -526,4 +526,88 @@ pub fn link(src_path: &Path, dest_path: &Path) -> Result<usize, SyscallError> {
 
     dest_dir.link(dest_name, src)?;
     Ok(0)
+}
+
+#[syscall]
+pub fn poll(
+    fds: &mut [PollFd],
+    // TODO: Use the provided timeout.
+    _timeout: &TimeSpec,
+    sigmask: usize,
+) -> Result<usize, SyscallError> {
+    if fds.len() == 0 {
+        // nothing to do.
+        return Ok(0x00);
+    }
+
+    let current_task = scheduler::get_scheduler().current_task();
+    let signals = current_task.signals();
+
+    let mut old_mask = 0;
+
+    // Update the signal mask.
+    signals.set_mask(SigProcMask::Set, Some(sigmask as u64), Some(&mut old_mask));
+
+    let mut poll_table = PollTable::default();
+    let mut n = 0;
+    let mut refds = alloc::vec![];
+
+    // Iterate over all the registered events and check if they are ready.
+    for (i, fd) in fds.iter_mut().enumerate() {
+        // TODO: If an invalid file descriptor is provided then return EBADFD. Not implemented currently,
+        // since the init process (libc?) tries to POLL on the stdout, stdin and stdout file descriptors
+        // which are currently not present.
+        //
+        // One possible solution is to open the file descriptors when the init process
+        // is a kernel process?
+        let handle = match current_task.file_table.get_handle(fd.fd as usize) {
+            Some(v) => v,
+            None => {
+                fd.revents = PollEventFlags::empty();
+                return Ok(0);
+            }
+        };
+
+        let ready: PollEventFlags = handle.inode().poll(None)?.into();
+
+        if ready.contains(fd.events) {
+            // The registered event is ready; increment the number of ready events
+            // and update revents mask for this event.
+            fd.revents = ready & fd.events;
+            n += 1;
+            continue;
+        }
+
+        // Not ready; add the event to the poll table.
+        handle.inode().poll(Some(&mut poll_table))?;
+        refds.push((handle, i));
+    }
+
+    // If all events are ready, we can return now.
+    if n > 0 {
+        debug_assert!(refds.len() == 0);
+        return Ok(n);
+    }
+
+    'search: loop {
+        // Wait till one of the file descriptor deliever an event.
+        scheduler::get_scheduler().inner.await_io()?;
+
+        for (handle, index) in refds.iter() {
+            let pollfd = &mut fds[*index];
+            let ready: PollEventFlags = handle.inode().poll(None)?.into();
+
+            if ready.contains(pollfd.events) {
+                // The event is ready; break out of the search loop and set ready
+                // events to 1.
+                pollfd.revents = ready & pollfd.events;
+                n = 1;
+                break 'search;
+            }
+        }
+    }
+
+    // Restore the orignal signal mask.
+    signals.set_mask(SigProcMask::Set, Some(old_mask), None);
+    Ok(n)
 }

@@ -81,6 +81,7 @@ pub const SYS_FUTEX_WAIT: usize = 57;
 pub const SYS_FUTEX_WAKE: usize = 58;
 pub const SYS_LINK: usize = 59;
 pub const SYS_BACKTRACE: usize = 60;
+pub const SYS_POLL: usize = 61;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;
@@ -113,7 +114,7 @@ pub const EPOLL_CTL_ADD: usize = 1;
 pub const EPOLL_CTL_DEL: usize = 2;
 pub const EPOLL_CTL_MOD: usize = 3;
 
-// structures and uninons for the epoll API:
+// structures for the epoll API:
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union EPollData {
@@ -123,15 +124,12 @@ pub union EPollData {
     pub u64: u64,
 }
 
+// options/linux/include/sys/epoll.h
 bitflags::bitflags! {
-    /// A bit mask composed by ORing together, zero or more of the following available event types.
-    #[derive(Default)]
     pub struct EPollEventFlags: u32 {
-        /// The associated file is available for read operations.
         const IN        = 0x001;
         /// There is an exceptional condition on the file descriptor.
         const PRI       = 0x002;
-        /// The associated file is available for write operations.
         const OUT       = 0x004;
         const RDNORM    = 0x040;
         const RDBAND    = 0x080;
@@ -153,6 +151,27 @@ bitflags::bitflags! {
 pub struct EPollEvent {
     pub events: EPollEventFlags,
     pub data: EPollData,
+}
+
+// structures for the poll API:
+pub struct PollFd {
+    pub fd: i32,
+    pub events: PollEventFlags,
+    pub revents: PollEventFlags,
+}
+
+// sysdeps/aero/include/abi-bits/poll.h
+bitflags::bitflags! {
+    pub struct PollEventFlags: i16 {
+        const IN     = 0x01;
+        const OUT    = 0x02;
+        const PRI    = 0x04;
+        const HUP    = 0x08;
+        const ERR    = 0x10;
+        const RDHUP  = 0x20;
+        const NVAL   = 0x40;
+        const WRNORM = 0x80;
+    }
 }
 
 // constants for generic ioctls (applicable to any file descriptor):

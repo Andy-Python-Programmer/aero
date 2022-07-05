@@ -17,10 +17,9 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::prelude::EPollEventFlags;
 use alloc::sync::Arc;
 
-use super::inode::{INodeInterface, PollTable};
+use super::inode::{INodeInterface, PollFlags, PollTable};
 use crate::utils::sync::{BlockQueue, Mutex};
 
 pub struct EventFd {
@@ -50,22 +49,22 @@ impl INodeInterface for EventFd {
         unimplemented!()
     }
 
-    fn poll(&self, table: Option<&mut PollTable>) -> super::Result<EPollEventFlags> {
+    fn poll(&self, table: Option<&mut PollTable>) -> super::Result<PollFlags> {
         let count = self.count.lock();
-        let mut events = EPollEventFlags::default();
+        let mut events = PollFlags::empty();
 
         table.map(|e| e.insert(&self.wq)); // listen for changes
 
         if *count > 0 {
-            events.insert(EPollEventFlags::IN);
+            events.insert(PollFlags::IN);
         }
 
         if *count == usize::MAX {
-            events.insert(EPollEventFlags::ERR);
+            events.insert(PollFlags::ERR);
         }
 
         if *count < (usize::MAX - 1) {
-            events.insert(EPollEventFlags::OUT); // possible to write a value of at least "1" without blocking.
+            events.insert(PollFlags::OUT); // possible to write a value of at least "1" without blocking.
         }
 
         Ok(events)
