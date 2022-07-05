@@ -253,7 +253,7 @@ pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, SyscallErr
 }
 
 #[syscall]
-pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, SyscallError> {
+pub fn pipe(fds: &mut [i32; 2], flags: usize) -> Result<usize, SyscallError> {
     let flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
     let pipe = Pipe::new();
 
@@ -278,8 +278,8 @@ pub fn pipe(fds: &mut [usize; 2], flags: usize) -> Result<usize, SyscallError> {
         Ok(fd2) => fd2,
     };
 
-    fds[0] = fd1;
-    fds[1] = fd2;
+    fds[0] = fd1 as i32;
+    fds[1] = fd2 as i32;
 
     Ok(0x00)
 }
@@ -360,6 +360,12 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
         aero_syscall::prelude::F_GETFL => {
             let flags = handle.flags.bits();
             Ok(flags)
+        }
+
+        aero_syscall::prelude::F_SETFL => {
+            log::debug!("F_SETFL: is a stub!");
+
+            Ok(0x00)
         }
 
         _ => unimplemented!("fcntl: unknown command {command}"),

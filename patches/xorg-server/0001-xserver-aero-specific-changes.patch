@@ -1,4 +1,4 @@
-From ec91d28586ecf3df66e23da1ce94dbba3042cd86 Mon Sep 17 00:00:00 2001
+From 3d08eb0ba228adf632f38c0c8f6476c1d0342386 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 30 Jun 2022 11:10:21 +1000
 Subject: [PATCH] xserver: aero specific changes
@@ -20,8 +20,8 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  include/os.h                             |  1 +
  mi/mibitblt.c                            |  2 ++
  os/access.c                              |  2 +-
- os/utils.c                               |  4 +--
- 16 files changed, 49 insertions(+), 19 deletions(-)
+ os/utils.c                               |  6 ++--
+ 16 files changed, 50 insertions(+), 20 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dc56b46..81d9886 100644
@@ -328,7 +328,7 @@ index 9724616..81befe3 100644
  #endif
  #if defined(SYSV) &&  defined(__i386__)
 diff --git a/os/utils.c b/os/utils.c
-index 2ba1c80..63dedc6 100644
+index 2ba1c80..ffa961f 100644
 --- a/os/utils.c
 +++ b/os/utils.c
 @@ -1402,7 +1402,7 @@ System(const char *command)
@@ -340,6 +340,15 @@ index 2ba1c80..63dedc6 100644
  }
  
  static struct pid {
+@@ -1474,7 +1474,7 @@ Popen(const char *command, const char *type)
+             }
+             close(pdes[1]);
+         }
+-        execl("/bin/sh", "sh", "-c", command, (char *) NULL);
++        execl("/usr/bin/bash", "sh", "-c", command, (char *) NULL);
+         _exit(127);
+     }
+ 
 @@ -1632,7 +1632,7 @@ Pclose(void *iop)
      }
  #endif
