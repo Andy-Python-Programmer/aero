@@ -1,18 +1,21 @@
-From a1c97a1acc4f67a2add919e2dbf8a7f35d1a107a Mon Sep 17 00:00:00 2001
+From 8849f6b4ee27ecbb6f80b18ab61036bb40637da6 Mon Sep 17 00:00:00 2001
 From: Matt Taylor <mstaveleytaylor@gmail.com>
 Date: Fri, 17 Jun 2022 15:28:34 +0100
 Subject: [PATCH] abi-bits: add domainname to utsname
 
 ---
- ABI_BREAKS.md                         |   1 +
- abis/linux/utsname.h                  |   1 +
- options/ansi/generic/stdlib-stubs.cpp | 100 ++++++++++++++++++++++----
- options/glibc/generic/execinfo.cpp    |   6 +-
- options/rtdl/generic/linker.cpp       |   2 +-
- sysdeps/aero/generic/aero.cpp         |  10 ++-
- sysdeps/aero/generic/filesystem.cpp   |  19 ++++-
- sysdeps/aero/include/aero/syscall.h   |   2 +
- 8 files changed, 122 insertions(+), 19 deletions(-)
+ ABI_BREAKS.md                           |   1 +
+ abis/linux/utsname.h                    |   1 +
+ options/ansi/generic/stdlib-stubs.cpp   | 100 +++++++++++++++++++++---
+ options/glibc/generic/execinfo.cpp      |   6 +-
+ options/posix/generic/pthread-stubs.cpp |  11 ++-
+ options/posix/include/pthread.h         |  51 +++++++++---
+ options/rtdl/generic/linker.cpp         |   2 +-
+ sysdeps/aero/generic/aero.cpp           |  10 ++-
+ sysdeps/aero/generic/filesystem.cpp     |  19 ++++-
+ sysdeps/aero/generic/sockets.cpp        |   4 +-
+ sysdeps/aero/include/aero/syscall.h     |   2 +
+ 11 files changed, 174 insertions(+), 33 deletions(-)
 
 diff --git a/ABI_BREAKS.md b/ABI_BREAKS.md
 index 0cd3993b..d2a0bb7d 100644
@@ -164,6 +167,131 @@ index 3474615e..c0081e30 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
+diff --git a/options/posix/generic/pthread-stubs.cpp b/options/posix/generic/pthread-stubs.cpp
+index be6eeecf..2e60b7d0 100644
+--- a/options/posix/generic/pthread-stubs.cpp
++++ b/options/posix/generic/pthread-stubs.cpp
+@@ -111,9 +111,14 @@ int pthread_attr_getscope(const pthread_attr_t *, int) {
+ 	__builtin_unreachable();
+ }
+ 
+-int pthread_attr_setscope(pthread_attr_t *, int) {
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++int pthread_attr_setscope(pthread_attr_t *attr, int scope) {
++	if (scope != PTHREAD_SCOPE_SYSTEM &&
++			scope != PTHREAD_SCOPE_PROCESS)
++		return EINVAL;
++	if (scope == PTHREAD_SCOPE_PROCESS)
++		return ENOTSUP;
++	attr->__mlibc_scope = scope;
++	return 0;
+ }
+ 
+ int pthread_attr_getschedpolicy(const pthread_attr_t *__restrict, int *__restrict) {
+diff --git a/options/posix/include/pthread.h b/options/posix/include/pthread.h
+index 4476a199..44dc5f95 100644
+--- a/options/posix/include/pthread.h
++++ b/options/posix/include/pthread.h
+@@ -1,4 +1,3 @@
+-
+ #ifndef _PTHREAD_H
+ #define _PTHREAD_H
+ 
+@@ -7,6 +6,7 @@
+ #include <bits/size_t.h>
+ #include <bits/posix/pthread_t.h>
+ 
++#include <signal.h>
+ #include <stdint.h>
+ 
+ // pthread.h is required to include sched.h and time.h
+@@ -25,6 +25,10 @@ extern "C" {
+ #define PTHREAD_SCOPE_SYSTEM 0
+ #define PTHREAD_SCOPE_PROCESS 1
+ 
++// Values for pthread_attr_{get,set}inheritsched
++#define PTHREAD_INHERIT_SCHED 0
++#define PTHREAD_EXPLICIT_SCHED 1
++
+ // values for pthread_{get,set}canceltype().
+ #define PTHREAD_CANCEL_DEFERRED 0
+ #define PTHREAD_CANCEL_ASYNCHRONOUS 1
+@@ -66,11 +70,24 @@ extern "C" {
+ #define PTHREAD_INHERIT_SCHED 0
+ #define PTHREAD_EXPLICIT_SCHED 1
+ 
++#define PTHREAD_STACK_MIN 16384
++
++#define PTHREAD_ATTR_NO_SIGMASK_NP (-1)
++
+ // TODO: move to own file and include in sys/types.h
+ struct __mlibc_threadattr {
+-	// TODO: the guardsize attribute needs to be supported here.
+-
+-	int __mlibc_deatchstate;
++	size_t __mlibc_guardsize;
++	size_t __mlibc_stacksize;
++	void *__mlibc_stackaddr;
++	int __mlibc_detachstate;
++	int __mlibc_scope;
++	int __mlibc_inheritsched;
++	struct sched_param __mlibc_schedparam;
++	int __mlibc_schedpolicy;
++	cpu_set_t *__mlibc_cpuset;
++	size_t __mlibc_cpusetsize;
++	sigset_t __mlibc_sigmask;
++	int __mlibc_sigmaskset;
+ };
+ typedef struct __mlibc_threadattr pthread_attr_t;
+ 
+@@ -141,20 +158,37 @@ int pthread_attr_setdetachstate(pthread_attr_t *, int);
+ int pthread_attr_getstacksize(const pthread_attr_t *__restrict, size_t *__restrict);
+ int pthread_attr_setstacksize(pthread_attr_t *, size_t);
+ 
++int pthread_attr_getstackaddr(const pthread_attr_t *, void **);
++int pthread_attr_setstackaddr(pthread_attr_t *, void *);
++
++int pthread_attr_getstack(const pthread_attr_t *, void **, size_t*);
++int pthread_attr_setstack(pthread_attr_t *, void *, size_t);
++
+ int pthread_attr_getguardsize(const pthread_attr_t *__restrict, size_t *__restrict);
+ int pthread_attr_setguardsize(pthread_attr_t *, size_t);
+ 
+-int pthread_attr_getscope(const pthread_attr_t *, int);
++int pthread_attr_getscope(const pthread_attr_t *, int*);
+ int pthread_attr_setscope(pthread_attr_t *, int);
+ 
++int pthread_attr_getschedparam(const pthread_attr_t *__restrict, struct sched_param *__restrict);
++int pthread_attr_setschedparam(pthread_attr_t *__restrict, const struct sched_param *__restrict);
++
+ int pthread_attr_getschedpolicy(const pthread_attr_t *__restrict, int *__restrict);
+-int pthread_attr_setschedpolicy(pthread_attr_t *, int);
++int pthread_attr_setschedpolicy(pthread_attr_t *__restrict, int);
++
++int pthread_attr_getinheritsched(const pthread_attr_t *__restrict, int *__restrict);
++int pthread_attr_setinheritsched(pthread_attr_t *__restrict, int);
+ 
+ int pthread_attr_getschedparam(const pthread_attr_t *__restrict, struct sched_param *__restrict);
+ int pthread_attr_setschedparam(pthread_attr_t *__restrict, const struct sched_param *__restrict);
+ 
+-int pthread_attr_getinheritsched(const pthread_attr_t *__restrict, int *__restrict);
+-int pthread_attr_setinheritsched(pthread_attr_t *, int);
++int pthread_attr_getaffinity_np(const pthread_attr_t *__restrict, size_t, cpu_set_t *__restrict);
++int pthread_attr_setaffinity_np(pthread_attr_t *__restrict, size_t, const cpu_set_t *__restrict);
++
++int pthread_attr_getsigmask_np(const pthread_attr_t *__restrict, sigset_t *__restrict);
++int pthread_attr_setsigmask_np(pthread_attr_t *__restrict, const sigset_t *__restrict);
++
++int pthread_getattr_np(pthread_t, pthread_attr_t *);
+ 
+ // pthread functions.
+ int pthread_create(pthread_t *__restrict, const pthread_attr_t *__restrict,
+@@ -287,4 +321,3 @@ int pthread_rwlock_unlock(pthread_rwlock_t *);
+ #endif
+ 
+ #endif // _PTHREAD_H
+-
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
 index c2eceff6..d2d91b13 100644
 --- a/options/rtdl/generic/linker.cpp
@@ -238,6 +366,21 @@ index a3e2aca2..a56438f0 100644
  int sys_mkdir(const char *path, mode_t) {
      auto result = syscall(SYS_MKDIR, path, strlen(path));
  
+diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
+index b6b18fe7..111dc570 100644
+--- a/sysdeps/aero/generic/sockets.cpp
++++ b/sysdeps/aero/generic/sockets.cpp
+@@ -46,8 +46,8 @@ int sys_listen(int fd, int backlog) {
+     return 0;
+ }
+ 
+-int sys_accept(int fd, int *newfd) {
+-    auto result = syscall(SYS_ACCEPT, fd);
++int sys_accept(int fd, int *newfd, struct sockaddr *addr_ptr, socklen_t *addr_length) {
++    auto result = syscall(SYS_ACCEPT, fd, addr_ptr, addr_length);
+ 
+     if (result < 0) {
+         return -result;
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 index 12f8dc61..fcc219a9 100644
 --- a/sysdeps/aero/include/aero/syscall.h
