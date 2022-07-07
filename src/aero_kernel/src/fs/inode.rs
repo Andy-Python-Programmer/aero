@@ -227,6 +227,10 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSocket)
     }
 
+    fn accept(&self, _address: SocketAddr) -> Result<()> {
+        Err(FileSystemError::NotSocket)
+    }
+
     /// Returns the inner UNIX socket inode if bound to one.
     fn as_unix_socket(&self) -> Result<Arc<dyn INodeInterface>> {
         Err(FileSystemError::NotSocket)

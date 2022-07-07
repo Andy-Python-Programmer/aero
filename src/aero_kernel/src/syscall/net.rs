@@ -33,6 +33,20 @@ pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, Syscal
     Ok(0)
 }
 
+/// Accept a connection on a socket.
+#[syscall]
+pub fn accept(fd: usize, address: usize, _length: &mut u32) -> Result<usize, SyscallError> {
+    let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
+    let file = scheduler::get_scheduler()
+        .current_task()
+        .file_table
+        .get_handle(fd)
+        .ok_or(SyscallError::EINVAL)?;
+
+    file.inode().accept(address)?;
+    Ok(0)
+}
+
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
 /// connection requests).
 #[syscall]

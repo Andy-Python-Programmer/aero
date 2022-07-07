@@ -163,6 +163,10 @@ impl INodeInterface for UnixSocket {
         Ok(())
     }
 
+    fn accept(&self, _address: SocketAddr) -> Result<()> {
+        unimplemented!()
+    }
+
     fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {
         table.map(|e| e.insert(&self.wq));
 
