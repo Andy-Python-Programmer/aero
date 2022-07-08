@@ -149,7 +149,7 @@ pub struct InterruptStack {
     pub iret: IretRegisters,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct InterruptErrorStack {
     pub code: u64,

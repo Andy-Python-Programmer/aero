@@ -183,10 +183,54 @@ impl ArchTask {
 
     pub fn clone_process(
         &self,
-        _entry: usize,
-        _stack: usize,
+        entry: usize,
+        usr_stack: usize,
     ) -> Result<Self, MapToError<Size4KiB>> {
-        todo!("implement clone_process")
+        log::trace!("ArchTask::clone_process(entry={entry:#x}, stack={usr_stack:#x})");
+
+        assert!(self.user, "cannot clone a kernel task");
+
+        let address_space = AddressSpace::this();
+        let switch_stack = Self::alloc_switch_stack()?.as_mut_ptr::<u8>();
+
+        let mut new_stack_ptr = switch_stack as u64;
+        let mut new_stack = StackHelper::new(&mut new_stack_ptr);
+
+        let mut old_stack_ptr = self.context_switch_rsp.as_u64();
+        let mut old_stack = StackHelper::new(&mut old_stack_ptr);
+
+        let old_registers_frame = unsafe { old_stack.offset::<InterruptErrorStack>() };
+
+        let registers_frame = unsafe { new_stack.offset::<InterruptErrorStack>() };
+        *registers_frame = InterruptErrorStack::default();
+
+        registers_frame.stack.iret.cs = old_registers_frame.stack.iret.cs;
+        registers_frame.stack.iret.ss = old_registers_frame.stack.iret.ss;
+
+        registers_frame.stack.iret.rip = entry as _;
+        registers_frame.stack.iret.rsp = usr_stack as _;
+        registers_frame.stack.iret.rflags = 0x200;
+
+        let context = unsafe { new_stack.offset::<Context>() };
+
+        extern "C" {
+            fn fork_init();
+        }
+
+        *context = Context::default();
+        context.rip = fork_init as _;
+        context.cr3 = address_space.cr3().start_address().as_u64();
+
+        Ok(Self {
+            context: unsafe { Unique::new_unchecked(context) },
+            context_switch_rsp: VirtAddr::new(switch_stack as u64),
+            address_space,
+            user: true,
+
+            // The FS and GS bases are inherited from the parent process.
+            fs_base: self.fs_base.clone(),
+            gs_base: self.gs_base.clone(),
+        })
     }
 
     pub fn fork(&self) -> Result<Self, MapToError<Size4KiB>> {
