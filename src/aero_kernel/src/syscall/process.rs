@@ -19,7 +19,6 @@
 
 use aero_syscall::signal::{SigAction, SigProcMask};
 use aero_syscall::{MMapFlags, MMapProt, SysInfo, SyscallError, Utsname};
-use alloc::string::String;
 use spin::{Mutex, Once};
 
 use crate::acpi::aml;

@@ -20,7 +20,6 @@
 #[cfg(feature = "round-robin")]
 pub mod round_robin;
 
-use alloc::string::String;
 use alloc::sync::Arc;
 
 use crate::apic;

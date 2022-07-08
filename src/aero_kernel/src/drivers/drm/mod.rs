@@ -21,7 +21,6 @@ mod rawfb;
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use bit_field::BitField;

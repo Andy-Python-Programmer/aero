@@ -28,7 +28,6 @@
 use core::alloc::Layout;
 
 use alloc::alloc::alloc_zeroed;
-use alloc::string::String;
 use alloc::vec::Vec;
 
 use super::gdt::*;

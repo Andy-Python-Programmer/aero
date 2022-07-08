@@ -25,7 +25,6 @@ use alloc::boxed::Box;
 use alloc::collections::linked_list::CursorMut;
 use alloc::collections::LinkedList;
 
-use alloc::string::String;
 use xmas_elf::header::*;
 use xmas_elf::program::*;
 use xmas_elf::*;

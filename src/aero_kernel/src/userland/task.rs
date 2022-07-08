@@ -17,7 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 
 use spin::RwLock;

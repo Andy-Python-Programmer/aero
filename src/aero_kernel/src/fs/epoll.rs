@@ -23,6 +23,7 @@ use aero_syscall::SyscallError;
 use alloc::sync::Arc;
 use hashbrown::HashMap;
 
+use crate::fs::cache::DirCacheImpl;
 use crate::userland::scheduler;
 use crate::utils::sync::Mutex;
 

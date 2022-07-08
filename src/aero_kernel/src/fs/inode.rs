@@ -22,7 +22,6 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use aero_syscall::prelude::{EPollEventFlags, PollEventFlags};
 use aero_syscall::{MMapFlags, OpenFlags};
 
-use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 
@@ -418,7 +417,7 @@ impl DirEntry {
         })
     }
 
-    pub fn from_inode(inode: Arc<dyn INodeInterface>) -> DirCacheItem {
+    pub fn from_inode(inode: Arc<dyn INodeInterface>, name: String) -> DirCacheItem {
         let icache = cache::icache();
         let inode = icache.make_item_no_cache(CachedINode::new(inode));
 
@@ -426,7 +425,7 @@ impl DirEntry {
             data: Mutex::new(DirProtectedData {
                 parent: None,
 
-                name: String::new(),
+                name,
                 inode: inode.clone(),
             }),
 
