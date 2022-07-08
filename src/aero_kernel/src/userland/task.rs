@@ -337,7 +337,41 @@ impl Task {
                 .expect("failed to fork arch task"),
         );
 
-        self.make_child(arch_task)
+        let pid = TaskId::allocate();
+
+        let this = Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+            zombies: Zombies::new(),
+
+            arch_task,
+            file_table: self.process_leader().file_table.clone(),
+            message_queue: MessageQueue::new(),
+            vm: self.process_leader().vm.clone(),
+            state: AtomicU8::new(TaskState::Runnable as _),
+
+            link: Default::default(),
+            clink: Default::default(),
+
+            sleep_duration: AtomicUsize::new(0),
+            exit_status: AtomicIsize::new(0),
+
+            tid: pid.clone(),
+            pid,
+
+            executable: Mutex::new(self.executable.lock().clone()),
+            pending_io: AtomicBool::new(false),
+
+            children: Mutex::new(Default::default()),
+            parent: Mutex::new(None),
+
+            cwd: self.cwd.read().fork(),
+            signals: Signals::new(),
+        });
+
+        self.add_child(this.clone());
+        this.signals().copy_from(self.signals());
+
+        this
     }
 
     pub fn fork(&self) -> Arc<Task> {
@@ -566,9 +600,10 @@ impl Task {
     }
 }
 
+// SAFETY: It's alright to access [`Task`] through references from other
+// threads because we're either accessing constant properties or properties
+// that are fully synchronized.
 unsafe impl Sync for Task {}
 
-// Create a new intrustive adapter for the [Task] struct as the tasks are stored as a linked
-// list in the scheduler.
 intrusive_collections::intrusive_adapter!(pub SchedTaskAdapter = Arc<Task> : Task { link: LinkedListLink });
 intrusive_collections::intrusive_adapter!(pub TaskAdapter = Arc<Task> : Task { clink: LinkedListLink });

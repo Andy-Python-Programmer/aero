@@ -82,6 +82,7 @@ pub const SYS_FUTEX_WAKE: usize = 58;
 pub const SYS_LINK: usize = 59;
 pub const SYS_BACKTRACE: usize = 60;
 pub const SYS_POLL: usize = 61;
+pub const SYS_EXIT_THREAD: usize = 62;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

@@ -1,68 +1,86 @@
-From 8849f6b4ee27ecbb6f80b18ab61036bb40637da6 Mon Sep 17 00:00:00 2001
-From: Matt Taylor <mstaveleytaylor@gmail.com>
-Date: Fri, 17 Jun 2022 15:28:34 +0100
-Subject: [PATCH] abi-bits: add domainname to utsname
+From 32d24edf161f338847c32fa2f44dc80422d4795e Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Fri, 8 Jul 2022 12:32:32 +1000
+Subject: [PATCH] yes
 
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
- ABI_BREAKS.md                           |   1 +
- abis/linux/utsname.h                    |   1 +
- options/ansi/generic/stdlib-stubs.cpp   | 100 +++++++++++++++++++++---
- options/glibc/generic/execinfo.cpp      |   6 +-
- options/posix/generic/pthread-stubs.cpp |  11 ++-
- options/posix/include/pthread.h         |  51 +++++++++---
- options/rtdl/generic/linker.cpp         |   2 +-
- sysdeps/aero/generic/aero.cpp           |  10 ++-
- sysdeps/aero/generic/filesystem.cpp     |  19 ++++-
- sysdeps/aero/generic/sockets.cpp        |   4 +-
- sysdeps/aero/include/aero/syscall.h     |   2 +
- 11 files changed, 174 insertions(+), 33 deletions(-)
+ options/ansi/generic/stdlib-stubs.cpp | 142 +++++++++++++++++++++-----
+ options/glibc/generic/execinfo.cpp    |   5 +-
+ options/rtdl/generic/linker.cpp       |   2 +-
+ sysdeps/aero/generic/aero.cpp         |  14 +--
+ sysdeps/aero/generic/filesystem.cpp   |  25 ++++-
+ sysdeps/aero/generic/sockets.cpp      |   4 +-
+ sysdeps/aero/include/aero/syscall.h   |   2 +
+ 7 files changed, 152 insertions(+), 42 deletions(-)
 
-diff --git a/ABI_BREAKS.md b/ABI_BREAKS.md
-index 0cd3993b..d2a0bb7d 100644
---- a/ABI_BREAKS.md
-+++ b/ABI_BREAKS.md
-@@ -6,3 +6,4 @@ This document lists the ABI breaks that were made in each mlibc major version.
- 
- - [#452](https://github.com/managarm/mlibc/pull/452): The functions `FD_{CLR,ISSET,SET,ZERO}` were renamed to `__FD_{CLR,ISSET,SET,ZERO}` and replaced by macros to match Wine's assumptions.
- - [#511](https://github.com/managarm/mlibc/pull/511): Musl's regex engine was added, implementing `regcomp` and `regexec`. This required some changes to the `regex_t` struct.
-+- [#504](https://github.com/managarm/mlibc/pull/504): A `domainname` member was added to `struct utsname`, which is a glibc extension.
-diff --git a/abis/linux/utsname.h b/abis/linux/utsname.h
-index 2cd22265..9875a46e 100644
---- a/abis/linux/utsname.h
-+++ b/abis/linux/utsname.h
-@@ -7,6 +7,7 @@ struct utsname {
- 	char release[65];
- 	char version[65];
- 	char machine[65];
-+	char domainname[65];
- };
- 
- #endif // _ABIBITS_UTSNAME_T_H
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
-index 375d4d72..2b4934d9 100644
+index 4836391e..2a73c6d0 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
 +++ b/options/ansi/generic/stdlib-stubs.cpp
-@@ -374,18 +374,94 @@ int mblen(const char *mbs, size_t mb_limit) {
+@@ -375,32 +375,122 @@ int mblen(const char *mbs, size_t mb_limit) {
  	return nseq.it - mbs;
  }
  
--int mbtowc(wchar_t *__restrict wc, const char *__restrict mbs, size_t max_size) {
--	mlibc::infoLogger() << "mlibc: Broken mbtowc() called" << frg::endlog;
+-int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
+-	auto cc = mlibc::current_charcode();
 -	__ensure(max_size);
 -
--	if(wc && mbs){
--		if(*mbs){
--			*wc = *mbs;
+-	if (mb) {
+-		if (*mb) {
+-			// If wc is NULL, decode into a single local character which we discard
+-			// to obtain the length.
+-			wchar_t tmp_wc;
+-			if (!wc)
+-				wc = &tmp_wc;
+-
+-			mlibc::code_seq<wchar_t> wseq{wc, wc + 1};
+-			mlibc::code_seq<const char> nseq{mb, mb + max_size};
+-			auto e = cc->decode_wtranscode(nseq, wseq, mbtowc_state);
+-			if (e != mlibc::charcode_error::null)
+-				__ensure(!"decode_wtranscode() errors are not handled");
+-
+-			return nseq.it - mb;
 -		} else {
 -			return 0; // When mbs is a null byte, return 0
 -		}
+-	} else {
+-		mblen_state = __MLIBC_MBSTATE_INITIALIZER;
+-		return cc->has_shift_states;
 -	}
--	return 1;
++// int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
++// 	auto cc = mlibc::current_charcode();
++// 	__ensure(max_size);
++//
++// 	if (mb) {
++// 		if (*mb) {
++// 			// If wc is NULL, decode into a single local character which we discard
++// 			// to obtain the length.
++// 			wchar_t tmp_wc;
++// 			if (!wc)
++// 				wc = &tmp_wc;
++//
++// 			mlibc::code_seq<wchar_t> wseq{wc, wc + 1};
++// 			mlibc::code_seq<const char> nseq{mb, mb + max_size};
++// 			auto e = cc->decode_wtranscode(nseq, wseq, mbtowc_state);
++// 			if (e != mlibc::charcode_error::null)
++// 				__ensure(!"decode_wtranscode() errors are not handled");
++//
++// 			return nseq.it - mb;
++// 		} else {
++// 			return 0; // When mbs is a null byte, return 0
++// 		}
++// 	} else {
++// 		mblen_state = __MLIBC_MBSTATE_INITIALIZER;
++// 		return cc->has_shift_states;
++// 	}
++// }
++
 +// Upper 6 state bits are a negative integer offset to bound-check next byte
 +//    equivalent to: ( (b-0x80) | (b+offset) ) & ~0x3f
 +#define OOB(c, b) (((((b) >> 3) - 0x10) | (((b) >> 3) + ((int32_t)(c) >> 26))) & ~7)
 +
-+// Interval [a,b). Either a must be 80 or b must be c0, lower 3 bits clear.
++// Interval [a,b]. Either a must be 80 or b must be c0, lower 3 bits clear.
 +#define R(a, b) ((uint32_t)((a == 0x80 ? 0x40u - b : 0u - a) << 23))
 +#define FAILSTATE R(0x80, 0x80)
 +
@@ -150,10 +168,10 @@ index 375d4d72..2b4934d9 100644
  
  int wctomb(char *, wchar_t) {
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
-index 3474615e..c0081e30 100644
+index 3474615e..10a2109e 100644
 --- a/options/glibc/generic/execinfo.cpp
 +++ b/options/glibc/generic/execinfo.cpp
-@@ -1,9 +1,11 @@
+@@ -1,9 +1,10 @@
  #include <execinfo.h>
  #include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
@@ -162,151 +180,25 @@ index 3474615e..c0081e30 100644
 -	__ensure(!"Not implemented");
 -	__builtin_unreachable();
 +	mlibc::infoLogger() << "backtrace() is unimplemented" << frg::endlog;
-+	// __ensure(!"Not implemented");
-+	// __builtin_unreachable();
- }
- 
- char **backtrace_symbols(void *const *, int) {
-diff --git a/options/posix/generic/pthread-stubs.cpp b/options/posix/generic/pthread-stubs.cpp
-index be6eeecf..2e60b7d0 100644
---- a/options/posix/generic/pthread-stubs.cpp
-+++ b/options/posix/generic/pthread-stubs.cpp
-@@ -111,9 +111,14 @@ int pthread_attr_getscope(const pthread_attr_t *, int) {
- 	__builtin_unreachable();
- }
- 
--int pthread_attr_setscope(pthread_attr_t *, int) {
--	__ensure(!"Not implemented");
--	__builtin_unreachable();
-+int pthread_attr_setscope(pthread_attr_t *attr, int scope) {
-+	if (scope != PTHREAD_SCOPE_SYSTEM &&
-+			scope != PTHREAD_SCOPE_PROCESS)
-+		return EINVAL;
-+	if (scope == PTHREAD_SCOPE_PROCESS)
-+		return ENOTSUP;
-+	attr->__mlibc_scope = scope;
 +	return 0;
  }
  
- int pthread_attr_getschedpolicy(const pthread_attr_t *__restrict, int *__restrict) {
-diff --git a/options/posix/include/pthread.h b/options/posix/include/pthread.h
-index 4476a199..44dc5f95 100644
---- a/options/posix/include/pthread.h
-+++ b/options/posix/include/pthread.h
-@@ -1,4 +1,3 @@
--
- #ifndef _PTHREAD_H
- #define _PTHREAD_H
- 
-@@ -7,6 +6,7 @@
- #include <bits/size_t.h>
- #include <bits/posix/pthread_t.h>
- 
-+#include <signal.h>
- #include <stdint.h>
- 
- // pthread.h is required to include sched.h and time.h
-@@ -25,6 +25,10 @@ extern "C" {
- #define PTHREAD_SCOPE_SYSTEM 0
- #define PTHREAD_SCOPE_PROCESS 1
- 
-+// Values for pthread_attr_{get,set}inheritsched
-+#define PTHREAD_INHERIT_SCHED 0
-+#define PTHREAD_EXPLICIT_SCHED 1
-+
- // values for pthread_{get,set}canceltype().
- #define PTHREAD_CANCEL_DEFERRED 0
- #define PTHREAD_CANCEL_ASYNCHRONOUS 1
-@@ -66,11 +70,24 @@ extern "C" {
- #define PTHREAD_INHERIT_SCHED 0
- #define PTHREAD_EXPLICIT_SCHED 1
- 
-+#define PTHREAD_STACK_MIN 16384
-+
-+#define PTHREAD_ATTR_NO_SIGMASK_NP (-1)
-+
- // TODO: move to own file and include in sys/types.h
- struct __mlibc_threadattr {
--	// TODO: the guardsize attribute needs to be supported here.
--
--	int __mlibc_deatchstate;
-+	size_t __mlibc_guardsize;
-+	size_t __mlibc_stacksize;
-+	void *__mlibc_stackaddr;
-+	int __mlibc_detachstate;
-+	int __mlibc_scope;
-+	int __mlibc_inheritsched;
-+	struct sched_param __mlibc_schedparam;
-+	int __mlibc_schedpolicy;
-+	cpu_set_t *__mlibc_cpuset;
-+	size_t __mlibc_cpusetsize;
-+	sigset_t __mlibc_sigmask;
-+	int __mlibc_sigmaskset;
- };
- typedef struct __mlibc_threadattr pthread_attr_t;
- 
-@@ -141,20 +158,37 @@ int pthread_attr_setdetachstate(pthread_attr_t *, int);
- int pthread_attr_getstacksize(const pthread_attr_t *__restrict, size_t *__restrict);
- int pthread_attr_setstacksize(pthread_attr_t *, size_t);
- 
-+int pthread_attr_getstackaddr(const pthread_attr_t *, void **);
-+int pthread_attr_setstackaddr(pthread_attr_t *, void *);
-+
-+int pthread_attr_getstack(const pthread_attr_t *, void **, size_t*);
-+int pthread_attr_setstack(pthread_attr_t *, void *, size_t);
-+
- int pthread_attr_getguardsize(const pthread_attr_t *__restrict, size_t *__restrict);
- int pthread_attr_setguardsize(pthread_attr_t *, size_t);
- 
--int pthread_attr_getscope(const pthread_attr_t *, int);
-+int pthread_attr_getscope(const pthread_attr_t *, int*);
- int pthread_attr_setscope(pthread_attr_t *, int);
- 
-+int pthread_attr_getschedparam(const pthread_attr_t *__restrict, struct sched_param *__restrict);
-+int pthread_attr_setschedparam(pthread_attr_t *__restrict, const struct sched_param *__restrict);
-+
- int pthread_attr_getschedpolicy(const pthread_attr_t *__restrict, int *__restrict);
--int pthread_attr_setschedpolicy(pthread_attr_t *, int);
-+int pthread_attr_setschedpolicy(pthread_attr_t *__restrict, int);
-+
-+int pthread_attr_getinheritsched(const pthread_attr_t *__restrict, int *__restrict);
-+int pthread_attr_setinheritsched(pthread_attr_t *__restrict, int);
- 
- int pthread_attr_getschedparam(const pthread_attr_t *__restrict, struct sched_param *__restrict);
- int pthread_attr_setschedparam(pthread_attr_t *__restrict, const struct sched_param *__restrict);
- 
--int pthread_attr_getinheritsched(const pthread_attr_t *__restrict, int *__restrict);
--int pthread_attr_setinheritsched(pthread_attr_t *, int);
-+int pthread_attr_getaffinity_np(const pthread_attr_t *__restrict, size_t, cpu_set_t *__restrict);
-+int pthread_attr_setaffinity_np(pthread_attr_t *__restrict, size_t, const cpu_set_t *__restrict);
-+
-+int pthread_attr_getsigmask_np(const pthread_attr_t *__restrict, sigset_t *__restrict);
-+int pthread_attr_setsigmask_np(pthread_attr_t *__restrict, const sigset_t *__restrict);
-+
-+int pthread_getattr_np(pthread_t, pthread_attr_t *);
- 
- // pthread functions.
- int pthread_create(pthread_t *__restrict, const pthread_attr_t *__restrict,
-@@ -287,4 +321,3 @@ int pthread_rwlock_unlock(pthread_rwlock_t *);
- #endif
- 
- #endif // _PTHREAD_H
--
+ char **backtrace_symbols(void *const *, int) {
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index c2eceff6..d2d91b13 100644
+index 6716ef4f..e5ec8cff 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
 @@ -15,7 +15,7 @@ uintptr_t libraryBase = 0x41000000;
  
- bool verbose = false;
- bool stillSlightlyVerbose = false;
--bool logBaseAddresses = false;
-+bool logBaseAddresses = true;
- bool eagerBinding = true;
+ constexpr bool verbose = false;
+ constexpr bool stillSlightlyVerbose = false;
+-constexpr bool logBaseAddresses = false;
++constexpr bool logBaseAddresses = true;
+ constexpr bool logRpath = false;
+ constexpr bool eagerBinding = true;
  
- #if defined(__x86_64__)
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 43ddb906..f4fe182f 100644
+index 29fb9610..645a84d5 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
 @@ -124,7 +124,9 @@ int sys_anon_free(void *pointer, size_t size) {
@@ -316,33 +208,58 @@ index 43ddb906..f4fe182f 100644
 -    sys_libc_log("libc panic!");
 +    mlibc::infoLogger() << "libc_panic: panicked at 'unknown'" << frg::endlog;
 +    __ensure(!syscall(SYS_BACKTRACE));
-+    
++
      sys_exit(1);
  }
  
-@@ -233,7 +235,11 @@ uid_t sys_geteuid() {
+@@ -233,7 +235,7 @@ uid_t sys_geteuid() {
      return 0;
  }
  
 -int sys_setuid(uid_t uid) UNIMPLEMENTED("sys_setuid")
-+// int sys_setuid(uid_t uid) {
-+//     mlibc::infoLogger() << "mlibc: sys_setuid is a stub" << frg::endlog;
-+//     return 0;
-+// }
-+
++// int sys_setuid(uid_t uid) UNIMPLEMENTED("sys_setuid")
  int sys_seteuid(uid_t euid) UNIMPLEMENTED("sys_seteuid")
  
  gid_t sys_getgid() {
+@@ -259,13 +261,13 @@ int sys_setegid(gid_t egid) {
+ void sys_yield() UNIMPLEMENTED("sys_yield")
+ 
+ int sys_clone(void *tcb, pid_t *tid_out, void *stack) {
+-    auto tid = syscall(SYS_CLONE, (uintptr_t)__mlibc_start_thread, stack);
++    auto result = syscall(SYS_CLONE, (uintptr_t)__mlibc_start_thread, stack);
+ 
+-    if (tid < 0) {
+-        return -tid;
++    if (result < 0) {
++        return -result;
+     }
+ 
+-    *tid_out = (pid_t)tid;
++    *tid_out = (pid_t)result;
+     return 0;
+ }
+ 
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index a3e2aca2..a56438f0 100644
+index a3e2aca2..09e6444f 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
-@@ -158,11 +158,26 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
+@@ -158,11 +158,6 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
      return 0;
  }
  
 -int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
 -    mlibc::infoLogger() << "sys_poll() is not implemented" << frg::endlog;
+-    return 0;
+-}
+-
+ int sys_mkdir(const char *path, mode_t) {
+     auto result = syscall(SYS_MKDIR, path, strlen(path));
+ 
+@@ -357,4 +352,24 @@ int sys_eventfd_create(unsigned int initval, int flags, int *fd) {
+     *fd = result;
+     return 0;
+ }
++
 +int sys_ppoll(struct pollfd *fds, int nfds, const struct timespec *timeout,
 +		const sigset_t *sigmask, int *num_events) {
 +    auto result = syscall(SYS_POLL, fds, nfds, timeout, sigmask);
@@ -352,20 +269,17 @@ index a3e2aca2..a56438f0 100644
 +    }
 +
 +    *num_events = result;
-     return 0;
- }
- 
++        return 0;
++}
++
 +int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
 +    struct timespec ts;
-+	ts.tv_sec = timeout / 1000;
-+	ts.tv_nsec = (timeout % 1000) * 1000000;
++    ts.tv_sec = timeout / 1000;
++    ts.tv_nsec = (timeout % 1000) * 1000000;
 +
 +    return sys_ppoll(fds, count, &ts, NULL, num_events);
 +}
-+
- int sys_mkdir(const char *path, mode_t) {
-     auto result = syscall(SYS_MKDIR, path, strlen(path));
- 
+ } // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
 index b6b18fe7..111dc570 100644
 --- a/sysdeps/aero/generic/sockets.cpp
