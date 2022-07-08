@@ -59,6 +59,8 @@ mod prelude {
         pub use core::arch::asm;
         pub use core::prelude::rust_2021::*;
         pub use core::prelude::v1::*;
+
+        pub use alloc::string::String;
     }
 }
 

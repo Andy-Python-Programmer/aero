@@ -20,7 +20,6 @@
 use core::fmt::Write;
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use alloc::string::String;
 use log::{Level, LevelFilter, Metadata, Record};
 use spin::Once;
 

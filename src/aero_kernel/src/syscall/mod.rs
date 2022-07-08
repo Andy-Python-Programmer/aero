@@ -244,8 +244,6 @@ pub fn generic_do_syscall(
 
     #[cfg(feature = "syslog")]
     {
-        use alloc::string::String;
-
         let name = aero_syscall::syscall_as_str(a);
         let mut result_v = String::new();
 

@@ -2,7 +2,6 @@ use core::alloc::Layout;
 
 use alloc::alloc::alloc_zeroed;
 use alloc::collections::BTreeMap;
-use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 

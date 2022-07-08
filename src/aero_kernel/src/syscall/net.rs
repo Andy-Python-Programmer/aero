@@ -76,7 +76,7 @@ pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usiz
 
     let sockfd_flags = SocketFlags::from_bits_truncate(socket_type).into();
 
-    let entry = DirEntry::from_inode(socket);
+    let entry = DirEntry::from_inode(socket, String::from("<socket>"));
     let current_task = scheduler::get_scheduler().current_task();
     let fd = current_task.file_table.open_file(entry, sockfd_flags)?;
 

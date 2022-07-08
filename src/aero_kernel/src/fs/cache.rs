@@ -30,7 +30,6 @@ use core::fmt::Debug;
 use core::hash::Hash;
 use core::ops;
 
-use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 

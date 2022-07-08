@@ -19,7 +19,6 @@
 
 use aero_syscall::SocketAddrUnix;
 
-use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::RwLock;

@@ -21,7 +21,6 @@ use core::mem;
 
 use aero_syscall::SyscallError;
 use alloc::collections::BTreeMap;
-use alloc::string::String;
 use alloc::sync::Arc;
 
 use crate::userland::scheduler;

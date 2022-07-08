@@ -257,7 +257,7 @@ pub fn pipe(fds: &mut [i32; 2], flags: usize) -> Result<usize, SyscallError> {
     let flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
     let pipe = Pipe::new();
 
-    let entry = DirEntry::from_inode(pipe);
+    let entry = DirEntry::from_inode(pipe, String::from("<pipe>"));
 
     let flags_1 = OpenFlags::O_RDONLY | (flags & OpenFlags::O_CLOEXEC);
     let flags_2 = OpenFlags::O_WRONLY | (flags & OpenFlags::O_CLOEXEC);
@@ -407,7 +407,7 @@ pub fn epoll_create(flags: usize) -> Result<usize, SyscallError> {
     let _flags = EPollFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     let epoll_file = EPoll::new();
-    let entry = DirEntry::from_inode(epoll_file);
+    let entry = DirEntry::from_inode(epoll_file, String::from("<epoll>"));
 
     Ok(scheduler::get_scheduler()
         .current_task()
@@ -496,7 +496,7 @@ pub fn event_fd(_initval: usize, flags: usize) -> Result<usize, SyscallError> {
     assert!(!flags.contains(EventFdFlags::SEMAPHORE)); // todo: implement event fd semaphore support.
 
     let eventfd_file = EventFd::new();
-    let entry = DirEntry::from_inode(eventfd_file);
+    let entry = DirEntry::from_inode(eventfd_file, String::from("<eventfd>"));
 
     let current_task = scheduler::get_scheduler().current_task();
 
