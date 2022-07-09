@@ -1,4 +1,4 @@
-From 3d08eb0ba228adf632f38c0c8f6476c1d0342386 Mon Sep 17 00:00:00 2001
+From 6a1cb57184179a2971bedd477fa71f30bbac6a09 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Thu, 30 Jun 2022 11:10:21 +1000
 Subject: [PATCH] xserver: aero specific changes
@@ -20,8 +20,9 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  include/os.h                             |  1 +
  mi/mibitblt.c                            |  2 ++
  os/access.c                              |  2 +-
+ os/ospoll.c                              |  2 ++
  os/utils.c                               |  6 ++--
- 16 files changed, 50 insertions(+), 20 deletions(-)
+ 17 files changed, 52 insertions(+), 20 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index dc56b46..81d9886 100644
@@ -327,6 +328,24 @@ index 9724616..81befe3 100644
  #include <sys/utsname.h>
  #endif
  #if defined(SYSV) &&  defined(__i386__)
+diff --git a/os/ospoll.c b/os/ospoll.c
+index c68aabc..19006c3 100644
+--- a/os/ospoll.c
++++ b/os/ospoll.c
+@@ -45,11 +45,13 @@
+ #define HAVE_OSPOLL     1
+ #endif
+ 
++#if 0
+ #if !HAVE_OSPOLL && defined(HAVE_EPOLL_CREATE1)
+ #include <sys/epoll.h>
+ #define EPOLL           1
+ #define HAVE_OSPOLL     1
+ #endif
++#endif
+ 
+ #if !HAVE_OSPOLL
+ #include "xserver_poll.h"
 diff --git a/os/utils.c b/os/utils.c
 index 2ba1c80..ffa961f 100644
 --- a/os/utils.c

@@ -1149,7 +1149,7 @@ impl Vm {
         accessed_address: VirtAddr,
     ) -> bool {
         self.inner
-            .lock()
+            .lock_irq()
             .handle_page_fault(reason, accessed_address)
     }
 

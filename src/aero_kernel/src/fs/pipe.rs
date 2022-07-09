@@ -5,7 +5,7 @@ use alloc::{sync::Arc, vec::Vec};
 
 use crate::utils::sync::{BlockQueue, Mutex};
 
-use super::inode::INodeInterface;
+use super::inode::{INodeInterface, PollFlags, PollTable};
 
 struct Buffer {
     data: Vec<u8>,
@@ -82,9 +82,10 @@ impl INodeInterface for Pipe {
     fn close(&self, flags: OpenFlags) {
         // Write end of the pipe:
         if flags.contains(OpenFlags::O_WRONLY) {
-            let active_writers = (self.num_writers.fetch_sub(1, Ordering::SeqCst) - 1) == 0;
+            let active_writers = self.num_writers.fetch_sub(1, Ordering::SeqCst) - 1;
+
             // There are no active writers and no data to read (reached EOF).
-            if active_writers {
+            if active_writers == 0 {
                 self.readers.notify_complete();
             }
         }
@@ -106,9 +107,24 @@ impl INodeInterface for Pipe {
     }
 
     fn write_at(&self, offset: usize, buf: &[u8]) -> super::Result<usize> {
-        let res = offset + self.queue.lock().write_data(buf);
+        let res = offset + self.queue.lock_irq().write_data(buf);
         self.readers.notify_complete();
 
         Ok(res)
+    }
+
+    fn poll(&self, table: Option<&mut PollTable>) -> super::Result<PollFlags> {
+        table.map(|e| {
+            e.insert(&self.readers);
+            e.insert(&self.writers)
+        });
+
+        let mut flags = PollFlags::OUT;
+
+        if self.queue.lock_irq().has_data() {
+            flags |= PollFlags::IN;
+        }
+
+        Ok(flags)
     }
 }
