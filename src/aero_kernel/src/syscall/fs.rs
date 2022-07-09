@@ -589,24 +589,6 @@ pub fn poll(
         return Ok(n);
     }
 
-    'search: loop {
-        // Wait till one of the file descriptor deliever an event.
-        scheduler::get_scheduler().inner.await_io()?;
-
-        for (handle, index) in refds.iter() {
-            let pollfd = &mut fds[*index];
-            let ready: PollEventFlags = handle.inode().poll(None)?.into();
-
-            if ready.contains(pollfd.events) {
-                // The event is ready; break out of the search loop and set ready
-                // events to 1.
-                pollfd.revents = ready & pollfd.events;
-                n = 1;
-                break 'search;
-            }
-        }
-    }
-
     // Restore the orignal signal mask.
     signals.set_mask(SigProcMask::Set, Some(old_mask), None);
     Ok(n)

@@ -47,7 +47,12 @@ pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, SyscallEr
         }
 
         CLOCK_TYPE_MONOTONIC => {
-            log::debug!("monotonic");
+            // FIXME: implement
+            let clock = crate::time::get_realtime_clock();
+
+            timespec.tv_sec = clock.tv_sec;
+            timespec.tv_nsec = clock.tv_nsec;
+
             Ok(0x00)
         }
 

@@ -53,7 +53,7 @@ pub fn get_uptime_ticks() -> usize {
 }
 
 pub fn get_realtime_clock() -> TimeSpec {
-    REALTIME_CLOCK.lock().clone()
+    REALTIME_CLOCK.lock_irq().clone()
 }
 
 /// Returns the current amount of PIT ticks.
@@ -94,7 +94,7 @@ fn pit_irq_handler(_stack: &mut InterruptStack) {
             tv_nsec: (1000000000 / PIT_FREQUENCY_HZ) as isize,
         };
 
-        let mut this = REALTIME_CLOCK.lock();
+        let mut this = REALTIME_CLOCK.lock_irq();
 
         if this.tv_nsec + interval.tv_nsec > 999999999 {
             let diff = (this.tv_nsec + interval.tv_nsec) - 1000000000;
