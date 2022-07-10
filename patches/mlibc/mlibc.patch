@@ -1,4 +1,4 @@
-From 32d24edf161f338847c32fa2f44dc80422d4795e Mon Sep 17 00:00:00 2001
+From bb17d740b50e98b67c4bdc6449e874568993aa84 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Fri, 8 Jul 2022 12:32:32 +1000
 Subject: [PATCH] yes
@@ -8,11 +8,11 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  options/ansi/generic/stdlib-stubs.cpp | 142 +++++++++++++++++++++-----
  options/glibc/generic/execinfo.cpp    |   5 +-
  options/rtdl/generic/linker.cpp       |   2 +-
- sysdeps/aero/generic/aero.cpp         |  14 +--
+ sysdeps/aero/generic/aero.cpp         |  38 +++----
  sysdeps/aero/generic/filesystem.cpp   |  25 ++++-
- sysdeps/aero/generic/sockets.cpp      |   4 +-
+ sysdeps/aero/generic/sockets.cpp      |  65 +++++++++++-
  sysdeps/aero/include/aero/syscall.h   |   2 +
- 7 files changed, 152 insertions(+), 42 deletions(-)
+ 7 files changed, 225 insertions(+), 54 deletions(-)
 
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
 index 4836391e..2a73c6d0 100644
@@ -198,9 +198,44 @@ index 6716ef4f..e5ec8cff 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 29fb9610..645a84d5 100644
+index 29fb9610..a27da559 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
+@@ -69,22 +69,22 @@ int sys_futex_tid() {
+ }
+ 
+ int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
+-    auto result = syscall(SYS_FUTEX_WAIT, pointer, expected, time);
+-
+-    if (result < 0) {
+-        return -result;
+-    }
+-
++    // auto result = syscall(SYS_FUTEX_WAIT, pointer, expected, time);
++    //
++    // if (result < 0) {
++    //     return -result;
++    // }
++    //
+     return 0;
+ }
+ 
+ int sys_futex_wake(int *pointer) {
+-    auto result = syscall(SYS_FUTEX_WAKE, pointer);
+-
+-    if (result < 0) {
+-        return -result;
+-    }
+-
++    // auto result = syscall(SYS_FUTEX_WAKE, pointer);
++    //
++    // if (result < 0) {
++    //     return -result;
++    // }
++    //
+     return 0;
+ }
+ 
 @@ -124,7 +124,9 @@ int sys_anon_free(void *pointer, size_t size) {
  }
  
@@ -240,7 +275,7 @@ index 29fb9610..645a84d5 100644
  }
  
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index a3e2aca2..09e6444f 100644
+index a3e2aca2..4187059e 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -158,11 +158,6 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
@@ -269,7 +304,7 @@ index a3e2aca2..09e6444f 100644
 +    }
 +
 +    *num_events = result;
-+        return 0;
++    return 0;
 +}
 +
 +int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
@@ -281,10 +316,17 @@ index a3e2aca2..09e6444f 100644
 +}
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index b6b18fe7..111dc570 100644
+index b6b18fe7..33609ca4 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
-@@ -46,8 +46,8 @@ int sys_listen(int fd, int backlog) {
+@@ -1,5 +1,6 @@
+ #include <mlibc/all-sysdeps.hpp>
+ #include <mlibc/thread-entry.hpp>
++#include <mlibc/debug.hpp>
+ 
+ #include <aero/syscall.h>
+ #include <stdint.h>
+@@ -46,8 +47,8 @@ int sys_listen(int fd, int backlog) {
      return 0;
  }
  
@@ -295,6 +337,71 @@ index b6b18fe7..111dc570 100644
  
      if (result < 0) {
          return -result;
+@@ -56,4 +57,64 @@ int sys_accept(int fd, int *newfd) {
+     *newfd = result;
+     return 0;
+ }
++
++int sys_getsockopt(int fd, int layer, int number, void *__restrict buffer, socklen_t *__restrict size) {
++	(void)fd; (void)size;
++	if (layer == SOL_SOCKET && number == SO_PEERCRED) {
++		mlibc::infoLogger() << "\e[31mmlibc: getsockopt() call with SOL_SOCKET and SO_PEERCRED is unimplemented\e[39m" << frg::endlog;
++		*(int *)buffer = 0;
++		return 0;
++	} else if(layer == SOL_SOCKET && number == SO_SNDBUF) {
++		mlibc::infoLogger() << "\e[31mmlibc: getsockopt() call with SOL_SOCKET and SO_SNDBUF is unimplemented\e[39m" << frg::endlog;
++		*(int *)buffer = 4096;
++		return 0;
++	} else if(layer == SOL_SOCKET && number == SO_TYPE) {
++		mlibc::infoLogger() << "\e[31mmlibc: getsockopt() call with SOL_SOCKET and SO_TYPE is unimplemented, hardcoding SOCK_STREAM\e[39m" << frg::endlog;
++		*(int *)buffer = SOCK_STREAM;
++		return 0;
++	} else if(layer == SOL_SOCKET && number == SO_ERROR) {
++		mlibc::infoLogger() << "\e[31mmlibc: getsockopt() call with SOL_SOCKET and SO_ERROR is unimplemented, hardcoding 0\e[39m" << frg::endlog;
++		*(int *)buffer = 0;
++		return 0;
++	} else if(layer == SOL_SOCKET && number == SO_KEEPALIVE) {
++		mlibc::infoLogger() << "\e[31mmlibc: getsockopt() call with SOL_SOCKET and SO_KEEPALIVE is unimplemented, hardcoding 0\e[39m" << frg::endlog;
++		*(int *)buffer = 0;
++		return 0;
++	} else{
++		mlibc::panicLogger() << "\e[31mmlibc: Unexpected getsockopt() call, layer: " << layer << " number: " << number << "\e[39m" << frg::endlog;
++		__builtin_unreachable();
++	}
++
++	return 0;
++}
++
++int sys_setsockopt(int fd, int layer, int number, const void *buffer, socklen_t size) {
++	(void)fd; (void)buffer; (void)size;
++
++	if (layer == SOL_SOCKET && number == SO_PASSCRED) {
++		mlibc::infoLogger() << "\e[31mmlibc: setsockopt(SO_PASSCRED) is not implemented correctly\e[39m" << frg::endlog;
++		return 0;
++	} else if (layer == SOL_SOCKET && number == SO_ATTACH_FILTER) {
++		mlibc::infoLogger() << "\e[31mmlibc: setsockopt(SO_ATTACH_FILTER) is not implemented correctly\e[39m" << frg::endlog;
++		return 0;
++	} else if (layer == SOL_SOCKET && number == SO_RCVBUFFORCE) {
++		mlibc::infoLogger() << "\e[31mmlibc: setsockopt(SO_RCVBUFFORCE) is not implemented correctly\e[39m" << frg::endlog;
++		return 0;
++	} else if (layer == SOL_SOCKET && number == SO_SNDBUF) {
++		mlibc::infoLogger() << "\e[31mmlibc: setsockopt() call with SOL_SOCKET and SO_SNDBUF is unimplemented\e[39m" << frg::endlog;
++		return 0;
++	} else if (layer == SOL_SOCKET && number == SO_KEEPALIVE) {
++		mlibc::infoLogger() << "\e[31mmlibc: setsockopt() call with SOL_SOCKET and SO_KEEPALIVE is unimplemented\e[39m" << frg::endlog;
++		return 0;
++	} else if (layer == SOL_SOCKET && number == SO_REUSEADDR) {
++		mlibc::infoLogger() << "\e[31mmlibc: setsockopt() call with SOL_SOCKET and SO_REUSEADDR is unimplemented\e[39m" << frg::endlog;
++		return 0;
++	} else if (layer == AF_NETLINK && number == SO_ACCEPTCONN) {
++		mlibc::infoLogger() << "\e[31mmlibc: setsockopt() call with AF_NETLINK and SO_ACCEPTCONN is unimplemented\e[39m" << frg::endlog;
++		return 0;
++	} else {
++		mlibc::panicLogger() << "\e[31mmlibc: Unexpected setsockopt() call, layer: " << layer << " number: " << number << "\e[39m" << frg::endlog;
++		__builtin_unreachable();
++	}
++}
+ } // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
 index 12f8dc61..fcc219a9 100644
 --- a/sysdeps/aero/include/aero/syscall.h
