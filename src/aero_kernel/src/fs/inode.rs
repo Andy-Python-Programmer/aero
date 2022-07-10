@@ -30,6 +30,7 @@ use intrusive_collections::UnsafeRef;
 use spin::Once;
 
 use crate::mem::paging::PhysFrame;
+use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
 use crate::userland::scheduler;
 use crate::utils::sync::BlockQueue;
@@ -226,7 +227,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSocket)
     }
 
-    fn accept(&self, _address: SocketAddr) -> Result<()> {
+    fn accept(&self, _address: &mut SocketAddr) -> Result<Arc<UnixSocket>> {
         Err(FileSystemError::NotSocket)
     }
 

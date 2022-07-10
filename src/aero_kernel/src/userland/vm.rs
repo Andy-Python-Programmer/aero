@@ -1113,16 +1113,16 @@ impl Vm {
         file: Option<DirCacheItem>,
     ) -> Option<VirtAddr> {
         self.inner
-            .lock()
+            .lock_irq()
             .mmap(address, size, protection, flags, offset, file)
     }
 
     pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
-        self.inner.lock().munmap(address, size)
+        self.inner.lock_irq().munmap(address, size)
     }
 
     pub(super) fn fork_from(&self, parent: &Vm) {
-        self.inner.lock().fork_from(parent)
+        self.inner.lock_irq().fork_from(parent)
     }
 
     /// Mapping the provided `bin` file into the VM.
@@ -1132,12 +1132,12 @@ impl Vm {
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
     ) -> Result<LoadedBinary, ElfLoadError> {
-        self.inner.lock().load_bin(bin, argv, envv)
+        self.inner.lock_irq().load_bin(bin, argv, envv)
     }
 
     /// Clears and unmaps all of the mappings in the VM.
     pub(super) fn clear(&self) {
-        self.inner.lock().clear()
+        self.inner.lock_irq().clear()
     }
 
     /// This function is responsible for handling page faults occured in
@@ -1154,6 +1154,6 @@ impl Vm {
     }
 
     pub(crate) fn log(&self) {
-        self.inner.lock().log()
+        self.inner.lock_irq().log()
     }
 }

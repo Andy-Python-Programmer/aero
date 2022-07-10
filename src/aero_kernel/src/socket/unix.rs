@@ -21,12 +21,11 @@ use aero_syscall::SocketAddrUnix;
 
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
-use spin::RwLock;
 
 use crate::fs;
 use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollFlags, PollTable};
 use crate::fs::{FileSystemError, Path, Result};
-use crate::utils::sync::BlockQueue;
+use crate::utils::sync::{BlockQueue, Mutex};
 
 use super::SocketAddr;
 
@@ -66,6 +65,10 @@ impl UnixSocketBacklog {
         self.backlog.as_ref().map(|e| e.len()).unwrap_or_default()
     }
 
+    pub fn pop(&mut self) -> Option<Arc<UnixSocket>> {
+        self.backlog.as_mut().map(|e| e.pop()).unwrap_or_default()
+    }
+
     pub fn update_capacity(&mut self, capacity: usize) {
         assert!(
             self.backlog.is_none(),
@@ -80,29 +83,43 @@ impl UnixSocketBacklog {
 struct UnixSocketInner {
     backlog: UnixSocketBacklog,
     listening: bool,
+    peer: Option<Arc<UnixSocket>>,
+    connected: bool,
 }
 
 pub struct UnixSocket {
-    inner: RwLock<UnixSocketInner>,
+    inner: Mutex<UnixSocketInner>,
     wq: BlockQueue,
     weak: Weak<UnixSocket>,
 }
 
 impl UnixSocket {
-    pub fn new() -> Arc<UnixSocket> {
-        Arc::new_cyclic(|weak| UnixSocket {
-            inner: RwLock::new(UnixSocketInner::default()),
+    pub fn new(peer: Option<Arc<UnixSocket>>) -> Arc<Self> {
+        Arc::new_cyclic(|weak| Self {
+            inner: Mutex::new(UnixSocketInner {
+                peer,
+                ..Default::default()
+            }),
+
             wq: BlockQueue::new(),
             weak: weak.clone(),
         })
     }
 
-    pub fn sref(&self) -> Arc<UnixSocket> {
+    pub fn sref(&self) -> Arc<Self> {
         self.weak.upgrade().unwrap()
     }
 }
 
 impl INodeInterface for UnixSocket {
+    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
+        unimplemented!()
+    }
+
+    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
+        unimplemented!()
+    }
+
     fn metadata(&self) -> Result<Metadata> {
         Ok(Metadata {
             id: 0,
@@ -140,7 +157,7 @@ impl INodeInterface for UnixSocket {
             .downcast_arc::<UnixSocket>()
             .ok_or(FileSystemError::NotSocket)?; // NOTE: the provided socket was not a unix socket.
 
-        let mut itarget = target.inner.write();
+        let mut itarget = target.inner.lock_irq();
 
         // ensure that the target socket is listening for new connections.
         if !itarget.listening {
@@ -149,12 +166,14 @@ impl INodeInterface for UnixSocket {
 
         itarget.backlog.push(self.sref());
         target.wq.notify_complete();
+        core::mem::drop(itarget); // release the lock
 
+        let _ = self.wq.block_on(&self.inner, |e| e.connected);
         Ok(())
     }
 
     fn listen(&self, backlog: usize) -> Result<()> {
-        let mut this = self.inner.write();
+        let mut this = self.inner.lock_irq();
 
         this.backlog.update_capacity(backlog);
         this.listening = true;
@@ -162,17 +181,47 @@ impl INodeInterface for UnixSocket {
         Ok(())
     }
 
-    fn accept(&self, _address: SocketAddr) -> Result<()> {
-        unimplemented!()
+    fn accept(&self, _address: &mut SocketAddr) -> Result<Arc<UnixSocket>> {
+        if !self.inner.lock_irq().listening {
+            return Err(FileSystemError::ConnectionRefused);
+        }
+
+        let mut this = self.wq.block_on(&self.inner, |e| e.backlog.len() != 0)?;
+
+        let peer = this
+            .backlog
+            .pop()
+            .expect("UnixSocket::accept(): backlog is empty");
+
+        let sock = Self::new(Some(peer.clone()));
+
+        {
+            let mut sock_inner = sock.inner.lock_irq();
+            sock_inner.connected = true;
+        }
+
+        {
+            let mut peer_data = peer.inner.lock_irq();
+            peer_data.peer = Some(sock.clone());
+            peer_data.connected = true;
+        }
+
+        peer.wq.notify_complete();
+        Ok(sock)
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {
         table.map(|e| e.insert(&self.wq));
 
         let mut events = PollFlags::empty();
+        let sock_data = self.inner.lock_irq();
 
-        if self.inner.read().backlog.len() > 0 {
-            events.insert(PollFlags::OUT);
+        if sock_data.backlog.len() > 0 {
+            events.insert(PollFlags::IN | PollFlags::OUT);
+        }
+
+        if sock_data.connected {
+            events.insert(PollFlags::IN | PollFlags::OUT);
         }
 
         Ok(events)

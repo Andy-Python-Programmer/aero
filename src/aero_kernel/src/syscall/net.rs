@@ -35,16 +35,21 @@ pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, Syscal
 
 /// Accept a connection on a socket.
 #[syscall]
-pub fn accept(fd: usize, address: usize, _length: &mut u32) -> Result<usize, SyscallError> {
-    let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
-    let file = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EINVAL)?;
+pub fn accept(
+    fd: usize,
+    address: &mut SocketAddr,
+    _length: &mut u32,
+) -> Result<usize, SyscallError> {
+    let file_table = scheduler::get_scheduler().current_task().file_table.clone();
+    let socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)?;
 
-    file.inode().accept(address)?;
-    Ok(0)
+    let connection_sock = socket.inode().accept(address)?;
+    let handle = file_table.open_file(
+        DirEntry::from_inode(connection_sock, String::from("<socket>")),
+        OpenFlags::O_RDWR,
+    )?;
+
+    Ok(handle)
 }
 
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
@@ -64,7 +69,7 @@ pub fn listen(fd: usize, backlog: usize) -> Result<usize, SyscallError> {
 #[syscall]
 pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usize, SyscallError> {
     let socket = match domain as u32 {
-        AF_UNIX => UnixSocket::new(),
+        AF_UNIX => UnixSocket::new(None),
         _ => {
             log::warn!(
                 "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol}"
