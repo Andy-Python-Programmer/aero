@@ -1,19 +1,30 @@
-From bb17d740b50e98b67c4bdc6449e874568993aa84 Mon Sep 17 00:00:00 2001
+From 24a4e9494f8b2d78936d08ffdfe4cf84cf35e76b Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Fri, 8 Jul 2022 12:32:32 +1000
 Subject: [PATCH] yes
 
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
+ .gitignore                            |   2 +
  options/ansi/generic/stdlib-stubs.cpp | 142 +++++++++++++++++++++-----
  options/glibc/generic/execinfo.cpp    |   5 +-
  options/rtdl/generic/linker.cpp       |   2 +-
  sysdeps/aero/generic/aero.cpp         |  38 +++----
  sysdeps/aero/generic/filesystem.cpp   |  25 ++++-
- sysdeps/aero/generic/sockets.cpp      |  65 +++++++++++-
- sysdeps/aero/include/aero/syscall.h   |   2 +
- 7 files changed, 225 insertions(+), 54 deletions(-)
+ sysdeps/aero/generic/sockets.cpp      |  77 +++++++++++++-
+ sysdeps/aero/include/aero/syscall.h   |   4 +
+ 8 files changed, 241 insertions(+), 54 deletions(-)
 
+diff --git a/.gitignore b/.gitignore
+index fdd60a00..9f811f47 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -3,3 +3,5 @@ subprojects
+ *.xbstrap
+ # editor configs:
+ .vscode
++# clangd cache files:
++.cache
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
 index 4836391e..2a73c6d0 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
@@ -316,7 +327,7 @@ index a3e2aca2..4187059e 100644
 +}
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index b6b18fe7..33609ca4 100644
+index b6b18fe7..e03c634b 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
 @@ -1,5 +1,6 @@
@@ -332,15 +343,27 @@ index b6b18fe7..33609ca4 100644
  
 -int sys_accept(int fd, int *newfd) {
 -    auto result = syscall(SYS_ACCEPT, fd);
-+int sys_accept(int fd, int *newfd, struct sockaddr *addr_ptr, socklen_t *addr_length) {
-+    auto result = syscall(SYS_ACCEPT, fd, addr_ptr, addr_length);
++int sys_accept(int sockfd, int *newfd, struct sockaddr *addr_ptr, socklen_t *addr_length) {
++    auto result = syscall(SYS_ACCEPT, sockfd, addr_ptr, addr_length);
  
      if (result < 0) {
          return -result;
-@@ -56,4 +57,64 @@ int sys_accept(int fd, int *newfd) {
+@@ -56,4 +57,76 @@ int sys_accept(int fd, int *newfd) {
      *newfd = result;
      return 0;
  }
++
++
++int sys_msg_recv(int sockfd, struct msghdr *msg_hdr, int flags, ssize_t *length) {
++	auto result = syscall(SYS_SOCK_RECV, sockfd, msg_hdr, flags);
++	
++	if (result < 0) {
++		return -result;
++	}
++
++	*length = result;
++	return 0;
++}
 +
 +int sys_getsockopt(int fd, int layer, int number, void *__restrict buffer, socklen_t *__restrict size) {
 +	(void)fd; (void)size;
@@ -403,15 +426,17 @@ index b6b18fe7..33609ca4 100644
 +}
  } // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc61..fcc219a9 100644
+index 12f8dc61..50f8cfa7 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -64,6 +64,8 @@
+@@ -64,6 +64,10 @@
  #define SYS_FUTEX_WAIT 57
  #define SYS_FUTEX_WAKE 58
  #define SYS_LINK 59
 +#define SYS_BACKTRACE 60
 +#define SYS_POLL 61
++#define SYS_EXIT_THREAD 62
++#define SYS_SOCK_RECV 63
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.

@@ -19,12 +19,14 @@
 
 use aero_syscall::SocketAddrUnix;
 
+use aero_syscall::socket::MessageHeader;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
 use crate::fs;
 use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollFlags, PollTable};
 use crate::fs::{FileSystemError, Path, Result};
+use crate::utils::buffer::Buffer;
 use crate::utils::sync::{BlockQueue, Mutex};
 
 use super::SocketAddr;
@@ -89,6 +91,7 @@ struct UnixSocketInner {
 
 pub struct UnixSocket {
     inner: Mutex<UnixSocketInner>,
+    buffer: Mutex<Buffer>,
     wq: BlockQueue,
     weak: Weak<UnixSocket>,
 }
@@ -101,6 +104,7 @@ impl UnixSocket {
                 ..Default::default()
             }),
 
+            buffer: Mutex::new(Buffer::new()),
             wq: BlockQueue::new(),
             weak: weak.clone(),
         })
@@ -112,8 +116,11 @@ impl UnixSocket {
 }
 
 impl INodeInterface for UnixSocket {
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
-        unimplemented!()
+    fn read_at(&self, _offset: usize, user_buffer: &mut [u8]) -> Result<usize> {
+        let mut buffer = self.wq.block_on(&self.buffer, |lock| lock.has_data())?;
+
+        let read = buffer.read_data(user_buffer);
+        Ok(read)
     }
 
     fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
@@ -208,6 +215,10 @@ impl INodeInterface for UnixSocket {
 
         peer.wq.notify_complete();
         Ok(sock)
+    }
+
+    fn recv(&self, _message_header: &mut MessageHeader) -> Result<()> {
+        Ok(())
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {

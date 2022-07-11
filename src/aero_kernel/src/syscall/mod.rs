@@ -219,6 +219,7 @@ pub fn generic_do_syscall(
         SYS_CONNECT => net::connect(b, c, d),
         SYS_LISTEN => net::listen(b, c),
         SYS_ACCEPT => net::accept(b, c, d),
+        SYS_SOCK_RECV => net::sock_recv(b, c, d),
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),

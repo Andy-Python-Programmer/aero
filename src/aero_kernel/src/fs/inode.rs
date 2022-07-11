@@ -20,6 +20,7 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::prelude::{EPollEventFlags, PollEventFlags};
+use aero_syscall::socket::MessageHeader;
 use aero_syscall::{MMapFlags, OpenFlags};
 
 use alloc::sync::Arc;
@@ -228,6 +229,10 @@ pub trait INodeInterface: Send + Sync {
     }
 
     fn accept(&self, _address: &mut SocketAddr) -> Result<Arc<UnixSocket>> {
+        Err(FileSystemError::NotSocket)
+    }
+
+    fn recv(&self, _message_header: &mut MessageHeader) -> Result<()> {
         Err(FileSystemError::NotSocket)
     }
 

@@ -1,3 +1,4 @@
+use aero_syscall::socket::MessageHeader;
 use aero_syscall::*;
 
 use crate::fs::inode::DirEntry;
@@ -50,6 +51,24 @@ pub fn accept(
     )?;
 
     Ok(handle)
+}
+
+#[syscall]
+pub fn sock_recv(
+    sockfd: usize,
+    header: &mut MessageHeader,
+    flags: usize,
+) -> Result<usize, SyscallError> {
+    assert!(flags == 0, "sock_recv: flags are not currently supported");
+
+    let current_task = scheduler::get_scheduler().current_task();
+    let socket = current_task
+        .file_table
+        .get_handle(sockfd)
+        .ok_or(SyscallError::EINVAL)?;
+
+    socket.inode().recv(header)?;
+    Ok(0)
 }
 
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
