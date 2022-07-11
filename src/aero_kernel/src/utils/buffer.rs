@@ -19,6 +19,42 @@
 
 use core::fmt::Write;
 
+use alloc::vec::Vec;
+
+pub struct Buffer {
+    data: Vec<u8>,
+}
+
+impl Buffer {
+    pub fn new() -> Self {
+        Self { data: Vec::new() }
+    }
+
+    pub fn has_data(&self) -> bool {
+        !self.data.is_empty()
+    }
+
+    pub fn read_data(&mut self, buffer: &mut [u8]) -> usize {
+        // nothing to read
+        if self.data.is_empty() {
+            return 0;
+        }
+
+        let count = core::cmp::min(buffer.len(), self.data.len());
+
+        for (i, b) in self.data.drain(..count).enumerate() {
+            buffer[i] = b;
+        }
+
+        count
+    }
+
+    pub fn write_data(&mut self, data: &[u8]) -> usize {
+        self.data.extend_from_slice(data);
+        data.len() - 1
+    }
+}
+
 /// Special special kind of buffer that stores valid UTF-8 text
 /// is always a constant size, removing the oldest messages when
 /// new messages are received without allocating memory on the

@@ -1,45 +1,12 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::OpenFlags;
-use alloc::{sync::Arc, vec::Vec};
+use alloc::sync::Arc;
 
+use crate::utils::buffer::Buffer;
 use crate::utils::sync::{BlockQueue, Mutex};
 
 use super::inode::{INodeInterface, PollFlags, PollTable};
-
-struct Buffer {
-    data: Vec<u8>,
-}
-
-impl Buffer {
-    fn new() -> Self {
-        Self { data: Vec::new() }
-    }
-
-    fn has_data(&self) -> bool {
-        !self.data.is_empty()
-    }
-
-    fn read_data(&mut self, buffer: &mut [u8]) -> usize {
-        // nothing to read mate
-        if self.data.is_empty() {
-            return 0;
-        }
-
-        let count = core::cmp::min(buffer.len(), self.data.len());
-
-        for (i, b) in self.data.drain(..count).enumerate() {
-            buffer[i] = b;
-        }
-
-        count
-    }
-
-    fn write_data(&mut self, data: &[u8]) -> usize {
-        self.data.extend_from_slice(data);
-        data.len() - 1
-    }
-}
 
 pub struct Pipe {
     queue: Mutex<Buffer>,

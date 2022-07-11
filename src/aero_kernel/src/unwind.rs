@@ -111,7 +111,7 @@ pub fn unwind_stack_trace() {
 
     log::trace!("{:-^80}", " BACKTRACE ");
 
-    for depth in 0..64 {
+    for depth in 0../*64*/16 {
         if let Some(rip_rbp) = rbp.checked_add(core::mem::size_of::<usize>()) {
             if offset_table
                 .translate_addr(VirtAddr::new(rip_rbp as u64))
