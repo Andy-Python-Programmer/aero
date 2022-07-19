@@ -1,4 +1,5 @@
 // sysdeps/aero/include/abi-bits/socket.h
+#[derive(Debug)]
 #[repr(C)]
 pub struct MessageHeader {
     name: *const u8,
@@ -14,6 +15,7 @@ pub struct MessageHeader {
 }
 
 // options/posix/include/bits/posix/iovec.h
+#[derive(Debug)]
 #[repr(C)]
 pub struct IoVec {
     base: *mut u8,

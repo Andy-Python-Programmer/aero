@@ -37,8 +37,8 @@ fn hostname() -> &'static Mutex<String> {
     HOSTNAME.call_once(|| Mutex::new(String::from("aero")))
 }
 
-#[syscall]
-pub fn exit(status: usize) -> ! {
+#[syscall(no_return)]
+pub fn exit(status: usize) -> Result<usize, SyscallError> {
     #[cfg(all(test, feature = "ci"))]
     crate::emu::exit_qemu(crate::emu::ExitStatus::Success);
 
@@ -113,7 +113,7 @@ pub fn kill(pid: usize, signal: usize) -> Result<usize, SyscallError> {
     }
 }
 
-#[syscall]
+#[syscall(no_return)]
 pub fn exec(
     path: &Path,
     args: usize,
@@ -328,8 +328,8 @@ pub fn sigaction(
     Ok(0)
 }
 
-#[syscall]
-pub fn shutdown() -> ! {
+#[syscall(no_return)]
+pub fn shutdown() -> Result<usize, SyscallError> {
     fs::cache::dcache().log();
 
     fs::cache::clear_inode_cache();

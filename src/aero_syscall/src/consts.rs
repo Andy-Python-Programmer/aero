@@ -155,7 +155,16 @@ pub struct EPollEvent {
     pub data: EPollData,
 }
 
+impl core::fmt::Debug for EPollEvent {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("EPollEvent")
+            .field("events", &self.events)
+            .finish()
+    }
+}
+
 // structures for the poll API:
+#[derive(Debug)]
 pub struct PollFd {
     pub fd: i32,
     pub events: PollEventFlags,

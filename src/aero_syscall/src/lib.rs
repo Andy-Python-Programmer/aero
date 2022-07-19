@@ -255,6 +255,7 @@ pub struct SysDirEntry {
     pub name: [u8; 0],
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct Utsname {
     pub name: [u8; 65],
@@ -421,6 +422,7 @@ pub struct Termios {
 pub const AT_FDCWD: isize = -100;
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct SysInfo {
     /// Seconds since boot
     pub uptime: i64,

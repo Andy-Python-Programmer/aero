@@ -155,6 +155,70 @@ pub fn exec_args_from_slice(args: usize, size: usize) -> ExecArgs {
     ExecArgs { inner: result }
 }
 
+#[cfg(feature = "syslog")]
+pub(super) struct SysLog {
+    name: &'static str,
+    /// The result of the syscall.
+    result: Option<Result<usize, SyscallError>>,
+    /// The formatted argument values.
+    args: Vec<String>,
+}
+
+#[cfg(feature = "syslog")]
+impl SysLog {
+    pub fn new(name: &'static str) -> Self {
+        Self {
+            name,
+            result: None,
+            args: Vec::new(),
+        }
+    }
+
+    pub fn add_argument<T>(mut self, value: T) -> Self
+    where
+        T: core::fmt::Display,
+    {
+        self.args.push(alloc::format!("{value}"));
+        self
+    }
+
+    pub fn add_argument_dbg<T>(mut self, value: T) -> Self
+    where
+        T: core::fmt::Debug,
+    {
+        self.args.push(alloc::format!("{value:?}"));
+        self
+    }
+
+    pub fn set_result(mut self, result: Result<usize, SyscallError>) -> Self {
+        self.result = Some(result);
+        self
+    }
+
+    pub fn flush(self) {
+        let mut result = String::new();
+
+        if self.result.map(|e| e.is_ok()).unwrap_or_default() {
+            result.push_str("\x1b[1;32m");
+        } else {
+            result.push_str("\x1b[1;31m");
+        }
+
+        result.push_str(alloc::format!("{}\x1b[0m(", self.name).as_str());
+
+        for (i, e) in self.args.iter().enumerate() {
+            if i != 0 {
+                result.push_str(", ");
+            }
+
+            result.push_str(e);
+        }
+
+        result.push_str(alloc::format!(") = {:?}", self.result.unwrap()).as_str());
+        log::trace!("{result}");
+    }
+}
+
 pub fn generic_do_syscall(
     a: usize,
     b: usize,
@@ -241,40 +305,5 @@ pub fn generic_do_syscall(
         }
     };
 
-    let result_usize = aero_syscall::syscall_result_as_usize(result);
-
-    #[cfg(feature = "syslog")]
-    {
-        let name = aero_syscall::syscall_as_str(a);
-        let mut result_v = String::new();
-
-        if result.is_ok() {
-            result_v.push_str("\x1b[1;32m");
-        } else {
-            result_v.push_str("\x1b[1;31m");
-        }
-
-        result_v.push_str(name);
-        result_v.push_str("\x1b[0m");
-
-        result_v.push_str("(");
-
-        for (i, arg) in [b, c, d, e, f, g].iter().enumerate() {
-            if i != 0 {
-                result_v.push_str(", ");
-            }
-
-            let hex_arg = alloc::format!("{:#x}", *arg);
-            result_v.push_str(&hex_arg);
-        }
-
-        result_v.push_str(") = ");
-
-        let result_str = alloc::format!("{:?}", result);
-        result_v.push_str(&result_str);
-
-        log::trace!("{}", result_v);
-    }
-
-    result_usize
+    aero_syscall::syscall_result_as_usize(result)
 }
