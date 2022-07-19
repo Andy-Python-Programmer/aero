@@ -24,7 +24,7 @@ use quote::quote;
 
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{Expr, FnArg, Pat, Type};
+use syn::{Expr, FnArg, NestedMeta, Pat, Type};
 
 enum ArgType {
     Array(bool),     // mutable?
@@ -35,7 +35,40 @@ enum ArgType {
     Path,
 }
 
-pub fn parse(_: TokenStream, item: TokenStream) -> TokenStream {
+#[derive(Default)]
+struct Config {
+    no_return: bool,
+}
+
+// TODO: determine if no_return by checking the return type of the syscall function;
+// if its the never type <!>.
+fn parse_attribute_args(args: Vec<NestedMeta>) -> Config {
+    let mut config = Config::default();
+
+    for attribute in args {
+        match attribute {
+            NestedMeta::Meta(meta) => match meta {
+                syn::Meta::Path(path) => {
+                    if let Some(ident) = path.get_ident() {
+                        match ident.to_string().as_str() {
+                            "no_return" => config.no_return = true,
+                            _ => emit_error!(ident.span(), "unknown attribute"),
+                        }
+                    }
+                }
+                _ => emit_error!(meta.span(), "unknown attribute"),
+            },
+            NestedMeta::Lit(e) => emit_error!(e.span(), "unknown attribute"),
+        }
+    }
+
+    config
+}
+
+pub fn parse(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let attr = syn::parse_macro_input!(attr as syn::AttributeArgs);
+    let config = parse_attribute_args(attr);
+
     let parsed_fn = syn::parse_macro_input!(item as syn::ItemFn);
     let signature = &parsed_fn.sig;
 
@@ -75,10 +108,61 @@ pub fn parse(_: TokenStream, item: TokenStream) -> TokenStream {
     let ret = &signature.output;
     let body = &parsed_fn.block;
 
+    let syslog_args = orig_args
+        .iter()
+        .map(|e| match e {
+            FnArg::Typed(typed) => match typed.pat.as_ref() {
+                Pat::Ident(pat) => {
+                    let ident = &pat.ident;
+                    let typ = determine_arg_type(&typed.ty);
+
+                    if let Some(typ) = typ {
+                        match typ {
+                            ArgType::Array(_) => quote::quote!(.add_argument("<array>")),
+                            ArgType::Slice(_) => quote::quote!(.add_argument("<slice>")),
+
+                            ArgType::Pointer(_) => {
+                                quote::quote!(.add_argument(alloc::format!("*{:#x}", #ident as usize)))
+                            }
+
+                            ArgType::Reference(_) => {
+                                quote::quote!(.add_argument(alloc::format!("&{:#x}", #ident as *const _ as usize)))
+                            },
+
+                            ArgType::String | ArgType::Path => quote::quote!(.add_argument_dbg(#ident)), 
+                        }
+                    } else {
+                        quote::quote!(.add_argument(#ident))
+                    }
+                }
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        })
+        .collect::<Vec<_>>();
+
+    let syslog = quote::quote! {
+        #[cfg(feature = "syslog")]
+        crate::syscall::SysLog::new(stringify!(#name))
+            #(#syslog_args)*
+            .set_result(result)
+            .flush();
+    };
+
+    let compiled_body = if config.no_return {
+        quote::quote! { #body }
+    } else {
+        quote::quote! {
+            let result = #body;
+            #syslog
+            result
+        }
+    };
+
     let result = quote! {
         #(#attrs)* #vis fn #name(#(#processed_args),*) #ret {
             #(#attrs)* fn inner_syscall(#orig_args) #ret {
-                #body
+                #compiled_body
             }
 
             inner_syscall(#(#call_args),*)
