@@ -12,3 +12,4 @@ export PYTHONHOME="/usr/lib"
 # todo: https://github.com/sharkdp/bat/blob/master/src/bin/bat/directories.rs panics if not set?
 export BAT_CONFIG_DIR="/cfg/bat"
 export BAT_CACHE_PATH="/cache/bat"
+export DISPLAY=:0
