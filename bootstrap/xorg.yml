@@ -351,6 +351,7 @@ packages:
         - '--without-doxygen'
         - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
         environ:
+            CFLAGS: '-g -O0'
             PYTHON: '@BUILD_ROOT@/tools/host-python/bin/python3.8'
     build:
       - args: ['make', '-j@PARALLELISM@']

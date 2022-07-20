@@ -224,15 +224,11 @@ impl INodeInterface for UnixSocket {
     fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {
         table.map(|e| e.insert(&self.wq));
 
-        let mut events = PollFlags::empty();
+        let mut events = PollFlags::OUT;
         let sock_data = self.inner.lock_irq();
 
-        if sock_data.backlog.len() > 0 {
-            events.insert(PollFlags::IN | PollFlags::OUT);
-        }
-
-        if sock_data.connected {
-            events.insert(PollFlags::IN | PollFlags::OUT);
+        if self.buffer.lock_irq().has_data() || sock_data.backlog.len() > 0 {
+            events.insert(PollFlags::IN);
         }
 
         Ok(events)

@@ -39,14 +39,16 @@ pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, SyscallError> {
         .get_handle(fd)
         .ok_or(SyscallError::EBADFD)?;
 
-    if handle
-        .flags
-        .intersects(OpenFlags::O_WRONLY | OpenFlags::O_RDWR)
-    {
-        Ok(handle.write(buffer)?)
-    } else {
-        Err(SyscallError::EACCES)
-    }
+    // FIXME(heck for xeyes): fnctl should update the open flags!
+    //
+    // if handle
+    //     .flags
+    //     .intersects(OpenFlags::O_WRONLY | OpenFlags::O_RDWR)
+    // {
+    Ok(handle.write(buffer)?)
+    // } else {
+    //     Err(SyscallError::EACCES)
+    // }
 }
 
 #[syscall]
@@ -528,25 +530,8 @@ pub fn link(src_path: &Path, dest_path: &Path) -> Result<usize, SyscallError> {
     Ok(0)
 }
 
-#[syscall]
-pub fn poll(
-    fds: &mut [PollFd],
-    // TODO: Use the provided timeout.
-    _timeout: &TimeSpec,
-    sigmask: usize,
-) -> Result<usize, SyscallError> {
-    if fds.len() == 0 {
-        // nothing to do.
-        return Ok(0x00);
-    }
-
+fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, SyscallError> {
     let current_task = scheduler::get_scheduler().current_task();
-    let signals = current_task.signals();
-
-    let mut old_mask = 0;
-
-    // Update the signal mask.
-    signals.set_mask(SigProcMask::Set, Some(sigmask as u64), Some(&mut old_mask));
 
     let mut poll_table = PollTable::default();
     let mut n = 0;
@@ -570,7 +555,7 @@ pub fn poll(
 
         let ready: PollEventFlags = handle.inode().poll(None)?.into();
 
-        if ready.contains(fd.events) {
+        if !(ready & fd.events).is_empty() {
             // The registered event is ready; increment the number of ready events
             // and update revents mask for this event.
             fd.revents = ready & fd.events;
@@ -588,6 +573,56 @@ pub fn poll(
         debug_assert!(refds.len() == 0);
         return Ok(n);
     }
+
+    // Start the timer if timeout specified, if not, we can block indefinitely.
+    if let Some(timeout) = timeout {
+        // If the timeout is zero, then we have to return without blocking.
+        if timeout.tv_nsec == 0 && timeout.tv_sec == 0 {
+            return Ok(0);
+        }
+    }
+
+    crate::unwind::unwind_stack_trace();
+
+    'search: loop {
+        // Wait till one of the file descriptor to be ready.
+        scheduler::get_scheduler().inner.await_io()?;
+
+        for (handle, index) in refds.iter() {
+            let pollfd = &mut fds[*index];
+            let ready: PollEventFlags = handle.inode().poll(None)?.into();
+
+            if !(ready & pollfd.events).is_empty() {
+                pollfd.revents = ready & pollfd.events;
+                break 'search Ok(1);
+            }
+        }
+    }
+}
+
+#[syscall]
+pub fn poll(fds: &mut [PollFd], timeout: usize, sigmask: usize) -> Result<usize, SyscallError> {
+    // Nothing to poll on.
+    if fds.len() == 0 {
+        return Ok(0);
+    }
+
+    // The timeout can be NULL.
+    let timeout = if timeout != 0x00 {
+        Some(crate::utils::validate_ptr(timeout as *const TimeSpec).ok_or(SyscallError::EINVAL)?)
+    } else {
+        None
+    };
+
+    let current_task = scheduler::get_scheduler().current_task();
+    let signals = current_task.signals();
+
+    let mut old_mask = 0;
+
+    // Update the signal mask.
+    signals.set_mask(SigProcMask::Set, Some(sigmask as u64), Some(&mut old_mask));
+
+    let n = do_poll(fds, timeout)?;
 
     // Restore the orignal signal mask.
     signals.set_mask(SigProcMask::Set, Some(old_mask), None);
