@@ -50,6 +50,8 @@ pub fn exit(status: usize) -> Result<usize, SyscallError> {
             status = status
         );
 
+        crate::unwind::unwind_stack_trace();
+
         scheduler::get_scheduler().exit(status as isize);
     }
 }
