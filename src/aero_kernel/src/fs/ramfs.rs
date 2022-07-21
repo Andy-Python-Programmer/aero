@@ -199,7 +199,7 @@ impl INodeInterface for LockedRamINode {
                 device.write_at(offset, buffer)
             }
 
-            FileContents::Socket(_) => Err(FileSystemError::NotSupported),
+            FileContents::Socket(e) => e.write_at(offset, buffer),
             FileContents::None => Err(FileSystemError::NotSupported),
         }
     }
@@ -298,7 +298,7 @@ impl INodeInterface for LockedRamINode {
                 device.read_at(offset, buffer)
             }
 
-            FileContents::Socket(_) => Err(FileSystemError::NotSupported),
+            FileContents::Socket(e) => e.read_at(offset, buffer),
             FileContents::None => Err(FileSystemError::NotSupported),
         }
     }

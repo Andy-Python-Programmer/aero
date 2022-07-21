@@ -51,7 +51,7 @@ impl Buffer {
 
     pub fn write_data(&mut self, data: &[u8]) -> usize {
         self.data.extend_from_slice(data);
-        data.len() - 1
+        data.len()
     }
 }
 
