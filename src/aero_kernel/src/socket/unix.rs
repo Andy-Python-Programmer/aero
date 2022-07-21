@@ -123,8 +123,19 @@ impl INodeInterface for UnixSocket {
         Ok(read)
     }
 
-    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
-        unimplemented!()
+    fn write_at(&self, offset: usize, buffer: &[u8]) -> Result<usize> {
+        let inner = self.inner.lock_irq();
+
+        // TODO: Remove the unwrap and return an error instead.
+        let peer = inner
+            .peer
+            .as_ref()
+            .expect("UnixSocket::write_at(): socket not connected!");
+
+        let result = offset + peer.buffer.lock_irq().write_data(buffer);
+        peer.wq.notify_complete();
+
+        Ok(result)
     }
 
     fn metadata(&self) -> Result<Metadata> {

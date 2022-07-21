@@ -119,7 +119,7 @@ pub fn parse(attr: TokenStream, item: TokenStream) -> TokenStream {
                     if let Some(typ) = typ {
                         match typ {
                             ArgType::Array(_) => quote::quote!(.add_argument("<array>")),
-                            ArgType::Slice(_) => quote::quote!(.add_argument("<slice>")),
+                            ArgType::Slice(_) => quote::quote!(.add_argument(alloc::format!("<slice[..{}]>", #ident.len()))),
 
                             ArgType::Pointer(_) => {
                                 quote::quote!(.add_argument(alloc::format!("*{:#x}", #ident as usize)))
