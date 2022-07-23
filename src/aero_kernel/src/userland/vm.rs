@@ -1084,7 +1084,7 @@ impl VmProtected {
     }
 
     fn fork_from(&mut self, parent: &Vm) {
-        let data = parent.inner.lock();
+        let data = parent.inner.lock_irq();
 
         // Copy over all of the mappings from the parent into the child.
         self.mappings = data.mappings.clone();

@@ -666,11 +666,22 @@ pub fn sys_sethostname(name: &str) -> Result<usize, SyscallError> {
 }
 
 // Sockets
+pub trait SocketAddr: Send + Sync {}
+
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct SocketAddrUnix {
     pub family: u32,
     pub path: [u8; 108],
+}
+
+impl Default for SocketAddrUnix {
+    fn default() -> Self {
+        Self {
+            family: AF_UNIX,
+            path: [0; 108],
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -681,6 +692,9 @@ pub struct SocketAddrInet {
     pub address: [u8; 4],
     pub padding: [u8; 8],
 }
+
+impl SocketAddr for SocketAddrUnix {}
+impl SocketAddr for SocketAddrInet {}
 
 // constants for the socket types:
 //

@@ -253,6 +253,10 @@ impl INodeInterface for Tty {
             state.parser.advance(&mut performer, *character);
         }
 
+        log::debug!("TTY::write_at(): {}", unsafe {
+            core::str::from_utf8_unchecked(buffer)
+        });
+
         Ok(buffer.len())
     }
 

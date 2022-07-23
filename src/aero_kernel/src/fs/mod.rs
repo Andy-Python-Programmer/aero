@@ -134,6 +134,8 @@ pub enum FileSystemError {
     InvalidPath,
     NotSocket,
     ConnectionRefused,
+    NotConnected,
+    WouldBlock,
 }
 
 impl From<FileSystemError> for SyscallError {
@@ -151,6 +153,8 @@ impl From<FileSystemError> for SyscallError {
             FileSystemError::NotSocket => Self::ENOTSOCK,
             FileSystemError::ConnectionRefused => Self::ECONNREFUSED,
             FileSystemError::IsDir => Self::EISDIR,
+            FileSystemError::NotConnected => Self::ENOTCONN,
+            FileSystemError::WouldBlock => Self::EAGAIN,
         }
     }
 }
