@@ -232,7 +232,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSocket)
     }
 
-    fn recv(&self, _message_header: &mut MessageHeader) -> Result<()> {
+    fn recv(&self, _message_header: &mut MessageHeader) -> Result<usize> {
         Err(FileSystemError::NotSocket)
     }
 

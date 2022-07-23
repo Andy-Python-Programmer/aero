@@ -87,6 +87,7 @@ struct UnixSocketInner {
     listening: bool,
     peer: Option<Arc<UnixSocket>>,
     connected: bool,
+    address: SocketAddrUnix,
 }
 
 pub struct UnixSocket {
@@ -110,8 +111,21 @@ impl UnixSocket {
         })
     }
 
+    pub fn set_address(&self, address: SocketAddrUnix) {
+        self.inner.lock_irq().address = address;
+    }
+
+    pub fn get_address(&self) -> SocketAddrUnix {
+        self.inner.lock_irq().address.clone()
+    }
+
     pub fn sref(&self) -> Arc<Self> {
         self.weak.upgrade().unwrap()
+    }
+
+    /// Returns wether the socket is connected or not.
+    pub fn is_connected(&self) -> bool {
+        self.inner.lock_irq().connected
     }
 }
 
@@ -160,6 +174,7 @@ impl INodeInterface for UnixSocket {
 
         // create the socket inode.
         DirEntry::from_socket_inode(fs::lookup_path(parent)?, String::from(name), self.sref())?;
+        self.set_address(address.clone());
 
         Ok(())
     }
@@ -204,7 +219,11 @@ impl INodeInterface for UnixSocket {
             return Err(FileSystemError::ConnectionRefused);
         }
 
-        let mut this = self.wq.block_on(&self.inner, |e| e.backlog.len() != 0)?;
+        let mut this = self.inner.lock_irq();
+
+        if this.backlog.len() == 0 {
+            return Err(FileSystemError::WouldBlock);
+        }
 
         let peer = this
             .backlog
@@ -224,12 +243,31 @@ impl INodeInterface for UnixSocket {
             peer_data.connected = true;
         }
 
+        sock.set_address(peer.get_address());
+
         peer.wq.notify_complete();
         Ok(sock)
     }
 
-    fn recv(&self, _message_header: &mut MessageHeader) -> Result<()> {
-        Ok(())
+    fn recv(&self, header: &mut MessageHeader) -> Result<usize> {
+        if !self.is_connected() {
+            return Err(FileSystemError::NotConnected);
+        }
+
+        let size = header.iovecs().iter().map(|e| e.len()).sum::<usize>();
+
+        let mut buffer = self.wq.block_on(&self.buffer, |e| e.len() >= size)?;
+        log::trace!("UnixSocket::recv(): recieved total of {size} bytes");
+
+        header
+            .name_mut::<SocketAddrUnix>()
+            .map(|e| *e = self.inner.lock_irq().peer.as_ref().unwrap().get_address());
+
+        Ok(header
+            .iovecs_mut()
+            .iter_mut()
+            .map(|iovec| buffer.read_data(iovec.as_mut_slice()))
+            .sum::<usize>())
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {
