@@ -4,7 +4,10 @@ image:
 ports:
 # vnc
 - port: 6080
-  onOpen: open-preview
+# open-preview is too small to reliably use, especially on smaller viewports
+  onOpen: open-browser
+- port: 5900
+  onOpen: ignore
 
 tasks:
 - init: ./aero.py --test --no-run
