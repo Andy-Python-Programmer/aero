@@ -7,6 +7,6 @@ ports:
   onOpen: open-preview
 
 tasks:
-# prebuilds will fail if the process never ends (i.e. because qemu was launched)
-# realistically, the build and run commands should be seperate
-- init: ./aero.py --test
+- init: ./aero.py --test --no-run
+# ideally, it wouldn't build a second time
+  command: ./aero.py --test
