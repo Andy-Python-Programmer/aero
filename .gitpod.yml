@@ -1,0 +1,12 @@
+image:
+  file: .gitpod.Dockerfile
+
+ports:
+# vnc
+- port: 6080
+  onOpen: open-preview
+
+tasks:
+# prebuilds will fail if the process never ends (i.e. because qemu was launched)
+# realistically, the build and run commands should be seperate
+- init: ./aero.py --test
