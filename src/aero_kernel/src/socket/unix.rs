@@ -17,21 +17,24 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::SocketAddrUnix;
+use aero_syscall::{SocketAddrUnix, SyscallError};
 
 use aero_syscall::socket::MessageHeader;
+
+use alloc::collections::VecDeque;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
 use crate::fs;
-use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollFlags, PollTable};
-use crate::fs::{FileSystemError, Path, Result};
-use crate::utils::buffer::Buffer;
+use crate::fs::inode::*;
+
+use crate::fs::{FileSystemError, Path};
+
 use crate::utils::sync::{BlockQueue, Mutex};
 
 use super::SocketAddr;
 
-fn path_from_unix_sock<'sock>(address: &'sock SocketAddrUnix) -> Result<&'sock Path> {
+fn path_from_unix_sock<'sock>(address: &'sock SocketAddrUnix) -> fs::Result<&'sock Path> {
     // The abstract namespace socket allows the creation of a socket
     // connection which does not require a path to be created.
     let abstrat_namespaced = address.path[0] == 0;
@@ -50,109 +53,159 @@ fn path_from_unix_sock<'sock>(address: &'sock SocketAddrUnix) -> Result<&'sock P
     Ok(Path::new(path_str))
 }
 
-#[derive(Default)]
-struct UnixSocketBacklog {
-    backlog: Option<Vec<Arc<UnixSocket>>>,
+#[derive(Debug, Default)]
+pub struct Message {
+    data: Vec<u8>,
+    // TODO: Keep track of the sender of the message here?
 }
 
-impl UnixSocketBacklog {
-    pub fn push(&mut self, socket: Arc<UnixSocket>) {
-        if let Some(ref mut backlog) = self.backlog {
-            assert!(backlog.len() != backlog.capacity());
-            backlog.push(socket);
+impl Message {
+    pub fn new(data: Vec<u8>) -> Self {
+        Self { data }
+    }
+}
+
+#[derive(Default)]
+pub struct MessageQueue {
+    messages: VecDeque<Message>,
+}
+
+impl MessageQueue {
+    pub fn is_empty(&self) -> bool {
+        self.messages.is_empty()
+    }
+
+    pub fn read(&mut self, buffer: &mut [u8]) -> usize {
+        log::debug!("MessageQueue::read(): {:?}", self.messages);
+
+        if let Some(message) = self.messages.pop_front() {
+            let message_len = message.data.len();
+            assert!(buffer.len() >= message_len);
+
+            buffer[..message_len].copy_from_slice(message.data.as_slice());
+            message_len
+        } else {
+            unreachable!("MessageQueue::read() called when queue is empty");
         }
     }
 
+    pub fn write(&mut self, buffer: &[u8]) {
+        let message = Message::new(buffer.to_vec());
+        self.messages.push_back(message);
+
+        log::debug!("MessageQueue::write(): {:?}", self.messages);
+    }
+}
+
+pub struct AcceptQueue {
+    sockets: VecDeque<Arc<UnixSocket>>,
+    backlog: usize,
+}
+
+impl AcceptQueue {
+    /// # Parameters
+    /// * `backlog`: The maximum number of pending connections that the
+    ///              queue can hold.
+    pub fn new(backlog: usize) -> Self {
+        Self {
+            sockets: VecDeque::with_capacity(backlog),
+            backlog,
+        }
+    }
+
+    /// Returns the number of pending connections in the queue.
     pub fn len(&self) -> usize {
-        self.backlog.as_ref().map(|e| e.len()).unwrap_or_default()
+        self.sockets.len()
     }
 
+    /// Returns `true` if the queue contains no pending connections.
+    pub fn is_empty(&self) -> bool {
+        self.sockets.is_empty()
+    }
+
+    /// Adds the given socket to the queue. Returns `EAGAIN` if the
+    /// queue is full.
+    pub fn push(&mut self, socket: Arc<UnixSocket>) -> Result<(), SyscallError> {
+        if self.backlog == self.sockets.len() {
+            return Err(SyscallError::EAGAIN);
+        }
+
+        self.sockets.push_back(socket);
+        Ok(())
+    }
+
+    /// Removes the first pending connection from the queue and
+    /// returns it, or [`None`] if it is empty.
     pub fn pop(&mut self) -> Option<Arc<UnixSocket>> {
-        self.backlog.as_mut().map(|e| e.pop()).unwrap_or_default()
+        self.sockets.pop_front()
     }
 
-    pub fn update_capacity(&mut self, capacity: usize) {
-        assert!(
-            self.backlog.is_none(),
-            "UnixSocket::listen() has already been called"
-        );
+    /// Updates the maximum number of pending connections that the
+    /// queue can hold. Returns `EINVAL` if the new backlog is smaller
+    /// than the current number of pending connections.
+    pub fn set_backlog(&mut self, backlog: usize) -> Result<(), SyscallError> {
+        if backlog < self.sockets.len() {
+            return Err(SyscallError::EINVAL);
+        }
 
-        self.backlog = Some(Vec::with_capacity(capacity));
+        self.backlog = backlog;
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+enum UnixSocketState {
+    /// The socket is not connected.
+    #[default]
+    Disconnected,
+
+    /// The socket is listening for new connections.
+    Listening(AcceptQueue),
+
+    /// The socket has connected to a peer.
+    Connected(Arc<UnixSocket>),
+}
+
+impl UnixSocketState {
+    /// Returns `true` if the socket is connected.
+    fn is_connected(&self) -> bool {
+        matches!(self, Self::Connected(_))
     }
 }
 
 #[derive(Default)]
 struct UnixSocketInner {
-    backlog: UnixSocketBacklog,
-    listening: bool,
-    peer: Option<Arc<UnixSocket>>,
-    connected: bool,
-    address: SocketAddrUnix,
+    /// The address that the socket has been bound to.
+    address: Option<SocketAddrUnix>,
+
+    state: UnixSocketState,
 }
 
 pub struct UnixSocket {
     inner: Mutex<UnixSocketInner>,
-    buffer: Mutex<Buffer>,
+    buffer: Mutex<MessageQueue>,
     wq: BlockQueue,
     weak: Weak<UnixSocket>,
 }
 
 impl UnixSocket {
-    pub fn new(peer: Option<Arc<UnixSocket>>) -> Arc<Self> {
+    pub fn new() -> Arc<Self> {
         Arc::new_cyclic(|weak| Self {
-            inner: Mutex::new(UnixSocketInner {
-                peer,
-                ..Default::default()
-            }),
+            inner: Mutex::new(UnixSocketInner::default()),
 
-            buffer: Mutex::new(Buffer::new()),
+            buffer: Mutex::new(MessageQueue::default()),
             wq: BlockQueue::new(),
             weak: weak.clone(),
         })
     }
 
-    pub fn set_address(&self, address: SocketAddrUnix) {
-        self.inner.lock_irq().address = address;
-    }
-
-    pub fn get_address(&self) -> SocketAddrUnix {
-        self.inner.lock_irq().address.clone()
-    }
-
     pub fn sref(&self) -> Arc<Self> {
         self.weak.upgrade().unwrap()
-    }
-
-    /// Returns wether the socket is connected or not.
-    pub fn is_connected(&self) -> bool {
-        self.inner.lock_irq().connected
     }
 }
 
 impl INodeInterface for UnixSocket {
-    fn read_at(&self, _offset: usize, user_buffer: &mut [u8]) -> Result<usize> {
-        let mut buffer = self.wq.block_on(&self.buffer, |lock| lock.has_data())?;
-
-        let read = buffer.read_data(user_buffer);
-        Ok(read)
-    }
-
-    fn write_at(&self, offset: usize, buffer: &[u8]) -> Result<usize> {
-        let inner = self.inner.lock_irq();
-
-        // TODO: Remove the unwrap and return an error instead.
-        let peer = inner
-            .peer
-            .as_ref()
-            .expect("UnixSocket::write_at(): socket not connected!");
-
-        let result = offset + peer.buffer.lock_irq().write_data(buffer);
-        peer.wq.notify_complete();
-
-        Ok(result)
-    }
-
-    fn metadata(&self) -> Result<Metadata> {
+    fn metadata(&self) -> fs::Result<Metadata> {
         Ok(Metadata {
             id: 0,
             file_type: FileType::Socket,
@@ -161,25 +214,64 @@ impl INodeInterface for UnixSocket {
         })
     }
 
-    fn bind(&self, address: SocketAddr, _length: usize) -> Result<()> {
+    fn read_at(&self, _offset: usize, user_buffer: &mut [u8]) -> fs::Result<usize> {
+        let mut buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
+
+        let read = buffer.read(user_buffer);
+        Ok(read)
+    }
+
+    fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
+        let inner = self.inner.lock_irq();
+        let peer = match inner.state {
+            UnixSocketState::Connected(ref peer) => peer,
+            _ => return Err(FileSystemError::NotConnected),
+        };
+
+        peer.buffer.lock_irq().write(buffer);
+        peer.wq.notify_complete();
+
+        Ok(buffer.len())
+    }
+
+    fn listen(&self, backlog: usize) -> Result<(), SyscallError> {
+        let mut inner = self.inner.lock_irq();
+        let is_bound = inner.address.is_some();
+
+        match &mut inner.state {
+            // We cannot listen on a socket that has not been bound.
+            UnixSocketState::Disconnected if is_bound => {
+                inner.state = UnixSocketState::Listening(AcceptQueue::new(backlog));
+                Ok(())
+            }
+
+            UnixSocketState::Listening(queue) => {
+                queue.set_backlog(backlog)?;
+                Ok(())
+            }
+
+            _ => unreachable!(),
+        }
+    }
+
+    fn bind(&self, address: SocketAddr, _length: usize) -> fs::Result<()> {
         let address = address.as_unix().ok_or(FileSystemError::NotSupported)?;
         let path = path_from_unix_sock(address)?;
 
-        // ensure that the provided path is not already in use.
         if fs::lookup_path(path).is_ok() {
             return Err(FileSystemError::EntryExists);
         }
 
         let (parent, name) = path.parent_and_basename();
-
-        // create the socket inode.
         DirEntry::from_socket_inode(fs::lookup_path(parent)?, String::from(name), self.sref())?;
-        self.set_address(address.clone());
+
+        let mut inner = self.inner.lock_irq();
+        inner.address = Some(address.clone());
 
         Ok(())
     }
 
-    fn connect(&self, address: SocketAddr, _length: usize) -> Result<()> {
+    fn connect(&self, address: SocketAddr, _length: usize) -> fs::Result<()> {
         let address = address.as_unix().ok_or(FileSystemError::NotSupported)?;
         let path = path_from_unix_sock(address)?;
         let socket = fs::lookup_path(path)?;
@@ -188,95 +280,95 @@ impl INodeInterface for UnixSocket {
             .inode()
             .as_unix_socket()?
             .downcast_arc::<UnixSocket>()
-            .ok_or(FileSystemError::NotSocket)?; // NOTE: the provided socket was not a unix socket.
+            .ok_or(FileSystemError::NotSocket)?;
 
         let mut itarget = target.inner.lock_irq();
 
-        // ensure that the target socket is listening for new connections.
-        if !itarget.listening {
-            return Err(FileSystemError::ConnectionRefused);
-        }
+        let queue = match &mut itarget.state {
+            UnixSocketState::Listening(queue) => queue,
+            _ => return Err(FileSystemError::ConnectionRefused),
+        };
 
-        itarget.backlog.push(self.sref());
+        queue.push(self.sref()).unwrap();
         target.wq.notify_complete();
         core::mem::drop(itarget); // release the lock
 
-        let _ = self.wq.block_on(&self.inner, |e| e.connected);
+        let _ = self.wq.block_on(&self.inner, |e| e.state.is_connected());
         Ok(())
     }
 
-    fn listen(&self, backlog: usize) -> Result<()> {
-        let mut this = self.inner.lock_irq();
+    fn accept(&self, _address: Option<&mut SocketAddr>) -> fs::Result<Arc<UnixSocket>> {
+        let mut inner = self.inner.lock_irq();
 
-        this.backlog.update_capacity(backlog);
-        this.listening = true;
+        let queue = match &mut inner.state {
+            UnixSocketState::Listening(queue) => queue,
+            _ => return Err(FileSystemError::ConnectionRefused),
+        };
 
-        Ok(())
-    }
-
-    fn accept(&self, _address: &mut SocketAddr) -> Result<Arc<UnixSocket>> {
-        if !self.inner.lock_irq().listening {
-            return Err(FileSystemError::ConnectionRefused);
-        }
-
-        let mut this = self.inner.lock_irq();
-
-        if this.backlog.len() == 0 {
+        if queue.len() == 0 {
             return Err(FileSystemError::WouldBlock);
         }
 
-        let peer = this
-            .backlog
-            .pop()
-            .expect("UnixSocket::accept(): backlog is empty");
-
-        let sock = Self::new(Some(peer.clone()));
+        let peer = queue.pop().expect("UnixSocket::accept(): backlog is empty");
+        let sock = Self::new();
 
         {
             let mut sock_inner = sock.inner.lock_irq();
-            sock_inner.connected = true;
+            sock_inner.state = UnixSocketState::Connected(peer.clone());
         }
 
         {
             let mut peer_data = peer.inner.lock_irq();
-            peer_data.peer = Some(sock.clone());
-            peer_data.connected = true;
+            peer_data.state = UnixSocketState::Connected(sock.clone());
         }
-
-        sock.set_address(peer.get_address());
 
         peer.wq.notify_complete();
         Ok(sock)
     }
 
-    fn recv(&self, header: &mut MessageHeader) -> Result<usize> {
-        if !self.is_connected() {
-            return Err(FileSystemError::NotConnected);
-        }
+    fn recv(&self, header: &mut MessageHeader) -> fs::Result<usize> {
+        let inner = self.inner.lock_irq();
 
-        let size = header.iovecs().iter().map(|e| e.len()).sum::<usize>();
+        log::trace!(
+            "UnixSocket::recv(): expecting a max of {} bytes",
+            header.iovecs().iter().map(|e| e.len()).sum::<usize>(),
+        );
 
-        let mut buffer = self.wq.block_on(&self.buffer, |e| e.len() >= size)?;
-        log::trace!("UnixSocket::recv(): recieved total of {size} bytes");
+        let peer = match &inner.state {
+            UnixSocketState::Connected(peer) => peer,
+            _ => return Err(FileSystemError::NotConnected),
+        };
+
+        let mut buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
 
         header
             .name_mut::<SocketAddrUnix>()
-            .map(|e| *e = self.inner.lock_irq().peer.as_ref().unwrap().get_address());
+            .map(|e| *e = peer.inner.lock_irq().address.as_ref().cloned().unwrap());
 
         Ok(header
             .iovecs_mut()
             .iter_mut()
-            .map(|iovec| buffer.read_data(iovec.as_mut_slice()))
+            .map(|iovec| buffer.read(iovec.as_mut_slice()))
             .sum::<usize>())
     }
 
-    fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {
+    fn poll(&self, table: Option<&mut PollTable>) -> fs::Result<PollFlags> {
         table.map(|e| e.insert(&self.wq));
 
         let mut events = PollFlags::OUT;
-        let sock_data = self.inner.lock_irq();
+        let inner = self.inner.lock_irq();
 
-        if self.buffer.lock_irq().has_data() || sock_data.backlog.len() > 0 {
+        match &inner.state {
+            UnixSocketState::Listening(queue) => {
+                if !queue.is_empty() {
+                    events.insert(PollFlags::IN);
+                }
+            }
+
+            _ => {}
+        }
+
+        if !self.buffer.lock_irq().is_empty() {
             events.insert(PollFlags::IN);
         }
 

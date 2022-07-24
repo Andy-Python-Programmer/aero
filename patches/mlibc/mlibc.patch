@@ -1,4 +1,4 @@
-From 796581911f51ff414a2fa03e53fd470a1f440329 Mon Sep 17 00:00:00 2001
+From 2167f1570f20a986de9b3c81636d78e4ef1cedb8 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Fri, 8 Jul 2022 12:32:32 +1000
 Subject: [PATCH] yes
@@ -8,13 +8,12 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  .gitignore                            |   2 +
  options/ansi/generic/stdlib-stubs.cpp | 142 +++++++++++++++++++++-----
  options/glibc/generic/execinfo.cpp    |   5 +-
- options/posix/generic/sys-uio.cpp     |   5 +
  options/rtdl/generic/linker.cpp       |   2 +-
  sysdeps/aero/generic/aero.cpp         |  38 +++----
  sysdeps/aero/generic/filesystem.cpp   |  25 ++++-
  sysdeps/aero/generic/sockets.cpp      |  77 +++++++++++++-
  sysdeps/aero/include/aero/syscall.h   |   4 +
- 9 files changed, 246 insertions(+), 54 deletions(-)
+ 8 files changed, 241 insertions(+), 54 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index fdd60a00..9f811f47 100644
@@ -196,22 +195,6 @@ index 3474615e..10a2109e 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
-diff --git a/options/posix/generic/sys-uio.cpp b/options/posix/generic/sys-uio.cpp
-index b1623525..a5f3e893 100644
---- a/options/posix/generic/sys-uio.cpp
-+++ b/options/posix/generic/sys-uio.cpp
-@@ -17,6 +17,11 @@ ssize_t readv(int, const struct iovec *, int) {
- }
- 
- ssize_t writev(int fd, const struct iovec *iovs, int iovc) {
-+	if (iovc == 0) {
-+		errno = EAGAIN;
-+		return -1;
-+	}
-+
- 	__ensure(iovc);
- 
- 	ssize_t written = 0;
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
 index 6716ef4f..e5ec8cff 100644
 --- a/options/rtdl/generic/linker.cpp

@@ -8,6 +8,7 @@ use crate::socket::unix::*;
 use crate::socket::SocketAddr;
 
 use crate::userland::scheduler;
+use crate::utils;
 
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
@@ -38,9 +39,16 @@ pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, Syscal
 #[syscall]
 pub fn accept(
     fd: usize,
-    address: &mut SocketAddr,
-    _length: &mut u32,
+    address: usize,
+    _length: /*&mut u32*/ usize,
 ) -> Result<usize, SyscallError> {
+    // TODO: In the syscall macro, handle Option<NonNull<T>> param.
+    let address = if address != 0 {
+        Some(utils::validate_mut_ptr(address as *mut SocketAddr).ok_or(SyscallError::EINVAL)?)
+    } else {
+        None
+    };
+
     let file_table = scheduler::get_scheduler().current_task().file_table.clone();
     let socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)?;
 
@@ -87,7 +95,7 @@ pub fn listen(fd: usize, backlog: usize) -> Result<usize, SyscallError> {
 #[syscall]
 pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usize, SyscallError> {
     let socket = match domain as u32 {
-        AF_UNIX => UnixSocket::new(None),
+        AF_UNIX => UnixSocket::new(),
         _ => {
             log::warn!(
                 "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol}"

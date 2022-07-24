@@ -21,7 +21,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::prelude::{EPollEventFlags, PollEventFlags};
 use aero_syscall::socket::MessageHeader;
-use aero_syscall::{MMapFlags, OpenFlags};
+use aero_syscall::{MMapFlags, OpenFlags, SyscallError};
 
 use alloc::sync::Arc;
 use alloc::sync::Weak;
@@ -224,11 +224,11 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSocket)
     }
 
-    fn listen(&self, _backlog: usize) -> Result<()> {
-        Err(FileSystemError::NotSocket)
+    fn listen(&self, _backlog: usize) -> ::core::result::Result<(), SyscallError> {
+        Err(SyscallError::ENOTSOCK)
     }
 
-    fn accept(&self, _address: &mut SocketAddr) -> Result<Arc<UnixSocket>> {
+    fn accept(&self, _address: Option<&mut SocketAddr>) -> Result<Arc<UnixSocket>> {
         Err(FileSystemError::NotSocket)
     }
 
