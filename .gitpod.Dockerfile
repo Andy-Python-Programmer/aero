@@ -6,4 +6,4 @@ RUN sudo apt-get install -y \
     xorriso \
     qemu-system-x86-64
     
-RUN python3 -m install requests xbstrap && pip install --upgrade pip
+RUN python3 -m install requests xbstrap
