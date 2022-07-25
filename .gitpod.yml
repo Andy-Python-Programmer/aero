@@ -11,5 +11,4 @@ ports:
 
 tasks:
 - init: ./aero.py --test --no-run
-# ideally, it wouldn't build a second time
-  command: ./aero.py --test
+  command: ./aero.py --only-run
