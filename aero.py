@@ -645,6 +645,20 @@ def main():
 
     if args.only_run:
         iso_path = os.path.join(BUILD_DIR, 'aero.iso')
+
+        if not os.path.exists(iso_path):
+            user_bins = build_userland(args)
+
+            if not user_bins:
+                return
+
+            kernel_bin = build_kernel(args)
+
+            if not kernel_bin or args.check:
+                return
+
+            kernel_bin = kernel_bin[0]
+            iso_path = prepare_iso(args, kernel_bin, user_bins)
         run_in_emulator(args, iso_path)
     elif args.clean:
         src_target = os.path.join('src', 'target', args.target)
