@@ -10,5 +10,5 @@ ports:
   onOpen: ignore
 
 tasks:
-- init: ./aero.py --test --no-run
+- init: ./aero.py --no-run
   command: ./aero.py --only-run
