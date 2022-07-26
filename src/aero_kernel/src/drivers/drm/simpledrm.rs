@@ -86,11 +86,11 @@ impl DrmDevice for RawFramebuffer {
     }
 
     fn driver_info(&self) -> (&'static str, &'static str, &'static str) {
-        ("rawfb_gpu", "rawfb gpu", "0")
+        ("simpledrm", "simpledrm", "0")
     }
 
     fn min_dim(&self) -> (usize, usize) {
-        // NOTE: for rawfb drm device, the max and min dimensions are the same.
+        // NOTE: for simpledrm drm device, the max and min dimensions are the same.
         self.max_dim()
     }
 

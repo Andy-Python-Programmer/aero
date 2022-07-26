@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod rawfb;
+mod simpledrm;
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
