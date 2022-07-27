@@ -1,4 +1,4 @@
-From 2167f1570f20a986de9b3c81636d78e4ef1cedb8 Mon Sep 17 00:00:00 2001
+From 0eb5403c389aaa7144d6bea297aac57d442bc9f6 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Fri, 8 Jul 2022 12:32:32 +1000
 Subject: [PATCH] yes
@@ -12,8 +12,11 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/generic/aero.cpp         |  38 +++----
  sysdeps/aero/generic/filesystem.cpp   |  25 ++++-
  sysdeps/aero/generic/sockets.cpp      |  77 +++++++++++++-
- sysdeps/aero/include/aero/syscall.h   |   4 +
- 8 files changed, 241 insertions(+), 54 deletions(-)
+ sysdeps/aero/generic/time.cpp         |  24 +++++
+ sysdeps/aero/include/aero/syscall.h   |   6 ++
+ sysdeps/aero/meson.build              |   1 +
+ 10 files changed, 268 insertions(+), 54 deletions(-)
+ create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
 index fdd60a00..9f811f47 100644
@@ -425,11 +428,42 @@ index b6b18fe7..e03c634b 100644
 +	}
 +}
  } // namespace mlibc
+diff --git a/sysdeps/aero/generic/time.cpp b/sysdeps/aero/generic/time.cpp
+new file mode 100644
+index 00000000..460412d0
+--- /dev/null
++++ b/sysdeps/aero/generic/time.cpp
+@@ -0,0 +1,24 @@
++#include <mlibc/all-sysdeps.hpp>
++#include <aero/syscall.h>
++
++namespace mlibc {
++int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value) {
++    auto result = syscall(SYS_SETITIMER, which, new_value, old_value);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    return 0;
++}
++
++int sys_getitimer(int which, struct itimerval *curr_value) {
++    auto result = syscall(SYS_GETITIMER, which, curr_value);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    return 0;
++}
++}
+\ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc61..50f8cfa7 100644
+index 12f8dc61..03001c46 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -64,6 +64,10 @@
+@@ -64,6 +64,12 @@
  #define SYS_FUTEX_WAIT 57
  #define SYS_FUTEX_WAKE 58
  #define SYS_LINK 59
@@ -437,9 +471,23 @@ index 12f8dc61..50f8cfa7 100644
 +#define SYS_POLL 61
 +#define SYS_EXIT_THREAD 62
 +#define SYS_SOCK_RECV 63
++#define SYS_SETITIMER 64
++#define SYS_GETITIMER 65
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.
+diff --git a/sysdeps/aero/meson.build b/sysdeps/aero/meson.build
+index 3ca8463e..f1d80139 100644
+--- a/sysdeps/aero/meson.build
++++ b/sysdeps/aero/meson.build
+@@ -11,6 +11,7 @@ libc_sources += files(
+ 	'generic/filesystem.cpp',
+ 	'generic/sockets.cpp',
+ 	'generic/signals.cpp',
++	'generic/time.cpp',
+ )
+ 
+ if not no_headers
 -- 
 2.25.1
 

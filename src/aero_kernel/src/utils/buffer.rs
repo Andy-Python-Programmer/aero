@@ -34,11 +34,6 @@ impl Buffer {
         !self.data.is_empty()
     }
 
-    /// Returns the size of the buffer.
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
     pub fn read_data(&mut self, buffer: &mut [u8]) -> usize {
         // nothing to read
         if self.data.is_empty() {

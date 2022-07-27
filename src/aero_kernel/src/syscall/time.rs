@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::time::ITimerVal;
 use aero_syscall::{SyscallError, TimeSpec};
 
 use crate::userland::scheduler;
@@ -58,4 +59,22 @@ pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, SyscallEr
 
         _ => Err(SyscallError::EINVAL),
     }
+}
+
+#[syscall]
+pub fn setitimer(
+    _which: usize,
+    _new_value: &ITimerVal,
+    _old_value: &mut ITimerVal,
+) -> Result<usize, SyscallError> {
+    let scheduler = scheduler::get_scheduler();
+    scheduler
+        .current_task()
+        .signal(aero_syscall::signal::SIGALRM);
+    Ok(0)
+}
+
+#[syscall]
+pub fn getitimer(_which: usize, _curr_value: &mut ITimerVal) -> Result<usize, SyscallError> {
+    Ok(0)
 }

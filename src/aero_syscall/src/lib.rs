@@ -24,6 +24,7 @@ pub mod consts;
 pub mod signal;
 pub mod socket;
 pub mod syscall;
+pub mod time;
 
 pub use crate::syscall::*;
 

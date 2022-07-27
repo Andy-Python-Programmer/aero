@@ -73,8 +73,8 @@ impl INodeInterface for Pipe {
         Ok(read)
     }
 
-    fn write_at(&self, offset: usize, buf: &[u8]) -> super::Result<usize> {
-        let res = offset + self.queue.lock_irq().write_data(buf);
+    fn write_at(&self, _offset: usize, buf: &[u8]) -> super::Result<usize> {
+        let res = self.queue.lock_irq().write_data(buf);
         self.readers.notify_complete();
 
         Ok(res)

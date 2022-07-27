@@ -288,6 +288,9 @@ pub fn generic_do_syscall(
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),
 
+        SYS_SETITIMER => time::setitimer(b, c, d),
+        SYS_GETITIMER => time::getitimer(b, c),
+
         SYS_IPC_SEND => ipc::send(b, c, d),
         SYS_IPC_RECV => ipc::recv(b, c, d, e),
         SYS_IPC_DISCOVER_ROOT => ipc::discover_root(),

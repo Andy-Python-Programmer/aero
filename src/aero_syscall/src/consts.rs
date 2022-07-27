@@ -84,6 +84,8 @@ pub const SYS_BACKTRACE: usize = 60;
 pub const SYS_POLL: usize = 61;
 pub const SYS_EXIT_THREAD: usize = 62;
 pub const SYS_SOCK_RECV: usize = 63;
+pub const SYS_SETITIMER: usize = 64;
+pub const SYS_GETITIMER: usize = 65;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

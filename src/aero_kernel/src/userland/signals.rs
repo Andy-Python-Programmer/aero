@@ -57,7 +57,7 @@ mod default {
         Action::Handle(terminate),        // SIGSEGV
         Action::Ignore,                   // UNUSED
         Action::Handle(terminate),        // SIGPIPE
-        Action::Ignore,                   // UNUSED
+        Action::Ignore,                   // SIGALRM
         Action::Handle(terminate),        // SIGTERM
         Action::Ignore,                   // UNUSED
         Action::Ignore,                   // SIGCHLD
