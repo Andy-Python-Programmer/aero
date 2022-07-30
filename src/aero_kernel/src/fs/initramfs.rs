@@ -18,6 +18,7 @@
  */
 
 use alloc::sync::Arc;
+use cpio_reader::Mode;
 
 use crate::fs::{FileSystemError, Path};
 use crate::mem::paging::PhysAddr;
@@ -25,7 +26,7 @@ use crate::mem::paging::PhysAddr;
 use super::cache::DirCacheItem;
 use super::ramfs::RamFs;
 
-use super::{root_dir, FileSystem, Result, MOUNT_MANAGER};
+use super::{root_dir, FileSystem, LookupMode, Result, MOUNT_MANAGER};
 
 lazy_static::lazy_static! {
     static ref INIT_FILESYSTEM: Arc<InitRamFs> = InitRamFs::new();
@@ -56,8 +57,24 @@ pub(super) fn init() -> Result<()> {
         core::slice::from_raw_parts(base.as_ptr(), length as usize)
     };
 
+    let mut symlinks = alloc::vec![];
+
     for entry in cpio_reader::iter_files(initrd) {
         let path = Path::new(entry.name());
+
+        if entry.mode().contains(Mode::SYMBOLIK_LINK) {
+            // CPIO symbolically linked file's contain the target path as their contents.
+            let target =
+                core::str::from_utf8(entry.file()).map_err(|_| FileSystemError::InvalidPath)?;
+
+            let (parent, _) = path.parent_and_basename();
+
+            // We need to create symbolically linked files at the end, after all the
+            // other files.
+            symlinks.push((alloc::format!("{}/{}", parent.as_str(), target), path));
+            continue;
+        }
+
         let component_count = path.components().count();
 
         let mut cwd = root_dir().clone();
@@ -78,7 +95,16 @@ pub(super) fn init() -> Result<()> {
         }
     }
 
-    MOUNT_MANAGER.mount(root_dir().clone(), INIT_FILESYSTEM.clone())?;
+    for (src, target) in symlinks {
+        let src = super::lookup_path_with(root_dir().clone(), Path::new(&src), LookupMode::None)
+            .expect(&alloc::format!("your mom {:?}", src));
+        let (target_dir, target_name) = target.parent_and_basename();
 
+        let target = super::lookup_path_with(root_dir().clone(), target_dir, LookupMode::None)
+            .expect(&alloc::format!("your dad {:?}", target));
+        target.inode().link(target_name, src.inode()).unwrap();
+    }
+
+    MOUNT_MANAGER.mount(root_dir().clone(), INIT_FILESYSTEM.clone())?;
     Ok(())
 }

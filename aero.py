@@ -422,19 +422,22 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join(limine_path, 'limine-cd.bin'), iso_root)
     shutil.copy(os.path.join(limine_path, 'limine-cd-efi.bin'), iso_root)
 
-    initramfs_root = os.path.join(BUILD_DIR, 'initramfs_root')
-    initramfs_bin = os.path.join(initramfs_root, 'usr', 'bin')
-
-    if os.path.exists(initramfs_root):
-        shutil.rmtree(initramfs_root)
-
     sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
+    shutil.copytree(BASE_FILES_DIR, sysroot_dir, dirs_exist_ok=True)
 
-    if os.path.exists(sysroot_dir):
-        # copying the sysroot will auto-magically create the bin directory.
-        shutil.copytree(sysroot_dir, initramfs_root)
-    else:
-        os.makedirs(initramfs_bin)
+    # dynamic linker (ld.so)
+    mlibc = os.path.join(get_userland_package(), "mlibc")
+    # gcc libraries required for rust programs
+    gcc = os.path.join(get_userland_package(), "gcc")
+
+    # FIXME
+    if "host-rust-prebuilt" in str(mlibc):
+        shutil.copytree(mlibc, sysroot_dir, dirs_exist_ok=True)
+        shutil.copytree(gcc, sysroot_dir, dirs_exist_ok=True)
+
+    for file in user_bins:
+        bin_name = os.path.basename(file)
+        shutil.copy(file, os.path.join(sysroot_dir, "usr", "bin", bin_name))
 
     def find(path) -> List[str]:
         _, find_output, _ = run_command(['find', '.', '-type', 'f'],
@@ -447,40 +450,15 @@ def prepare_iso(args, kernel_bin, user_bins):
             lambda x: remove_prefix(x, './'), files_without_dot)
         files = list(files_without_prefix)
 
-        return files
+        files.append("usr/lib/libiconv.so.2")
+        return files 
 
-    def cp(src, dest):
-        files = find(src)
-
-        for line in files:
-            file = os.path.join(src, line)
-            dest_file = os.path.join(dest, line)
-
-            os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-            shutil.copy(file, dest_file)
-
-    # dynamic linker (ld.so)
-    mlibc = os.path.join(get_userland_package(), "mlibc")
-    # gcc libraries required for rust programs
-    gcc = os.path.join(get_userland_package(), "gcc")
-
-    if "host-rust-prebuilt" in str(mlibc):
-        cp(mlibc, initramfs_root)
-        cp(gcc, initramfs_root)
-
-    cp(BASE_FILES_DIR, initramfs_root)
-
-    for file in user_bins:
-        bin_name = os.path.basename(file)
-
-        shutil.copy(file, os.path.join(initramfs_bin, bin_name))
-
-    files = find(initramfs_root)
+    files = find(sysroot_dir)
 
     with open(os.path.join(iso_root, 'initramfs.cpio'), 'wb') as initramfs:
         cpio_input = '\n'.join(files)
         code, _, _ = run_command(['cpio', '-o', '-v'],
-                                 cwd=initramfs_root,
+                                 cwd=sysroot_dir,
                                  stdout=initramfs,
                                  stderr=subprocess.PIPE,
                                  input=cpio_input.encode('utf-8'))
@@ -529,7 +507,7 @@ def run_in_emulator(args, iso_path):
 
     qemu_args = ['-cdrom', iso_path,
                  '-M', 'q35',
-                 '-m', '9G',
+                 '-m', '9800M',
                  '-smp', '5',
                  '-serial', 'stdio']
 

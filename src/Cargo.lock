@@ -93,8 +93,8 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "cpio_reader"
-version = "0.1.0"
-source = "git+https://github.com/czapek1337/cpio_reader#9e3a58b24320f03036303b355e9cb976f429a883"
+version = "0.1.1"
+source = "git+https://github.com/Andy-Python-Programmer/cpio_reader#8ae88c281288385447976398c57af0549a47ce72"
 dependencies = [
  "bitflags",
 ]
