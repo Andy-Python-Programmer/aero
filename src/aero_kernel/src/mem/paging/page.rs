@@ -113,12 +113,6 @@ impl<S: PageSize> Page<S> {
         self.start_address().p3_index()
     }
 
-    /// Returns a range of pages, inclusive `end`.
-    #[inline]
-    pub fn range_inclusive(start: Self, end: Self) -> PageRangeInclusive<S> {
-        PageRangeInclusive { start, end }
-    }
-
     /// Returns a range of pages, exclusive `end`.
     #[inline]
     pub const fn range(start: Self, end: Self) -> PageRange<S> {
@@ -218,40 +212,6 @@ impl<S: PageSize> Iterator for PageRange<S> {
 impl<S: PageSize> fmt::Debug for PageRange<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("PageRange")
-            .field("start", &self.start)
-            .field("end", &self.end)
-            .finish()
-    }
-}
-
-/// A range of pages with inclusive upper bound.
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(C)]
-pub struct PageRangeInclusive<S: PageSize = Size4KiB> {
-    /// The start of the range, inclusive.
-    pub start: Page<S>,
-    /// The end of the range, inclusive.
-    pub end: Page<S>,
-}
-
-impl<S: PageSize> Iterator for PageRangeInclusive<S> {
-    type Item = Page<S>;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.start <= self.end {
-            let page = self.start;
-            self.start += 1;
-            Some(page)
-        } else {
-            None
-        }
-    }
-}
-
-impl<S: PageSize> fmt::Debug for PageRangeInclusive<S> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("PageRangeInclusive")
             .field("start", &self.start)
             .field("end", &self.end)
             .finish()
@@ -430,29 +390,5 @@ impl<S: PageSize> fmt::Debug for PhysFrameRangeInclusive<S> {
             .field("start", &self.start)
             .field("end", &self.end)
             .finish()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    pub fn test_page_ranges() {
-        let page_size = Size4KiB::SIZE;
-        let number = 1000;
-
-        let start_addr = VirtAddr::new(0xdead_beaf);
-        let start: Page = Page::containing_address(start_addr);
-        let end = start + number;
-
-        let mut range_inclusive = Page::range_inclusive(start, end);
-        for i in 0..=number {
-            assert_eq!(
-                range_inclusive.next(),
-                Some(Page::containing_address(start_addr + page_size * i))
-            );
-        }
-        assert_eq!(range_inclusive.next(), None);
     }
 }
