@@ -88,18 +88,14 @@ trait DrmDevice: Send + Sync {
 
 #[derive(Debug, Clone)]
 struct BufferObject {
-    width: u32,
-    height: u32,
     size: usize,
     mapping: usize,
     memory: Vec<PhysFrame>,
 }
 
 impl BufferObject {
-    pub fn new(width: u32, height: u32, size: usize, memory: Vec<PhysFrame>) -> Self {
+    pub fn new(size: usize, memory: Vec<PhysFrame>) -> Self {
         Self {
-            width,
-            height,
             size,
             mapping: usize::MAX,
             memory,

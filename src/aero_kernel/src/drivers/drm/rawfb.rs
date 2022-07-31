@@ -43,10 +43,7 @@ impl DrmDevice for RawFramebuffer {
             memory.push(frame);
         }
 
-        (
-            BufferObject::new(width, height, size as usize, memory),
-            width * bpp / 8,
-        )
+        (BufferObject::new(size as usize, memory), width * bpp / 8)
     }
 
     fn commit(&self, buffer_obj: &BufferObject) {
