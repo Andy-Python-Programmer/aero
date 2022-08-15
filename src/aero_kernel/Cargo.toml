@@ -37,6 +37,7 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 lai = { git = "https://github.com/aero-os/lai-rs" }
 uapi = { path = "../uapi" }
 cpio_reader = { git = "https://github.com/Andy-Python-Programmer/cpio_reader" }
+static_assertions = "1.1.0"
 
 [dependencies.vte]
 git = "https://github.com/Andy-Python-Programmer/vte"

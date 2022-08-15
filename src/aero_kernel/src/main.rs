@@ -61,6 +61,8 @@ mod prelude {
         pub use core::prelude::v1::*;
 
         pub use alloc::string::String;
+
+        pub use static_assertions::*;
     }
 }
 

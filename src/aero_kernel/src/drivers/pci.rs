@@ -17,14 +17,17 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use alloc::alloc::Global;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
+use crate::apic;
+use crate::utils::bitmap::Bitmap;
 use crate::utils::sync::Mutex;
 
 use crate::acpi::mcfg;
 use crate::mem::paging::OffsetPageTable;
-use crate::utils::io;
+use crate::utils::{io, VolatileCell};
 
 use bit_field::BitField;
 
@@ -40,6 +43,159 @@ bitflags::bitflags! {
         const SECONDARY_PCI_NATIVE = 0b00000100;
         const SECONDARY_CAN_SWITCH = 0b00001000;
         const DMA_CAPABLE          = 0b10000000;
+    }
+}
+
+#[repr(C)]
+struct Message {
+    addr_lower: VolatileCell<u32>,
+    addr_upper: VolatileCell<u32>,
+    data: VolatileCell<u32>,
+    mask: VolatileCell<u32>,
+}
+
+impl Message {
+    fn is_masked(&self) -> bool {
+        self.mask.get().get_bit(0)
+    }
+
+    fn set_masked(&self, masked: bool) {
+        self.mask.set(*self.mask.get().set_bit(0, masked));
+    }
+
+    fn set(&mut self, vector: u8) {
+        assert!(self.is_masked(), "msix: message is unmasked");
+
+        let mut data = 0;
+        data.set_bits(0..8, vector as u32);
+
+        let mut addr = 0;
+        addr.set_bits(12..20, apic::get_bsp_id() as u32);
+        addr.set_bits(20..32, 0xfee);
+
+        self.data.set(data);
+        self.addr_lower.set(addr);
+        self.addr_upper.set(0);
+    }
+}
+
+pub struct Msix<'a> {
+    messages: &'a mut [Message],
+    table: Bitmap<Global>,
+}
+
+impl<'a> Msix<'a> {
+    pub fn new(header: &'a PciHeader, offset: u32) -> Self {
+        let mut message_control = unsafe { header.read::<u16>(offset + 2) } as u16;
+
+        // 31             16 15           8 7             0
+        // ------------------------------------------------
+        // Message Control | Next Pointer | Capability ID |
+        // -----------------------------------------------
+        //
+        // XXX: table length is encoded as N - 1, so we add one to get N.
+        let table_length = message_control.get_bits(0..11) + 1;
+
+        let table_ptr = unsafe { header.read::<u32>(offset + 4) };
+        // BAR index specifies the BAR number whose address range contains the MSI-X Table.
+        let bar_index = table_ptr.get_bits(0..3) as u8;
+        let bar_offset = table_ptr & !0b111;
+
+        let bar = header
+            .get_bar(bar_index)
+            .expect("msix: table bar not present");
+
+        let bar_address = match bar {
+            Bar::Memory64 { address, .. } => address,
+            Bar::Memory32 { address, .. } => address as u64,
+            _ => unreachable!(),
+        };
+
+        // SAFETY: We have exclusive access to the BAR and the slice is in bounds.
+        let messages = unsafe {
+            core::slice::from_raw_parts_mut(
+                (bar_address + bar_offset as u64) as *mut Message,
+                table_length as usize,
+            )
+        };
+
+        unsafe {
+            message_control.set_bit(15, true); // enable MSI-X
+            message_control.set_bit(14, false); // function mask
+
+            header.write::<u16>(offset + 2, message_control as u32);
+        }
+
+        Self {
+            messages,
+            table: Bitmap::new_in(Global, table_length as usize),
+        }
+    }
+
+    pub fn set(&mut self, vector: u8) -> usize {
+        let msix_vector = self
+            .table
+            .find_first_unset()
+            .expect("msix: no free vectors");
+
+        self.table.set(msix_vector, true);
+
+        let message = &mut self.messages[msix_vector];
+        message.set(vector);
+        message.set_masked(false);
+
+        msix_vector
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Capability {
+    Msi,
+    Msix,
+
+    Unknown,
+}
+
+pub struct CapabilityIter<'a> {
+    offset: u32,
+    header: &'a PciHeader,
+}
+
+impl<'a> CapabilityIter<'a> {
+    fn new(device: &'a PciHeader, offset: u32) -> Self {
+        Self {
+            offset,
+            header: device,
+        }
+    }
+}
+
+impl<'a> Iterator for CapabilityIter<'a> {
+    type Item = (u32, Capability);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset == 0 {
+            return None;
+        }
+
+        // Parse the capabilities linked-list.
+        //
+        // 15           8 7             0
+        // ------------------------------
+        // Next Pointer | Capability ID |
+        // ------------------------------
+        let id = unsafe { self.header.read::<u8>(self.offset) };
+        let capability = match id {
+            0x5 => Capability::Msi,
+            0x11 => Capability::Msix,
+
+            _ => Capability::Unknown,
+        };
+
+        let old_offset = self.offset;
+        self.offset = unsafe { self.header.read::<u8>(self.offset + 1) };
+
+        Some((old_offset, capability))
     }
 }
 
@@ -81,6 +237,7 @@ pub enum DeviceType {
     AtaController,
     SataController,
     SasController,
+    NvmeController,
     OtherMassStorageController,
 
     /*
@@ -252,6 +409,7 @@ impl DeviceType {
             (0x01, 0x05) => DeviceType::AtaController,
             (0x01, 0x06) => DeviceType::SataController,
             (0x01, 0x07) => DeviceType::SasController,
+            (0x01, 0x08) => DeviceType::NvmeController,
             (0x01, 0x80) => DeviceType::OtherMassStorageController,
 
             (0x02, 0x00) => DeviceType::EthernetController,
@@ -494,6 +652,17 @@ impl PciHeader {
     /// indicate layout for bytes,of the device’s configuration space.
     pub fn get_header_type(&self) -> u8 {
         unsafe { self.read::<u8>(0x0E) as u8 & 0b01111111 }
+    }
+
+    pub fn capabilities(&self) -> CapabilityIter {
+        let offset = unsafe { self.read::<u8>(0x34) };
+        CapabilityIter::new(self, offset)
+    }
+
+    pub fn msix(&self) -> Option<Msix> {
+        self.capabilities()
+            .find(|(_, e)| *e == Capability::Msix)
+            .map(|(offset, _)| Msix::new(self, offset))
     }
 
     /// Returns the value stored in the bar of the provided slot. Returns [`None`] if the

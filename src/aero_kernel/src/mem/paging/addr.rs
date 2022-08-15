@@ -118,8 +118,8 @@ impl VirtAddr {
 
     /// Returns if the address is valid to read `sizeof(T)` bytes at the address.
     fn validate_read<T: Sized>(&self) -> bool {
-        (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address() // in-range
-            && self.0 != 0 // non-null
+        // FIXME: (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address() // in-range
+        self.0 != 0 // non-null
     }
 
     /// Aligns the virtual address downwards to the given alignment.

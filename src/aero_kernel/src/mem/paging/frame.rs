@@ -35,7 +35,7 @@ use crate::mem::paging::align_up;
 use crate::utils::bitmap::Bitmap;
 use crate::utils::sync::Mutex;
 
-static BUDDY_SIZE: [u64; 3] = [Size4KiB::SIZE, Size4KiB::SIZE * 2, Size2MiB::SIZE];
+static BUDDY_SIZE: [u64; 3] = [Size4KiB::SIZE, Size4KiB::SIZE * 4, Size2MiB::SIZE];
 
 pub struct LockedFrameAllocator(Once<Mutex<GlobalFrameAllocator>>);
 
@@ -95,7 +95,7 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
             .get()
             .map(|m| {
                 m.lock()
-                    .allocate_frame_inner(1)
+                    .allocate_frame_inner(2)
                     .map(|f| PhysFrame::containing_address(f))
             })
             .unwrap_or(None)
@@ -112,7 +112,7 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
 
         self.0
             .get()
-            .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 1))
+            .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 2))
             .unwrap_or(());
     }
 }
@@ -167,7 +167,7 @@ impl Iterator for RangeMemoryIter {
 #[repr(usize)]
 pub enum BuddyOrdering {
     Size4KiB = 0,
-    Size8KiB = 1,
+    Size8KiB = 2,
 }
 
 pub fn pmm_alloc(order: BuddyOrdering) -> PhysAddr {

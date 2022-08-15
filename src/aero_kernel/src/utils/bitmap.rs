@@ -85,6 +85,40 @@ impl<A: Allocator> Bitmap<A> {
         n.get_bit(mod_bit_idx)
     }
 
+    /// Returns the index of the first unset bit.
+    ///
+    /// ## Example
+    /// ```rust
+    /// use alloc::alloc::Global;
+    ///
+    /// let mut bitmap = Bitmap::new_in(Global, 4096);
+    ///
+    /// bitmap.set(69, true);
+    /// assert_eq!(bitmap.find_first_set(), Some(0));
+    /// ```
+    pub fn find_first_unset(&self) -> Option<usize> {
+        for (i, block) in self.bitmap.iter().enumerate() {
+            let mut block_value = *block;
+
+            if block_value == 0 {
+                return Some(i * BLOCK_BITS);
+            }
+
+            let mut bit = 0;
+
+            // Loop through the bits in the block and find
+            // the first unset bit.
+            while block_value.get_bit(0) {
+                block_value >>= 1;
+                bit += 1;
+            }
+
+            return Some((i * BLOCK_BITS) + bit);
+        }
+
+        None
+    }
+
     /// Returns the index of the first set bit.
     ///
     /// ## Example
@@ -100,7 +134,6 @@ impl<A: Allocator> Bitmap<A> {
         for (i, block) in self.bitmap.iter().enumerate() {
             let mut block_value = *block;
 
-            // The chunk is empty, skip it.
             if block_value != 0 {
                 let mut bit = 0;
 
@@ -123,6 +156,17 @@ impl<A: Allocator> Bitmap<A> {
 mod test {
     use super::*;
     use alloc::alloc::Global;
+
+    #[test]
+    fn bitmap_first_unset_idx() {
+        let mut bitmap = Bitmap::new_in(Global, 4096);
+
+        bitmap.set(69, true);
+        assert_eq!(bitmap.find_first_unset(), Some(0));
+
+        bitmap.set(0, true);
+        assert_eq!(bitmap.find_first_unset(), Some(1));
+    }
 
     #[test]
     fn bitmap_first_set_idx() {
