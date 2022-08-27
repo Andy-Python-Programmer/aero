@@ -66,6 +66,7 @@ mod prelude {
     }
 }
 
+use limine::LimineFile;
 #[prelude_import]
 pub use prelude::rust_2021::*;
 
@@ -92,8 +93,6 @@ mod unwind;
 mod userland;
 mod utils;
 
-use stivale_boot::v2::*;
-
 use self::mem::alloc::LockedHeap;
 use self::mem::paging::VirtAddr;
 
@@ -106,8 +105,7 @@ use self::userland::task::Task;
 static AERO_SYSTEM_ALLOCATOR: LockedHeap = LockedHeap::new_uninit();
 
 static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
-static UNWIND_INFO: spin::Once<&StivaleKernelFileV2Tag> = spin::Once::new();
-static INITRD_MODULE: spin::Once<&StivaleModule> = spin::Once::new();
+static INITRD_MODULE: spin::Once<&LimineFile> = spin::Once::new();
 
 const IO_VIRTUAL_BASE: VirtAddr = VirtAddr::new(0xffffff0000000000);
 

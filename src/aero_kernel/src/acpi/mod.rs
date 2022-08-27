@@ -25,7 +25,7 @@
 use spin::Once;
 
 use crate::{
-    mem::paging::{PhysAddr, VirtAddr},
+    mem::paging::VirtAddr,
     utils::sync::{Mutex, MutexGuard},
 };
 
@@ -104,8 +104,7 @@ pub fn get_acpi_table() -> MutexGuard<'static, AcpiTable> {
 }
 
 /// Initialize the ACPI tables.
-pub fn init(rsdp_address: PhysAddr) {
-    let rsdp_address = rsdp_address.as_hhdm_virt();
+pub fn init(rsdp_address: VirtAddr) {
     let acpi_table = AcpiTable::new(rsdp_address);
 
     ACPI_TABLE.call_once(|| Mutex::new(acpi_table));

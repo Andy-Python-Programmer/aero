@@ -9,7 +9,7 @@
                 "platform select remote-gdb-server"
             ],
             "targetCreateCommands": [
-                "target create ${workspaceFolder}/src/target/x86_64-aero_os/release/aero_kernel"
+                "target create ${workspaceFolder}/build/iso_root/aero.elf"
             ],
             "processCreateCommands": [
                 "gdb-remote 127.0.0.1:1234" // Connect to the GDB Server

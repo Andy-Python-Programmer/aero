@@ -60,6 +60,7 @@ pub struct Madt {
 
 impl Madt {
     pub(super) fn init(&'static self) {
+        return;
         log::debug!("storing AP trampoline at 0x1000");
 
         let page_index = unsafe { smp_prepare_trampoline() };

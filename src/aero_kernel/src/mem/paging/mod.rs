@@ -30,7 +30,8 @@ pub use self::mapper::*;
 pub use self::page::*;
 pub use self::page_table::*;
 
-use stivale_boot::v2::StivaleMemoryMapTag;
+use limine::LimineMemmapEntry;
+use limine::NonNullPtr;
 
 pub use frame::LockedFrameAllocator;
 
@@ -75,15 +76,8 @@ pub fn level_5_paging_enabled() -> bool {
 
 /// Initialize paging.
 pub fn init(
-    memory_regions: &'static StivaleMemoryMapTag,
+    memory_regions: &mut [NonNullPtr<LimineMemmapEntry>],
 ) -> Result<OffsetPageTable<'static>, MapToError<Size4KiB>> {
-    let memory_regions = unsafe {
-        let ptr = memory_regions as *const StivaleMemoryMapTag;
-        let addr = PhysAddr::new(ptr as u64).as_hhdm_virt();
-
-        &*addr.as_mut_ptr::<StivaleMemoryMapTag>()
-    };
-
     let active_level_4 = unsafe { active_level_4_table() };
     let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };
 

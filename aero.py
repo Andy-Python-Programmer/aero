@@ -59,15 +59,16 @@ TIMEOUT=0
 VERBOSE=yes
 
 :aero
-PROTOCOL=stivale2
+PROTOCOL=limine
+KASLR=no
 KERNEL_PATH=boot:///aero.elf
 CMDLINE=term-background=background theme-background=0x50000000
 
 MODULE_PATH=boot:///term_background.bmp
-MODULE_STRING=background
+MODULE_CMDLINE=background
 
 MODULE_PATH=boot:///initramfs.cpio
-MODULE_STRING=initramfs
+MODULE_CMDLINE=initramfs
 """
 
 

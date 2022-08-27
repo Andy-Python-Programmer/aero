@@ -22,9 +22,8 @@ use core::ptr::NonNull;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::vec::Vec;
+use limine::{LimineMemmapEntry, LimineMemoryMapEntryType, NonNullPtr};
 use spin::Once;
-use stivale_boot::v2::StivaleMemoryMapEntry;
-use stivale_boot::v2::{StivaleMemoryMapEntryType, StivaleMemoryMapIter, StivaleMemoryMapTag};
 
 use super::mapper::*;
 use super::page::*;
@@ -47,7 +46,7 @@ impl LockedFrameAllocator {
     }
 
     /// Initializes the inner locked global frame allocator.
-    pub(super) fn init(&self, memory_map: &'static StivaleMemoryMapTag) {
+    pub(super) fn init(&self, memory_map: &mut [NonNullPtr<LimineMemmapEntry>]) {
         self.0
             .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
     }
@@ -117,14 +116,14 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
     }
 }
 
-struct RangeMemoryIter {
-    iter: StivaleMemoryMapIter<'static>,
+struct RangeMemoryIter<'a> {
+    iter: core::slice::Iter<'a, NonNullPtr<LimineMemmapEntry>>,
 
     cursor_base: PhysAddr,
     cursor_end: PhysAddr,
 }
 
-impl Iterator for RangeMemoryIter {
+impl<'a> Iterator for RangeMemoryIter<'a> {
     type Item = MemoryRange;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -134,24 +133,19 @@ impl Iterator for RangeMemoryIter {
                 // the memory map and set the cursor to the start of it.
                 let next = self.iter.next()?;
 
-                if next.entry_type == StivaleMemoryMapEntryType::Usable {
+                if next.typ == LimineMemoryMapEntryType::Usable {
                     break Some(next);
                 }
             } {
                 self.cursor_base = PhysAddr::new(entry.base).align_up(Size4KiB::SIZE);
-                self.cursor_end = PhysAddr::new(entry.base + entry.length);
+                self.cursor_end = PhysAddr::new(entry.base + entry.len);
             } else {
                 // We reached the end of the memory map.
                 return None;
             }
         }
 
-        let mut typee = MemoryRangeType::Usable;
-
-        if (CONVENTIONAL_MEM_START..CONVENTIONAL_MEM_END).contains(&self.cursor_base) {
-            self.cursor_base = CONVENTIONAL_MEM_END;
-            typee = MemoryRangeType::Conventional;
-        }
+        let typee = MemoryRangeType::Usable;
 
         let range = MemoryRange {
             addr: self.cursor_base,
@@ -274,13 +268,6 @@ unsafe impl Allocator for BootAllocRef {
 
 unsafe impl Send for BootAllocRef {}
 
-const CONVENTIONAL_MEM_START: PhysAddr = unsafe { PhysAddr::new_unchecked(0x00) };
-
-// NOTE: Even though conventional memory is till `0x100000` (which is 4KiB * 256), we only
-// reserve the first 4 4KiB pages (as conventional memory) which is mainly used to startup
-// the APs.
-const CONVENTIONAL_MEM_END: PhysAddr = unsafe { PhysAddr::new_unchecked(Size4KiB::SIZE * 4) };
-
 static VM_FRAMES: Once<Vec<VmFrame>> = Once::new();
 
 /// Buddy allocator combines power-of-two allocator with free buffer
@@ -312,41 +299,38 @@ pub struct GlobalFrameAllocator {
 
 impl GlobalFrameAllocator {
     /// Create a new global frame allocator from the memory map provided by the bootloader.
-    fn new(memory_map: &'static StivaleMemoryMapTag) -> Self {
-        let mut iter = memory_map.iter();
-        let cursor = iter
-            .next()
-            .expect("stivale2: unexpected end of the memory map");
-
+    fn new(memory_map: &mut [NonNullPtr<LimineMemmapEntry>]) -> Self {
         // Find a memory map entry that is big enough to fit all of the items in
         // range memory iter.
-        let requested_size = core::mem::size_of::<MemoryRange>() as u64 * memory_map.entries_len;
+        let requested_size = (core::mem::size_of::<MemoryRange>() * memory_map.len()) as u64;
         let mut region = None;
 
-        for i in 0..memory_map.entries_len {
-            let entry = &memory_map.as_slice()[i as usize];
+        for i in 0..memory_map.len() {
+            let entry = &mut memory_map[i];
 
             // Make sure that the memory map entry is marked as usable.
-            if entry.entry_type != StivaleMemoryMapEntryType::Usable {
+            if entry.typ != LimineMemoryMapEntryType::Usable {
                 continue;
             }
 
-            if entry.length >= requested_size && entry.base > CONVENTIONAL_MEM_END.as_u64() {
-                // Found a big enough memory map entry.
-                //
-                // SAFETY: Its safe for us to mutate the memory map entry & life is ment to be
-                // unsafe. We use the power of holy transmutes here.
-                let entry_mut = unsafe { &mut *(entry as *const _ as *mut StivaleMemoryMapEntry) };
-                let base = entry_mut.base;
+            // Found a big enough memory map entry.
+            if entry.len >= requested_size {
+                let base = entry.base;
 
-                entry_mut.base += requested_size;
-                entry_mut.length -= requested_size;
+                entry.base += requested_size;
+                entry.len -= requested_size;
 
                 region = Some(PhysAddr::new(base));
 
                 break;
             }
         }
+
+        let mut iter = memory_map.iter();
+
+        let cursor = iter
+            .next()
+            .expect("stivale2: unexpected end of the memory map");
 
         let ranges = unsafe {
             let virt_addr = region.expect("stivale2: out of memory").as_hhdm_virt();
@@ -361,7 +345,7 @@ impl GlobalFrameAllocator {
             iter,
 
             cursor_base: PhysAddr::new(cursor.base),
-            cursor_end: PhysAddr::new(cursor.base + cursor.length),
+            cursor_end: PhysAddr::new(cursor.base + cursor.len),
         };
 
         // Lets goo! Now lets initialize the bootstrap allocator so we can initialize

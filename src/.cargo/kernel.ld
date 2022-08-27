@@ -1,80 +1,54 @@
+/* Tell the linker that we want an x86_64 ELF64 output file */
+OUTPUT_FORMAT(elf64-x86-64)
+OUTPUT_ARCH(i386:x86-64)
+
+/* We want the symbol `x86_64_aero_main` to be our entry point */
 ENTRY(x86_64_aero_main)
-OUTPUT_FORMAT(elf64-x86-64) 
 
-/* We want to be placed in the higher half, 2MiB above 0x00 in physical memory */
-KERNEL_OFFSET = 0xFFFFFFFF80200000;
-
-SECTIONS 
+/* Define the program headers we want so the bootloader gives us the right */
+/* MMU permissions */
+PHDRS
 {
-    . = KERNEL_OFFSET;
+    null    PT_NULL    FLAGS(0) ;                   /* Null segment */
+    text    PT_LOAD    FLAGS((1 << 0) | (1 << 2)) ; /* Execute + Read */
+    rodata  PT_LOAD    FLAGS((1 << 2)) ;            /* Read only */
+    data    PT_LOAD    FLAGS((1 << 1) | (1 << 2)) ; /* Write + Read */
+}
 
-    __kernel_start = .;
+SECTIONS
+{
+    /* We wanna be placed in the topmost 2GiB of the address space, for optimisations */
+    /* and because that is what the Limine spec mandates. */
+    /* Any address in this region will do, but often 0xffffffff80000000 is chosen as */
+    /* that is the beginning of the region. */
+    . = 0xffffffff80000000;
 
-    .stivale2hdr : ALIGN(4K) {
-        KEEP(*(.stivale2hdr))
-    }
-
-    /* Then place all of the other traditional executable sections afterwards... */
-    . = ALIGN(4K);
     .text : {
-        __text_start = .;
         *(.text .text.*)
-        . = ALIGN(4096);
-        __text_end = .;
-    }
+    } :text
 
-    . = ALIGN(4K);
+    /* Move to the next memory page for .rodata */
+    . += CONSTANT(MAXPAGESIZE);
+
     .rodata : {
-        __rodata_start = .;
-        *(.rodata*)
-        . = ALIGN(4096);
-        __rodata_end = .;
-    }
+        *(.rodata .rodata.*)
+    } :rodata
 
-    /* The kernel makes use of the tdata section for CPU-local variables... */
-    . = ALIGN(4K);
-    .tdata : {
-        __tdata_start = .;
-        KEEP(*(.tdata*))
-        KEEP(*(.tbss*))
-        __tdata_end = ALIGN(8);
-    }
+    /* Move to the next memory page for .data */
+    . += CONSTANT(MAXPAGESIZE);
 
-    . = ALIGN(4K);
     .data : {
-        __data_start = .;
         *(.data .data.*)
-        . = ALIGN(4096);
-        __data_end = .;
-    }
+    } :data
 
-    . = ALIGN(4K);
     .kernel_modules : {
         __kernel_modules_start = .;
         KEEP(*(.kernel_modules.init))
         __kernel_modules_end = .;
     }
 
-    . = ALIGN(4K);
     .bss : {
-        __bss_start = .;
+        *(COMMON)
         *(.bss .bss.*)
-        . = ALIGN(4096);
-        __bss_end = .;
-    }
-    
-    __kernel_end = .;
-
-    /* 
-     * Discard all of the useless sections for us. Note that Aero does do stack unwinding on panic, instead
-     * of aborting, but it does not use the eh frame. See the `aero_kernel/src/unwind.rs` file for more
-     * information.
-     */
-    /DISCARD/ : {
-        *(.comment*)
-        *(.eh_frame*)
-        *(.gcc_except_table*)
-        *(.note*)
-        *(.rel.eh_frame*)
-    }
+    } :data
 }

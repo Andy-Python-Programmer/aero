@@ -1,7 +1,7 @@
 use core::num::ParseIntError;
 
+use limine::{LimineFile, NonNullPtr};
 use spin::Once;
-use stivale_boot::v2::StivaleModuleTag;
 
 use crate::rendy;
 
@@ -27,11 +27,16 @@ impl CommandLine {
     }
 }
 
-fn resolve_module(modules: &'static StivaleModuleTag, name: &str) -> &'static [u8] {
+fn resolve_module(modules: &[NonNullPtr<LimineFile>], name: &str) -> &'static [u8] {
     modules
         .iter()
-        .find(|m| m.as_str() == name)
-        .map(|m| unsafe { core::slice::from_raw_parts(m.start as *const u8, m.size() as usize) })
+        .find(|m| {
+            let n = unsafe { m.cmdline.to_str().unwrap().to_str().unwrap() };
+            n == name
+        })
+        .map(|m| unsafe {
+            core::slice::from_raw_parts(m.base.as_ptr().unwrap(), m.length as usize)
+        })
         .expect("resolve_module: invalid operand")
 }
 
@@ -50,7 +55,7 @@ fn parse_number(mut string: &str) -> Result<usize, ParseIntError> {
     }
 }
 
-pub fn parse(cmdline: &'static str, modules: &'static StivaleModuleTag) -> CommandLine {
+pub fn parse(cmdline: &'static str, modules: &[NonNullPtr<LimineFile>]) -> CommandLine {
     RAW_CMDLINE_STR.call_once(|| cmdline);
 
     // Chew up the leading spaces.

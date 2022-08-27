@@ -26,7 +26,6 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::TimeSpec;
-use stivale_boot::v2::StivaleEpochTag;
 
 use crate::apic;
 
@@ -42,7 +41,7 @@ pub const PIT_DIVIDEND: usize = 1193182;
 static UPTIME_RAW: AtomicUsize = AtomicUsize::new(0);
 static UPTIME_SEC: AtomicUsize = AtomicUsize::new(0);
 
-pub static EPOCH_TAG: spin::Once<&'static StivaleEpochTag> = spin::Once::new();
+pub static EPOCH: AtomicUsize = AtomicUsize::new(usize::MAX);
 pub static REALTIME_CLOCK: Mutex<aero_syscall::TimeSpec> = Mutex::new(aero_syscall::TimeSpec {
     tv_sec: 0,
     tv_nsec: 0,
@@ -120,10 +119,7 @@ fn pit_irq_handler(_stack: &mut InterruptStack) {
 pub fn init() {
     apic::get_local_apic().timer_calibrate();
 
-    REALTIME_CLOCK.lock().tv_sec = EPOCH_TAG
-        .get()
-        .expect("failed to initialize realtime clock")
-        .epoch as isize;
+    REALTIME_CLOCK.lock().tv_sec = EPOCH.load(Ordering::SeqCst) as _;
 
     set_frequency(PIT_FREQUENCY_HZ);
 

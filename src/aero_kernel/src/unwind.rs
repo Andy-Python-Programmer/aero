@@ -25,7 +25,7 @@ use xmas_elf::sections::{SectionData, ShType};
 use xmas_elf::symbol_table::Entry;
 use xmas_elf::ElfFile;
 
-use crate::mem::paging::{PhysAddr, Translate, VirtAddr};
+use crate::mem::paging::{Translate, VirtAddr};
 use crate::mem::AddressSpace;
 
 use crate::logger;
@@ -34,6 +34,7 @@ use crate::rendy;
 use crate::arch::interrupts;
 
 static PANIC_HOOK_READY: AtomicBool = AtomicBool::new(false);
+pub static UNWIND_INFO: spin::Once<UnwindInfo> = spin::Once::new();
 
 pub fn set_panic_hook_ready(yes: bool) {
     PANIC_HOOK_READY.store(yes, Ordering::SeqCst);
@@ -61,23 +62,21 @@ pub fn prepare_panic() {
     }
 }
 
-// todo: return `ElfLoadResult` (defined in `vm.rs`) instead of returning an optional value.
-fn get_kernel_elf() -> Option<ElfFile<'static>> {
-    let unwind_info = crate::UNWIND_INFO.get()?;
+pub struct UnwindInfo {
+    kernel_elf: ElfFile<'static>,
+}
 
-    let elf_start = PhysAddr::new(unwind_info.kernel_start).as_hhdm_virt();
-    let elf_size = unwind_info.kernel_size as usize;
-
-    // SAFETY: The kernel start and end addresses are valid.
-    let elf_slice = unsafe { core::slice::from_raw_parts(elf_start.as_ptr::<u8>(), elf_size) };
-    ElfFile::new(elf_slice).ok()
+impl UnwindInfo {
+    pub fn new(elf: ElfFile<'static>) -> Self {
+        Self { kernel_elf: elf }
+    }
 }
 
 pub fn unwind_stack_trace() {
     let mut address_space = AddressSpace::this();
     let offset_table = address_space.offset_page_table();
 
-    let kernel_elf = get_kernel_elf().unwrap();
+    let kernel_elf = &UNWIND_INFO.get().unwrap().kernel_elf;
     let mut symbol_table = None;
 
     for section in kernel_elf.section_iter() {

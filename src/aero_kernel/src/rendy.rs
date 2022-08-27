@@ -24,14 +24,12 @@ use core::u8;
 
 use alloc::boxed::Box;
 
+use limine::LimineFramebuffer;
 use spin::Once;
 
 use crate::cmdline::CommandLine;
 use crate::mem;
 use crate::mem::paging::align_up;
-use crate::mem::paging::PhysAddr;
-
-use stivale_boot::v2::StivaleFramebufferTag;
 
 use crate::utils::sync::Mutex;
 
@@ -938,14 +936,14 @@ pub unsafe fn force_unlock() {
     DEBUG_RENDY.get().map(|l| l.force_unlock());
 }
 
-pub fn init(framebuffer_tag: &'static StivaleFramebufferTag, cmdline: &CommandLine) {
+pub fn init(framebuffer_tag: &LimineFramebuffer, cmdline: &CommandLine) {
     let framebuffer_info = RendyInfo {
         byte_len: framebuffer_tag.size(),
-        bits_per_pixel: framebuffer_tag.framebuffer_bpp as usize,
-        horizontal_resolution: framebuffer_tag.framebuffer_width as usize,
-        vertical_resolution: framebuffer_tag.framebuffer_height as usize,
+        bits_per_pixel: framebuffer_tag.bpp as usize,
+        horizontal_resolution: framebuffer_tag.width as usize,
+        vertical_resolution: framebuffer_tag.height as usize,
         pixel_format: PixelFormat::BGR,
-        stride: framebuffer_tag.framebuffer_pitch as usize,
+        stride: framebuffer_tag.pitch as usize,
 
         red_mask_shift: framebuffer_tag.red_mask_shift,
         red_mask_size: framebuffer_tag.red_mask_size,
@@ -957,11 +955,9 @@ pub fn init(framebuffer_tag: &'static StivaleFramebufferTag, cmdline: &CommandLi
         blue_mask_size: framebuffer_tag.blue_mask_size,
     };
 
-    let framebuffer_addr = PhysAddr::new(framebuffer_tag.framebuffer_addr).as_hhdm_virt();
-
     let framebuffer = unsafe {
         core::slice::from_raw_parts_mut::<u32>(
-            framebuffer_addr.as_mut_ptr(),
+            framebuffer_tag.address.as_ptr().unwrap() as *mut u32,
             framebuffer_info.byte_len,
         )
     };
