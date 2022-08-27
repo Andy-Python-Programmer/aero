@@ -31,7 +31,7 @@ fn resolve_module(modules: &[NonNullPtr<LimineFile>], name: &str) -> &'static [u
     modules
         .iter()
         .find(|m| {
-            let n = unsafe { m.cmdline.to_str().unwrap().to_str().unwrap() };
+            let n = m.cmdline.to_str().unwrap().to_str().unwrap();
             n == name
         })
         .map(|m| unsafe {

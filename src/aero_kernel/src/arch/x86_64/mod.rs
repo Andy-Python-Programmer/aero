@@ -125,7 +125,10 @@ extern "C" fn x86_64_aero_main() -> ! {
     // setup the debug renderer.
     //
     // SAFETY: The `cmdline` is a valid, aligned, and NULL terminated string.
-    let command_line = unsafe { kernel_file.cmdline.to_str() }.expect("limine: bad command line");
+    let command_line = kernel_file
+        .cmdline
+        .to_str()
+        .expect("limine: bad command line");
     let command_line = cmdline::parse(
         command_line.to_str().expect("cmdline: invalid utf8"),
         modules,
@@ -177,7 +180,7 @@ extern "C" fn x86_64_aero_main() -> ! {
     crate::INITRD_MODULE.call_once(|| {
         modules
             .iter()
-            .find(|e| unsafe { e.cmdline.to_str().unwrap() }.to_str().unwrap() == "initramfs")
+            .find(|e| e.cmdline.to_str().unwrap().to_str().unwrap() == "initramfs")
             .unwrap()
     });
 
