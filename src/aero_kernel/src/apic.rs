@@ -414,17 +414,6 @@ pub fn get_cpu_count() -> usize {
     CPU_COUNT.load(Ordering::Relaxed)
 }
 
-/// Returns true if the AP is ready.
-#[inline]
-pub fn ap_ready() -> bool {
-    AP_READY.load(Ordering::SeqCst)
-}
-
-#[inline]
-pub fn mark_ap_ready(value: bool) {
-    AP_READY.store(value, Ordering::SeqCst);
-}
-
 #[inline]
 pub fn is_bsp_ready() -> bool {
     BSP_READY.load(Ordering::SeqCst)

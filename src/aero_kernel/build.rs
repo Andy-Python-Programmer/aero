@@ -23,7 +23,6 @@ use std::error::Error;
 use std::ffi::OsString;
 use std::fs::DirEntry;
 use std::path::Path;
-use std::process::Command;
 
 //this is all magic, yes dont ever let anyone see this shit
 
@@ -55,23 +54,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         let path = entry.path();
 
         match path.extension() {
-            Some(ext) if ext.eq(&OsString::from("real")) => {
-                let object_os = path.file_name().expect("Failed to get file name");
-                let object_file = object_os.to_str().expect("Invalid UTF-8 for file name");
-
-                let success = Command::new("nasm")
-                    .arg("-f")
-                    .arg("bin")
-                    .arg("-o")
-                    .arg(format!("../target/{}.bin", object_file))
-                    .arg(format!("{}", path.display()))
-                    .status()
-                    .expect("Failed to assemble real source file")
-                    .success();
-
-                assert!(success);
-            }
-
             Some(ext) if ext.eq(&OsString::from("inc")) => {
                 let path = path
                     .to_str()

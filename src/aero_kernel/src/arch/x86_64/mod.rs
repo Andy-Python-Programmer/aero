@@ -30,6 +30,7 @@ use core::sync::atomic::Ordering;
 use crate::acpi;
 use crate::acpi::aml;
 use crate::apic;
+use crate::apic::CPU_COUNT;
 use crate::cmdline;
 
 use crate::mem;
@@ -47,13 +48,14 @@ use limine::*;
 
 use self::interrupts::INTERRUPT_CONTROLLER;
 
-static mut MEMMAP: LimineMemmapRequest = LimineMemmapRequest::new(0);
+static MEMMAP: LimineMemmapRequest = LimineMemmapRequest::new(0);
+static SMP: LimineSmpRequest = LimineSmpRequest::new(0);
 static KERNEL_FILE: LimineKernelFileRequest = LimineKernelFileRequest::new(0);
 static MODULES: LimineModuleRequest = LimineModuleRequest::new(0);
 static FRAMEBUFFER: LimineFramebufferRequest = LimineFramebufferRequest::new(0);
 static RSDP: LimineRsdpRequest = LimineRsdpRequest::new(0);
 static BOOT_TIME: LimineBootTimeRequest = LimineBootTimeRequest::new(0);
-static STACK: LimineStackSizeRequest = LimineStackSizeRequest::new(0).stack_size(0x1000 * 32);
+static STACK: LimineStackSizeRequest = LimineStackSizeRequest::new(0).stack_size(0x1000 * 32); // 16KiB of stack for both the BSP and the APs
 static HHDM: LimineHhdmRequest = LimineHhdmRequest::new(0);
 
 #[no_mangle]
@@ -63,7 +65,7 @@ extern "C" fn x86_64_aero_main() -> ! {
     }
 
     // SAFETY: We have exclusive access to the memory map.
-    let memmap = unsafe { &mut MEMMAP }
+    let memmap = MEMMAP
         .get_response()
         .get_mut()
         .expect("limine: invalid memmap response")
@@ -129,19 +131,34 @@ extern "C" fn x86_64_aero_main() -> ! {
         .cmdline
         .to_str()
         .expect("limine: bad command line");
+
     let command_line = cmdline::parse(
         command_line.to_str().expect("cmdline: invalid utf8"),
         modules,
     );
-
-    gdt::init_boot();
-    log::info!("loaded bootstrap GDT");
 
     paging::init(memmap).unwrap();
     log::info!("loaded paging");
 
     mem::alloc::init_heap();
     log::info!("loaded heap");
+
+    // SMP initialization.
+    let smp_response = SMP.get_response().get_mut().unwrap();
+    let bsp_lapic_id = smp_response.bsp_lapic_id;
+
+    for cpu in smp_response.cpus().iter_mut() {
+        CPU_COUNT.fetch_add(1, Ordering::SeqCst);
+
+        if cpu.lapic_id == bsp_lapic_id {
+            continue;
+        }
+
+        cpu.goto_address = x86_64_aero_ap_main;
+    }
+
+    gdt::init_boot();
+    log::info!("loaded bootstrap GDT");
 
     paging::init_vm_frames();
 
@@ -193,7 +210,10 @@ extern "C" fn x86_64_aero_main() -> ! {
 }
 
 #[no_mangle]
-extern "C" fn x86_64_aero_ap_main(ap_id: usize, stack_top_addr: VirtAddr) {
+extern "C" fn x86_64_aero_ap_main(boot_info: *const LimineSmpInfo) -> ! {
+    let boot_info = unsafe { &*boot_info };
+    let ap_id = boot_info.processor_id as usize;
+
     log::debug!("booting CPU {}", ap_id);
 
     gdt::init_boot();
@@ -206,8 +226,6 @@ extern "C" fn x86_64_aero_ap_main(ap_id: usize, stack_top_addr: VirtAddr) {
     log::info!("AP{}: loaded GDT", ap_id);
 
     syscall::init();
-
-    apic::mark_ap_ready(true);
 
     // Wait for the BSP to be ready (after the BSP has initialized
     // the scheduler).

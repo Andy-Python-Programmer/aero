@@ -197,7 +197,6 @@ struct MemoryRange {
 #[derive(Debug, PartialEq)]
 enum MemoryRangeType {
     Usable,
-    Conventional,
 }
 
 struct BootAlloc {
@@ -214,10 +213,6 @@ impl BootAlloc {
     fn allocate_inner(&self, size: usize) -> *mut u8 {
         let size = align_up(size as u64, Size4KiB::SIZE);
         for range in self.memory_ranges.lock().iter_mut().rev() {
-            if range.typee == MemoryRangeType::Conventional {
-                continue;
-            }
-
             if range.size >= size {
                 let addr = range.addr;
 
