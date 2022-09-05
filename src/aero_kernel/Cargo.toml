@@ -42,7 +42,7 @@ uapi = { path = "../uapi" }
 cpio_reader = { git = "https://github.com/Andy-Python-Programmer/cpio_reader" }
 static_assertions = "1.1.0"
 
-limine = { path = "../../../limine-rs" }
+limine = { git = "https://github.com/limine-bootloader/limine-rs" }
 
 [dependencies.vte]
 git = "https://github.com/Andy-Python-Programmer/vte"
