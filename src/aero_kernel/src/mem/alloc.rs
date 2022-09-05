@@ -20,141 +20,22 @@
 use core::alloc;
 use core::alloc::{GlobalAlloc, Layout};
 
-use crate::utils::sync::Mutex;
-
 use super::paging::FRAME_ALLOCATOR;
 use super::vmalloc;
 use crate::mem::paging::*;
 
-#[repr(C)]
-struct SlabHeader {
-    ptr: *mut Slab,
-}
-
-/// The slab is the primary unit of currency in the slab allocator.
-struct Slab {
-    size: usize,
-    first_free: usize,
-}
-
-impl Slab {
-    const fn new(size: usize) -> Self {
-        Self {
-            size,
-            first_free: 0,
-        }
-    }
-
-    fn init(&mut self) {
-        let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
-            .allocate_frame()
-            .expect("slab_init: failed to allocate frame");
-
-        self.first_free = frame.start_address().as_hhdm_virt().as_u64() as usize;
-
-        let hdr_size = core::mem::size_of::<SlabHeader>() as u64;
-        let aligned_hdr_size = align_up(hdr_size, self.size as u64) as usize;
-
-        let avl_size = Size4KiB::SIZE as usize - aligned_hdr_size;
-
-        let slab_ptr = unsafe { &mut *(self.first_free as *mut SlabHeader) };
-        slab_ptr.ptr = self as *mut Slab;
-
-        self.first_free += aligned_hdr_size;
-
-        let arr_ptr = self.first_free as *mut usize;
-        let array = unsafe { core::slice::from_raw_parts_mut(arr_ptr, avl_size) };
-
-        // A slab is built by allocating a 4KiB page, placing the slab data at
-        // the end, and dividing the rest into equal-size buffers:
-        //
-        // ------------------------------------------------------
-        // | buffer | buffer | buffer | buffer | slab header
-        // ------------------------------------------------------
-        //                         one page
-        let max = avl_size / self.size - 1;
-        let fact = self.size / 8;
-
-        for i in 0..max {
-            unsafe {
-                array[i * fact] = array.as_ptr().add((i + 1) * fact) as usize;
-            }
-        }
-
-        array[max * fact] = 0;
-    }
-
-    fn alloc(&mut self) -> *mut u8 {
-        if self.first_free == 0 {
-            self.init();
-        }
-
-        let old_free = self.first_free as *mut usize;
-
-        unsafe {
-            self.first_free = *old_free;
-        }
-
-        old_free as *mut u8
-    }
-
-    fn dealloc(&mut self, ptr: *mut u8) {
-        if ptr == core::ptr::null_mut() {
-            panic!("dealloc: attempted to free a nullptr")
-        }
-
-        let new_head = ptr as *mut usize;
-
-        unsafe {
-            *new_head = self.first_free;
-        }
-
-        self.first_free = new_head as usize;
-    }
-}
-
-struct ProtectedAllocator {
-    slabs: [Slab; 10],
-}
-
-struct Allocator {
-    inner: Mutex<ProtectedAllocator>,
-}
+struct Allocator {}
 
 impl Allocator {
     const fn new() -> Self {
-        Self {
-            inner: Mutex::new(ProtectedAllocator {
-                slabs: [
-                    Slab::new(8),
-                    Slab::new(16),
-                    Slab::new(24),
-                    Slab::new(32),
-                    Slab::new(48),
-                    Slab::new(64),
-                    Slab::new(128),
-                    Slab::new(256),
-                    Slab::new(512),
-                    Slab::new(1024),
-                ],
-            }),
-        }
+        Self {}
     }
 
     fn alloc(&self, layout: Layout) -> *mut u8 {
-        let mut inner = self.inner.lock_irq();
-
-        let slab = inner
-            .slabs
-            .iter_mut()
-            .find(|slab| slab.size >= (8 + layout.size()));
-
-        if let Some(slab) = slab {
-            slab.alloc()
+        if layout.size() <= 4096 {
+            let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR.allocate_frame().unwrap();
+            frame.start_address().as_hhdm_virt().as_mut_ptr()
         } else {
-            // the vmalloc allocator may require reverse dependency
-            core::mem::drop(inner);
-
             let size = align_up(layout.size() as _, Size4KiB::SIZE) / Size4KiB::SIZE;
 
             vmalloc::get_vmalloc()
@@ -172,12 +53,7 @@ impl Allocator {
             return;
         }
 
-        let slab_header = (ptr as usize & !(0xfff)) as *mut SlabHeader;
-
-        let slab_header = unsafe { &mut *slab_header };
-        let slab = unsafe { &mut *slab_header.ptr };
-
-        slab.dealloc(ptr);
+        // TODO: free the slab.
     }
 }
 

@@ -26,6 +26,7 @@
 //! at [`VMALLOC_VIRT_START`] and ending at [`VMALLOC_VIRT_END`].
 
 use alloc::boxed::Box;
+use alloc::collections::VecDeque;
 use intrusive_collections::*;
 use spin::Once;
 
@@ -82,17 +83,17 @@ impl<'a> KeyAdapter<'a> for VmallocAreaAdaptor {
 intrusive_collections::intrusive_adapter!(VmallocAreaAdaptor = Box<VmallocArea>: VmallocArea { link: RBTreeLink });
 
 pub(super) struct Vmalloc {
-    free_list: RBTree<VmallocAreaAdaptor>,
+    free_list: VecDeque<VmallocArea>,
 }
 
 impl Vmalloc {
     fn new() -> Self {
         let mut this = Self {
-            free_list: RBTree::new(Default::default()),
+            free_list: VecDeque::new(),
         };
 
         this.free_list
-            .insert(box VmallocArea::new(VMALLOC_START, VMALLOC_MAX_SIZE));
+            .push_back(VmallocArea::new(VMALLOC_START, VMALLOC_MAX_SIZE));
 
         this
     }
@@ -101,10 +102,11 @@ impl Vmalloc {
         // +1: area for the guard page.
         let size_bytes = (npages + 1) * Size4KiB::SIZE as usize;
 
-        let area = self
+        let (i, area) = self
             .free_list
             .iter()
-            .find(|area| area.protected.lock().size >= size_bytes)?;
+            .enumerate()
+            .find(|(_, area)| area.protected.lock().size >= size_bytes)?;
 
         let mut area_p = area.protected.lock();
         let address = area_p.addr.clone();
@@ -117,11 +119,7 @@ impl Vmalloc {
             // from the free list.
             core::mem::drop(area_p); // unlock
 
-            let area_ptr = area as *const VmallocArea;
-
-            // SAFETY: The constructed pointer is a valid object that is in the tree,
-            let mut area_cursor = unsafe { self.free_list.cursor_mut_from_ptr(area_ptr) };
-            area_cursor.remove();
+            self.free_list.remove(i);
         }
 
         // subtract the size of the guard page since we are not required to allocate
@@ -174,8 +172,9 @@ impl Vmalloc {
             merge.addr = addr;
             merge.size += size;
         } else {
-            // the block cannot be merged, so add it to the free list.
-            self.free_list.insert(box VmallocArea::new(addr, size));
+            // We add it to the back of the free list since, its more likely
+            // to find larger free areas in the front of the list.
+            self.free_list.push_back(VmallocArea::new(addr, size));
         }
 
         // subtract the size of the guard page since its not mapped.
