@@ -231,7 +231,7 @@ def download_bundled():
                 file.write(response.content)
 
     if not os.path.exists(limine_path):
-        run_command(['git', 'clone', '--branch', 'v3.0-branch-binary',
+        run_command(['git', 'clone', '--branch', 'v4.x-branch-binary',
                     '--depth', '1', LIMINE_URL, limine_path])
 
     if not os.path.exists(SYSROOT_DIR):
