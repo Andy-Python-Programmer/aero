@@ -45,9 +45,9 @@ use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::syscall::ExecArgs;
 use crate::userland::vm::Vm;
-use crate::utils::{io, StackHelper};
+use crate::utils::StackHelper;
 
-use super::controlregs;
+use super::{controlregs, io};
 
 use crate::mem::AddressSpace;
 

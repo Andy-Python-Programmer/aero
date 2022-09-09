@@ -17,10 +17,27 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#[cfg(target_arch = "x86_64")]
 pub mod block;
+#[cfg(target_arch = "x86_64")]
 pub mod drm;
+// FIXME: aarch64 port
+#[cfg(target_arch = "x86_64")]
 pub mod keyboard;
+// FIXME: aarch64 port
+#[cfg(target_arch = "x86_64")]
 pub mod lai;
+// FIXME: aarch64 port
+#[cfg(target_arch = "x86_64")]
 pub mod pci;
 pub mod tty;
-pub mod uart_16550;
+
+cfg_if::cfg_if! {
+    if #[cfg(target_arch = "x86_64")] {
+        pub mod uart_16550;
+        pub use self::uart_16550 as uart;
+    } else if #[cfg(target_arch = "aarch64")] {
+        pub mod uart_mmio32;
+        pub use self::uart_mmio32 as uart;
+    }
+}

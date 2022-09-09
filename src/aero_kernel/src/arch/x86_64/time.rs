@@ -27,12 +27,12 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::TimeSpec;
 
-use crate::apic;
+use super::apic;
 
 use crate::arch::interrupts;
 use crate::arch::interrupts::InterruptStack;
 
-use crate::utils::io;
+use crate::arch::io;
 use crate::utils::sync::Mutex;
 
 const PIT_FREQUENCY_HZ: usize = 1000;

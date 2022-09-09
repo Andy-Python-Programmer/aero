@@ -24,11 +24,10 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 pub use idt::*;
 
-use crate::apic;
-use crate::utils::io;
+use crate::arch::apic;
 use crate::utils::sync::Mutex;
 
-use super::controlregs;
+use super::{controlregs, io};
 
 const PIC1_COMMAND: u16 = 0x20;
 const PIC1_DATA: u16 = 0x21;
@@ -297,17 +296,4 @@ pub unsafe fn enable_interrupts() {
 #[inline(always)]
 pub fn is_enabled() -> bool {
     controlregs::read_rflags().contains(controlregs::RFlags::INTERRUPT_FLAG)
-}
-
-/// Wrapper function to the `pause` assembly instruction used to pause
-/// the cpu.
-///
-/// ## Saftey
-/// Its safe to pause the CPU as the pause assembly instruction is similar
-/// to the `nop` instruction and has no memory effects.
-#[inline(always)]
-pub fn pause() {
-    unsafe {
-        asm!("pause", options(nomem, nostack));
-    }
 }

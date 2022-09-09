@@ -43,7 +43,7 @@ impl log::Log for AeroLogger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            use crate::drivers::uart_16550::*;
+            use crate::drivers::uart::*;
 
             let file = record.file().unwrap_or("unknown");
             let file = file.strip_prefix("aero_kernel/src/").unwrap_or(file);
@@ -93,7 +93,7 @@ impl log::Log for AeroLogger {
                 Level::Trace => serial_print!("\x1b[34;1mtrace "), // blue trace
             }
 
-            crate::drivers::uart_16550::serial_print!("\x1b[0m");
+            serial_print!("\x1b[0m");
             log_ln!("{}", record.args());
         }
     }

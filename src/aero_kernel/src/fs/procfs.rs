@@ -51,6 +51,7 @@ fn get_cpuinfo_cached() -> &'static str {
             .map(|processors| {
                 let mut cpu_info = vec![];
 
+                #[cfg(target_arch = "x86_64")]
                 tls::for_cpu_info_cached(|info| {
                     let mut processor = json!({});
 

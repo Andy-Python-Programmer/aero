@@ -22,8 +22,8 @@ use bit_field::BitField;
 use crate::drivers::block::ahci::AtaCommand;
 use crate::mem::paging::PhysAddr;
 
-use crate::utils::io;
-use crate::utils::io::BasedPort;
+use crate::arch::io;
+use crate::arch::io::BasedPort;
 
 const BASE_FEATURE: u16 = 1;
 const BASE_SECTOR_COUNT: u16 = 2;

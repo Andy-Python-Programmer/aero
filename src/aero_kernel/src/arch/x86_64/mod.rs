@@ -17,20 +17,21 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub mod apic;
 pub mod controlregs;
 pub mod gdt;
 pub mod interrupts;
+pub mod io;
 pub mod signals;
 pub mod syscall;
 pub mod task;
+pub mod time;
 pub mod tls;
 
 use core::sync::atomic::Ordering;
 
 use crate::acpi;
 use crate::acpi::aml;
-use crate::apic;
-use crate::apic::CPU_COUNT;
 use crate::cmdline;
 
 use crate::mem;
@@ -40,7 +41,6 @@ use crate::mem::paging::VirtAddr;
 use crate::drivers;
 use crate::logger;
 use crate::rendy;
-use crate::utils::io;
 
 use raw_cpuid::CpuId;
 
@@ -59,7 +59,7 @@ static STACK: LimineStackSizeRequest = LimineStackSizeRequest::new(0).stack_size
 static HHDM: LimineHhdmRequest = LimineHhdmRequest::new(0);
 
 #[no_mangle]
-extern "C" fn x86_64_aero_main() -> ! {
+extern "C" fn arch_aero_main() -> ! {
     unsafe {
         core::ptr::read_volatile(STACK.get_response().as_ptr().unwrap());
     }
@@ -111,7 +111,7 @@ extern "C" fn x86_64_aero_main() -> ! {
     // Now that we have unwind info, we can initialize the COM ports. This
     // will be used to print panic messages/logs before the debug renderer is
     // initialized to the serial output (if avaliable).
-    drivers::uart_16550::init();
+    drivers::uart::init();
     logger::init();
 
     // Initialize the CPU specific features.
@@ -148,7 +148,7 @@ extern "C" fn x86_64_aero_main() -> ! {
     let bsp_lapic_id = smp_response.bsp_lapic_id;
 
     for cpu in smp_response.cpus().iter_mut() {
-        CPU_COUNT.fetch_add(1, Ordering::SeqCst);
+        apic::CPU_COUNT.fetch_add(1, Ordering::SeqCst);
 
         if cpu.lapic_id == bsp_lapic_id {
             continue;
@@ -202,7 +202,7 @@ extern "C" fn x86_64_aero_main() -> ! {
     });
 
     let boot_time = BOOT_TIME.get_response().get().unwrap();
-    crate::time::EPOCH.store(boot_time.boot_time as _, Ordering::SeqCst);
+    time::EPOCH.store(boot_time.boot_time as _, Ordering::SeqCst);
 
     // Architecture init is done. Now we can initialize and start the init
     // process in the non-architecture specific part of the kernel.

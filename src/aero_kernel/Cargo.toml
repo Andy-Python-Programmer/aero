@@ -20,6 +20,7 @@ kmemleak = []
 vmlog = []
 syslog = []
 
+
 default = ["round-robin"]
 
 [dependencies]
@@ -31,9 +32,8 @@ spin = { version = "0.9.4", default-features = false, features = [
 bitflags = "1.2.1"
 bit_field = "0.10.1"
 log = "0.4.14"
-raw-cpuid = "10.0.0"
 xmas-elf = "0.8.0"
-hashbrown = "0.11.2"
+hashbrown = "0.12.3"
 rustc-demangle = "0.1.20"
 intrusive-collections = "0.9.2"
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
@@ -43,6 +43,12 @@ cpio_reader = { git = "https://github.com/Andy-Python-Programmer/cpio_reader" }
 static_assertions = "1.1.0"
 
 limine = { git = "https://github.com/limine-bootloader/limine-rs" }
+
+cfg-if = "1.0"
+
+# X86_64 specific dependencies:
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+raw-cpuid = "10.0.0"
 
 [dependencies.vte]
 git = "https://github.com/Andy-Python-Programmer/vte"

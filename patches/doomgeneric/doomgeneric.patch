@@ -570,11 +570,11 @@ index 0000000..1172db3
 +    log_info("initializing framebuffer");
 +
 +    // Open up the framebuffer device.
-+    size_t framebuffer = fopen("/dev/fb", "r+");
++    size_t framebuffer = fopen("/dev/fb0", "r+");
 +
 +    // Make sure the there were no errors.
 +    if (framebuffer == NULL) {
-+        log_error("failed to open `/dev/fb`");
++        log_error("failed to open `/dev/fb0`");
 +        exit(1);
 +    }
 +

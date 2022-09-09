@@ -20,14 +20,18 @@
 use alloc::{alloc::alloc_zeroed, sync::Arc};
 use core::{alloc::Layout, any::Any, cell::UnsafeCell, mem, ptr::Unique};
 
-use crate::{
-    apic::get_cpu_count,
-    mem::paging::{align_down, VirtAddr},
-};
+use crate::mem::paging::{align_down, VirtAddr};
+
+#[cfg(target_arch = "x86_64")]
+use crate::arch::apic::get_cpu_count;
+
+#[cfg(target_arch = "aarch64")]
+fn get_cpu_count() -> usize {
+    1
+}
 
 pub mod bitmap;
 pub mod buffer;
-pub mod io;
 pub mod linker;
 pub mod sync;
 

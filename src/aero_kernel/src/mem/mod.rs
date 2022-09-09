@@ -73,29 +73,41 @@ impl AddressSpace {
 
     /// Returns the current active address space.
     pub fn this() -> Self {
-        let cr3 = {
-            // Get the value of the Cr3 register.
-            let value: u64;
+        #[cfg(target_arch = "x86_64")]
+        {
+            let cr3 = {
+                // Get the value of the Cr3 register.
+                let value: u64;
 
-            unsafe {
-                asm!("mov {}, cr3", out(reg) value, options(nomem));
-            }
+                unsafe {
+                    asm!("mov {}, cr3", out(reg) value, options(nomem));
+                }
 
-            let addr = PhysAddr::new(value & 0x_000f_ffff_ffff_f000);
-            let frame = PhysFrame::containing_address(addr);
+                let addr = PhysAddr::new(value & 0x_000f_ffff_ffff_f000);
+                let frame = PhysFrame::containing_address(addr);
 
-            frame
-        };
+                frame
+            };
 
-        Self { cr3 }
+            Self { cr3 }
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        unimplemented!()
     }
 
     pub fn switch(&self) {
-        let cr3 = self.cr3().start_address().as_u64();
+        #[cfg(target_arch = "x86_64")]
+        {
+            let cr3 = self.cr3().start_address().as_u64();
 
-        unsafe {
-            asm!("mov cr3, {}", in(reg) cr3, options(nostack)); // Load the new address space
+            unsafe {
+                asm!("mov cr3, {}", in(reg) cr3, options(nostack)); // Load the new address space
+            }
         }
+
+        #[cfg(target_arch = "aarch64")]
+        unimplemented!()
     }
 
     /// Returns a reference to the page table frame allocated for this address

@@ -33,8 +33,7 @@ use alloc::alloc::alloc_zeroed;
 
 use crate::arch::tls::PerCpuData;
 
-use super::tls;
-use crate::utils::io;
+use super::{io, tls};
 
 bitflags::bitflags! {
     /// Specifies which element to load into a segment from
@@ -287,10 +286,10 @@ pub struct Tss {
 }
 
 // Processor Control Region
-#[repr(C, packed)]
+#[repr(C)]
 pub struct Kpcr {
     pub tss: Tss,
-    pub cpu_local: &'static mut PerCpuData,
+    pub cpu_local: PerCpuData,
 }
 
 /// Initialize the bootstrap GDT which is required to initialize TLS (Thread Local Storage)
@@ -317,12 +316,10 @@ pub fn init_boot() {
     }
 }
 
-/// SAFETY: The GS base should point to the kernel PCR.
 pub fn get_task_state_segement() -> &'static mut Tss {
-    unsafe { &mut *(io::rdmsr(io::IA32_GS_BASE) as *mut Tss) }
+    &mut get_kpcr().tss
 }
 
-/// SAFETY: The GS base should point to the kernel PCR.
 pub fn get_kpcr() -> &'static mut Kpcr {
     unsafe { &mut *(io::rdmsr(io::IA32_GS_BASE) as *mut Kpcr) }
 }

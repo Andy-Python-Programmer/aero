@@ -39,7 +39,7 @@ pub fn sleep(timespec: &TimeSpec) -> Result<usize, SyscallError> {
 pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, SyscallError> {
     match clock {
         CLOCK_TYPE_REALTIME => {
-            let clock = crate::time::get_realtime_clock();
+            let clock = crate::arch::time::get_realtime_clock();
 
             timespec.tv_sec = clock.tv_sec;
             timespec.tv_nsec = clock.tv_nsec;
@@ -49,7 +49,7 @@ pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, SyscallEr
 
         CLOCK_TYPE_MONOTONIC => {
             // FIXME: implement
-            let clock = crate::time::get_realtime_clock();
+            let clock = crate::arch::time::get_realtime_clock();
 
             timespec.tv_sec = clock.tv_sec;
             timespec.tv_nsec = clock.tv_nsec;

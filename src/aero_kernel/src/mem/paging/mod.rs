@@ -35,7 +35,6 @@ use limine::NonNullPtr;
 
 pub use frame::LockedFrameAllocator;
 
-use crate::arch::controlregs;
 use crate::PHYSICAL_MEMORY_OFFSET;
 
 pub static FRAME_ALLOCATOR: LockedFrameAllocator = LockedFrameAllocator::new_uninit();
@@ -69,9 +68,15 @@ bitflags::bitflags! {
 }
 
 /// Returns true if level 5 paging is supported by the CPU and is enabled in Cr4.
-#[inline]
+#[cfg(target_arch = "x86_64")]
 pub fn level_5_paging_enabled() -> bool {
+    use crate::arch::controlregs;
     controlregs::read_cr4().contains(controlregs::Cr4Flags::L5_PAGING)
+}
+
+#[cfg(target_arch = "aarch64")]
+pub const fn level_5_paging_enabled() -> bool {
+    false
 }
 
 /// Initialize paging.
@@ -86,11 +91,19 @@ pub fn init(
 }
 
 /// Get a mutable reference to the active level 4 page table.
+#[cfg(target_arch = "x86_64")]
 pub unsafe fn active_level_4_table() -> &'static mut PageTable {
+    use crate::arch::controlregs;
+
     let (level_4_table_frame, _) = controlregs::read_cr3();
 
     let virtual_address = level_4_table_frame.start_address().as_hhdm_virt();
     let page_table_ptr: *mut PageTable = virtual_address.as_mut_ptr();
 
     &mut *page_table_ptr
+}
+
+#[cfg(target_arch = "aarch64")]
+pub unsafe fn active_level_4_table() -> &'static mut PageTable {
+    unimplemented!()
 }

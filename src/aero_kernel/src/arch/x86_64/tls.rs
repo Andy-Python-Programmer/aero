@@ -31,8 +31,8 @@ use alloc::alloc::alloc_zeroed;
 use alloc::vec::Vec;
 
 use super::gdt::*;
+use super::io;
 
-use crate::utils::io;
 use crate::utils::sync::Mutex;
 
 use raw_cpuid::FeatureInfo;
@@ -111,6 +111,7 @@ pub struct CpuInfo {
     pub features: Vec<&'static &'static str>,
 }
 
+#[repr(C)]
 pub struct PerCpuData {
     pub cpuid: usize,
     pub lapic_timer_frequency: u32,
@@ -125,27 +126,17 @@ pub fn get_cpuid() -> usize {
 
 /// SAFETY: The GS base should point to the kernel PCR.
 pub fn get_percpu() -> &'static mut PerCpuData {
-    unsafe { (&mut *(io::rdmsr(io::IA32_GS_BASE) as *mut Kpcr)).cpu_local }
+    &mut get_kpcr().cpu_local
 }
 
 pub fn init(cpuid: usize) {
-    let size = core::mem::size_of::<PerCpuData>();
-
     // NOTE: Inside kernel space, the GS base will always point to the CPU local data and when
     // jumping to userland `swapgs` is called making the GS base point to the userland TLS data.
     unsafe {
-        let tss_layout = Layout::from_size_align_unchecked(
-            core::mem::size_of::<Kpcr>(),
-            core::mem::align_of::<Kpcr>(),
-        );
+        let kpcr_layout = Layout::new::<Kpcr>();
 
-        let tss_ptr = alloc_zeroed(tss_layout) as *mut Tss;
-        io::wrmsr(io::IA32_GS_BASE, tss_ptr as u64);
-
-        let tls_layout = Layout::from_size_align_unchecked(size, 8);
-        let tls_raw_ptr = alloc_zeroed(tls_layout);
-
-        crate::arch::gdt::get_kpcr().cpu_local = &mut *(tls_raw_ptr as *mut PerCpuData);
+        let kpcr_ptr = alloc_zeroed(kpcr_layout) as *mut Kpcr;
+        io::wrmsr(io::IA32_GS_BASE, kpcr_ptr as u64);
     }
 
     get_percpu().cpuid = cpuid;

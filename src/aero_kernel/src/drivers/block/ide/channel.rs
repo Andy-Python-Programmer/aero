@@ -25,7 +25,7 @@ use super::registers::*;
 use crate::drivers::block::ahci::{AtaCommand, DmaBuffer, DmaRequest};
 use crate::mem::paging::*;
 
-use crate::utils::io::delay;
+use crate::arch::io::delay;
 use crate::utils::sync::Mutex;
 
 struct PrdTable<'a> {

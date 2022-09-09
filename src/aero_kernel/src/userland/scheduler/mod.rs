@@ -22,8 +22,7 @@ pub mod round_robin;
 
 use alloc::sync::Arc;
 
-use crate::apic;
-use crate::arch::interrupts::{self, InterruptStack, INTERRUPT_CONTROLLER};
+use crate::arch::interrupts::{self, InterruptStack};
 use crate::utils::sync::Mutex;
 use crate::{fs::cache::DirCacheItem, syscall::ExecArgs};
 
@@ -156,8 +155,14 @@ static SCHEDULER_VECTOR: Once<u8> = Once::new();
 const SCHEDULER_TIMER_US: usize = 20000;
 
 fn scheduler_irq_handler(_stack: &mut InterruptStack) {
-    apic::get_local_apic().timer_oneshot(*SCHEDULER_VECTOR.get().unwrap(), SCHEDULER_TIMER_US);
-    INTERRUPT_CONTROLLER.eoi();
+    #[cfg(target_arch = "x86_64")]
+    {
+        crate::arch::apic::get_local_apic()
+            .timer_oneshot(*SCHEDULER_VECTOR.get().unwrap(), SCHEDULER_TIMER_US);
+
+        crate::arch::interrupts::INTERRUPT_CONTROLLER.eoi();
+    }
+
     self::get_scheduler().inner.preempt();
 }
 
@@ -168,6 +173,7 @@ pub fn init() {
     let scheduler_vector = interrupts::allocate_vector();
     interrupts::register_handler(scheduler_vector, scheduler_irq_handler);
 
-    apic::get_local_apic().timer_oneshot(scheduler_vector, SCHEDULER_TIMER_US);
+    #[cfg(target_arch = "x86_64")]
+    crate::arch::apic::get_local_apic().timer_oneshot(scheduler_vector, SCHEDULER_TIMER_US);
     SCHEDULER_VECTOR.call_once(|| scheduler_vector);
 }

@@ -79,7 +79,7 @@ impl TaskQueue {
         debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
 
         task.update_state(TaskState::AwaitingIo);
-        task.set_sleep_duration(crate::time::get_uptime_ticks() + duration);
+        task.set_sleep_duration(crate::arch::time::get_uptime_ticks() + duration);
 
         self.deadline_awaiting.push_back(task);
     }
@@ -128,7 +128,7 @@ impl RoundRobin {
         let _guard = IrqGuard::new();
         let queue = self.queue.get_mut();
 
-        let time = crate::time::get_uptime_ticks();
+        let time = crate::arch::time::get_uptime_ticks();
 
         let mut cursor = queue.deadline_awaiting.front_mut();
 

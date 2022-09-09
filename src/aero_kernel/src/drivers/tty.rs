@@ -29,7 +29,9 @@ use crate::fs::inode::INodeInterface;
 use crate::mem::paging::VirtAddr;
 use crate::utils::sync::{BlockQueue, Mutex};
 
+#[cfg(target_arch = "x86_64")]
 use super::keyboard::KeyCode;
+#[cfg(target_arch = "x86_64")]
 use super::keyboard::KeyboardListener;
 
 lazy_static::lazy_static! {
@@ -337,6 +339,7 @@ impl devfs::Device for Tty {
     }
 }
 
+#[cfg(target_arch = "x86_64")]
 impl KeyboardListener for Tty {
     fn on_key(&self, key: KeyCode, released: bool) {
         let mut state = self.state.lock();
@@ -862,6 +865,8 @@ impl vte::Perform for AnsiEscape {
 }
 
 fn init_tty() {
+    // TODO: aarch64 port
+    #[cfg(target_arch = "x86_64")]
     super::keyboard::register_keyboard_listener(TTY.as_ref().clone());
 
     devfs::install_device(TTY.clone()).expect("failed to register tty as a device");

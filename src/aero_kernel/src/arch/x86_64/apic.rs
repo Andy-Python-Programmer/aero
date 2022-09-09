@@ -28,9 +28,10 @@ use spin::Once;
 
 use crate::utils::sync::{Mutex, MutexGuard};
 
+use super::{io, time};
+
 use crate::acpi::madt;
-use crate::utils::io;
-use crate::{time, PHYSICAL_MEMORY_OFFSET};
+use crate::PHYSICAL_MEMORY_OFFSET;
 
 const APIC_SPURIOUS_VECTOR: u32 = 0xFF;
 
@@ -45,9 +46,6 @@ const XAPIC_SVR: u32 = 0x0F0;
 
 /// EOI register. Write-only.
 const XAPIC_EOI: u32 = 0x0B0;
-
-/// Interrupt Command Register (ICR). Read/write. (64-bit register)
-const XAPIC_ICR: u32 = 0x300;
 
 /// Task Priority Register (TPR). Read/write. Bits 31:8 are reserved.
 const XAPIC_TPR: u32 = 0x080;
@@ -76,7 +74,6 @@ static BSP_APIC_ID: AtomicU64 = AtomicU64::new(0xFFFF_FFFF_FFFF_FFFF);
 /// The count of all the active CPUs.
 pub static CPU_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-static AP_READY: AtomicBool = AtomicBool::new(false);
 static BSP_READY: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -154,26 +151,6 @@ impl LocalApic {
         }
     }
 
-    /// This function is responsible for sending IPI to the provided target logical
-    /// processors by writing to the ICR register of this instance.
-    ///
-    /// ## Saftey
-    /// The provided `cpu` must be a valid logical processor ID and the provided `vec` must be
-    /// a valid interrupt vector.
-    ///
-    /// ## Panics
-    /// * If the APIC type is set to [`ApicType::None`].
-    pub unsafe fn send_ipi(&mut self, cpu: usize, vec: u8) {
-        self.write_long(XAPIC_ICR, (cpu as u64) << 32 | vec as u64);
-
-        // NOTE: Make the ICR delivery status is clear, indicating that the
-        // local APIC has completed sending the IPI. If set to 1 the
-        // local APIC has not completed sending the IPI.
-        while self.read(XAPIC_ICR) & (1u32 << 12) > 0 {
-            core::hint::spin_loop();
-        }
-    }
-
     /// At power up, system hardware assigns a unique APIC ID to each local APIC on the
     /// system bus. This function returns the unique APIC ID this instance.
     ///
@@ -206,11 +183,6 @@ impl LocalApic {
         unsafe {
             self.write(XAPIC_EOI, 0);
         }
-    }
-
-    /// Returns the APIC type of this instance.
-    pub fn apic_type(&self) -> ApicType {
-        self.apic_type
     }
 
     /// Stops the APIC timer.
@@ -259,17 +231,6 @@ impl LocalApic {
         }
 
         self.timer_stop();
-    }
-
-    /// Sets the provided `value` to the ICR register of the instance.
-    ///
-    /// ## Panics
-    /// * If the APIC type is set to [`ApicType::None`].
-    ///
-    /// ## Safety
-    /// The provided `value` must be a valid value for the ICR register.
-    pub unsafe fn set_icr(&mut self, value: u64) {
-        self.write_long(XAPIC_ICR, value);
     }
 
     /// Converts the provided APIC register (`register`) into its respective
@@ -347,51 +308,6 @@ impl LocalApic {
             ApicType::None => unreachable!(),
         }
     }
-
-    /// Writes the provided 64-bit value (`value`) to the provided
-    /// APIC register (`register`).
-    ///
-    /// ## Panics
-    /// * If the APIC type is set to [`ApicType::None`].
-    ///
-    /// ## Notes
-    /// This function works for both XAPIC and X2APIC.
-    ///
-    /// ## Safety
-    /// * The provided `register` must be a valid APIC register and the `value` must
-    /// be a valid value for the provided APIC register.
-    ///
-    /// * If the `register` is 32-bit wide, then the [`Self::write`] function must
-    /// be used instead.
-    unsafe fn write_long(&mut self, register: u32, value: u64) {
-        match self.apic_type {
-            ApicType::X2apic => {
-                let msr = self.register_to_x2apic_msr(register);
-                io::wrmsr(msr, value);
-            }
-
-            ApicType::Xapic => {
-                let addr_low = self.register_to_xapic_addr(register);
-                let addr_high = self.register_to_xapic_addr(register + 0x10);
-
-                addr_high.as_mut_ptr::<u32>().write_volatile(value as u32);
-                addr_low
-                    .as_mut_ptr::<u32>()
-                    .write_volatile((value >> 32) as u32);
-            }
-
-            ApicType::None => unreachable!(),
-        }
-    }
-}
-
-#[repr(C, packed)]
-pub struct IoApicHeader {
-    header: madt::EntryHeader,
-    io_apic_id: u8,
-    reserved: u8,
-    io_apic_address: u32,
-    global_system_interrupt_base: u32,
 }
 
 /// Get a mutable reference to the local apic.

@@ -10,6 +10,7 @@ dependencies = [
  "aero_syscall",
  "bit_field",
  "bitflags",
+ "cfg-if",
  "cpio_reader",
  "hashbrown",
  "intrusive-collections",
@@ -163,9 +164,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.11.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 dependencies = [
  "ahash",
 ]

@@ -255,7 +255,7 @@ pub fn gethostname(buffer: &mut [u8]) -> Result<usize, SyscallError> {
 
 #[syscall]
 pub fn info(struc: &mut SysInfo) -> Result<usize, SyscallError> {
-    struc.uptime = crate::time::get_uptime_ticks() as i64;
+    struc.uptime = crate::arch::time::get_uptime_ticks() as i64;
 
     Ok(0x00)
 }

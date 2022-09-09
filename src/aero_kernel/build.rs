@@ -46,6 +46,12 @@ fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry)) -> std::io::Result<()> 
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let target = std::env::var("TARGET").expect("target triple is not set");
+
+    if target.contains("aarch64") {
+        return Ok(());
+    }
+
     let mut inc_files = vec![];
 
     // Assemble all of the assembly real files first as they will be included in the
@@ -79,11 +85,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     visit_dirs(Path::new("src"), &mut |entry: &DirEntry| {
         let path = entry.path();
 
+        let object_os = path.file_name().expect("Failed to get file name");
+        let object_file = object_os.to_str().expect("Invalid UTF-8 for file name");
+
         match path.extension() {
             Some(ext) if ext.eq(&OsString::from("asm")) => {
-                let object_os = path.file_name().expect("Failed to get file name");
-                let object_file = object_os.to_str().expect("Invalid UTF-8 for file name");
-
                 let mut build = nasm_rs::Build::new();
 
                 build

@@ -17,22 +17,16 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod interrupts;
-pub mod task;
-pub mod time;
-pub mod tls;
+use aero_syscall::TimeSpec;
 
-use limine::*;
+pub fn get_uptime_ticks() -> usize {
+    unimplemented!()
+}
 
-static TERMINAL: LimineTerminalRequest = LimineTerminalRequest::new(0);
+pub fn get_realtime_clock() -> TimeSpec {
+    unimplemented!()
+}
 
-#[no_mangle]
-extern "C" fn arch_aero_main() -> ! {
-    let response = TERMINAL.get_response().get().unwrap();
-    let terminal = &response.terminals()[0];
-    let writer = response.write().unwrap();
-
-    writer(&terminal, "Hello Aero from unbased64 booted by limine :^)");
-
-    loop {}
+pub fn init() {
+    unimplemented!()
 }

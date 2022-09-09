@@ -25,8 +25,8 @@ use crate::acpi::get_acpi_table;
 
 use crate::mem::paging::PhysAddr;
 
+use crate::arch::io;
 use crate::userland::scheduler;
-use crate::utils::io;
 
 use super::pci::PciHeader;
 

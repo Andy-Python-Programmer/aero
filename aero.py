@@ -72,11 +72,27 @@ MODULE_CMDLINE=initramfs
 """
 
 
+class BuildInfo:
+    args: argparse.Namespace
+    target_arch: str
+
+    def __init__(self, target_arch: str, args: argparse.Namespace):
+        self.target_arch = target_arch
+        self.args = args
+
+
 def log_info(msg):
     """
     Logs a message with info log level.
     """
     print(f"\033[1m\033[92minfo\033[0m: {msg}")
+
+
+def log_error(msg):
+    """
+    Logs a message with error log level.
+    """
+    print(f"\033[1m\033[91merror\033[0m: {msg}")
 
 
 def download_userland_host_rust():
@@ -162,7 +178,7 @@ def parse_args():
                         default=False,
                         action='store_true',
                         help='doesn\'t run the built image in emulator when applicable')
-    
+
     parser.add_argument('--only-run',
                         default=False,
                         action='store_true',
@@ -365,6 +381,7 @@ def build_userland(args):
     def get_mlibc(): return os.path.join("..", pkg_dir, PACKAGE_MLIBC)
 
     command = 'build'
+    # TODO: handle the unbased architectures.
     cmd_args = ["--target", "x86_64-unknown-aero-system",
 
                 # cargo config
@@ -423,6 +440,12 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join(limine_path, 'limine-cd.bin'), iso_root)
     shutil.copy(os.path.join(limine_path, 'limine-cd-efi.bin'), iso_root)
 
+    efi_boot = os.path.join(iso_root, "EFI", "BOOT")
+    os.makedirs(efi_boot)
+
+    shutil.copy(os.path.join(limine_path, 'BOOTAA64.EFI'), efi_boot)
+    shutil.copy(os.path.join(limine_path, 'BOOTX64.EFI'), efi_boot)
+
     sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
     shutil.copytree(BASE_FILES_DIR, sysroot_dir, dirs_exist_ok=True)
 
@@ -452,7 +475,7 @@ def prepare_iso(args, kernel_bin, user_bins):
         files = list(files_without_prefix)
 
         files.append("usr/lib/libiconv.so.2")
-        return files 
+        return files
 
     files = find(sysroot_dir)
 
@@ -474,8 +497,8 @@ def prepare_iso(args, kernel_bin, user_bins):
     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if code != 0:
-        print('Failed to create the ISO image')
-        print(xorriso_stderr.decode('utf-8'))
+        log_error('failed to create the ISO image')
+        log_error(xorriso_stderr.decode('utf-8'))
 
         return None
 
@@ -486,8 +509,8 @@ def prepare_iso(args, kernel_bin, user_bins):
                                                    stdout=subprocess.PIPE,
                                                    stderr=subprocess.PIPE)
         if code != 0:
-            print('Failed to build `limine-deploy`')
-            print(limine_build_stderr.decode('utf8'))
+            log_error('failed to build `limine-deploy`')
+            log_error(limine_build_stderr.decode('utf8'))
             exit(1)
 
     code, _, limine_deploy_stderr = run_command([limine_deploy, iso_path],
@@ -495,25 +518,31 @@ def prepare_iso(args, kernel_bin, user_bins):
                                                 stderr=subprocess.PIPE)
 
     if code != 0:
-        print('Failed to install Limine')
-        print(limine_deploy_stderr)
+        log_error('failed to install Limine')
+        log_error(limine_deploy_stderr)
 
         return None
 
     return iso_path
 
 
-def run_in_emulator(args, iso_path):
+def run_in_emulator(build_info: BuildInfo, iso_path):
     is_kvm_available = is_kvm_supported()
+    args = build_info.args
 
     qemu_args = ['-cdrom', iso_path,
-                 '-M', 'q35',
                  '-m', '9800M',
                  '-smp', '1',
                  '-serial', 'stdio']
 
     if args.bios == 'uefi':
-        qemu_args += ['-bios', 'bundled/ovmf/OVMF-pure-efi.fd']
+        if build_info.target_arch == "aarch64":
+            qemu_args += ['-bios', 'bundled/ovmf/OVMF.fd']
+        elif build_info.target_arch == "x86_64":
+            qemu_args += ['-bios', 'bundled/ovmf/OVMF-pure-efi.fd']
+        else:
+            log_error("unknown target architecture")
+            exit(1)
 
     cmdline = args.remaining
 
@@ -524,7 +553,7 @@ def run_in_emulator(args, iso_path):
         qemu_args += cmdline
 
     if is_kvm_available and not args.disable_kvm:
-        print("Running with KVM acceleration enabled")
+        log_info("running with KVM acceleration enabled")
 
         if platform.system() == 'Darwin':
             qemu_args += ['-accel', 'hvf', '-cpu',
@@ -533,9 +562,17 @@ def run_in_emulator(args, iso_path):
             qemu_args += ['-enable-kvm', '-cpu',
                           'host,+la57' if args.la57 else 'host']
     else:
-        qemu_args += ["-cpu", "qemu64,+la57" if args.la57 else "qemu64"]
+        if build_info.target_arch == "aarch64":
+            qemu_args += ['-device', 'ramfb',
+                          '-M', 'virt', '-cpu', 'cortex-a72']
+        elif build_info.target_arch == "x86_64":
+            qemu_args += ["-cpu", "qemu64,+la57" if args.la57 else "qemu64"]
+        else:
+            log_error("unknown target architecture")
+            exit(1)
 
-    run_command(['qemu-system-x86_64', *qemu_args])
+    qemu_binary = f'qemu-system-{build_info.target_arch}'
+    run_command([qemu_binary, *qemu_args])
 
 
 def get_sysctl(name: str) -> str:
@@ -620,6 +657,14 @@ def is_kvm_supported() -> bool:
 def main():
     args = parse_args()
 
+    # arch-aero_os
+    target_arch = args.target.split('-')[0]
+    build_info = BuildInfo(target_arch, args)
+
+    if build_info.target_arch == "aarch64" and not args.bios == "uefi":
+        log_error("aarch64 requires UEFI (help: run again with `--bios=uefi`)")
+        return
+
     download_bundled()
 
     if args.only_run:
@@ -669,7 +714,7 @@ def main():
         iso_path = prepare_iso(args, kernel_bin, user_bins)
 
         if not args.no_run:
-            run_in_emulator(args, iso_path)
+            run_in_emulator(build_info, iso_path)
 
 
 if __name__ == '__main__':

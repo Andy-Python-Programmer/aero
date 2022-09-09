@@ -21,13 +21,14 @@ use alloc::alloc::Global;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
-use crate::apic;
 use crate::utils::bitmap::Bitmap;
 use crate::utils::sync::Mutex;
 
 use crate::acpi::mcfg;
 use crate::mem::paging::OffsetPageTable;
-use crate::utils::{io, VolatileCell};
+use crate::utils::VolatileCell;
+
+use crate::arch::{apic, io};
 
 use bit_field::BitField;
 

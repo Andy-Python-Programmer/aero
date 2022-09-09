@@ -22,11 +22,11 @@ use alloc::vec::Vec;
 use spin::RwLock;
 
 use crate::arch::interrupts::{self, InterruptStack};
-use crate::{apic, fs};
+use crate::fs;
 
+use crate::arch::{apic, io};
 use crate::fs::devfs::{self, Device};
 use crate::fs::inode::INodeInterface;
-use crate::utils::io;
 use crate::utils::sync::Mutex;
 
 pub trait KeyboardListener: Send + Sync {

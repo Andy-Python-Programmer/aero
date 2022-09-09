@@ -32,11 +32,13 @@ impl Allocator {
     }
 
     fn alloc(&self, layout: Layout) -> *mut u8 {
-        if layout.size() <= 4096 {
+        let size = align_up(layout.size() as _, layout.align() as _);
+
+        if size <= 4096 {
             let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR.allocate_frame().unwrap();
             frame.start_address().as_hhdm_virt().as_mut_ptr()
         } else {
-            let size = align_up(layout.size() as _, Size4KiB::SIZE) / Size4KiB::SIZE;
+            let size = align_up(size, Size4KiB::SIZE) / Size4KiB::SIZE;
 
             vmalloc::get_vmalloc()
                 .alloc(size as usize)

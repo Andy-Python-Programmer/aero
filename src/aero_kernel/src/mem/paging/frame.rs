@@ -77,10 +77,10 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
         // let caller = core::panic::Location::caller();
         // log::debug!("deallocation request of 4KiB by {:?}", caller);
 
-        self.0
-            .get()
-            .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 0))
-            .unwrap_or(());
+        // self.0
+        //     .get()
+        //     .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 0))
+        //     .unwrap_or(());
     }
 }
 

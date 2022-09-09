@@ -17,14 +17,13 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use super::InterruptErrorStack;
+use super::{io, InterruptErrorStack};
 
 use crate::arch::controlregs;
 use crate::mem::paging::PageFaultErrorCode;
 
 use crate::unwind;
 use crate::userland::scheduler;
-use crate::utils::io;
 
 const LOG_PF_PTABLE: bool = true;
 

@@ -73,7 +73,6 @@ pub use prelude::rust_2021::*;
 extern crate alloc;
 
 mod acpi;
-mod apic;
 mod arch;
 mod cmdline;
 mod drivers;
@@ -88,7 +87,6 @@ mod socket;
 mod syscall;
 #[cfg(test)]
 mod tests;
-mod time;
 mod unwind;
 mod userland;
 mod utils;
@@ -116,13 +114,14 @@ fn aero_main() -> ! {
     fs::init().unwrap();
     log::info!("loaded filesystem");
 
-    time::init();
+    crate::arch::time::init();
     log::info!("loaded timer");
 
     userland::scheduler::init();
     log::info!("loaded scheduler");
 
-    apic::mark_bsp_ready(true);
+    #[cfg(target_arch = "x86_64")]
+    crate::arch::apic::mark_bsp_ready(true);
 
     log::info!("initialized kernel");
 
@@ -149,8 +148,10 @@ fn kernel_main_thread() {
     modules::init();
     log::info!("loaded kernel modules");
 
+    #[cfg(target_arch = "x86_64")]
     arch::enable_acpi();
 
+    #[cfg(target_arch = "x86_64")]
     drivers::pci::init(&mut offset_table);
     log::info!("loaded PCI driver");
 

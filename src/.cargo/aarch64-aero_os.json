@@ -11,5 +11,11 @@
     "linker": "rust-lld",
     "panic-strategy": "abort",
     "disable-redzone": true,
-    "features": "+strict-align,-neon,-fp-armv8"
+    "features": "+strict-align,-neon,-fp-armv8",
+    "pre-link-args": {
+        "ld.lld": [
+            "--gc-sections",
+            "--script=.cargo/kernel.ld"
+        ]
+    }
 }

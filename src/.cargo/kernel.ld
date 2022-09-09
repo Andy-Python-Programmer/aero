@@ -1,9 +1,5 @@
-/* Tell the linker that we want an x86_64 ELF64 output file */
-OUTPUT_FORMAT(elf64-x86-64)
-OUTPUT_ARCH(i386:x86-64)
-
-/* We want the symbol `x86_64_aero_main` to be our entry point */
-ENTRY(x86_64_aero_main)
+/* We want the symbol `arch_aero_main` to be our entry point */
+ENTRY(arch_aero_main)
 
 /* Define the program headers we want so the bootloader gives us the right */
 /* MMU permissions */

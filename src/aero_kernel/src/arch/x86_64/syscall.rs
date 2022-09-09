@@ -4,10 +4,10 @@ use raw_cpuid::CpuId;
 use crate::arch::gdt::GdtEntryType;
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
-use crate::utils::io;
 use crate::utils::sync::IrqGuard;
 
 use super::interrupts::InterruptErrorStack;
+use super::io;
 
 extern "C" {
     fn x86_64_syscall_handler();

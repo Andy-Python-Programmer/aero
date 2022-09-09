@@ -22,8 +22,6 @@ use core::mem;
 use alloc::vec::Vec;
 use spin::RwLock;
 
-use crate::apic::IoApicHeader;
-
 use super::sdt::Sdt;
 
 pub(super) const SIGNATURE: &str = "APIC";
@@ -40,10 +38,6 @@ pub struct Madt {
 
 impl Madt {
     pub(super) fn init(&'static self) {
-        // log::debug!("storing AP trampoline at 0x1000");
-
-        // let page_index = unsafe { smp_prepare_trampoline() };
-
         for entry in self.iter() {
             match entry {
                 MadtEntry::IoApic(e) => IO_APICS.write().push(e),
@@ -85,6 +79,15 @@ pub struct MadtIntSrcOverride {
     pub irq: u8,
     pub global_system_interrupt: u32,
     pub flags: u16,
+}
+
+#[repr(C, packed)]
+pub struct IoApicHeader {
+    pub header: EntryHeader,
+    pub io_apic_id: u8,
+    pub reserved: u8,
+    pub io_apic_address: u32,
+    pub global_system_interrupt_base: u32,
 }
 
 enum MadtEntry {
