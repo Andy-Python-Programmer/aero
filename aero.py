@@ -29,21 +29,32 @@ import tarfile
 from typing import List
 
 
+def log_info(msg):
+    """
+    Logs a message with info log level.
+    """
+    print(f"\033[1m\033[92minfo\033[0m: {msg}")
+
+
+def log_error(msg):
+    """
+    Logs a message with error log level.
+    """
+    print(f"\033[1m\033[91merror\033[0m: {msg}")
+
+
 # Make sure requests is installed
 try:
     import requests
     import xbstrap
 except ImportError:
-    print('Please install required libraires using the following command:')
-    print(' - python3 -m pip install requests xbstrap')
+    log_error('Please install required libraires using the following command:')
+    log_error(' - python3 -m pip install requests xbstrap')
 
     sys.exit(0)
 
-import requests
-import xbstrap
 
-
-OVMF_URL = 'https://github.com/rust-osdev/ovmf-prebuilt/releases/latest/download'
+OVMF_URL = 'https://github.com/aero-os/ovmf-prebuilt'
 LIMINE_URL = 'https://github.com/limine-bootloader/limine'
 
 BUILD_DIR = 'build'
@@ -52,7 +63,6 @@ SYSROOT_DIR = 'sysroot'
 EXTRA_FILES = 'extra-files'
 SYSROOT_CARGO_HOME = os.path.join(SYSROOT_DIR, 'cargo-home')
 BASE_FILES_DIR = 'base-files'
-OVMF_FILES = ['OVMF-pure-efi.fd']
 
 LIMINE_TEMPLATE = """
 TIMEOUT=0
@@ -79,20 +89,6 @@ class BuildInfo:
     def __init__(self, target_arch: str, args: argparse.Namespace):
         self.target_arch = target_arch
         self.args = args
-
-
-def log_info(msg):
-    """
-    Logs a message with info log level.
-    """
-    print(f"\033[1m\033[92minfo\033[0m: {msg}")
-
-
-def log_error(msg):
-    """
-    Logs a message with error log level.
-    """
-    print(f"\033[1m\033[91merror\033[0m: {msg}")
 
 
 def download_userland_host_rust():
@@ -235,16 +231,7 @@ def download_bundled():
     limine_path = os.path.join(BUNDLED_DIR, 'limine')
 
     if not os.path.exists(ovmf_path):
-        os.makedirs(ovmf_path)
-
-    for ovmf_file in OVMF_FILES:
-        file_path = os.path.join(ovmf_path, ovmf_file)
-
-        if not os.path.exists(file_path):
-            with open(file_path, 'wb') as file:
-                response = requests.get(f'{OVMF_URL}/{ovmf_file}')
-
-                file.write(response.content)
+        run_command(['git', 'clone', '--depth', '1', OVMF_URL, ovmf_path])
 
     if not os.path.exists(limine_path):
         run_command(['git', 'clone', '--branch', 'v4.x-branch-binary',
@@ -536,13 +523,8 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
                  '-serial', 'stdio']
 
     if args.bios == 'uefi':
-        if build_info.target_arch == "aarch64":
-            qemu_args += ['-bios', 'bundled/ovmf/OVMF.fd']
-        elif build_info.target_arch == "x86_64":
-            qemu_args += ['-bios', 'bundled/ovmf/OVMF-pure-efi.fd']
-        else:
-            log_error("unknown target architecture")
-            exit(1)
+        qemu_args += ['-bios',
+                      f'bundled/ovmf/ovmf-{build_info.target_arch}/OVMF.fd']
 
     cmdline = args.remaining
 
