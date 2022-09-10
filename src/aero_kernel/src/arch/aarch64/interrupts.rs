@@ -45,18 +45,22 @@ pub fn register_handler(vector: u8, handler: fn(&mut InterruptStack)) {
     unimplemented!()
 }
 
-pub unsafe fn disable_interrupts() {
-    unimplemented!()
+pub fn is_enabled() -> bool {
+    let v: u64;
+    unsafe {
+        asm!("mrs {}, daif", out(reg) v, options(nostack, nomem));
+    }
+    (!v) != 0
 }
 
-pub fn is_enabled() -> bool {
-    unimplemented!()
+pub unsafe fn disable_interrupts() {
+    asm!("msr daifset, #15", options(nomem, nostack))
 }
 
 pub unsafe fn enable_interrupts() {
-    unimplemented!()
+    asm!("msr daifclr, #15", options(nomem, nostack))
 }
 
 pub unsafe fn halt() {
-    asm!("wfi");
+    asm!("wfi", options(nomem, nostack));
 }

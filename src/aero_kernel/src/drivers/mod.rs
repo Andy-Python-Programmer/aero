@@ -37,7 +37,7 @@ cfg_if::cfg_if! {
         pub mod uart_16550;
         pub use self::uart_16550 as uart;
     } else if #[cfg(target_arch = "aarch64")] {
-        pub mod uart_mmio32;
-        pub use self::uart_mmio32 as uart;
+        pub mod uart_pl011;
+        pub use self::uart_pl011 as uart;
     }
 }
