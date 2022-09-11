@@ -222,7 +222,7 @@ checksum = "fbe5e23404da5b4f555ef85ebed98fb4083e55a00c317800bc2a50ede9f3d219"
 [[package]]
 name = "limine"
 version = "0.1.8"
-source = "git+https://github.com/limine-bootloader/limine-rs#59fa1764915ae366d5c9889c2df4fe8177fb8d19"
+source = "git+https://github.com/limine-bootloader/limine-rs#bd55281c929ae0d3fe283ba33a9dd411ed58e355"
 
 [[package]]
 name = "log"
