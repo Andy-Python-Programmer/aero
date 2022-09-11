@@ -214,6 +214,10 @@ def parse_args():
                         nargs=argparse.REMAINDER,
                         help='additional arguments to pass as the emulator')
 
+    parser.add_argument('--memory',
+                        default='9800M',
+                        help='amount of memory to allocate to QEMU')
+
     return parser.parse_args()
 
 
@@ -515,10 +519,11 @@ def prepare_iso(args, kernel_bin, user_bins):
 
 def run_in_emulator(build_info: BuildInfo, iso_path):
     is_kvm_available = is_kvm_supported()
-    args = build_info.args
+    # args = build_info.args
+    args = parse_args()
 
     qemu_args = ['-cdrom', iso_path,
-                 '-m', '9800M',
+                 '-m', args.memory,
                  '-smp', '1',
                  '-serial', 'stdio']
 
@@ -665,7 +670,7 @@ def main():
 
             kernel_bin = kernel_bin[0]
             iso_path = prepare_iso(args, kernel_bin, user_bins)
-        run_in_emulator(args, iso_path)
+        run_in_emulator(build_info, iso_path)
     elif args.clean:
         src_target = os.path.join('src', 'target', args.target)
         userland_target = os.path.join('userland', 'target')
