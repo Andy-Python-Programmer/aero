@@ -519,8 +519,7 @@ def prepare_iso(args, kernel_bin, user_bins):
 
 def run_in_emulator(build_info: BuildInfo, iso_path):
     is_kvm_available = is_kvm_supported()
-    # args = build_info.args
-    args = parse_args()
+    args = build_info.args
 
     qemu_args = ['-cdrom', iso_path,
                  '-m', args.memory,
