@@ -11,4 +11,4 @@ ports:
 
 tasks:
 - init: ./aero.py --no-run
-  command: ./aero.py --only-run
+  command: ./aero.py --only-run --memory 32G
