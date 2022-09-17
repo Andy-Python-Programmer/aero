@@ -20,6 +20,8 @@
 mod channel;
 mod registers;
 
+use core::mem::MaybeUninit;
+
 use channel::*;
 
 use alloc::sync::Arc;
@@ -50,14 +52,15 @@ impl IdeDrive {
 }
 
 impl BlockDeviceInterface for IdeDrive {
-    fn read(&self, sector: usize, dest: &mut [u8]) -> Option<usize> {
+    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         let count = dest.len().ceil_div(512);
         let request = Arc::new(DmaRequest::new(sector, count));
 
         let res = self.channel.run_request(request.clone(), self.slave);
 
         if res.is_some() {
-            request.copy_into(dest);
+            todo!()
+            // request.copy_into(dest);
         }
 
         res

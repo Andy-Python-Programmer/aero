@@ -17,8 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use bit_field::BitField;
-
 #[repr(u8)]
 #[derive(Default, Copy, Clone)]
 pub enum IdentifyCns {
@@ -58,7 +56,7 @@ pub enum AdminOpcode {
     Unknown = u8::MAX,
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 #[repr(C)]
 pub struct DataPointer {
     pub prp1: u64,
@@ -272,7 +270,7 @@ pub struct IdentifyNamespace {
 const_assert_eq!(core::mem::size_of::<IdentifyNamespace>(), 0x1000);
 
 #[repr(C)]
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct ReadWriteCommand {
     pub opcode: u8,
     pub flags: u8,
@@ -343,16 +341,12 @@ impl Into<Command> for CreateCQCommand {
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct CompletionEntry {
-    dw0: u32,
-    dw1: u32,
-    dw2: u32,
-    dw3: u32,
-}
-
-impl CompletionEntry {
-    pub fn get_phase_tag(&self) -> bool {
-        self.dw3.get_bit(16)
-    }
+    pub result: u32, // Used by admin commands to return data.
+    pub reserved: u32,
+    pub sq_head: u16,    // Portion of the queue that may be reclaimed
+    pub sq_id: u16,      // Submission Queue that generated this entry.
+    pub command_id: u16, // Command ID of the command that was completed.
+    pub status: u16,     // Reason why the command failed, if it did.
 }
 
 #[repr(C)]

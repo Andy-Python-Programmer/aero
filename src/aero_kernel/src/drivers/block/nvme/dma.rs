@@ -35,22 +35,26 @@ pub struct DmaAllocator;
 unsafe impl Allocator for DmaAllocator {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         // XXX: The DMA buffer must be aligned to a page boundary.
-        let size = align_up(layout.size() as u64, Size2MiB::SIZE);
+        let size_bytes = layout.size() as u64;
 
-        let pages = size / Size2MiB::SIZE;
-        assert!(pages == 1);
+        let phys = if size_bytes <= Size4KiB::SIZE {
+            let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR.allocate_frame().ok_or(AllocError)?;
+            frame.start_address()
+        } else {
+            assert!(size_bytes <= Size2MiB::SIZE);
 
-        let frame: PhysFrame<Size2MiB> = FRAME_ALLOCATOR.allocate_frame().ok_or(AllocError)?;
-        let virt = frame.start_address().as_hhdm_virt();
+            let frame: PhysFrame<Size2MiB> = FRAME_ALLOCATOR.allocate_frame().ok_or(AllocError)?;
+            frame.start_address()
+        };
+
+        let virt = phys.as_hhdm_virt();
 
         // SAFETY: The frame is aligned and non-null.
         let ptr = unsafe { NonNull::new_unchecked(virt.as_mut_ptr() as *mut u8) };
-        Ok(NonNull::slice_from_raw_parts(ptr, size as _))
+        Ok(NonNull::slice_from_raw_parts(ptr, size_bytes as _))
     }
 
-    unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {
-        log::warn!("DMA memory deallocation is not *yet* implemented :) Enjoy the leaks :)")
-    }
+    unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {}
 }
 
 pub type DmaBuffer<T> = Box<T, DmaAllocator>;

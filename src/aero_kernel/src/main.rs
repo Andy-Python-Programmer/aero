@@ -41,7 +41,9 @@
     const_btree_new,
     prelude_import,
     allocator_api,
-    nonnull_slice_from_raw_parts
+    nonnull_slice_from_raw_parts,
+    maybe_uninit_write_slice,
+    maybe_uninit_as_bytes
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]
