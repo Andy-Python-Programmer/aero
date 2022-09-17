@@ -1,4 +1,4 @@
-use core::mem::MaybeUninit;
+use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicU16, Ordering};
 
 use crate::mem::paging::PhysAddr;
@@ -38,7 +38,7 @@ unsafe impl Sync for DoorBell {}
 pub(super) struct Queue<'bell, T: QueueType> {
     doorbell: &'bell DoorBell,
     index: usize,
-    queue: Dma<[MaybeUninit<T::Type>]>,
+    queue: Dma<[UnsafeCell<T::Type>]>,
     phase: bool,
 }
 
@@ -53,7 +53,7 @@ impl<'bell, T: QueueType> Queue<'bell, T> {
 
         Ok(Self {
             doorbell,
-            queue: Dma::new_uninit_slice(size),
+            queue: unsafe { Dma::new_uninit_slice(size).assume_init() },
             index: 0,
             phase: true,
         })
@@ -66,20 +66,30 @@ impl<'bell, T: QueueType> Queue<'bell, T> {
 
 impl Queue<'_, Completion> {
     pub fn next_cmd_result(&mut self) -> Option<CompletionEntry> {
-        let cur_completion = unsafe { self.queue[self.index].assume_init() };
-        if cur_completion.get_phase_tag() != self.phase {
-            self.index += 1;
-            self.doorbell.0.set(self.index as u32);
-            Some(cur_completion.clone())
-        } else {
-            None
+        let cmd = &mut self.queue[self.index];
+
+        while (cmd.get_mut().status & 0x1) != self.phase as u16 {
+            core::hint::spin_loop();
         }
+
+        let cmd = cmd.get_mut();
+        let status = cmd.status >> 1;
+
+        if status != 0 {
+            log::error!("nvme: command error {status:#x}");
+            return None;
+        }
+
+        self.index += 1;
+        self.doorbell.0.set(self.index as u32);
+
+        Some(cmd.clone())
     }
 }
 
 impl Queue<'_, Submisson> {
     pub fn submit_command(&mut self, command: Command) {
-        self.queue[self.index] = MaybeUninit::new(command);
+        self.queue[self.index] = UnsafeCell::new(command);
 
         self.index += 1;
         self.doorbell.0.set(self.index as u32); // ring ring!

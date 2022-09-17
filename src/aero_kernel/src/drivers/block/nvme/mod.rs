@@ -21,6 +21,8 @@ mod command;
 mod dma;
 mod queue;
 
+use core::mem::MaybeUninit;
+
 use command::*;
 use dma::*;
 use queue::*;
@@ -36,7 +38,7 @@ use crate::fs::block::{install_block_device, BlockDevice, BlockDeviceInterface};
 use crate::mem::paging::*;
 
 use crate::utils::sync::Mutex;
-use crate::utils::VolatileCell;
+use crate::utils::{CeilDiv, VolatileCell};
 
 #[derive(Copy, Clone, Debug)]
 enum Error {
@@ -78,7 +80,8 @@ bitflags::bitflags! {
 struct Capability(VolatileCell<u64>);
 
 impl Capability {
-    /// Returns maximum individual queue size that the controller supports.
+    /// Returns maximum individual queue size that the controller
+    /// supports.
     fn max_queue_entries(&self) -> u16 {
         self.0.get().get_bits(0..16) as u16
     }
@@ -88,9 +91,16 @@ impl Capability {
         self.0.get().get_bits(32..36)
     }
 
-    /// Returns the command sets that are supported by the controller.
+    /// Returns the command sets that are supported by the
+    /// controller.
     fn get_css(&self) -> CommandSetsSupported {
         CommandSetsSupported::from_bits_truncate(self.0.get().get_bits(37..45) as u8)
+    }
+
+    /// Returns the the minimum host memory page size that the
+    /// controller supports.
+    fn mpsmin(&self) -> u64 {
+        self.0.get().get_bits(48..52)
     }
 }
 
@@ -215,12 +225,15 @@ struct Namespace<'a> {
     blocks: usize,
     block_size: usize,
     size: usize,
+    max_prps: usize,
+    prps: Mutex<Dma<[MaybeUninit<u64>]>>,
     controller: Arc<Controller<'a>>,
 }
 
 impl<'a> Namespace<'a> {
-    fn read(&self, sector: usize, dest: &mut [u8]) {
-        let length = ((dest.len() / self.block_size) - 1) as u16;
+    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) {
+        let size_bytes = dest.len();
+        let blocks = size_bytes.ceil_div(self.block_size);
 
         let buffer = Dma::<u8>::new_uninit_slice(dest.len());
         let mut read_cmd = ReadWriteCommand::default();
@@ -228,14 +241,32 @@ impl<'a> Namespace<'a> {
         read_cmd.opcode = CommandOpcode::Read as u8;
         read_cmd.nsid = self.nsid;
         read_cmd.start_lba = sector as u64;
-        read_cmd.length = length;
-        read_cmd.data_ptr.prp1 = buffer.addr().as_u64();
+        read_cmd.length = (blocks - 1) as u16;
+
+        if size_bytes > Size4KiB::SIZE as usize {
+            // The data cannot fit in 8KiB frames, so we need to use
+            // a PRP list.
+            let prp_num = ((blocks - 1) * self.block_size) / Size4KiB::SIZE as usize;
+            assert!(prp_num < self.max_prps);
+
+            let mut prps = self.prps.lock();
+
+            for i in 0..prp_num {
+                prps[i]
+                    .write((buffer.addr().as_u64() + Size4KiB::SIZE) + (Size4KiB::SIZE * i as u64));
+            }
+
+            read_cmd.data_ptr.prp1 = buffer.addr().as_u64();
+            read_cmd.data_ptr.prp2 = prps.addr().as_u64();
+        } else {
+            read_cmd.data_ptr.prp1 = buffer.addr().as_u64();
+        }
 
         self.controller.io_queue.lock().submit_command(read_cmd);
 
         // SAFETY: The buffer is initialized above.
         let buffer = unsafe { buffer.assume_init() };
-        dest.copy_from_slice(&*buffer);
+        MaybeUninit::write_slice(dest, &*buffer);
     }
 }
 
@@ -356,6 +387,13 @@ impl<'a> Controller<'a> {
 
         admin.submit_command(io_sq_cmd);
 
+        let shift = 12 + registers.capability.mpsmin() as usize;
+        let max_transfer_shift = if identity.mdts != 0 {
+            shift + identity.mdts as usize
+        } else {
+            20
+        };
+
         let this = Arc::new(Self {
             identity,
             namespaces: Mutex::new(alloc::vec![]),
@@ -396,12 +434,19 @@ impl<'a> Controller<'a> {
                 let blocks = identity.nsze as usize;
                 let block_size = 1 << identity.lbaf[(identity.flbas & 0b11111) as usize].ds;
 
+                // The maximum transfer size is in units of 2^(min page size)
+                let lba_shift = identity.lbaf[(identity.flbas & 0xf) as usize].ds;
+                let max_lbas = 1 << (max_transfer_shift - lba_shift as usize);
+                let max_prps = (max_lbas * (1 << lba_shift)) / Size4KiB::SIZE as usize;
+
                 Namespace {
                     controller: this.clone(),
                     nsid: *nsid,
                     blocks,
                     block_size,
                     size: blocks * block_size,
+                    max_prps,
+                    prps: Mutex::new(Dma::new_uninit_slice(max_prps)),
                 }
             })
             .collect::<Vec<_>>();
@@ -423,7 +468,7 @@ impl<'a> Controller<'a> {
 }
 
 impl<'a> BlockDeviceInterface for Controller<'a> {
-    fn read(&self, sector: usize, dest: &mut [u8]) -> Option<usize> {
+    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         self.namespaces.lock()[0].read(sector, dest);
         Some(dest.len())
     }

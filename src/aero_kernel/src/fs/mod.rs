@@ -37,6 +37,7 @@ pub mod cache;
 pub mod devfs;
 pub mod epoll;
 pub mod eventfd;
+pub mod ext2;
 pub mod file_table;
 pub mod initramfs;
 pub mod inode;
@@ -318,6 +319,7 @@ pub fn init() -> Result<()> {
     root_dir().inode().mkdir("tmp")?;
     root_dir().inode().mkdir("proc")?;
     root_dir().inode().mkdir("var")?;
+    root_dir().inode().mkdir("mnt")?;
 
     initramfs::init()?;
     log::info!("installed initramfs");
