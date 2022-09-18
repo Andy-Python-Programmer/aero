@@ -39,6 +39,8 @@ use spin::Once;
 use crate::fs::inode::{DirEntry, INodeInterface};
 use crate::utils::sync::Mutex;
 
+use super::FileSystem;
+
 pub(super) static INODE_CACHE: Once<Arc<INodeCache>> = Once::new();
 pub(super) static DIR_CACHE: Once<Arc<DirCache>> = Once::new();
 
@@ -291,10 +293,13 @@ impl ops::Deref for CachedINode {
 
 impl Cacheable<INodeCacheKey> for CachedINode {
     fn cache_key(&self) -> INodeCacheKey {
-        (
-            Weak::as_ptr(&self.weak_filesystem().unwrap()) as *const () as usize,
-            self.metadata().unwrap().id,
-        )
+        INodeCacheItem::make_key(self.weak_filesystem().unwrap(), self.metadata().unwrap().id)
+    }
+}
+
+impl INodeCacheItem {
+    pub fn make_key(fs: Weak<dyn FileSystem>, id: usize) -> INodeCacheKey {
+        (Weak::as_ptr(&fs) as *const () as usize, id)
     }
 }
 

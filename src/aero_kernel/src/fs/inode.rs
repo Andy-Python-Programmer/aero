@@ -256,13 +256,7 @@ pub trait INodeInterface: Send + Sync {
 pub struct Metadata {
     pub id: usize,
     pub file_type: FileType,
-
-    /// The total size of the content that the inode holds. Set to `0x00` if
-    /// the inode file type is *not* a file.
     pub size: usize,
-
-    /// The length of the children's map of the inode. Set to `0x00` if the inode
-    /// has no children and if the file type of the inode is *not* a directory.
     pub children_len: usize,
 }
 
@@ -330,6 +324,7 @@ pub enum FileType {
     Directory,
     Device,
     Socket,
+    Symlink,
 }
 
 impl From<FileType> for aero_syscall::SysFileType {
@@ -337,8 +332,9 @@ impl From<FileType> for aero_syscall::SysFileType {
         match file {
             FileType::File => aero_syscall::SysFileType::File,
             FileType::Directory => aero_syscall::SysFileType::Directory,
-            FileType::Device => aero_syscall::SysFileType::Device,
+            FileType::Device => aero_syscall::SysFileType::CharDevice, // FIXME: determine if it is a character or block device.
             FileType::Socket => aero_syscall::SysFileType::Socket,
+            FileType::Symlink => aero_syscall::SysFileType::Symlink,
         }
     }
 }

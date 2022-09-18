@@ -241,10 +241,14 @@ pub fn syscall_as_str(syscall: usize) -> &'static str {
 #[derive(Debug)]
 #[repr(usize)]
 pub enum SysFileType {
-    File,
-    Directory,
-    Device,
-    Socket,
+    Unknown = 0,
+    Fifo = 1,
+    CharDevice = 2,
+    Directory = 4,
+    BlockDevice = 6,
+    File = 8,
+    Symlink = 10,
+    Socket = 12,
 }
 
 #[repr(C, packed)]
