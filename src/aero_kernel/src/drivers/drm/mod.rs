@@ -1093,8 +1093,8 @@ fn make_dmt_modes(max_width: u16, max_height: u16) -> Vec<DrmModeInfo> {
 
     // Sort the modes by display size:
     result.sort_by(|e, f| {
-        (e.hdisplay * e.vdisplay)
-            .partial_cmp(&(f.hdisplay * f.vdisplay))
+        ((e.hdisplay as usize) * (e.vdisplay as usize))
+            .partial_cmp(&((f.hdisplay as usize) * (f.vdisplay as usize)))
             .unwrap() // unreachable
     });
 
