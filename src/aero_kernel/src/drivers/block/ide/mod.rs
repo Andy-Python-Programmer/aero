@@ -52,7 +52,7 @@ impl IdeDrive {
 }
 
 impl BlockDeviceInterface for IdeDrive {
-    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
+    fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         let count = dest.len().ceil_div(512);
         let request = Arc::new(DmaRequest::new(sector, count));
 
@@ -66,7 +66,11 @@ impl BlockDeviceInterface for IdeDrive {
         res
     }
 
-    fn write(&self, _sector: usize, _buf: &[u8]) -> Option<usize> {
+    fn block_size(&self) -> usize {
+        todo!()
+    }
+
+    fn write_block(&self, _sector: usize, _buf: &[u8]) -> Option<usize> {
         unimplemented!()
     }
 }

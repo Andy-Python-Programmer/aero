@@ -22,12 +22,13 @@ use core::mem::MaybeUninit;
 use alloc::boxed::Box;
 use alloc::sync::{Arc, Weak};
 
+use crate::fs::cache::CachedINode;
 use crate::utils::CeilDiv;
 
 use super::block::BlockDevice;
 
 use super::cache;
-use super::cache::{CachedINode, DirCacheItem, INodeCacheItem};
+use super::cache::{DirCacheItem, INodeCacheItem};
 
 use super::inode::{DirEntry, INodeInterface, Metadata};
 use super::FileSystem;
@@ -154,7 +155,7 @@ impl From<FileType> for super::inode::FileType {
     }
 }
 
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct DiskINode {
     type_and_perm: u16,
@@ -213,23 +214,31 @@ impl INode {
             Some(inode)
         } else {
             let fs = ext2.upgrade()?;
+            let superblock = &fs.superblock;
 
-            let inode_block_group = (id - 1) / fs.superblock.inodes_per_group as usize;
-            let inode_table_idx = (id - 1) % fs.superblock.inodes_per_group as usize;
+            // There is one inode table per block group and can be located by
+            // the `inode_table` offset in the group descriptor. Also there are
+            // `inodes_per_group` inodes per table.
+            let ino_per_group = superblock.inodes_per_group as usize;
 
-            let group_descriptor = &fs.bgdt[inode_block_group];
-            let inode_size = core::mem::size_of::<DiskINode>(); // TODO: the inode size can be different
+            let ino_block_group = (id - 1) / ino_per_group;
+            let ino_table_index = (id - 1) % ino_per_group;
 
-            let table_offset = group_descriptor.inode_table as usize * fs.superblock.block_size();
-            let inode_offset = table_offset + (inode_size * inode_table_idx);
+            let group_descriptor = &fs.bgdt[ino_block_group];
+
+            let table_offset = group_descriptor.inode_table as usize * superblock.block_size();
 
             let mut inode = Box::<DiskINode>::new_uninit();
-            fs.block
-                .device()
-                .read(inode_offset / 512, inode.as_bytes_mut());
+
+            fs.block.device().read(
+                table_offset + (ino_table_index * core::mem::size_of::<DiskINode>()),
+                inode.as_bytes_mut(),
+            )?;
 
             // SAFETY: We have initialized the inode above.
             let inode = unsafe { inode.assume_init() };
+
+            log::debug!("ino_table_index={ino_table_index:?} inode={inode:?}");
 
             Some(icache.make_item_cached(CachedINode::new(Arc::new(Self {
                 inode,
@@ -268,7 +277,7 @@ impl Ext2 {
 
     pub fn new(block: Arc<BlockDevice>) -> Option<Arc<Self>> {
         let mut superblock = Box::<SuperBlock>::new_uninit();
-        block.device().read(2, superblock.as_bytes_mut())?;
+        block.device().read_block(2, superblock.as_bytes_mut())?;
 
         // SAFETY: We have initialized the superblock above.
         let superblock = unsafe { superblock.assume_init() };
@@ -277,10 +286,15 @@ impl Ext2 {
             return None;
         }
 
+        assert_eq!(
+            superblock.inode_size as usize,
+            core::mem::size_of::<DiskINode>()
+        );
+
         let bgdt_len = superblock.bgdt_len();
         let mut bgdt = Box::<[GroupDescriptor]>::new_uninit_slice(bgdt_len);
 
-        block.device().read(
+        block.device().read_block(
             superblock.bgdt_sector(),
             MaybeUninit::slice_as_bytes_mut(&mut bgdt),
         )?;

@@ -19,6 +19,7 @@
 
 mod gpt;
 
+use alloc::boxed::Box;
 use gpt::Gpt;
 
 use core::mem::MaybeUninit;
@@ -31,14 +32,34 @@ use crate::fs::devfs::install_device;
 use crate::fs::{Path, Result, MOUNT_MANAGER};
 
 use crate::fs::ext2::Ext2;
+use crate::mem::paging::{align_down, align_up};
 use crate::utils::sync::Mutex;
 
 use super::devfs::{alloc_device_marker, Device};
 use super::inode::INodeInterface;
 
 pub trait BlockDeviceInterface: Send + Sync {
-    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize>;
-    fn write(&self, sector: usize, buf: &[u8]) -> Option<usize>;
+    fn block_size(&self) -> usize;
+
+    fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize>;
+    fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize>;
+
+    fn read(&self, offset: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        let aligned_offset = align_down(offset as u64, self.block_size() as u64) as usize;
+        let sector = aligned_offset / self.block_size();
+
+        let aligned_size = align_up(dest.len() as u64, self.block_size() as u64) as usize;
+        let mut buffer = Box::<[u8]>::new_uninit_slice(aligned_size);
+
+        self.read_block(sector, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
+        // SAFETY: We have initialized the buffer above.
+        let buffer = unsafe { buffer.assume_init() };
+
+        let offset = offset - aligned_offset;
+        MaybeUninit::write_slice(dest, &buffer[offset..(offset + dest.len())]);
+
+        Some(dest.len())
+    }
 }
 
 static BLOCK_DEVS: Mutex<BTreeMap<usize, Arc<BlockDevice>>> = Mutex::new(BTreeMap::new());
@@ -113,20 +134,24 @@ impl PartitionBlockDevice {
 }
 
 impl BlockDeviceInterface for PartitionBlockDevice {
-    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
+    fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         if sector >= self.size {
             return None;
         }
 
-        self.device.read(self.offset + sector, dest)
+        self.device.read_block(self.offset + sector, dest)
     }
 
-    fn write(&self, sector: usize, buf: &[u8]) -> Option<usize> {
+    fn block_size(&self) -> usize {
+        self.device.block_size()
+    }
+
+    fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize> {
         if sector >= self.size {
             return None;
         }
 
-        self.device.write(self.offset + sector, buf)
+        self.device.write_block(self.offset + sector, buf)
     }
 }
 

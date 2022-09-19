@@ -468,12 +468,16 @@ impl<'a> Controller<'a> {
 }
 
 impl<'a> BlockDeviceInterface for Controller<'a> {
-    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
+    fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         self.namespaces.lock()[0].read(sector, dest);
         Some(dest.len())
     }
 
-    fn write(&self, _sector: usize, _buf: &[u8]) -> Option<usize> {
+    fn block_size(&self) -> usize {
+        self.namespaces.lock()[0].block_size
+    }
+
+    fn write_block(&self, _sector: usize, _buf: &[u8]) -> Option<usize> {
         unimplemented!()
     }
 }

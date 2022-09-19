@@ -127,7 +127,7 @@ impl Gpt {
 
         controller
             .device()
-            .read(1, header.as_bytes_mut())
+            .read_block(1, header.as_bytes_mut())
             .expect("gpt: failed to read first sector");
 
         // SAFETY: The buffer is initialized above.
@@ -144,7 +144,7 @@ impl Gpt {
 
         controller
             .device()
-            .read(
+            .read_block(
                 header.starting_lba as _,
                 MaybeUninit::slice_as_bytes_mut(&mut entry_list),
             )
