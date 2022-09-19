@@ -20,6 +20,7 @@
 use core::mem::MaybeUninit;
 
 use alloc::boxed::Box;
+use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
 
 use crate::fs::cache::CachedINode;
@@ -197,10 +198,12 @@ impl DiskINode {
 
 const_assert_eq!(core::mem::size_of::<DiskINode>(), 128);
 
-struct INode {
+pub struct INode {
     id: usize,
     fs: Weak<Ext2>,
     inode: Box<DiskINode>,
+
+    sref: Weak<INode>,
 }
 
 impl INode {
@@ -238,14 +241,30 @@ impl INode {
             // SAFETY: We have initialized the inode above.
             let inode = unsafe { inode.assume_init() };
 
-            log::debug!("ino_table_index={ino_table_index:?} inode={inode:?}");
+            Some(
+                icache.make_item_cached(CachedINode::new(Arc::new_cyclic(|sref| Self {
+                    inode,
+                    id,
+                    fs: ext2,
 
-            Some(icache.make_item_cached(CachedINode::new(Arc::new(Self {
-                inode,
-                id,
-                fs: ext2,
-            }))))
+                    sref: sref.clone(),
+                }))),
+            )
         }
+    }
+
+    pub fn sref(&self) -> Arc<INode> {
+        self.sref.upgrade().unwrap()
+    }
+
+    pub fn make_dir_entry(
+        &self,
+        parent: DirCacheItem,
+        name: &str,
+        entry: &DiskDirEntry,
+    ) -> Option<DirCacheItem> {
+        let inode = self.fs.upgrade()?.find_inode(entry.inode as usize)?;
+        Some(DirEntry::new(parent, inode, name.to_string()))
     }
 }
 
@@ -261,6 +280,72 @@ impl INodeInterface for INode {
             size: self.inode.size_lower as _,
             children_len: 0,
         })
+    }
+
+    fn dirent(&self, parent: DirCacheItem, index: usize) -> super::Result<Option<DirCacheItem>> {
+        Ok(DirEntryIter::new(parent, self.sref()).nth(index))
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+#[repr(C, packed)]
+pub struct DiskDirEntry {
+    inode: u32,
+    entry_size: u16,
+    name_size: u8,
+    file_type: u8,
+}
+
+pub struct DirEntryIter {
+    parent: DirCacheItem,
+    inode: Arc<INode>,
+    offset: usize,
+}
+
+impl DirEntryIter {
+    pub fn new(parent: DirCacheItem, inode: Arc<INode>) -> Self {
+        Self {
+            parent,
+            inode,
+
+            offset: 0,
+        }
+    }
+}
+
+impl Iterator for DirEntryIter {
+    type Item = DirCacheItem;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let filesystem = self.inode.fs.upgrade()?;
+        let file_size = self.inode.inode.size_lower as usize;
+
+        if self.offset + core::mem::size_of::<DiskDirEntry>() > file_size {
+            return None;
+        }
+
+        let mut entry = Box::<DiskDirEntry>::new_uninit();
+
+        let offset = (self.inode.inode.data_ptr[0] as usize * filesystem.superblock.block_size())
+            + self.offset;
+
+        filesystem.block.device().read(offset, entry.as_bytes_mut());
+
+        // SAFETY: We have initialized the entry above.
+        let entry = unsafe { entry.assume_init() };
+
+        let mut name = Box::<[u8]>::new_uninit_slice(entry.name_size as usize);
+        filesystem.block.device().read(
+            offset + core::mem::size_of::<DiskDirEntry>(),
+            MaybeUninit::slice_as_bytes_mut(&mut name),
+        );
+
+        // SAFETY: We have initialized the name above.
+        let name = unsafe { name.assume_init() };
+        let name = unsafe { core::str::from_utf8_unchecked(&*name) };
+
+        self.offset += entry.entry_size as usize;
+        self.inode.make_dir_entry(self.parent.clone(), name, &entry)
     }
 }
 
