@@ -66,6 +66,7 @@ impl<'bell, T: QueueType> Queue<'bell, T> {
 
 impl Queue<'_, Completion> {
     pub fn next_cmd_result(&mut self) -> Option<CompletionEntry> {
+        let queue_len = self.queue.len();
         let cmd = &mut self.queue[self.index];
 
         while (cmd.get_mut().status & 0x1) != self.phase as u16 {
@@ -80,7 +81,13 @@ impl Queue<'_, Completion> {
             return None;
         }
 
-        self.index += 1;
+        self.index = (self.index + 1) % queue_len;
+
+        // invert the phase bit since we are in the next cycle/phase.
+        if self.index == 0 {
+            self.phase = !self.phase;
+        }
+
         self.doorbell.0.set(self.index as u32);
 
         Some(cmd.clone())
@@ -91,7 +98,7 @@ impl Queue<'_, Submisson> {
     pub fn submit_command(&mut self, command: Command) {
         self.queue[self.index] = UnsafeCell::new(command);
 
-        self.index += 1;
+        self.index = (self.index + 1) % self.queue.len();
         self.doorbell.0.set(self.index as u32); // ring ring!
     }
 }

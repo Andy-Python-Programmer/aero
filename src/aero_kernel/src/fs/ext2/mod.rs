@@ -19,11 +19,15 @@
 
 use core::mem::MaybeUninit;
 
+use aero_syscall::MMapFlags;
 use alloc::boxed::Box;
 use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
+use alloc::vec::Vec;
+use spin::Once;
 
 use crate::fs::cache::CachedINode;
+use crate::mem::paging::{FrameAllocator, PhysFrame, FRAME_ALLOCATOR};
 use crate::utils::CeilDiv;
 
 use super::block::BlockDevice;
@@ -168,7 +172,7 @@ pub struct DiskINode {
     pub deletion_time: u32,
     pub group_id: u16,
     pub hl_count: u16,
-    pub sector_count: u32,
+    pub block_count: u32,
     pub flags: u32,
     pub os_specific: u32,
     pub data_ptr: [u32; 15],
@@ -202,6 +206,11 @@ pub struct INode {
     id: usize,
     fs: Weak<Ext2>,
     inode: Box<DiskINode>,
+
+    // TODO: Do not store this in the inode, but rather in a different
+    // cache using the API provided by fs::cache (consider LRU only?).
+    block_map: Once<Box<[u32]>>,
+    entries: Once<Vec<(String, Box<DiskDirEntry>)>>,
 
     sref: Weak<INode>,
 }
@@ -247,14 +256,122 @@ impl INode {
                     id,
                     fs: ext2,
 
+                    block_map: Once::new(),
+                    entries: Once::new(),
+
                     sref: sref.clone(),
                 }))),
             )
         }
     }
 
-    pub fn sref(&self) -> Arc<INode> {
-        self.sref.upgrade().unwrap()
+    pub fn init_block_map(&self) {
+        let filesystem = self.fs.upgrade().unwrap();
+        let block_size = filesystem.superblock.block_size();
+
+        let entries_per_block = block_size / core::mem::size_of::<u32>();
+        let mut block_map = Box::<[u32]>::new_uninit_slice(self.inode.block_count as usize);
+
+        // There are pointers to the first 12 blocks which contain the file's
+        // data in the inode. There is a pointer to an indirect block (which
+        // contains pointers to the next set of blocks), a pointer to a doubly
+        // indirect block and a pointer to a treply indirect block.
+        for i in 0..block_map.len() {
+            let mut block = i;
+            if block < 12 {
+                // direct block
+                block_map[i].write(self.inode.data_ptr[block]);
+            } else {
+                // indirect block
+                block -= 12;
+
+                if block >= entries_per_block {
+                    // doubly indirect block
+                    block -= entries_per_block;
+
+                    let index = block / entries_per_block;
+                    let mut indirect_block = MaybeUninit::<u32>::uninit();
+
+                    if index >= entries_per_block {
+                        // treply indirect block
+                        todo!()
+                    } else {
+                        let block_ptrs = self.inode.data_ptr[13] as usize * block_size;
+                        let offset = block_ptrs + (index * core::mem::size_of::<u32>());
+
+                        filesystem
+                            .block
+                            .device()
+                            .read(offset, indirect_block.as_bytes_mut())
+                            .unwrap();
+                    }
+
+                    // SAFETY: We have initialized the indirect block variable above.
+                    let indirect_block = unsafe { indirect_block.assume_init() } as usize;
+
+                    for j in 0..entries_per_block {
+                        if (i + j) >= block_map.len() {
+                            // SAFETY: We have fully initialized the block map.
+                            let block_map = unsafe { block_map.assume_init() };
+                            self.block_map.call_once(|| block_map);
+                            return;
+                        }
+
+                        let offset = indirect_block * block_size + j * core::mem::size_of::<u32>();
+                        filesystem
+                            .block
+                            .device()
+                            .read(offset, block_map[i + j].as_bytes_mut())
+                            .unwrap();
+                    }
+                } else {
+                    // singly indirect block
+                    let block_ptrs = self.inode.data_ptr[12] as usize * block_size;
+                    let offset = block_ptrs + (block * core::mem::size_of::<u32>());
+
+                    filesystem
+                        .block
+                        .device()
+                        .read(offset, block_map[i].as_bytes_mut())
+                        .expect("init_block_map: failed to read singly indirect block");
+                }
+            }
+        }
+
+        // SAFETY: We have fully initialized the block map.
+        let block_map = unsafe { block_map.assume_init() };
+        self.block_map.call_once(|| block_map);
+    }
+
+    pub fn read(&self, offset: usize, buffer: &mut [MaybeUninit<u8>]) -> super::Result<usize> {
+        let filesystem = self.fs.upgrade().unwrap();
+        let block_size = filesystem.superblock.block_size();
+
+        let mut progress = 0;
+
+        let count = core::cmp::min(self.inode.size_lower as usize - offset, buffer.len());
+
+        while progress < count {
+            let block = (offset + progress) / block_size;
+            let loc = (offset + progress) % block_size;
+
+            let mut chunk = count - progress;
+
+            if chunk > block_size - loc {
+                chunk = block_size - loc;
+            }
+
+            let block_index = self.block_map()[block] as usize;
+
+            filesystem.block.device().read(
+                (block_index * block_size) + loc,
+                &mut buffer[progress..progress + chunk],
+            );
+
+            progress += chunk;
+        }
+
+        Ok(count)
     }
 
     pub fn make_dir_entry(
@@ -265,6 +382,20 @@ impl INode {
     ) -> Option<DirCacheItem> {
         let inode = self.fs.upgrade()?.find_inode(entry.inode as usize)?;
         Some(DirEntry::new(parent, inode, name.to_string()))
+    }
+
+    pub fn entries(&self) -> &[(String, Box<DiskDirEntry>)] {
+        self.entries
+            .call_once(|| DirEntryIter::new(self.sref()).collect::<Vec<_>>())
+    }
+
+    pub fn block_map(&self) -> &[u32] {
+        self.init_block_map();
+        self.block_map.get().unwrap()
+    }
+
+    pub fn sref(&self) -> Arc<INode> {
+        self.sref.upgrade().unwrap()
     }
 }
 
@@ -313,51 +444,46 @@ impl INodeInterface for INode {
     }
 
     fn dirent(&self, parent: DirCacheItem, index: usize) -> super::Result<Option<DirCacheItem>> {
-        Ok(DirEntryIter::new(parent, self.sref()).nth(index))
-    }
-
-    fn lookup(&self, dir: DirCacheItem, name: &str) -> super::Result<DirCacheItem> {
-        DirEntryIter::new(dir, self.sref())
-            .find(|e| &e.name() == name)
-            .ok_or(FileSystemError::EntryNotFound)
-    }
-
-    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> super::Result<usize> {
-        let filesystem = self.fs.upgrade().unwrap();
-        let block_size = filesystem.superblock.block_size();
-
-        let mut progress = 0;
-
-        let count = core::cmp::min(self.inode.size_lower as usize - offset, buffer.len());
-
-        while progress < count {
-            let block = (offset + progress) / block_size;
-            let loc = (offset + progress) % block_size;
-
-            let mut chunk = count - progress;
-
-            if chunk > block_size - loc {
-                chunk = block_size - loc;
-            }
-
-            let block_index = self.inode.data_ptr[block];
-
-            // TODO: We really should not allocate another buffer here.
-            let mut data = Box::<[u8]>::new_uninit_slice(chunk);
-
-            filesystem.block.device().read(
-                (block_index as usize * block_size) + loc,
-                MaybeUninit::slice_as_bytes_mut(&mut data),
-            );
-
-            // SAFETY: We have initialized the data buffer above.
-            let data = unsafe { data.assume_init() };
-
-            buffer[progress..progress + data.len()].copy_from_slice(&*data);
-            progress += chunk;
+        if let Some((name, entry)) = self.entries().get(index) {
+            Ok(self.make_dir_entry(parent, name, entry))
+        } else {
+            Ok(None)
         }
+    }
+
+    fn lookup(&self, parent: DirCacheItem, name: &str) -> super::Result<DirCacheItem> {
+        let (name, entry) = self
+            .entries()
+            .iter()
+            .find(|(ename, _)| ename == name)
+            .ok_or(FileSystemError::EntryNotFound)
+            .cloned()?;
+
+        Ok(self.make_dir_entry(parent, &name, &entry).unwrap())
+    }
+
+    fn read_at(&self, offset: usize, usr_buffer: &mut [u8]) -> super::Result<usize> {
+        // TODO: We really should not allocate another buffer here.
+        let mut buffer = Box::<[u8]>::new_uninit_slice(usr_buffer.len());
+        let count = self.read(offset, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
+
+        // SAFETY: We have initialized the data buffer above.
+        let buffer = unsafe { buffer.assume_init() };
+        usr_buffer.copy_from_slice(&*buffer);
 
         Ok(count)
+    }
+
+    fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> super::Result<PhysFrame> {
+        // TODO: support shared file mappings.
+        assert!(!flags.contains(MMapFlags::MAP_SHARED));
+
+        let private_cp: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
+
+        let buffer = &mut private_cp.as_slice_mut()[..size];
+        self.read_at(offset, buffer)?;
+
+        Ok(private_cp)
     }
 }
 
@@ -371,27 +497,20 @@ pub struct DiskDirEntry {
 }
 
 pub struct DirEntryIter {
-    parent: DirCacheItem,
     inode: Arc<INode>,
     offset: usize,
 }
 
 impl DirEntryIter {
-    pub fn new(parent: DirCacheItem, inode: Arc<INode>) -> Self {
-        Self {
-            parent,
-            inode,
-
-            offset: 0,
-        }
+    pub fn new(inode: Arc<INode>) -> Self {
+        Self { inode, offset: 0 }
     }
 }
 
 impl Iterator for DirEntryIter {
-    type Item = DirCacheItem;
+    type Item = (String, Box<DiskDirEntry>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let filesystem = self.inode.fs.upgrade()?;
         let file_size = self.inode.inode.size_lower as usize;
 
         if self.offset + core::mem::size_of::<DiskDirEntry>() > file_size {
@@ -400,26 +519,25 @@ impl Iterator for DirEntryIter {
 
         let mut entry = Box::<DiskDirEntry>::new_uninit();
 
-        let offset = (self.inode.inode.data_ptr[0] as usize * filesystem.superblock.block_size())
-            + self.offset;
-
-        filesystem.block.device().read(offset, entry.as_bytes_mut());
+        self.inode.read(self.offset, entry.as_bytes_mut()).ok()?;
 
         // SAFETY: We have initialized the entry above.
         let entry = unsafe { entry.assume_init() };
 
         let mut name = Box::<[u8]>::new_uninit_slice(entry.name_size as usize);
-        filesystem.block.device().read(
-            offset + core::mem::size_of::<DiskDirEntry>(),
-            MaybeUninit::slice_as_bytes_mut(&mut name),
-        );
+        self.inode
+            .read(
+                self.offset + core::mem::size_of::<DiskDirEntry>(),
+                MaybeUninit::slice_as_bytes_mut(&mut name),
+            )
+            .ok()?;
 
         // SAFETY: We have initialized the name above.
         let name = unsafe { name.assume_init() };
         let name = unsafe { core::str::from_utf8_unchecked(&*name) };
 
         self.offset += entry.entry_size as usize;
-        self.inode.make_dir_entry(self.parent.clone(), name, &entry)
+        Some((name.to_string(), entry))
     }
 }
 

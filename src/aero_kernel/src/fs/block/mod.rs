@@ -32,7 +32,6 @@ use crate::fs::devfs::install_device;
 use crate::fs::{Path, Result, MOUNT_MANAGER};
 
 use crate::fs::ext2::Ext2;
-use crate::mem::paging::{align_down, align_up};
 use crate::utils::sync::Mutex;
 
 use super::devfs::{alloc_device_marker, Device};
@@ -45,20 +44,27 @@ pub trait BlockDeviceInterface: Send + Sync {
     fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize>;
 
     fn read(&self, offset: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        let aligned_offset = align_down(offset as u64, self.block_size() as u64) as usize;
-        let sector = aligned_offset / self.block_size();
+        let mut progress = 0;
+        let block_size = self.block_size();
 
-        let aligned_size = align_up(dest.len() as u64, self.block_size() as u64) as usize;
-        let mut buffer = Box::<[u8]>::new_uninit_slice(aligned_size);
+        while progress < dest.len() {
+            let block = (offset + progress) / block_size;
+            let loc = (offset + progress) % block_size;
 
-        self.read_block(sector, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
-        // SAFETY: We have initialized the buffer above.
-        let buffer = unsafe { buffer.assume_init() };
+            let mut chunk = dest.len() - progress;
 
-        let offset = offset - aligned_offset;
-        MaybeUninit::write_slice(dest, &buffer[offset..(offset + dest.len())]);
+            if chunk > (block_size - loc) {
+                chunk = block_size - loc;
+            }
 
-        Some(dest.len())
+            let mut buffer = Box::<[u8]>::new_uninit_slice(block_size);
+            self.read_block(block, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
+
+            dest[progress..(progress + chunk)].copy_from_slice(&buffer[loc..loc + chunk]);
+            progress += chunk;
+        }
+
+        Some(progress)
     }
 }
 
