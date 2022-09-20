@@ -28,8 +28,8 @@ use crate::utils::CeilDiv;
 
 use super::block::BlockDevice;
 
-use super::cache;
 use super::cache::{DirCacheItem, INodeCacheItem};
+use super::{cache, FileSystemError};
 
 use super::inode::{DirEntry, INodeInterface, Metadata};
 use super::FileSystem;
@@ -282,8 +282,82 @@ impl INodeInterface for INode {
         })
     }
 
+    fn stat(&self) -> super::Result<aero_syscall::Stat> {
+        use super::inode::FileType;
+        use aero_syscall::{Mode, Stat};
+
+        let filesystem = self.fs.upgrade().unwrap();
+        let filetype = self.metadata()?.file_type();
+
+        let mut mode = Mode::empty();
+
+        match filetype {
+            FileType::File => mode.insert(Mode::S_IFREG),
+            FileType::Directory => mode.insert(Mode::S_IFDIR),
+            FileType::Device => mode.insert(Mode::S_IFCHR),
+            FileType::Socket => mode.insert(Mode::S_IFSOCK),
+            FileType::Symlink => mode.insert(Mode::S_IFLNK),
+        }
+
+        // FIXME: read permission bits from the inode.
+        mode.insert(Mode::S_IRWXU | Mode::S_IRWXG | Mode::S_IRWXO);
+
+        Ok(Stat {
+            st_ino: self.id as _,
+            st_blksize: filesystem.superblock.block_size() as _,
+            st_size: self.inode.size_lower as _,
+            st_mode: mode,
+
+            ..Default::default()
+        })
+    }
+
     fn dirent(&self, parent: DirCacheItem, index: usize) -> super::Result<Option<DirCacheItem>> {
         Ok(DirEntryIter::new(parent, self.sref()).nth(index))
+    }
+
+    fn lookup(&self, dir: DirCacheItem, name: &str) -> super::Result<DirCacheItem> {
+        DirEntryIter::new(dir, self.sref())
+            .find(|e| &e.name() == name)
+            .ok_or(FileSystemError::EntryNotFound)
+    }
+
+    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> super::Result<usize> {
+        let filesystem = self.fs.upgrade().unwrap();
+        let block_size = filesystem.superblock.block_size();
+
+        let mut progress = 0;
+
+        let count = core::cmp::min(self.inode.size_lower as usize - offset, buffer.len());
+
+        while progress < count {
+            let block = (offset + progress) / block_size;
+            let loc = (offset + progress) % block_size;
+
+            let mut chunk = count - progress;
+
+            if chunk > block_size - loc {
+                chunk = block_size - loc;
+            }
+
+            let block_index = self.inode.data_ptr[block];
+
+            // TODO: We really should not allocate another buffer here.
+            let mut data = Box::<[u8]>::new_uninit_slice(chunk);
+
+            filesystem.block.device().read(
+                (block_index as usize * block_size) + loc,
+                MaybeUninit::slice_as_bytes_mut(&mut data),
+            );
+
+            // SAFETY: We have initialized the data buffer above.
+            let data = unsafe { data.assume_init() };
+
+            buffer[progress..progress + data.len()].copy_from_slice(&*data);
+            progress += chunk;
+        }
+
+        Ok(count)
     }
 }
 

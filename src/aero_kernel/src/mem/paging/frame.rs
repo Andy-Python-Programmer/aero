@@ -61,7 +61,7 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
         self.0
             .get()
             .map(|m| {
-                m.lock()
+                m.lock_irq()
                     .allocate_frame_inner(0)
                     .map(|f| PhysFrame::containing_address(f))
             })
@@ -93,7 +93,7 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
         self.0
             .get()
             .map(|m| {
-                m.lock()
+                m.lock_irq()
                     .allocate_frame_inner(2)
                     .map(|f| PhysFrame::containing_address(f))
             })
@@ -111,7 +111,10 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
 
         self.0
             .get()
-            .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 2))
+            .map(|m| {
+                m.lock_irq()
+                    .deallocate_frame_inner(frame.start_address(), 2)
+            })
             .unwrap_or(());
     }
 }
