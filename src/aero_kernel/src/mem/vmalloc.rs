@@ -205,5 +205,8 @@ pub fn init() {
 /// ## Panics
 /// * If the `vmalloc` allocator is not initialized.
 pub(super) fn get_vmalloc() -> MutexGuard<'static, Vmalloc> {
-    VMALLOC.get().expect("get_vmalloc: not initialized").lock()
+    VMALLOC
+        .get()
+        .expect("get_vmalloc: not initialized")
+        .lock_irq()
 }

@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
 
 from typing import List
 
@@ -76,9 +77,6 @@ CMDLINE=term-background=background theme-background=0x50000000
 
 MODULE_PATH=boot:///term_background.bmp
 MODULE_CMDLINE=background
-
-MODULE_PATH=boot:///initramfs.cpio
-MODULE_CMDLINE=initramfs
 """
 
 
@@ -437,47 +435,6 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join(limine_path, 'BOOTAA64.EFI'), efi_boot)
     shutil.copy(os.path.join(limine_path, 'BOOTX64.EFI'), efi_boot)
 
-    sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
-    shutil.copytree(BASE_FILES_DIR, sysroot_dir, dirs_exist_ok=True)
-
-    # dynamic linker (ld.so)
-    mlibc = os.path.join(get_userland_package(), "mlibc")
-    # gcc libraries required for rust programs
-    gcc = os.path.join(get_userland_package(), "gcc")
-
-    # FIXME
-    if "host-rust-prebuilt" in str(mlibc):
-        shutil.copytree(mlibc, sysroot_dir, dirs_exist_ok=True)
-        shutil.copytree(gcc, sysroot_dir, dirs_exist_ok=True)
-
-    for file in user_bins:
-        bin_name = os.path.basename(file)
-        shutil.copy(file, os.path.join(sysroot_dir, "usr", "bin", bin_name))
-
-    def find(path) -> List[str]:
-        _, find_output, _ = run_command(['find', '.', '-type', 'f'],
-                                        cwd=path,
-                                        stdout=subprocess.PIPE)
-
-        files_without_dot = filter(
-            lambda x: x != '.', find_output.decode('utf-8').splitlines())
-        files_without_prefix = map(
-            lambda x: remove_prefix(x, './'), files_without_dot)
-        files = list(files_without_prefix)
-
-        files.append("usr/lib/libiconv.so.2")
-        return files
-
-    files = find(sysroot_dir)
-
-    with open(os.path.join(iso_root, 'initramfs.cpio'), 'wb') as initramfs:
-        cpio_input = '\n'.join(files)
-        code, _, _ = run_command(['cpio', '-o', '-v'],
-                                 cwd=sysroot_dir,
-                                 stdout=initramfs,
-                                 stderr=subprocess.PIPE,
-                                 input=cpio_input.encode('utf-8'))
-
     with open(os.path.join(iso_root, 'limine.cfg'), 'w') as limine_cfg:
         limine_cfg.write(LIMINE_TEMPLATE)
 
@@ -641,6 +598,7 @@ def is_kvm_supported() -> bool:
 
 
 def main():
+    t0 = time.time()
     args = parse_args()
 
     # arch-aero_os
@@ -699,6 +657,8 @@ def main():
         kernel_bin = kernel_bin[0]
         iso_path = prepare_iso(args, kernel_bin, user_bins)
 
+        t1 = time.time()
+        log_info(f"build completed in {t1 - t0:.2f} seconds")
         if not args.no_run:
             run_in_emulator(build_info, iso_path)
 

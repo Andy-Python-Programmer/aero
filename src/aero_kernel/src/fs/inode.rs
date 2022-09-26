@@ -120,6 +120,17 @@ impl From<PollFlags> for PollEventFlags {
 /// files on the disk, etc...
 #[downcastable]
 pub trait INodeInterface: Send + Sync {
+    /// Resolves the symbolically linked file and returns the relative path
+    /// to the file.
+    ///
+    /// ## Errors
+    /// - `FileSystemError::NotSupported` - If the inode is not a symbolic link or
+    ///                                     the filesystem does not support symbolic
+    ///                                     links.
+    fn resolve_link(&self) -> Result<String> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Returns the inode metadata of `this` inode.
     fn metadata(&self) -> Result<Metadata> {
         Err(FileSystemError::NotSupported)
@@ -266,7 +277,6 @@ impl Metadata {
         self.id
     }
 
-    #[inline]
     pub fn file_type(&self) -> FileType {
         self.file_type
     }
@@ -277,15 +287,17 @@ impl Metadata {
     }
 
     /// Returns [`true`] if the file type of the inode is a directory.
-    #[inline]
     pub fn is_directory(&self) -> bool {
         self.file_type == FileType::Directory
     }
 
     /// Returns [`true`] if the file type of the inode is a socket.
-    #[inline]
     pub fn is_socket(&self) -> bool {
         self.file_type == FileType::Socket
+    }
+
+    pub fn is_symlink(&self) -> bool {
+        matches!(self.file_type, FileType::Symlink)
     }
 }
 

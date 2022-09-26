@@ -169,7 +169,7 @@ pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, SyscallError> {
         // pathname is interpreted relative to the current working directory of the
         // calling task.
         if dfd as isize == aero_syscall::AT_FDCWD {
-            let cwd = scheduler::get_scheduler().current_task().get_cwd_dirent();
+            let cwd = scheduler::get_scheduler().current_task().cwd_dirent();
             (cwd.inode(), path.as_str())
         } else {
             let handle = scheduler::get_scheduler()
