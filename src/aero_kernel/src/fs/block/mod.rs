@@ -29,19 +29,48 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
 use crate::fs::devfs::install_device;
-use crate::fs::{Path, Result, MOUNT_MANAGER};
+use crate::fs::{FileSystem, Result};
 
 use crate::fs::ext2::Ext2;
 use crate::utils::sync::Mutex;
 
+use super::cache::{Cache, Cacheable};
 use super::devfs::{alloc_device_marker, Device};
 use super::inode::INodeInterface;
+
+type CachedBlockKey = (usize, usize); // (block device pointer, block)
+
+struct CachedBlock {
+    device: Weak<dyn CachedAccess>,
+    block: usize,
+    buffer: Box<[u8]>,
+}
+
+impl CachedBlock {
+    fn make_key(device: Weak<dyn CachedAccess>, block: usize) -> CachedBlockKey {
+        (device.as_ptr() as *const u8 as usize, block)
+    }
+}
+
+impl Cacheable<CachedBlockKey> for CachedBlock {
+    fn cache_key(&self) -> CachedBlockKey {
+        Self::make_key(self.device.clone(), self.block)
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref BLOCK_CACHE: Arc<Cache<CachedBlockKey, CachedBlock>> = Cache::new();
+}
 
 pub trait BlockDeviceInterface: Send + Sync {
     fn block_size(&self) -> usize;
 
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize>;
     fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize>;
+}
+
+pub trait CachedAccess: BlockDeviceInterface {
+    fn sref(&self) -> Weak<dyn CachedAccess>;
 
     fn read(&self, offset: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         let mut progress = 0;
@@ -57,10 +86,26 @@ pub trait BlockDeviceInterface: Send + Sync {
                 chunk = block_size - loc;
             }
 
-            let mut buffer = Box::<[u8]>::new_uninit_slice(block_size);
-            self.read_block(block, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
+            let key = CachedBlock::make_key(self.sref(), block);
 
-            dest[progress..(progress + chunk)].copy_from_slice(&buffer[loc..loc + chunk]);
+            if let Some(cached) = BLOCK_CACHE.get(key) {
+                MaybeUninit::write_slice(
+                    &mut dest[progress..(progress + chunk)],
+                    &cached.buffer[loc..loc + chunk],
+                );
+            } else {
+                let mut buffer = Box::<[u8]>::new_uninit_slice(block_size);
+
+                self.read_block(block, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
+                dest[progress..(progress + chunk)].copy_from_slice(&buffer[loc..loc + chunk]);
+
+                BLOCK_CACHE.make_item_cached(CachedBlock {
+                    device: self.sref(),
+                    block,
+                    buffer: unsafe { buffer.assume_init() },
+                });
+            }
+
             progress += chunk;
         }
 
@@ -85,25 +130,41 @@ pub struct BlockDevice {
     id: usize,
     name: String,
     dev: Arc<dyn BlockDeviceInterface>,
-    self_ref: Weak<BlockDevice>,
+    sref: Weak<BlockDevice>,
 }
 
 impl BlockDevice {
     pub fn new(name: String, imp: Arc<dyn BlockDeviceInterface>) -> Arc<BlockDevice> {
-        Arc::new_cyclic(|me| BlockDevice {
+        Arc::new_cyclic(|sref| BlockDevice {
             id: alloc_device_marker(),
             name,
             dev: imp,
-            self_ref: me.clone(),
+            sref: sref.clone(),
         })
     }
 
     pub fn name(&self) -> String {
         self.name.clone()
     }
+}
 
-    pub fn device(&self) -> Arc<dyn BlockDeviceInterface> {
-        self.dev.clone()
+impl BlockDeviceInterface for BlockDevice {
+    fn block_size(&self) -> usize {
+        self.dev.block_size()
+    }
+
+    fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        self.dev.read_block(sector, dest)
+    }
+
+    fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize> {
+        self.dev.write_block(sector, buf)
+    }
+}
+
+impl CachedAccess for BlockDevice {
+    fn sref(&self) -> Weak<dyn CachedAccess> {
+        self.sref.clone()
     }
 }
 
@@ -119,23 +180,27 @@ impl Device for BlockDevice {
     }
 
     fn inode(&self) -> Arc<dyn INodeInterface> {
-        self.self_ref.upgrade().unwrap().clone()
+        self.sref.upgrade().unwrap().clone()
     }
 }
 
 struct PartitionBlockDevice {
+    sref: Weak<Self>,
+
     offset: usize, // offset in sectors
     size: usize,   // capacity in sectors
     device: Arc<dyn BlockDeviceInterface>,
 }
 
 impl PartitionBlockDevice {
-    fn new(offset: usize, size: usize, device: Arc<dyn BlockDeviceInterface>) -> Self {
-        Self {
+    fn new(offset: usize, size: usize, device: Arc<dyn BlockDeviceInterface>) -> Arc<Self> {
+        Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+
             offset,
             size,
             device,
-        }
+        })
     }
 }
 
@@ -158,6 +223,12 @@ impl BlockDeviceInterface for PartitionBlockDevice {
         }
 
         self.device.write_block(self.offset + sector, buf)
+    }
+}
+
+impl CachedAccess for PartitionBlockDevice {
+    fn sref(&self) -> Weak<dyn CachedAccess> {
+        self.sref.clone()
     }
 }
 
@@ -189,19 +260,27 @@ pub fn launch() -> Result<()> {
                 );
 
                 let name = alloc::format!("{}p{}", block.name(), i);
-                let partition_device = PartitionBlockDevice::new(start, size, block.device());
-                let device = BlockDevice::new(name, Arc::new(partition_device));
+                let partition_device = PartitionBlockDevice::new(start, size, block.clone());
+                let device = BlockDevice::new(name, partition_device);
 
                 install_block_device(device.clone())?;
 
                 // Check what filesystem is on this partition and mount it.
                 if let Some(ext2) = Ext2::new(device.clone()) {
                     log::info!("gpt: found ext2 filesystem on {}!", device.name());
-                    MOUNT_MANAGER.mount(super::lookup_path(Path::new("/mnt"))?, ext2)?;
+
+                    super::ROOT_FS.call_once(|| ext2.clone());
+                    super::ROOT_DIR.call_once(|| ext2.root_dir().clone());
                 }
             }
         }
     }
+
+    super::devfs::init()?;
+    log::info!("installed devfs");
+
+    super::procfs::init()?;
+    log::info!("installed procfs");
 
     Ok(())
 }

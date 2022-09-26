@@ -262,7 +262,7 @@ impl<'a> Namespace<'a> {
             read_cmd.data_ptr.prp1 = buffer.addr().as_u64();
         }
 
-        self.controller.io_queue.lock().submit_command(read_cmd);
+        self.controller.io_queue.lock_irq().submit_command(read_cmd);
 
         // SAFETY: The buffer is initialized above.
         let buffer = unsafe { buffer.assume_init() };

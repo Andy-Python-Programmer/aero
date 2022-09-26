@@ -26,11 +26,12 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::Once;
 
+use crate::fs::block::BlockDeviceInterface;
 use crate::fs::cache::CachedINode;
 use crate::mem::paging::{FrameAllocator, PhysFrame, FRAME_ALLOCATOR};
 use crate::utils::CeilDiv;
 
-use super::block::BlockDevice;
+use super::block::{BlockDevice, CachedAccess};
 
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::{cache, FileSystemError};
@@ -137,6 +138,7 @@ pub struct GroupDescriptor {
 
 const_assert_eq!(core::mem::size_of::<GroupDescriptor>(), 32);
 
+#[derive(PartialEq)]
 pub enum FileType {
     Fifo,
     CharDev,
@@ -160,7 +162,7 @@ impl From<FileType> for super::inode::FileType {
     }
 }
 
-#[repr(C, packed)]
+#[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct DiskINode {
     type_and_perm: u16,
@@ -242,7 +244,7 @@ impl INode {
 
             let mut inode = Box::<DiskINode>::new_uninit();
 
-            fs.block.device().read(
+            fs.block.read(
                 table_offset + (ino_table_index * core::mem::size_of::<DiskINode>()),
                 inode.as_bytes_mut(),
             )?;
@@ -265,84 +267,6 @@ impl INode {
         }
     }
 
-    pub fn init_block_map(&self) {
-        let filesystem = self.fs.upgrade().unwrap();
-        let block_size = filesystem.superblock.block_size();
-
-        let entries_per_block = block_size / core::mem::size_of::<u32>();
-        let mut block_map = Box::<[u32]>::new_uninit_slice(self.inode.block_count as usize);
-
-        // There are pointers to the first 12 blocks which contain the file's
-        // data in the inode. There is a pointer to an indirect block (which
-        // contains pointers to the next set of blocks), a pointer to a doubly
-        // indirect block and a pointer to a treply indirect block.
-        for i in 0..block_map.len() {
-            let mut block = i;
-            if block < 12 {
-                // direct block
-                block_map[i].write(self.inode.data_ptr[block]);
-            } else {
-                // indirect block
-                block -= 12;
-
-                if block >= entries_per_block {
-                    // doubly indirect block
-                    block -= entries_per_block;
-
-                    let index = block / entries_per_block;
-                    let mut indirect_block = MaybeUninit::<u32>::uninit();
-
-                    if index >= entries_per_block {
-                        // treply indirect block
-                        todo!()
-                    } else {
-                        let block_ptrs = self.inode.data_ptr[13] as usize * block_size;
-                        let offset = block_ptrs + (index * core::mem::size_of::<u32>());
-
-                        filesystem
-                            .block
-                            .device()
-                            .read(offset, indirect_block.as_bytes_mut())
-                            .unwrap();
-                    }
-
-                    // SAFETY: We have initialized the indirect block variable above.
-                    let indirect_block = unsafe { indirect_block.assume_init() } as usize;
-
-                    for j in 0..entries_per_block {
-                        if (i + j) >= block_map.len() {
-                            // SAFETY: We have fully initialized the block map.
-                            let block_map = unsafe { block_map.assume_init() };
-                            self.block_map.call_once(|| block_map);
-                            return;
-                        }
-
-                        let offset = indirect_block * block_size + j * core::mem::size_of::<u32>();
-                        filesystem
-                            .block
-                            .device()
-                            .read(offset, block_map[i + j].as_bytes_mut())
-                            .unwrap();
-                    }
-                } else {
-                    // singly indirect block
-                    let block_ptrs = self.inode.data_ptr[12] as usize * block_size;
-                    let offset = block_ptrs + (block * core::mem::size_of::<u32>());
-
-                    filesystem
-                        .block
-                        .device()
-                        .read(offset, block_map[i].as_bytes_mut())
-                        .expect("init_block_map: failed to read singly indirect block");
-                }
-            }
-        }
-
-        // SAFETY: We have fully initialized the block map.
-        let block_map = unsafe { block_map.assume_init() };
-        self.block_map.call_once(|| block_map);
-    }
-
     pub fn read(&self, offset: usize, buffer: &mut [MaybeUninit<u8>]) -> super::Result<usize> {
         let filesystem = self.fs.upgrade().unwrap();
         let block_size = filesystem.superblock.block_size();
@@ -363,7 +287,7 @@ impl INode {
 
             let block_index = self.block_map()[block] as usize;
 
-            filesystem.block.device().read(
+            filesystem.block.read(
                 (block_index * block_size) + loc,
                 &mut buffer[progress..progress + chunk],
             );
@@ -390,8 +314,88 @@ impl INode {
     }
 
     pub fn block_map(&self) -> &[u32] {
-        self.init_block_map();
-        self.block_map.get().unwrap()
+        if let Some(map) = self.block_map.get() {
+            return map;
+        }
+
+        // The block map is not cached, so we need to make it.
+        let filesystem = self.fs.upgrade().unwrap();
+        let block_size = filesystem.superblock.block_size();
+
+        let entries_per_block = block_size / core::mem::size_of::<u32>();
+        let mut block_map = Box::<[u32]>::new_uninit_slice(self.inode.block_count as usize);
+
+        let mut i = 0;
+
+        // There are pointers to the first 12 blocks which contain the file's
+        // data in the inode. There is a pointer to an indirect block (which
+        // contains pointers to the next set of blocks), a pointer to a doubly
+        // indirect block and a pointer to a treply indirect block.
+        while i < block_map.len() {
+            let mut block = i;
+            if block < 12 {
+                // direct block
+                block_map[i].write(self.inode.data_ptr[block]);
+            } else {
+                // indirect block
+                block -= 12;
+
+                if block >= entries_per_block {
+                    // doubly indirect block
+                    block -= entries_per_block;
+
+                    let index = block / entries_per_block;
+                    let mut indirect_block = MaybeUninit::<u32>::uninit();
+
+                    if index >= entries_per_block {
+                        // treply indirect block
+                        todo!()
+                    } else {
+                        let block_ptrs = self.inode.data_ptr[13] as usize * block_size;
+                        let offset = block_ptrs + (index * core::mem::size_of::<u32>());
+
+                        filesystem
+                            .block
+                            .read(offset, indirect_block.as_bytes_mut())
+                            .unwrap();
+                    }
+
+                    // SAFETY: We have initialized the indirect block variable above.
+                    let indirect_block = unsafe { indirect_block.assume_init() } as usize;
+
+                    for j in 0..entries_per_block {
+                        if (i + j) >= block_map.len() {
+                            // SAFETY: We have fully initialized the block map.
+                            let block_map = unsafe { block_map.assume_init() };
+                            return self.block_map.call_once(|| block_map);
+                        }
+
+                        let offset = indirect_block * block_size + j * core::mem::size_of::<u32>();
+                        filesystem
+                            .block
+                            .read(offset, block_map[i + j].as_bytes_mut())
+                            .unwrap();
+                    }
+
+                    i += entries_per_block - 1;
+                } else {
+                    // singly indirect block
+                    let block_ptrs = self.inode.data_ptr[12] as usize * block_size;
+                    let offset = block_ptrs + (block * core::mem::size_of::<u32>());
+
+                    filesystem
+                        .block
+                        .read(offset, block_map[i].as_bytes_mut())
+                        .expect("init_block_map: failed to read singly indirect block");
+                }
+            }
+
+            i += 1;
+        }
+
+        // SAFETY: We have fully initialized the block map.
+        let block_map = unsafe { block_map.assume_init() };
+        self.block_map.call_once(|| block_map)
     }
 
     pub fn sref(&self) -> Arc<INode> {
@@ -463,6 +467,10 @@ impl INodeInterface for INode {
     }
 
     fn read_at(&self, offset: usize, usr_buffer: &mut [u8]) -> super::Result<usize> {
+        if !self.metadata()?.is_file() {
+            return Err(FileSystemError::NotSupported);
+        }
+
         // TODO: We really should not allocate another buffer here.
         let mut buffer = Box::<[u8]>::new_uninit_slice(usr_buffer.len());
         let count = self.read(offset, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
@@ -472,6 +480,22 @@ impl INodeInterface for INode {
         usr_buffer.copy_from_slice(&*buffer);
 
         Ok(count)
+    }
+
+    fn resolve_link(&self) -> super::Result<String> {
+        if !self.metadata()?.is_symlink() {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        let path_len = self.inode.size_lower as usize;
+        let data_bytes: &[u8] = bytemuck::cast_slice(&self.inode.data_ptr);
+
+        assert!(path_len <= data_bytes.len() - 1);
+
+        let path_bytes = &data_bytes[..path_len];
+        let path = core::str::from_utf8(path_bytes).or(Err(FileSystemError::InvalidPath))?;
+
+        return Ok(path.into());
     }
 
     fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> super::Result<PhysFrame> {
@@ -554,7 +578,7 @@ impl Ext2 {
 
     pub fn new(block: Arc<BlockDevice>) -> Option<Arc<Self>> {
         let mut superblock = Box::<SuperBlock>::new_uninit();
-        block.device().read_block(2, superblock.as_bytes_mut())?;
+        block.read_block(2, superblock.as_bytes_mut())?;
 
         // SAFETY: We have initialized the superblock above.
         let superblock = unsafe { superblock.assume_init() };
@@ -571,7 +595,7 @@ impl Ext2 {
         let bgdt_len = superblock.bgdt_len();
         let mut bgdt = Box::<[GroupDescriptor]>::new_uninit_slice(bgdt_len);
 
-        block.device().read_block(
+        block.read_block(
             superblock.bgdt_sector(),
             MaybeUninit::slice_as_bytes_mut(&mut bgdt),
         )?;

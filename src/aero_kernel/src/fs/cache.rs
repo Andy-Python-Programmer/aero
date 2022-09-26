@@ -28,7 +28,10 @@
 use core::borrow::Borrow;
 use core::fmt::Debug;
 use core::hash::Hash;
+use core::num::NonZeroUsize;
 use core::ops;
+use core::sync::atomic::AtomicBool;
+use core::sync::atomic::Ordering;
 
 use alloc::sync::Arc;
 use alloc::sync::Weak;
@@ -41,8 +44,8 @@ use crate::utils::sync::Mutex;
 
 use super::FileSystem;
 
-pub(super) static INODE_CACHE: Once<Arc<INodeCache>> = Once::new();
-pub(super) static DIR_CACHE: Once<Arc<DirCache>> = Once::new();
+pub static INODE_CACHE: Once<Arc<INodeCache>> = Once::new();
+pub static DIR_CACHE: Once<Arc<DirCache>> = Once::new();
 
 // NOTE: We require a custom wrapper around [`Arc`] and [`Weak`] since we need to be able
 // to move the cache item from the used list to the unused list when the cache item is dropped.
@@ -146,21 +149,29 @@ pub trait Cacheable<K: CacheKey>: Sized {
     fn cache_key(&self) -> K;
 }
 
-/// Structure representing a cache item in the cache index. See the documentation of [CacheIndex]
-/// and the fields of this struct for more information.
 pub struct CacheItem<K: CacheKey, V: Cacheable<K>> {
     cache: Weak<Cache<K, V>>,
     value: V,
+    /// Whether the cache item has active strong references associated
+    /// with it.
+    used: AtomicBool,
 }
 
 impl<K: CacheKey, V: Cacheable<K>> CacheItem<K, V> {
-    /// Constructs a new `CacheItem<K, V>`.
-    #[inline]
     pub fn new(cache: &Weak<Cache<K, V>>, value: V) -> CacheArc<Self> {
         CacheArc::new(Self {
             cache: cache.clone(),
             value,
+            used: AtomicBool::new(false),
         })
+    }
+
+    pub fn is_used(&self) -> bool {
+        self.used.load(Ordering::SeqCst)
+    }
+
+    pub fn set_used(&self, yes: bool) {
+        self.used.store(yes, Ordering::SeqCst);
     }
 }
 
@@ -176,33 +187,37 @@ unsafe impl<K: CacheKey, V: Cacheable<K>> Sync for CacheItem<K, V> {}
 
 struct CacheIndex<K: CacheKey, V: Cacheable<K>> {
     used: hashbrown::HashMap<K, Weak<CacheItem<K, V>>>,
+    /// Cache items that are longer have any active strong references associated
+    /// with them. These are stored in the cache index so, if the item is
+    /// accessed again, we can re-use it; reducing required memory allocation
+    /// and I/O (if applicable).
+    unused: lru::LruCache<K, Arc<CacheItem<K, V>>>,
 }
 
-/// Structure representing a cache with a key of `K` and value of `V`. The cache
-/// key is used to get the cache from the cache index. This structure basically contains
-/// the cache index (protected by a mutex) and a weak self reference to itself.
 pub struct Cache<K: CacheKey, V: Cacheable<K>> {
     index: Mutex<CacheIndex<K, V>>,
     self_ref: Weak<Cache<K, V>>,
 }
 
 impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
-    pub(super) fn new() -> Arc<Self> {
+    pub fn new() -> Arc<Self> {
         Arc::new_cyclic(|this| Cache::<K, V> {
             index: Mutex::new(CacheIndex {
                 used: hashbrown::HashMap::new(),
+                unused: lru::LruCache::new(NonZeroUsize::new(512).unwrap()),
             }),
             self_ref: this.clone(),
         })
     }
 
-    pub(super) fn clear(&self) {
+    pub fn clear(&self) {
         let mut index_mut = self.index.lock();
 
+        index_mut.unused.clear();
         index_mut.used.clear();
     }
 
-    pub(super) fn make_item_cached(&self, value: V) -> CacheArc<CacheItem<K, V>> {
+    pub fn make_item_cached(&self, value: V) -> CacheArc<CacheItem<K, V>> {
         let item = CacheItem::<K, V>::new(&self.self_ref, value);
 
         self.index
@@ -210,51 +225,72 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
             .used
             .insert(item.cache_key(), Arc::downgrade(&item));
 
+        item.set_used(true);
         item
     }
 
-    pub(super) fn make_item_no_cache(&self, value: V) -> CacheArc<CacheItem<K, V>> {
+    pub fn make_item_no_cache(&self, value: V) -> CacheArc<CacheItem<K, V>> {
         CacheItem::<K, V>::new(&Weak::default(), value)
     }
 
-    pub(super) fn get(&self, key: K) -> Option<CacheArc<CacheItem<K, V>>> {
-        let index = self.index.lock();
+    pub fn get(&self, key: K) -> Option<CacheArc<CacheItem<K, V>>> {
+        let mut index = self.index.lock();
 
         if let Some(entry) = index.used.get(&key) {
-            Some(CacheArc::from(entry.upgrade()?))
+            let entry = entry.upgrade()?;
+            Some(CacheArc::from(entry))
+        } else if let Some(entry) = index.unused.pop(&key) {
+            entry.set_used(true);
+            index.used.insert(key, Arc::downgrade(&entry));
+
+            Some(entry.into())
         } else {
             None
         }
     }
 
     pub fn log(&self) {
+        let index = self.index.lock();
+
         log::debug!("Cache:");
 
-        log::debug!("\t Used entries:    {}", self.index.lock().used.len());
-        for item in self.index.lock().used.iter() {
-            log::debug!("\t\t {:?} -> {:?}", item.0, item.1.strong_count());
+        log::debug!("\t Used entries:    {}", index.used.len());
+        for (key, item) in index.used.iter() {
+            log::debug!("\t\t {:?} -> {:?}", key, item.strong_count());
+        }
+
+        log::debug!("\t Unused entries:  {}", index.unused.len());
+        for (key, item) in index.unused.iter() {
+            log::debug!("\t\t {:?} -> {:?}", key, Arc::strong_count(item))
         }
     }
 
     /// Removes the item with the provided `key` from the cache.
-    pub(super) fn remove(&self, key: &K) {
+    pub fn remove(&self, key: &K) {
         let mut index = self.index.lock();
 
-        index.used.remove(key);
+        if index.used.remove(key).is_none() {
+            let _ = index.unused.pop(key);
+        }
     }
 
     fn mark_item_unused(&self, item: CacheArc<CacheItem<K, V>>) {
-        let mut this = self.index.lock();
+        item.set_used(false);
+
+        let mut index = self.index.lock_irq();
         let key = item.cache_key();
 
-        this.used.remove(&key);
+        assert!(index.used.remove(&key).is_some());
+        index.unused.put(key, item.0.clone());
     }
 }
 
 impl<K: CacheKey, T: Cacheable<K>> CacheDropper for CacheItem<K, T> {
     fn drop_this(&self, this: Arc<Self>) {
         if let Some(cache) = self.cache.upgrade() {
-            cache.mark_item_unused(this.into());
+            if self.is_used() {
+                cache.mark_item_unused(this.into());
+            }
         }
     }
 }
@@ -264,9 +300,6 @@ pub type INodeCache = Cache<INodeCacheKey, CachedINode>;
 pub type INodeCacheItem = CacheArc<CacheItem<INodeCacheKey, CachedINode>>;
 pub type INodeCacheWeakItem = CacheWeak<CacheItem<INodeCacheKey, CachedINode>>;
 
-/// The cache key for the directory entry cache used to get the cache item. The cache key
-/// is the tuple of the parent's cache marker (akin [usize]) and the name of the directory entry
-/// (akin [String]).
 pub type DirCacheKey = (usize, String);
 pub type DirCache = Cache<DirCacheKey, DirEntry>;
 pub type DirCacheItem = CacheArc<CacheItem<DirCacheKey, DirEntry>>;

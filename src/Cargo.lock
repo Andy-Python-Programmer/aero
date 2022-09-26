@@ -10,6 +10,7 @@ dependencies = [
  "aero_syscall",
  "bit_field",
  "bitflags",
+ "bytemuck",
  "cfg-if",
  "cpio_reader",
  "hashbrown",
@@ -18,6 +19,7 @@ dependencies = [
  "lazy_static",
  "limine",
  "log",
+ "lru",
  "nasm-rs",
  "raw-cpuid",
  "rustc-demangle",
@@ -80,6 +82,12 @@ name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+
+[[package]]
+name = "bytemuck"
+version = "1.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f5715e491b5a1598fc2bef5a606847b5dc1d48ea625bd3c02c00de8285591da"
 
 [[package]]
 name = "cc"
@@ -231,6 +239,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "lru"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "936d98d2ddd79c18641c6709e7bb09981449694e402d1a0f0f657ea8d61f4a51"
+dependencies = [
+ "hashbrown",
 ]
 
 [[package]]
