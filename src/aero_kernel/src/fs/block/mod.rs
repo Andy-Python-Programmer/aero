@@ -70,6 +70,10 @@ impl CachedPage {
         unsafe { core::slice::from_raw_parts_mut(data_ptr, Size4KiB::SIZE as usize) }
     }
 
+    fn data_addr(&self) -> PhysAddr {
+        self.page.start_address()
+    }
+
     fn make_key(device: Weak<dyn CachedAccess>, offset: usize) -> PageCacheKey {
         (device.as_ptr() as *const u8 as usize, offset)
     }
@@ -107,12 +111,10 @@ impl Cache<PageCacheKey, CachedPage> {
         let device = device.upgrade().expect("page_cache: device dropped");
 
         let aligned_offset = align_down(offset as u64, Size4KiB::SIZE) as usize;
+        let sector = aligned_offset / device.block_size();
 
         device
-            // FIXME(perf,mem): internally read_block makes use of the DMA API (cc drivers::nvme::dma), which in turn
-            // allocates another frame in order to make sure the destination buffer is DMA capable. In this
-            // case, this is not required since we have already allocated a DMA capable frame.
-            .read_block(aligned_offset / device.block_size(), page.data_mut())
+            .read_dma(sector, page.data_addr(), Size4KiB::SIZE as usize)
             .expect("page_cache: failed to read block");
 
         PAGE_CACHE.make_item_cached(page)
@@ -121,6 +123,8 @@ impl Cache<PageCacheKey, CachedPage> {
 
 pub trait BlockDeviceInterface: Send + Sync {
     fn block_size(&self) -> usize;
+
+    fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize>;
 
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize>;
     fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize>;
@@ -140,6 +144,33 @@ pub trait CachedAccess: BlockDeviceInterface {
 
             let data = &page.data_mut()[page_offset..page_offset + size];
             dest[loc..loc + size].copy_from_slice(data);
+
+            loc += size;
+            offset += align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
+        }
+
+        Some(loc)
+    }
+
+    /// Writes the given data to the device at the given offset and returns the
+    /// number of bytes written.
+    ///
+    /// ## Notes
+    ///
+    /// * This function does **not** sync the written data to the disk.
+    fn write(&self, mut offset: usize, buffer: &[u8]) -> Option<usize> {
+        let mut loc = 0;
+
+        while loc < buffer.len() {
+            let page = PAGE_CACHE.get_page(self.sref(), offset);
+
+            let page_offset = offset % Size4KiB::SIZE as usize;
+            let size = core::cmp::min(Size4KiB::SIZE as usize - page_offset, buffer.len() - loc);
+
+            MaybeUninit::write_slice(
+                &mut page.data_mut()[page_offset..page_offset + size],
+                &buffer[loc..loc + size],
+            );
 
             loc += size;
             offset += align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
@@ -187,6 +218,10 @@ impl BlockDevice {
 impl BlockDeviceInterface for BlockDevice {
     fn block_size(&self) -> usize {
         self.dev.block_size()
+    }
+
+    fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {
+        self.dev.read_dma(sector, start, size)
     }
 
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
@@ -249,16 +284,24 @@ impl BlockDeviceInterface for PartitionBlockDevice {
         self.device.read_block(self.offset + sector, dest)
     }
 
-    fn block_size(&self) -> usize {
-        self.device.block_size()
-    }
-
     fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize> {
         if sector >= self.size {
             return None;
         }
 
         self.device.write_block(self.offset + sector, buf)
+    }
+
+    fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {
+        if sector >= self.size {
+            return None;
+        }
+
+        self.device.read_dma(self.offset + sector, start, size)
+    }
+
+    fn block_size(&self) -> usize {
+        self.device.block_size()
     }
 }
 
