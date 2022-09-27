@@ -435,6 +435,11 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join(limine_path, 'BOOTAA64.EFI'), efi_boot)
     shutil.copy(os.path.join(limine_path, 'BOOTX64.EFI'), efi_boot)
 
+    sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
+    for file in user_bins:
+        bin_name = os.path.basename(file)
+        shutil.copy(file, os.path.join(sysroot_dir, "usr", "bin", bin_name))
+
     with open(os.path.join(iso_root, 'limine.cfg'), 'w') as limine_cfg:
         limine_cfg.write(LIMINE_TEMPLATE)
 

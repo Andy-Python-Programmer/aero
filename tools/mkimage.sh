@@ -1,3 +1,8 @@
+# sync the sysroot
+echo "sysroot: syncing base-files"
+cp -r base-files/. sysroot/system-root/
+
+# make the disk image
 rm -rf disk.img
 
 dd if=/dev/zero bs=1G count=0 seek=512 of=disk.img
