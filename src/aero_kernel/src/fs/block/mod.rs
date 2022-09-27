@@ -19,7 +19,6 @@
 
 mod gpt;
 
-use alloc::boxed::Box;
 use gpt::Gpt;
 
 use core::mem::MaybeUninit;
@@ -32,34 +31,92 @@ use crate::fs::devfs::install_device;
 use crate::fs::{FileSystem, Result};
 
 use crate::fs::ext2::Ext2;
+use crate::mem::paging::*;
 use crate::utils::sync::Mutex;
 
-use super::cache::{Cache, Cacheable};
+use super::cache::{Cache, CacheArc, CacheItem, Cacheable};
 use super::devfs::{alloc_device_marker, Device};
 use super::inode::INodeInterface;
 
-type CachedBlockKey = (usize, usize); // (block device pointer, block)
+type PageCacheKey = (usize, usize); // (block device pointer, offset)
+type PageCacheItem = CacheArc<CacheItem<PageCacheKey, CachedPage>>;
 
-struct CachedBlock {
+struct CachedPage {
     device: Weak<dyn CachedAccess>,
-    block: usize,
-    buffer: Box<[u8]>,
+    offset: usize,
+    page: PhysFrame,
 }
 
-impl CachedBlock {
-    fn make_key(device: Weak<dyn CachedAccess>, block: usize) -> CachedBlockKey {
-        (device.as_ptr() as *const u8 as usize, block)
+impl CachedPage {
+    fn new(device: Weak<dyn CachedAccess>, offset: usize) -> Self {
+        Self {
+            device,
+            offset,
+            page: FRAME_ALLOCATOR
+                .allocate_frame()
+                .expect("page_cache: out of memory"),
+        }
+    }
+
+    fn data_mut(&self) -> &mut [MaybeUninit<u8>] {
+        let data_ptr = self
+            .page
+            .start_address()
+            .as_hhdm_virt()
+            .as_mut_ptr::<MaybeUninit<u8>>();
+
+        // SAFETY: It is safe to create a slice of MaybeUninit<T> because it has the same
+        // size and alignment as T.
+        unsafe { core::slice::from_raw_parts_mut(data_ptr, Size4KiB::SIZE as usize) }
+    }
+
+    fn make_key(device: Weak<dyn CachedAccess>, offset: usize) -> PageCacheKey {
+        (device.as_ptr() as *const u8 as usize, offset)
     }
 }
 
-impl Cacheable<CachedBlockKey> for CachedBlock {
-    fn cache_key(&self) -> CachedBlockKey {
-        Self::make_key(self.device.clone(), self.block)
+impl Cacheable<PageCacheKey> for CachedPage {
+    fn cache_key(&self) -> PageCacheKey {
+        Self::make_key(self.device.clone(), self.offset)
     }
 }
 
 lazy_static::lazy_static! {
-    static ref BLOCK_CACHE: Arc<Cache<CachedBlockKey, CachedBlock>> = Cache::new();
+    static ref PAGE_CACHE: Arc<Cache<PageCacheKey, CachedPage>> = Cache::new();
+}
+
+impl Cache<PageCacheKey, CachedPage> {
+    /// Returns the cached page at the given offset, if not present, it will be allocated,
+    /// initialized with the data on the disk and placed in the page cache.
+    ///
+    /// ## Arguments
+    ///
+    /// * `device` - The device to get the page from.
+    ///
+    /// * `offset` - The offset in bytes to the data. This will be rounded down to
+    ///              the nearest page boundary.
+    pub fn get_page(&self, device: Weak<dyn CachedAccess>, offset: usize) -> PageCacheItem {
+        let cache_offset = offset / Size4KiB::SIZE as usize;
+        let cache_key = CachedPage::make_key(device.clone(), cache_offset);
+
+        if let Some(page) = PAGE_CACHE.get(cache_key) {
+            return page;
+        }
+
+        let page = CachedPage::new(device.clone(), offset);
+        let device = device.upgrade().expect("page_cache: device dropped");
+
+        let aligned_offset = align_down(offset as u64, Size4KiB::SIZE) as usize;
+
+        device
+            // FIXME(perf,mem): internally read_block makes use of the DMA API (cc drivers::nvme::dma), which in turn
+            // allocates another frame in order to make sure the destination buffer is DMA capable. In this
+            // case, this is not required since we have already allocated a DMA capable frame.
+            .read_block(aligned_offset / device.block_size(), page.data_mut())
+            .expect("page_cache: failed to read block");
+
+        PAGE_CACHE.make_item_cached(page)
+    }
 }
 
 pub trait BlockDeviceInterface: Send + Sync {
@@ -72,44 +129,23 @@ pub trait BlockDeviceInterface: Send + Sync {
 pub trait CachedAccess: BlockDeviceInterface {
     fn sref(&self) -> Weak<dyn CachedAccess>;
 
-    fn read(&self, offset: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        let mut progress = 0;
-        let block_size = self.block_size();
+    fn read(&self, mut offset: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        let mut loc = 0;
 
-        while progress < dest.len() {
-            let block = (offset + progress) / block_size;
-            let loc = (offset + progress) % block_size;
+        while loc < dest.len() {
+            let page = PAGE_CACHE.get_page(self.sref(), offset);
 
-            let mut chunk = dest.len() - progress;
+            let page_offset = offset % Size4KiB::SIZE as usize;
+            let size = core::cmp::min(Size4KiB::SIZE as usize - page_offset, dest.len() - loc);
 
-            if chunk > (block_size - loc) {
-                chunk = block_size - loc;
-            }
+            let data = &page.data_mut()[page_offset..page_offset + size];
+            dest[loc..loc + size].copy_from_slice(data);
 
-            let key = CachedBlock::make_key(self.sref(), block);
-
-            if let Some(cached) = BLOCK_CACHE.get(key) {
-                MaybeUninit::write_slice(
-                    &mut dest[progress..(progress + chunk)],
-                    &cached.buffer[loc..loc + chunk],
-                );
-            } else {
-                let mut buffer = Box::<[u8]>::new_uninit_slice(block_size);
-
-                self.read_block(block, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
-                dest[progress..(progress + chunk)].copy_from_slice(&buffer[loc..loc + chunk]);
-
-                BLOCK_CACHE.make_item_cached(CachedBlock {
-                    device: self.sref(),
-                    block,
-                    buffer: unsafe { buffer.assume_init() },
-                });
-            }
-
-            progress += chunk;
+            loc += size;
+            offset += align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
         }
 
-        Some(progress)
+        Some(loc)
     }
 }
 

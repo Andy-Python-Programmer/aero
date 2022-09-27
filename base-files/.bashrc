@@ -4,7 +4,7 @@ HISTCONTROL=ignoredups
 HISTSIZE=-1
 HISTFILESIZE=-1
 
-TERM=linux
+export TERM=linux
 
 alias ls="ls --color=auto"
 alias clear='printf "\e[2J\e[H"'
