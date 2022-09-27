@@ -231,11 +231,10 @@ struct Namespace<'a> {
 }
 
 impl<'a> Namespace<'a> {
-    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) {
-        let size_bytes = dest.len();
-        let blocks = size_bytes.ceil_div(self.block_size);
+    fn read(&self, sector: usize, start: PhysAddr, size_bytes: usize) {
+        assert!(size_bytes != 0);
 
-        let buffer = Dma::<u8>::new_uninit_slice(dest.len());
+        let blocks = size_bytes.ceil_div(self.block_size);
         let mut read_cmd = ReadWriteCommand::default();
 
         read_cmd.opcode = CommandOpcode::Read as u8;
@@ -252,21 +251,16 @@ impl<'a> Namespace<'a> {
             let mut prps = self.prps.lock();
 
             for i in 0..prp_num {
-                prps[i]
-                    .write((buffer.addr().as_u64() + Size4KiB::SIZE) + (Size4KiB::SIZE * i as u64));
+                prps[i].write((start.as_u64() + Size4KiB::SIZE) + (Size4KiB::SIZE * i as u64));
             }
 
-            read_cmd.data_ptr.prp1 = buffer.addr().as_u64();
+            read_cmd.data_ptr.prp1 = start.as_u64();
             read_cmd.data_ptr.prp2 = prps.addr().as_u64();
         } else {
-            read_cmd.data_ptr.prp1 = buffer.addr().as_u64();
+            read_cmd.data_ptr.prp1 = start.as_u64();
         }
 
         self.controller.io_queue.lock_irq().submit_command(read_cmd);
-
-        // SAFETY: The buffer is initialized above.
-        let buffer = unsafe { buffer.assume_init() };
-        MaybeUninit::write_slice(dest, &*buffer);
     }
 }
 
@@ -468,8 +462,17 @@ impl<'a> Controller<'a> {
 }
 
 impl<'a> BlockDeviceInterface for Controller<'a> {
+    fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {
+        self.namespaces.lock()[0].read(sector, start, size);
+        Some(size)
+    }
+
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        self.namespaces.lock()[0].read(sector, dest);
+        let buffer = Dma::<u8>::new_uninit_slice(dest.len());
+        self.namespaces.lock()[0].read(sector, buffer.addr(), dest.len());
+
+        // SAFETY: The buffer is initialized above.
+        dest.copy_from_slice(&buffer);
         Some(dest.len())
     }
 
