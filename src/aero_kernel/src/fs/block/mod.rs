@@ -107,7 +107,7 @@ impl Cache<PageCacheKey, CachedPage> {
             return page;
         }
 
-        let page = CachedPage::new(device.clone(), offset);
+        let page = CachedPage::new(device.clone(), cache_offset);
         let device = device.upgrade().expect("page_cache: device dropped");
 
         let aligned_offset = align_down(offset as u64, Size4KiB::SIZE) as usize;
@@ -145,8 +145,10 @@ pub trait CachedAccess: BlockDeviceInterface {
             let data = &page.data_mut()[page_offset..page_offset + size];
             dest[loc..loc + size].copy_from_slice(data);
 
+            core::mem::forget(page);
+
             loc += size;
-            offset += align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
+            offset = align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
         }
 
         Some(loc)
@@ -172,8 +174,10 @@ pub trait CachedAccess: BlockDeviceInterface {
                 &buffer[loc..loc + size],
             );
 
+            core::mem::forget(page);
+
             loc += size;
-            offset += align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
+            offset = align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
         }
 
         Some(loc)
@@ -302,12 +306,6 @@ impl BlockDeviceInterface for PartitionBlockDevice {
 
     fn block_size(&self) -> usize {
         self.device.block_size()
-    }
-}
-
-impl CachedAccess for PartitionBlockDevice {
-    fn sref(&self) -> Weak<dyn CachedAccess> {
-        self.sref.clone()
     }
 }
 
