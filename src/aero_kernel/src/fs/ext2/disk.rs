@@ -1,6 +1,5 @@
+use crate::fs::inode;
 use crate::utils::CeilDiv;
-
-use super::FileType;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C, packed)]
@@ -129,17 +128,41 @@ impl DirEntry {
         name_bytes.copy_from_slice(name.as_bytes());
     }
 
-    pub fn avaliable_size(&self) -> usize {
-        if self.inode == 0 {
-            self.entry_size as usize
-        } else {
-            0
-        }
-    }
-
     pub fn as_bytes(&self) -> &[u8] {
         unsafe {
             core::slice::from_raw_parts(self as *const Self as *const u8, self.entry_size as usize)
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(PartialEq)]
+pub enum FileType {
+    Unknown = 0,
+    Fifo = 1,
+    CharDev = 2,
+    Directory = 4,
+    BlockDev = 6,
+    File = 8,
+    Symlink = 10,
+    Socket = 12,
+}
+
+impl FileType {
+    pub fn bits(&self) -> u16 {
+        let val = *self as u8;
+        (val as u16) << 12
+    }
+}
+
+impl From<FileType> for inode::FileType {
+    fn from(ty: FileType) -> Self {
+        match ty {
+            FileType::Symlink => Self::Symlink,
+            FileType::Directory => Self::Directory,
+            FileType::BlockDev | FileType::CharDev => Self::Device,
+
+            _ => Self::File,
         }
     }
 }
@@ -168,6 +191,12 @@ pub struct INode {
 }
 
 impl INode {
+    pub fn set_file_type(&mut self, file_type: FileType) {
+        // The last 4 bits are used to store the filetype.
+        let mask = 0b0000_1111_1111_1111u16;
+        self.type_and_perm = file_type.bits() | (self.type_and_perm & mask);
+    }
+
     pub fn file_type(&self) -> FileType {
         let ty = self.type_and_perm >> 12;
 
