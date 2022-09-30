@@ -30,7 +30,7 @@ use spin::RwLock;
 
 use crate::fs::block::BlockDeviceInterface;
 use crate::fs::cache::CachedINode;
-use crate::fs::ext2::disk::SuperBlock;
+use crate::fs::ext2::disk::{FileType, SuperBlock};
 use crate::mem::paging::{FrameAllocator, PhysFrame, FRAME_ALLOCATOR};
 
 use self::group_desc::GroupDescriptors;
@@ -42,30 +42,6 @@ use super::{cache, FileSystemError};
 
 use super::inode::{DirEntry, INodeInterface, Metadata};
 use super::FileSystem;
-
-#[derive(PartialEq)]
-pub enum FileType {
-    Fifo,
-    CharDev,
-    Directory,
-    BlockDev,
-    File,
-    Symlink,
-    Socket,
-    Unknown,
-}
-
-impl From<FileType> for super::inode::FileType {
-    fn from(ty: FileType) -> Self {
-        match ty {
-            FileType::Symlink => Self::Symlink,
-            FileType::Directory => Self::Directory,
-            FileType::BlockDev | FileType::CharDev => Self::Device,
-
-            _ => Self::File,
-        }
-    }
-}
 
 pub struct INode {
     id: usize,
@@ -218,6 +194,51 @@ impl INode {
         todo!("triply indirect block")
     }
 
+    pub fn make_inode(&self, name: &str, typ: FileType) -> super::Result<INodeCacheItem> {
+        if !self.metadata()?.is_directory() {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        if DirEntryIter::new(self.sref())
+            .find(|(e, _)| e == name)
+            .is_some()
+        {
+            return Err(FileSystemError::EntryExists);
+        }
+
+        assert!(self.inode.read().hl_count != 0, "ext2: dangling inode");
+
+        let fs = self.fs.upgrade().expect("ext2: filesystem was dropped");
+
+        let inode = fs.bgdt.alloc_inode().expect("ext2: out of inodes");
+        let ext2_inode = inode.downcast_arc::<INode>().expect("ext2: invalid inode");
+
+        {
+            let mut inode = ext2_inode.inode.write();
+            inode.set_file_type(typ);
+            inode.hl_count += 1;
+        }
+
+        // TODO: scan for unused directory entries and check if this can be
+        //       inserted into the existing block.
+        let block = self.append_block().unwrap();
+        let block_size = fs.superblock.block_size();
+
+        let mut entry = Box::<disk::DirEntry>::new_uninit();
+        fs.block.read(block * block_size, entry.as_bytes_mut());
+
+        // SAFETY: We have initialized the entry above.
+        let mut entry = unsafe { entry.assume_init() };
+
+        entry.entry_size = block_size as _;
+        entry.inode = ext2_inode.id as _;
+        entry.file_type = 2;
+        entry.set_name(name);
+
+        fs.block.write(block * block_size, entry.as_bytes());
+        Ok(inode)
+    }
+
     pub fn make_dir_entry(
         &self,
         parent: DirCacheItem,
@@ -314,42 +335,12 @@ impl INodeInterface for INode {
     }
 
     fn touch(&self, parent: DirCacheItem, name: &str) -> super::Result<DirCacheItem> {
-        let fs = self.fs.upgrade().expect("ext2: filesystem was dropped");
-        let inode = fs.bgdt.alloc_inode().ok_or(FileSystemError::EntryExists)?;
-
-        let ext2_inode = inode.downcast_arc::<INode>().expect("ext2: invalid inode");
-
-        log::debug!(
-            "ext2: allocated inode alloced_id={} this_id={}",
-            ext2_inode.id,
-            self.id
-        );
-
-        let dirent_size = name.len() + core::mem::size_of::<disk::DirEntry>();
-
-        if let Some((_name, _entry)) =
-            DirEntryIter::new(self.sref()).find(|(_, e)| e.avaliable_size() >= dirent_size)
-        {
-            todo!()
-        } else {
-            let block = self.append_block().unwrap();
-            let block_size = fs.superblock.block_size();
-
-            let mut entry = Box::<disk::DirEntry>::new_uninit();
-            fs.block.read(block * block_size, entry.as_bytes_mut());
-
-            // SAFETY: We have initialized the entry above.
-            let mut entry = unsafe { entry.assume_init() };
-
-            entry.entry_size = block_size as _;
-            entry.inode = ext2_inode.id as _;
-            entry.file_type = 2;
-            entry.set_name(name);
-
-            fs.block.write(block * block_size, entry.as_bytes());
-        }
-
+        let inode = self.make_inode(name, FileType::File)?;
         Ok(DirEntry::new(parent, inode, name.to_string()))
+    }
+
+    fn mkdir(&self, name: &str) -> super::Result<INodeCacheItem> {
+        self.make_inode(name, FileType::Directory)
     }
 
     fn resolve_link(&self) -> super::Result<String> {
