@@ -38,7 +38,6 @@
     new_uninit,
     box_syntax,
     step_trait,
-    const_btree_new,
     prelude_import,
     allocator_api,
     nonnull_slice_from_raw_parts,
