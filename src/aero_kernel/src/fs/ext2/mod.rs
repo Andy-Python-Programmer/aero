@@ -84,7 +84,6 @@ impl INode {
         let block_size = filesystem.superblock.block_size();
 
         let mut progress = 0;
-
         let count = core::cmp::min(inode.size_lower as usize - offset, buffer.len());
 
         while progress < count {
@@ -113,7 +112,43 @@ impl INode {
         Ok(count)
     }
 
-    /// Allocates and appends a new block to the inode.
+    pub fn write(&self, offset: usize, buffer: &[u8]) -> super::Result<usize> {
+        let filesystem = self.fs.upgrade().unwrap();
+        let block_size = filesystem.superblock.block_size();
+
+        let mut progress = 0;
+        let count = buffer.len();
+
+        while progress < count {
+            let block = (offset + progress) / block_size;
+            let loc = (offset + progress) % block_size;
+
+            let mut chunk = count - progress;
+
+            if chunk > block_size - loc {
+                chunk = block_size - loc;
+            }
+
+            let mut block_index = self.get_block(block).unwrap() as usize;
+
+            if block_index == 0 {
+                block_index = self.append_block().unwrap();
+            }
+
+            filesystem
+                .block
+                .write(
+                    (block_index * block_size) + loc,
+                    &buffer[progress..progress + chunk],
+                )
+                .expect("inode: write failed");
+
+            progress += chunk;
+        }
+
+        Ok(count)
+    }
+
     pub fn append_block(&self) -> Option<usize> {
         let fs = self.fs.upgrade().expect("ext2: filesystem was dropped");
         let block_size = fs.superblock.block_size();
@@ -215,7 +250,11 @@ impl INode {
 
         {
             let mut inode = ext2_inode.inode.write();
+            **inode = disk::INode::default();
+
             inode.set_file_type(typ);
+            inode.set_permissions(0o755);
+
             inode.hl_count += 1;
         }
 
@@ -332,6 +371,18 @@ impl INodeInterface for INode {
         usr_buffer.copy_from_slice(&*buffer);
 
         Ok(count)
+    }
+
+    fn write_at(&self, offset: usize, usr_buffer: &[u8]) -> super::Result<usize> {
+        if !self.metadata()?.is_file() {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        self.write(offset, usr_buffer)
+    }
+
+    fn truncate(&self, _size: usize) -> super::Result<()> {
+        Ok(())
     }
 
     fn touch(&self, parent: DirCacheItem, name: &str) -> super::Result<DirCacheItem> {

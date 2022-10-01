@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2021-2022 The Aero Project Developers.
+ *
+ * This file is part of The Aero Project.
+ *
+ * Aero is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Aero is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Aero. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+use bit_field::BitField;
+
 use crate::fs::inode;
 use crate::utils::CeilDiv;
 
@@ -195,6 +216,12 @@ impl INode {
         // The last 4 bits are used to store the filetype.
         let mask = 0b0000_1111_1111_1111u16;
         self.type_and_perm = file_type.bits() | (self.type_and_perm & mask);
+    }
+
+    pub fn set_permissions(&mut self, permissions: u16) {
+        let mut val = self.type_and_perm;
+        val.set_bits(..13, permissions);
+        self.type_and_perm = val;
     }
 
     pub fn file_type(&self) -> FileType {
