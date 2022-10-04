@@ -438,7 +438,9 @@ def prepare_iso(args, kernel_bin, user_bins):
     sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
     for file in user_bins:
         bin_name = os.path.basename(file)
-        shutil.copy(file, os.path.join(sysroot_dir, "usr", "bin", bin_name))
+        dest_dir = os.path.join(sysroot_dir, "usr", "bin")
+        os.makedirs(dest_dir, exist_ok=True)
+        shutil.copy(file, os.path.join(dest_dir, bin_name))
 
     with open(os.path.join(iso_root, 'limine.cfg'), 'w') as limine_cfg:
         limine_cfg.write(LIMINE_TEMPLATE)
