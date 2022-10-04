@@ -1,14 +1,18 @@
+#!/bin/bash
+
 # sync the sysroot
 echo "sysroot: syncing base-files"
 cp -r base-files/. sysroot/system-root/
 
-# make the disk image
-rm -rf disk.img
+IMAGE_PATH=build/disk.img
 
-dd if=/dev/zero bs=1G count=0 seek=512 of=disk.img
-parted -s disk.img mklabel gpt
-parted -s disk.img mkpart primary 2048s 100%
-sudo losetup -Pf --show disk.img > loopback_dev
+# make the disk image
+rm -rf $IMAGE_PATH
+
+dd if=/dev/zero bs=1G count=0 seek=512 of=$IMAGE_PATH
+parted -s $IMAGE_PATH mklabel gpt
+parted -s $IMAGE_PATH mkpart primary 2048s 100%
+sudo losetup -Pf --show $IMAGE_PATH > loopback_dev
 sudo mkfs.ext2 `cat loopback_dev`p1 -I128
 rm -rf disk_image/
 mkdir disk_image
