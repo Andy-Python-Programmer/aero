@@ -476,6 +476,13 @@ def prepare_iso(args, kernel_bin, user_bins):
 
         return None
 
+    # create the disk image
+    disk_path = os.path.join(BUILD_DIR, 'disk.img')
+
+    if not os.path.exists(disk_path):
+        log_info('creating disk image')
+        os.system('bash ./tools/mkimage.sh')
+
     return iso_path
 
 
@@ -486,7 +493,10 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
     qemu_args = ['-cdrom', iso_path,
                  '-m', args.memory,
                  '-smp', '1',
-                 '-serial', 'stdio']
+                 '-serial', 'stdio',
+                 '-drive', 'file=build/disk.img,if=none,id=NVME1', '-device', 'nvme,drive=NVME1,serial=nvme',
+                 # Specify the boot order (where `d` is the first CD-ROM drive)
+                 '--boot', 'd']
 
     if args.bios == 'uefi':
         qemu_args += ['-bios',
