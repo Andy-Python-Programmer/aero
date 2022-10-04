@@ -339,10 +339,19 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
         //
         // F_DUPFD_CLOEXEC additionally sets the close-on-exec flag for the duplicate
         // file descriptor.
+        aero_syscall::prelude::F_DUPFD => scheduler::get_scheduler()
+            .current_task()
+            .file_table
+            .duplicate(fd, DuplicateHint::GreatorOrEqual(arg), handle.flags),
+
         aero_syscall::prelude::F_DUPFD_CLOEXEC => scheduler::get_scheduler()
             .current_task()
             .file_table
-            .duplicate(fd, DuplicateHint::GreatorOrEqual(arg), OpenFlags::O_CLOEXEC),
+            .duplicate(
+                fd,
+                DuplicateHint::GreatorOrEqual(arg),
+                handle.flags | OpenFlags::O_CLOEXEC,
+            ),
 
         // Get the value of file descriptor flags.
         aero_syscall::prelude::F_GETFD => {

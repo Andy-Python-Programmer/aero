@@ -242,7 +242,7 @@ impl FileTable {
             for (i, file) in array.iter_mut().enumerate() {
                 if file.is_none() {
                     *file = Some(handle.duplicate(i, flags)?);
-                    return Ok(i);
+                    return Ok(start + i);
                 }
             }
 
