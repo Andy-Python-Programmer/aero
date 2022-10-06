@@ -1,0 +1,26 @@
+From 923dd34de98831460447a85a2786e7c7d6ff3a95 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Wed, 5 Oct 2022 19:43:23 +1100
+Subject: [PATCH] fontconfig: aero specific changes
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ src/fcstat.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/fcstat.c b/src/fcstat.c
+index 4f69eae..8a621dd 100644
+--- a/src/fcstat.c
++++ b/src/fcstat.c
+@@ -386,7 +386,7 @@ FcFStatFs (int fd, FcStatFS *statb)
+ #  endif
+ #  if defined(HAVE_STRUCT_STATFS_F_FSTYPENAME)
+ 	p = buf.f_fstypename;
+-#  elif defined(__linux__) || defined (__EMSCRIPTEN__)
++#  elif defined(__linux__) || defined(__aero__) || defined (__EMSCRIPTEN__)
+ 	switch (buf.f_type)
+ 	{
+ 	case 0x6969: /* nfs */
+-- 
+2.25.1
+
