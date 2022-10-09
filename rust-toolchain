@@ -1,3 +1,4 @@
 [toolchain]
-channel = "nightly"
+# https://github.com/rust-lang/rust/pull/101988#issuecomment-1272407248
+channel = "nightly-2022-10-07"
 components = ["rust-src", "rustfmt", "clippy"]

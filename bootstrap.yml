@@ -48,14 +48,8 @@ sources:
 
   - name: mlibc
     subdir: 'bundled'
-    # git: 'https://github.com/managarm/mlibc'
-    git: 'https://github.com/Andy-Python-Programmer/mlibc'
-    # 452: The functions FD_{CLR,ISSET,SET,ZERO} were renamed to __FD_{CLR,ISSET,SET,ZERO} and replaced by macros to match Wine's assumptions.
-    # 511: Musl's regex engine was added, implementing regcomp and regexec. This required some changes to the regex_t struct.
-    # 504, #580: In both the mlibc and Linux ABIs, a domainname member was added to struct utsname, which is a glibc extension.
-    # 311: Added all necessary fields in pthread_attr_t required for implementing all pthread_attr functions.
-    branch: 'abi-break'
-    commit: '58ceb6648eefd801a774ba5e87b032706105243d'
+    git: 'https://github.com/managarm/mlibc'
+    branch: 'master'
 
   - name: tzcode
     subdir: 'bundled'
@@ -91,7 +85,6 @@ sources:
     subdir: 'bundled'
     git: 'https://github.com/Andy-Python-Programmer/libc.git'
     branch: 'master'
-    commit: '54d72b34bd614f0081e0da01e6323c7c69f45395'
 
   - name: rust-num-cpus
     subdir: 'bundled'
