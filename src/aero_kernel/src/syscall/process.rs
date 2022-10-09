@@ -65,7 +65,7 @@ pub fn uname(buffer: &mut Utsname) -> Result<usize, SyscallError> {
         fixed[..len].copy_from_slice(init_bytes)
     }
 
-    init_array(&mut buffer.name, "Aero");
+    init_array(&mut buffer.sysname, "Aero");
     init_array(&mut buffer.nodename, "unknown");
     init_array(&mut buffer.version, env!("CARGO_PKG_VERSION"));
     init_array(
