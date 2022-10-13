@@ -271,7 +271,7 @@ impl INode {
 
         entry.entry_size = block_size as _;
         entry.inode = ext2_inode.id as _;
-        entry.file_type = 2;
+        entry.file_type = 2; // FIXME: This is fucked.
         entry.set_name(name);
 
         fs.block.write(block * block_size, entry.as_bytes());
@@ -374,11 +374,26 @@ impl INodeInterface for INode {
     }
 
     fn write_at(&self, offset: usize, usr_buffer: &[u8]) -> super::Result<usize> {
-        if !self.metadata()?.is_file() {
+        if !self.metadata()?.is_file() && !self.metadata()?.is_symlink() {
             return Err(FileSystemError::NotSupported);
         }
 
         self.write(offset, usr_buffer)
+    }
+
+    fn link(&self, name: &str, src: DirCacheItem) -> super::Result<()> {
+        if !self.metadata()?.is_directory() {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        if src.inode().metadata()?.is_directory() {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        let inode = self.make_inode(name, FileType::Symlink)?;
+        inode.write_at(0, src.name().as_bytes())?;
+
+        Ok(())
     }
 
     fn truncate(&self, _size: usize) -> super::Result<()> {

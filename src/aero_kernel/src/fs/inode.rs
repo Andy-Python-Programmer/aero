@@ -256,7 +256,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    fn link(&self, _name: &str, _src: INodeCacheItem) -> Result<()> {
+    fn link(&self, _name: &str, _src: DirCacheItem) -> Result<()> {
         Err(FileSystemError::NotSupported)
     }
 }

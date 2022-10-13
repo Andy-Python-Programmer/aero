@@ -198,7 +198,7 @@ impl SysLog {
     pub fn flush(self) {
         let mut result = String::new();
 
-        if self.result.map(|e| e.is_ok()).unwrap_or_default() {
+        if self.result.unwrap().is_ok() {
             result.push_str("\x1b[1;32m");
         } else {
             result.push_str("\x1b[1;31m");

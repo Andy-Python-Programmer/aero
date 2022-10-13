@@ -412,7 +412,9 @@ impl INodeInterface for LockedRamINode {
         Some(self.0.read().filesystem.clone())
     }
 
-    fn link(&self, name: &str, src: INodeCacheItem) -> Result<()> {
+    fn link(&self, name: &str, src: DirCacheItem) -> Result<()> {
+        let src = src.inode();
+
         // ensure: The dest inode (self) is a directory.
         if self.metadata()?.file_type() != FileType::Directory {
             return Err(FileSystemError::NotDirectory);

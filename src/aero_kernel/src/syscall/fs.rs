@@ -520,7 +520,7 @@ pub fn event_fd(_initval: usize, flags: usize) -> Result<usize, SyscallError> {
 /// file.
 #[syscall]
 pub fn link(src_path: &Path, dest_path: &Path) -> Result<usize, SyscallError> {
-    let src = fs::lookup_path(src_path)?.inode();
+    let src = fs::lookup_path(src_path)?;
     let (dest_dir, dest_name) = dest_path.parent_and_basename();
 
     let dest_dir = fs::lookup_path(dest_dir)?.inode();
@@ -531,7 +531,9 @@ pub fn link(src_path: &Path, dest_path: &Path) -> Result<usize, SyscallError> {
     // strong references to it.
     //
     // TODO: Should this be moved to the inode impl?
-    if dest_dir.weak_filesystem().unwrap().as_ptr() != src.weak_filesystem().unwrap().as_ptr() {
+    if dest_dir.weak_filesystem().unwrap().as_ptr()
+        != src.inode().weak_filesystem().unwrap().as_ptr()
+    {
         return Err(SyscallError::EINVAL);
     }
 
