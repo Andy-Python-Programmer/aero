@@ -26,7 +26,6 @@ use bit_field::BitField;
 use spin::RwLock;
 
 use crate::fs::block::{BlockDevice, CachedAccess};
-use crate::fs::cache::INodeCacheItem;
 
 use super::{disk, Ext2};
 
@@ -151,7 +150,7 @@ impl GroupDescriptors {
     }
 
     /// Allocates a new inode using the first fit allocation strategy.
-    pub fn alloc_inode(&self) -> Option<INodeCacheItem> {
+    pub fn alloc_inode(&self) -> Option<usize> {
         let fs = self.ext2.upgrade()?;
         let ino_per_group = fs.superblock.inodes_per_group as usize;
 
@@ -168,7 +167,7 @@ impl GroupDescriptors {
             block_group.free_inodes_count -= 1;
             drop(descriptors); // release the lock
 
-            return fs.find_inode(inode_id);
+            return Some(inode_id);
         }
 
         None

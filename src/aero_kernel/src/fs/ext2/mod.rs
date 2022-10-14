@@ -22,7 +22,8 @@ mod group_desc;
 
 use core::mem::MaybeUninit;
 
-use aero_syscall::MMapFlags;
+use aero_syscall::socket::MessageHeader;
+use aero_syscall::{MMapFlags, SyscallError};
 use alloc::boxed::Box;
 use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
@@ -33,6 +34,9 @@ use crate::fs::cache::CachedINode;
 use crate::fs::ext2::disk::{FileType, SuperBlock};
 use crate::mem::paging::{FrameAllocator, PhysFrame, FRAME_ALLOCATOR};
 
+use crate::socket::unix::UnixSocket;
+use crate::socket::SocketAddr;
+
 use self::group_desc::GroupDescriptors;
 
 use super::block::{BlockDevice, CachedAccess};
@@ -40,13 +44,17 @@ use super::block::{BlockDevice, CachedAccess};
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::{cache, FileSystemError};
 
-use super::inode::{DirEntry, INodeInterface, Metadata};
+use super::inode::{DirEntry, INodeInterface, Metadata, PollFlags, PollTable};
 use super::FileSystem;
 
 pub struct INode {
     id: usize,
     fs: Weak<Ext2>,
     inode: RwLock<Box<disk::INode>>,
+    // Forwards all of the inode operations to the proxy inode. Note that the
+    // proxy inode is not saved on the disk. (e.g. This is useful for binding
+    // a socket inode to a file).
+    proxy: Option<Arc<dyn INodeInterface>>,
 
     // TODO: Do not store this in the inode, but rather in a different
     // cache using the API provided by fs::cache (consider LRU only?).
@@ -54,7 +62,11 @@ pub struct INode {
 }
 
 impl INode {
-    pub fn new(ext2: Weak<Ext2>, id: usize) -> Option<INodeCacheItem> {
+    pub fn new(
+        ext2: Weak<Ext2>,
+        id: usize,
+        proxy: Option<Arc<dyn INodeInterface>>,
+    ) -> Option<INodeCacheItem> {
         debug_assert!(id != 0);
 
         let icache = cache::icache();
@@ -71,6 +83,7 @@ impl INode {
                     inode: RwLock::new(inode),
                     id,
                     fs: ext2,
+                    proxy,
 
                     sref: sref.clone(),
                 }))),
@@ -229,7 +242,12 @@ impl INode {
         todo!("triply indirect block")
     }
 
-    pub fn make_inode(&self, name: &str, typ: FileType) -> super::Result<INodeCacheItem> {
+    pub fn make_inode(
+        &self,
+        name: &str,
+        typ: FileType,
+        proxy: Option<Arc<dyn INodeInterface>>,
+    ) -> super::Result<INodeCacheItem> {
         if !self.metadata()?.is_directory() {
             return Err(FileSystemError::NotSupported);
         }
@@ -246,6 +264,8 @@ impl INode {
         let fs = self.fs.upgrade().expect("ext2: filesystem was dropped");
 
         let inode = fs.bgdt.alloc_inode().expect("ext2: out of inodes");
+        let inode = fs.find_inode(inode, proxy).expect("ext2: inode not found");
+
         let ext2_inode = inode.downcast_arc::<INode>().expect("ext2: invalid inode");
 
         {
@@ -284,7 +304,7 @@ impl INode {
         name: &str,
         entry: &disk::DirEntry,
     ) -> Option<DirCacheItem> {
-        let inode = self.fs.upgrade()?.find_inode(entry.inode as usize)?;
+        let inode = self.fs.upgrade()?.find_inode(entry.inode as usize, None)?;
         Some(DirEntry::new(parent, inode, name.to_string()))
     }
 
@@ -358,6 +378,10 @@ impl INodeInterface for INode {
     }
 
     fn read_at(&self, offset: usize, usr_buffer: &mut [u8]) -> super::Result<usize> {
+        if let Some(proxy) = self.proxy.as_ref() {
+            return proxy.read_at(offset, usr_buffer);
+        }
+
         if !self.metadata()?.is_file() {
             return Err(FileSystemError::NotSupported);
         }
@@ -374,6 +398,10 @@ impl INodeInterface for INode {
     }
 
     fn write_at(&self, offset: usize, usr_buffer: &[u8]) -> super::Result<usize> {
+        if let Some(proxy) = self.proxy.as_ref() {
+            return proxy.write_at(offset, usr_buffer);
+        }
+
         if !self.metadata()?.is_file() && !self.metadata()?.is_symlink() {
             return Err(FileSystemError::NotSupported);
         }
@@ -390,23 +418,40 @@ impl INodeInterface for INode {
             return Err(FileSystemError::NotSupported);
         }
 
-        let inode = self.make_inode(name, FileType::Symlink)?;
+        let inode = self.make_inode(name, FileType::Symlink, None)?;
         inode.write_at(0, src.name().as_bytes())?;
 
         Ok(())
     }
 
     fn truncate(&self, _size: usize) -> super::Result<()> {
+        log::warn!("ext2::truncate is a stub!");
         Ok(())
     }
 
     fn touch(&self, parent: DirCacheItem, name: &str) -> super::Result<DirCacheItem> {
-        let inode = self.make_inode(name, FileType::File)?;
+        if !self.metadata()?.is_directory() {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        let inode = self.make_inode(name, FileType::File, None)?;
         Ok(DirEntry::new(parent, inode, name.to_string()))
     }
 
     fn mkdir(&self, name: &str) -> super::Result<INodeCacheItem> {
-        self.make_inode(name, FileType::Directory)
+        if !self.metadata()?.is_directory() {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        self.make_inode(name, FileType::Directory, None)
+    }
+
+    fn make_local_socket_inode(
+        &self,
+        name: &str,
+        inode: Arc<dyn INodeInterface>,
+    ) -> super::Result<INodeCacheItem> {
+        Ok(self.make_inode(name, FileType::Socket, Some(inode))?)
     }
 
     fn resolve_link(&self) -> super::Result<String> {
@@ -428,6 +473,8 @@ impl INodeInterface for INode {
     }
 
     fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> super::Result<PhysFrame> {
+        assert!(self.proxy.is_none());
+
         // TODO: support shared file mappings.
         assert!(!flags.contains(MMapFlags::MAP_SHARED));
 
@@ -437,6 +484,49 @@ impl INodeInterface for INode {
         self.read_at(offset, buffer)?;
 
         Ok(private_cp)
+    }
+
+    fn listen(&self, backlog: usize) -> Result<(), SyscallError> {
+        if let Some(proxy) = self.proxy.as_ref() {
+            return proxy.listen(backlog);
+        }
+
+        return Err(SyscallError::EACCES);
+    }
+
+    // XXX: We do not require to handle `bind` here since if this function
+    // is being is called on an EXT2 inode then, it has already been bound.
+
+    fn connect(&self, address: SocketAddr, length: usize) -> super::Result<()> {
+        if let Some(proxy) = self.proxy.as_ref() {
+            return proxy.connect(address, length);
+        }
+
+        return Err(FileSystemError::NotSupported);
+    }
+
+    fn accept(&self, address: Option<&mut SocketAddr>) -> super::Result<Arc<UnixSocket>> {
+        if let Some(proxy) = self.proxy.as_ref() {
+            return proxy.accept(address);
+        }
+
+        return Err(FileSystemError::NotSupported);
+    }
+
+    fn recv(&self, message_header: &mut MessageHeader) -> super::Result<usize> {
+        if let Some(proxy) = self.proxy.as_ref() {
+            return proxy.recv(message_header);
+        }
+
+        return Err(FileSystemError::NotSupported);
+    }
+
+    fn poll(&self, table: Option<&mut PollTable>) -> super::Result<PollFlags> {
+        if let Some(proxy) = self.proxy.as_ref() {
+            return proxy.poll(table);
+        }
+
+        return Err(FileSystemError::NotSupported);
     }
 }
 
@@ -526,15 +616,19 @@ impl Ext2 {
         }))
     }
 
-    pub fn find_inode(&self, id: usize) -> Option<INodeCacheItem> {
-        INode::new(self.sref.clone(), id)
+    pub fn find_inode(
+        &self,
+        id: usize,
+        proxy: Option<Arc<dyn INodeInterface>>,
+    ) -> Option<INodeCacheItem> {
+        INode::new(self.sref.clone(), id, proxy)
     }
 }
 
 impl FileSystem for Ext2 {
     fn root_dir(&self) -> DirCacheItem {
         let inode = self
-            .find_inode(Ext2::ROOT_INODE_ID)
+            .find_inode(Ext2::ROOT_INODE_ID, None)
             .expect("ext2: invalid filesystem (root inode not found)");
 
         DirEntry::new_root(inode, String::from("/"))
