@@ -105,6 +105,16 @@ pub fn parse(attr: TokenStream, item: TokenStream) -> TokenStream {
     let orig_args = &signature.inputs;
     let processed_args = process_args(orig_args);
     let call_args = process_call_args(orig_args);
+    let args = orig_args
+        .iter()
+        .map(|e| match e {
+            FnArg::Typed(arg) => match arg.pat.as_ref() {
+                Pat::Ident(pat) => pat.ident.clone(),
+                _ => unimplemented!(),
+            },
+            _ => unimplemented!(),
+        })
+        .collect::<Vec<_>>();
     let ret = &signature.output;
     let body = &parsed_fn.block;
 
@@ -150,22 +160,29 @@ pub fn parse(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     let compiled_body = if config.no_return {
-        quote::quote! { #body }
+        quote::quote! {
+            fn even_inner(#orig_args) #ret #body
+            even_inner(#(#call_args),*)
+        }
     } else {
         quote::quote! {
-            let result = #body;
-            #syslog
-            result
+            #[inline(always)]
+            fn even_inner(#orig_args) #ret #body
+
+            #[inline(always)]
+            fn syscall_inner(#orig_args) #ret {
+                let result = even_inner(#(#args),*);
+                #syslog
+                result
+            }
+
+            syscall_inner(#(#call_args),*)
         }
     };
 
     let result = quote! {
         #(#attrs)* #vis fn #name(#(#processed_args),*) #ret {
-            #(#attrs)* fn inner_syscall(#orig_args) #ret {
-                #compiled_body
-            }
-
-            inner_syscall(#(#call_args),*)
+            #compiled_body
         }
     };
 
