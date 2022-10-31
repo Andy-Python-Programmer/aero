@@ -82,22 +82,6 @@ tools:
     install:
       - args: ['make', 'install-strip']
 
-  - name: host-gettext
-    from_source: gettext
-    exports_aclocal: true
-    tools_required:
-      # - host-bison
-      - host-autoconf-v2.69
-      - host-automake-v1.16
-    configure:
-      - args:
-        - '@THIS_SOURCE_DIR@/configure'
-        - '--prefix=@PREFIX@'
-    compile:
-      - args: ['make']
-    install:
-      - args: ['make', 'install-strip']
-
 packages:
   # `xorg-util-macros` is a set of autoconf macros used by the configure.ac scripts in
   # other Xorg modular packages, and is needed to generate new versions
@@ -1177,7 +1161,6 @@ packages:
         - host-libtool
         - host-pkg-config
         - host-xorg-macros
-        - host-gettext
       regenerate:
         - args: ['./autogen.sh']
           environ:
