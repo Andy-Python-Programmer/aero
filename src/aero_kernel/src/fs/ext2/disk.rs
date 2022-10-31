@@ -157,7 +157,7 @@ impl DirEntry {
 }
 
 #[repr(u8)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
 pub enum FileType {
     Unknown = 0,
     Fifo = 1,
