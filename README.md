@@ -52,14 +52,15 @@ Aero. If you are using windows, its highly recommended to use WSL 2.
 ## Dependencies
 
 Before building Aero, you need the following things installed:
-- `rustc` should be the **latest nightly**
-- `qemu`
+- `rust` (should be the **latest nightly**)
+- `qemu` (optional: required if you want to run it in the Qemu emulator)
 - `nasm`
-- `g++` 5.1 or later
-- `ninja`
-- `parted`
-- `meson`
-- `python3`
+
+If you are building Aero with sysroot then the following dependencies are additionally required:
+```sh
+# Arch Linux:
+sudo pacman -S bash coreutils make patch tar gzip binutils gcc git subversion mercurial curl wget xz nasm mtools meson perl m4 texinfo groff gettext expat bison flex help2man openssl gperf rsync libxslt python python-pip python-mako xcb-proto xorriso boost-libs cmake
+```
 
 ## Hardware
 
