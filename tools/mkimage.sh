@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x -e
+
 # sync the sysroot
 echo "sysroot: syncing base-files"
 cp -r base-files/. sysroot/system-root/
