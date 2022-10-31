@@ -330,27 +330,7 @@ def build_userland_sysroot(args):
         # symlink the bootstrap.yml file in the src root to sysroot/bootstrap.link
         symlink_rel('bootstrap.yml', blink)
 
-    os.chdir(SYSROOT_DIR)
-
-    args = {
-        "update": True,
-        "all": True,
-        "dry_run": False,
-        "check": False,
-        "recursive": False,
-        "paranoid": False,
-        "reset": False,
-        "hard_reset": False,
-        "only_wanted": False,
-        "keep_going": False,
-
-        "progress_file": None,  # file that receives machine-ready progress notifications
-        "reconfigure": False,
-        "rebuild": False
-    }
-
-    namespace = argparse.Namespace(**args)
-    xbstrap.do_install(namespace)
+    run_command(['xbstrap', 'install', '-u', '--all'], cwd=SYSROOT_DIR)
 
 
 def build_userland(args):
@@ -496,7 +476,7 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
                  '-m', args.memory,
                  '-smp', '1',
                  '-serial', 'stdio',
-                 '-drive', 'file=build/disk.img,if=none,id=NVME1', '-device', 'nvme,drive=NVME1,serial=nvme',
+                 '-drive', 'file=build/disk.img,if=none,id=NVME1,format=raw', '-device', 'nvme,drive=NVME1,serial=nvme',
                  # Specify the boot order (where `d` is the first CD-ROM drive)
                  '--boot', 'd']
 
