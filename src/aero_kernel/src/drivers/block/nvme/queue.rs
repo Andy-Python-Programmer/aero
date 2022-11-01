@@ -109,17 +109,21 @@ pub(super) struct QueuePair<'a> {
     id: u16,
     size: usize,
 
+    cid: u16,
+
     submission: Queue<'a, Submisson>,
     completion: Queue<'a, Completion>,
 }
 
 impl<'a> QueuePair<'a> {
     pub fn new(registers: &Registers, size: usize) -> Result<Self, Error> {
-        let queue_id = QUEUE_PAIR_ID.fetch_add(2, Ordering::SeqCst);
+        let queue_id = QUEUE_PAIR_ID.fetch_add(1, Ordering::SeqCst);
 
         Ok(Self {
             size,
             id: queue_id,
+
+            cid: 0,
 
             submission: Queue::new(registers, size, queue_id)?,
             completion: Queue::new(registers, size, queue_id)?,
@@ -127,7 +131,19 @@ impl<'a> QueuePair<'a> {
     }
 
     pub fn submit_command<T: Into<Command>>(&mut self, command: T) {
-        self.submission.submit_command(command.into());
+        let mut command = command.into();
+
+        unsafe {
+            // SAFETY: Command Layout:
+            //              - opcode: u8
+            //              - flags: u8
+            //              - command_id: u16 (offset=2 bytes))
+            *(&mut command as *mut Command as *mut u16).offset(1) = self.cid;
+        }
+
+        self.cid += 1;
+
+        self.submission.submit_command(command);
         self.completion.next_cmd_result().unwrap();
     }
 

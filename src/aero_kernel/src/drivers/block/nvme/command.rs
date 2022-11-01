@@ -187,6 +187,7 @@ pub struct IdentifyController {
     pub sqes: u8,
     pub cqes: u8,
     pub maxcmd: u16,
+    /// This field indicates the maximum value of a valid NSID for the NVM subsystem.
     pub nn: u32,
     pub oncs: u16,
     pub fuses: u16,

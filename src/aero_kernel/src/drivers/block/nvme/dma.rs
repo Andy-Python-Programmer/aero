@@ -112,6 +112,12 @@ impl<T: ?Sized> core::ops::DerefMut for Dma<T> {
     }
 }
 
+impl<T: ?Sized + core::fmt::Debug> core::fmt::Debug for Dma<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Dma").field(&self.0).finish()
+    }
+}
+
 impl<T: ?Sized> Dma<T> {
     pub fn addr(&self) -> PhysAddr {
         unsafe {
