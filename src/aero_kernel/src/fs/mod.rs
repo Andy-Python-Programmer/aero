@@ -272,10 +272,14 @@ pub fn lookup_path_with(
                 let metadata = inode.metadata()?;
 
                 if metadata.is_symlink() {
-                    let relative_path_str = inode.resolve_link()?;
-                    let relative_path = Path::new(&relative_path_str);
+                    let resolved_path_str = inode.resolve_link()?;
+                    let resolved_path = Path::new(&resolved_path_str);
 
-                    return lookup_path_with(parent, relative_path, LookupMode::None);
+                    if resolved_path.is_absolute() {
+                        return lookup_path(resolved_path);
+                    }
+
+                    return lookup_path_with(parent, resolved_path, LookupMode::None);
                 } else if metadata.is_directory() {
                     if let Ok(mount_point) = MOUNT_MANAGER.find_mount(cwd.clone()) {
                         cwd = mount_point.root_entry;
