@@ -609,6 +609,7 @@ packages:
             NOCONFIGURE: 'yes'
     tools_required:
       - host-gcc
+      - host-pkg-config
     pkgs_required:
       - mlibc
       - xorg-util-macros
