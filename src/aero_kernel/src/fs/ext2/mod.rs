@@ -528,6 +528,13 @@ impl INodeInterface for INode {
 
         return Err(FileSystemError::NotSupported);
     }
+
+    fn as_unix_socket(&self) -> super::Result<Arc<dyn INodeInterface>> {
+        self.proxy
+            .as_ref()
+            .ok_or(FileSystemError::NotSocket)
+            .cloned()
+    }
 }
 
 pub struct DirEntryIter {
