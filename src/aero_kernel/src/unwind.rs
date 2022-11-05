@@ -73,6 +73,8 @@ impl UnwindInfo {
 }
 
 pub fn unwind_stack_trace() {
+    let _guard = IrqGuard::new();
+
     let mut address_space = AddressSpace::this();
     let offset_table = address_space.offset_page_table();
 
@@ -158,6 +160,7 @@ pub fn unwind_stack_trace() {
 
 #[cfg(feature = "ci")]
 use crate::emu;
+use crate::utils::sync::IrqGuard;
 
 #[panic_handler]
 extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
