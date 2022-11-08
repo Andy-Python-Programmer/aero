@@ -44,14 +44,13 @@ pub fn exit(status: usize) -> Result<usize, SyscallError> {
 
     #[cfg(not(feature = "ci"))]
     {
-        log::trace!(
-            "exiting the process (pid={pid}) with status: {status}",
-            pid = scheduler::get_scheduler().current_task().pid().as_usize(),
-            status = status
-        );
+        let current_task = scheduler::get_scheduler().current_task();
+        let pid = current_task.pid().as_usize();
+        let path = current_task.path();
+
+        log::trace!("exiting the process (pid={pid}, path={path:?}) with status: {status}");
 
         crate::unwind::unwind_stack_trace();
-
         scheduler::get_scheduler().exit(status as isize);
     }
 }
