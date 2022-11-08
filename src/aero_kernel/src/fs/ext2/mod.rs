@@ -32,7 +32,7 @@ use spin::RwLock;
 use crate::fs::block::BlockDeviceInterface;
 use crate::fs::cache::CachedINode;
 use crate::fs::ext2::disk::{FileType, SuperBlock};
-use crate::mem::paging::{FrameAllocator, PhysFrame, FRAME_ALLOCATOR};
+use crate::mem::paging::{FrameAllocator, PhysFrame, VirtAddr, FRAME_ALLOCATOR};
 
 use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
@@ -505,7 +505,7 @@ impl INodeInterface for INode {
         return Err(FileSystemError::NotSupported);
     }
 
-    fn accept(&self, address: Option<&mut SocketAddr>) -> super::Result<Arc<UnixSocket>> {
+    fn accept(&self, address: Option<(VirtAddr, &mut u32)>) -> super::Result<Arc<UnixSocket>> {
         if let Some(proxy) = self.proxy.as_ref() {
             return proxy.accept(address);
         }
@@ -513,9 +513,9 @@ impl INodeInterface for INode {
         return Err(FileSystemError::NotSupported);
     }
 
-    fn recv(&self, message_header: &mut MessageHeader) -> super::Result<usize> {
+    fn recv(&self, message_header: &mut MessageHeader, non_block: bool) -> super::Result<usize> {
         if let Some(proxy) = self.proxy.as_ref() {
-            return proxy.recv(message_header);
+            return proxy.recv(message_header, non_block);
         }
 
         return Err(FileSystemError::NotSupported);

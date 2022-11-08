@@ -45,7 +45,7 @@ pub struct FileHandle {
     // We need to store the `offset` behind an Arc since when the file handle
     // is duplicated, the `offset` needs to be in sync with the parent.
     pub offset: Arc<AtomicUsize>,
-    pub flags: OpenFlags,
+    pub flags: RwLock<OpenFlags>,
     pub fd_flags: Mutex<FdFlags>,
 }
 
@@ -56,7 +56,7 @@ impl FileHandle {
             fd,
             inode: inode.clone(),
             offset: Arc::new(AtomicUsize::new(0)),
-            flags,
+            flags: RwLock::new(flags),
             fd_flags: Mutex::new(FdFlags::empty()),
         }
     }
@@ -123,16 +123,16 @@ impl FileHandle {
     }
 
     pub fn duplicate(&self, dupfd: usize, flags: OpenFlags) -> super::Result<Arc<FileHandle>> {
-        let flags = self.flags | flags;
+        let flags = *self.flags.read() | flags;
         let new = Arc::new(Self {
             fd: dupfd,
             inode: self.inode.clone(),
             offset: self.offset.clone(),
-            flags,
+            flags: RwLock::new(flags),
             fd_flags: Mutex::new(self.fd_flags.lock().clone()),
         });
 
-        new.inode.inode().open(flags)?;
+        new.inode.inode().open(flags, new.clone())?;
 
         Ok(new)
     }
@@ -266,7 +266,7 @@ impl FileTable {
                     let handle = handle.duplicate(new_fd, flags)?;
                     let old = files[new_fd].take().unwrap();
 
-                    old.inode.inode().close(old.flags);
+                    old.inode.inode().close(*old.flags.read());
                     files[new_fd] = Some(handle);
 
                     Ok(0x00)
@@ -301,7 +301,7 @@ impl FileTable {
         if let Some((i, f)) = files.iter_mut().enumerate().find(|e| e.1.is_none()) {
             let handle = Arc::new(FileHandle::new(i, dentry, flags));
 
-            handle.inode.inode().open(flags)?;
+            handle.inode.inode().open(flags, handle.clone())?;
             *f = Some(handle);
 
             Ok(i)
@@ -309,7 +309,7 @@ impl FileTable {
             let fd = files.len();
             let handle = Arc::new(FileHandle::new(fd, dentry, flags));
 
-            handle.inode.inode().open(flags)?;
+            handle.inode.inode().open(flags, handle.clone())?;
             files.push(Some(handle));
 
             Ok(fd)
@@ -326,7 +326,7 @@ impl FileTable {
 
         if let Some(file) = files.get_mut(fd) {
             if let Some(handle) = file {
-                handle.inode.inode().close(handle.flags);
+                handle.inode.inode().close(*handle.flags.read());
                 *file = None;
 
                 return true;

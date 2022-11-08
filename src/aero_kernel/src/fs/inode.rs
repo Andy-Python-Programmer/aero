@@ -30,7 +30,7 @@ use alloc::vec::Vec;
 use intrusive_collections::UnsafeRef;
 use spin::Once;
 
-use crate::mem::paging::PhysFrame;
+use crate::mem::paging::{PhysFrame, VirtAddr};
 use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
 use crate::userland::scheduler;
@@ -42,6 +42,7 @@ use super::cache::Cacheable;
 use super::cache::CachedINode;
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::devfs::DevINode;
+use super::file_table::FileHandle;
 use super::{FileSystem, FileSystemError, Result};
 
 static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
@@ -70,7 +71,7 @@ impl Drop for PollTable {
 bitflags::bitflags! {
     pub struct PollFlags: usize {
         /// The associated file is available for read operations.
-        const IN   = 1 << 1;
+        const IN  = 1 << 1;
         /// The associated file is available for write operations.
         const OUT = 1 << 2;
         /// Error condition happened on the associated file descriptor.
@@ -192,7 +193,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    fn open(&self, _flags: OpenFlags) -> Result<()> {
+    fn open(&self, _flags: OpenFlags, _handle: Arc<FileHandle>) -> Result<()> {
         Ok(())
     }
 
@@ -239,11 +240,11 @@ pub trait INodeInterface: Send + Sync {
         Err(SyscallError::ENOTSOCK)
     }
 
-    fn accept(&self, _address: Option<&mut SocketAddr>) -> Result<Arc<UnixSocket>> {
+    fn accept(&self, _address: Option<(VirtAddr, &mut u32)>) -> Result<Arc<UnixSocket>> {
         Err(FileSystemError::NotSocket)
     }
 
-    fn recv(&self, _message_header: &mut MessageHeader) -> Result<usize> {
+    fn recv(&self, _message_header: &mut MessageHeader, _non_block: bool) -> Result<usize> {
         Err(FileSystemError::NotSocket)
     }
 

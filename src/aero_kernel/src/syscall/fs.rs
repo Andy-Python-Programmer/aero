@@ -21,6 +21,7 @@ use aero_syscall::signal::SigProcMask;
 use aero_syscall::{prelude::*, TimeSpec};
 use aero_syscall::{OpenFlags, Stat, SyscallError};
 
+use crate::fs::cache::DirCacheImpl;
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::DuplicateHint;
@@ -61,6 +62,7 @@ pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, SyscallError> {
 
     if handle
         .flags
+        .read()
         .intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR)
     {
         Ok(handle.read(buffer)?)
@@ -287,25 +289,24 @@ pub fn pipe(fds: &mut [i32; 2], flags: usize) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn unlink(fd: usize, path: &Path, flags: usize) -> Result<usize, SyscallError> {
-    // TODO: Make use of the open flags.
-    let _flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
-    let name = path.container();
+pub fn unlink(_fd: usize, _path: &Path, _flags: usize) -> Result<usize, SyscallError> {
+    // let _flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
+    // let name = path.container();
 
-    if fd as isize == aero_syscall::AT_FDCWD {
-        let file = fs::lookup_path(path)?;
+    // if fd as isize == aero_syscall::AT_FDCWD {
+    //     let file = fs::lookup_path(path)?;
 
-        if let Some(dir) = file.parent() {
-            let metadata = file.inode().metadata()?;
+    //     if let Some(dir) = file.parent() {
+    //         let metadata = file.inode().metadata()?;
 
-            if metadata.is_file() {
-                dir.inode().unlink(name.as_str())?;
-                file.drop_from_cache();
-            }
-        }
-    } else {
-        unimplemented!()
-    }
+    //         if metadata.is_file() {
+    //             dir.inode().unlink(name.as_str())?;
+    //             file.drop_from_cache();
+    //         }
+    //     }
+    // } else {
+    //     unimplemented!()
+    // }
 
     Ok(0x00)
 }
@@ -342,7 +343,7 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
         aero_syscall::prelude::F_DUPFD => scheduler::get_scheduler()
             .current_task()
             .file_table
-            .duplicate(fd, DuplicateHint::GreatorOrEqual(arg), handle.flags),
+            .duplicate(fd, DuplicateHint::GreatorOrEqual(arg), *handle.flags.read()),
 
         aero_syscall::prelude::F_DUPFD_CLOEXEC => scheduler::get_scheduler()
             .current_task()
@@ -350,7 +351,7 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
             .duplicate(
                 fd,
                 DuplicateHint::GreatorOrEqual(arg),
-                handle.flags | OpenFlags::O_CLOEXEC,
+                *handle.flags.read() | OpenFlags::O_CLOEXEC,
             ),
 
         // Get the value of file descriptor flags.
@@ -364,19 +365,20 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
             let flags = FdFlags::from_bits(arg).ok_or(SyscallError::EINVAL)?;
             handle.fd_flags.lock().insert(flags);
 
-            Ok(0x00)
+            Ok(0)
         }
 
         // Get the value of file status flags:
         aero_syscall::prelude::F_GETFL => {
-            let flags = handle.flags.bits();
+            let flags = handle.flags.read().bits();
             Ok(flags)
         }
 
         aero_syscall::prelude::F_SETFL => {
-            log::debug!("F_SETFL: is a stub!");
+            let flags = OpenFlags::from_bits_truncate(arg);
+            handle.flags.write().insert(flags);
 
-            Ok(0x00)
+            Ok(0)
         }
 
         _ => unimplemented!("fcntl: unknown command {command}"),
@@ -550,6 +552,8 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
 
     // Iterate over all the registered events and check if they are ready.
     for (i, fd) in fds.iter_mut().enumerate() {
+        fd.revents = PollEventFlags::empty();
+
         // TODO: If an invalid file descriptor is provided then return EBADFD. Not implemented currently,
         // since the init process (libc?) tries to POLL on the stdout, stdin and stdout file descriptors
         // which are currently not present.
@@ -559,12 +563,19 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
         let handle = match current_task.file_table.get_handle(fd.fd as usize) {
             Some(v) => v,
             None => {
-                fd.revents = PollEventFlags::empty();
                 return Ok(0);
             }
         };
 
         let ready: PollEventFlags = handle.inode().poll(None)?.into();
+
+        log::trace!(
+            "poll: (fd={} `{:?}`, events={:?} cur={:?})",
+            fd.fd,
+            handle.inode.absolute_path_str(),
+            fd.events,
+            ready
+        );
 
         if !(ready & fd.events).is_empty() {
             // The registered event is ready; increment the number of ready events
@@ -581,7 +592,6 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
 
     // If all events are ready, we can return now.
     if n > 0 {
-        debug_assert!(refds.len() == 0);
         return Ok(n);
     }
 
@@ -596,9 +606,6 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
     crate::unwind::unwind_stack_trace();
 
     'search: loop {
-        // Wait till one of the file descriptor to be ready.
-        scheduler::get_scheduler().inner.await_io()?;
-
         for (handle, index) in refds.iter() {
             let pollfd = &mut fds[*index];
             let ready: PollEventFlags = handle.inode().poll(None)?.into();

@@ -153,12 +153,8 @@ impl Zombies {
 
         let (tid, st) = captured;
 
-        // WIFEXITED: The child process has been terminated normally by
-        // either calling sys_exit() or returning from the main function.
-        *status = 0x200;
-        // The lower 8-bits are used to store the exit status.
-        *status |= st as u32 & 0xff;
-
+        log::debug!("waitpid: status = {st}");
+        *status = st as u32;
         Ok(tid.as_usize())
     }
 }
@@ -487,15 +483,15 @@ impl Task {
     }
 
     pub(super) fn update_state(&self, state: TaskState) {
-        if state != TaskState::Runnable {
-            log::warn!(
-                "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",
-                self.pid,
-                self.tid
-            );
+        // if state != TaskState::Runnable {
+        //     log::warn!(
+        //         "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",
+        //         self.pid,
+        //         self.tid
+        //     );
 
-            crate::unwind::unwind_stack_trace();
-        }
+        //     crate::unwind::unwind_stack_trace();
+        // }
 
         self.state.store(state as _, Ordering::SeqCst);
     }

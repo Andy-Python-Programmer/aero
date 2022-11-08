@@ -170,12 +170,6 @@ pub fn sigreturn(stack: &mut InterruptStack) -> usize {
     *stack = signal_frame.frame;
 
     if signal_frame.restart_syscall != u64::MAX {
-        #[cfg(feature = "syslog")]
-        log::debug!(
-            "sigreturn: restarting {} syscall",
-            aero_syscall::syscall_as_str(signal_frame.restart_syscall as _)
-        );
-
         stack.iret.rip -= SYSCALL_INSTRUCTION_SIZE;
     }
 

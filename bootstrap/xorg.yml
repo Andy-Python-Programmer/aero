@@ -658,7 +658,7 @@ packages:
           CFLAGS: '-Wno-error=array-bounds -O0 -g -pipe'
     build:
       - args: ['make', '-j@PARALLELISM@']
-      - args: ['make', 'install-strip']
+      - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
       - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/etc/X11']
