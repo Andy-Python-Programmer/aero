@@ -79,12 +79,19 @@ impl MessageQueue {
     }
 
     pub fn read(&mut self, buffer: &mut [u8]) -> usize {
-        if let Some(message) = self.messages.pop_front() {
+        if let Some(message) = self.messages.front_mut() {
             let message_len = message.data.len();
-            assert!(buffer.len() >= message_len);
+            let size = core::cmp::min(buffer.len(), message_len);
 
-            buffer[..message_len].copy_from_slice(message.data.as_slice());
-            message_len
+            buffer[..size].copy_from_slice(&message.data[..size]);
+
+            if size < message_len {
+                message.data.drain(..size);
+                return size;
+            }
+
+            self.messages.pop_front();
+            size
         } else {
             unreachable!("MessageQueue::read() called when queue is empty");
         }
