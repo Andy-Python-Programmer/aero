@@ -963,7 +963,7 @@ packages:
     pkgs_required:
       - mlibc
     build:
-      - args: ['make', '-C', '@THIS_SOURCE_DIR@/doomgeneric', '-f', 'Makefile.aero', '-j@PARALLELISM@']
+      - args: ['make', '-C', '@THIS_SOURCE_DIR@/doomgeneric', '-f', 'Makefile', '-j@PARALLELISM@', 'CC=x86_64-aero-gcc']
       - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/bin']
       - args: ['cp', '@THIS_SOURCE_DIR@/doomgeneric/doomgeneric', '@THIS_COLLECT_DIR@/usr/bin/doomgeneric']
 
