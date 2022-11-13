@@ -19,8 +19,8 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 **Official Discord Server**: <https://discord.gg/8gwhTTZwt8>
 
 # Screenshots
-<img src="misc/dwm-xeyes.png">
-<p align="center">Running <a href="https://dwm.suckless.org/">DWM</a> and <a href="https://github.com/freedesktop/xorg-xeyes">Xeyes</a> in Aero!</p>
+<img src="misc/dwm-doom-xeyes.png">
+<p align="center">Running <a href="https://dwm.suckless.org/">DWM</a>, <a href="https://github.com/freedesktop/xorg-xeyes">Xeyes</a> and DOOM in Aero!</p>
 
 # Features
 - 64-bit higher half kernel
