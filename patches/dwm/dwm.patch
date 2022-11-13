@@ -1,0 +1,41 @@
+From b037341e78de204069d705b2fcb16f7de53b15b4 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sun, 13 Nov 2022 12:09:35 +1100
+Subject: [PATCH] <xxx>
+
+---
+ config.def.h | 2 +-
+ config.mk    | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/config.def.h b/config.def.h
+index 9efa774..cb4f512 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -58,7 +58,7 @@ static const Layout layouts[] = {
+ /* commands */
+ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
+ static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+-static const char *termcmd[]  = { "st", NULL };
++static const char *termcmd[]  = { "xeyes", NULL };
+ 
+ static const Key keys[] = {
+ 	/* modifier                     key        function        argument */
+diff --git a/config.mk b/config.mk
+index ef8acf7..3d7341e 100644
+--- a/config.mk
++++ b/config.mk
+@@ -11,8 +11,8 @@ X11INC = /usr/X11R6/include
+ X11LIB = /usr/X11R6/lib
+ 
+ # Xinerama, comment if you don't want it
+-XINERAMALIBS  = -lXinerama
+-XINERAMAFLAGS = -DXINERAMA
++# XINERAMALIBS  = -lXinerama
++# XINERAMAFLAGS = -DXINERAMA
+ 
+ # freetype
+ FREETYPELIBS = -lfontconfig -lXft
+-- 
+2.38.1
+

@@ -871,7 +871,9 @@ packages:
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
-      - args: ['ln', '-sf', 'bash', '@THIS_COLLECT_DIR@/usr/bin/sh']
+      - args: ['ln', '-sf', '/usr/bin/bash', '@THIS_COLLECT_DIR@/usr/bin/sh']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/bin']
+      - args: ['ln', '-sf', '/usr/bin/bash', '@THIS_COLLECT_DIR@/bin/sh']
 
   - name: tcc
     source:

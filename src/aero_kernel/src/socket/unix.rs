@@ -79,8 +79,6 @@ impl MessageQueue {
     }
 
     pub fn read(&mut self, buffer: &mut [u8]) -> usize {
-        log::debug!("MessageQueue::read(): {:?}", self.messages);
-
         if let Some(message) = self.messages.pop_front() {
             let message_len = message.data.len();
             assert!(buffer.len() >= message_len);
@@ -95,8 +93,6 @@ impl MessageQueue {
     pub fn write(&mut self, buffer: &[u8]) {
         let message = Message::new(buffer.to_vec());
         self.messages.push_back(message);
-
-        log::debug!("MessageQueue::write(): {:?}", self.messages);
     }
 }
 

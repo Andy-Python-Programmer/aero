@@ -569,14 +569,6 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
 
         let ready: PollEventFlags = handle.inode().poll(None)?.into();
 
-        log::trace!(
-            "poll: (fd={} `{:?}`, events={:?} cur={:?})",
-            fd.fd,
-            handle.inode.absolute_path_str(),
-            fd.events,
-            ready
-        );
-
         if !(ready & fd.events).is_empty() {
             // The registered event is ready; increment the number of ready events
             // and update revents mask for this event.
@@ -602,8 +594,6 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
             return Ok(0);
         }
     }
-
-    crate::unwind::unwind_stack_trace();
 
     'search: loop {
         for (handle, index) in refds.iter() {

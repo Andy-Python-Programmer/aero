@@ -19,14 +19,8 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 **Official Discord Server**: <https://discord.gg/8gwhTTZwt8>
 
 # Screenshots
-<img src="misc/demo.png">
-<p align="center"><i>Aero running TCC in Qemu (the background image is by <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Rick Astley</a>)</i></p>
-
-<img src="misc/qjs-in-aero.png">
-<p align="center"><i>Aero running Quick JS in Qemu (the background image is by <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Rick Astley</a>)</i></p>
-
-<img src="misc/aero-doom.png">
-<p align="center"><i>Aero running DOOM in Qemu (the background image is by <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Rick Astley</a>)</i></p>
+<img src="misc/dwm-xeyes.png">
+<p align="center">Running <a href="https://dwm.suckless.org/">DWM</a> and <a href="https://github.com/freedesktop/xorg-xeyes">Xeyes</a> in Aero!</p>
 
 # Features
 - 64-bit higher half kernel

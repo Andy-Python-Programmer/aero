@@ -122,13 +122,6 @@ pub fn exec(
     envs: usize,
     envc: usize,
 ) -> Result<usize, SyscallError> {
-    let mut path = path;
-
-    // fixme!!!! before MERGE!!!! ANDYYYY
-    if path.as_str() == "/bin/sh" {
-        path = Path::new("/usr/bin/bash");
-    }
-
     let executable = fs::lookup_path(path)?;
 
     if executable.inode().metadata()?.is_directory() {

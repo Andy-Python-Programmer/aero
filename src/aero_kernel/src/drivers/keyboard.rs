@@ -26,8 +26,8 @@ use crate::fs;
 
 use crate::arch::{apic, io};
 use crate::fs::devfs::{self, Device};
-use crate::fs::inode::INodeInterface;
-use crate::utils::sync::Mutex;
+use crate::fs::inode::{INodeInterface, PollFlags};
+use crate::utils::sync::{BlockQueue, Mutex};
 
 pub trait KeyboardListener: Send + Sync {
     fn on_key(&self, key: KeyCode, released: bool);
@@ -189,6 +189,7 @@ struct KeyboardDevice {
     marker: usize,
     buffer: Mutex<Vec<u8>>,
     sref: Weak<Self>,
+    wq: BlockQueue,
 }
 
 impl KeyboardDevice {
@@ -197,6 +198,7 @@ impl KeyboardDevice {
             marker: devfs::alloc_device_marker(),
             buffer: Mutex::new(Vec::new()),
             sref: this.clone(),
+            wq: BlockQueue::new(),
         })
     }
 }
@@ -222,11 +224,18 @@ impl KeyboardListener for KeyboardDevice {
         } else {
             self.buffer.lock_irq().push(keycode as u8);
         }
+
+        self.wq.notify_complete()
     }
 }
 
 impl INodeInterface for KeyboardDevice {
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+        if self.buffer.lock_irq().is_empty() {
+            return Ok(0);
+        }
+
+        // TODO: block using wq
         let mut sbuf = self.buffer.lock_irq();
         let drainage = core::cmp::min(buffer.len(), sbuf.len());
 
@@ -235,6 +244,16 @@ impl INodeInterface for KeyboardDevice {
         }
 
         Ok(drainage)
+    }
+
+    fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {
+        table.map(|q| q.insert(&self.wq));
+
+        if !self.buffer.lock_irq().is_empty() {
+            Ok(PollFlags::IN)
+        } else {
+            Ok(PollFlags::empty())
+        }
     }
 }
 
