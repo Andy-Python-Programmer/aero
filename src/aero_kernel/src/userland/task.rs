@@ -86,21 +86,21 @@ struct Cwd {
 }
 
 impl Cwd {
-    fn new() -> RwLock<Self> {
+    fn new() -> Self {
         let root = fs::root_dir().clone();
         let fs = root.inode().weak_filesystem().unwrap().upgrade().unwrap();
 
-        RwLock::new(Self {
+        Self {
             inode: root,
             filesystem: fs,
-        })
+        }
     }
 
-    fn fork(&self) -> RwLock<Self> {
-        RwLock::new(Self {
+    fn fork(&self) -> Self {
+        Self {
             inode: self.inode.clone(),
             filesystem: self.filesystem.clone(),
-        })
+        }
     }
 }
 
@@ -153,12 +153,8 @@ impl Zombies {
 
         let (tid, st) = captured;
 
-        // WIFEXITED: The child process has been terminated normally by
-        // either calling sys_exit() or returning from the main function.
-        *status = 0x200;
-        // The lower 8-bits are used to store the exit status.
-        *status |= st as u32 & 0xff;
-
+        log::debug!("waitpid: status = {st}");
+        *status = st as u32;
         Ok(tid.as_usize())
     }
 }
@@ -195,7 +191,7 @@ pub struct Task {
 
     pub message_queue: MessageQueue,
 
-    cwd: RwLock<Cwd>,
+    cwd: RwLock<Option<Cwd>>,
 
     pub(super) exit_status: AtomicIsize,
 }
@@ -236,7 +232,7 @@ impl Task {
             parent: Mutex::new(None),
 
             signals: Signals::new(),
-            cwd: Cwd::new(),
+            cwd: RwLock::new(None),
         })
     }
 
@@ -273,7 +269,7 @@ impl Task {
             parent: Mutex::new(None),
 
             signals: Signals::new(),
-            cwd: Cwd::new(),
+            cwd: RwLock::new(None),
         })
     }
 
@@ -305,7 +301,7 @@ impl Task {
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
 
-            cwd: self.cwd.read().fork(),
+            cwd: RwLock::new(Some(self.cwd.read().as_ref().unwrap().fork())),
             signals: Signals::new(),
         });
 
@@ -363,7 +359,7 @@ impl Task {
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
 
-            cwd: self.cwd.read().fork(),
+            cwd: RwLock::new(Some(self.cwd.read().as_ref().unwrap().fork())),
             signals: Signals::new(),
         });
 
@@ -457,6 +453,10 @@ impl Task {
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
     ) -> Result<(), MapToError<Size4KiB>> {
+        if self.cwd.read().is_none() {
+            *self.cwd.write() = Some(Cwd::new())
+        }
+
         *self.executable.lock() = Some(executable.clone());
 
         let vm = self.vm();
@@ -483,15 +483,15 @@ impl Task {
     }
 
     pub(super) fn update_state(&self, state: TaskState) {
-        if state != TaskState::Runnable {
-            log::warn!(
-                "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",
-                self.pid,
-                self.tid
-            );
+        // if state != TaskState::Runnable {
+        //     log::warn!(
+        //         "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",
+        //         self.pid,
+        //         self.tid
+        //     );
 
-            crate::unwind::unwind_stack_trace();
-        }
+        //     crate::unwind::unwind_stack_trace();
+        // }
 
         self.state.store(state as _, Ordering::SeqCst);
     }
@@ -509,19 +509,19 @@ impl Task {
         self.tid
     }
 
-    pub fn get_cwd_dirent(&self) -> DirCacheItem {
-        self.cwd.read().inode.clone()
+    pub fn cwd_dirent(&self) -> DirCacheItem {
+        self.cwd.read().as_ref().unwrap().inode.clone()
     }
 
     pub fn get_cwd(&self) -> String {
-        self.cwd.read().inode.absolute_path_str()
+        self.cwd.read().as_ref().unwrap().inode.absolute_path_str()
     }
 
     pub fn set_cwd(&self, cwd: DirCacheItem) {
         let filesystem = cwd.inode().weak_filesystem().unwrap().upgrade().unwrap();
 
-        self.cwd.write().inode = cwd;
-        self.cwd.write().filesystem = filesystem;
+        self.cwd.write().as_mut().unwrap().inode = cwd;
+        self.cwd.write().as_mut().unwrap().filesystem = filesystem;
     }
 
     fn get_parent(&self) -> Option<Arc<Task>> {

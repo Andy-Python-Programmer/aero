@@ -1,25 +1,25 @@
-From 0eb5403c389aaa7144d6bea297aac57d442bc9f6 Mon Sep 17 00:00:00 2001
+From 9ad862a1edb6ce5b86fc4fa49e8ce365af507f47 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Fri, 8 Jul 2022 12:32:32 +1000
+Date: Sat, 12 Nov 2022 18:58:33 +1100
 Subject: [PATCH] yes
 
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
- .gitignore                            |   2 +
- options/ansi/generic/stdlib-stubs.cpp | 142 +++++++++++++++++++++-----
- options/glibc/generic/execinfo.cpp    |   5 +-
- options/rtdl/generic/linker.cpp       |   2 +-
- sysdeps/aero/generic/aero.cpp         |  38 +++----
- sysdeps/aero/generic/filesystem.cpp   |  25 ++++-
- sysdeps/aero/generic/sockets.cpp      |  77 +++++++++++++-
- sysdeps/aero/generic/time.cpp         |  24 +++++
- sysdeps/aero/include/aero/syscall.h   |   6 ++
- sysdeps/aero/meson.build              |   1 +
- 10 files changed, 268 insertions(+), 54 deletions(-)
+ .gitignore                              |  2 +
+ options/glibc/generic/execinfo.cpp      |  5 +-
+ options/posix/generic/termios-stubs.cpp |  5 +-
+ options/rtdl/generic/linker.cpp         |  2 +-
+ sysdeps/aero/generic/aero.cpp           | 38 ++++++------
+ sysdeps/aero/generic/filesystem.cpp     | 25 ++++++--
+ sysdeps/aero/generic/sockets.cpp        | 77 ++++++++++++++++++++++++-
+ sysdeps/aero/generic/time.cpp           | 24 ++++++++
+ sysdeps/aero/include/aero/syscall.h     |  6 ++
+ sysdeps/aero/meson.build                |  1 +
+ 10 files changed, 155 insertions(+), 30 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
-index fdd60a00..9f811f47 100644
+index fdd60a0..9f811f4 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -3,3 +3,5 @@ subprojects
@@ -28,161 +28,8 @@ index fdd60a00..9f811f47 100644
  .vscode
 +# clangd cache files:
 +.cache
-diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
-index 4836391e..2a73c6d0 100644
---- a/options/ansi/generic/stdlib-stubs.cpp
-+++ b/options/ansi/generic/stdlib-stubs.cpp
-@@ -375,32 +375,122 @@ int mblen(const char *mbs, size_t mb_limit) {
- 	return nseq.it - mbs;
- }
- 
--int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
--	auto cc = mlibc::current_charcode();
--	__ensure(max_size);
--
--	if (mb) {
--		if (*mb) {
--			// If wc is NULL, decode into a single local character which we discard
--			// to obtain the length.
--			wchar_t tmp_wc;
--			if (!wc)
--				wc = &tmp_wc;
--
--			mlibc::code_seq<wchar_t> wseq{wc, wc + 1};
--			mlibc::code_seq<const char> nseq{mb, mb + max_size};
--			auto e = cc->decode_wtranscode(nseq, wseq, mbtowc_state);
--			if (e != mlibc::charcode_error::null)
--				__ensure(!"decode_wtranscode() errors are not handled");
--
--			return nseq.it - mb;
--		} else {
--			return 0; // When mbs is a null byte, return 0
--		}
--	} else {
--		mblen_state = __MLIBC_MBSTATE_INITIALIZER;
--		return cc->has_shift_states;
--	}
-+// int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
-+// 	auto cc = mlibc::current_charcode();
-+// 	__ensure(max_size);
-+//
-+// 	if (mb) {
-+// 		if (*mb) {
-+// 			// If wc is NULL, decode into a single local character which we discard
-+// 			// to obtain the length.
-+// 			wchar_t tmp_wc;
-+// 			if (!wc)
-+// 				wc = &tmp_wc;
-+//
-+// 			mlibc::code_seq<wchar_t> wseq{wc, wc + 1};
-+// 			mlibc::code_seq<const char> nseq{mb, mb + max_size};
-+// 			auto e = cc->decode_wtranscode(nseq, wseq, mbtowc_state);
-+// 			if (e != mlibc::charcode_error::null)
-+// 				__ensure(!"decode_wtranscode() errors are not handled");
-+//
-+// 			return nseq.it - mb;
-+// 		} else {
-+// 			return 0; // When mbs is a null byte, return 0
-+// 		}
-+// 	} else {
-+// 		mblen_state = __MLIBC_MBSTATE_INITIALIZER;
-+// 		return cc->has_shift_states;
-+// 	}
-+// }
-+
-+// Upper 6 state bits are a negative integer offset to bound-check next byte
-+//    equivalent to: ( (b-0x80) | (b+offset) ) & ~0x3f
-+#define OOB(c, b) (((((b) >> 3) - 0x10) | (((b) >> 3) + ((int32_t)(c) >> 26))) & ~7)
-+
-+// Interval [a,b]. Either a must be 80 or b must be c0, lower 3 bits clear.
-+#define R(a, b) ((uint32_t)((a == 0x80 ? 0x40u - b : 0u - a) << 23))
-+#define FAILSTATE R(0x80, 0x80)
-+
-+#define SA 0xc2u
-+#define SB 0xf4u
-+
-+// Arbitrary encoding for representing code units instead of characters.
-+#define CODEUNIT(c) (0xdfff & (signed char)(c))
-+#define IS_CODEUNIT(c) ((unsigned)(c)-0xdf80 < 0x80)
-+
-+#define C(x) ( x<2 ? -1 : ( R(0x80,0xc0) | x ) )
-+#define D(x) C((x+16))
-+#define E(x) ( ( x==0 ? R(0xa0,0xc0) : \
-+                 x==0xd ? R(0x80,0xa0) : \
-+                 R(0x80,0xc0) ) \
-+             | ( R(0x80,0xc0) >> 6 ) \
-+             | x )
-+#define F(x) ( ( x>=5 ? 0 : \
-+                 x==0 ? R(0x90,0xc0) : \
-+                 x==4 ? R(0x80,0xa0) : \
-+                 R(0x80,0xc0) ) \
-+             | ( R(0x80,0xc0) >> 6 ) \
-+             | ( R(0x80,0xc0) >> 12 ) \
-+             | x )
-+
-+const uint32_t bittab[] = {
-+	C(0x2),C(0x3),C(0x4),C(0x5),C(0x6),C(0x7),
-+	C(0x8),C(0x9),C(0xa),C(0xb),C(0xc),C(0xd),C(0xe),C(0xf),
-+	D(0x0),D(0x1),D(0x2),D(0x3),D(0x4),D(0x5),D(0x6),D(0x7),
-+	D(0x8),D(0x9),D(0xa),D(0xb),D(0xc),D(0xd),D(0xe),D(0xf),
-+	E(0x0),E(0x1),E(0x2),E(0x3),E(0x4),E(0x5),E(0x6),E(0x7),
-+	E(0x8),E(0x9),E(0xa),E(0xb),E(0xc),E(0xd),E(0xe),E(0xf),
-+	F(0x0),F(0x1),F(0x2),F(0x3),F(0x4)
-+};
-+
-+// Converts a multibyte sequence to a wide character.
-+//
-+// Credits - MUSL
-+int mbtowc(wchar_t *__restrict wc, const char *__restrict src, size_t n) {
-+	unsigned c;
-+	const unsigned char *s = static_cast<const unsigned char *>((const void *)src);
-+	wchar_t dummy;
-+
-+  	if (!s) return 0;
-+  	if (!n) goto ilseq;
-+  	if (!wc) wc = &dummy;
-+
-+  	if (*s < 0x80) return !!(*wc = *s);
-+	if (MB_CUR_MAX == 1) return (*wc = CODEUNIT(*s)), 1;
-+  	if (*s - SA > SB - SA) goto ilseq;
-+  	
-+	c = bittab[*s++ - SA];
-+
-+  	// Avoid excessive checks against n: If shifting the state n-1
-+	// times does not clear the high bit, then the value of n is
-+	// insufficient to read a character.
-+  	if (n < 4 && ((c << (6 * n - 6)) & (1U << 31))) goto ilseq;
-+  	if (OOB(c, *s)) goto ilseq;
-+  	
-+	c = c << 6 | (*s++ - 0x80);
-+  	
-+	if (!(c & (1U << 31))) {
-+    	*wc = c;
-+    	return 2;
-+  	}
-+
-+  	if (*s - 0x80u >= 0x40) goto ilseq;
-+  	
-+	c = c << 6 | (*s++ - 0x80);
-+  	
-+	if (!(c & (1U << 31))) {
-+    	*wc = c;
-+    	return 3;
-+  	}
-+
-+  	if (*s - 0x80u >= 0x40) goto ilseq;
-+	
-+	*wc = c << 6 | (*s++ - 0x80);
-+	return 4;
-+
-+ilseq:
-+	errno = EILSEQ;
-+	return -1;
- }
- 
- int wctomb(char *, wchar_t) {
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
-index 3474615e..10a2109e 100644
+index 3474615..10a2109 100644
 --- a/options/glibc/generic/execinfo.cpp
 +++ b/options/glibc/generic/execinfo.cpp
 @@ -1,9 +1,10 @@
@@ -198,11 +45,34 @@ index 3474615e..10a2109e 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
+diff --git a/options/posix/generic/termios-stubs.cpp b/options/posix/generic/termios-stubs.cpp
+index 3e621ad..583c1f5 100644
+--- a/options/posix/generic/termios-stubs.cpp
++++ b/options/posix/generic/termios-stubs.cpp
+@@ -5,6 +5,7 @@
+ 
+ #include <bits/ensure.h>
+ #include <mlibc/posix-sysdeps.hpp>
++#include <mlibc/debug.hpp>
+ 
+ speed_t cfgetispeed(const struct termios *tios) {
+ 	return tios->ibaud;
+@@ -50,8 +51,8 @@ int tcflow(int fd, int action) {
+ }
+ 
+ int tcflush(int, int) {
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	mlibc::infoLogger() << "mlibc::tcflush: is a stub!" << frg::endlog;
++	return 0;
+ }
+ 
+ int tcgetattr(int fd, struct termios *attr) {
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 6716ef4f..e5ec8cff 100644
+index 2e2d3f1..3ff5fef 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
-@@ -15,7 +15,7 @@ uintptr_t libraryBase = 0x41000000;
+@@ -18,7 +18,7 @@ uintptr_t libraryBase = 0x41000000;
  
  constexpr bool verbose = false;
  constexpr bool stillSlightlyVerbose = false;
@@ -212,7 +82,7 @@ index 6716ef4f..e5ec8cff 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 29fb9610..a27da559 100644
+index 29fb961..a27da55 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
 @@ -69,22 +69,22 @@ int sys_futex_tid() {
@@ -289,7 +159,7 @@ index 29fb9610..a27da559 100644
  }
  
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index a3e2aca2..4187059e 100644
+index a3e2aca..4187059 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -158,11 +158,6 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
@@ -330,7 +200,7 @@ index a3e2aca2..4187059e 100644
 +}
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index b6b18fe7..e03c634b 100644
+index b6b18fe..e03c634 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
 @@ -1,5 +1,6 @@
@@ -430,7 +300,7 @@ index b6b18fe7..e03c634b 100644
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/time.cpp b/sysdeps/aero/generic/time.cpp
 new file mode 100644
-index 00000000..460412d0
+index 0000000..460412d
 --- /dev/null
 +++ b/sysdeps/aero/generic/time.cpp
 @@ -0,0 +1,24 @@
@@ -460,7 +330,7 @@ index 00000000..460412d0
 +}
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc61..03001c46 100644
+index 12f8dc6..03001c4 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
 @@ -64,6 +64,12 @@
@@ -477,7 +347,7 @@ index 12f8dc61..03001c46 100644
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.
 diff --git a/sysdeps/aero/meson.build b/sysdeps/aero/meson.build
-index 3ca8463e..f1d80139 100644
+index a807b37..878c216 100644
 --- a/sysdeps/aero/meson.build
 +++ b/sysdeps/aero/meson.build
 @@ -11,6 +11,7 @@ libc_sources += files(
@@ -489,5 +359,5 @@ index 3ca8463e..f1d80139 100644
  
  if not no_headers
 -- 
-2.25.1
+2.38.1
 

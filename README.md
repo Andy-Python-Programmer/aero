@@ -19,14 +19,8 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 **Official Discord Server**: <https://discord.gg/8gwhTTZwt8>
 
 # Screenshots
-<img src="misc/demo.png">
-<p align="center"><i>Aero running TCC in Qemu (the background image is by <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Rick Astley</a>)</i></p>
-
-<img src="misc/qjs-in-aero.png">
-<p align="center"><i>Aero running Quick JS in Qemu (the background image is by <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Rick Astley</a>)</i></p>
-
-<img src="misc/aero-doom.png">
-<p align="center"><i>Aero running DOOM in Qemu (the background image is by <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Rick Astley</a>)</i></p>
+<img src="misc/dwm-doom-xeyes.png">
+<p align="center">Running <a href="https://dwm.suckless.org/">DWM</a>, <a href="https://github.com/freedesktop/xorg-xeyes">Xeyes</a> and DOOM in Aero!</p>
 
 # Features
 - 64-bit higher half kernel
@@ -52,14 +46,15 @@ Aero. If you are using windows, its highly recommended to use WSL 2.
 ## Dependencies
 
 Before building Aero, you need the following things installed:
-- `rustc` should be the **latest nightly**
-- `qemu`
+- `rust` (should be the **latest nightly**)
+- `qemu` (optional: required if you want to run it in the Qemu emulator)
 - `nasm`
-- `g++` 5.1 or later
-- `ninja`
-- `parted`
-- `meson`
-- `python3`
+
+If you are building Aero with sysroot then the following dependencies are additionally required:
+```sh
+# Arch Linux:
+sudo pacman -S bash coreutils make patch tar gzip binutils gcc git subversion mercurial curl wget xz nasm mtools meson perl m4 texinfo groff gettext expat bison flex help2man openssl gperf rsync libxslt python python-pip python-mako xcb-proto xorriso boost-libs cmake
+```
 
 ## Hardware
 

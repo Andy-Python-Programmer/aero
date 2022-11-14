@@ -48,14 +48,8 @@ sources:
 
   - name: mlibc
     subdir: 'bundled'
-    # git: 'https://github.com/managarm/mlibc'
-    git: 'https://github.com/Andy-Python-Programmer/mlibc'
-    # 452: The functions FD_{CLR,ISSET,SET,ZERO} were renamed to __FD_{CLR,ISSET,SET,ZERO} and replaced by macros to match Wine's assumptions.
-    # 511: Musl's regex engine was added, implementing regcomp and regexec. This required some changes to the regex_t struct.
-    # 504, #580: In both the mlibc and Linux ABIs, a domainname member was added to struct utsname, which is a glibc extension.
-    # 311: Added all necessary fields in pthread_attr_t required for implementing all pthread_attr functions.
-    branch: 'abi-break'
-    commit: '58ceb6648eefd801a774ba5e87b032706105243d'
+    git: 'https://github.com/managarm/mlibc'
+    branch: 'master'
 
   - name: tzcode
     subdir: 'bundled'
@@ -91,7 +85,6 @@ sources:
     subdir: 'bundled'
     git: 'https://github.com/Andy-Python-Programmer/libc.git'
     branch: 'master'
-    commit: '54d72b34bd614f0081e0da01e6323c7c69f45395'
 
   - name: rust-num-cpus
     subdir: 'bundled'
@@ -449,61 +442,61 @@ tools:
       - args: ['ninja', 'install']
 
 packages:
-  - name: ripgrep
-    source:
-      subdir: bundled
-      git: 'https://github.com/BurntSushi/ripgrep.git'
-      tag: '12.1.1'
-      version: '12.1.1'
-    tools_required:
-      - host-cargo
-    sources_required:
-      - rust-patched-libs
-    pkgs_required:
-      - mlibc
-    configure:
-      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
-      # cc: https://github.com/rust-lang/cargo/issues/10283
-      # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
-    build:
-      - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
-      - args:
-        - 'cargo'
-        - 'install'
-        - '--locked'
-        - '--path'
-        - '.'
-        - '--root'
-        - '@THIS_COLLECT_DIR@/usr'
-        - '-j@PARALLELISM@'
+  # - name: ripgrep
+  #   source:
+  #     subdir: bundled
+  #     git: 'https://github.com/BurntSushi/ripgrep.git'
+  #     tag: '12.1.1'
+  #     version: '12.1.1'
+  #   tools_required:
+  #     - host-cargo
+  #   sources_required:
+  #     - rust-patched-libs
+  #   pkgs_required:
+  #     - mlibc
+  #   configure:
+  #     - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+  #     # cc: https://github.com/rust-lang/cargo/issues/10283
+  #     # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
+  #   build:
+  #     - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
+  #     - args:
+  #       - 'cargo'
+  #       - 'install'
+  #       - '--locked'
+  #       - '--path'
+  #       - '.'
+  #       - '--root'
+  #       - '@THIS_COLLECT_DIR@/usr'
+  #       - '-j@PARALLELISM@'
 
-  - name: hex
-    source:
-      subdir: bundled
-      git: 'https://github.com/sitkevij/hex'
-      tag: 'v0.4.2'
-      version: '0.4.2'
-    tools_required:
-      - host-cargo
-    sources_required:
-      - rust-patched-libs
-    pkgs_required:
-      - mlibc
-    configure:
-      # cc: https://github.com/rust-lang/cargo/issues/10283
-      # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
-      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
-    build:
-      - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
-      - args:
-        - 'cargo'
-        - 'install'
-        - '--locked'
-        - '--path'
-        - '.'
-        - '--root'
-        - '@THIS_COLLECT_DIR@/usr'
-        - '-j@PARALLELISM@'
+  # - name: hex
+  #   source:
+  #     subdir: bundled
+  #     git: 'https://github.com/sitkevij/hex'
+  #     tag: 'v0.4.2'
+  #     version: '0.4.2'
+  #   tools_required:
+  #     - host-cargo
+  #   sources_required:
+  #     - rust-patched-libs
+  #   pkgs_required:
+  #     - mlibc
+  #   configure:
+  #     # cc: https://github.com/rust-lang/cargo/issues/10283
+  #     # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
+  #     - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+  #   build:
+  #     - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
+  #     - args:
+  #       - 'cargo'
+  #       - 'install'
+  #       - '--locked'
+  #       - '--path'
+  #       - '.'
+  #       - '--root'
+  #       - '@THIS_COLLECT_DIR@/usr'
+  #       - '-j@PARALLELISM@'
 
   # - name: bat
   #   source:
@@ -548,33 +541,53 @@ packages:
       - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/bin']
       - args: ['cp', '@THIS_BUILD_DIR@/qjs', '@THIS_COLLECT_DIR@/usr/bin/qjs']
 
-  - name: sd
+  # - name: sd
+  #   source:
+  #     subdir: bundled
+  #     git: 'https://github.com/chmln/sd'
+  #     tag: 'v0.7.6'
+  #     version: '0.7.6'
+  #   tools_required:
+  #     - host-cargo
+  #   sources_required:
+  #     - rust-patched-libs
+  #   pkgs_required:
+  #     - mlibc
+  #   configure:
+  #     - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+  #     # cc: https://github.com/rust-lang/cargo/issues/10283
+  #     # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
+  #   build:
+  #     - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
+  #     - args:
+  #       - 'cargo'
+  #       - 'install'
+  #       - '--locked'
+  #       - '--path'
+  #       - '.'
+  #       - '--root'
+  #       - '@THIS_COLLECT_DIR@/usr'
+  #       - '-j@PARALLELISM@'
+
+  - name: socket_test
     source:
       subdir: bundled
-      git: 'https://github.com/chmln/sd'
-      tag: 'v0.7.6'
-      version: '0.7.6'
+      git: 'https://github.com/streaksu/socket_test'
+      branch: 'main'
     tools_required:
-      - host-cargo
-    sources_required:
-      - rust-patched-libs
+      - host-gcc
     pkgs_required:
       - mlibc
     configure:
       - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
-      # cc: https://github.com/rust-lang/cargo/issues/10283
-      # - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
     build:
-      - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', './Cargo.toml']
-      - args:
-        - 'cargo'
-        - 'install'
-        - '--locked'
-        - '--path'
-        - '.'
-        - '--root'
-        - '@THIS_COLLECT_DIR@/usr'
-        - '-j@PARALLELISM@'
+      - args: ['make', '-j@PARALLELISM@']
+        environ:
+          CC: "x86_64-aero-gcc"
+      - args: ['make', 'install']
+        environ:
+          PREFIX: '/usr'
+          DESTDIR: '@THIS_COLLECT_DIR@'
 
   - name: mlibc-headers
     from_source: mlibc
@@ -858,6 +871,9 @@ packages:
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
+      - args: ['ln', '-sf', '/usr/bin/bash', '@THIS_COLLECT_DIR@/usr/bin/sh']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/bin']
+      - args: ['ln', '-sf', '/usr/bin/bash', '@THIS_COLLECT_DIR@/bin/sh']
 
   - name: tcc
     source:
@@ -947,7 +963,7 @@ packages:
     pkgs_required:
       - mlibc
     build:
-      - args: ['make', '-C', '@THIS_SOURCE_DIR@/doomgeneric', '-f', 'Makefile.aero', '-j@PARALLELISM@']
+      - args: ['make', '-C', '@THIS_SOURCE_DIR@/doomgeneric', '-f', 'Makefile', '-j@PARALLELISM@', 'CC=x86_64-aero-gcc']
       - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/bin']
       - args: ['cp', '@THIS_SOURCE_DIR@/doomgeneric/doomgeneric', '@THIS_COLLECT_DIR@/usr/bin/doomgeneric']
 

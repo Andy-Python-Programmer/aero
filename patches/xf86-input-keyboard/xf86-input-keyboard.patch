@@ -1,0 +1,192 @@
+From 43c032ed1ae85352eca634ed92132242eee99f87 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sat, 12 Nov 2022 19:22:14 +1100
+Subject: [PATCH] keydev: aero specific changes
+
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+---
+ .gitignore      |   2 +
+ configure.ac    |   5 +++
+ src/Makefile.am |   7 +++-
+ src/aero_kbd.c  | 109 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 122 insertions(+), 1 deletion(-)
+ create mode 100644 src/aero_kbd.c
+
+diff --git a/.gitignore b/.gitignore
+index 5f04578..f10deba 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -76,3 +76,5 @@ core
+ #		Edit the following section as needed
+ # For example, !report.pc overrides *.pc. See 'man gitignore'
+ # 
++# editor configs:
++.vscode
+diff --git a/configure.ac b/configure.ac
+index c3ebdf3..33b36f9 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -69,6 +69,10 @@ case $host_os in
+     IS_SOLARIS="yes"
+     ;;
+ 
++  aero*)
++    IS_AERO="yes"
++    ;;
++
+   gnu*)
+     IS_HURD="yes"
+     ;;
+@@ -95,6 +99,7 @@ case $host_os in
+ esac
+ AC_SUBST([OS_FLAGS])
+ 
++AM_CONDITIONAL(AERO, [test "x$IS_AERO" = xyes])
+ AM_CONDITIONAL(LINUX, [test "x$IS_LINUX" = xyes])
+ AM_CONDITIONAL(BSD, [test "x$IS_BSD" = xyes])
+ AM_CONDITIONAL(SOLARIS, [test "x$IS_SOLARIS" = xyes])
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 8612c87..fac400e 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -26,11 +26,16 @@ kbd_drv_la_SOURCES = kbd.c xf86OSKbd.h xf86Keymap.h atKeynames.h
+ kbd_drv_la_LIBADD = $(XORG_LIBS)
+ kbd_drv_ladir = @inputdir@
+ 
++AERO_SRCS = aero_kbd.c at_scancode.c
+ BSD_SRCS = bsd_KbdMap.c bsd_kbd.c bsd_kbd.h at_scancode.c
+ HURD_SRCS = hurd_kbd.c at_scancode.c
+ LINUX_SRCS = lnx_KbdMap.c lnx_kbd.c lnx_kbd.h at_scancode.c
+ SOLARIS_SRCS = sun_kbd.c sun_kbd.h sun_kbdMap.c
+ 
++if AERO
++kbd_drv_la_SOURCES += $(AERO_SRCS)
++endif
++
+ if BSD
+ kbd_drv_la_SOURCES += $(BSD_SRCS)
+ endif
+@@ -47,4 +52,4 @@ if HURD
+ kbd_drv_la_SOURCES += $(HURD_SRCS)
+ endif
+ 
+-EXTRA_DIST = $(BSD_SRCS) $(HURD_SRCS) $(LINUX_SRCS) $(SOLARIS_SRCS)
++EXTRA_DIST = $(AERO_SRCS) $(BSD_SRCS) $(HURD_SRCS) $(LINUX_SRCS) $(SOLARIS_SRCS)
+diff --git a/src/aero_kbd.c b/src/aero_kbd.c
+new file mode 100644
+index 0000000..c9cbc4e
+--- /dev/null
++++ b/src/aero_kbd.c
+@@ -0,0 +1,109 @@
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
++#include <X11/X.h>
++#include <xorg-server.h>
++
++#include "compiler.h"
++
++#include "xf86.h"
++#include "xf86Priv.h"
++#include "xf86_OSlib.h"
++
++#include "atKeynames.h"
++#include "xf86Keymap.h"
++#include "xf86OSKbd.h"
++#include "xf86Xinput.h"
++
++#include <assert.h>
++#include <errno.h>
++#include <stdio.h>
++#include <sys/file.h>
++#include <sys/ioctl.h>
++#include <sys/time.h>
++
++static int KbdOn(InputInfoPtr pInfo, int what) { 
++    return Success;  
++}
++
++static int KbdOff(InputInfoPtr pInfo, int what) {
++    printf("aero::kbdOff: is a stub!\n"); 
++    return -1;
++}
++
++static void SoundKbdBell(InputInfoPtr pInfo, int loudness, int pitch, int duration) {
++    printf("aero::SoundKbdBell: is a stub!\n");
++}
++
++static void SetKbdLeds(InputInfoPtr pInfo, int leds) { printf("aero::SetKbdLeds: is a stub!\n"); }
++
++static int GetKbdLeds(InputInfoPtr pInfo) {
++    printf("aero::GetKbdLeds: is a stub!\n");
++    return -1;
++}
++
++// Save the initial keyboard state. This function is called at the start
++// of each server generation.
++static int KbdInit(InputInfoPtr pInfo, int what) {
++    return Success;
++}
++
++static void KbdGetMapping(InputInfoPtr pInfo, KeySymsPtr pKeySyms, CARD8 *pModMap) {
++    printf("aero::KbdGetMapping: is a stub!\n");
++}
++
++static void ReadInput(InputInfoPtr pInfo) {
++    KbdDevPtr pKbd = (KbdDevPtr) pInfo->private;
++
++    for(;;) {
++        uint8_t scancode;
++        size_t result = read(pInfo->fd, &scancode, sizeof(uint8_t));
++
++        if (result == sizeof(uint8_t)) {
++            pKbd->PostEvent(pInfo, scancode & 0x7f /* scancode */, scancode & 0x80 ? FALSE : TRUE /* released */);
++        } else {
++            return;
++        }
++    }
++}
++
++static Bool OpenKeyboard(InputInfoPtr pInfo) {
++    char *kbdPath = xf86SetStrOption(pInfo->options, "Device", "/dev/kbd0");
++    Bool ret;
++
++    pInfo->fd = open(kbdPath, O_RDONLY | O_NONBLOCK);
++
++    if (pInfo->fd == -1) {
++        xf86Msg(X_ERROR, "%s: cannot open \"%s\"\n", pInfo->name, kbdPath);
++        ret = FALSE;
++    } else {
++        xf86MsgVerb(X_INFO, 3, "%s: opened device \"%s\"\n", pInfo->name, kbdPath);
++        pInfo->read_input = ReadInput;
++        ret = TRUE;
++
++        // in case it wasn't set and we fell back to default.
++        xf86ReplaceStrOption(pInfo->options, "Device", kbdPath);
++    }
++
++    free(kbdPath);
++    return ret;
++}
++
++Bool xf86OSKbdPreInit(InputInfoPtr pInfo) { 
++    KbdDevPtr pKbd = pInfo->private;
++
++    pKbd->KbdInit       = KbdInit;
++    pKbd->KbdOn         = KbdOn;
++    pKbd->KbdOff        = KbdOff;
++    pKbd->Bell          = SoundKbdBell;
++    pKbd->SetLeds       = SetKbdLeds;
++    pKbd->GetLeds       = GetKbdLeds;
++    pKbd->KbdGetMapping = KbdGetMapping;
++    pKbd->OpenKeyboard = OpenKeyboard;
++
++    pKbd->RemapScanCode = NULL;
++    pKbd->private = NULL;
++
++    return TRUE;
++}
+-- 
+2.38.1
+

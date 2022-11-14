@@ -27,10 +27,8 @@ use crate::userland::scheduler;
 use crate::utils::sync::Mutex;
 use spin::Once;
 
-use crate::fs::inode::FileType;
-
 use self::cache::Cacheable;
-use self::{cache::DirCacheItem, ramfs::RamFs};
+use self::cache::DirCacheItem;
 
 pub mod block;
 pub mod cache;
@@ -39,13 +37,12 @@ pub mod epoll;
 pub mod eventfd;
 pub mod ext2;
 pub mod file_table;
-pub mod initramfs;
 pub mod inode;
 pub mod pipe;
 pub mod procfs;
 pub mod ramfs;
 
-static ROOT_FS: Once<Arc<RamFs>> = Once::new();
+static ROOT_FS: Once<Arc<dyn FileSystem>> = Once::new();
 static ROOT_DIR: Once<DirCacheItem> = Once::new();
 
 lazy_static::lazy_static! {
@@ -245,6 +242,7 @@ pub fn lookup_path_with(
                 // After we have resolved all of the special cases that might occur in a path, now
                 // we have to resolve the directory entry itself. For example `a` in `./a/`.
                 let cache_entry = inode::fetch_dir_entry(cwd.clone(), String::from(component));
+                let parent = cwd.clone();
 
                 if let Some(entry) = cache_entry {
                     cwd = entry;
@@ -270,7 +268,19 @@ pub fn lookup_path_with(
                     }
                 }
 
-                if cwd.inode().metadata()?.file_type == FileType::Directory {
+                let inode = cwd.inode();
+                let metadata = inode.metadata()?;
+
+                if metadata.is_symlink() {
+                    let resolved_path_str = inode.resolve_link()?;
+                    let resolved_path = Path::new(&resolved_path_str);
+
+                    if resolved_path.is_absolute() {
+                        return lookup_path(resolved_path);
+                    }
+
+                    return lookup_path_with(parent, resolved_path, LookupMode::None);
+                } else if metadata.is_directory() {
                     if let Ok(mount_point) = MOUNT_MANAGER.find_mount(cwd.clone()) {
                         cwd = mount_point.root_entry;
                     }
@@ -284,7 +294,7 @@ pub fn lookup_path_with(
 
 pub fn lookup_path_with_mode(path: &Path, mode: LookupMode) -> Result<DirCacheItem> {
     let cwd = if !path.is_absolute() {
-        scheduler::get_scheduler().current_task().get_cwd_dirent()
+        scheduler::get_scheduler().current_task().cwd_dirent()
     } else {
         root_dir().clone()
     };
@@ -294,7 +304,7 @@ pub fn lookup_path_with_mode(path: &Path, mode: LookupMode) -> Result<DirCacheIt
 
 pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
     let cwd = if !path.is_absolute() {
-        scheduler::get_scheduler().current_task().get_cwd_dirent()
+        scheduler::get_scheduler().current_task().cwd_dirent()
     } else {
         root_dir().clone()
     };
@@ -309,26 +319,15 @@ pub fn root_dir() -> &'static DirCacheItem {
 pub fn init() -> Result<()> {
     cache::init();
 
-    let filesystem = RamFs::new();
+    // root_dir().inode().mkdir("dev")?;
+    // root_dir().inode().mkdir("home")?;
+    // root_dir().inode().mkdir("tmp")?;
+    // root_dir().inode().mkdir("proc")?;
+    // root_dir().inode().mkdir("var")?;
+    // root_dir().inode().mkdir("mnt")?;
 
-    ROOT_FS.call_once(|| filesystem.clone());
-    ROOT_DIR.call_once(|| filesystem.root_dir().clone());
-
-    root_dir().inode().mkdir("dev")?;
-    root_dir().inode().mkdir("home")?;
-    root_dir().inode().mkdir("tmp")?;
-    root_dir().inode().mkdir("proc")?;
-    root_dir().inode().mkdir("var")?;
-    root_dir().inode().mkdir("mnt")?;
-
-    initramfs::init()?;
-    log::info!("installed initramfs");
-
-    devfs::init()?;
-    log::info!("installed devfs");
-
-    procfs::init()?;
-    log::info!("installed procfs");
+    // initramfs::init()?;
+    // log::info!("installed initramfs");
 
     Ok(())
 }

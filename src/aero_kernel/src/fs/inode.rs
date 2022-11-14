@@ -30,7 +30,7 @@ use alloc::vec::Vec;
 use intrusive_collections::UnsafeRef;
 use spin::Once;
 
-use crate::mem::paging::PhysFrame;
+use crate::mem::paging::{PhysFrame, VirtAddr};
 use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
 use crate::userland::scheduler;
@@ -42,6 +42,7 @@ use super::cache::Cacheable;
 use super::cache::CachedINode;
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::devfs::DevINode;
+use super::file_table::FileHandle;
 use super::{FileSystem, FileSystemError, Result};
 
 static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
@@ -70,7 +71,7 @@ impl Drop for PollTable {
 bitflags::bitflags! {
     pub struct PollFlags: usize {
         /// The associated file is available for read operations.
-        const IN   = 1 << 1;
+        const IN  = 1 << 1;
         /// The associated file is available for write operations.
         const OUT = 1 << 2;
         /// Error condition happened on the associated file descriptor.
@@ -120,6 +121,17 @@ impl From<PollFlags> for PollEventFlags {
 /// files on the disk, etc...
 #[downcastable]
 pub trait INodeInterface: Send + Sync {
+    /// Resolves the symbolically linked file and returns the relative path
+    /// to the file.
+    ///
+    /// ## Errors
+    /// - `FileSystemError::NotSupported` - If the inode is not a symbolic link or
+    ///                                     the filesystem does not support symbolic
+    ///                                     links.
+    fn resolve_link(&self) -> Result<String> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Returns the inode metadata of `this` inode.
     fn metadata(&self) -> Result<Metadata> {
         Err(FileSystemError::NotSupported)
@@ -181,7 +193,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    fn open(&self, _flags: OpenFlags) -> Result<()> {
+    fn open(&self, _flags: OpenFlags, _handle: Arc<FileHandle>) -> Result<()> {
         Ok(())
     }
 
@@ -228,11 +240,11 @@ pub trait INodeInterface: Send + Sync {
         Err(SyscallError::ENOTSOCK)
     }
 
-    fn accept(&self, _address: Option<&mut SocketAddr>) -> Result<Arc<UnixSocket>> {
+    fn accept(&self, _address: Option<(VirtAddr, &mut u32)>) -> Result<Arc<UnixSocket>> {
         Err(FileSystemError::NotSocket)
     }
 
-    fn recv(&self, _message_header: &mut MessageHeader) -> Result<usize> {
+    fn recv(&self, _message_header: &mut MessageHeader, _non_block: bool) -> Result<usize> {
         Err(FileSystemError::NotSocket)
     }
 
@@ -245,7 +257,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    fn link(&self, _name: &str, _src: INodeCacheItem) -> Result<()> {
+    fn link(&self, _name: &str, _src: DirCacheItem) -> Result<()> {
         Err(FileSystemError::NotSupported)
     }
 }
@@ -266,7 +278,6 @@ impl Metadata {
         self.id
     }
 
-    #[inline]
     pub fn file_type(&self) -> FileType {
         self.file_type
     }
@@ -277,15 +288,17 @@ impl Metadata {
     }
 
     /// Returns [`true`] if the file type of the inode is a directory.
-    #[inline]
     pub fn is_directory(&self) -> bool {
         self.file_type == FileType::Directory
     }
 
     /// Returns [`true`] if the file type of the inode is a socket.
-    #[inline]
     pub fn is_socket(&self) -> bool {
         self.file_type == FileType::Socket
+    }
+
+    pub fn is_symlink(&self) -> bool {
+        matches!(self.file_type, FileType::Symlink)
     }
 }
 

@@ -17,8 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+set -x -e
+
 SPATH=$(dirname $(readlink -f "$0"))
 AERO_PATH=$(realpath $SPATH/..)
+
+# remove the build directory to ensure the build image
+# is rebuilt.
+rm -rf $AERO_PATH/build
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <package dir> [<package name>] [--tool]"

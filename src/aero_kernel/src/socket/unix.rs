@@ -17,19 +17,22 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::{SocketAddrUnix, SyscallError};
+use aero_syscall::{OpenFlags, SocketAddrUnix, SyscallError, AF_UNIX};
 
 use aero_syscall::socket::MessageHeader;
 
 use alloc::collections::VecDeque;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
+use spin::Once;
 
 use crate::fs;
+use crate::fs::file_table::FileHandle;
 use crate::fs::inode::*;
 
 use crate::fs::{FileSystemError, Path};
 
+use crate::mem::paging::VirtAddr;
 use crate::utils::sync::{BlockQueue, Mutex};
 
 use super::SocketAddr;
@@ -76,14 +79,19 @@ impl MessageQueue {
     }
 
     pub fn read(&mut self, buffer: &mut [u8]) -> usize {
-        log::debug!("MessageQueue::read(): {:?}", self.messages);
-
-        if let Some(message) = self.messages.pop_front() {
+        if let Some(message) = self.messages.front_mut() {
             let message_len = message.data.len();
-            assert!(buffer.len() >= message_len);
+            let size = core::cmp::min(buffer.len(), message_len);
 
-            buffer[..message_len].copy_from_slice(message.data.as_slice());
-            message_len
+            buffer[..size].copy_from_slice(&message.data[..size]);
+
+            if size < message_len {
+                message.data.drain(..size);
+                return size;
+            }
+
+            self.messages.pop_front();
+            size
         } else {
             unreachable!("MessageQueue::read() called when queue is empty");
         }
@@ -92,8 +100,6 @@ impl MessageQueue {
     pub fn write(&mut self, buffer: &[u8]) {
         let message = Message::new(buffer.to_vec());
         self.messages.push_back(message);
-
-        log::debug!("MessageQueue::write(): {:?}", self.messages);
     }
 }
 
@@ -111,11 +117,6 @@ impl AcceptQueue {
             sockets: VecDeque::with_capacity(backlog),
             backlog,
         }
-    }
-
-    /// Returns the number of pending connections in the queue.
-    pub fn len(&self) -> usize {
-        self.sockets.len()
     }
 
     /// Returns `true` if the queue contains no pending connections.
@@ -171,6 +172,13 @@ impl UnixSocketState {
     fn is_connected(&self) -> bool {
         matches!(self, Self::Connected(_))
     }
+
+    fn queue(&mut self) -> Option<&mut AcceptQueue> {
+        match self {
+            Self::Listening(q) => Some(q),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -186,6 +194,7 @@ pub struct UnixSocket {
     buffer: Mutex<MessageQueue>,
     wq: BlockQueue,
     weak: Weak<UnixSocket>,
+    handle: Once<Arc<FileHandle>>,
 }
 
 impl UnixSocket {
@@ -196,11 +205,21 @@ impl UnixSocket {
             buffer: Mutex::new(MessageQueue::default()),
             wq: BlockQueue::new(),
             weak: weak.clone(),
+            handle: Once::new(),
         })
     }
 
     pub fn sref(&self) -> Arc<Self> {
         self.weak.upgrade().unwrap()
+    }
+
+    pub fn is_non_block(&self) -> bool {
+        self.handle
+            .get()
+            .expect("unix: not bound to an fd")
+            .flags
+            .read()
+            .contains(OpenFlags::O_NONBLOCK)
     }
 }
 
@@ -214,7 +233,16 @@ impl INodeInterface for UnixSocket {
         })
     }
 
+    fn open(&self, _flags: aero_syscall::OpenFlags, handle: Arc<FileHandle>) -> fs::Result<()> {
+        self.handle.call_once(|| handle);
+        Ok(())
+    }
+
     fn read_at(&self, _offset: usize, user_buffer: &mut [u8]) -> fs::Result<usize> {
+        if self.buffer.lock_irq().is_empty() && self.is_non_block() {
+            return Err(FileSystemError::WouldBlock);
+        }
+
         let mut buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
 
         let read = buffer.read(user_buffer);
@@ -293,21 +321,19 @@ impl INodeInterface for UnixSocket {
         target.wq.notify_complete();
         core::mem::drop(itarget); // release the lock
 
-        let _ = self.wq.block_on(&self.inner, |e| e.state.is_connected());
+        let _ = self.wq.block_on(&self.inner, |e| e.state.is_connected())?;
         Ok(())
     }
 
-    fn accept(&self, _address: Option<&mut SocketAddr>) -> fs::Result<Arc<UnixSocket>> {
-        let mut inner = self.inner.lock_irq();
+    fn accept(&self, address: Option<(VirtAddr, &mut u32)>) -> fs::Result<Arc<UnixSocket>> {
+        let mut inner = self.wq.block_on(&self.inner, |e| {
+            e.state.queue().map(|x| !x.is_empty()).unwrap_or(false)
+        })?;
 
-        let queue = match &mut inner.state {
-            UnixSocketState::Listening(queue) => queue,
-            _ => return Err(FileSystemError::ConnectionRefused),
-        };
-
-        if queue.len() == 0 {
-            return Err(FileSystemError::WouldBlock);
-        }
+        let queue = inner
+            .state
+            .queue()
+            .ok_or(FileSystemError::ConnectionRefused)?;
 
         let peer = queue.pop().expect("UnixSocket::accept(): backlog is empty");
         let sock = Self::new();
@@ -322,22 +348,36 @@ impl INodeInterface for UnixSocket {
             peer_data.state = UnixSocketState::Connected(sock.clone());
         }
 
+        if let Some((address, length)) = address {
+            let address = address
+                .read_mut::<SocketAddrUnix>()
+                .ok_or(FileSystemError::NotSupported)?;
+
+            if let Some(paddr) = peer.inner.lock_irq().address.as_ref() {
+                *address = paddr.clone();
+            } else {
+                *address = SocketAddrUnix::default();
+                address.family = AF_UNIX;
+            }
+
+            *length = core::mem::size_of::<SocketAddrUnix>() as u32;
+        }
+
         peer.wq.notify_complete();
         Ok(sock)
     }
 
-    fn recv(&self, header: &mut MessageHeader) -> fs::Result<usize> {
+    fn recv(&self, header: &mut MessageHeader, non_block: bool) -> fs::Result<usize> {
         let inner = self.inner.lock_irq();
-
-        log::trace!(
-            "UnixSocket::recv(): expecting a max of {} bytes",
-            header.iovecs().iter().map(|e| e.len()).sum::<usize>(),
-        );
 
         let peer = match &inner.state {
             UnixSocketState::Connected(peer) => peer,
             _ => return Err(FileSystemError::NotConnected),
         };
+
+        if self.buffer.lock_irq().is_empty() && non_block {
+            return Err(FileSystemError::WouldBlock);
+        }
 
         let mut buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
 
@@ -353,22 +393,25 @@ impl INodeInterface for UnixSocket {
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> fs::Result<PollFlags> {
+        let buffer = self.buffer.lock_irq();
+        let inner = self.inner.lock_irq();
+
         table.map(|e| e.insert(&self.wq));
 
         let mut events = PollFlags::OUT;
-        let inner = self.inner.lock_irq();
 
         match &inner.state {
             UnixSocketState::Listening(queue) => {
                 if !queue.is_empty() {
                     events.insert(PollFlags::IN);
+                    return Ok(events);
                 }
             }
 
             _ => {}
         }
 
-        if !self.buffer.lock_irq().is_empty() {
+        if !buffer.is_empty() {
             events.insert(PollFlags::IN);
         }
 

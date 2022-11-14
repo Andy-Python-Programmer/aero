@@ -194,13 +194,6 @@ extern "C" fn arch_aero_main() -> ! {
 
     syscall::init();
 
-    crate::INITRD_MODULE.call_once(|| {
-        modules
-            .iter()
-            .find(|e| e.cmdline.to_str().unwrap().to_str().unwrap() == "initramfs")
-            .unwrap()
-    });
-
     let boot_time = BOOT_TIME.get_response().get().unwrap();
     time::EPOCH.store(boot_time.boot_time as _, Ordering::SeqCst);
 

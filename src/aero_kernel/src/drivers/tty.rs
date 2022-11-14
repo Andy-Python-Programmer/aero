@@ -43,7 +43,7 @@ lazy_static::lazy_static! {
         c_cflag: aero_syscall::TermiosCFlag::empty(),
         c_lflag: aero_syscall::TermiosLFlag::ECHO | aero_syscall::TermiosLFlag::ICANON,
         c_line: 0,
-        c_cc: [0; 11],
+        c_cc: [0; 32],
         c_ispeed: 0,
         c_ospeed: 0,
     });

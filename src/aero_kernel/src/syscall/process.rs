@@ -44,14 +44,13 @@ pub fn exit(status: usize) -> Result<usize, SyscallError> {
 
     #[cfg(not(feature = "ci"))]
     {
-        log::trace!(
-            "exiting the process (pid={pid}) with status: {status}",
-            pid = scheduler::get_scheduler().current_task().pid().as_usize(),
-            status = status
-        );
+        let current_task = scheduler::get_scheduler().current_task();
+        let pid = current_task.pid().as_usize();
+        let path = current_task.path();
+
+        log::trace!("exiting the process (pid={pid}, path={path:?}) with status: {status}");
 
         crate::unwind::unwind_stack_trace();
-
         scheduler::get_scheduler().exit(status as isize);
     }
 }
@@ -65,7 +64,7 @@ pub fn uname(buffer: &mut Utsname) -> Result<usize, SyscallError> {
         fixed[..len].copy_from_slice(init_bytes)
     }
 
-    init_array(&mut buffer.name, "Aero");
+    init_array(&mut buffer.sysname, "Aero");
     init_array(&mut buffer.nodename, "unknown");
     init_array(&mut buffer.version, env!("CARGO_PKG_VERSION"));
     init_array(
@@ -123,13 +122,6 @@ pub fn exec(
     envs: usize,
     envc: usize,
 ) -> Result<usize, SyscallError> {
-    let mut path = path;
-
-    // fixme!!!! before MERGE!!!! ANDYYYY
-    if path.as_str() == "/bin/sh" {
-        path = Path::new("/usr/bin/bash");
-    }
-
     let executable = fs::lookup_path(path)?;
 
     if executable.inode().metadata()?.is_directory() {

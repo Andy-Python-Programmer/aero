@@ -231,11 +231,10 @@ struct Namespace<'a> {
 }
 
 impl<'a> Namespace<'a> {
-    fn read(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) {
-        let size_bytes = dest.len();
-        let blocks = size_bytes.ceil_div(self.block_size);
+    fn read(&self, sector: usize, start: PhysAddr, size_bytes: usize) {
+        assert!(size_bytes != 0);
 
-        let buffer = Dma::<u8>::new_uninit_slice(dest.len());
+        let blocks = size_bytes.ceil_div(self.block_size);
         let mut read_cmd = ReadWriteCommand::default();
 
         read_cmd.opcode = CommandOpcode::Read as u8;
@@ -252,21 +251,16 @@ impl<'a> Namespace<'a> {
             let mut prps = self.prps.lock();
 
             for i in 0..prp_num {
-                prps[i]
-                    .write((buffer.addr().as_u64() + Size4KiB::SIZE) + (Size4KiB::SIZE * i as u64));
+                prps[i].write((start.as_u64() + Size4KiB::SIZE) + (Size4KiB::SIZE * i as u64));
             }
 
-            read_cmd.data_ptr.prp1 = buffer.addr().as_u64();
+            read_cmd.data_ptr.prp1 = start.as_u64();
             read_cmd.data_ptr.prp2 = prps.addr().as_u64();
         } else {
-            read_cmd.data_ptr.prp1 = buffer.addr().as_u64();
+            read_cmd.data_ptr.prp1 = start.as_u64();
         }
 
-        self.controller.io_queue.lock().submit_command(read_cmd);
-
-        // SAFETY: The buffer is initialized above.
-        let buffer = unsafe { buffer.assume_init() };
-        MaybeUninit::write_slice(dest, &*buffer);
+        self.controller.io_queue.lock_irq().submit_command(read_cmd);
     }
 }
 
@@ -369,9 +363,8 @@ impl<'a> Controller<'a> {
         io_cq_cmd.prp1 = io_queue.completion_addr().as_u64();
         io_cq_cmd.cqid = io_queue.id();
         io_cq_cmd.q_size = (io_queue.len() - 1) as u16;
-        io_cq_cmd.irq_vector = vector as u16;
-        io_cq_cmd.cq_flags =
-            (CommandFlags::CQ_IRQ_ENABLED | CommandFlags::QUEUE_PHYS_CONTIG).bits();
+        io_cq_cmd.irq_vector = 0;
+        io_cq_cmd.cq_flags = CommandFlags::QUEUE_PHYS_CONTIG.bits();
 
         admin.submit_command(io_cq_cmd);
 
@@ -382,8 +375,7 @@ impl<'a> Controller<'a> {
         io_sq_cmd.cqid = io_queue.id();
         io_sq_cmd.sqid = io_queue.id();
         io_sq_cmd.q_size = (io_queue.len() - 1) as u16;
-        io_sq_cmd.sq_flags =
-            (CommandFlags::CQ_IRQ_ENABLED | CommandFlags::QUEUE_PHYS_CONTIG).bits();
+        io_sq_cmd.sq_flags = CommandFlags::QUEUE_PHYS_CONTIG.bits();
 
         admin.submit_command(io_sq_cmd);
 
@@ -402,7 +394,8 @@ impl<'a> Controller<'a> {
             io_queue: Mutex::new(io_queue),
         });
 
-        let namespace_ids = || {
+        // Discover and initialize the namespaces.
+        let nsids = {
             let nsid_list = Dma::<u32>::new_uninit_slice(this.identity.nn as usize);
             let mut nsid_command = IdentifyCommand::default();
 
@@ -416,48 +409,50 @@ impl<'a> Controller<'a> {
             unsafe { nsid_list.assume_init() }
         };
 
-        // Discover and initialize the namespaces.
-        let nsids = namespace_ids();
-        let namespaces = nsids
-            .iter()
-            .map(|nsid| {
-                let identity = Dma::<IdentifyNamespace>::new();
-                let mut identify_command = IdentifyCommand::default();
+        let mut namespaces = alloc::vec![];
 
-                identify_command.opcode = AdminOpcode::Identify as u8;
-                identify_command.cns = IdentifyCns::Namespace as u8;
-                identify_command.nsid = *nsid;
-                identify_command.data_ptr.prp1 = identity.addr().as_u64();
+        for &nsid in nsids.iter() {
+            // Unused entries are zero-filled.
+            if nsid == 0 {
+                continue;
+            }
 
-                this.admin.lock().submit_command(identify_command);
+            let identity = Dma::<IdentifyNamespace>::new();
+            let mut identify_command = IdentifyCommand::default();
 
-                let blocks = identity.nsze as usize;
-                let block_size = 1 << identity.lbaf[(identity.flbas & 0b11111) as usize].ds;
+            identify_command.opcode = AdminOpcode::Identify as u8;
+            identify_command.cns = IdentifyCns::Namespace as u8;
+            identify_command.nsid = nsid;
+            identify_command.data_ptr.prp1 = identity.addr().as_u64();
 
-                // The maximum transfer size is in units of 2^(min page size)
-                let lba_shift = identity.lbaf[(identity.flbas & 0xf) as usize].ds;
-                let max_lbas = 1 << (max_transfer_shift - lba_shift as usize);
-                let max_prps = (max_lbas * (1 << lba_shift)) / Size4KiB::SIZE as usize;
+            this.admin.lock().submit_command(identify_command);
 
-                Namespace {
-                    controller: this.clone(),
-                    nsid: *nsid,
-                    blocks,
-                    block_size,
-                    size: blocks * block_size,
-                    max_prps,
-                    prps: Mutex::new(Dma::new_uninit_slice(max_prps)),
-                }
-            })
-            .collect::<Vec<_>>();
+            let blocks = identity.nsze as usize;
+            let block_size = 1 << identity.lbaf[(identity.flbas & 0b11111) as usize].ds;
 
-        for namespace in namespaces.iter() {
+            // The maximum transfer size is in units of 2^(min page size)
+            let lba_shift = identity.lbaf[(identity.flbas & 0xf) as usize].ds;
+            let max_lbas = 1 << (max_transfer_shift - lba_shift as usize);
+            let max_prps = (max_lbas * (1 << lba_shift)) / Size4KiB::SIZE as usize;
+
+            let namespace = Namespace {
+                controller: this.clone(),
+                nsid,
+                blocks,
+                block_size,
+                size: blocks * block_size,
+                max_prps,
+                prps: Mutex::new(Dma::new_uninit_slice(max_prps)),
+            };
+
             log::trace!(
                 "nvme: identified namespace (blocks={}, block_size={}, size={})",
                 namespace.blocks,
                 namespace.block_size,
                 namespace.size
             );
+
+            namespaces.push(namespace);
         }
 
         *this.namespaces.lock() = namespaces;
@@ -468,8 +463,17 @@ impl<'a> Controller<'a> {
 }
 
 impl<'a> BlockDeviceInterface for Controller<'a> {
+    fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {
+        self.namespaces.lock()[0].read(sector, start, size);
+        Some(size)
+    }
+
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        self.namespaces.lock()[0].read(sector, dest);
+        let buffer = Dma::<u8>::new_uninit_slice(dest.len());
+        self.namespaces.lock()[0].read(sector, buffer.addr(), dest.len());
+
+        // SAFETY: The buffer is initialized above.
+        dest.copy_from_slice(&buffer);
         Some(dest.len())
     }
 

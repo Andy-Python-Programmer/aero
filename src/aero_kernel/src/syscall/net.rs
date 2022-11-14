@@ -8,7 +8,6 @@ use crate::socket::unix::*;
 use crate::socket::SocketAddr;
 
 use crate::userland::scheduler;
-use crate::utils;
 
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
@@ -37,20 +36,20 @@ pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, Syscal
 
 /// Accept a connection on a socket.
 #[syscall]
-pub fn accept(
-    fd: usize,
-    address: usize,
-    _length: /*&mut u32*/ usize,
-) -> Result<usize, SyscallError> {
-    // TODO: In the syscall macro, handle Option<NonNull<T>> param.
-    let address = if address != 0 {
-        Some(utils::validate_mut_ptr(address as *mut SocketAddr).ok_or(SyscallError::EINVAL)?)
+pub fn accept(fd: usize, address: usize, length: usize) -> Result<usize, SyscallError> {
+    let file_table = scheduler::get_scheduler().current_task().file_table.clone();
+    let socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)?;
+
+    let address = if address != 0 && length != 0 {
+        Some((
+            VirtAddr::new(address as u64),
+            VirtAddr::new(length as u64)
+                .read_mut::<u32>()
+                .ok_or(SyscallError::EACCES)?,
+        ))
     } else {
         None
     };
-
-    let file_table = scheduler::get_scheduler().current_task().file_table.clone();
-    let socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)?;
 
     let connection_sock = socket.inode().accept(address)?;
     let handle = file_table.open_file(
@@ -75,7 +74,8 @@ pub fn sock_recv(
         .get_handle(sockfd)
         .ok_or(SyscallError::EINVAL)?;
 
-    Ok(socket.inode().recv(header)?)
+    let non_block = socket.flags.read().contains(OpenFlags::O_NONBLOCK);
+    Ok(socket.inode().recv(header, non_block)?)
 }
 
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming

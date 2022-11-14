@@ -40,9 +40,10 @@ lai = { git = "https://github.com/aero-os/lai-rs" }
 uapi = { path = "../uapi" }
 cpio_reader = { git = "https://github.com/Andy-Python-Programmer/cpio_reader" }
 static_assertions = "1.1.0"
+lru = "0.8.0"
+bytemuck = "1.12.1"
 
 limine = { git = "https://github.com/limine-bootloader/limine-rs" }
-
 cfg-if = "1.0"
 
 # X86_64 specific dependencies:

@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::fs::block::BlockDeviceInterface;
+
 use super::BlockDevice;
 use core::mem::MaybeUninit;
 
@@ -126,7 +128,6 @@ impl Gpt {
         let mut header = Box::<GptTableHeader>::new_uninit();
 
         controller
-            .device()
             .read_block(1, header.as_bytes_mut())
             .expect("gpt: failed to read first sector");
 
@@ -143,7 +144,6 @@ impl Gpt {
         let mut entry_list = Box::<[GptEntry]>::new_uninit_slice(header.num_entries as usize);
 
         controller
-            .device()
             .read_block(
                 header.starting_lba as _,
                 MaybeUninit::slice_as_bytes_mut(&mut entry_list),

@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
 
 from typing import List
 
@@ -76,9 +77,6 @@ CMDLINE=term-background=background theme-background=0x50000000
 
 MODULE_PATH=boot:///term_background.bmp
 MODULE_CMDLINE=background
-
-MODULE_PATH=boot:///initramfs.cpio
-MODULE_CMDLINE=initramfs
 """
 
 
@@ -91,46 +89,8 @@ class BuildInfo:
         self.args = args
 
 
-def download_userland_host_rust():
-    out_file = os.path.join(BUNDLED_DIR, "host-rust-prebuilt.tar.gz")
-
-    # we have already cloned the toolchain
-    if os.path.exists(out_file):
-        return
-
-    log_info("downloading prebuilt userland host rust toolchain")
-
-    cmd = r"""
-    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate "https://docs.google.com/uc?export=download&id=FILE_HASH" -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=FILE_HASH" -O OUTPUT_FILE && rm -rf /tmp/cookies.txt
-    """.replace("FILE_HASH", "1TTC9qa1z-KdLaQkhgMCYxLE5nuKg4gcx").replace("OUTPUT_FILE", out_file)
-
-    subprocess.run(cmd, shell=True)
-
-    log_info("extracting prebuilt userland host rust toolchain")
-
-    # the toolchain is compressed, so we need to extract it
-    file = tarfile.open(out_file)
-    file.extractall(os.path.join(BUNDLED_DIR, "host-rust-prebuilt"))
-    file.close()
-
-
-def get_userland_tool():
-    toolchain = os.path.join(SYSROOT_DIR, "tools")
-
-    if os.path.exists(toolchain):
-        return toolchain
-
-    return os.path.join(BUNDLED_DIR, "host-rust-prebuilt/aero")
-
-
-def get_userland_package():
-    toolchain = os.path.join(SYSROOT_DIR, "packages")
-
-    if os.path.exists(toolchain):
-        return toolchain
-
-    return os.path.join(BUNDLED_DIR, "host-rust-prebuilt/aero")
-
+def get_userland_tool(): return os.path.join(SYSROOT_DIR, "tools")
+def get_userland_package(): return os.path.join(SYSROOT_DIR, "packages")
 
 def remove_prefix(string: str, prefix: str):
     if string.startswith(prefix):
@@ -242,7 +202,8 @@ def download_bundled():
                     '--depth', '1', LIMINE_URL, limine_path])
 
     if not os.path.exists(SYSROOT_DIR):
-        download_userland_host_rust()
+        log_info("building minimal sysroot")
+        build_userland_sysroot(True)
 
 
 def extract_artifacts(stdout):
@@ -302,7 +263,7 @@ def symlink_rel(src, dst):
     os.symlink(rel_path_src, dst)
 
 
-def build_userland_sysroot(args):
+def build_userland_sysroot(minimal):
     if not os.path.exists(SYSROOT_DIR):
         os.mkdir(SYSROOT_DIR)
 
@@ -331,31 +292,28 @@ def build_userland_sysroot(args):
     if not os.path.islink(blink):
         # symlink the bootstrap.yml file in the src root to sysroot/bootstrap.link
         symlink_rel('bootstrap.yml', blink)
+    
+    def run_xbstrap(args):
+        try:
+            run_command(['xbstrap', *args], cwd=SYSROOT_DIR)
+        except FileNotFoundError:
+            run_command([f'{os.environ["HOME"]}/.local/bin/xbstrap', *args], cwd=SYSROOT_DIR)
 
-    os.chdir(SYSROOT_DIR)
-
-    args = {
-        "update": True,
-        "all": True,
-        "dry_run": False,
-        "check": False,
-        "recursive": False,
-        "paranoid": False,
-        "reset": False,
-        "hard_reset": False,
-        "only_wanted": False,
-        "keep_going": False,
-
-        "progress_file": None,  # file that receives machine-ready progress notifications
-        "reconfigure": False,
-        "rebuild": False
-    }
-
-    namespace = argparse.Namespace(**args)
-    xbstrap.do_install(namespace)
+    if minimal:
+        run_xbstrap(['install', '-u', 'bash', 'coreutils'])
+    else:
+        run_xbstrap(['install', '-u', '--all'])
 
 
 def build_userland(args):
+    # We need to check if we have host-cargo in-order for us to build
+    # our rust userland applications in `userland/`.
+    host_cargo = os.path.join(SYSROOT_DIR, "tools/host-cargo")
+
+    if not os.path.exists(host_cargo):
+        log_error("host-cargo not built as a part of the sysroot, skipping compilation of `userland/`")
+        return []
+
     HOST_CARGO = "host-cargo/bin/cargo"
     HOST_RUST = "host-rust/bin/rustc"
     HOST_GCC = "host-gcc/bin/x86_64-aero-gcc"
@@ -438,45 +396,11 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join(limine_path, 'BOOTX64.EFI'), efi_boot)
 
     sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
-    shutil.copytree(BASE_FILES_DIR, sysroot_dir, dirs_exist_ok=True)
-
-    # dynamic linker (ld.so)
-    mlibc = os.path.join(get_userland_package(), "mlibc")
-    # gcc libraries required for rust programs
-    gcc = os.path.join(get_userland_package(), "gcc")
-
-    # FIXME
-    if "host-rust-prebuilt" in str(mlibc):
-        shutil.copytree(mlibc, sysroot_dir, dirs_exist_ok=True)
-        shutil.copytree(gcc, sysroot_dir, dirs_exist_ok=True)
-
     for file in user_bins:
         bin_name = os.path.basename(file)
-        shutil.copy(file, os.path.join(sysroot_dir, "usr", "bin", bin_name))
-
-    def find(path) -> List[str]:
-        _, find_output, _ = run_command(['find', '.', '-type', 'f'],
-                                        cwd=path,
-                                        stdout=subprocess.PIPE)
-
-        files_without_dot = filter(
-            lambda x: x != '.', find_output.decode('utf-8').splitlines())
-        files_without_prefix = map(
-            lambda x: remove_prefix(x, './'), files_without_dot)
-        files = list(files_without_prefix)
-
-        files.append("usr/lib/libiconv.so.2")
-        return files
-
-    files = find(sysroot_dir)
-
-    with open(os.path.join(iso_root, 'initramfs.cpio'), 'wb') as initramfs:
-        cpio_input = '\n'.join(files)
-        code, _, _ = run_command(['cpio', '-o', '-v'],
-                                 cwd=sysroot_dir,
-                                 stdout=initramfs,
-                                 stderr=subprocess.PIPE,
-                                 input=cpio_input.encode('utf-8'))
+        dest_dir = os.path.join(sysroot_dir, "usr", "bin")
+        os.makedirs(dest_dir, exist_ok=True)
+        shutil.copy(file, os.path.join(dest_dir, bin_name))
 
     with open(os.path.join(iso_root, 'limine.cfg'), 'w') as limine_cfg:
         limine_cfg.write(LIMINE_TEMPLATE)
@@ -514,6 +438,13 @@ def prepare_iso(args, kernel_bin, user_bins):
 
         return None
 
+    # create the disk image
+    disk_path = os.path.join(BUILD_DIR, 'disk.img')
+
+    if not os.path.exists(disk_path):
+        log_info('creating disk image')
+        os.system('bash ./tools/mkimage.sh')
+
     return iso_path
 
 
@@ -524,7 +455,10 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
     qemu_args = ['-cdrom', iso_path,
                  '-m', args.memory,
                  '-smp', '1',
-                 '-serial', 'stdio']
+                 '-serial', 'stdio',
+                 '-drive', 'file=build/disk.img,if=none,id=NVME1,format=raw', '-device', 'nvme,drive=NVME1,serial=nvme',
+                 # Specify the boot order (where `d` is the first CD-ROM drive)
+                 '--boot', 'd']
 
     if args.bios == 'uefi':
         qemu_args += ['-bios',
@@ -641,6 +575,7 @@ def is_kvm_supported() -> bool:
 
 
 def main():
+    t0 = time.time()
     args = parse_args()
 
     # arch-aero_os
@@ -658,10 +593,6 @@ def main():
 
         if not os.path.exists(iso_path):
             user_bins = build_userland(args)
-
-            if not user_bins:
-                return
-
             kernel_bin = build_kernel(args)
 
             if not kernel_bin or args.check:
@@ -680,17 +611,13 @@ def main():
         if os.path.exists(userland_target):
             shutil.rmtree(userland_target)
     elif args.sysroot:
-        build_userland_sysroot(args)
+        build_userland_sysroot(False)
     elif args.document:
         build_kernel(args)
 
         generate_docs(args)
     else:
         user_bins = build_userland(args)
-
-        if not user_bins:
-            return
-
         kernel_bin = build_kernel(args)
 
         if not kernel_bin or args.check:
@@ -699,6 +626,8 @@ def main():
         kernel_bin = kernel_bin[0]
         iso_path = prepare_iso(args, kernel_bin, user_bins)
 
+        t1 = time.time()
+        log_info(f"build completed in {t1 - t0:.2f} seconds")
         if not args.no_run:
             run_in_emulator(build_info, iso_path)
 

@@ -111,6 +111,7 @@ fn pit_irq_handler(_stack: &mut InterruptStack) {
 
     if value % PIT_FREQUENCY_HZ == 0 {
         UPTIME_SEC.fetch_add(1, Ordering::Relaxed); // Increment uptime seconds
+        crate::syscall::check_timers();
     }
 }
 

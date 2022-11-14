@@ -169,75 +169,6 @@ pub enum SyscallError {
     Unknown = isize::MAX,
 }
 
-pub fn syscall_as_str(syscall: usize) -> &'static str {
-    match syscall {
-        prelude::SYS_READ => "read",
-        prelude::SYS_WRITE => "write",
-        prelude::SYS_OPEN => "open",
-        prelude::SYS_CLOSE => "close",
-        prelude::SYS_SHUTDOWN => "shutdown",
-        prelude::SYS_EXIT => "exit",
-        prelude::SYS_FORK => "fork",
-        prelude::SYS_REBOOT => "reboot",
-        prelude::SYS_MMAP => "mmap",
-        prelude::SYS_MUNMAP => "munmap",
-        prelude::SYS_ARCH_PRCTL => "arch_prctl",
-        prelude::SYS_GETDENTS => "getdents",
-        prelude::SYS_GETCWD => "getcwd",
-        prelude::SYS_CHDIR => "chdir",
-        prelude::SYS_MKDIR => "mkdir",
-        prelude::SYS_MKDIR_AT => "mkdir_at",
-        prelude::SYS_RMDIR => "rmdir",
-        prelude::SYS_EXEC => "exec",
-        prelude::SYS_LOG => "log",
-        prelude::SYS_UNAME => "uname",
-        prelude::SYS_WAITPID => "waitpid",
-        prelude::SYS_IOCTL => "ioctl",
-        prelude::SYS_GETPID => "getpid",
-        prelude::SYS_SOCKET => "socket",
-        prelude::SYS_CONNECT => "connect",
-        prelude::SYS_BIND => "bind",
-        prelude::SYS_LISTEN => "listen",
-        prelude::SYS_ACCEPT => "accept",
-        prelude::SYS_SEEK => "seek",
-        prelude::SYS_GETTID => "gettid",
-        prelude::SYS_GETTIME => "gettime",
-        prelude::SYS_SLEEP => "sleep",
-        prelude::SYS_ACCESS => "access",
-        prelude::SYS_PIPE => "pipe",
-        prelude::SYS_UNLINK => "unlink",
-        prelude::SYS_GETHOSTNAME => "gethostname",
-        prelude::SYS_SETHOSTNAME => "sethostname",
-        prelude::SYS_INFO => "info",
-        prelude::SYS_CLONE => "clone",
-        prelude::SYS_SIGRETURN => "sigreturn",
-        prelude::SYS_SIGACTION => "sigaction",
-        prelude::SYS_SIGPROCMASK => "sigprocmask",
-        prelude::SYS_DUP => "dup",
-        prelude::SYS_FCNTL => "fcntl",
-        prelude::SYS_DUP2 => "dup2",
-        prelude::SYS_IPC_SEND => "ipc_send",
-        prelude::SYS_IPC_RECV => "ipc_recv",
-        prelude::SYS_IPC_DISCOVER_ROOT => "ipc_discover_root",
-        prelude::SYS_IPC_BECOME_ROOT => "ipc_become_root",
-        prelude::SYS_STAT => "stat",
-        prelude::SYS_FSTAT => "fstat",
-        prelude::SYS_READ_LINK => "readlink",
-        prelude::SYS_EPOLL_CREATE => "epoll_create",
-        prelude::SYS_EPOLL_PWAIT => "epoll_pwait",
-        prelude::SYS_EPOLL_CTL => "epoll_ctl",
-        prelude::SYS_EVENT_FD => "event_fd",
-        prelude::SYS_KILL => "kill",
-        prelude::SYS_FUTEX_WAIT => "futex_wait",
-        prelude::SYS_FUTEX_WAKE => "futex_wake",
-        prelude::SYS_LINK => "link",
-        prelude::SYS_BACKTRACE => "backtrace",
-        prelude::SYS_POLL => "poll",
-
-        _ => unreachable!("unknown syscall {syscall}"),
-    }
-}
-
 #[derive(Debug)]
 #[repr(usize)]
 pub enum SysFileType {
@@ -260,19 +191,20 @@ pub struct SysDirEntry {
     pub name: [u8; 0],
 }
 
-#[derive(Debug)]
 #[repr(C)]
+#[derive(Debug)]
 pub struct Utsname {
-    pub name: [u8; 65],
+    pub sysname: [u8; 65],
     pub nodename: [u8; 65],
     pub release: [u8; 65],
     pub version: [u8; 65],
     pub machine: [u8; 65],
+    pub domainname: [u8; 65],
 }
 
 impl Utsname {
     pub fn name(&self) -> &str {
-        unsafe { core::str::from_utf8_unchecked(&self.name) }
+        unsafe { core::str::from_utf8_unchecked(&self.sysname) }
     }
 
     pub fn nodename(&self) -> &str {
@@ -295,11 +227,12 @@ impl Utsname {
 impl Default for Utsname {
     fn default() -> Self {
         Self {
-            name: [0; 65],
+            sysname: [0; 65],
             nodename: [0; 65],
             release: [0; 65],
             version: [0; 65],
             machine: [0; 65],
+            domainname: [0; 65],
         }
     }
 }
@@ -346,68 +279,69 @@ pub struct WinSize {
 bitflags::bitflags! {
     #[derive(Default)]
     pub struct TermiosLFlag: u32 {
-        const ECHO   =  0x0001;
-        const ECHOE  =  0x0002;
-        const ECHOK  =  0x0004;
-        const ECHONL =  0x0008;
-        const ICANON =  0x0010;
-        const IEXTEN =  0x0020;
-        const ISIG   =  0x0040;
-        const NOFLSH =  0x0080;
-        const TOSTOP =  0x0100;
-        const ECHOPRT=  0x0200;
+        const ECHO    = 0x8;
+        const ECHOE   = 0x10;
+        const ECHOK   = 0x20;
+        const ECHONL  = 0x40;
+        const ICANON  = 0x2;
+        const IEXTEN  = 0x8000;
+        const ISIG    = 0x1;
+        const NOFLSH  = 0x80;
+        const TOSTOP  = 0x100;
+        const ECHOPRT = 0x400;
     }
 }
 
 bitflags::bitflags! {
     #[derive(Default)]
     pub struct TermiosCFlag: u32 {
-        const CSIZE  =  0x0003;
-        const CS5    =  0x0000;
-        const CS6    =  0x0001;
-        const CS7    =  0x0002;
-        const CS8    =  0x0003;
-        const CSTOPB =  0x0004;
-        const CREAD  =  0x0008;
-        const PARENB =  0x0010;
-        const PARODD =  0x0020;
-        const HUPCL  =  0x0040;
-        const CLOCAL =  0x0080;
+        const CSIZE  = 0x30;
+        const CS5    = 0x0;
+        const CS6    = 0x10;
+        const CS7    = 0x20;
+        const CS8    = 0x30;
+        const CSTOPB = 0x40;
+        const CREAD  = 0x80;
+        const PARENB = 0x100;
+        const PARODD = 0x200;
+        const HUPCL  = 0x400;
+        const CLOCAL = 0x800;
     }
 }
 
 bitflags::bitflags! {
     #[derive(Default)]
     pub struct TermiosOFlag: u32 {
-        const OPOST  =  0x0001;
-        const ONLCR  =  0x0002;
-        const OCRNL  =  0x0004;
-        const ONOCR  =  0x0008;
-        const ONLRET =  0x0010;
-        const OFDEL  =  0x0020;
-        const OFILL  =  0x0040;
-        const NLDLY  =  0x0080;
-        const NL0    =  0x0000;
-        const NL1    =  0x0080;
-        const CRDLY  =  0x0300;
-        const CR0    =  0x0000;
-        const CR1    =  0x0100;
-        const CR2    =  0x0200;
-        const CR3    =  0x0300;
-        const TABDLY =  0x0C00;
-        const TAB0   =  0x0000;
-        const TAB1   =  0x0400;
-        const TAB2   =  0x0800;
-        const TAB3   =  0x0C00;
-        const BSDLY  =  0x1000;
-        const BS0    =  0x0000;
-        const BS1    =  0x1000;
-        const VTDLY  =  0x2000;
-        const VT0    =  0x0000;
-        const VT1    =  0x2000;
-        const FFDLY  =  0x4000;
-        const FF0    =  0x0000;
-        const FF1    =  0x4000;
+        const OPOST  = 0x1;
+        const ONLCR  = 0x4;
+        const OCRNL  = 0x8;
+        const ONOCR  = 0x10;
+        const ONLRET = 0x20;
+        const OFDEL  = 0x80;
+        const OFILL  = 0x40;
+        const NLDLY  = 0x100;
+        const NL0    = 0x0;
+        const NL1    = 0x100;
+        const CRDLY  = 0x600;
+        const CR0    = 0x0;
+        const CR1    = 0x200;
+        const CR2    = 0x400;
+        const CR3    = 0x600;
+        const TABDLY = 0x1800;
+        const TAB0   = 0x0;
+        const TAB1   = 0x800;
+        const TAB2   = 0x1000;
+        const TAB3   = 0x1800;
+        const XTABS  = 0x1800;
+        const BSDLY  = 0x2000;
+        const BS0    = 0x0;
+        const BS1    = 0x2000;
+        const VTDLY  = 0x4000;
+        const VT0    = 0x0;
+        const VT1    = 0x4000;
+        const FFDLY  = 0x8000;
+        const FF0    = 0x0;
+        const FF1    = 0x8000;
     }
 }
 
@@ -419,7 +353,7 @@ pub struct Termios {
     pub c_cflag: TermiosCFlag,
     pub c_lflag: TermiosLFlag,
     pub c_line: u8,
-    pub c_cc: [u8; 11],
+    pub c_cc: [u8; 32],
     pub c_ispeed: u32,
     pub c_ospeed: u32,
 }

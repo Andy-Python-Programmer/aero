@@ -86,21 +86,20 @@ impl EPoll {
         Ok(())
     }
 
-    /// Retrieves ready events, and delivers them to the caller-supplied event buffer.
+    /// Retrieves ready events, and delivers them to the caller-supplied event buffer and
+    /// returns the number of ready events if the call was successful.
     ///
     /// ## Arguments
     ///
     /// * `events`: Used to return information from the ready list about file descriptors in the
-    /// interest list that have some events available.
+    ///             interest list that have some events available.
     ///
     /// * `max_events`: Maximum number of events.
     ///
     /// * `timeout`: specifies the minimum number of milliseconds that epoll wait will block. Specifying
-    /// a timeout of `-1` will block indefinitely. While specifing a timeout of `0` will return immediately
-    /// even if there are available no events.
+    ///              a timeout of `-1` will block indefinitely. While specifing a timeout of `0` will return
+    ///              immediately even if there are available no events.
     ///
-    /// ## Return
-    /// Returns the number of ready events if the call was successful.
     ///
     /// ## Blocking
     /// Blocks the current task until either:

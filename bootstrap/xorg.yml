@@ -82,22 +82,6 @@ tools:
     install:
       - args: ['make', 'install-strip']
 
-  - name: host-gettext
-    from_source: gettext
-    exports_aclocal: true
-    tools_required:
-      # - host-bison
-      - host-autoconf-v2.69
-      - host-automake-v1.16
-    configure:
-      - args:
-        - '@THIS_SOURCE_DIR@/configure'
-        - '--prefix=@PREFIX@'
-    compile:
-      - args: ['make']
-    install:
-      - args: ['make', 'install-strip']
-
 packages:
   # `xorg-util-macros` is a set of autoconf macros used by the configure.ac scripts in
   # other Xorg modular packages, and is needed to generate new versions
@@ -625,6 +609,7 @@ packages:
             NOCONFIGURE: 'yes'
     tools_required:
       - host-gcc
+      - host-pkg-config
     pkgs_required:
       - mlibc
       - xorg-util-macros
@@ -673,7 +658,7 @@ packages:
           CFLAGS: '-Wno-error=array-bounds -O0 -g -pipe'
     build:
       - args: ['make', '-j@PARALLELISM@']
-      - args: ['make', 'install-strip']
+      - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
       - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/etc/X11']
@@ -1177,7 +1162,6 @@ packages:
         - host-libtool
         - host-pkg-config
         - host-xorg-macros
-        - host-gettext
       regenerate:
         - args: ['./autogen.sh']
           environ:
@@ -1211,6 +1195,90 @@ packages:
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: dwm
+    source:
+      subdir: 'bundled'
+      git: 'https://git.suckless.org/dwm/'
+      branch: master
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libx11
+      - libxmu
+      - libxaw
+      - libxrender
+      - libxft
+      - libxt
+      - libxkbfile
+      - libiconv
+      - libxi
+      - dejavu
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['make', 'CC=x86_64-aero-gcc', 'CXX=x86_64-aero-g++']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: dmenu
+    source:
+      subdir: 'bundled'
+      git: 'https://git.suckless.org/dmenu/'
+      branch: master
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libx11
+      - libxmu
+      - libxaw
+      - libxrender
+      - libxft
+      - libxt
+      - libxkbfile
+      - libiconv
+      - libxi
+      - dejavu
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['make', 'CC=x86_64-aero-gcc', 'CXX=x86_64-aero-g++']
+      - args: ['make', 'install']
+        environ:
+          PREFIX: '/usr'
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: dejavu
+    source:
+      subdir: bundled
+      url: 'https://sourceforge.net/projects/dejavu/files/dejavu/2.37/dejavu-fonts-ttf-2.37.tar.bz2'
+      format: 'tar.bz2'
+      checksum: blake2b:d8614907887f20967fc7c75cb33b636a0eb5c682a076ccc7aef09f4ac243507afc005ef90d0b2aeee6a4a6a1ff3d5ce4fac0d1722a382525b3883ef53cdec26a
+      extract_path: 'dejavu-fonts-ttf-2.37'
+      version: '2.37'
+    pkgs_required:
+      - freetype
+      - fontconfig
+    revision: 3
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/ttf', '@THIS_SOURCE_DIR@/dejavu']
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/share/fonts/truetype/']
+      - args: ['cp', '-r', '@THIS_BUILD_DIR@/dejavu/dejavu', '@THIS_COLLECT_DIR@/usr/share/fonts/truetype/']
+    scripts:
+        post_install:
+          - args: 'echo "Running fc-cache; this may take a few seconds..."'
+          - args: ['fc-cache']
 
   - name: libxv
     source:

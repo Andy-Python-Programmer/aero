@@ -17,10 +17,14 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::time::ITimerVal;
+use aero_syscall::time::{ITimerVal, ITIMER_REAL};
 use aero_syscall::{SyscallError, TimeSpec};
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 
 use crate::userland::scheduler;
+use crate::userland::task::Task;
+use crate::utils::sync::{IrqGuard, Mutex};
 use crate::utils::CeilDiv;
 
 const CLOCK_TYPE_REALTIME: usize = 0;
@@ -61,16 +65,34 @@ pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, SyscallEr
     }
 }
 
+static TIMERS: Mutex<Vec<Arc<Task>>> = Mutex::new(Vec::new());
+
+pub fn check_timers() {
+    // if let Some(task) = TIMERS.lock_irq().pop() {
+    //     task.signal(aero_syscall::signal::SIGALRM);
+    // }
+}
+
 #[syscall]
 pub fn setitimer(
-    _which: usize,
+    which: usize,
     _new_value: &ITimerVal,
-    _old_value: &mut ITimerVal,
+    _old_value: usize, // FIXME: Option<&mut ITimerVal>
 ) -> Result<usize, SyscallError> {
-    let scheduler = scheduler::get_scheduler();
-    scheduler
-        .current_task()
-        .signal(aero_syscall::signal::SIGALRM);
+    let _guard = IrqGuard::new();
+
+    match which {
+        // The interval timer value is decremented in real time. The SIGALRM signal is
+        // generated for the process when this timer expires.
+        ITIMER_REAL => {}
+
+        _ => unreachable!("setitimer: unimplemented timer (ty={which})"),
+    }
+
+    TIMERS
+        .lock_irq()
+        .push(scheduler::get_scheduler().current_task());
+
     Ok(0)
 }
 
