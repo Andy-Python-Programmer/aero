@@ -89,46 +89,8 @@ class BuildInfo:
         self.args = args
 
 
-def download_userland_host_rust():
-    out_file = os.path.join(BUNDLED_DIR, "host-rust-prebuilt.tar.gz")
-
-    # we have already cloned the toolchain
-    if os.path.exists(out_file):
-        return
-
-    log_info("downloading prebuilt userland host rust toolchain")
-
-    cmd = r"""
-    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate "https://docs.google.com/uc?export=download&id=FILE_HASH" -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=FILE_HASH" -O OUTPUT_FILE && rm -rf /tmp/cookies.txt
-    """.replace("FILE_HASH", "1TTC9qa1z-KdLaQkhgMCYxLE5nuKg4gcx").replace("OUTPUT_FILE", out_file)
-
-    subprocess.run(cmd, shell=True)
-
-    log_info("extracting prebuilt userland host rust toolchain")
-
-    # the toolchain is compressed, so we need to extract it
-    file = tarfile.open(out_file)
-    file.extractall(os.path.join(BUNDLED_DIR, "host-rust-prebuilt"))
-    file.close()
-
-
-def get_userland_tool():
-    toolchain = os.path.join(SYSROOT_DIR, "tools")
-
-    if os.path.exists(toolchain):
-        return toolchain
-
-    return os.path.join(BUNDLED_DIR, "host-rust-prebuilt/aero")
-
-
-def get_userland_package():
-    toolchain = os.path.join(SYSROOT_DIR, "packages")
-
-    if os.path.exists(toolchain):
-        return toolchain
-
-    return os.path.join(BUNDLED_DIR, "host-rust-prebuilt/aero")
-
+def get_userland_tool(): return os.path.join(SYSROOT_DIR, "tools")
+def get_userland_package(): return os.path.join(SYSROOT_DIR, "packages")
 
 def remove_prefix(string: str, prefix: str):
     if string.startswith(prefix):
@@ -240,7 +202,8 @@ def download_bundled():
                     '--depth', '1', LIMINE_URL, limine_path])
 
     if not os.path.exists(SYSROOT_DIR):
-        download_userland_host_rust()
+        log_info("building minimal sysroot")
+        build_userland_sysroot(True)
 
 
 def extract_artifacts(stdout):
@@ -300,7 +263,7 @@ def symlink_rel(src, dst):
     os.symlink(rel_path_src, dst)
 
 
-def build_userland_sysroot(args):
+def build_userland_sysroot(minimal):
     if not os.path.exists(SYSROOT_DIR):
         os.mkdir(SYSROOT_DIR)
 
@@ -330,10 +293,21 @@ def build_userland_sysroot(args):
         # symlink the bootstrap.yml file in the src root to sysroot/bootstrap.link
         symlink_rel('bootstrap.yml', blink)
 
-    run_command(['xbstrap', 'install', '-u', '--all'], cwd=SYSROOT_DIR)
+    if minimal:
+        run_command(['xbstrap', 'install', '-u', 'bash', 'coreutils'], cwd=SYSROOT_DIR)
+    else:
+        run_command(['xbstrap', 'install', '-u', '--all'], cwd=SYSROOT_DIR)
 
 
 def build_userland(args):
+    # We need to check if we have host-cargo in-order for us to build
+    # our rust userland applications in `userland/`.
+    host_cargo = os.path.join(SYSROOT_DIR, "tools/host-cargo")
+
+    if not os.path.exists(host_cargo):
+        log_error("host-cargo not built as a part of the sysroot, skipping compilation of `userland/`")
+        return
+
     HOST_CARGO = "host-cargo/bin/cargo"
     HOST_RUST = "host-rust/bin/rustc"
     HOST_GCC = "host-gcc/bin/x86_64-aero-gcc"
@@ -635,7 +609,7 @@ def main():
         if os.path.exists(userland_target):
             shutil.rmtree(userland_target)
     elif args.sysroot:
-        build_userland_sysroot(args)
+        build_userland_sysroot(False)
     elif args.document:
         build_kernel(args)
 
