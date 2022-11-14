@@ -292,11 +292,17 @@ def build_userland_sysroot(minimal):
     if not os.path.islink(blink):
         # symlink the bootstrap.yml file in the src root to sysroot/bootstrap.link
         symlink_rel('bootstrap.yml', blink)
+    
+    def run_xbstrap(args):
+        try:
+            run_command(['xbstrap', *args], cwd=SYSROOT_DIR)
+        except FileNotFoundError:
+            run_command([f'{os.environ["HOME"]}/.local/bin/xbstrap', *args], cwd=SYSROOT_DIR)
 
     if minimal:
-        run_command(['xbstrap', 'install', '-u', 'bash', 'coreutils'], cwd=SYSROOT_DIR)
+        run_xbstrap(['install', '-u', 'bash', 'coreutils'])
     else:
-        run_command(['xbstrap', 'install', '-u', '--all'], cwd=SYSROOT_DIR)
+        run_xbstrap(['install', '-u', '--all'])
 
 
 def build_userland(args):
@@ -306,7 +312,7 @@ def build_userland(args):
 
     if not os.path.exists(host_cargo):
         log_error("host-cargo not built as a part of the sysroot, skipping compilation of `userland/`")
-        return
+        return []
 
     HOST_CARGO = "host-cargo/bin/cargo"
     HOST_RUST = "host-rust/bin/rustc"
@@ -587,10 +593,6 @@ def main():
 
         if not os.path.exists(iso_path):
             user_bins = build_userland(args)
-
-            if not user_bins:
-                return
-
             kernel_bin = build_kernel(args)
 
             if not kernel_bin or args.check:
@@ -616,10 +618,6 @@ def main():
         generate_docs(args)
     else:
         user_bins = build_userland(args)
-
-        if not user_bins:
-            return
-
         kernel_bin = build_kernel(args)
 
         if not kernel_bin or args.check:
