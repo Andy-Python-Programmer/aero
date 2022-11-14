@@ -5,4 +5,7 @@ authors = ["Joshua Price <jwpjr567@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-# clap = "3.2.22"
+# gumdrop
+# todo: set as few feature flags as required
+ureq = "2.5.0"
+execute = "0.2.11"

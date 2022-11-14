@@ -1,18 +1,42 @@
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Stdio};
 use std::path::Path;
+use std::io::{BufReader, BufRead};
+
+use execute::Execute;
 
 const ANSI_ESCAPE: &str = "\x1b[";
 const ANSI_BOLD_RED: &str = "1;31m";
 const ANSI_BOLD_GREEN: &str = "1;32m";
 const ANSI_RESET: &str = "0m";
 
+/// Logs a message with info log level.
 pub fn log_info(message: &str) {
-    println!("{ANSI_ESCAPE}{ANSI_BOLD_GREEN}info: {ANSI_ESCAPE}{ANSI_RESET}{message}");
+    println!("{ANSI_ESCAPE}{ANSI_BOLD_GREEN}info{ANSI_ESCAPE}{ANSI_RESET}: {message}");
 }
 
+/// Logs a message with error log level.
 pub fn log_error(message: &str) {
-    println!("{ANSI_ESCAPE}{ANSI_BOLD_RED}red: {ANSI_ESCAPE}{ANSI_RESET}{message}");
+    println!("{ANSI_ESCAPE}{ANSI_BOLD_RED}red{ANSI_ESCAPE}{ANSI_RESET}: {message}");
 }
+
+// pub fn run_command_test(pwd: &Path, command: &str, args: Vec<String>) {
+//     let outputd = Command::new(command)
+//     .arg(command)
+//     .args(args)
+//     .current_dir(pwd);
+
+//     let output = outputd.execute_output().unwrap();
+
+//     if let Some(exit_code) = output.status.code() {
+//         if exit_code == 0 {
+//             println!("Ok.");
+//         } else {
+//             eprintln!("Failed.");
+//         }
+//     } else {
+//         eprintln!("Interrupted!");
+//     }
+// }
 
 #[derive(Debug)]
 pub struct CommandOutput {
@@ -36,7 +60,7 @@ pub fn run_command(pwd: &Path, command: &str, args: Vec<String>) -> CommandOutpu
     let output = Command::new(command)
         .arg(command)
         .args(args)
-        // .current_dir(pwd)
+        .current_dir(pwd)
         .output()
         .expect("todo");
 

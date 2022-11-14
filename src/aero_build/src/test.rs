@@ -1,3 +1,5 @@
+use crate::utils;
+
 pub fn test() {
-    println!("test");
+    utils::log_info("testing!");
 }

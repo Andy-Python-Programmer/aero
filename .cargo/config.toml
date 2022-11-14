@@ -1,2 +1,4 @@
 [alias]
+# todo: add --release flag? it would slow down `aero_build` builds but it
+# would also speed up `aero` builds. a tradeoff worthy of benchmarking?
 aero = "run --manifest-path ./src/aero_build/Cargo.toml --"
