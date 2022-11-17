@@ -30,6 +30,7 @@ pub mod lai;
 // FIXME: aarch64 port
 #[cfg(target_arch = "x86_64")]
 pub mod pci;
+pub mod pty;
 pub mod tty;
 
 cfg_if::cfg_if! {

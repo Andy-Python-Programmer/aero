@@ -1196,6 +1196,45 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: limine-term
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/Andy-Python-Programmer/limine-term-emu'
+      branch: 'master'
+      regenerate:
+        - args: ['git', 'submodule', 'update', '--init']
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libx11
+      - libxmu
+      - libxaw
+      - libxrender
+      - libxft
+      - libxt
+      - libxkbfile
+      - libiconv
+      - libxi
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja', '-j@PARALLELISM@']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: dwm
     source:
       subdir: 'bundled'

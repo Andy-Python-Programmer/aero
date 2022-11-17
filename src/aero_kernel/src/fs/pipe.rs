@@ -6,6 +6,7 @@ use alloc::sync::Arc;
 use crate::utils::buffer::Buffer;
 use crate::utils::sync::{BlockQueue, Mutex};
 
+use super::cache::DirCacheItem;
 use super::file_table::FileHandle;
 use super::inode::{INodeInterface, PollFlags, PollTable};
 
@@ -38,13 +39,17 @@ impl Pipe {
 }
 
 impl INodeInterface for Pipe {
-    fn open(&self, flags: OpenFlags, _handle: Arc<FileHandle>) -> super::Result<()> {
+    fn open(
+        &self,
+        flags: OpenFlags,
+        _handle: Arc<FileHandle>,
+    ) -> super::Result<Option<DirCacheItem>> {
         // Write end of the pipe:
         if flags.contains(OpenFlags::O_WRONLY) {
             self.num_writers.fetch_add(1, Ordering::SeqCst);
         }
 
-        Ok(())
+        Ok(None)
     }
 
     fn close(&self, flags: OpenFlags) {

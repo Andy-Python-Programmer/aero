@@ -318,16 +318,5 @@ pub fn root_dir() -> &'static DirCacheItem {
 
 pub fn init() -> Result<()> {
     cache::init();
-
-    // root_dir().inode().mkdir("dev")?;
-    // root_dir().inode().mkdir("home")?;
-    // root_dir().inode().mkdir("tmp")?;
-    // root_dir().inode().mkdir("proc")?;
-    // root_dir().inode().mkdir("var")?;
-    // root_dir().inode().mkdir("mnt")?;
-
-    // initramfs::init()?;
-    // log::info!("installed initramfs");
-
     Ok(())
 }

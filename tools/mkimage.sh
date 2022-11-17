@@ -9,7 +9,7 @@ cp -r base-files/. sysroot/system-root/
 IMAGE_PATH=build/disk.img
 
 # set $SUID_BINARY based on installed SUID binary
-if [[ $(sudo -n | head -c1 | wc -c) -ne 0 ]]; then
+if command -v sudo; then
 	SUID_BINARY=$(which sudo)
 else
 	echo "mkimage.sh: sudo not found, attempting to use opendoas"
@@ -45,7 +45,8 @@ popd
 sync
 $SUID_BINARY umount disk_image/
 
-
 $SUID_BINARY losetup -d `cat loopback_dev`
 sync
+
 rm -rf loopback_dev
+rm -rf disk_image

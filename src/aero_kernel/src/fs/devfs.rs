@@ -131,6 +131,14 @@ impl INodeInterface for DevINode {
     fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {
         self.0.inode().poll(table)
     }
+
+    fn open(
+        &self,
+        flags: aero_syscall::OpenFlags,
+        handle: Arc<super::file_table::FileHandle>,
+    ) -> Result<Option<DirCacheItem>> {
+        self.0.inode().open(flags, handle)
+    }
 }
 
 /// Implementation of dev filesystem. (See the module-level documentation for more

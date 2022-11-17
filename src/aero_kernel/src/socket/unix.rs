@@ -27,6 +27,7 @@ use alloc::vec::Vec;
 use spin::Once;
 
 use crate::fs;
+use crate::fs::cache::DirCacheItem;
 use crate::fs::file_table::FileHandle;
 use crate::fs::inode::*;
 
@@ -233,9 +234,13 @@ impl INodeInterface for UnixSocket {
         })
     }
 
-    fn open(&self, _flags: aero_syscall::OpenFlags, handle: Arc<FileHandle>) -> fs::Result<()> {
+    fn open(
+        &self,
+        _flags: aero_syscall::OpenFlags,
+        handle: Arc<FileHandle>,
+    ) -> fs::Result<Option<DirCacheItem>> {
         self.handle.call_once(|| handle);
-        Ok(())
+        Ok(None)
     }
 
     fn read_at(&self, _offset: usize, user_buffer: &mut [u8]) -> fs::Result<usize> {

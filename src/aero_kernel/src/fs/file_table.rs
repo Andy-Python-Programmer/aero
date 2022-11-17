@@ -299,17 +299,25 @@ impl FileTable {
 
         // Check if a file handle was removed, if so re-use the file handle.
         if let Some((i, f)) = files.iter_mut().enumerate().find(|e| e.1.is_none()) {
-            let handle = Arc::new(FileHandle::new(i, dentry, flags));
+            let mut handle = Arc::new(FileHandle::new(i, dentry, flags));
 
-            handle.inode.inode().open(flags, handle.clone())?;
+            if let Some(inode) = handle.inode.inode().open(flags, handle.clone())? {
+                // TODO: should open be called on the inner file aswell???
+                handle = Arc::new(FileHandle::new(i, inode, flags))
+            }
+
             *f = Some(handle);
 
             Ok(i)
         } else if files.len() < 256 {
             let fd = files.len();
-            let handle = Arc::new(FileHandle::new(fd, dentry, flags));
+            let mut handle = Arc::new(FileHandle::new(fd, dentry, flags));
 
-            handle.inode.inode().open(flags, handle.clone())?;
+            if let Some(inode) = handle.inode.inode().open(flags, handle.clone())? {
+                // TODO: should open be called on the inner file aswell???
+                handle = Arc::new(FileHandle::new(fd, inode, flags))
+            }
+
             files.push(Some(handle));
 
             Ok(fd)
