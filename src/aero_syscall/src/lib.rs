@@ -264,10 +264,11 @@ impl From<usize> for SeekWhence {
 }
 
 pub const TIOCGWINSZ: usize = 0x5413;
+pub const TIOCSWINSZ: usize = 0x5414;
 pub const TCGETS: usize = 0x5401;
 pub const TCSETSF: usize = 0x5404;
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct WinSize {
     pub ws_row: u16,
@@ -345,7 +346,7 @@ bitflags::bitflags! {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 #[repr(C)]
 pub struct Termios {
     pub c_iflag: u32,

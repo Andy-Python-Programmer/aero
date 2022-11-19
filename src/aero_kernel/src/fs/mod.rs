@@ -69,7 +69,7 @@ impl MountManager {
         Self(Mutex::new(BTreeMap::new()))
     }
 
-    fn mount(&self, directory: DirCacheItem, filesystem: Arc<dyn FileSystem>) -> Result<()> {
+    pub fn mount(&self, directory: DirCacheItem, filesystem: Arc<dyn FileSystem>) -> Result<()> {
         let mut this = self.0.lock();
         let mount_key = directory.cache_key();
 

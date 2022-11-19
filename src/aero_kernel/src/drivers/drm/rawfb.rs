@@ -134,4 +134,4 @@ fn init() {
     devfs::install_device_at(dri, rfb).expect("ramfs: failed to install DRM device");
 }
 
-crate::module_init!(init);
+crate::module_init!(init, ModuleType::Block);

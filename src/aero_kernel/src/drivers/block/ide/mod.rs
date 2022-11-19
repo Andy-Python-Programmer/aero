@@ -229,4 +229,4 @@ fn init() {
     register_device_driver(get_device().clone());
 }
 
-crate::module_init!(init);
+crate::module_init!(init, ModuleType::Block);

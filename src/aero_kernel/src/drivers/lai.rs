@@ -134,4 +134,4 @@ pub fn init_lai() {
     aml::init(subsystem);
 }
 
-crate::module_init!(init_lai);
+crate::module_init!(init_lai, ModuleType::Other);

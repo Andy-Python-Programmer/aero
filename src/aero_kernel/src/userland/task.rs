@@ -457,6 +457,8 @@ impl Task {
             *self.cwd.write() = Some(Cwd::new())
         }
 
+        self.file_table.log();
+
         *self.executable.lock() = Some(executable.clone());
 
         let vm = self.vm();
