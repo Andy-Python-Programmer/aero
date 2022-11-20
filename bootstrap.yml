@@ -70,7 +70,7 @@ sources:
     subdir: 'bundled'
     git: 'https://github.com/rust-lang/rust.git'
     branch: 'master'
-    commit: '22e491ac7ed454d34669151a8b6464cb643c9b41'
+    commit: 'ff0ffda6b3c3ea392c6cf88c676133666f491e5c'
 
   - name: llvm
     subdir: 'bundled'
@@ -98,6 +98,49 @@ sources:
     tag: 'v0.11.0'
     version: '0.11.0'
 
+  - name: rust-winit
+    subdir: 'bundled'
+    git: 'https://github.com/rust-windowing/winit.git'
+    tag: 'v0.26.1'
+    version: '0.26.1'
+
+  - name: rust-mio-0.8
+    subdir: 'bundled'
+    git: 'https://github.com/tokio-rs/mio.git'
+    tag: 'v0.8.3'
+    version: '0.8.3'
+
+  - name: rust-nix
+    subdir: 'bundled'
+    git: 'https://github.com/nix-rust/nix.git'
+    tag: 'v0.22.3'
+    version: '0.22.3'
+
+  - name: rust-mio-0.6
+    subdir: 'bundled'
+    git: 'https://github.com/tokio-rs/mio.git'
+    tag: 'v0.6.23'
+    version: '0.6.23'
+
+  - name: rust-glutin
+    subdir: 'bundled'
+    git: 'https://github.com/rust-windowing/glutin.git'
+    tag: 'v0.28.0'
+    version: '0.28.0'
+
+  - name: rust-shared-library
+    subdir: 'bundled'
+    git: 'https://github.com/tomaka/shared_library.git'
+    commit: 'f09e038246a559650c8505b3b3831b820d1a5689'
+    branch: 'master'
+    version: '0.1.9'
+
+  - name: rust-libloading
+    subdir: 'bundled'
+    git: 'https://github.com/nagisa/rust_libloading.git'
+    tag: '0.7.3'
+    version: '0.7.3'
+
   - name: rust-patched-libs
     subdir: 'bundled'
     sources_required:
@@ -107,9 +150,31 @@ sources:
         recursive: true
       - name: rust-users
         recursive: true
+      - name: rust-winit
+        recursive: true
+      - name: rust-shared-library
+        recursive: true
+      - name: rust-mio-0.8
+        recursive: true
+      - name: rust-mio-0.6
+        recursive: true
+      - name: rust-nix
+        recursive: true
+      - name: rust-glutin
+        recursive: true
+      - name: rust-libloading
+        recursive: true
   # ---------------------------------------------------------------------------
   # Rust patched crates end
   # ---------------------------------------------------------------------------
+
+  - name: host-bootstrap-cargo
+    subdir: 'bundled'
+    url: 'https://static.rust-lang.org/dist/2022-04-07/cargo-1.60.0-x86_64-unknown-linux-gnu.tar.xz'
+    format: 'tar.xz'
+    checksum: blake2b:d60239d5977bfcf1c6f2d973d9d27e93d6d138ae6e929deb016afde8cd8e0ff0bba8396f8fa62d5e738be7bde7b91e9aa406ec2440e1ab50451c5b9ad2d8fdfb
+    extract_path: 'cargo-1.60.0-x86_64-unknown-linux-gnu'
+    version: '0.60.0'
 
   - name: python
     subdir: 'bundled'
@@ -254,34 +319,35 @@ tools:
     install:
       - args: ['python3', '@THIS_SOURCE_DIR@/x.py', 'install', '-j', '@PARALLELISM@']
 
-  - name: host-cargo
-    source:
-      subdir: 'bundled'
-      git: 'https://github.com/rust-lang/cargo.git'
-      branch: 'master'
-      commit: '25fcb135d02ea897ce894b67ae021f48107d522b'
-    tools_required:
-      - tool: host-rust
-        recursive: true
-      - tool: host-gcc # GCC is used for linking
-        recursive: true
-    sources_required:
-      # This cargo runs on the host, so we don't actually need any patches here. We just
-      # add the sources used by cargo so that the dependency resolver doesn't complain.
-      - rust-patched-libs
-    compile:
-      - args:
-        - 'cargo'
-        - 'install'
-        - '--target'
-        - 'x86_64-unknown-linux-gnu'
-        - '--target-dir'
-        - '@THIS_BUILD_DIR@'
-        - '--path'
-        - '@THIS_SOURCE_DIR@'
-        - '-j@PARALLELISM@'
-        - '--root'
-        - '@PREFIX@'
+  # - name: host-cargo
+  #   source:
+  #     subdir: 'bundled'
+  #     git: 'https://github.com/rust-lang/cargo.git'
+  #     tag: '0.61.0'
+  #     version: '0.61.0'
+  #   tools_required:
+  #     - tool: host-rust
+  #       recursive: true
+  #     - tool: host-gcc # GCC is used for linking
+  #       recursive: true
+  #   sources_required:
+  #     # This cargo runs on the host, so we don't actually need any patches here. We just
+  #     # add the sources used by cargo so that the dependency resolver doesn't complain.
+  #     - rust-patched-libs
+  #     - host-bootstrap-cargo
+  #   compile:
+  #     - args:
+  #       - 'cargo'
+  #       - 'install'
+  #       - '--target'
+  #       - 'x86_64-unknown-linux-gnu'
+  #       - '--target-dir'
+  #       - '@THIS_BUILD_DIR@'
+  #       - '--path'
+  #       - '@THIS_SOURCE_DIR@'
+  #       - '-j@PARALLELISM@'
+  #       - '--root'
+  #       - '@PREFIX@'
 
   - name: host-python
     from_source: python
@@ -442,6 +508,42 @@ tools:
       - args: ['ninja', 'install']
 
 packages:
+  - name: alacritty
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/alacritty/alacritty'
+      tag: 'v0.10.1'
+      version: '0.10.1'
+    tools_required:
+      # - host-cargo
+      - host-gcc
+    sources_required:
+      - rust-patched-libs
+    pkgs_required:
+      - mlibc
+      - fontconfig
+      - freetype
+      - libx11
+    configure:
+      - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
+      # - args: ['cargo', 'update', '--manifest-path', '@THIS_SOURCE_DIR@/Cargo.toml']
+    build:
+      - args: ['install', '-D', '@THIS_SOURCE_DIR@/alacritty.yml', '@THIS_COLLECT_DIR@/root/.alacritty.yml']
+      - args:
+        - 'cargo'
+        - 'install'
+        - '--no-default-features'
+        - '--features'
+        - 'x11'
+        - '--locked'
+        - '--target-dir'
+        - '@THIS_BUILD_DIR@'
+        - '--path'
+        - '@THIS_SOURCE_DIR@/alacritty'
+        - '--root'
+        - '@THIS_COLLECT_DIR@/usr'
+        - '-j@PARALLELISM@'
+
   # - name: ripgrep
   #   source:
   #     subdir: bundled

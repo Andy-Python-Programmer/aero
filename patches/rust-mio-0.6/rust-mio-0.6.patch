@@ -1,0 +1,94 @@
+From 1459849ab415fe1e9459b108a2908c22c8b1c029 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sun, 20 Nov 2022 13:08:41 +1100
+Subject: [PATCH] <xxx>
+
+---
+ src/event_imp.rs      | 10 ++++++----
+ src/sys/unix/mod.rs   |  2 ++
+ src/sys/unix/ready.rs |  7 +++++--
+ 3 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/src/event_imp.rs b/src/event_imp.rs
+index f93e1fd..0109f74 100644
+--- a/src/event_imp.rs
++++ b/src/event_imp.rs
+@@ -512,8 +512,9 @@ impl ops::Sub for PollOpt {
+     }
+ }
+ 
+-#[deprecated(since = "0.6.10", note = "removed")]
+-#[cfg(feature = "with-deprecated")]
++// Hack: causes errors for us since this isn't upstream.
++// #[deprecated(since = "0.6.10", note = "removed")]
++// #[cfg(feature = "with-deprecated")]
+ #[doc(hidden)]
+ impl ops::Not for PollOpt {
+     type Output = PollOpt;
+@@ -999,8 +1000,9 @@ impl<T: Into<Ready>> ops::SubAssign<T> for Ready {
+     }
+ }
+ 
+-#[deprecated(since = "0.6.10", note = "removed")]
+-#[cfg(feature = "with-deprecated")]
++// Hack: causes errors for us since this isn't upstream.
++// #[deprecated(since = "0.6.10", note = "removed")]
++// #[cfg(feature = "with-deprecated")]
+ #[doc(hidden)]
+ impl ops::Not for Ready {
+     type Output = Ready;
+diff --git a/src/sys/unix/mod.rs b/src/sys/unix/mod.rs
+index c5726c0..b702d35 100644
+--- a/src/sys/unix/mod.rs
++++ b/src/sys/unix/mod.rs
+@@ -6,6 +6,7 @@ pub mod dlsym;
+ #[cfg(any(
+     target_os = "android",
+     target_os = "illumos",
++    target_os = "aero",
+     target_os = "linux",
+     target_os = "solaris"
+ ))]
+@@ -14,6 +15,7 @@ mod epoll;
+ #[cfg(any(
+     target_os = "android",
+     target_os = "illumos",
++    target_os = "aero",
+     target_os = "linux",
+     target_os = "solaris"
+ ))]
+diff --git a/src/sys/unix/ready.rs b/src/sys/unix/ready.rs
+index ef90147..50237e0 100644
+--- a/src/sys/unix/ready.rs
++++ b/src/sys/unix/ready.rs
+@@ -276,6 +276,7 @@ impl UnixReady {
+     #[cfg(any(
+         target_os = "android",
+         target_os = "illumos",
++        target_os = "aero",
+         target_os = "linux",
+         target_os = "solaris"
+     ))]
+@@ -407,6 +408,7 @@ impl UnixReady {
+     #[cfg(any(
+         target_os = "android",
+         target_os = "illumos",
++        target_os = "aero",
+         target_os = "linux",
+         target_os = "solaris"
+     ))]
+@@ -477,8 +479,9 @@ impl ops::Sub for UnixReady {
+     }
+ }
+ 
+-#[deprecated(since = "0.6.10", note = "removed")]
+-#[cfg(feature = "with-deprecated")]
++// Hack: causes errors for us since this isn't upstream.
++// #[deprecated(since = "0.6.10", note = "removed")]
++// #[cfg(feature = "with-deprecated")]
+ #[doc(hidden)]
+ impl ops::Not for UnixReady {
+     type Output = UnixReady;
+-- 
+2.38.1
+

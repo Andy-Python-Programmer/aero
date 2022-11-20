@@ -1,0 +1,73 @@
+From de6c2d83e3db2040ca4933ca97006f1c2ad82a64 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sun, 20 Nov 2022 12:29:48 +1100
+Subject: [PATCH] <xxx>
+
+---
+ src/sys/unix/pipe.rs         | 2 ++
+ src/sys/unix/selector/mod.rs | 2 ++
+ src/sys/unix/waker.rs        | 4 ++--
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/sys/unix/pipe.rs b/src/sys/unix/pipe.rs
+index b2865cd..df56531 100644
+--- a/src/sys/unix/pipe.rs
++++ b/src/sys/unix/pipe.rs
+@@ -150,6 +150,7 @@ pub fn new() -> io::Result<(Sender, Receiver)> {
+     #[cfg(any(
+         target_os = "android",
+         target_os = "dragonfly",
++        target_os = "aero",
+         target_os = "freebsd",
+         target_os = "linux",
+         target_os = "netbsd",
+@@ -189,6 +190,7 @@ pub fn new() -> io::Result<(Sender, Receiver)> {
+         target_os = "dragonfly",
+         target_os = "freebsd",
+         target_os = "linux",
++        target_os = "aero",
+         target_os = "netbsd",
+         target_os = "openbsd",
+         target_os = "ios",
+diff --git a/src/sys/unix/selector/mod.rs b/src/sys/unix/selector/mod.rs
+index 9ae4c14..cb1ce72 100644
+--- a/src/sys/unix/selector/mod.rs
++++ b/src/sys/unix/selector/mod.rs
+@@ -3,6 +3,7 @@
+     target_os = "illumos",
+     target_os = "linux",
+     target_os = "redox",
++    target_os = "aero",
+ ))]
+ mod epoll;
+ 
+@@ -11,6 +12,7 @@ mod epoll;
+     target_os = "illumos",
+     target_os = "linux",
+     target_os = "redox",
++    target_os = "aero",
+ ))]
+ pub(crate) use self::epoll::{event, Event, Events, Selector};
+ 
+diff --git a/src/sys/unix/waker.rs b/src/sys/unix/waker.rs
+index de88e31..714ac55 100644
+--- a/src/sys/unix/waker.rs
++++ b/src/sys/unix/waker.rs
+@@ -1,4 +1,4 @@
+-#[cfg(any(target_os = "linux", target_os = "android"))]
++#[cfg(any(target_os = "linux", target_os = "android", target_os = "aero"))]
+ mod eventfd {
+     use crate::sys::Selector;
+     use crate::{Interest, Token};
+@@ -58,7 +58,7 @@ mod eventfd {
+     }
+ }
+ 
+-#[cfg(any(target_os = "linux", target_os = "android"))]
++#[cfg(any(target_os = "linux", target_os = "android", target_os = "aero"))]
+ pub use self::eventfd::Waker;
+ 
+ #[cfg(any(target_os = "freebsd", target_os = "ios", target_os = "macos"))]
+-- 
+2.38.1
+

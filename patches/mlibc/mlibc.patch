@@ -1,12 +1,13 @@
-From 9ad862a1edb6ce5b86fc4fa49e8ce365af507f47 Mon Sep 17 00:00:00 2001
+From 8854e64e2fbfdbe7e15d35aa8814c173480784d6 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sat, 12 Nov 2022 18:58:33 +1100
-Subject: [PATCH] yes
+Date: Sun, 20 Nov 2022 14:45:27 +1100
+Subject: [PATCH] <xxx>
 
-Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                              |  2 +
+ options/ansi/generic/stdlib-stubs.cpp   |  2 +-
  options/glibc/generic/execinfo.cpp      |  5 +-
+ options/posix/generic/dlfcn-stubs.cpp   |  1 +
  options/posix/generic/termios-stubs.cpp |  5 +-
  options/rtdl/generic/linker.cpp         |  2 +-
  sysdeps/aero/generic/aero.cpp           | 38 ++++++------
@@ -15,7 +16,7 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  sysdeps/aero/generic/time.cpp           | 24 ++++++++
  sysdeps/aero/include/aero/syscall.h     |  6 ++
  sysdeps/aero/meson.build                |  1 +
- 10 files changed, 155 insertions(+), 30 deletions(-)
+ 12 files changed, 157 insertions(+), 31 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -28,6 +29,19 @@ index fdd60a0..9f811f4 100644
  .vscode
 +# clangd cache files:
 +.cache
+diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
+index c0e54fe..d6f92f3 100644
+--- a/options/ansi/generic/stdlib-stubs.cpp
++++ b/options/ansi/generic/stdlib-stubs.cpp
+@@ -392,7 +392,7 @@ int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
+ 			mlibc::code_seq<const char> nseq{mb, mb + max_size};
+ 			auto e = cc->decode_wtranscode(nseq, wseq, mbtowc_state);
+ 			if (e != mlibc::charcode_error::null)
+-				__ensure(!"decode_wtranscode() errors are not handled");
++				return -1;
+ 
+ 			return nseq.it - mb;
+ 		} else {
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
 index 3474615..10a2109 100644
 --- a/options/glibc/generic/execinfo.cpp
@@ -45,6 +59,18 @@ index 3474615..10a2109 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
+diff --git a/options/posix/generic/dlfcn-stubs.cpp b/options/posix/generic/dlfcn-stubs.cpp
+index fc9fd84..ab57631 100644
+--- a/options/posix/generic/dlfcn-stubs.cpp
++++ b/options/posix/generic/dlfcn-stubs.cpp
+@@ -27,6 +27,7 @@ char *dlerror(void) {
+ 
+ [[gnu::noinline]]
+ void *dlopen(const char *file, int flags) {
++	mlibc::infoLogger() << "mlibc memes: " << file << frg::endlog;
+ 	auto ra = __builtin_extract_return_addr(__builtin_return_address(0));
+ 	return __dlapi_open(file, flags, ra);
+ }
 diff --git a/options/posix/generic/termios-stubs.cpp b/options/posix/generic/termios-stubs.cpp
 index 3e621ad..583c1f5 100644
 --- a/options/posix/generic/termios-stubs.cpp
