@@ -54,7 +54,7 @@ If you are building Aero with sysroot, run the following helper script to instal
 ```sh
 ./tools/deps.sh
 ```
-Note: If your host operating system is not in the list below, you will need to determine the dependency packages' names for your package manager.
+Note: If your host operating system is not in the list below, you will need to determine the dependency packages' names for your package manager (contributions to this tool are welcome!)
 - Arch Linux (pacman)
 - Arch Linux-based (pacman)
 - macOS (Homebrew)
