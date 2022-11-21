@@ -20,7 +20,7 @@ else
 	# TODO: support more operating systems
 fi
 
-DEPSDIR='.'
+DEPSDIR='./tools/deps'
 DEPSFILE="$DEPSDIR/deps_$PLATFORM"
 
 echo "$PREFIX \`$PLATFORM\` system detected"
