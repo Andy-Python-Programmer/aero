@@ -4,7 +4,6 @@
 #  dependency installer script
 #
 #  note: should be replaced as part of build system rework
-
 PREFIX='deps.sh>'
 PLATFORM='unknown'
 PKGMAN='unknown'
@@ -20,7 +19,8 @@ else
 	# TODO: support more operating systems
 fi
 
-DEPSDIR='./tools/deps'
+PARENTDIR=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+DEPSDIR="$PARENTDIR/deps"
 DEPSFILE="$DEPSDIR/deps_$PLATFORM"
 
 echo "$PREFIX \`$PLATFORM\` system detected"
