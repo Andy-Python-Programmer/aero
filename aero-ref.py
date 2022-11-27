@@ -1,132 +1,54 @@
-def download_userland_host_rust():
-    out_file = os.path.join(BUNDLED_DIR, "host-rust-prebuilt.tar.gz")
+# Slowly deleting code from this file as things are implemented
+# in Rust—the goal is to see what's left to write
 
-    # we have already cloned the toolchain
-    if os.path.exists(out_file):
-        return
+#!/usr/bin/env python3
 
-    log_info("downloading prebuilt userland host rust toolchain")
+# Copyright (C) 2021-2022 The Aero Project Developers.
+#
+# This file is part of The Aero Project.
+#
+# Aero is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Aero is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-    cmd = r"""
-    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate "https://docs.google.com/uc?export=download&id=FILE_HASH" -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=FILE_HASH" -O OUTPUT_FILE && rm -rf /tmp/cookies.txt
-    """.replace("FILE_HASH", "1TTC9qa1z-KdLaQkhgMCYxLE5nuKg4gcx").replace("OUTPUT_FILE", out_file)
+import argparse
+import json
+import os
+import platform
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
 
-    subprocess.run(cmd, shell=True)
+from typing import List
 
-    log_info("extracting prebuilt userland host rust toolchain")
+class BuildInfo:
+    args: argparse.Namespace
+    target_arch: str
 
-    # the toolchain is compressed, so we need to extract it
-    file = tarfile.open(out_file)
-    file.extractall(os.path.join(BUNDLED_DIR, "host-rust-prebuilt"))
-    file.close()
-
-
-def get_userland_tool():
-    toolchain = os.path.join(SYSROOT_DIR, "tools")
-
-    if os.path.exists(toolchain):
-        return toolchain
-
-    return os.path.join(BUNDLED_DIR, "host-rust-prebuilt/aero")
+    def __init__(self, target_arch: str, args: argparse.Namespace):
+        self.target_arch = target_arch
+        self.args = args
 
 
-def get_userland_package():
-    toolchain = os.path.join(SYSROOT_DIR, "packages")
-
-    if os.path.exists(toolchain):
-        return toolchain
-
-    return os.path.join(BUNDLED_DIR, "host-rust-prebuilt/aero")
-
+def get_userland_tool(): return os.path.join(SYSROOT_DIR, "tools")
+def get_userland_package(): return os.path.join(SYSROOT_DIR, "packages")
 
 def remove_prefix(string: str, prefix: str):
     if string.startswith(prefix):
         return string[len(prefix):]
     else:
         return string[:]
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="utility used to build aero kernel and userland")
-
-    check_test = parser.add_mutually_exclusive_group()
-
-    check_test.add_argument('--clean',
-                            default=False,
-                            action='store_true',
-                            help='removes the build artifacts')
-
-    check_test.add_argument('--check',
-                            default=False,
-                            action='store_true',
-                            help='checks if aero builds correctly without packaging and running it')
-
-    check_test.add_argument('--test',
-                            default=False,
-                            action='store_true',
-                            help='runs the aero test suite')
-
-    check_test.add_argument('--document',
-                            default=False,
-                            action='store_true',
-                            help='generates the documentation for the aero kernel')
-
-    parser.add_argument('--debug',
-                        default=False,
-                        action='store_true',
-                        help='builds the kernel and userland in debug mode')
-
-    parser.add_argument('--no-run',
-                        default=False,
-                        action='store_true',
-                        help='doesn\'t run the built image in emulator when applicable')
-
-    parser.add_argument('--only-run',
-                        default=False,
-                        action='store_true',
-                        help='runs aero without rebuilding. ignores any build-related flags')
-
-    parser.add_argument('--bios',
-                        type=str,
-                        default='legacy',
-                        choices=['legacy', 'uefi'],
-                        help='run aero using the selected BIOS')
-
-    parser.add_argument('--features',
-                        type=lambda x: x.split(','),
-                        default=[],
-                        help='additional features to build the kernel with')
-
-    parser.add_argument('--target',
-                        default='x86_64-aero_os',
-                        help='override the target triple the kernel will be built for')
-
-    parser.add_argument('--la57',
-                        default=False,
-                        action='store_true',
-                        help='run emulator with 5 level paging support')
-
-    parser.add_argument('--sysroot',
-                        default=False,
-                        action='store_true',
-                        help='build the full userland sysroot. If disabled, then the sysroot will only contain the aero_shell and the init binaries')
-
-    parser.add_argument('--disable-kvm',
-                        default=False,
-                        action='store_true',
-                        help='disable KVM acceleration even if its available')
-
-    parser.add_argument('remaining',
-                        nargs=argparse.REMAINDER,
-                        help='additional arguments to pass as the emulator')
-
-    parser.add_argument('--memory',
-                        default='9800M',
-                        help='amount of memory to allocate to QEMU')
-
-    return parser.parse_args()
-
 
 def run_command(args, **kwargs):
     output = subprocess.run(args, **kwargs)
@@ -149,7 +71,8 @@ def download_bundled():
                     '--depth', '1', LIMINE_URL, limine_path])
 
     if not os.path.exists(SYSROOT_DIR):
-        download_userland_host_rust()
+        log_info("building minimal sysroot")
+        build_userland_sysroot(True)
 
 
 def extract_artifacts(stdout):
@@ -209,7 +132,7 @@ def symlink_rel(src, dst):
     os.symlink(rel_path_src, dst)
 
 
-def build_userland_sysroot(args):
+def build_userland_sysroot(minimal):
     if not os.path.exists(SYSROOT_DIR):
         os.mkdir(SYSROOT_DIR)
 
@@ -238,31 +161,28 @@ def build_userland_sysroot(args):
     if not os.path.islink(blink):
         # symlink the bootstrap.yml file in the src root to sysroot/bootstrap.link
         symlink_rel('bootstrap.yml', blink)
+    
+    def run_xbstrap(args):
+        try:
+            run_command(['xbstrap', *args], cwd=SYSROOT_DIR)
+        except FileNotFoundError:
+            run_command([f'{os.environ["HOME"]}/.local/bin/xbstrap', *args], cwd=SYSROOT_DIR)
 
-    os.chdir(SYSROOT_DIR)
-
-    args = {
-        "update": True,
-        "all": True,
-        "dry_run": False,
-        "check": False,
-        "recursive": False,
-        "paranoid": False,
-        "reset": False,
-        "hard_reset": False,
-        "only_wanted": False,
-        "keep_going": False,
-
-        "progress_file": None,  # file that receives machine-ready progress notifications
-        "reconfigure": False,
-        "rebuild": False
-    }
-
-    namespace = argparse.Namespace(**args)
-    xbstrap.do_install(namespace)
+    if minimal:
+        run_xbstrap(['install', '-u', 'bash', 'coreutils'])
+    else:
+        run_xbstrap(['install', '-u', '--all'])
 
 
 def build_userland(args):
+    # We need to check if we have host-cargo in-order for us to build
+    # our rust userland applications in `userland/`.
+    host_cargo = os.path.join(SYSROOT_DIR, "tools/host-cargo")
+
+    if not os.path.exists(host_cargo):
+        log_error("host-cargo not built as a part of the sysroot, skipping compilation of `userland/`")
+        return []
+
     HOST_CARGO = "host-cargo/bin/cargo"
     HOST_RUST = "host-rust/bin/rustc"
     HOST_GCC = "host-gcc/bin/x86_64-aero-gcc"
@@ -345,45 +265,11 @@ def prepare_iso(args, kernel_bin, user_bins):
     shutil.copy(os.path.join(limine_path, 'BOOTX64.EFI'), efi_boot)
 
     sysroot_dir = os.path.join(SYSROOT_DIR, 'system-root')
-    shutil.copytree(BASE_FILES_DIR, sysroot_dir, dirs_exist_ok=True)
-
-    # dynamic linker (ld.so)
-    mlibc = os.path.join(get_userland_package(), "mlibc")
-    # gcc libraries required for rust programs
-    gcc = os.path.join(get_userland_package(), "gcc")
-
-    # FIXME
-    if "host-rust-prebuilt" in str(mlibc):
-        shutil.copytree(mlibc, sysroot_dir, dirs_exist_ok=True)
-        shutil.copytree(gcc, sysroot_dir, dirs_exist_ok=True)
-
     for file in user_bins:
         bin_name = os.path.basename(file)
-        shutil.copy(file, os.path.join(sysroot_dir, "usr", "bin", bin_name))
-
-    def find(path) -> List[str]:
-        _, find_output, _ = run_command(['find', '.', '-type', 'f'],
-                                        cwd=path,
-                                        stdout=subprocess.PIPE)
-
-        files_without_dot = filter(
-            lambda x: x != '.', find_output.decode('utf-8').splitlines())
-        files_without_prefix = map(
-            lambda x: remove_prefix(x, './'), files_without_dot)
-        files = list(files_without_prefix)
-
-        files.append("usr/lib/libiconv.so.2")
-        return files
-
-    files = find(sysroot_dir)
-
-    with open(os.path.join(iso_root, 'initramfs.cpio'), 'wb') as initramfs:
-        cpio_input = '\n'.join(files)
-        code, _, _ = run_command(['cpio', '-o', '-v'],
-                                 cwd=sysroot_dir,
-                                 stdout=initramfs,
-                                 stderr=subprocess.PIPE,
-                                 input=cpio_input.encode('utf-8'))
+        dest_dir = os.path.join(sysroot_dir, "usr", "bin")
+        os.makedirs(dest_dir, exist_ok=True)
+        shutil.copy(file, os.path.join(dest_dir, bin_name))
 
     with open(os.path.join(iso_root, 'limine.cfg'), 'w') as limine_cfg:
         limine_cfg.write(LIMINE_TEMPLATE)
@@ -421,6 +307,13 @@ def prepare_iso(args, kernel_bin, user_bins):
 
         return None
 
+    # create the disk image
+    disk_path = os.path.join(BUILD_DIR, 'disk.img')
+
+    if not os.path.exists(disk_path):
+        log_info('creating disk image')
+        os.system('bash ./tools/mkimage.sh')
+
     return iso_path
 
 
@@ -431,7 +324,10 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
     qemu_args = ['-cdrom', iso_path,
                  '-m', args.memory,
                  '-smp', '1',
-                 '-serial', 'stdio']
+                 '-serial', 'stdio',
+                 '-drive', 'file=build/disk.img,if=none,id=NVME1,format=raw', '-device', 'nvme,drive=NVME1,serial=nvme',
+                 # Specify the boot order (where `d` is the first CD-ROM drive)
+                 '--boot', 'd']
 
     if args.bios == 'uefi':
         qemu_args += ['-bios',
@@ -548,6 +444,7 @@ def is_kvm_supported() -> bool:
 
 
 def main():
+    t0 = time.time()
     args = parse_args()
 
     # arch-aero_os
@@ -565,10 +462,6 @@ def main():
 
         if not os.path.exists(iso_path):
             user_bins = build_userland(args)
-
-            if not user_bins:
-                return
-
             kernel_bin = build_kernel(args)
 
             if not kernel_bin or args.check:
@@ -587,17 +480,13 @@ def main():
         if os.path.exists(userland_target):
             shutil.rmtree(userland_target)
     elif args.sysroot:
-        build_userland_sysroot(args)
+        build_userland_sysroot(False)
     elif args.document:
         build_kernel(args)
 
         generate_docs(args)
     else:
         user_bins = build_userland(args)
-
-        if not user_bins:
-            return
-
         kernel_bin = build_kernel(args)
 
         if not kernel_bin or args.check:
@@ -606,6 +495,8 @@ def main():
         kernel_bin = kernel_bin[0]
         iso_path = prepare_iso(args, kernel_bin, user_bins)
 
+        t1 = time.time()
+        log_info(f"build completed in {t1 - t0:.2f} seconds")
         if not args.no_run:
             run_in_emulator(build_info, iso_path)
 

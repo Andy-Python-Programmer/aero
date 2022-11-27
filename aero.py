@@ -29,32 +29,6 @@ import time
 
 from typing import List
 
-
-def log_info(msg):
-    """
-    Logs a message with info log level.
-    """
-    print(f"\033[1m\033[92minfo\033[0m: {msg}")
-
-
-def log_error(msg):
-    """
-    Logs a message with error log level.
-    """
-    print(f"\033[1m\033[91merror\033[0m: {msg}")
-
-
-# Make sure requests is installed
-try:
-    import requests
-    import xbstrap
-except ImportError:
-    log_error('Please install required libraires using the following command:')
-    log_error(' - python3 -m pip install requests xbstrap')
-
-    sys.exit(0)
-
-
 OVMF_URL = 'https://github.com/aero-os/ovmf-prebuilt'
 LIMINE_URL = 'https://github.com/limine-bootloader/limine'
 
@@ -78,7 +52,6 @@ CMDLINE=term-background=background theme-background=0x50000000
 MODULE_PATH=boot:///term_background.bmp
 MODULE_CMDLINE=background
 """
-
 
 class BuildInfo:
     args: argparse.Namespace

@@ -1,11 +1,12 @@
 [package]
 name = "aero_build"
+description = "Utility used to build aero kernel and userland"
 version = "0.1.0"
 authors = ["Joshua Price <jwpjr567@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-# gumdrop
 # todo: set as few feature flags as required
 ureq = "2.5.0"
 execute = "0.2.11"
+clap = { version = "4.0.27", features = ["derive"] }
