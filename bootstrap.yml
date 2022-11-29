@@ -225,6 +225,23 @@ sources:
           NOCONFIGURE: 'yes'
 
 tools:
+  - name: host-cmake
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.kitware.com/cmake/cmake.git'
+      tag: 'v3.24.2'
+      version: '3.24.2'
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/bootstrap'
+        - '--prefix=@PREFIX@'
+        - '--parallel=@PARALLELISM@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+      - args: ['ln', '-sf', '@SOURCE_ROOT@/userland/aero.cmake', '@PREFIX@/share/cmake-3.24/Modules/Platform/']
+
   # We could run an external pkg-config; however, we need the aclocal files.
   # The easiest way to ensure that they are available is to just install pkg-config.
   - name: host-pkg-config
@@ -671,25 +688,41 @@ packages:
   #       - '@THIS_COLLECT_DIR@/usr'
   #       - '-j@PARALLELISM@'
 
-  - name: socket_test
-    source:
-      subdir: bundled
-      git: 'https://github.com/streaksu/socket_test'
-      branch: 'main'
-    tools_required:
-      - host-gcc
-    pkgs_required:
-      - mlibc
-    configure:
-      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
-    build:
-      - args: ['make', '-j@PARALLELISM@']
-        environ:
-          CC: "x86_64-aero-gcc"
-      - args: ['make', 'install']
-        environ:
-          PREFIX: '/usr'
-          DESTDIR: '@THIS_COLLECT_DIR@'
+  # - name: llvm
+  #   from_source: llvm
+  #   tools_required:
+  #     - host-gcc
+  #     - host-cmake
+  #   pkgs_required:
+  #     - mlibc
+  #     - zlib
+  #   revision: 3
+  #   configure:
+  #     - args:
+  #       - 'cmake'
+  #       - '-GNinja'
+  #       - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/userland/CMakeToolchain-x86_64.txt'
+  #       - '-DCMAKE_INSTALL_PREFIX=/usr'
+  #       # We really have to build LLVM in Release mode.
+  #       # Building it in debug mode produces tens of GiB of debugging info.
+  #       - '-DCMAKE_BUILD_TYPE=Release'
+  #       - '-DLLVM_LINK_LLVM_DYLIB=ON'
+  #       # RTTI affects the ABI. Hence, we enable it.
+  #       - '-DLLVM_ENABLE_RTTI=ON'
+  #       - '-DLLVM_TARGETS_TO_BUILD=X86'
+  #       - '-DLLVM_TARGET_ARCH=X86_64'
+  #       - '-DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-aero'
+  #       - '-DLLVM_HOST_TRIPLE=x86_64-aero'
+  #       # Disable linking against ncurses, which we do not build with -fPIC.
+  #       - '-DLLVM_ENABLE_TERMINFO=OFF'
+  #       # Suppress developer warnings
+  #       - '-Wno-dev'
+  #       - '@THIS_SOURCE_DIR@/llvm'
+  #   build:
+  #     - args: ['ninja']
+  #     - args: ['ninja', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'
 
   - name: mlibc-headers
     from_source: mlibc

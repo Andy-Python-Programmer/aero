@@ -431,6 +431,56 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: mesa
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/mesa/mesa.git'
+      tag: 'mesa-21.3.5'
+      version: '21.3.5'
+      tools_required:
+        - host-pkg-config
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - wayland-scanner
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+    pkgs_required:
+      - mlibc
+      - libdrm
+      - zlib
+      - libxrandr
+      - libxfixes
+      - libx11
+      - libxext
+      - libxcb
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        # The debug build type enables some additional output from Mesa.
+        - '--buildtype=debugoptimized'
+        #- '--buildtype=debug'
+        - '-Dglx=gallium-xlib'
+        - '-Dplatforms=x11'
+        # The Gallium swrast driver seems to be preferred over dri-swrast.
+        - '-Ddri-drivers='
+        - '-Dgallium-drivers=swrast'
+        - '-Dvulkan-drivers='
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   # `libxkbfile` is used by the X servers and utilities to parse the XKB
   # configuration data files.
   - name: libxkbfile
@@ -628,6 +678,37 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: libepoxy
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/anholt/libepoxy.git'
+      tag: '1.5.10'
+      version: '1.5.10'
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: "@OPTION:x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - mesa
+      - xorg-proto
+      - libx11
+    configure:
+      - args:
+          - 'meson'
+          - '--cross-file'
+          - '@SOURCE_ROOT@/userland/cross-file.ini'
+          - '--prefix=/usr'
+          - '-Degl=no'
+          - '-Dtests=false'
+          - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   # The X server accepts requests from client applications to create windows,
   # which are (normally rectangular) "virtual screens" that the client program
   # can draw into.
@@ -657,6 +738,7 @@ packages:
       - xorg-util-macros
       - xorg-proto
       - openssl
+      - libepoxy
       - libxkbfile
       - libxfont2
       - pixman
