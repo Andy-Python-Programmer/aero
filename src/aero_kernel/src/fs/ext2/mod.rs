@@ -205,7 +205,35 @@ impl INode {
         let entries_per_block = superblock.entries_per_block();
         let block_size = superblock.block_size();
 
-        if block <= entries_per_block {
+        if block >= entries_per_block {
+            // doubly indirect block
+            block -= entries_per_block;
+
+            let index = block / entries_per_block;
+            let mut indirect_block = MaybeUninit::<u32>::uninit();
+
+            if index >= entries_per_block {
+                // treply indirect block
+                todo!()
+            } else {
+                let block_ptrs = self.inode.read().data_ptr[13] as usize * block_size;
+                let offset = block_ptrs + (index * core::mem::size_of::<u32>());
+
+                fs.block
+                    .read(offset, indirect_block.as_bytes_mut())
+                    .unwrap();
+            }
+
+            // SAFETY: We have initialized the variable above.
+            let indirect_block = unsafe { indirect_block.assume_init() } as usize * block_size;
+            let offset = indirect_block + (block % entries_per_block) * core::mem::size_of::<u32>();
+
+            let mut res = MaybeUninit::<u32>::uninit();
+            fs.block.read(offset, res.as_bytes_mut());
+
+            // SAFETY: We have initialized the variable above.
+            return Some(unsafe { res.assume_init() });
+        } else {
             // singly indirect block
             let block_ptrs = self.inode.read().data_ptr[12] as usize * block_size;
             let offset = block_ptrs + (block * core::mem::size_of::<u32>());
@@ -216,30 +244,6 @@ impl INode {
             // SAFETY: We have initialized the variable above.
             return Some(unsafe { res.assume_init() });
         }
-
-        block -= entries_per_block;
-
-        if block <= entries_per_block {
-            // doubly indirect block
-            let block_ptrs = self.inode.read().data_ptr[13] as usize * block_size;
-            let offset = block_ptrs + ((block / entries_per_block) * core::mem::size_of::<u32>());
-
-            let mut indirect_block = MaybeUninit::<u32>::uninit();
-            fs.block.read(offset, indirect_block.as_bytes_mut());
-
-            // SAFETY: We have initialized the variable above.
-            let indirect_block = unsafe { indirect_block.assume_init() } as usize * block_size;
-
-            let offset = indirect_block + entries_per_block * core::mem::size_of::<u32>();
-
-            let mut res = MaybeUninit::<u32>::uninit();
-            fs.block.read(offset, res.as_bytes_mut());
-
-            // SAFETY: We have initialized the variable above.
-            return Some(unsafe { res.assume_init() });
-        }
-
-        todo!("triply indirect block")
     }
 
     pub fn make_inode(
@@ -464,12 +468,20 @@ impl INodeInterface for INode {
         let path_len = inode.size_lower as usize;
         let data_bytes: &[u8] = bytemuck::cast_slice(&inode.data_ptr);
 
-        assert!(path_len <= data_bytes.len() - 1);
+        if path_len <= data_bytes.len() {
+            let path_bytes = &data_bytes[..path_len];
+            let path = core::str::from_utf8(path_bytes).or(Err(FileSystemError::InvalidPath))?;
 
-        let path_bytes = &data_bytes[..path_len];
-        let path = core::str::from_utf8(path_bytes).or(Err(FileSystemError::InvalidPath))?;
+            return Ok(path.into());
+        } else {
+            let mut buffer = Box::<[u8]>::new_uninit_slice(path_len);
+            self.read(0, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
 
-        return Ok(path.into());
+            let path_bytes = unsafe { buffer.assume_init() };
+            let path = core::str::from_utf8(&path_bytes).or(Err(FileSystemError::InvalidPath))?;
+
+            return Ok(path.into());
+        }
     }
 
     fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> super::Result<PhysFrame> {
@@ -607,6 +619,12 @@ impl Ext2 {
         if superblock.magic != SuperBlock::MAGIC {
             return None;
         }
+
+        log::trace!(
+            "ext2: initialized (block_size={}, entries_per_block={})",
+            superblock.block_size(),
+            superblock.entries_per_block()
+        );
 
         assert_eq!(
             superblock.inode_size as usize,
