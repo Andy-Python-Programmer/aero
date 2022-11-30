@@ -26,8 +26,8 @@ if [[ "$(uname)" == 'Linux' ]]; then
 # TODO: only supports arch-based distros at the moment
 PLATFORM='linux'
 PKGMAN="pacman"
-PKGPREFIX="yes | $SUID_BINARY"
-PKGINSTALL="-S"
+PKGPREFIX="$SUID_BINARY"
+PKGINSTALL="-S --noconfirm"
 PKGQUERY="-Q"
 elif [[ "$(uname)" == 'Darwin' ]]; then
 PLATFORM='darwin'
