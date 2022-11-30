@@ -52,10 +52,10 @@ while read -r line; do
 	if [[ "$pkg" != *"#"* ]]; then
 		echo -n "installing $pkg... "
 		# TODO: handle potential errors in installation commands
-		if [[ "$SILENT" == "true" ]]; then
-			$PKGPREFIX $PKGMAN $PKGINSTALL $pkg &>/dev/null
-		else
+		if [[ "$VERBOSE" == "true" ]]; then
 			$PKGPREFIX $PKGMAN $PKGINSTALL $pkg
+		else
+			$PKGPREFIX $PKGMAN $PKGINSTALL $pkg &>/dev/null
 		fi
 
 		if grep -q "$pkg" <<< "$($PKGMAN $PKGQUERY)"; then
