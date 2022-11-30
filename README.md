@@ -54,6 +54,12 @@ If you are building Aero with sysroot, run the following helper script to instal
 ```sh
 ./tools/deps.sh
 ```
+You can optionally set the environment variable `SILENT` to `true`, which will silence the output of your package manager,
+ignoring errors and warnings.
+```sh
+SILENT=true ./tools/deps.sh
+```
+
 Note: If your host operating system is not in the list below, you will need to determine the dependency packages' names for your package manager (contributions to this tool are welcome!)
 - Arch Linux (pacman)
 - Arch Linux-based (pacman)
