@@ -7,15 +7,6 @@
 
 PREFIX='deps.sh>'
 
-# setuid binary detection - supports 'sudo' and 'opendoas'
-SUID_BINARY='unknown'
-if command -v sudo; then
-	SUID_BINARY=$(which sudo)
-else
-	echo "$PREFIX sudo not found, attempting to use opendoas"
-	SUID_BINARY=$(which doas)
-fi
-
 # platform/os detection - supports macOS and arch-based distros 
 PLATFORM='unknown'
 PKGMAN='unknown'
@@ -38,6 +29,16 @@ else
 	echo "$PREFIX unsupported OS"
 	# TODO: support more operating systems
 fi
+
+# setuid binary detection - supports 'sudo' and 'opendoas'
+SUID_BINARY='unknown'
+if command -v sudo; then
+	SUID_BINARY=$(which sudo)
+else
+	echo "$PREFIX sudo not found, attempting to use opendoas"
+	SUID_BINARY=$(which doas)
+fi
+
 
 PARENTDIR=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 DEPSDIR="$PARENTDIR/deps"
