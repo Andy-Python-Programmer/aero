@@ -5,6 +5,8 @@
 #
 #  note: should be replaced as part of build system rework
 
+set -e
+
 PREFIX='deps.sh>'
 
 # platform/os detection - supports macOS and arch-based distros 
