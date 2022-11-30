@@ -32,7 +32,7 @@ python
 python-pip 
 python-mako 
 xcb-proto 
-xorriso 
+libisoburn
 boost-libs 
 cmake
 #
