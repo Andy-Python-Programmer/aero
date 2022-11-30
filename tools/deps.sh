@@ -4,16 +4,36 @@
 #  dependency installer script
 #
 #  note: should be replaced as part of build system rework
+
 PREFIX='deps.sh>'
+
+# setuid binary detection - supports 'sudo' and 'opendoas'
+SUID_BINARY='unknown'
+if command -v sudo; then
+	SUID_BINARY=$(which sudo)
+else
+	echo "$PREFIX sudo not found, attempting to use opendoas"
+	SUID_BINARY=$(which doas)
+fi
+
+# platform/os detection - supports macOS and arch-based distros 
 PLATFORM='unknown'
 PKGMAN='unknown'
+PKGPREFIX=''
+PKGINSTALL=''
+PKGQUERY=''
 if [[ "$(uname)" == 'Linux' ]]; then
 # TODO: only supports arch-based distros at the moment
 PLATFORM='linux'
-PKGMAN='pacman -S'
+PKGMAN="pacman"
+PKGPREFIX="yes | $SUID_BINARY"
+PKGINSTALL="-S"
+PKGQUERY="-Q"
 elif [[ "$(uname)" == 'Darwin' ]]; then
 PLATFORM='darwin'
-PKGMAN='brew install'
+PKGMAN='brew'
+PKGINSTALL='install'
+PKGQUERY='list'
 else
 	echo "$PREFIX unsupported OS"
 	# TODO: support more operating systems
@@ -32,8 +52,17 @@ while read -r line; do
 	if [[ "$pkg" != *"#"* ]]; then
 		echo -n "installing $pkg... "
 		# TODO: handle potential errors in installation commands
-		$PKGMAN $pkg &>/dev/null
-		echo "done" 
+		if [[ "$SILENT" == "true" ]]; then
+			$PKGPREFIX $PKGMAN $PKGINSTALL $pkg &>/dev/null
+		else
+			$PKGPREFIX $PKGMAN $PKGINSTALL $pkg
+		fi
+
+		if grep -q "$pkg" <<< "$($PKGMAN $PKGQUERY)"; then
+			echo done
+		else
+			echo "FAILED"
+		fi
 	fi
 done <$DEPSFILE
 
