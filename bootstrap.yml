@@ -70,7 +70,7 @@ sources:
     subdir: 'bundled'
     git: 'https://github.com/rust-lang/rust.git'
     branch: 'master'
-    commit: 'ff0ffda6b3c3ea392c6cf88c676133666f491e5c'
+    commit: '22e491ac7ed454d34669151a8b6464cb643c9b41'
 
   - name: llvm
     subdir: 'bundled'
@@ -533,6 +533,7 @@ packages:
       version: '0.10.1'
     tools_required:
       # - host-cargo
+      - host-rust
       - host-gcc
     sources_required:
       - rust-patched-libs

@@ -306,15 +306,14 @@ def build_userland_sysroot(minimal):
 
 
 def build_userland(args):
-    # We need to check if we have host-cargo in-order for us to build
+    # We need to check if we have host-rust in-order for us to build
     # our rust userland applications in `userland/`.
-    host_cargo = os.path.join(SYSROOT_DIR, "tools/host-cargo")
+    host_cargo = os.path.join(SYSROOT_DIR, "tools/host-rust")
 
     if not os.path.exists(host_cargo):
-        log_error("host-cargo not built as a part of the sysroot, skipping compilation of `userland/`")
+        log_error("host-rust not built as a part of the sysroot, skipping compilation of `userland/`")
         return []
 
-    HOST_CARGO = "host-cargo/bin/cargo"
     HOST_RUST = "host-rust/bin/rustc"
     HOST_GCC = "host-gcc/bin/x86_64-aero-gcc"
     HOST_BINUTILS = "host-binutils/x86_64-aero/bin"
@@ -323,7 +322,6 @@ def build_userland(args):
     tool_dir = get_userland_tool()
     pkg_dir = get_userland_package()
 
-    def get_cargo(): return os.path.join('..', tool_dir, HOST_CARGO)
     def get_rustc(): return os.path.join('..', tool_dir, HOST_RUST)
     def get_gcc(): return os.path.join('..', tool_dir, HOST_GCC)
     def get_binutils(): return os.path.join("..", tool_dir, HOST_BINUTILS)
@@ -348,9 +346,9 @@ def build_userland(args):
         command = 'check'
 
     if args.test:
-        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args], get_cargo())
+        return build_cargo_workspace('userland', 'build', ['--package', 'utest', *cmd_args])
     else:
-        return build_cargo_workspace('userland', command, cmd_args, get_cargo())
+        return build_cargo_workspace('userland', command, cmd_args)
 
     # TODO: Userland check
     # elif args.check:
