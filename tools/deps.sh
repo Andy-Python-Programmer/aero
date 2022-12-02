@@ -16,32 +16,18 @@ function log_error() { echo -e "$PREFIX ${RED}error${NC}: $1"; }
 
 PREFIX='deps.sh>'
 
-# platform/os detection - supports macOS and arch-based distros 
-PLATFORM='unknown'
 PKGMAN='unknown'
 PKGPREFIX=''
 PKGINSTALL=''
 PKGQUERY=''
-if [[ "$(uname)" == 'Linux' ]]; then
-# TODO: only supports arch-based distros at the moment
-PLATFORM='linux'
-PKGMAN="pacman"
-PKGPREFIX="$SUID_BINARY"
-PKGINSTALL="-S --noconfirm"
-PKGQUERY="-Q"
-elif [[ "$(uname)" == 'Darwin' ]]; then
-PLATFORM='darwin'
-PKGMAN='brew'
-PKGINSTALL='install'
-PKGQUERY='list'
-else
-	echo "$PREFIX unsupported OS"
-	# TODO: support more operating systems
-fi
 
 PARENTDIR=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+
+PLATFORM=$(uname)
 DEPSDIR="$PARENTDIR/deps"
-DEPSFILE="$DEPSDIR/deps_$PLATFORM"
+DEPSFILE="$DEPSDIR/deps_${PLATFORM,,}"
+
+. $DEPSFILE
 
 log_info "\`$PLATFORM\` system detected"
 log_info "installing packages from \`$DEPSFILE\` with \`$PKGMAN\`..."
@@ -51,24 +37,21 @@ if [ "$EUID" -ne 0 ]; then
 	exit
 fi
 
-while read -r line; do
-	# DEPSFILE comments are made with `#`
-	pkg=$(echo -n -e $line)
-	if [[ "$pkg" != *"#"* && -n "$pkg" ]]; then
-		echo -n "installing $pkg... "
-		# TODO: handle potential errors in installation commands
-		if [[ "$VERBOSE" == "true" ]]; then
-			$PKGPREFIX $PKGMAN $PKGINSTALL $pkg
-		else
-			$PKGPREFIX $PKGMAN $PKGINSTALL $pkg &>/dev/null
-		fi
+for pkg in "${packages[@]}"; do
+	echo -n "installing $pkg... "
 
-		if grep -q "$pkg" <<< "$($PKGMAN $PKGQUERY)"; then
-			echo -e "${GREEN}ok${NC}"
-		else
-			echo -e "${RED}FAILED${NC}"
-		fi
+	# TODO: handle potential errors in installation commands
+	if [[ "$VERBOSE" == "true" ]]; then
+		install_package $pkg
+	else
+		install_package $pkg &>/dev/null
 	fi
-done <$DEPSFILE
+
+	if query_package $pkg; then
+		echo -e "${GREEN}ok${NC}"
+	else
+		echo -e "${RED}FAILED${NC}"
+	fi
+done
 
 log_info "$PREFIX completed"
