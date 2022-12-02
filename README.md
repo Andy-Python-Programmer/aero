@@ -52,6 +52,7 @@ Before building Aero, you need the following things installed:
 
 If you are building Aero with sysroot, run the following helper script to install additional dependencies.
 ```sh
+# make sure to run the script with root privileges!
 ./tools/deps.sh
 ```
 You can optionally set the environment variable `VERBOSE` to `true`, which will pass through the output of your package manager for troubleshooting.
