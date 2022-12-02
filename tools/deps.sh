@@ -7,6 +7,13 @@
 
 set -e
 
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+NC='\033[0m' # no colour
+
+function log_info() { echo -e "$PREFIX ${GREEN}info${NC}: $1"; }
+function log_error() { echo -e "$PREFIX ${RED}error${NC}: $1"; }
+
 PREFIX='deps.sh>'
 
 # platform/os detection - supports macOS and arch-based distros 
@@ -32,27 +39,22 @@ else
 	# TODO: support more operating systems
 fi
 
-# setuid binary detection - supports 'sudo' and 'opendoas'
-SUID_BINARY='unknown'
-if command -v sudo; then
-	SUID_BINARY=$(which sudo)
-else
-	echo "$PREFIX sudo not found, attempting to use opendoas"
-	SUID_BINARY=$(which doas)
-fi
-
-
 PARENTDIR=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 DEPSDIR="$PARENTDIR/deps"
 DEPSFILE="$DEPSDIR/deps_$PLATFORM"
 
-echo "$PREFIX \`$PLATFORM\` system detected"
-echo "$PREFIX installing packages from \`$DEPSFILE\` with \`$PKGMAN\`..."
+log_info "\`$PLATFORM\` system detected"
+log_info "installing packages from \`$DEPSFILE\` with \`$PKGMAN\`..."
+
+if [ "$EUID" -ne 0 ]; then
+	log_error "please run as root"
+	exit
+fi
 
 while read -r line; do
 	# DEPSFILE comments are made with `#`
 	pkg=$(echo -n -e $line)
-	if [[ "$pkg" != *"#"* ]]; then
+	if [[ "$pkg" != *"#"* && -n "$pkg" ]]; then
 		echo -n "installing $pkg... "
 		# TODO: handle potential errors in installation commands
 		if [[ "$VERBOSE" == "true" ]]; then
@@ -62,11 +64,11 @@ while read -r line; do
 		fi
 
 		if grep -q "$pkg" <<< "$($PKGMAN $PKGQUERY)"; then
-			echo done
+			echo -e "${GREEN}ok${NC}"
 		else
-			echo "FAILED"
+			echo -e "${RED}FAILED${NC}"
 		fi
 	fi
 done <$DEPSFILE
 
-echo "$PREFIX completed"
+log_info "$PREFIX completed"
