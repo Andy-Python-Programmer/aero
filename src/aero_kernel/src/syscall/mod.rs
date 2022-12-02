@@ -239,6 +239,7 @@ pub fn generic_do_syscall(
         SYS_UNAME => process::uname(b),
         SYS_WAITPID => process::waitpid(b, c, d),
         SYS_GETPID => process::getpid(),
+        SYS_GETPPID => process::getppid(),
         SYS_GETTID => process::gettid(),
         SYS_GETHOSTNAME => process::gethostname(b, c),
         SYS_SETHOSTNAME => process::sethostname(b, c),

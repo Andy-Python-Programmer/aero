@@ -18,7 +18,7 @@
  */
 
 use aero_syscall::signal::{SigAction, SigProcMask};
-use aero_syscall::{MMapFlags, MMapProt, SysInfo, SyscallError, Utsname};
+use aero_syscall::*;
 use spin::{Mutex, Once};
 
 use crate::acpi::aml;
@@ -157,10 +157,11 @@ pub fn log(msg: &str) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn waitpid(pid: usize, status: &mut u32, _flags: usize) -> Result<usize, SyscallError> {
+pub fn waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize, SyscallError> {
+    let flags = WaitPidFlags::from_bits_truncate(flags);
     let current_task = scheduler::get_scheduler().current_task();
 
-    Ok(current_task.waitpid(pid as isize, status)?)
+    Ok(current_task.waitpid(pid as isize, status, flags)?)
 }
 
 #[syscall]
@@ -224,6 +225,14 @@ pub fn backtrace() -> Result<usize, SyscallError> {
 #[syscall]
 pub fn getpid() -> Result<usize, SyscallError> {
     Ok(scheduler::get_scheduler().current_task().pid().as_usize())
+}
+
+#[syscall]
+pub fn getppid() -> Result<usize, SyscallError> {
+    Ok(scheduler::get_scheduler()
+        .current_task()
+        .parent_pid()
+        .as_usize())
 }
 
 #[syscall]

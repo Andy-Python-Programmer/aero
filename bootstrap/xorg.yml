@@ -709,6 +709,50 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: xorg-xinit
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/freedesktop/xorg-xinit'
+      tag: 'xinit-1.3.4'
+      version: '1.3.4'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-xorg-font-util
+        - host-xtrans
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-gcc
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - xorg-server
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+        - '--without-xauth'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['cp', '@SOURCE_ROOT@/extra-files/xorg/xinitrc', '@THIS_COLLECT_DIR@/etc/X11/xinit/xinitrc']
+
   # The X server accepts requests from client applications to create windows,
   # which are (normally rectangular) "virtual screens" that the client program
   # can draw into.

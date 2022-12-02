@@ -168,14 +168,6 @@ sources:
   # Rust patched crates end
   # ---------------------------------------------------------------------------
 
-  - name: host-bootstrap-cargo
-    subdir: 'bundled'
-    url: 'https://static.rust-lang.org/dist/2022-04-07/cargo-1.60.0-x86_64-unknown-linux-gnu.tar.xz'
-    format: 'tar.xz'
-    checksum: blake2b:d60239d5977bfcf1c6f2d973d9d27e93d6d138ae6e929deb016afde8cd8e0ff0bba8396f8fa62d5e738be7bde7b91e9aa406ec2440e1ab50451c5b9ad2d8fdfb
-    extract_path: 'cargo-1.60.0-x86_64-unknown-linux-gnu'
-    version: '0.60.0'
-
   - name: python
     subdir: 'bundled'
     patch-path-strip: 1
@@ -868,6 +860,7 @@ packages:
         - '--host=x86_64-aero'
         - '--prefix=/usr'
         - 'CFLAGS=-DSLOW_BUT_NO_HACKS -Wno-error'
+        - '--enable-install-program=hostname'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install']

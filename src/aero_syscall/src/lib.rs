@@ -77,6 +77,17 @@ bitflags::bitflags! {
     }
 }
 
+bitflags::bitflags! {
+    pub struct WaitPidFlags: usize {
+        const WNOHANG    = 1;
+        const WUNTRACED  = 2;
+        const WSTOPPED   = 2;
+        const WEXITED    = 4;
+        const WCONTINUED = 8;
+        const WNOWAIT    = 0x01000000;
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(isize)]
 pub enum SyscallError {
