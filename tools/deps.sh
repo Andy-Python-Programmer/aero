@@ -54,4 +54,4 @@ for pkg in "${packages[@]}"; do
 	fi
 done
 
-log_info "$PREFIX completed"
+log_info "completed"
