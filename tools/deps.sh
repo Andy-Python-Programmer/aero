@@ -46,7 +46,7 @@ for pkg in "${packages[@]}"; do
 	else
 		install_package $pkg &>/dev/null
 	fi
-
+	
 	if query_package $pkg; then
 		echo -e "${GREEN}ok${NC}"
 	else
