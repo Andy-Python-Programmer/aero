@@ -32,7 +32,7 @@ DEPSFILE="$DEPSDIR/deps_${PLATFORM,,}"
 log_info "\`$PLATFORM\` system detected"
 log_info "installing packages from \`$DEPSFILE\` with \`$PKGMAN\`..."
 
-if [ "$EUID" -ne 0 ]; then
+if [[ !("$PLATFORM" == "Darwin") && ("$EUID" -ne 0) ]]; then
 	log_error "please run as root"
 	exit
 fi
@@ -44,7 +44,7 @@ for pkg in "${packages[@]}"; do
 	if [[ "$VERBOSE" == "true" ]]; then
 		install_package $pkg
 	else
-		install_package $pkg &>/dev/null
+		install_package $pkg &>/dev/null 
 	fi
 
 	if query_package $pkg; then
