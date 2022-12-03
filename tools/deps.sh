@@ -44,7 +44,7 @@ for pkg in "${packages[@]}"; do
 	if [[ "$VERBOSE" == "true" ]]; then
 		install_package $pkg
 	else
-		install_package $pkg &>/dev/null 
+		install_package $pkg &>/dev/null
 	fi
 
 	if query_package $pkg; then
