@@ -47,4 +47,4 @@ packages=(
 )
 
 function install_package() { brew install $1; }
-function query_package() { brew list | grep -q $1; }
+function query_package() { brew list | { grep -q $1; cat > /dev/null;} }
