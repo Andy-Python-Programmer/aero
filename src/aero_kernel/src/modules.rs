@@ -31,7 +31,7 @@
 //! aero_kernel::module_exit!(hello_exit);
 //! ```
 
-use crate::{drivers, fs, utils::linker::LinkerSymbol};
+use crate::{drivers, fs};
 
 /// Inner helper function to make sure the function provided to the [module_init] macro
 /// has a valid function signature. This function returns the passed module init function as
