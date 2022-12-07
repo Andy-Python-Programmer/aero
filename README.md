@@ -61,9 +61,9 @@ VERBOSE=true ./tools/deps.sh
 ```
 
 Note: If your host operating system is not in the list below, you will need to determine the dependency packages' names for your package manager (contributions to this tool are welcome!)
-- Arch Linux (pacman)
-- Arch Linux-based (pacman)
-- macOS (Homebrew)
+- Arch Linux/based (pacman)
+- Debian Linux/based (apt)
+- macOS (homebrew)
 
 
 ## Hardware
