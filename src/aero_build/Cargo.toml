@@ -8,5 +8,8 @@ edition = "2021"
 [dependencies]
 # todo: set as few feature flags as required
 ureq = "2.5.0"
-execute = "0.2.11"
+# execute = "0.2.11"
 clap = { version = "4.0.27", features = ["derive"] }
+# todo: see if PR has been merged upstream
+stopwatch = { git = "https://github.com/jwpjrdev/rust-stopwatch.git" }
+serde_json = "1.0.89"

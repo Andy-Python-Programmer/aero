@@ -50,128 +50,128 @@ def remove_prefix(string: str, prefix: str):
     else:
         return string[:]
 
-def run_command(args, **kwargs):
-    output = subprocess.run(args, **kwargs)
+# def run_command(args, **kwargs):
+#     output = subprocess.run(args, **kwargs)
 
-    return output.returncode, output.stdout, output.stderr
-
-
-def download_bundled():
-    if not os.path.exists(BUNDLED_DIR):
-        os.makedirs(BUNDLED_DIR)
-
-    ovmf_path = os.path.join(BUNDLED_DIR, 'ovmf')
-    limine_path = os.path.join(BUNDLED_DIR, 'limine')
-
-    if not os.path.exists(ovmf_path):
-        run_command(['git', 'clone', '--depth', '1', OVMF_URL, ovmf_path])
-
-    if not os.path.exists(limine_path):
-        run_command(['git', 'clone', '--branch', 'v4.x-branch-binary',
-                    '--depth', '1', LIMINE_URL, limine_path])
-
-    if not os.path.exists(SYSROOT_DIR):
-        log_info("building minimal sysroot")
-        build_userland_sysroot(True)
+#     return output.returncode, output.stdout, output.stderr
 
 
-def extract_artifacts(stdout):
-    result = []
-    lines = stdout.splitlines()
+# def download_bundled():
+    # if not os.path.exists(BUNDLED_DIR):
+    #     os.makedirs(BUNDLED_DIR)
 
-    for line in lines:
-        info = json.loads(line)
-        executable = info['executable'] if 'executable' in info else None
+    # ovmf_path = os.path.join(BUNDLED_DIR, 'ovmf')
+    # limine_path = os.path.join(BUNDLED_DIR, 'limine')
 
-        if executable:
-            result.append(info['executable'])
+    # if not os.path.exists(ovmf_path):
+    #     run_command(['git', 'clone', '--depth', '1', OVMF_URL, ovmf_path])
 
-    return result
+    # if not os.path.exists(limine_path):
+    #     run_command(['git', 'clone', '--branch', 'v4.x-branch-binary',
+    #                 '--depth', '1', LIMINE_URL, limine_path])
 
-
-def build_cargo_workspace(cwd, command, args, cargo="cargo"):
-    code, _, _ = run_command([cargo, command, *args], cwd=cwd)
-
-    if code != 0:
-        return None
-
-    _, stdout, _ = run_command([cargo, command, *args, '--message-format=json'],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.DEVNULL,
-                               cwd=cwd)
-
-    return extract_artifacts(stdout)
+    # if not os.path.exists(SYSROOT_DIR):
+    #     log_info("building minimal sysroot")
+    #     build_userland_sysroot(True)
 
 
-def build_kernel(args):
-    command = 'build'
-    cmd_args = ['--package', 'aero_kernel',
-                '--target', f'.cargo/{args.target}.json']
+# def extract_artifacts(stdout):
+#     result = []
+#     lines = stdout.splitlines()
 
-    if not args.debug:
-        cmd_args += ['--release']
+#     for line in lines:
+#         info = json.loads(line)
+#         executable = info['executable'] if 'executable' in info else None
 
-    if args.test:
-        command = 'test'
-        cmd_args += ['--no-run']
-    elif args.check:
-        command = 'check'
-    elif args.document:
-        command = 'doc'
+#         if executable:
+#             result.append(info['executable'])
 
-    if args.features:
-        cmd_args += ['--features', ','.join(args.features)]
+#     return result
 
-    return build_cargo_workspace('src', command, cmd_args)
+
+# def build_cargo_workspace(cwd, command, args, cargo="cargo"):
+#     code, _, _ = run_command([cargo, command, *args], cwd=cwd)
+
+#     if code != 0:
+#         return None
+
+#     _, stdout, _ = run_command([cargo, command, *args, '--message-format=json'],
+#                                stdout=subprocess.PIPE,
+#                                stderr=subprocess.DEVNULL,
+#                                cwd=cwd)
+
+#     return extract_artifacts(stdout)
+
+
+# def build_kernel(args):
+    # command = 'build'
+    # cmd_args = ['--package', 'aero_kernel',
+    #             '--target', f'.cargo/{args.target}.json']
+
+    # if not args.debug:
+    #     cmd_args += ['--release']
+
+    # if args.test:
+    #     command = 'test'
+    #     cmd_args += ['--no-run']
+    # elif args.check:
+    #     command = 'check'
+    # elif args.document:
+    #     command = 'doc'
+
+    # if args.features:
+    #     cmd_args += ['--features', ','.join(args.features)]
+
+    # return build_cargo_workspace('src', command, cmd_args)
 
 
 # Helper function for symlink since os.symlink uses path
 # relative to the destination directory.
-def symlink_rel(src, dst):
-    rel_path_src = os.path.relpath(src, os.path.dirname(dst))
-    os.symlink(rel_path_src, dst)
+# def symlink_rel(src, dst):
+#     rel_path_src = os.path.relpath(src, os.path.dirname(dst))
+#     os.symlink(rel_path_src, dst)
 
 
-def build_userland_sysroot(minimal):
-    if not os.path.exists(SYSROOT_DIR):
-        os.mkdir(SYSROOT_DIR)
+# def build_userland_sysroot(minimal):
+    # if not os.path.exists(SYSROOT_DIR):
+    #     os.mkdir(SYSROOT_DIR)
 
     # FIXME(xbstrap): xbstrap does not copy over the extra-files/rust/config.toml
     # file into the cargo home directory.
-    if not os.path.exists(SYSROOT_CARGO_HOME):
-        os.mkdir(SYSROOT_CARGO_HOME)
+    # if not os.path.exists(SYSROOT_CARGO_HOME):
+    #     os.mkdir(SYSROOT_CARGO_HOME)
 
-    cargo_sys_cfg = os.path.join(SYSROOT_CARGO_HOME, 'config.toml')
-    if not os.path.exists(cargo_sys_cfg):
-        cargo_cfg_fd = open(os.path.join(
-            EXTRA_FILES, 'rust', 'config.toml'), 'r')
-        cargo_cfg = cargo_cfg_fd.read()
-        cargo_cfg_fd.close()
+    # cargo_sys_cfg = os.path.join(SYSROOT_CARGO_HOME, 'config.toml')
+    # if not os.path.exists(cargo_sys_cfg):
+        # cargo_cfg_fd = open(os.path.join(
+        #     EXTRA_FILES, 'rust', 'config.toml'), 'r')
+        # cargo_cfg = cargo_cfg_fd.read()
+        # cargo_cfg_fd.close()
 
-        cargo_cfg = cargo_cfg.replace("@SOURCE_ROOT@", os.getcwd())
-        cargo_cfg = cargo_cfg.replace(
-            "@BUILD_ROOT@", os.path.join(os.getcwd(), SYSROOT_DIR))
+        # cargo_cfg = cargo_cfg.replace("@SOURCE_ROOT@", os.getcwd())
+        # cargo_cfg = cargo_cfg.replace(
+        #     "@BUILD_ROOT@", os.path.join(os.getcwd(), SYSROOT_DIR))
 
-        cargo_cfg_fd = open(cargo_sys_cfg, "w+")
-        cargo_cfg_fd.write(cargo_cfg)
-        cargo_cfg_fd.close()
+        # cargo_cfg_fd = open(cargo_sys_cfg, "w+")
+        # cargo_cfg_fd.write(cargo_cfg)
+        # cargo_cfg_fd.close()
 
-    blink = os.path.join(SYSROOT_DIR, 'bootstrap.link')
+    # blink = os.path.join(SYSROOT_DIR, 'bootstrap.link')
 
-    if not os.path.islink(blink):
+    # if not os.path.islink(blink):
         # symlink the bootstrap.yml file in the src root to sysroot/bootstrap.link
-        symlink_rel('bootstrap.yml', blink)
+        # symlink_rel('bootstrap.yml', blink)
     
-    def run_xbstrap(args):
-        try:
-            run_command(['xbstrap', *args], cwd=SYSROOT_DIR)
-        except FileNotFoundError:
-            run_command([f'{os.environ["HOME"]}/.local/bin/xbstrap', *args], cwd=SYSROOT_DIR)
+    # def run_xbstrap(args):
+    #     try:
+    #         run_command(['xbstrap', *args], cwd=SYSROOT_DIR)
+    #     except FileNotFoundError:
+    #         run_command([f'{os.environ["HOME"]}/.local/bin/xbstrap', *args], cwd=SYSROOT_DIR)
 
-    if minimal:
-        run_xbstrap(['install', '-u', 'bash', 'coreutils'])
-    else:
-        run_xbstrap(['install', '-u', '--all'])
+    # if minimal:
+    #     run_xbstrap(['install', '-u', 'bash', 'coreutils'])
+    # else:
+    #     run_xbstrap(['install', '-u', '--all'])
 
 
 def build_userland(args):
@@ -451,11 +451,11 @@ def main():
     target_arch = args.target.split('-')[0]
     build_info = BuildInfo(target_arch, args)
 
-    if build_info.target_arch == "aarch64" and not args.bios == "uefi":
-        log_error("aarch64 requires UEFI (help: run again with `--bios=uefi`)")
-        return
+    # if build_info.target_arch == "aarch64" and not args.bios == "uefi":
+    #     log_error("aarch64 requires UEFI (help: run again with `--bios=uefi`)")
+    #     return
 
-    download_bundled()
+    # download_bundled()
 
     if args.only_run:
         iso_path = os.path.join(BUILD_DIR, 'aero.iso')
@@ -470,17 +470,8 @@ def main():
             kernel_bin = kernel_bin[0]
             iso_path = prepare_iso(args, kernel_bin, user_bins)
         run_in_emulator(build_info, iso_path)
-    elif args.clean:
-        src_target = os.path.join('src', 'target', args.target)
-        userland_target = os.path.join('userland', 'target')
-
-        if os.path.exists(src_target):
-            shutil.rmtree(src_target)
-
-        if os.path.exists(userland_target):
-            shutil.rmtree(userland_target)
-    elif args.sysroot:
-        build_userland_sysroot(False)
+    # elif args.sysroot:
+    #     build_userland_sysroot(False)
     elif args.document:
         build_kernel(args)
 
@@ -501,8 +492,8 @@ def main():
             run_in_emulator(build_info, iso_path)
 
 
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
+# if __name__ == '__main__':
+#     try:
+#         main()
+#     except KeyboardInterrupt:
+#         pass
