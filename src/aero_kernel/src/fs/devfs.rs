@@ -131,6 +131,14 @@ impl INodeInterface for DevINode {
     fn poll(&self, table: Option<&mut PollTable>) -> Result<PollFlags> {
         self.0.inode().poll(table)
     }
+
+    fn open(
+        &self,
+        flags: aero_syscall::OpenFlags,
+        handle: Arc<super::file_table::FileHandle>,
+    ) -> Result<Option<DirCacheItem>> {
+        self.0.inode().open(flags, handle)
+    }
 }
 
 /// Implementation of dev filesystem. (See the module-level documentation for more
@@ -373,6 +381,22 @@ impl INodeInterface for DevFb {
 
                 *struc = self.finfo.clone();
                 Ok(0x00)
+            }
+
+            // Device independent colormap information can be get and set using
+            // the `FBIOGETCMAP` and `FBIOPUTCMAP` ioctls.
+            FBIOPUTCMAP => {
+                let struc = VirtAddr::new(arg as _)
+                    .read_mut::<FramebufferCmap>()
+                    .ok_or(FileSystemError::NotSupported);
+
+                log::debug!("fbdev: `FBIOPUTCMAP` is a stub! {struc:?}");
+                Ok(0)
+            }
+
+            FBIOGETCMAP => {
+                log::warn!("fbdev: `FBIOGETCMAP` is a stub!");
+                Ok(0)
             }
 
             _ => {

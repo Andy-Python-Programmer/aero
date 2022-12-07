@@ -77,6 +77,17 @@ bitflags::bitflags! {
     }
 }
 
+bitflags::bitflags! {
+    pub struct WaitPidFlags: usize {
+        const WNOHANG    = 1;
+        const WUNTRACED  = 2;
+        const WSTOPPED   = 2;
+        const WEXITED    = 4;
+        const WCONTINUED = 8;
+        const WNOWAIT    = 0x01000000;
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(isize)]
 pub enum SyscallError {
@@ -264,10 +275,11 @@ impl From<usize> for SeekWhence {
 }
 
 pub const TIOCGWINSZ: usize = 0x5413;
+pub const TIOCSWINSZ: usize = 0x5414;
 pub const TCGETS: usize = 0x5401;
 pub const TCSETSF: usize = 0x5404;
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct WinSize {
     pub ws_row: u16,
@@ -345,7 +357,7 @@ bitflags::bitflags! {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 #[repr(C)]
 pub struct Termios {
     pub c_iflag: u32,

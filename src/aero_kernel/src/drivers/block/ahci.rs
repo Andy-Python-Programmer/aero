@@ -985,4 +985,4 @@ pub fn ahci_init() {
     register_device_driver(get_ahci().clone());
 }
 
-crate::module_init!(ahci_init);
+crate::module_init!(ahci_init, ModuleType::Block);

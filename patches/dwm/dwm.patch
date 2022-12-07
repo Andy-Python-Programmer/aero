@@ -1,23 +1,25 @@
-From b037341e78de204069d705b2fcb16f7de53b15b4 Mon Sep 17 00:00:00 2001
+From c709d9f916f71104f658e1b8bba922dc66a3523e Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sun, 13 Nov 2022 12:09:35 +1100
+Date: Sun, 20 Nov 2022 13:43:15 +1100
 Subject: [PATCH] <xxx>
 
 ---
- config.def.h | 2 +-
+ config.def.h | 4 ++--
  config.mk    | 4 ++--
- 2 files changed, 3 insertions(+), 3 deletions(-)
+ 2 files changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/config.def.h b/config.def.h
-index 9efa774..cb4f512 100644
+index 9efa774..20b1681 100644
 --- a/config.def.h
 +++ b/config.def.h
-@@ -58,7 +58,7 @@ static const Layout layouts[] = {
+@@ -57,8 +57,8 @@ static const Layout layouts[] = {
+ 
  /* commands */
  static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
- static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 -static const char *termcmd[]  = { "st", NULL };
-+static const char *termcmd[]  = { "xeyes", NULL };
++static const char *dmenucmd[] = { "alacritty", NULL };
++static const char *termcmd[]  = { "limine-term", NULL };
  
  static const Key keys[] = {
  	/* modifier                     key        function        argument */

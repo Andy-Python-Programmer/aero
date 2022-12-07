@@ -24,7 +24,7 @@ use crate::utils::sync::{BlockQueue, Mutex};
 
 pub struct EventFd {
     wq: BlockQueue,
-    count: Mutex<usize>,
+    count: Mutex<u64>,
 }
 
 impl EventFd {
@@ -37,16 +37,33 @@ impl EventFd {
 }
 
 impl INodeInterface for EventFd {
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> super::Result<usize> {
-        self.wq.notify_complete();
+    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> super::Result<usize> {
+        let size = core::mem::size_of::<u64>();
+        assert!(buffer.len() == size);
 
-        unimplemented!()
+        // SAFETY: We have above verified that it is safe to dereference
+        //         the value.
+        let value = unsafe { &mut *(buffer.as_mut_ptr() as *mut u64) };
+        let mut count = self.wq.block_on(&self.count, |e| **e != 0)?;
+
+        *value = *count;
+        *count = 0; // reset the counter
+
+        self.wq.notify_complete();
+        Ok(size)
     }
 
-    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> super::Result<usize> {
-        self.wq.notify_complete();
+    fn write_at(&self, _offset: usize, buffer: &[u8]) -> super::Result<usize> {
+        let size = core::mem::size_of::<u64>();
+        assert!(buffer.len() == size);
 
-        unimplemented!()
+        // SAFETY: We have above verified that it is safe to dereference
+        //         the value.
+        let value = unsafe { *(buffer.as_ptr() as *const u64) };
+
+        *self.count.lock_irq() += value;
+        self.wq.notify_complete();
+        Ok(size)
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> super::Result<PollFlags> {
@@ -59,11 +76,11 @@ impl INodeInterface for EventFd {
             events.insert(PollFlags::IN);
         }
 
-        if *count == usize::MAX {
+        if *count == u64::MAX {
             events.insert(PollFlags::ERR);
         }
 
-        if *count < (usize::MAX - 1) {
+        if *count < (u64::MAX - 1) {
             events.insert(PollFlags::OUT); // possible to write a value of at least "1" without blocking.
         }
 

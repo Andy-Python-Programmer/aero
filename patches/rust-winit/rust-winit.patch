@@ -1,0 +1,122 @@
+From 4e0723a7be1155a72b64eda807712460079a923e Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Thu, 1 Dec 2022 17:51:20 +1100
+Subject: [PATCH] <xxx>
+
+---
+ Cargo.toml                             | 2 +-
+ src/platform/run_return.rs             | 1 +
+ src/platform/unix.rs                   | 1 +
+ src/platform_impl/linux/mod.rs         | 8 ++++++++
+ src/platform_impl/linux/wayland/mod.rs | 1 +
+ src/platform_impl/linux/x11/mod.rs     | 1 +
+ src/platform_impl/mod.rs               | 2 ++
+ 7 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/Cargo.toml b/Cargo.toml
+index b1e4159..08309aa 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -84,7 +84,7 @@ features = [
+     "timeapi"
+ ]
+ 
+-[target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
++[target.'cfg(any(target_os = "linux", target_os = "aero", target_os = "dragonfly", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
+ wayland-client = { version = "0.29", default_features = false,  features = ["use_system_lib"], optional = true }
+ wayland-protocols = { version = "0.29", features = [ "staging_protocols"], optional = true }
+ sctk = { package = "smithay-client-toolkit", version = "0.15.1", default_features = false, features = ["calloop"],  optional = true }
+diff --git a/src/platform/run_return.rs b/src/platform/run_return.rs
+index 932d9e3..4983c4c 100644
+--- a/src/platform/run_return.rs
++++ b/src/platform/run_return.rs
+@@ -1,5 +1,6 @@
+ #![cfg(any(
+     target_os = "windows",
++    target_os = "aero",
+     target_os = "macos",
+     target_os = "android",
+     target_os = "linux",
+diff --git a/src/platform/unix.rs b/src/platform/unix.rs
+index ba600b1..cfa1f03 100644
+--- a/src/platform/unix.rs
++++ b/src/platform/unix.rs
+@@ -1,5 +1,6 @@
+ #![cfg(any(
+     target_os = "linux",
++    target_os = "aero",
+     target_os = "dragonfly",
+     target_os = "freebsd",
+     target_os = "netbsd",
+diff --git a/src/platform_impl/linux/mod.rs b/src/platform_impl/linux/mod.rs
+index 953fca1..4f9dbb0 100644
+--- a/src/platform_impl/linux/mod.rs
++++ b/src/platform_impl/linux/mod.rs
+@@ -1,6 +1,7 @@
+ #![cfg(any(
+     target_os = "linux",
+     target_os = "dragonfly",
++    target_os = "aero",
+     target_os = "freebsd",
+     target_os = "netbsd",
+     target_os = "openbsd"
+@@ -771,6 +772,13 @@ fn is_main_thread() -> bool {
+     unsafe { syscall(SYS_gettid) == getpid() as c_long }
+ }
+ 
++#[cfg(any(target_os = "aero"))]
++fn is_main_thread() -> bool {
++    // This function is only used for assertions (to make sure that library consumers don't do
++    // anything wrong), but we don't currently implement gettid yet so just return true for now.
++    true
++}
++
+ #[cfg(any(target_os = "dragonfly", target_os = "freebsd", target_os = "openbsd"))]
+ fn is_main_thread() -> bool {
+     use libc::pthread_main_np;
+diff --git a/src/platform_impl/linux/wayland/mod.rs b/src/platform_impl/linux/wayland/mod.rs
+index 4ed564a..502545e 100644
+--- a/src/platform_impl/linux/wayland/mod.rs
++++ b/src/platform_impl/linux/wayland/mod.rs
+@@ -1,6 +1,7 @@
+ #![cfg(any(
+     target_os = "linux",
+     target_os = "dragonfly",
++    target_os = "aero",
+     target_os = "freebsd",
+     target_os = "netbsd",
+     target_os = "openbsd"
+diff --git a/src/platform_impl/linux/x11/mod.rs b/src/platform_impl/linux/x11/mod.rs
+index 27c92c4..7b3d7e3 100644
+--- a/src/platform_impl/linux/x11/mod.rs
++++ b/src/platform_impl/linux/x11/mod.rs
+@@ -1,5 +1,6 @@
+ #![cfg(any(
+     target_os = "linux",
++    target_os = "aero",
+     target_os = "dragonfly",
+     target_os = "freebsd",
+     target_os = "netbsd",
+diff --git a/src/platform_impl/mod.rs b/src/platform_impl/mod.rs
+index 152065d..a0d471b 100644
+--- a/src/platform_impl/mod.rs
++++ b/src/platform_impl/mod.rs
+@@ -6,6 +6,7 @@ mod platform;
+ #[cfg(any(
+     target_os = "linux",
+     target_os = "dragonfly",
++    target_os = "aero",
+     target_os = "freebsd",
+     target_os = "netbsd",
+     target_os = "openbsd"
+@@ -32,6 +33,7 @@ mod platform;
+     not(target_os = "macos"),
+     not(target_os = "android"),
+     not(target_os = "dragonfly"),
++    not(target_os = "aero"),
+     not(target_os = "freebsd"),
+     not(target_os = "netbsd"),
+     not(target_os = "openbsd"),
+-- 
+2.38.1
+

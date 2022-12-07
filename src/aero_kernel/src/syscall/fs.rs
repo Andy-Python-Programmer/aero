@@ -21,7 +21,6 @@ use aero_syscall::signal::SigProcMask;
 use aero_syscall::{prelude::*, TimeSpec};
 use aero_syscall::{OpenFlags, Stat, SyscallError};
 
-use crate::fs::cache::DirCacheImpl;
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::DuplicateHint;

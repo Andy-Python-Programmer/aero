@@ -13,3 +13,10 @@ linker = "@BUILD_ROOT@/tools/host-gcc/bin/x86_64-aero-gcc"
 libc = { path = "@SOURCE_ROOT@/bundled/rust-libc" }
 num_cpus = { path = "@SOURCE_ROOT@/bundled/rust-num-cpus" }
 users = { path = "@SOURCE_ROOT@/bundled/rust-users" }
+winit = { path = "@SOURCE_ROOT@/bundled/rust-winit" }
+nix = { path = "@SOURCE_ROOT@/bundled/rust-nix" }
+mio-06 = { path = "@SOURCE_ROOT@/bundled/rust-mio-0.6", package = "mio" }
+mio-08 = { path = "@SOURCE_ROOT@/bundled/rust-mio-0.8", package = "mio" }
+glutin = { path = "@SOURCE_ROOT@/bundled/rust-glutin/glutin" }
+shared_library = { path = "@SOURCE_ROOT@/bundled/rust-shared-library" }
+libloading = { path = "@SOURCE_ROOT@/bundled/rust-libloading" }

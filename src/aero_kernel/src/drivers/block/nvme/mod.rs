@@ -534,4 +534,4 @@ fn nvme_init() {
     register_device_driver(Handler::new())
 }
 
-crate::module_init!(nvme_init);
+crate::module_init!(nvme_init, ModuleType::Block);

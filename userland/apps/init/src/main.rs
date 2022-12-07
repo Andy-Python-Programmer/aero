@@ -23,7 +23,6 @@ use std::process::Command;
 
 use std::mem;
 
-const DEFAULT_SHELL_PATH: &str = "/usr/bin/bash";
 const TTY_PATH: &str = "/dev/tty";
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -35,7 +34,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     mem::forget(OpenOptions::new().write(true).open(TTY_PATH)?); // fd=1 for stdout
     mem::forget(OpenOptions::new().write(true).open(TTY_PATH)?); // fd=2 for stderr
 
-    Command::new(DEFAULT_SHELL_PATH).spawn()?;
-
-    Ok(())
+    Command::new("/usr/bin/startx").spawn()?;
+    loop {}
 }

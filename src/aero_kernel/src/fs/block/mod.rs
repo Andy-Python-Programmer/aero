@@ -260,8 +260,6 @@ impl Device for BlockDevice {
 }
 
 struct PartitionBlockDevice {
-    sref: Weak<Self>,
-
     offset: usize, // offset in sectors
     size: usize,   // capacity in sectors
     device: Arc<dyn BlockDeviceInterface>,
@@ -269,9 +267,7 @@ struct PartitionBlockDevice {
 
 impl PartitionBlockDevice {
     fn new(offset: usize, size: usize, device: Arc<dyn BlockDeviceInterface>) -> Arc<Self> {
-        Arc::new_cyclic(|sref| Self {
-            sref: sref.clone(),
-
+        Arc::new(Self {
             offset,
             size,
             device,

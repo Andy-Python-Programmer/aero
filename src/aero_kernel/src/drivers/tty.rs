@@ -872,4 +872,4 @@ fn init_tty() {
     devfs::install_device(TTY.clone()).expect("failed to register tty as a device");
 }
 
-crate::module_init!(init_tty);
+crate::module_init!(init_tty, ModuleType::Other);

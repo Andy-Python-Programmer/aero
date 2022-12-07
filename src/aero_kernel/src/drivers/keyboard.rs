@@ -441,4 +441,4 @@ pub fn keyboard_irq_handler(_stack: &mut InterruptStack) {
     }
 }
 
-crate::module_init!(ps2_keyboard_init);
+crate::module_init!(ps2_keyboard_init, ModuleType::Other);

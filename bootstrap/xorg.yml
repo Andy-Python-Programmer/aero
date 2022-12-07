@@ -389,6 +389,98 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: libxcursor
+    source:
+      subdir: bundled
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxcursor.git'
+      tag: 'libXcursor-1.2.1'
+      version: '1.2.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libx11
+      - libxfixes
+      - libxrender
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: mesa
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/mesa/mesa.git'
+      tag: 'mesa-21.3.5'
+      version: '21.3.5'
+      tools_required:
+        - host-pkg-config
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - wayland-scanner
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+    pkgs_required:
+      - mlibc
+      - libdrm
+      - zlib
+      - libxrandr
+      - libxfixes
+      - libx11
+      - libxext
+      - libxcb
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        # The debug build type enables some additional output from Mesa.
+        - '--buildtype=debugoptimized'
+        #- '--buildtype=debug'
+        - '-Dglx=gallium-xlib'
+        - '-Dplatforms=x11'
+        # The Gallium swrast driver seems to be preferred over dri-swrast.
+        - '-Ddri-drivers='
+        - '-Dgallium-drivers=swrast'
+        - '-Dvulkan-drivers='
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   # `libxkbfile` is used by the X servers and utilities to parse the XKB
   # configuration data files.
   - name: libxkbfile
@@ -586,6 +678,81 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: libepoxy
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/anholt/libepoxy.git'
+      tag: '1.5.10'
+      version: '1.5.10'
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: "@OPTION:x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - mesa
+      - xorg-proto
+      - libx11
+    configure:
+      - args:
+          - 'meson'
+          - '--cross-file'
+          - '@SOURCE_ROOT@/userland/cross-file.ini'
+          - '--prefix=/usr'
+          - '-Degl=no'
+          - '-Dtests=false'
+          - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: xorg-xinit
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/freedesktop/xorg-xinit'
+      tag: 'xinit-1.3.4'
+      version: '1.3.4'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-xorg-font-util
+        - host-xtrans
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-gcc
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - xorg-server
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+        - '--without-xauth'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install-strip']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['cp', '@SOURCE_ROOT@/extra-files/xorg/xinitrc', '@THIS_COLLECT_DIR@/etc/X11/xinit/xinitrc']
+
   # The X server accepts requests from client applications to create windows,
   # which are (normally rectangular) "virtual screens" that the client program
   # can draw into.
@@ -615,6 +782,7 @@ packages:
       - xorg-util-macros
       - xorg-proto
       - openssl
+      - libepoxy
       - libxkbfile
       - libxfont2
       - pixman
@@ -1193,6 +1361,45 @@ packages:
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: limine-term
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/Andy-Python-Programmer/limine-term-emu'
+      branch: 'master'
+      regenerate:
+        - args: ['git', 'submodule', 'update', '--init']
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libx11
+      - libxmu
+      - libxaw
+      - libxrender
+      - libxft
+      - libxt
+      - libxkbfile
+      - libiconv
+      - libxi
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja', '-j@PARALLELISM@']
+      - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 

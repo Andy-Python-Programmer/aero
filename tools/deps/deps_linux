@@ -1,0 +1,96 @@
+#!/usr/bin/bash
+
+# We are going to use /etc/os-release to identify which
+# Linux distribution we are currently running.
+. /etc/os-release
+
+if [[ $ID_LIKE == "debian" ]]; then
+PKGMAN="apt"
+
+packages=(
+    "bash"
+    "coreutils"
+    "make"
+    "patch"
+    "tar"
+    "gzip"
+    "binutils"
+    "gcc"
+    "git"
+    "subversion"
+    "mercurial"
+    "curl"
+    "wget"
+    "xz-utils"
+    "nasm"
+    "mtools"
+    "meson"
+    "perl"
+    "m4"
+    "texinfo"
+    "groff"
+    "gettext"
+    "expat"
+    "bison"
+    "flex"
+    "help2man"
+    "openssl"
+    "gperf"
+    "rsync"
+    "xsltproc"
+    "python3"
+    "python3-pip"
+    "python3-mako"
+    "xcb-proto"
+    "xorriso"
+    "cmake"
+)
+
+function install_package() { apt-get install -y $1; }
+function query_package() { dpkg -l | grep -q $1; }
+elif [[ $ID == "arch" ]]; then # if [[ $ID_LIKE == "debian" ]]; then
+PKGMAN="pacman"
+
+packages=(
+    "bash"
+    "coreutils"
+    "make"
+    "patch"
+    "tar"
+    "gzip"
+    "binutils"
+    "gcc"
+    "git"
+    "subversion"
+    "mercurial"
+    "curl"
+    "wget"
+    "xz"
+    "nasm"
+    "mtools"
+    "meson"
+    "perl"
+    "m4"
+    "texinfo"
+    "groff"
+    "gettext"
+    "expat"
+    "bison"
+    "flex"
+    "help2man"
+    "openssl"
+    "gperf"
+    "rsync"
+    "libxslt"
+    "python"
+    "python-pip"
+    "python-mako"
+    "xcb-proto"
+    "libisoburn"
+    "boost-libs"
+    "cmake"
+)
+
+function install_package() { pacman -S $1 --noconfirm; }
+function query_package() { pacman -Q | grep -q $1; }
+fi # elif [[ $ID == "arch" ]]; then

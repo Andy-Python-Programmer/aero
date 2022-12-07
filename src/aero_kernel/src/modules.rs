@@ -31,30 +31,39 @@
 //! aero_kernel::module_exit!(hello_exit);
 //! ```
 
-use crate::utils::linker::LinkerSymbol;
+use crate::{drivers, fs};
 
 /// Inner helper function to make sure the function provided to the [module_init] macro
 /// has a valid function signature. This function returns the passed module init function as
 /// a const void pointer.
-#[inline]
-pub const fn make_module_init(init_function: fn() -> ()) -> ModuleInit {
-    ModuleInit(init_function as *const ())
+
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[repr(C)]
+pub enum ModuleType {
+    Block = 0,
+    Other = 1,
 }
 
-/// Inner helper structure holding the module init function as a void pointer. This struct
-/// is required as we cannot directly store a pointer in the static as it needs to implement
-/// [Sync].
-pub struct ModuleInit(*const ());
+#[derive(Debug)]
+#[repr(C)]
+pub struct Module {
+    pub init: *const fn() -> (),
+    pub ty: ModuleType,
+}
 
-unsafe impl Sync for ModuleInit {}
+unsafe impl Sync for Module {}
 
 #[macro_export]
 macro_rules! module_init {
-    ($init_function:expr) => {
+    ($init_function:expr, $ty:path) => {
+        use crate::modules::ModuleType;
+
         #[used]
         #[link_section = ".kernel_modules.init"]
-        static __MODULE_INIT: $crate::modules::ModuleInit =
-            $crate::modules::make_module_init($init_function);
+        static __MODULE_INIT: $crate::modules::Module = $crate::modules::Module {
+            init: $init_function as *const fn() -> (),
+            ty: $ty,
+        };
     };
 }
 
@@ -63,17 +72,40 @@ macro_rules! module_init {
 /// itself (this is temporary and modules will be loaded from the filesystem in the future).
 pub(crate) fn init() {
     extern "C" {
-        static __kernel_modules_start: LinkerSymbol;
-        static __kernel_modules_end: LinkerSymbol;
+        static mut __kernel_modules_start: u8;
+        static mut __kernel_modules_end: u8;
     }
 
-    /*
-     * Iterate over the `kernel_modules` linker section containing pointers to module
-     * initialization functions.
-     */
     unsafe {
-        (__kernel_modules_start.as_usize()..__kernel_modules_end.as_usize())
-            .step_by(0x08)
-            .for_each(|module| (*(module as *mut fn() -> ()))());
+        let size = &__kernel_modules_end as *const u8 as usize
+            - &__kernel_modules_start as *const u8 as usize;
+
+        let modules = core::slice::from_raw_parts_mut(
+            &mut __kernel_modules_start as *mut u8 as *mut Module,
+            size / core::mem::size_of::<Module>(),
+        );
+
+        modules.sort_by(|e, a| e.ty.cmp(&a.ty));
+
+        let mut launched_fs = false;
+
+        for module in modules {
+            log::debug!("{module:?} {launched_fs}");
+
+            if module.ty != ModuleType::Block && !launched_fs {
+                let mut address_space = crate::mem::AddressSpace::this();
+                let mut offset_table = address_space.offset_page_table();
+
+                #[cfg(target_arch = "x86_64")]
+                drivers::pci::init(&mut offset_table);
+                log::info!("loaded PCI driver");
+
+                fs::block::launch().unwrap();
+                launched_fs = true;
+            }
+
+            let init = core::mem::transmute::<*const fn() -> (), fn() -> ()>(module.init);
+            init();
+        }
     }
 }

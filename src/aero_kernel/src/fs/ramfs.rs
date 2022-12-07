@@ -17,10 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! Implementation of in-memory filesystem. This is used for temporary filesystems (e.g. dev, tmp) and
-//! since Aero currently does not have support for actual disk filesystems (e.g. ex2 and FAT32), ram-fs is
-//! used as the root filesystem.
-
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::MMapFlags;
@@ -300,6 +296,25 @@ impl INodeInterface for LockedRamINode {
 
             FileContents::Socket(e) => e.read_at(offset, buffer),
             FileContents::None => Err(FileSystemError::NotSupported),
+        }
+    }
+
+    fn open(
+        &self,
+        flags: aero_syscall::OpenFlags,
+        handle: Arc<super::file_table::FileHandle>,
+    ) -> Result<Option<DirCacheItem>> {
+        let this = self.0.read();
+
+        match &this.contents {
+            FileContents::Device(device) => {
+                let device = device.clone();
+                drop(this);
+
+                device.open(flags, handle)
+            }
+
+            _ => Ok(None),
         }
     }
 

@@ -1,21 +1,22 @@
-From 9ad862a1edb6ce5b86fc4fa49e8ce365af507f47 Mon Sep 17 00:00:00 2001
+From 12c60e06a4b58e27d26763cb1bb9c6577c14add5 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sat, 12 Nov 2022 18:58:33 +1100
-Subject: [PATCH] yes
+Date: Thu, 1 Dec 2022 20:11:07 +1100
+Subject: [PATCH] <xxx>
 
-Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                              |  2 +
+ options/ansi/generic/stdlib-stubs.cpp   |  2 +-
  options/glibc/generic/execinfo.cpp      |  5 +-
+ options/posix/generic/dlfcn-stubs.cpp   |  1 +
  options/posix/generic/termios-stubs.cpp |  5 +-
  options/rtdl/generic/linker.cpp         |  2 +-
- sysdeps/aero/generic/aero.cpp           | 38 ++++++------
+ sysdeps/aero/generic/aero.cpp           | 62 ++++++++++++--------
  sysdeps/aero/generic/filesystem.cpp     | 25 ++++++--
  sysdeps/aero/generic/sockets.cpp        | 77 ++++++++++++++++++++++++-
  sysdeps/aero/generic/time.cpp           | 24 ++++++++
- sysdeps/aero/include/aero/syscall.h     |  6 ++
+ sysdeps/aero/include/aero/syscall.h     |  7 +++
  sysdeps/aero/meson.build                |  1 +
- 10 files changed, 155 insertions(+), 30 deletions(-)
+ 12 files changed, 176 insertions(+), 37 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -28,6 +29,19 @@ index fdd60a0..9f811f4 100644
  .vscode
 +# clangd cache files:
 +.cache
+diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
+index c0e54fe..d6f92f3 100644
+--- a/options/ansi/generic/stdlib-stubs.cpp
++++ b/options/ansi/generic/stdlib-stubs.cpp
+@@ -392,7 +392,7 @@ int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
+ 			mlibc::code_seq<const char> nseq{mb, mb + max_size};
+ 			auto e = cc->decode_wtranscode(nseq, wseq, mbtowc_state);
+ 			if (e != mlibc::charcode_error::null)
+-				__ensure(!"decode_wtranscode() errors are not handled");
++				return -1;
+ 
+ 			return nseq.it - mb;
+ 		} else {
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
 index 3474615..10a2109 100644
 --- a/options/glibc/generic/execinfo.cpp
@@ -45,6 +59,18 @@ index 3474615..10a2109 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
+diff --git a/options/posix/generic/dlfcn-stubs.cpp b/options/posix/generic/dlfcn-stubs.cpp
+index fc9fd84..ab57631 100644
+--- a/options/posix/generic/dlfcn-stubs.cpp
++++ b/options/posix/generic/dlfcn-stubs.cpp
+@@ -27,6 +27,7 @@ char *dlerror(void) {
+ 
+ [[gnu::noinline]]
+ void *dlopen(const char *file, int flags) {
++	mlibc::infoLogger() << "mlibc memes: " << file << frg::endlog;
+ 	auto ra = __builtin_extract_return_addr(__builtin_return_address(0));
+ 	return __dlapi_open(file, flags, ra);
+ }
 diff --git a/options/posix/generic/termios-stubs.cpp b/options/posix/generic/termios-stubs.cpp
 index 3e621ad..583c1f5 100644
 --- a/options/posix/generic/termios-stubs.cpp
@@ -82,10 +108,27 @@ index 2e2d3f1..3ff5fef 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 29fb961..a27da55 100644
+index 29fb961..cf0503b 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
-@@ -69,22 +69,22 @@ int sys_futex_tid() {
+@@ -62,6 +62,16 @@ static frg::vector<Slice, MemoryAllocator> create_slice(char *const arg[]) {
+ }
+ 
+ namespace mlibc {
++int sys_uname(struct utsname *buf) {
++    auto result = syscall(SYS_UNAME, buf);
++
++    if (result < 0) {
++        return -result;
++    }
++
++    return result;
++}
++
+ int sys_futex_tid() {
+     // SAFETY: gettid does not return any errors (ie. the call is always
+     // successful).
+@@ -69,22 +79,22 @@ int sys_futex_tid() {
  }
  
  int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
@@ -120,7 +163,7 @@ index 29fb961..a27da55 100644
      return 0;
  }
  
-@@ -124,7 +124,9 @@ int sys_anon_free(void *pointer, size_t size) {
+@@ -124,7 +134,9 @@ int sys_anon_free(void *pointer, size_t size) {
  }
  
  void sys_libc_panic() {
@@ -131,7 +174,36 @@ index 29fb961..a27da55 100644
      sys_exit(1);
  }
  
-@@ -233,7 +235,7 @@ uid_t sys_geteuid() {
+@@ -140,8 +152,15 @@ void sys_exit(int status) {
+ 
+ pid_t sys_getpid() {
+     auto result = syscall(SYS_GETPID);
++    __ensure(result >= 0);
++
++    return result;
++}
++
++pid_t sys_getppid() {
++    auto result = syscall(SYS_GETPPID);
++    __ensure(result != 0);
+ 
+-    __ensure(result >= 0); // getpid() cannot fail.
+     return result;
+ }
+ 
+@@ -162,11 +181,6 @@ pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
+     return 0;
+ }
+ 
+-pid_t sys_getppid() {
+-    mlibc::infoLogger() << "sys_getppid() is unimplemented" << frg::endlog;
+-    return 0;
+-}
+-
+ int sys_clock_get(int clock, time_t *secs, long *nanos) {
+     struct timespec ts;
+     auto result = syscall(SYS_GETTIME, clock, &ts);
+@@ -233,7 +247,7 @@ uid_t sys_geteuid() {
      return 0;
  }
  
@@ -140,7 +212,7 @@ index 29fb961..a27da55 100644
  int sys_seteuid(uid_t euid) UNIMPLEMENTED("sys_seteuid")
  
  gid_t sys_getgid() {
-@@ -259,13 +261,13 @@ int sys_setegid(gid_t egid) {
+@@ -259,13 +273,13 @@ int sys_setegid(gid_t egid) {
  void sys_yield() UNIMPLEMENTED("sys_yield")
  
  int sys_clone(void *tcb, pid_t *tid_out, void *stack) {
@@ -330,10 +402,10 @@ index 0000000..460412d
 +}
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc6..03001c4 100644
+index 12f8dc6..4e330ef 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -64,6 +64,12 @@
+@@ -64,6 +64,13 @@
  #define SYS_FUTEX_WAIT 57
  #define SYS_FUTEX_WAKE 58
  #define SYS_LINK 59
@@ -343,6 +415,7 @@ index 12f8dc6..03001c4 100644
 +#define SYS_SOCK_RECV 63
 +#define SYS_SETITIMER 64
 +#define SYS_GETITIMER 65
++#define SYS_GETPPID 66
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.

@@ -1,0 +1,41 @@
+From 4d53b6fbd2a90d69c153933c413ecf5a0598518a Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Fri, 2 Dec 2022 19:15:20 +1100
+Subject: [PATCH] <xxx>
+
+---
+ config.sub | 2 +-
+ configure  | 4 ++++
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/config.sub b/config.sub
+index 0f2234c..0cf7603 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1366,7 +1366,7 @@ case $os in
+ 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+-	     | nsk* | powerunix)
++	     | nsk* | powerunix | aero*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	qnx*)
+diff --git a/configure b/configure
+index 06f344f..a008d88 100755
+--- a/configure
++++ b/configure
+@@ -5961,6 +5961,10 @@ echo "${ECHO_T}$cf_cv_ldflags_search_paths_first" >&6
+ 
+ 		MK_SHARED_LIB='${CC} ${LDFLAGS} ${CFLAGS} -shared -Wl,-soname,'$cf_cv_shared_soname',-stats,-lc -o $@'
+ 		;;
++  (aero*)
++    CC_SHARED_OPTS='-fPIC'
++                 MK_SHARED_LIB='${CC} -shared -o $@'
++    ;;
+ 	(mingw*)
+ 		cf_cv_shlib_version=mingw
+ 		cf_cv_shlib_version_infix=mingw
+-- 
+2.38.1
+

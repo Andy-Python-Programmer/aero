@@ -1,0 +1,709 @@
+From 608f6dc307498272ec3a6317cac3bbbe2a8b74b1 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sun, 20 Nov 2022 12:21:43 +1100
+Subject: [PATCH] <xxx>
+
+---
+ src/errno.rs           | 217 +++++++++++++++++++++++++++++++++++++++++
+ src/lib.rs             |  12 ++-
+ src/sys/mod.rs         |  10 +-
+ src/sys/socket/addr.rs |  16 +--
+ src/sys/socket/mod.rs  |   5 +-
+ src/sys/termios.rs     |  54 +++++++++-
+ src/unistd.rs          |  27 +++++
+ 7 files changed, 327 insertions(+), 14 deletions(-)
+
+diff --git a/src/errno.rs b/src/errno.rs
+index 9c2dfe4..d26d63d 100644
+--- a/src/errno.rs
++++ b/src/errno.rs
+@@ -22,6 +22,7 @@ cfg_if! {
+     } else if #[cfg(any(target_os = "linux",
+                         target_os = "redox",
+                         target_os = "dragonfly",
++                        target_os = "aero",
+                         target_os = "fuchsia"))] {
+         unsafe fn errno_location() -> *mut c_int {
+             libc::__errno_location()
+@@ -183,6 +184,9 @@ fn last() -> Errno {
+ 
+ fn desc(errno: Errno) -> &'static str {
+     use self::Errno::*;
++    // TODO: This is completely broken on aero
++    #[allow(unreachable_patterns)]
++    #[allow(unused_variables)]
+     match errno {
+         UnknownErrno    => "Unknown errno",
+         EPERM           => "Operation not permitted",
+@@ -1557,6 +1561,219 @@ mod consts {
+     }
+ }
+ 
++#[cfg(target_os = "aero")]
++mod consts {
++    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
++    #[repr(i32)]
++    pub enum Errno {
++        UnknownErrno    = 0,
++        E2BIG           = libc::E2BIG,
++        EACCES          = libc::EACCES,
++        EADDRINUSE      = libc::EADDRINUSE,
++        EADDRNOTAVAIL   = libc::EADDRNOTAVAIL,
++        // EAFNOSUPPORT    = libc::EAFNOSUPPORT,
++        EAGAIN          = libc::EAGAIN,
++        // EALREADY        = libc::EALREADY,
++        // EAUTH           = libc::EAUTH,
++        EBADF           = libc::EBADF,
++        // EBADMSG         = libc::EBADMSG,
++        // EBADRPC         = libc::EBADRPC,
++        // EBUSY           = libc::EBUSY,
++        // ECANCELED       = libc::ECANCELED,
++        // ECHILD          = libc::ECHILD,
++        ECONNABORTED    = libc::ECONNABORTED,
++        ECONNREFUSED    = libc::ECONNREFUSED,
++        ECONNRESET      = libc::ECONNRESET,
++        EDEADLK         = libc::EDEADLK,
++        // EDESTADDRREQ    = libc::EDESTADDRREQ,
++        // EDOM            = libc::EDOM,
++        // EDQUOT          = libc::EDQUOT,
++        EEXIST          = libc::EEXIST,
++        // EFAULT          = libc::EFAULT,
++        // EFBIG           = libc::EFBIG,
++        // EFTYPE          = libc::EFTYPE,
++        // EHOSTDOWN       = libc::EHOSTDOWN,
++        // EHOSTUNREACH    = libc::EHOSTUNREACH,
++        // EIDRM           = libc::EIDRM,
++        // EILSEQ          = libc::EILSEQ,
++        EINPROGRESS     = libc::EINPROGRESS,
++        EINTR           = libc::EINTR,
++        EINVAL          = libc::EINVAL,
++        // EIO             = libc::EIO,
++        // EISCONN         = libc::EISCONN,
++        // EISDIR          = libc::EISDIR,
++        // ELOOP           = libc::ELOOP,
++        // EMFILE          = libc::EMFILE,
++        // EMLINK          = libc::EMLINK,
++        // EMSGSIZE        = libc::EMSGSIZE,
++        // EMULTIHOP       = libc::EMULTIHOP,
++        ENAMETOOLONG    = libc::ENAMETOOLONG,
++        // ENEEDAUTH       = libc::ENEEDAUTH,
++        // ENETDOWN        = libc::ENETDOWN,
++        // ENETRESET       = libc::ENETRESET,
++        // ENETUNREACH     = libc::ENETUNREACH,
++        // ENFILE          = libc::ENFILE,
++        // ENOATTR         = libc::ENOATTR,
++        // ENOBUFS         = libc::ENOBUFS,
++        // ENODATA         = libc::ENODATA,
++        // ENODEV          = libc::ENODEV,
++        ENOENT          = libc::ENOENT,
++        // ENOEXEC         = libc::ENOEXEC,
++        // ENOLCK          = libc::ENOLCK,
++        // ENOLINK         = libc::ENOLINK,
++        // ENOMEM          = libc::ENOMEM,
++        // ENOMSG          = libc::ENOMSG,
++        // ENOPROTOOPT     = libc::ENOPROTOOPT,
++        // ENOSPC          = libc::ENOSPC,
++        // ENOSR           = libc::ENOSR,
++        // ENOSTR          = libc::ENOSTR,
++        ENOSYS          = libc::ENOSYS,
++        // ENOTBLK         = libc::ENOTBLK,
++        ENOTCONN        = libc::ENOTCONN,
++        // ENOTDIR         = libc::ENOTDIR,
++        // ENOTEMPTY       = libc::ENOTEMPTY,
++        // ENOTSOCK        = libc::ENOTSOCK,
++        // ENOTSUP         = libc::ENOTSUP,
++        ENOTTY          = libc::ENOTTY,
++        // ENXIO           = libc::ENXIO,
++        // EOPNOTSUPP      = libc::EOPNOTSUPP,
++        // EOVERFLOW       = libc::EOVERFLOW,
++        EPERM           = libc::EPERM,
++        // EPFNOSUPPORT    = libc::EPFNOSUPPORT,
++        EPIPE           = libc::EPIPE,
++        // EPROCLIM        = libc::EPROCLIM,
++        // EPROCUNAVAIL    = libc::EPROCUNAVAIL,
++        // EPROGMISMATCH   = libc::EPROGMISMATCH,
++        // EPROGUNAVAIL    = libc::EPROGUNAVAIL,
++        EPROTO          = libc::EPROTO,
++        // EPROTONOSUPPORT = libc::EPROTONOSUPPORT,
++        // EPROTOTYPE      = libc::EPROTOTYPE,
++        ERANGE          = libc::ERANGE,
++        // EREMOTE         = libc::EREMOTE,
++        // EROFS           = libc::EROFS,
++        // ERPCMISMATCH    = libc::ERPCMISMATCH,
++        // ESHUTDOWN       = libc::ESHUTDOWN,
++        // ESOCKTNOSUPPORT = libc::ESOCKTNOSUPPORT,
++        // ESPIPE          = libc::ESPIPE,
++        // ESRCH           = libc::ESRCH,
++        // ESTALE          = libc::ESTALE,
++        // ETIME           = libc::ETIME,
++        ETIMEDOUT       = libc::ETIMEDOUT,
++        // ETOOMANYREFS    = libc::ETOOMANYREFS,
++        // ETXTBSY         = libc::ETXTBSY,
++        // EUSERS          = libc::EUSERS,
++        // EXDEV           = libc::EXDEV,
++    }
++
++    // pub const ELAST: Errno       = Errno::ENOTSUP;
++    pub const EWOULDBLOCK: Errno = Errno::EAGAIN;
++
++    // pub const EL2NSYNC: Errno = Errno::UnknownErrno;
++
++    pub fn from_i32(e: i32) -> Errno {
++        use self::Errno::*;
++
++        match e {
++            // libc::E2BIG => E2BIG,
++            libc::EACCES => EACCES,
++            libc::EADDRINUSE => EADDRINUSE,
++            libc::EADDRNOTAVAIL => EADDRNOTAVAIL,
++            // libc::EAFNOSUPPORT => EAFNOSUPPORT,
++            libc::EAGAIN => EAGAIN,
++            // libc::EALREADY => EALREADY,
++            // libc::EAUTH => EAUTH,
++            libc::EBADF => EBADF,
++            // libc::EBADMSG => EBADMSG,
++            // libc::EBADRPC => EBADRPC,
++            // libc::EBUSY => EBUSY,
++            // libc::ECANCELED => ECANCELED,
++            // libc::ECHILD => ECHILD,
++            libc::ECONNABORTED => ECONNABORTED,
++            libc::ECONNREFUSED => ECONNREFUSED,
++            libc::ECONNRESET => ECONNRESET,
++            libc::EDEADLK => EDEADLK,
++            // libc::EDESTADDRREQ => EDESTADDRREQ,
++            // libc::EDOM => EDOM,
++            // libc::EDQUOT => EDQUOT,
++            libc::EEXIST => EEXIST,
++            // libc::EFAULT => EFAULT,
++            // libc::EFBIG => EFBIG,
++            // libc::EFTYPE => EFTYPE,
++            // libc::EHOSTDOWN => EHOSTDOWN,
++            // libc::EHOSTUNREACH => EHOSTUNREACH,
++            // libc::EIDRM => EIDRM,
++            // libc::EILSEQ => EILSEQ,
++            libc::EINPROGRESS => EINPROGRESS,
++            libc::EINTR => EINTR,
++            libc::EINVAL => EINVAL,
++            // libc::EIO => EIO,
++            // libc::EISCONN => EISCONN,
++            // libc::EISDIR => EISDIR,
++            // libc::ELOOP => ELOOP,
++            // libc::EMFILE => EMFILE,
++            // libc::EMLINK => EMLINK,
++            // libc::EMSGSIZE => EMSGSIZE,
++            // libc::EMULTIHOP => EMULTIHOP,
++            libc::ENAMETOOLONG => ENAMETOOLONG,
++            // libc::ENEEDAUTH => ENEEDAUTH,
++            // libc::ENETDOWN => ENETDOWN,
++            // libc::ENETRESET => ENETRESET,
++            // libc::ENETUNREACH => ENETUNREACH,
++            // libc::ENFILE => ENFILE,
++            // libc::ENOATTR => ENOATTR,
++            // libc::ENOBUFS => ENOBUFS,
++            // libc::ENODATA => ENODATA,
++            // libc::ENODEV => ENODEV,
++            libc::ENOENT => ENOENT,
++            // libc::ENOEXEC => ENOEXEC,
++            // libc::ENOLCK => ENOLCK,
++            // libc::ENOLINK => ENOLINK,
++            // libc::ENOMEM => ENOMEM,
++            // libc::ENOMSG => ENOMSG,
++            // libc::ENOPROTOOPT => ENOPROTOOPT,
++            // libc::ENOSPC => ENOSPC,
++            // libc::ENOSR => ENOSR,
++            // libc::ENOSTR => ENOSTR,
++            libc::ENOSYS => ENOSYS,
++            // libc::ENOTBLK => ENOTBLK,
++            libc::ENOTCONN => ENOTCONN,
++            // libc::ENOTDIR => ENOTDIR,
++            // libc::ENOTEMPTY => ENOTEMPTY,
++            // libc::ENOTSOCK => ENOTSOCK,
++            // libc::ENOTSUP => ENOTSUP,
++            // libc::ENOTTY => ENOTTY,
++            // libc::ENXIO => ENXIO,
++            // libc::EOPNOTSUPP => EOPNOTSUPP,
++            // libc::EOVERFLOW => EOVERFLOW,
++            libc::EPERM => EPERM,
++            // libc::EPFNOSUPPORT => EPFNOSUPPORT,
++            libc::EPIPE => EPIPE,
++            // libc::EPROCLIM => EPROCLIM,
++            // libc::EPROCUNAVAIL => EPROCUNAVAIL,
++            // libc::EPROGMISMATCH => EPROGMISMATCH,
++            // libc::EPROGUNAVAIL => EPROGUNAVAIL,
++            // libc::EPROTO => EPROTO,
++            // libc::EPROTONOSUPPORT => EPROTONOSUPPORT,
++            // libc::EPROTOTYPE => EPROTOTYPE,
++            libc::ERANGE => ERANGE,
++            // libc::EREMOTE => EREMOTE,
++            // libc::EROFS => EROFS,
++            // libc::ERPCMISMATCH => ERPCMISMATCH,
++            // libc::ESHUTDOWN => ESHUTDOWN,
++            // libc::ESOCKTNOSUPPORT => ESOCKTNOSUPPORT,
++            // libc::ESPIPE => ESPIPE,
++            // libc::ESRCH => ESRCH,
++            // libc::ESTALE => ESTALE,
++            // libc::ETIME => ETIME,
++            libc::ETIMEDOUT => ETIMEDOUT,
++            // libc::ETOOMANYREFS => ETOOMANYREFS,
++            // libc::ETXTBSY => ETXTBSY,
++            // libc::EUSERS => EUSERS,
++            // libc::EXDEV => EXDEV,
++             _   => UnknownErrno,
++         }
++     }
++}
+ 
+ #[cfg(target_os = "dragonfly")]
+ mod consts {
+diff --git a/src/lib.rs b/src/lib.rs
+index 3b534a5..f7c8495 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -5,12 +5,13 @@
+ #![crate_name = "nix"]
+ #![cfg(unix)]
+ #![allow(non_camel_case_types)]
++#![allow(non_snake_case)]
+ // latest bitflags triggers a rustc bug with cross-crate macro expansions causing dead_code
+ // warnings even though the macro expands into something with allow(dead_code)
+ #![allow(dead_code)]
+ #![cfg_attr(test, deny(warnings))]
+ #![recursion_limit = "500"]
+-#![deny(unused)]
++// #![deny(unused)]
+ #![deny(unstable_features)]
+ #![deny(missing_copy_implementations)]
+ #![deny(missing_debug_implementations)]
+@@ -22,11 +23,13 @@ pub use libc;
+ #[macro_use] mod macros;
+ 
+ // Public crates
+-#[cfg(not(target_os = "redox"))]
++#[cfg(not(any(target_os = "redox", target_os = "aero")))]
+ pub mod dir;
++#[cfg(not(target_os = "aero"))]
+ pub mod env;
+ pub mod errno;
+ #[deny(missing_docs)]
++#[cfg(not(target_os = "aero"))]
+ pub mod features;
+ pub mod fcntl;
+ #[deny(missing_docs)]
+@@ -54,15 +57,18 @@ pub mod mount;
+           target_os = "netbsd"))]
+ pub mod mqueue;
+ #[deny(missing_docs)]
+-#[cfg(not(target_os = "redox"))]
++#[cfg(not(any(target_os = "redox", target_os = "aero")))]
+ pub mod net;
+ #[deny(missing_docs)]
++#[cfg(not(target_os = "aero"))]
+ pub mod poll;
+ #[deny(missing_docs)]
+ #[cfg(not(any(target_os = "redox", target_os = "fuchsia")))]
+ pub mod pty;
++#[cfg(not(target_os = "aero"))]
+ pub mod sched;
+ pub mod sys;
++#[cfg(not(target_os = "aero"))]
+ pub mod time;
+ // This can be implemented for other platforms as soon as libc
+ // provides bindings for them.
+diff --git a/src/sys/mod.rs b/src/sys/mod.rs
+index 43877a1..20dd8e5 100644
+--- a/src/sys/mod.rs
++++ b/src/sys/mod.rs
+@@ -6,7 +6,7 @@
+           target_os = "netbsd"))]
+ pub mod aio;
+ 
+-#[cfg(any(target_os = "android", target_os = "linux"))]
++#[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
+ pub mod epoll;
+ 
+ #[cfg(any(target_os = "dragonfly",
+@@ -42,6 +42,7 @@ pub mod mman;
+ #[cfg(target_os = "linux")]
+ pub mod personality;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod pthread;
+ 
+ #[cfg(any(target_os = "android",
+@@ -59,7 +60,8 @@ pub mod quota;
+ #[cfg(any(target_os = "linux"))]
+ pub mod reboot;
+ 
+-#[cfg(not(target_os = "redox"))]
++// #[cfg(not(target_os = "redox"))]
++#[cfg(not(any(target_os = "redox", target_os = "aero")))]
+ pub mod select;
+ 
+ #[cfg(any(target_os = "android",
+@@ -69,6 +71,7 @@ pub mod select;
+           target_os = "macos"))]
+ pub mod sendfile;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod signal;
+ 
+ #[cfg(any(target_os = "android", target_os = "linux"))]
+@@ -89,6 +92,7 @@ pub mod stat;
+ ))]
+ pub mod statfs;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod statvfs;
+ 
+ #[cfg(any(target_os = "android", target_os = "linux"))]
+@@ -100,8 +104,10 @@ pub mod time;
+ 
+ pub mod uio;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod utsname;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod wait;
+ 
+ #[cfg(any(target_os = "android", target_os = "linux"))]
+diff --git a/src/sys/socket/addr.rs b/src/sys/socket/addr.rs
+index d486056..b367e18 100644
+--- a/src/sys/socket/addr.rs
++++ b/src/sys/socket/addr.rs
+@@ -17,6 +17,7 @@ use std::os::unix::io::RawFd;
+ use crate::sys::socket::addr::sys_control::SysControlAddr;
+ #[cfg(any(target_os = "android",
+           target_os = "dragonfly",
++          target_os = "aero",
+           target_os = "freebsd",
+           target_os = "ios",
+           target_os = "linux",
+@@ -46,6 +47,7 @@ pub enum AddressFamily {
+     /// Low level packet interface (see [`packet(7)`](https://man7.org/linux/man-pages/man7/packet.7.html))
+     #[cfg(any(target_os = "android",
+               target_os = "linux",
++              target_os = "aero",
+               target_os = "illumos",
+               target_os = "fuchsia",
+               target_os = "solaris"))]
+@@ -245,7 +247,7 @@ impl AddressFamily {
+             libc::AF_NETLINK => Some(AddressFamily::Netlink),
+             #[cfg(any(target_os = "macos", target_os = "macos"))]
+             libc::AF_SYSTEM => Some(AddressFamily::System),
+-            #[cfg(any(target_os = "android", target_os = "linux"))]
++            #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
+             libc::AF_PACKET => Some(AddressFamily::Packet),
+             #[cfg(any(target_os = "dragonfly",
+                       target_os = "freebsd",
+@@ -653,6 +655,7 @@ pub enum SockAddr {
+     /// Datalink address (MAC)
+     #[cfg(any(target_os = "android",
+               target_os = "dragonfly",
++              target_os = "aero",
+               target_os = "freebsd",
+               target_os = "ios",
+               target_os = "linux",
+@@ -705,7 +708,7 @@ impl SockAddr {
+             SockAddr::Alg(..) => AddressFamily::Alg,
+             #[cfg(any(target_os = "ios", target_os = "macos"))]
+             SockAddr::SysControl(..) => AddressFamily::System,
+-            #[cfg(any(target_os = "android", target_os = "linux"))]
++            #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
+             SockAddr::Link(..) => AddressFamily::Packet,
+             #[cfg(any(target_os = "dragonfly",
+                       target_os = "freebsd",
+@@ -738,7 +741,7 @@ impl SockAddr {
+         if addr.is_null() {
+             None
+         } else {
+-            match AddressFamily::from_i32(i32::from((*addr).sa_family)) {
++            match AddressFamily::from_i32((*addr).sa_family as i32) {
+                 Some(AddressFamily::Unix) => None,
+                 Some(AddressFamily::Inet) => Some(SockAddr::Inet(
+                     InetAddr::V4(*(addr as *const libc::sockaddr_in)))),
+@@ -750,7 +753,7 @@ impl SockAddr {
+                 #[cfg(any(target_os = "ios", target_os = "macos"))]
+                 Some(AddressFamily::System) => Some(SockAddr::SysControl(
+                     SysControlAddr(*(addr as *const libc::sockaddr_ctl)))),
+-                #[cfg(any(target_os = "android", target_os = "linux"))]
++                #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
+                 Some(AddressFamily::Packet) => Some(SockAddr::Link(
+                     LinkAddr(*(addr as *const libc::sockaddr_ll)))),
+                 #[cfg(any(target_os = "dragonfly",
+@@ -833,7 +836,7 @@ impl SockAddr {
+                 mem::size_of_val(sa) as libc::socklen_t
+ 
+             ),
+-            #[cfg(any(target_os = "android", target_os = "linux"))]
++            #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
+             SockAddr::Link(LinkAddr(ref addr)) => (
+                 // This cast is always allowed in C
+                 unsafe {
+@@ -879,6 +882,7 @@ impl fmt::Display for SockAddr {
+             #[cfg(any(target_os = "ios", target_os = "macos"))]
+             SockAddr::SysControl(ref sc) => sc.fmt(f),
+             #[cfg(any(target_os = "android",
++                      target_os = "aero",
+                       target_os = "dragonfly",
+                       target_os = "freebsd",
+                       target_os = "ios",
+@@ -1064,7 +1068,7 @@ pub mod sys_control {
+ }
+ 
+ 
+-#[cfg(any(target_os = "android", target_os = "linux", target_os = "fuchsia"))]
++#[cfg(any(target_os = "android", target_os = "linux", target_os = "aero", target_os = "fuchsia"))]
+ mod datalink {
+     use super::{fmt, AddressFamily};
+ 
+diff --git a/src/sys/socket/mod.rs b/src/sys/socket/mod.rs
+index da5573c..3bac136 100644
+--- a/src/sys/socket/mod.rs
++++ b/src/sys/socket/mod.rs
+@@ -251,6 +251,7 @@ libc_bitflags!{
+         ///
+         /// Only used in [`recvmsg`](fn.recvmsg.html) function.
+         #[cfg(any(target_os = "android",
++                  target_os = "aero",
+                   target_os = "dragonfly",
+                   target_os = "freebsd",
+                   target_os = "linux",
+@@ -866,13 +867,13 @@ impl<'a> ControlMessage<'a> {
+ 
+     /// The value of CMSG_LEN on this message.
+     /// Safe because CMSG_LEN is always safe
+-    #[cfg(any(target_os = "android",
++    #[cfg(any(target_os = "android", target_os = "aero",
+               all(target_os = "linux", not(target_env = "musl"))))]
+     fn cmsg_len(&self) -> usize {
+         unsafe{CMSG_LEN(self.len() as libc::c_uint) as usize}
+     }
+ 
+-    #[cfg(not(any(target_os = "android",
++    #[cfg(not(any(target_os = "android", target_os = "aero",
+                   all(target_os = "linux", not(target_env = "musl")))))]
+     fn cmsg_len(&self) -> libc::c_uint {
+         unsafe{CMSG_LEN(self.len() as libc::c_uint)}
+diff --git a/src/sys/termios.rs b/src/sys/termios.rs
+index 36a3601..c7bddc3 100644
+--- a/src/sys/termios.rs
++++ b/src/sys/termios.rs
+@@ -467,10 +467,19 @@ impl From<BaudRate> for u32 {
+ }
+ 
+ // TODO: Add TCSASOFT, which will require treating this as a bitfield.
++#[cfg(target_os = "aero")]
+ libc_enum! {
+     /// Specify when a port configuration change should occur.
+     ///
+     /// Used as an argument to `tcsetattr()`
++    #[repr(i32)]
++    pub enum SetArg {
++        TCSANOW,
++    }
++}
++
++#[cfg(not(target_os = "aero"))]
++libc_enum! {
+     #[repr(i32)]
+     pub enum SetArg {
+         /// The change will occur immediately
+@@ -482,10 +491,19 @@ libc_enum! {
+     }
+ }
+ 
++#[cfg(target_os = "aero")]
+ libc_enum! {
+     /// Specify a combination of the input and output buffers to flush
+     ///
+     /// Used as an argument to `tcflush()`.
++    #[repr(i32)]
++    pub enum FlushArg {
++        TCIFLUSH,
++    }
++}
++
++#[cfg(not(target_os = "aero"))]
++libc_enum! {
+     #[repr(i32)]
+     pub enum FlushArg {
+         /// Flush data that was received but not read
+@@ -515,8 +533,17 @@ libc_enum! {
+ }
+ 
+ // TODO: Make this usable directly as a slice index.
++#[cfg(target_os = "aero")]
+ libc_enum! {
+     /// Indices into the `termios.c_cc` array for special characters.
++    #[repr(usize)]
++    pub enum SpecialCharacterIndices {
++        VEOF,
++    }
++}
++
++#[cfg(not(target_os = "aero"))]
++libc_enum! {
+     #[repr(usize)]
+     pub enum SpecialCharacterIndices {
+         VDISCARD,
+@@ -601,13 +628,22 @@ libc_bitflags! {
+         IXOFF;
+         #[cfg(not(target_os = "redox"))]
+         IXANY;
+-        #[cfg(not(target_os = "redox"))]
++        #[cfg(not(any(target_os = "redox", target_os = "aero")))]
+         IMAXBEL;
+         #[cfg(any(target_os = "android", target_os = "linux", target_os = "macos"))]
+         IUTF8;
+     }
+ }
+ 
++#[cfg(target_os = "aero")]
++libc_bitflags! {
++    /// Flags for configuring the output mode of a terminal
++    pub struct OutputFlags: tcflag_t {
++        OPOST;
++    }
++}
++
++#[cfg(not(target_os = "aero"))]
+ libc_bitflags! {
+     /// Flags for configuring the output mode of a terminal
+     pub struct OutputFlags: tcflag_t {
+@@ -791,8 +827,16 @@ libc_bitflags! {
+     }
+ }
+ 
++#[cfg(target_os = "aero")]
+ libc_bitflags! {
+     /// Flags for setting the control mode of a terminal
++    pub struct ControlFlags: tcflag_t {
++        CS5;
++    }
++}
++
++#[cfg(not(target_os = "aero"))]
++lib_bitflags! {
+     pub struct ControlFlags: tcflag_t {
+         #[cfg(any(target_os = "dragonfly",
+                   target_os = "freebsd",
+@@ -859,8 +903,16 @@ libc_bitflags! {
+     }
+ }
+ 
++#[cfg(target_os = "aero")]
+ libc_bitflags! {
+     /// Flags for setting any local modes
++    pub struct LocalFlags: tcflag_t {
++        ECHO;
++    }
++}
++
++#[cfg(not(target_os = "aero"))]
++libc_bitflags! {
+     pub struct LocalFlags: tcflag_t {
+         #[cfg(not(target_os = "redox"))]
+         ECHOKE;
+diff --git a/src/unistd.rs b/src/unistd.rs
+index d94cb99..8e26266 100644
+--- a/src/unistd.rs
++++ b/src/unistd.rs
+@@ -1081,6 +1081,7 @@ pub fn pipe() -> std::result::Result<(RawFd, RawFd), Error> {
+ /// See also [pipe(2)](https://man7.org/linux/man-pages/man2/pipe.2.html)
+ #[cfg(any(target_os = "android",
+           target_os = "dragonfly",
++          target_os = "aero",
+           target_os = "emscripten",
+           target_os = "freebsd",
+           target_os = "illumos",
+@@ -1478,6 +1479,7 @@ pub fn getgroups() -> Result<Vec<Gid>> {
+ pub fn setgroups(groups: &[Gid]) -> Result<()> {
+     cfg_if! {
+         if #[cfg(any(target_os = "dragonfly",
++                     target_os = "aero",
+                      target_os = "freebsd",
+                      target_os = "illumos",
+                      target_os = "ios",
+@@ -1799,6 +1801,14 @@ pub fn mkstemp<P: ?Sized + NixPath>(template: &P) -> Result<(RawFd, PathBuf)> {
+ /// - [pathconf(2)](https://pubs.opengroup.org/onlinepubs/9699919799/functions/pathconf.html)
+ /// - [limits.h](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/limits.h.html)
+ /// - [unistd.h](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/unistd.h.html)
++#[cfg(target_os = "aero")]
++#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
++#[repr(i32)]
++pub enum PathconfVar {
++    NAME_MAX = libc::_PC_NAME_MAX,
++}
++
++#[cfg(not(target_os = "aero"))]
+ #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+ #[repr(i32)]
+ pub enum PathconfVar {
+@@ -1978,6 +1988,17 @@ pub fn pathconf<P: ?Sized + NixPath>(path: &P, var: PathconfVar) -> Result<Optio
+ /// - [sysconf(3)](https://pubs.opengroup.org/onlinepubs/9699919799/functions/sysconf.html)
+ /// - [unistd.h](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/unistd.h.html)
+ /// - [limits.h](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/limits.h.html)
++#[cfg(target_os = "aero")]
++#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
++#[repr(i32)]
++pub enum SysconfVar {
++    PAGE_SIZE = libc::_SC_PAGESIZE,
++    GETGR_R_SIZE_MAX = libc::_SC_GETGR_R_SIZE_MAX,
++    GETPW_R_SIZE_MAX = libc::_SC_GETPW_R_SIZE_MAX,
++    NGROUPS_MAX = libc::_SC_NGROUPS_MAX,
++}
++
++#[cfg(not(target_os = "aero"))]
+ #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+ #[repr(i32)]
+ pub enum SysconfVar {
+@@ -2633,6 +2654,7 @@ pub struct User {
+     /// Login class
+     #[cfg(not(any(target_os = "android",
+                   target_os = "fuchsia",
++                  target_os = "aero",
+                   target_os = "illumos",
+                   target_os = "linux",
+                   target_os = "solaris")))]
+@@ -2640,6 +2662,7 @@ pub struct User {
+     /// Last password change
+     #[cfg(not(any(target_os = "android",
+                   target_os = "fuchsia",
++                  target_os = "aero",
+                   target_os = "illumos",
+                   target_os = "linux",
+                   target_os = "solaris")))]
+@@ -2647,6 +2670,7 @@ pub struct User {
+     /// Expiration time of account
+     #[cfg(not(any(target_os = "android",
+                   target_os = "fuchsia",
++                  target_os = "aero",
+                   target_os = "illumos",
+                   target_os = "linux",
+                   target_os = "solaris")))]
+@@ -2668,18 +2692,21 @@ impl From<&libc::passwd> for User {
+                 gid: Gid::from_raw((*pw).pw_gid),
+                 #[cfg(not(any(target_os = "android",
+                               target_os = "fuchsia",
++                              target_os = "aero",
+                               target_os = "illumos",
+                               target_os = "linux",
+                               target_os = "solaris")))]
+                 class: CString::new(CStr::from_ptr((*pw).pw_class).to_bytes()).unwrap(),
+                 #[cfg(not(any(target_os = "android",
+                               target_os = "fuchsia",
++                              target_os = "aero",
+                               target_os = "illumos",
+                               target_os = "linux",
+                               target_os = "solaris")))]
+                 change: (*pw).pw_change,
+                 #[cfg(not(any(target_os = "android",
+                               target_os = "fuchsia",
++                              target_os = "aero",
+                               target_os = "illumos",
+                               target_os = "linux",
+                               target_os = "solaris")))]
+-- 
+2.38.1
+

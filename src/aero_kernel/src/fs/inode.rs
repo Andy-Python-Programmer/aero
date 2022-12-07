@@ -193,8 +193,8 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    fn open(&self, _flags: OpenFlags, _handle: Arc<FileHandle>) -> Result<()> {
-        Ok(())
+    fn open(&self, _flags: OpenFlags, _handle: Arc<FileHandle>) -> Result<Option<DirCacheItem>> {
+        Ok(None)
     }
 
     fn close(&self, _flags: OpenFlags) {}

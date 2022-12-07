@@ -141,20 +141,11 @@ fn aero_main() -> ! {
 }
 
 fn kernel_main_thread() {
-    let mut address_space = mem::AddressSpace::this();
-    let mut offset_table = address_space.offset_page_table();
-
     modules::init();
     log::info!("loaded kernel modules");
 
     #[cfg(target_arch = "x86_64")]
     arch::enable_acpi();
-
-    #[cfg(target_arch = "x86_64")]
-    drivers::pci::init(&mut offset_table);
-    log::info!("loaded PCI driver");
-
-    fs::block::launch().unwrap();
 
     #[cfg(test)]
     test_main();

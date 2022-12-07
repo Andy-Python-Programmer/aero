@@ -86,6 +86,7 @@ pub const SYS_EXIT_THREAD: usize = 62;
 pub const SYS_SOCK_RECV: usize = 63;
 pub const SYS_SETITIMER: usize = 64;
 pub const SYS_GETITIMER: usize = 65;
+pub const SYS_GETPPID: usize = 66;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;
@@ -214,6 +215,8 @@ bitflags::bitflags! {
 pub const FBIOGET_VSCREENINFO: usize = 0x4600;
 pub const FBIOPUT_VSCREENINFO: usize = 0x4601;
 pub const FBIOGET_FSCREENINFO: usize = 0x4602;
+pub const FBIOGETCMAP: usize = 0x4604;
+pub const FBIOPUTCMAP: usize = 0x4605;
 
 pub const FB_TYPE_PACKED_PIXELS: u32 = 0;
 pub const FB_TYPE_PLANES: u32 = 1;
@@ -255,6 +258,31 @@ impl FramebufferBitField {
             offset: shift,
             length: size,
             msb_right: 0,
+        }
+    }
+}
+
+// device independent colour information:
+#[derive(Debug)]
+#[repr(C)]
+pub struct FramebufferCmap {
+    pub start: u32, // first entry
+    pub len: u32,   // number of entries
+    pub red: *mut u16,
+    pub green: *mut u16,
+    pub blue: *mut u16,
+    pub transp: *mut u16, // can be NULL
+}
+
+impl Default for FramebufferCmap {
+    fn default() -> Self {
+        Self {
+            start: Default::default(),
+            len: Default::default(),
+            red: core::ptr::null_mut(),
+            green: core::ptr::null_mut(),
+            blue: core::ptr::null_mut(),
+            transp: core::ptr::null_mut(),
         }
     }
 }

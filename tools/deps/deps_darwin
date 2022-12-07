@@ -1,0 +1,56 @@
+#!/usr/bin/bash
+
+PKGMAN='brew'
+
+#
+#
+# DEPENDENCIES BELOW ARE NOT IN Homebrew REPOS
+#
+# patch			PREINSTALLED ON darwin/macOS
+# tar			PREINSTALLED ON darwin/macOS
+# python-pip	TODO: ALTERNATIVE INSTALL
+# python-mako	TODO: ALTERNATIVE INSTALL
+packages=(
+    "bash"
+    "coreutils"
+    "make"
+    "gzip"
+    "binutils"
+    "gcc"
+    "git"
+    "subversion"
+    "mercurial"
+    "curl"
+    "wget"
+    "xz"
+    "nasm"
+    "mtools"
+    "meson"
+    "perl"
+    "m4"
+    "texinfo"
+    "groff"
+    "gettext"
+    "expat"
+    "bison"
+    "flex"
+    "help2man"
+    "openssl"
+    "gperf"
+    "rsync"
+    "libxslt"
+    "python"
+    "xcb-proto"
+    "xorriso"
+    "boost"
+    "cmake"
+)
+
+function install_package() { brew install $1; }
+function query_package() {
+	brew list | { 
+		RESULT=$(grep -q $1);
+		cat > /dev/null;
+		return $RESULT;
+	}
+}

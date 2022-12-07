@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::WaitPidFlags;
 use alloc::sync::{Arc, Weak};
 
 use spin::RwLock;
@@ -129,8 +130,13 @@ impl Zombies {
         self.block.notify_complete();
     }
 
-    fn waitpid(&self, pids: &[usize], status: &mut u32) -> SignalResult<usize> {
-        let mut captured = (TaskId(0), 0);
+    fn waitpid(
+        &self,
+        pids: &[usize],
+        status: &mut u32,
+        flags: WaitPidFlags,
+    ) -> SignalResult<usize> {
+        let mut captured = None;
 
         self.block.block_on(&self.list, |l| {
             let mut cursor = l.front_mut();
@@ -138,7 +144,7 @@ impl Zombies {
             while let Some(t) = cursor.get() {
                 for pid in pids {
                     if t.pid().as_usize() == *pid {
-                        captured = (t.pid(), t.exit_status());
+                        captured = Some((t.pid(), t.exit_status()));
                         cursor.remove();
 
                         return true;
@@ -148,14 +154,23 @@ impl Zombies {
                 cursor.move_next();
             }
 
+            if flags.contains(WaitPidFlags::WNOHANG) {
+                return true;
+            }
+
             false
         })?;
 
-        let (tid, st) = captured;
-
-        log::debug!("waitpid: status = {st}");
-        *status = st as u32;
-        Ok(tid.as_usize())
+        if let Some((tid, st)) = captured {
+            log::debug!("waitpid: status = {st}");
+            *status = st as u32;
+            Ok(tid.as_usize())
+        } else {
+            // If `WNOHANG` was specified in flags and there were no children in a waitable
+            // state, then waitid() returns 0 immediately.
+            *status = 0;
+            Ok(0)
+        }
     }
 }
 
@@ -417,7 +432,12 @@ impl Task {
         self.sleep_duration.load(Ordering::SeqCst)
     }
 
-    pub fn waitpid(&self, pid: isize, status: &mut u32) -> SignalResult<usize> {
+    pub fn waitpid(
+        &self,
+        pid: isize,
+        status: &mut u32,
+        flags: WaitPidFlags,
+    ) -> SignalResult<usize> {
         if pid == -1 {
             // wait for any child process if no specific process is requested.
             //
@@ -433,9 +453,9 @@ impl Task {
                 .collect::<alloc::vec::Vec<_>>();
 
             pids.extend(self.children.lock_irq().iter().map(|e| e.pid().as_usize()));
-            self.zombies.waitpid(&pids, status)
+            self.zombies.waitpid(&pids, status, flags)
         } else {
-            self.zombies.waitpid(&[pid as _], status)
+            self.zombies.waitpid(&[pid as _], status, flags)
         }
     }
 
@@ -456,6 +476,8 @@ impl Task {
         if self.cwd.read().is_none() {
             *self.cwd.write() = Some(Cwd::new())
         }
+
+        self.file_table.log();
 
         *self.executable.lock() = Some(executable.clone());
 
@@ -483,15 +505,15 @@ impl Task {
     }
 
     pub(super) fn update_state(&self, state: TaskState) {
-        // if state != TaskState::Runnable {
-        //     log::warn!(
-        //         "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",
-        //         self.pid,
-        //         self.tid
-        //     );
+        if state != TaskState::Runnable {
+            log::warn!(
+                "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",
+                self.pid,
+                self.tid
+            );
 
-        //     crate::unwind::unwind_stack_trace();
-        // }
+            crate::unwind::unwind_stack_trace();
+        }
 
         self.state.store(state as _, Ordering::SeqCst);
     }
@@ -503,6 +525,10 @@ impl Task {
     /// Returns the PID ID that was allocated for this task.
     pub fn pid(&self) -> TaskId {
         self.pid
+    }
+
+    pub fn parent_pid(&self) -> TaskId {
+        self.get_parent().unwrap().pid()
     }
 
     pub fn tid(&self) -> TaskId {
