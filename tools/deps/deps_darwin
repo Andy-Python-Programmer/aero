@@ -46,6 +46,7 @@ packages=(
     "cmake"
 )
 
+function update_manager() { brew update && brew upgrade; }
 function install_package() { brew install $1; }
 function query_package() {
 	brew list | { 

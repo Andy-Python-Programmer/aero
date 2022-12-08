@@ -46,6 +46,7 @@ packages=(
     "cmake"
 )
 
+function update_manager() { apt-get update -y && apt-get upgrade -y; }
 function install_package() { apt-get install -y $1; }
 function query_package() { dpkg -l | grep -q $1; }
 elif [[ $ID == "arch" ]]; then # if [[ $ID_LIKE == "debian" ]]; then
@@ -91,6 +92,7 @@ packages=(
     "cmake"
 )
 
+function update_manager() { pacman -Syu; }
 function install_package() { pacman -S $1 --noconfirm; }
 function query_package() { pacman -Q | grep -q $1; }
 fi # elif [[ $ID == "arch" ]]; then
