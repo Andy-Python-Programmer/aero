@@ -1,4 +1,5 @@
 {
+	// TODO: update Dockerfile to not rely on Gitpod
 	"name": "Gitpod Dockerfile",
 	"context": "..",
 	"dockerFile": "../.gitpod.Dockerfile",
@@ -7,5 +8,16 @@
 	"postCreateCommand": "../aero.py --no-run",
 	"postStartCommand": "./aero.py --only-run --memory 20G",
 	// Uncomment when using a ptrace-based debugger like C++, Go, and Rust
-	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined" ]
+	"runArgs": [
+		"--cap-add=SYS_PTRACE",
+		"--security-opt",
+		"seccomp=unconfined"
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"rust-lang.rust-analyzer"
+			]
+		}
+	}
 }
