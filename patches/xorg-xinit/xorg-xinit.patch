@@ -1,0 +1,25 @@
+From e071d54e12c9feaa8bfd19f52247d13d45e94ab2 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sat, 10 Dec 2022 19:17:27 +1100
+Subject: [PATCH] <xxx>
+
+---
+ startx.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/startx.cpp b/startx.cpp
+index 1c6fce0..e42051c 100644
+--- a/startx.cpp
++++ b/startx.cpp
+@@ -113,6 +113,8 @@ if defaults read $X11_PREFS_DOMAIN 2> /dev/null | grep -q 'dpi' && defaults read
+     defaultserverargs="$defaultserverargs -dpi `defaults read $X11_PREFS_DOMAIN dpi`"
+ fi
+ 
++#elif defined(__aero__)
++enable_xauth=0
+ #else
+ enable_xauth=1
+ #endif
+-- 
+2.38.1
+

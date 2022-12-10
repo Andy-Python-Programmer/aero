@@ -745,7 +745,6 @@ packages:
         - '--sysconfdir=/etc'
         - '--localstatedir=/var'
         - '--disable-static'
-        - '--without-xauth'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install-strip']
