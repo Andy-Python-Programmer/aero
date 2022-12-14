@@ -431,6 +431,78 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: glu
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/mesa/glu.git'
+      tag: 'glu-9.0.2'
+      version: '9.0.2'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: '1'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - gcc # Actually requires libstdc++.so in the system root, otherwise it links against the host libstdc++.so.6
+      - mesa
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: mesa-utils
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/freedesktop/mesa-demos'
+      branch: 'master'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - mesa
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+        - '--disable-gles1' # Requires some linux header that we don't have
+        - '--disable-vg'
+        - '--disable-osmesa'
+        - '--disable-rbug'
+        - '--with-system-data-files'
+    build:
+    - args: ['make', '-j@PARALLELISM@']
+    - args: ['make', 'install']
+      environ:
+        DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: mesa
     source:
       subdir: 'bundled'

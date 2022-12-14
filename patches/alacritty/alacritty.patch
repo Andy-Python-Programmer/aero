@@ -1,0 +1,71 @@
+From b194e3d72903f677f2aacf9293706ff2027a413b Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sun, 11 Dec 2022 18:43:18 +1100
+Subject: [PATCH] <xxx>
+
+---
+ alacritty/src/display/window.rs    |  8 ++++----
+ alacritty_terminal/src/tty/unix.rs | 17 +++++++++--------
+ 2 files changed, 13 insertions(+), 12 deletions(-)
+
+diff --git a/alacritty/src/display/window.rs b/alacritty/src/display/window.rs
+index ee2e74f..d75996b 100644
+--- a/alacritty/src/display/window.rs
++++ b/alacritty/src/display/window.rs
+@@ -128,9 +128,9 @@ fn create_gl_window<E>(
+     }
+ 
+     let windowed_context = ContextBuilder::new()
+-        .with_srgb(srgb)
+-        .with_vsync(vsync)
+-        .with_hardware_acceleration(None)
++        // .with_srgb(srgb)
++        // .with_vsync(vsync)
++        // .with_hardware_acceleration(None)
+         .build_windowed(window, event_loop)?;
+ 
+     // Make the context current so OpenGL operations can run.
+@@ -292,7 +292,7 @@ impl Window {
+         let builder = WindowBuilder::new()
+             .with_title(&identity.title)
+             .with_visible(false)
+-            .with_transparent(true)
++            .with_transparent(false)
+             .with_decorations(window_config.decorations != Decorations::None)
+             .with_maximized(window_config.maximized())
+             .with_fullscreen(window_config.fullscreen());
+diff --git a/alacritty_terminal/src/tty/unix.rs b/alacritty_terminal/src/tty/unix.rs
+index 206dbe8..cb172ab 100644
+--- a/alacritty_terminal/src/tty/unix.rs
++++ b/alacritty_terminal/src/tty/unix.rs
+@@ -90,18 +90,19 @@ fn get_pw_entry(buf: &mut [i8; 1024]) -> Passwd<'_> {
+         die!("getpwuid_r failed");
+     }
+ 
+-    if res.is_null() {
+-        die!("pw not found");
+-    }
++    // if res.is_null() {
++    //     die!("pw not found");
++    // }
+ 
+-    // Sanity check.
+-    assert_eq!(entry.pw_uid, uid);
++    // // Sanity check.
++    // assert_eq!(entry.pw_uid, uid);
+ 
+     // Build a borrowed Passwd struct.
++    // FIXME(mlibc): Assertion '!"slab_pool corruption. Possible write to unallocated object"' failed!
+     Passwd {
+-        name: unsafe { CStr::from_ptr(entry.pw_name).to_str().unwrap() },
+-        dir: unsafe { CStr::from_ptr(entry.pw_dir).to_str().unwrap() },
+-        shell: unsafe { CStr::from_ptr(entry.pw_shell).to_str().unwrap() },
++        name: "root",
++        dir: "/",
++        shell: "/usr/bin/bash",
+     }
+ }
+ 
+-- 
+2.38.1
+

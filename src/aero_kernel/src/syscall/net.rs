@@ -1,6 +1,7 @@
 use aero_syscall::socket::MessageHeader;
 use aero_syscall::*;
 
+use crate::fs::cache::DirCacheItem;
 use crate::fs::inode::DirEntry;
 use crate::mem::paging::VirtAddr;
 
@@ -92,8 +93,11 @@ pub fn listen(fd: usize, backlog: usize) -> Result<usize, SyscallError> {
     Ok(0)
 }
 
-#[syscall]
-pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usize, SyscallError> {
+fn create_socket(
+    domain: usize,
+    socket_type: usize,
+    protocol: usize,
+) -> Result<DirCacheItem, SyscallError> {
     let socket = match domain as u32 {
         AF_UNIX => UnixSocket::new(),
         _ => {
@@ -105,10 +109,17 @@ pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usiz
         }
     };
 
-    let sockfd_flags = SocketFlags::from_bits_truncate(socket_type).into();
-
     let entry = DirEntry::from_inode(socket, String::from("<socket>"));
+    Ok(entry)
+}
+
+#[syscall]
+pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usize, SyscallError> {
+    let entry = create_socket(domain, socket_type, protocol)?;
+
     let current_task = scheduler::get_scheduler().current_task();
+
+    let sockfd_flags = SocketFlags::from_bits_truncate(socket_type).into();
     let fd = current_task.file_table.open_file(entry, sockfd_flags)?;
 
     Ok(fd)
@@ -133,4 +144,28 @@ pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, SyscallEr
         }
         None => Err(SyscallError::ENOENT),
     }
+}
+
+/// Create an unbound pair of connected sockets in a specified domain, of a
+/// specified type, under the protocol optionally specified by the protocol
+/// argument. The two sockets shall be identical. The file descriptors used
+/// in referencing the created sockets shall be returned in fds[0] and fds[1].
+#[syscall]
+pub fn socket_pair(
+    domain: usize,
+    type_and_flags: usize,
+    protocol: usize,
+    fds: &mut [i32],
+) -> Result<usize, SyscallError> {
+    let current_task = scheduler::get_scheduler().current_task();
+    let sockfd_flags = SocketFlags::from_bits_truncate(type_and_flags).into();
+
+    let a = create_socket(domain, type_and_flags, protocol)?;
+    let b = create_socket(domain, type_and_flags, protocol)?;
+
+    UnixSocket::connect_pair(a.clone(), b.clone())?;
+
+    fds[0] = current_task.file_table.open_file(a, sockfd_flags)? as i32;
+    fds[1] = current_task.file_table.open_file(b, sockfd_flags)? as i32;
+    Ok(0)
 }

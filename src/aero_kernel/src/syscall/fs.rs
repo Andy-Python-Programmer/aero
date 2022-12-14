@@ -236,7 +236,12 @@ pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, Syscal
         // to `fcntl(fd, F_SETFD, FD_CLOEXEC)`
         FIOCLEX => {
             handle.fd_flags.lock().insert(FdFlags::CLOEXEC);
-            return Ok(0x00);
+            Ok(0)
+        }
+
+        FIONBIO => {
+            handle.flags.write().insert(OpenFlags::O_NONBLOCK);
+            Ok(0)
         }
 
         // Handle file specific ioctl:
@@ -471,7 +476,7 @@ pub fn epoll_ctl(
 #[syscall]
 pub fn epoll_pwait(
     epfd: usize,
-    event: &mut [&mut EPollEvent],
+    event: &mut [EPollEvent],
     timeout: usize,
     sigmask: usize,
 ) -> Result<usize, SyscallError> {

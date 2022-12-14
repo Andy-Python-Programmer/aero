@@ -67,7 +67,7 @@ impl INodeInterface for EventFd {
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> super::Result<PollFlags> {
-        let count = self.count.lock();
+        let count = self.count.lock_irq();
         let mut events = PollFlags::empty();
 
         table.map(|e| e.insert(&self.wq)); // listen for changes

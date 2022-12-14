@@ -32,8 +32,8 @@ impl Pipe {
         })
     }
 
-    /// Returns whether the pipe has active writers.
-    pub fn has_active_writers(&self) -> usize {
+    /// Returns the number of active writers to the pipe.
+    pub fn active_writers(&self) -> usize {
         self.num_writers.load(Ordering::SeqCst)
     }
 }
@@ -65,8 +65,12 @@ impl INodeInterface for Pipe {
     }
 
     fn read_at(&self, _offset: usize, buf: &mut [u8]) -> super::Result<usize> {
+        if self.active_writers() == 0 {
+            return Ok(0);
+        }
+
         let mut buffer = self.readers.block_on(&self.queue, |lock| {
-            lock.has_data() || !self.has_active_writers() == 0
+            lock.has_data() || self.active_writers() != 0
         })?;
 
         let read = buffer.read_data(buf);

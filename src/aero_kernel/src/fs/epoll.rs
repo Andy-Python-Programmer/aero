@@ -109,9 +109,9 @@ impl EPoll {
     /// * The timeout expires.
     pub fn wait(
         &self,
-        ret_events: &mut [&mut EPollEvent],
+        ret_events: &mut [EPollEvent],
         max_events: usize,
-        _timeout: usize,
+        timeout: usize,
     ) -> Result<usize, FileSystemError> {
         let current_task = scheduler::get_scheduler().current_task();
         let file_table = &current_task.file_table;
@@ -128,6 +128,8 @@ impl EPoll {
                 break;
             }
 
+            ret_events[n].events = EPollEventFlags::empty();
+
             let fd = file_table
                 .get_handle(*fd)
                 .ok_or(FileSystemError::NotSupported)?; // EINVAL
@@ -135,16 +137,13 @@ impl EPoll {
             let flags = epoll_event.events;
             let ready: EPollEventFlags = fd.inode().poll(None)?.into();
 
-            if ready.contains(flags) {
-                // The registered event is ready; increment the number of ready events
-                // and set event flags mask for this event in the caller-supplied event
-                // buffer.
+            if !(ready & flags).is_empty() {
                 ret_events[n].events = ready & flags;
                 n += 1;
                 continue;
             }
 
-            // Not ready; add the event to the poll table.
+            // // Not ready; add the event to the poll table.
             fd.inode().poll(Some(&mut poll_table))?;
             fds.push(fd);
         }
@@ -155,21 +154,24 @@ impl EPoll {
             return Ok(n);
         }
 
-        'search: loop {
-            // Wait till one of the file descriptor deliever an event.
-            scheduler::get_scheduler().inner.await_io()?;
+        // Start the timer if timeout specified, if not, we can block indefinitely.
+        // If the timeout is zero, then we have to return without blocking.
+        if timeout == 0 {
+            return Ok(0);
+        }
 
-            for fd in fds.iter() {
+        'search: loop {
+            for (i, fd) in fds.iter().enumerate() {
                 let ready: EPollEventFlags = fd.inode().poll(None)?.into();
                 let flags = table
                     .get(&fd.fd)
                     .ok_or(FileSystemError::NotSupported)?
                     .events;
 
-                if ready.contains(flags) {
+                if !(ready & flags).is_empty() {
                     // The event is ready; break out of the search loop and set ready
                     // events to 1.
-                    ret_events[0].events = ready & flags;
+                    ret_events[i].events = ready & flags;
                     n = 1;
                     break 'search;
                 }

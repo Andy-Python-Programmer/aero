@@ -278,6 +278,7 @@ pub const TIOCGWINSZ: usize = 0x5413;
 pub const TIOCSWINSZ: usize = 0x5414;
 pub const TCGETS: usize = 0x5401;
 pub const TCSETSF: usize = 0x5404;
+pub const TIOCSCTTY: usize = 0x540e;
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]

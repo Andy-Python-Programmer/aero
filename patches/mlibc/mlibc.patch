@@ -1,22 +1,22 @@
-From 12c60e06a4b58e27d26763cb1bb9c6577c14add5 Mon Sep 17 00:00:00 2001
+From fd1ced027b75cff8ee16a12157330ee0986ccefa Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Thu, 1 Dec 2022 20:11:07 +1100
+Date: Mon, 12 Dec 2022 16:37:48 +1100
 Subject: [PATCH] <xxx>
 
 ---
- .gitignore                              |  2 +
- options/ansi/generic/stdlib-stubs.cpp   |  2 +-
- options/glibc/generic/execinfo.cpp      |  5 +-
- options/posix/generic/dlfcn-stubs.cpp   |  1 +
- options/posix/generic/termios-stubs.cpp |  5 +-
- options/rtdl/generic/linker.cpp         |  2 +-
- sysdeps/aero/generic/aero.cpp           | 62 ++++++++++++--------
- sysdeps/aero/generic/filesystem.cpp     | 25 ++++++--
- sysdeps/aero/generic/sockets.cpp        | 77 ++++++++++++++++++++++++-
- sysdeps/aero/generic/time.cpp           | 24 ++++++++
- sysdeps/aero/include/aero/syscall.h     |  7 +++
- sysdeps/aero/meson.build                |  1 +
- 12 files changed, 176 insertions(+), 37 deletions(-)
+ .gitignore                              |   2 +
+ options/ansi/generic/stdlib-stubs.cpp   | 183 +++++++++++++++++++++++-
+ options/glibc/generic/execinfo.cpp      |   5 +-
+ options/posix/generic/dlfcn-stubs.cpp   |   1 +
+ options/posix/generic/termios-stubs.cpp |   5 +-
+ options/rtdl/generic/linker.cpp         |   2 +-
+ sysdeps/aero/generic/aero.cpp           |  66 +++++----
+ sysdeps/aero/generic/filesystem.cpp     |  25 +++-
+ sysdeps/aero/generic/sockets.cpp        |  87 ++++++++++-
+ sysdeps/aero/generic/time.cpp           |  24 ++++
+ sysdeps/aero/include/aero/syscall.h     |   8 ++
+ sysdeps/aero/meson.build                |   1 +
+ 12 files changed, 366 insertions(+), 43 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -30,10 +30,199 @@ index fdd60a0..9f811f4 100644
 +# clangd cache files:
 +.cache
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
-index c0e54fe..d6f92f3 100644
+index c0e54fe..b988dea 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
 +++ b/options/ansi/generic/stdlib-stubs.cpp
-@@ -392,7 +392,7 @@ int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
+@@ -319,13 +319,182 @@ void qsort(void *base, size_t count, size_t size,
+ 	}
+ }
+ 
+-void qsort_r(void *, size_t, size_t,
+-		int (*compare)(const void *, const void *, void *),
+-		void *) {
+-	(void) compare;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++
++// ---------------- QSORT START ----------------
++/*
++ * Adapted from https://github.com/noporpoise/sort_r, original
++ * copyright follows:
++ *
++ * Isaac Turner 29 April 2014 Public Domain
++ */
++#include <stdlib.h>
++#include <string.h>
++
++#define SORT_R_SWAP(a,b,tmp) ((tmp) = (a), (a) = (b), (b) = (tmp))
++
++/* swap a and b */
++/* a and b must not be equal! */
++static void sort_r_swap(char *__restrict a, char *__restrict b,
++			size_t w)
++{
++	char tmp, *end = a+w;
++	for(; a < end; a++, b++) { SORT_R_SWAP(*a, *b, tmp); }
++}
++
++/* swap a, b iff a>b */
++/* a and b must not be equal! */
++/* __restrict is same as restrict but better support on old machines */
++static int sort_r_cmpswap(char *__restrict a,
++			  char *__restrict b, size_t w,
++			  int (*compar)(const void *_a,
++					const void *_b,
++					void *_arg),
++			  void *arg)
++{
++	if(compar(a, b, arg) > 0) {
++		sort_r_swap(a, b, w);
++		return 1;
++	}
++	return 0;
++}
++
++/*
++  Swap consecutive blocks of bytes of size na and nb starting at memory addr ptr,
++  with the smallest swap so that the blocks are in the opposite order. Blocks may
++  be internally re-ordered e.g.
++  12345ab  ->   ab34512
++  123abc   ->   abc123
++  12abcde  ->   deabc12
++*/
++static void sort_r_swap_blocks(char *ptr, size_t na, size_t nb)
++{
++	if(na > 0 && nb > 0) {
++		if(na > nb) { sort_r_swap(ptr, ptr+na, nb); }
++		else { sort_r_swap(ptr, ptr+nb, na); }
++	}
++}
++
++/* Implement recursive quicksort ourselves */
++/* Note: quicksort is not stable, equivalent values may be swapped */
++void qsort_r(void *base, size_t nel, size_t w,
++	     int (*compar)(const void *_a,
++			   const void *_b,
++			   void *_arg),
++	     void *arg)
++{
++	char *b = (char *)base, *end = b + nel*w;
++
++	/* for(size_t i=0; i<nel; i++) {printf("%4i", *(int*)(b + i*sizeof(int)));}
++	   printf("\n"); */
++
++	if(nel < 10) {
++		/* Insertion sort for arbitrarily small inputs */
++		char *pi, *pj;
++		for(pi = b+w; pi < end; pi += w) {
++			for(pj = pi; pj > b && sort_r_cmpswap(pj-w,pj,w,compar,arg); pj -= w) {}
++		}
++	}
++	else
++	{
++		/* nel > 6; Quicksort */
++
++		int cmp;
++		char *pl, *ple, *pr, *pre, *pivot;
++		char *last = b+w*(nel-1), *tmp;
++
++		/*
++		  Use median of second, middle and second-last items as pivot.
++		  First and last may have been swapped with pivot and therefore be extreme
++		*/
++		char *l[3];
++		l[0] = b + w;
++		l[1] = b+w*(nel/2);
++		l[2] = last - w;
++
++		/* printf("pivots: %i, %i, %i\n", *(int*)l[0], *(int*)l[1], *(int*)l[2]); */
++
++		if(compar(l[0],l[1],arg) > 0) { SORT_R_SWAP(l[0], l[1], tmp); }
++		if(compar(l[1],l[2],arg) > 0) {
++			SORT_R_SWAP(l[1], l[2], tmp);
++			if(compar(l[0],l[1],arg) > 0) { SORT_R_SWAP(l[0], l[1], tmp); }
++		}
++
++		/* swap mid value (l[1]), and last element to put pivot as last element */
++		if(l[1] != last) { sort_r_swap(l[1], last, w); }
++
++		/*
++		  pl is the next item on the left to be compared to the pivot
++		  pr is the last item on the right that was compared to the pivot
++		  ple is the left position to put the next item that equals the pivot
++		  ple is the last right position where we put an item that equals the pivot
++		  v- end (beyond the array)
++		  EEEEEELLLLLLLLuuuuuuuuGGGGGGGEEEEEEEE.
++		  ^- b  ^- ple  ^- pl   ^- pr  ^- pre ^- last (where the pivot is)
++		  Pivot comparison key:
++		  E = equal, L = less than, u = unknown, G = greater than, E = equal
++		*/
++		pivot = last;
++		ple = pl = b;
++		pre = pr = last;
++
++		/*
++		  Strategy:
++		  Loop into the list from the left and right at the same time to find:
++		  - an item on the left that is greater than the pivot
++		  - an item on the right that is less than the pivot
++		  Once found, they are swapped and the loop continues.
++		  Meanwhile items that are equal to the pivot are moved to the edges of the
++		  array.
++		*/
++		while(pl < pr) {
++			/* Move left hand items which are equal to the pivot to the far left.
++			   break when we find an item that is greater than the pivot */
++			for(; pl < pr; pl += w) {
++				cmp = compar(pl, pivot, arg);
++				if(cmp > 0) { break; }
++				else if(cmp == 0) {
++					if(ple < pl) { sort_r_swap(ple, pl, w); }
++					ple += w;
++				}
++			}
++			/* break if last batch of left hand items were equal to pivot */
++			if(pl >= pr) { break; }
++			/* Move right hand items which are equal to the pivot to the far right.
++			   break when we find an item that is less than the pivot */
++			for(; pl < pr; ) {
++				pr -= w; /* Move right pointer onto an unprocessed item */
++				cmp = compar(pr, pivot, arg);
++				if(cmp == 0) {
++					pre -= w;
++					if(pr < pre) { sort_r_swap(pr, pre, w); }
++				}
++				else if(cmp < 0) {
++					if(pl < pr) { sort_r_swap(pl, pr, w); }
++					pl += w;
++					break;
++				}
++			}
++		}
++
++		pl = pr; /* pr may have gone below pl */
++
++		/*
++		  Now we need to go from: EEELLLGGGGEEEE
++		  to: LLLEEEEEEEGGGG
++		  Pivot comparison key:
++		  E = equal, L = less than, u = unknown, G = greater than, E = equal
++		*/
++		sort_r_swap_blocks(b, ple-b, pl-ple);
++		sort_r_swap_blocks(pr, pre-pr, end-pre);
++
++		/*for(size_t i=0; i<nel; i++) {printf("%4i", *(int*)(b + i*sizeof(int)));}
++		  printf("\n");*/
++
++		qsort_r(b, (pl-ple)/w, w, compar, arg);
++		qsort_r(end-(pre-pr), (pre-pr)/w, w, compar, arg);
++	}
+ }
++// ---------------- QSORT END ----------------
+ 
+ int abs(int num) {
+ 	return num < 0 ? -num : num;
+@@ -392,7 +561,7 @@ int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
  			mlibc::code_seq<const char> nseq{mb, mb + max_size};
  			auto e = cc->decode_wtranscode(nseq, wseq, mbtowc_state);
  			if (e != mlibc::charcode_error::null)
@@ -108,7 +297,7 @@ index 2e2d3f1..3ff5fef 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 29fb961..cf0503b 100644
+index 29fb961..39cc900 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
 @@ -62,6 +62,16 @@ static frg::vector<Slice, MemoryAllocator> create_slice(char *const arg[]) {
@@ -203,16 +392,20 @@ index 29fb961..cf0503b 100644
  int sys_clock_get(int clock, time_t *secs, long *nanos) {
      struct timespec ts;
      auto result = syscall(SYS_GETTIME, clock, &ts);
-@@ -233,7 +247,7 @@ uid_t sys_geteuid() {
+@@ -233,7 +247,11 @@ uid_t sys_geteuid() {
      return 0;
  }
  
 -int sys_setuid(uid_t uid) UNIMPLEMENTED("sys_setuid")
-+// int sys_setuid(uid_t uid) UNIMPLEMENTED("sys_setuid")
++int sys_setsid(pid_t *sid) {
++    mlibc::infoLogger() << "mlibc: sys_setsid is a stub" << frg::endlog;
++    return 0;
++}
++
  int sys_seteuid(uid_t euid) UNIMPLEMENTED("sys_seteuid")
  
  gid_t sys_getgid() {
-@@ -259,13 +273,13 @@ int sys_setegid(gid_t egid) {
+@@ -259,13 +277,13 @@ int sys_setegid(gid_t egid) {
  void sys_yield() UNIMPLEMENTED("sys_yield")
  
  int sys_clone(void *tcb, pid_t *tid_out, void *stack) {
@@ -272,7 +465,7 @@ index a3e2aca..4187059 100644
 +}
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index b6b18fe..e03c634 100644
+index b6b18fe..b4635df 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
 @@ -1,5 +1,6 @@
@@ -293,7 +486,7 @@ index b6b18fe..e03c634 100644
  
      if (result < 0) {
          return -result;
-@@ -56,4 +57,76 @@ int sys_accept(int fd, int *newfd) {
+@@ -56,4 +57,86 @@ int sys_accept(int fd, int *newfd) {
      *newfd = result;
      return 0;
  }
@@ -307,6 +500,16 @@ index b6b18fe..e03c634 100644
 +	}
 +
 +	*length = result;
++	return 0;
++}
++
++int sys_socketpair(int domain, int type_and_flags, int proto, int *fds) {
++	auto result = syscall(SYS_SOCKET_PAIR, domain, type_and_flags, proto, fds);
++
++	if (result < 0) {
++		return -result;
++	}
++
 +	return 0;
 +}
 +
@@ -402,10 +605,10 @@ index 0000000..460412d
 +}
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc6..4e330ef 100644
+index 12f8dc6..7fba5dd 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -64,6 +64,13 @@
+@@ -64,6 +64,14 @@
  #define SYS_FUTEX_WAIT 57
  #define SYS_FUTEX_WAKE 58
  #define SYS_LINK 59
@@ -416,6 +619,7 @@ index 12f8dc6..4e330ef 100644
 +#define SYS_SETITIMER 64
 +#define SYS_GETITIMER 65
 +#define SYS_GETPPID 66
++#define SYS_SOCKET_PAIR 67
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.

@@ -1,0 +1,29 @@
+From 212ebc20ae9724fb6b69980170a5527fbd9f312e Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sun, 11 Dec 2022 15:18:55 +1100
+Subject: [PATCH] <xxx>
+
+---
+ configure.ac | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index ddc68b5..373e51b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -93,9 +93,9 @@ AC_EGREP_HEADER([glutInitContextProfile],
+ 		[])
+ 
+ dnl Check for GLEW
+-PKG_CHECK_MODULES(GLEW, [glew >= 1.5.4])
+-DEMO_CFLAGS="$DEMO_CFLAGS $GLEW_CFLAGS"
+-DEMO_LIBS="$DEMO_LIBS $GLEW_LIBS"
++dnl PKG_CHECK_MODULES(GLEW, [glew >= 1.5.4])
++dnl DEMO_CFLAGS="$DEMO_CFLAGS $GLEW_CFLAGS"
++dnl DEMO_LIBS="$DEMO_LIBS $GLEW_LIBS"
+ 
+ # LIBS was set by AC_CHECK_LIB above
+ LIBS=""
+-- 
+2.38.1
+

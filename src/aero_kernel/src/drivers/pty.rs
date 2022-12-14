@@ -87,6 +87,13 @@ impl INodeInterface for Master {
         Ok(buffer.len())
     }
 
+    fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<fs::inode::PollFlags> {
+        table.map(|e| e.insert(&self.wq));
+        let mut flags = fs::inode::PollFlags::IN | fs::inode::PollFlags::OUT;
+
+        Ok(flags)
+    }
+
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
         match command {
             TIOCGPTN => {
@@ -188,6 +195,12 @@ impl INodeInterface for Slave {
                     .ok_or(FileSystemError::NotSupported)?;
 
                 inner.termios = *termios;
+                Ok(0)
+            }
+
+            aero_syscall::TIOCSCTTY => {
+                // TODO(alacritty): stub!
+                log::error!("TIOCSCTTY is a stub!");
                 Ok(0)
             }
 

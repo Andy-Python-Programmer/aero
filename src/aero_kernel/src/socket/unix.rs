@@ -210,6 +210,22 @@ impl UnixSocket {
         })
     }
 
+    pub fn connect_pair(a: DirCacheItem, b: DirCacheItem) -> fs::Result<()> {
+        let a = a
+            .inode()
+            .downcast_arc::<UnixSocket>()
+            .ok_or(FileSystemError::NotSocket)?;
+
+        let b = b
+            .inode()
+            .downcast_arc::<UnixSocket>()
+            .ok_or(FileSystemError::NotSocket)?;
+
+        a.inner.lock_irq().state = UnixSocketState::Connected(b.clone());
+        b.inner.lock_irq().state = UnixSocketState::Connected(a.clone());
+        Ok(())
+    }
+
     pub fn sref(&self) -> Arc<Self> {
         self.weak.upgrade().unwrap()
     }

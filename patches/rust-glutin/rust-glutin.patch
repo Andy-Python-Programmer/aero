@@ -1,26 +1,26 @@
-From e6b432ef7fcf3df707428759f01b1cc32f048ecc Mon Sep 17 00:00:00 2001
+From b9cdd46f1acb5a6dd84b08f782f1c01ea40eb23c Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sun, 20 Nov 2022 13:18:36 +1100
+Date: Sun, 11 Dec 2022 16:27:48 +1100
 Subject: [PATCH] <xxx>
 
 ---
- glutin/Cargo.toml                    | 2 +-
- glutin/src/api/dlloader.rs           | 1 +
- glutin/src/api/egl/mod.rs            | 6 ++++++
- glutin/src/api/glx/mod.rs            | 1 +
- glutin/src/api/osmesa/mod.rs         | 1 +
- glutin/src/lib.rs                    | 4 ++++
- glutin/src/platform/mod.rs           | 1 +
- glutin/src/platform/unix.rs          | 1 +
- glutin/src/platform_impl/mod.rs      | 1 +
- glutin/src/platform_impl/unix/mod.rs | 1 +
- glutin/src/windowed.rs               | 2 ++
- glutin_egl_sys/build.rs              | 1 +
- glutin_egl_sys/src/lib.rs            | 2 ++
- glutin_glx_sys/Cargo.toml            | 2 +-
- glutin_glx_sys/build.rs              | 1 +
- glutin_glx_sys/src/lib.rs            | 1 +
- 16 files changed, 26 insertions(+), 2 deletions(-)
+ glutin/Cargo.toml                    |  2 +-
+ glutin/src/api/dlloader.rs           |  1 +
+ glutin/src/api/egl/mod.rs            |  6 ++++++
+ glutin/src/api/glx/mod.rs            |  7 ++++++-
+ glutin/src/api/osmesa/mod.rs         |  1 +
+ glutin/src/lib.rs                    | 16 ++++++++++------
+ glutin/src/platform/mod.rs           |  1 +
+ glutin/src/platform/unix.rs          |  1 +
+ glutin/src/platform_impl/mod.rs      |  1 +
+ glutin/src/platform_impl/unix/mod.rs |  1 +
+ glutin/src/windowed.rs               |  2 ++
+ glutin_egl_sys/build.rs              |  1 +
+ glutin_egl_sys/src/lib.rs            |  2 ++
+ glutin_glx_sys/Cargo.toml            |  2 +-
+ glutin_glx_sys/build.rs              |  1 +
+ glutin_glx_sys/src/lib.rs            |  1 +
+ 16 files changed, 37 insertions(+), 9 deletions(-)
 
 diff --git a/glutin/Cargo.toml b/glutin/Cargo.toml
 index ddd23ee..d3c2eac 100644
@@ -100,7 +100,7 @@ index d567678..de59a09 100644
          target_os = "dragonfly",
          target_os = "freebsd",
 diff --git a/glutin/src/api/glx/mod.rs b/glutin/src/api/glx/mod.rs
-index 61968e6..2ea9702 100644
+index 61968e6..e5876a3 100644
 --- a/glutin/src/api/glx/mod.rs
 +++ b/glutin/src/api/glx/mod.rs
 @@ -1,5 +1,6 @@
@@ -110,6 +110,19 @@ index 61968e6..2ea9702 100644
      target_os = "dragonfly",
      target_os = "freebsd",
      target_os = "netbsd",
+@@ -409,7 +410,11 @@ impl<'a> ContextPrototype<'a> {
+             unsafe {
+                 extra_functions.SwapIntervalSGI(swap_mode);
+             }
+-        } else {
++        } else if self.opengl.vsync {
++            // If vsync was not requested and it is not supported on the system, 
++            // then this feature can safely be ignored. 
++            //
++            // cc <https://github.com/rust-windowing/glutin/issues/1262> 
+             return Err(CreationError::OsError(
+                 "Couldn't find any available vsync extension".to_string(),
+             ));
 diff --git a/glutin/src/api/osmesa/mod.rs b/glutin/src/api/osmesa/mod.rs
 index 89c0765..80cc2cd 100644
 --- a/glutin/src/api/osmesa/mod.rs
@@ -122,7 +135,7 @@ index 89c0765..80cc2cd 100644
      target_os = "freebsd",
      target_os = "netbsd",
 diff --git a/glutin/src/lib.rs b/glutin/src/lib.rs
-index 7ee1522..3282215 100644
+index 7ee1522..ff9d6f0 100644
 --- a/glutin/src/lib.rs
 +++ b/glutin/src/lib.rs
 @@ -43,6 +43,7 @@
@@ -157,6 +170,29 @@ index 7ee1522..3282215 100644
          target_os = "dragonfly",
          target_os = "freebsd",
          target_os = "netbsd",
+@@ -598,16 +602,16 @@ impl Default for PixelFormatRequirements {
+     #[inline]
+     fn default() -> PixelFormatRequirements {
+         PixelFormatRequirements {
+-            hardware_accelerated: Some(true),
+-            color_bits: Some(24),
++            hardware_accelerated: None,
++            color_bits: None,
+             float_color_buffer: false,
+-            alpha_bits: Some(8),
+-            depth_bits: Some(24),
+-            stencil_bits: Some(8),
++            alpha_bits: None,
++            depth_bits: None,
++            stencil_bits: None,
+             double_buffer: None,
+             multisampling: None,
+             stereoscopy: false,
+-            srgb: true,
++            srgb: false,
+             release_behavior: ReleaseBehavior::Flush,
+             x11_visual_xid: None,
+         }
 diff --git a/glutin/src/platform/mod.rs b/glutin/src/platform/mod.rs
 index e508519..c83423b 100644
 --- a/glutin/src/platform/mod.rs
