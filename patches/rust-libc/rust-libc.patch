@@ -1,14 +1,14 @@
-From aaf02ca3edbe7f8f163f626915fd7d4919f7d399 Mon Sep 17 00:00:00 2001
+From 36ba983c2f910970588929a1c47a051a5163d57f Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sun, 20 Nov 2022 14:58:17 +1100
+Date: Wed, 14 Dec 2022 18:20:52 +1100
 Subject: [PATCH] <xxx>
 
 ---
- src/unix/mlibc/mod.rs | 380 ++++++++++++++++++++++++++++++++++++++----
- 1 file changed, 351 insertions(+), 29 deletions(-)
+ src/unix/mlibc/mod.rs | 386 ++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 356 insertions(+), 30 deletions(-)
 
 diff --git a/src/unix/mlibc/mod.rs b/src/unix/mlibc/mod.rs
-index 2046530..8404ff9 100644
+index 2046530..6d5eaf8 100644
 --- a/src/unix/mlibc/mod.rs
 +++ b/src/unix/mlibc/mod.rs
 @@ -47,7 +47,6 @@ pub type fsfilcnt_t = ::c_uint;
@@ -55,7 +55,15 @@ index 2046530..8404ff9 100644
      }
      pub struct sockaddr_in6 {
          pub sin6_family: sa_family_t,
-@@ -250,10 +249,14 @@ s! {
+@@ -244,16 +243,22 @@ s! {
+     }
+     pub struct pthread_cond_t {
+         pub __mlibc_seq: ::c_uint,
++        pub __mlibc_flags: ::c_uint,
++        pub __mlibc_clock: ::clockid_t
+     }
+     pub struct pthread_condattr_t {}
+     pub struct pthread_mutex_t {
          pub __mlibc_state: ::c_uint,
          pub __mlibc_recursion: ::c_uint,
          pub __mlibc_flags: ::c_uint,
@@ -70,7 +78,7 @@ index 2046530..8404ff9 100644
      }
      pub struct pthread_rwlock_t {
          pub __mlibc_m: ::c_uint,
-@@ -319,10 +322,73 @@ s! {
+@@ -319,10 +324,73 @@ s! {
      pub struct fd_set {
          pub fds_bits: [c_char; 128],
      }
@@ -144,7 +152,7 @@ index 2046530..8404ff9 100644
      pub {const} fn WCOREDUMP(x: ::c_int) -> bool {
          x & WCOREFLAG != 0
      }
-@@ -356,11 +422,24 @@ pub const MAP_SHARED: ::c_int = 2;
+@@ -356,11 +424,24 @@ pub const MAP_SHARED: ::c_int = 2;
  pub const PROT_EXEC: ::c_int = 4;
  pub const PROT_READ: ::c_int = 1;
  pub const PROT_WRITE: ::c_int = 2;
@@ -169,7 +177,7 @@ index 2046530..8404ff9 100644
  
  // options/ansi/include/time.h
  pub const CLOCK_MONOTONIC: clockid_t = 1;
-@@ -369,33 +448,49 @@ pub const CLOCK_REALTIME: clockid_t = 0;
+@@ -369,33 +450,49 @@ pub const CLOCK_REALTIME: clockid_t = 0;
  // options/posix/include/netdb.h
  pub const EAI_SYSTEM: ::c_int = 9;
  
@@ -241,7 +249,7 @@ index 2046530..8404ff9 100644
  
  // abis/linux/signal.h
  pub const SIGABRT: ::c_int = 6;
-@@ -436,45 +531,186 @@ pub const SIGSYS: ::c_int = 31;
+@@ -436,45 +533,186 @@ pub const SIGSYS: ::c_int = 31;
  pub const SIGUNUSED: ::c_int = SIGSYS;
  pub const SIGCANCEL: ::c_int = 32;
  
@@ -428,7 +436,7 @@ index 2046530..8404ff9 100644
  pub const SOCK_STREAM: ::c_int = 4;
  pub const SOL_SOCKET: ::c_int = 1;
  pub const SO_ACCEPTCONN: ::c_int = 1;
-@@ -494,6 +730,8 @@ pub const SO_SNDLOWAT: ::c_int = 14;
+@@ -494,6 +732,8 @@ pub const SO_SNDLOWAT: ::c_int = 14;
  pub const SO_SNDTIMEO: ::c_int = 15;
  pub const SO_TYPE: ::c_int = 16;
  pub const SO_SNDBUFFORCE: ::c_int = 17;
@@ -437,7 +445,7 @@ index 2046530..8404ff9 100644
  pub const SO_PEERCRED: ::c_int = 18;
  pub const SO_ATTACH_FILTER: ::c_int = 19;
  pub const SO_PASSCRED: ::c_int = 20;
-@@ -503,6 +741,12 @@ pub const SO_PROTOCOL: ::c_int = 23;
+@@ -503,6 +743,12 @@ pub const SO_PROTOCOL: ::c_int = 23;
  pub const SO_REUSEPORT: ::c_int = 24;
  pub const SO_TIMESTAMP: ::c_int = 25;
  
@@ -450,7 +458,7 @@ index 2046530..8404ff9 100644
  // abis/mlibc/errno.h
  pub const EDOM: ::c_int = 1;
  pub const EILSEQ: ::c_int = 2;
-@@ -592,15 +836,24 @@ pub const ENOTBLK: ::c_int = 1083;
+@@ -592,15 +838,24 @@ pub const ENOTBLK: ::c_int = 1083;
  
  // options/posix/include/fcntl.h
  pub const AT_FDCWD: ::c_int = -100;
@@ -476,7 +484,7 @@ index 2046530..8404ff9 100644
  pub const F_GETOWN: ::c_int = 10;
  pub const F_SETOWN: ::c_int = 11;
  pub const O_ACCMODE: ::c_int = 7;
-@@ -649,18 +902,42 @@ pub const WCOREFLAG: ::c_int = 0x80;
+@@ -649,18 +904,42 @@ pub const WCOREFLAG: ::c_int = 0x80;
  pub const WNOHANG: ::c_int = 2;
  
  // options/linux/include/sys/poll.h
@@ -520,7 +528,7 @@ index 2046530..8404ff9 100644
  
  // options/posix/include/pthread.h
  align_const! {
-@@ -668,6 +945,7 @@ align_const! {
+@@ -668,9 +947,12 @@ align_const! {
          __mlibc_state: 0,
          __mlibc_recursion: 0,
          __mlibc_flags: 0,
@@ -528,7 +536,12 @@ index 2046530..8404ff9 100644
      };
      pub const PTHREAD_COND_INITIALIZER: pthread_cond_t = pthread_cond_t {
          __mlibc_seq: 0,
-@@ -689,11 +967,40 @@ pub const PTHREAD_PROCESS_PRIVATE: ::c_int = 0;
++        __mlibc_flags: 0,
++        __mlibc_clock: 0,
+     };
+     pub const PTHREAD_RWLOCK_INITIALIZER: pthread_rwlock_t = pthread_rwlock_t {
+         __mlibc_m: 0,
+@@ -689,11 +971,40 @@ pub const PTHREAD_PROCESS_PRIVATE: ::c_int = 0;
  pub const PTHREAD_PROCESS_SHARED: ::c_int = 1;
  
  extern "C" {
@@ -569,7 +582,7 @@ index 2046530..8404ff9 100644
      pub fn getgrgid_r(
          gid: ::gid_t,
          grp: *mut ::group,
-@@ -728,8 +1035,21 @@ extern "C" {
+@@ -728,12 +1039,25 @@ extern "C" {
          buflen: ::size_t,
          result: *mut *mut passwd,
      ) -> ::c_int;
@@ -591,7 +604,12 @@ index 2046530..8404ff9 100644
      pub fn msync(addr: *mut ::c_void, len: ::size_t, flags: ::c_int) -> ::c_int;
      pub fn pthread_condattr_setclock(
          attr: *mut pthread_condattr_t,
-@@ -752,6 +1072,8 @@ extern "C" {
+-        clock_id: ::clockid_t,
++        clock_id: clockid_t,
+     ) -> ::c_int;
+     pub fn pthread_create(
+         thread: *mut ::pthread_t,
+@@ -752,6 +1076,8 @@ extern "C" {
          addr: *mut ::sockaddr,
          addrlen: *mut ::socklen_t,
      ) -> ::ssize_t;
