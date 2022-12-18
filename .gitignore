@@ -6,7 +6,7 @@
 Cargo.lock
 
 target
-build
+/build
 bundled
 sysroot
 

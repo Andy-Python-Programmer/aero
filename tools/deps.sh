@@ -37,6 +37,8 @@ if [[ !("$PLATFORM" == "Darwin") && ("$EUID" -ne 0) ]]; then
 	exit
 fi
 
+update_manager
+
 for pkg in "${packages[@]}"; do
 	echo -n "installing $pkg... "
 

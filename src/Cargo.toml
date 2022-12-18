@@ -1,5 +1,7 @@
 [workspace]
 members = ["aero_kernel", "aero_syscall", "aero_proc"]
+# if aero_build is part of the workspace, cargo will attempt to build it as no_std
+exclude = ["aero_build"]
 
 [profile.release]
 debug = true
