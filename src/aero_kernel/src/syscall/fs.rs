@@ -413,10 +413,14 @@ pub fn stat(path: &Path, stat: &mut Stat) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn read_link(path: &Path, _buffer: &mut [u8]) -> Result<usize, SyscallError> {
-    log::warn!("read_link: is a stub! (path={path:?})");
+pub fn read_link(path: &Path, buffer: &mut [u8]) -> Result<usize, SyscallError> {
+    // XXX: lookup_path with automatically resolve the link.
+    let file = fs::lookup_path(path)?;
+    let resolved_path = file.absolute_path_str();
+    let size = core::cmp::min(resolved_path.len(), buffer.len());
 
-    Err(SyscallError::EINVAL)
+    buffer[..size].copy_from_slice(&resolved_path.as_bytes()[..size]);
+    Ok(size)
 }
 
 /// Returns a file descriptor referring to the new epoll instance.
