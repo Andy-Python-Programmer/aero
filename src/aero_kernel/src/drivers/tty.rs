@@ -248,12 +248,12 @@ impl INodeInterface for Tty {
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
-        let mut state = self.state.lock_irq();
-        let mut performer = AnsiEscape;
+        // let mut state = self.state.lock_irq();
+        // let mut performer = AnsiEscape;
 
-        for character in buffer.iter() {
-            state.parser.advance(&mut performer, *character);
-        }
+        // for character in buffer.iter() {
+        //     state.parser.advance(&mut performer, *character);
+        // }
 
         log::debug!("TTY::write_at(): {}", unsafe {
             core::str::from_utf8_unchecked(buffer)

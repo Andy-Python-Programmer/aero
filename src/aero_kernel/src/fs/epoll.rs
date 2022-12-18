@@ -23,6 +23,7 @@ use aero_syscall::SyscallError;
 use alloc::sync::Arc;
 use hashbrown::HashMap;
 
+use crate::fs::cache::DirCacheImpl;
 use crate::userland::scheduler;
 use crate::utils::sync::Mutex;
 
@@ -34,6 +35,14 @@ pub struct EPoll {
 }
 
 impl EPoll {
+    // FIXME: The bitflags does not support bitwise or operations in const.
+    const PRIVATE_BITS: EPollEventFlags = EPollEventFlags::from_bits_truncate(
+        EPollEventFlags::WAKEUP.bits()
+            | EPollEventFlags::ONESHOT.bits()
+            | EPollEventFlags::ET.bits()
+            | EPollEventFlags::EXCLUSIVE.bits(),
+    );
+
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             events: Mutex::new(HashMap::new()),
@@ -129,6 +138,7 @@ impl EPoll {
             }
 
             ret_events[n].events = EPollEventFlags::empty();
+            ret_events[n].data = unsafe { core::mem::zeroed() };
 
             let fd = file_table
                 .get_handle(*fd)
@@ -137,15 +147,29 @@ impl EPoll {
             let flags = epoll_event.events;
             let ready: EPollEventFlags = fd.inode().poll(None)?.into();
 
+            // If the event mask does not contain any poll(2) events, the event
+            // descriptor is disabled. This is the effe
+            if flags == Self::PRIVATE_BITS {
+                continue;
+            }
+
             if !(ready & flags).is_empty() {
                 ret_events[n].events = ready & flags;
+                ret_events[n].data = epoll_event.data;
+
+                if flags.contains(EPollEventFlags::ONESHOT) {
+                    // The `EPOLLONESHOT` bit that disables the descriptor when an event is
+                    // received, until the next `EPOLL_CTL_MOD` will be issued.
+                    epoll_event.events = Self::PRIVATE_BITS;
+                }
+
                 n += 1;
                 continue;
             }
 
-            // // Not ready; add the event to the poll table.
+            // Not ready; add the event to the poll table.
             fd.inode().poll(Some(&mut poll_table))?;
-            fds.push(fd);
+            fds.push((fd, epoll_event, flags));
         }
 
         // If all events are ready, we can return now.
@@ -161,17 +185,27 @@ impl EPoll {
         }
 
         'search: loop {
-            for (i, fd) in fds.iter().enumerate() {
-                let ready: EPollEventFlags = fd.inode().poll(None)?.into();
-                let flags = table
-                    .get(&fd.fd)
-                    .ok_or(FileSystemError::NotSupported)?
-                    .events;
+            for (fd, event, flags) in fds.iter_mut() {
+                // If the event mask does not contain any poll(2) events, the event
+                // descriptor is disabled. This is the effe
+                if *flags == Self::PRIVATE_BITS {
+                    continue;
+                }
 
-                if !(ready & flags).is_empty() {
+                let ready: EPollEventFlags = fd.inode().poll(None)?.into();
+
+                if !(ready & *flags).is_empty() {
                     // The event is ready; break out of the search loop and set ready
                     // events to 1.
-                    ret_events[i].events = ready & flags;
+                    ret_events[n].events = ready & *flags;
+                    ret_events[n].data = event.data;
+
+                    if flags.contains(EPollEventFlags::ONESHOT) {
+                        // The `EPOLLONESHOT` bit that disables the descriptor when an event is
+                        // received, until the next `EPOLL_CTL_MOD` will be issued.
+                        event.events = Self::PRIVATE_BITS;
+                    }
+
                     n = 1;
                     break 'search;
                 }

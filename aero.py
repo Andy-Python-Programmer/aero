@@ -456,7 +456,8 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
                  '-serial', 'stdio',
                  '-drive', 'file=build/disk.img,if=none,id=NVME1,format=raw', '-device', 'nvme,drive=NVME1,serial=nvme',
                  # Specify the boot order (where `d` is the first CD-ROM drive)
-                 '--boot', 'd']
+                 '--boot', 'd', 
+                 '-s']
 
     if args.bios == 'uefi':
         qemu_args += ['-bios',

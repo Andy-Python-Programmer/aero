@@ -553,6 +553,8 @@ packages:
         - '--root'
         - '@THIS_COLLECT_DIR@/usr'
         - '-j@PARALLELISM@'
+        environ:
+          RUSTFLAGS: '-Cforce-frame-pointers=yes -Clink-args=-no-pie'
 
   # - name: ripgrep
   #   source:

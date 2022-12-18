@@ -68,7 +68,7 @@ pub fn gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, SyscallEr
 static TIMERS: Mutex<Vec<Arc<Task>>> = Mutex::new(Vec::new());
 
 pub fn check_timers() {
-    // if let Some(task) = TIMERS.lock_irq().pop() {
+    // for task in TIMERS.lock_irq().iter() {
     //     task.signal(aero_syscall::signal::SIGALRM);
     // }
 }

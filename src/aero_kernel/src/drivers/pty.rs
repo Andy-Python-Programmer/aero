@@ -55,6 +55,7 @@ static PTY_ID: AtomicU32 = AtomicU32::new(0);
 struct Master {
     id: u32,
     wq: BlockQueue,
+    window_size: Mutex<WinSize>,
     slave_buffer: Mutex<Vec<u8>>,
     buffer: Mutex<Vec<u8>>,
 }
@@ -64,6 +65,7 @@ impl Master {
         Self {
             id: PTY_ID.fetch_add(1, Ordering::SeqCst),
             wq: BlockQueue::new(),
+            window_size: Mutex::new(WinSize::default()),
             slave_buffer: Mutex::new(Vec::new()),
             buffer: Mutex::new(Vec::new()),
         }
@@ -72,7 +74,13 @@ impl Master {
 
 impl INodeInterface for Master {
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        let mut pty_buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
+        let mut pty_buffer = self.buffer.lock_irq();
+
+        if pty_buffer.is_empty() {
+            return Err(FileSystemError::WouldBlock);
+        }
+
+        // let mut pty_buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
         let size = core::cmp::min(pty_buffer.len(), buffer.len());
 
         buffer[..size].copy_from_slice(&pty_buffer.drain(..size).collect::<Vec<_>>());
@@ -89,7 +97,11 @@ impl INodeInterface for Master {
 
     fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<fs::inode::PollFlags> {
         table.map(|e| e.insert(&self.wq));
-        let mut flags = fs::inode::PollFlags::IN | fs::inode::PollFlags::OUT;
+        let mut flags = fs::inode::PollFlags::OUT;
+
+        if !self.buffer.lock_irq().is_empty() {
+            flags |= fs::inode::PollFlags::IN;
+        }
 
         Ok(flags)
     }
@@ -104,6 +116,14 @@ impl INodeInterface for Master {
                 *id = self.id;
             }
 
+            aero_syscall::TIOCSWINSZ => {
+                let winsize = VirtAddr::new(arg as u64)
+                    .read_mut::<WinSize>()
+                    .ok_or(FileSystemError::NotSupported)?;
+
+                *self.window_size.lock_irq() = *winsize;
+            }
+
             _ => {
                 log::warn!("ptmx: unknown ioctl (command={command:#x})")
             }
@@ -114,7 +134,6 @@ impl INodeInterface for Master {
 }
 
 struct SlaveInner {
-    window_size: WinSize,
     termios: Termios,
 }
 
@@ -128,7 +147,6 @@ impl Slave {
         Self {
             master,
             inner: Mutex::new(SlaveInner {
-                window_size: WinSize::default(),
                 termios: Termios {
                     c_iflag: 0,
                     c_oflag: aero_syscall::TermiosOFlag::empty(),
@@ -162,21 +180,12 @@ impl INodeInterface for Slave {
         let mut inner = self.inner.lock_irq();
 
         match command {
-            aero_syscall::TIOCSWINSZ => {
-                let winsize = VirtAddr::new(arg as u64)
-                    .read_mut::<WinSize>()
-                    .ok_or(FileSystemError::NotSupported)?;
-
-                inner.window_size = *winsize;
-                Ok(0)
-            }
-
             aero_syscall::TIOCGWINSZ => {
                 let winsize = VirtAddr::new(arg as u64)
                     .read_mut::<WinSize>()
                     .ok_or(FileSystemError::NotSupported)?;
 
-                *winsize = inner.window_size;
+                *winsize = *self.master.window_size.lock_irq();
                 Ok(0)
             }
 
