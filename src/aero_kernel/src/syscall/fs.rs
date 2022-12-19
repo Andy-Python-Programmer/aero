@@ -645,3 +645,8 @@ pub fn poll(fds: &mut [PollFd], timeout: usize, sigmask: usize) -> Result<usize,
     signals.set_mask(SigProcMask::Set, Some(old_mask), None);
     Ok(n)
 }
+
+#[syscall]
+pub fn rename(src: &Path, dest: &Path) -> Result<usize, SyscallError> {
+    Ok(0)
+}

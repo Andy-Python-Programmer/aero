@@ -38,7 +38,7 @@ lazy_static::lazy_static! {
     static ref TTY: Arc<Tty> = Tty::new();
 
     static ref TERMIOS: Mutex<aero_syscall::Termios> = Mutex::new(aero_syscall::Termios {
-        c_iflag: 0,
+        c_iflag: aero_syscall::TermiosIFlag::empty(),
         c_oflag: aero_syscall::TermiosOFlag::empty(),
         c_cflag: aero_syscall::TermiosCFlag::empty(),
         c_lflag: aero_syscall::TermiosLFlag::ECHO | aero_syscall::TermiosLFlag::ICANON,

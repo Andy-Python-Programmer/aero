@@ -36,6 +36,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     Command::new("/usr/bin/startx")
         .env("RUST_BACKTRACE", "full")
+        .env("TERM", "linux")
         .spawn()?;
 
     loop {}

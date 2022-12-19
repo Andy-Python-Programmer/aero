@@ -36,6 +36,7 @@ use crate::mem::paging::{FrameAllocator, PhysFrame, VirtAddr, FRAME_ALLOCATOR};
 
 use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
+use crate::utils::CeilDiv;
 
 use self::group_desc::GroupDescriptors;
 
@@ -165,25 +166,46 @@ impl INode {
     pub fn append_block(&self) -> Option<usize> {
         let fs = self.fs.upgrade().expect("ext2: filesystem was dropped");
         let block_size = fs.superblock.block_size();
+        let entries_per_block = fs.superblock.entries_per_block();
 
         let new_block = fs.bgdt.alloc_block_ptr()?;
         let data_ptrs = self.inode.read().data_ptr;
 
-        // Check if the there are free direct data pointers avaliable to
-        // insert the new block..
-        for (i, block) in data_ptrs[..12].iter().enumerate() {
-            if *block == 0 {
-                drop(data_ptrs);
+        let mut next_block_num = (self.inode.read().size_lower as usize).ceil_div(block_size);
 
-                let mut inode = self.inode.write();
-                inode.data_ptr[i] = new_block as u32;
-                inode.size_lower += block_size as u32;
+        if next_block_num < 12 {
+            drop(data_ptrs);
 
-                return Some(new_block);
-            }
+            let mut inode = self.inode.write();
+
+            assert_eq!(inode.data_ptr[next_block_num], 0);
+
+            inode.data_ptr[next_block_num] = new_block as u32;
+            inode.size_lower += block_size as u32;
+
+            return Some(new_block);
         }
 
-        todo!("append_block: indirect blocks")
+        // indirect block
+        next_block_num -= 12;
+
+        if next_block_num >= entries_per_block {
+            unimplemented!("append_block: doubly and triply indirect")
+        } else {
+            // singly indirect block
+            let mut block_ptrs = self.inode.read().data_ptr[12] as usize;
+
+            if block_ptrs == 0 {
+                block_ptrs = fs.bgdt.alloc_block_ptr()?;
+            }
+
+            let block_ptrs = block_ptrs * block_size;
+            let offset = block_ptrs + (new_block * core::mem::size_of::<u32>());
+
+            fs.block.write(offset, &new_block.to_le_bytes());
+        }
+
+        Some(new_block)
     }
 
     pub fn get_block(&self, mut block: usize) -> Option<u32> {

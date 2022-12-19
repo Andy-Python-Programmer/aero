@@ -88,6 +88,7 @@ pub const SYS_SETITIMER: usize = 64;
 pub const SYS_GETITIMER: usize = 65;
 pub const SYS_GETPPID: usize = 66;
 pub const SYS_SOCKET_PAIR: usize = 67;
+pub const SYS_RENAME: usize = 68;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

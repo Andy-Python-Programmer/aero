@@ -55,25 +55,33 @@ bitflags::bitflags! {
 
 bitflags::bitflags! {
     pub struct OpenFlags: usize {
-        const O_ACCMODE   = 0x0007;
-        const O_EXEC      = 1;
-        const O_RDONLY    = 2;
-        const O_RDWR      = 3;
-        const O_SEARCH    = 4;
-        const O_WRONLY    = 5;
-        const O_APPEND    = 0x0008;
-        const O_CREAT     = 0x0010;
-        const O_DIRECTORY =  0x0020;
-        const O_EXCL      =  0x0040;
-        const O_NOCTTY    = 0x0080;
-        const O_NOFOLLOW  = 0x0100;
-        const O_TRUNC     = 0x0200;
-        const O_NONBLOCK  = 0x0400;
-        const O_DSYNC     = 0x0800;
-        const O_RSYNC     = 0x1000;
-        const O_SYNC      = 0x2000;
-        const O_CLOEXEC   = 0x4000;
-        const O_PATH      = 0x8000;
+        // reserve 3 bits for the access mode
+        const O_ACCMODE =  0x0007;
+        const O_EXEC    =  1;
+        const O_RDONLY  =  2;
+        const O_RDWR    =  3;
+        const O_SEARCH  =  4;
+        const O_WRONLY  =  5;
+
+        // these flags get their own bit
+        const O_APPEND    = 0x000008;
+        const O_CREAT     = 0x000010;
+        const O_DIRECTORY = 0x000020;
+        const O_EXCL      = 0x000040;
+        const O_NOCTTY    = 0x000080;
+        const O_NOFOLLOW  = 0x000100;
+        const O_TRUNC     = 0x000200;
+        const O_NONBLOCK  = 0x000400;
+        const O_DSYNC     = 0x000800;
+        const O_RSYNC     = 0x001000;
+        const O_SYNC      = 0x002000;
+        const O_CLOEXEC   = 0x004000;
+        const O_PATH      = 0x008000;
+        const O_LARGEFILE = 0x010000;
+        const O_NOATIME   = 0x020000;
+        const O_ASYNC     = 0x040000;
+        const O_TMPFILE   = 0x080000;
+        const O_DIRECT    = 0x100000;
     }
 }
 
@@ -289,6 +297,25 @@ pub struct WinSize {
     pub ws_ypixel: u16,
 }
 
+// abis/linux/termios.h
+bitflags::bitflags! {
+    #[derive(Default)]
+    pub struct TermiosIFlag: u32 {
+        const BRKINT = 0o000002;
+        const ICRNL  = 0o000400;
+        const IGNBRK = 0o000001;
+        const IGNCR  = 0o000200;
+        const IGNPAR = 0o000004;
+        const INLCR  = 0o000100;
+        const INPCK  = 0o000020;
+        const ISTRIP = 0o000040;
+        const IXANY  = 0o004000;
+        const IXOFF  = 0o010000;
+        const IXON   = 0o002000;
+        const PARMRK = 0o000010;
+    }
+}
+
 bitflags::bitflags! {
     #[derive(Default)]
     pub struct TermiosLFlag: u32 {
@@ -361,7 +388,7 @@ bitflags::bitflags! {
 #[derive(Debug, Default, Copy, Clone)]
 #[repr(C)]
 pub struct Termios {
-    pub c_iflag: u32,
+    pub c_iflag: TermiosIFlag,
     pub c_oflag: TermiosOFlag,
     pub c_cflag: TermiosCFlag,
     pub c_lflag: TermiosLFlag,

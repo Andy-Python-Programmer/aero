@@ -80,9 +80,7 @@ impl INodeInterface for Master {
             return Err(FileSystemError::WouldBlock);
         }
 
-        // let mut pty_buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
         let size = core::cmp::min(pty_buffer.len(), buffer.len());
-
         buffer[..size].copy_from_slice(&pty_buffer.drain(..size).collect::<Vec<_>>());
         Ok(size)
     }
@@ -148,8 +146,8 @@ impl Slave {
             master,
             inner: Mutex::new(SlaveInner {
                 termios: Termios {
-                    c_iflag: 0,
-                    c_oflag: aero_syscall::TermiosOFlag::empty(),
+                    c_iflag: aero_syscall::TermiosIFlag::empty(),
+                    c_oflag: aero_syscall::TermiosOFlag::ONLCR,
                     c_cflag: aero_syscall::TermiosCFlag::empty(),
                     c_lflag: aero_syscall::TermiosLFlag::ECHO | aero_syscall::TermiosLFlag::ICANON,
                     c_line: 0,
@@ -234,8 +232,28 @@ impl INodeInterface for Slave {
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
-        let mut pty_buffer = self.master.buffer.lock_irq();
-        pty_buffer.extend_from_slice(buffer);
+        if self
+            .inner
+            .lock_irq()
+            .termios
+            .c_oflag
+            .contains(aero_syscall::TermiosOFlag::ONLCR)
+        {
+            let mut master = self.master.buffer.lock_irq();
+
+            for b in buffer.iter() {
+                if *b == b'\n' {
+                    // ONLCR: Convert NL to CR + NL
+                    master.extend_from_slice(&[b'\r', b'\n']);
+                    continue;
+                }
+
+                master.push(*b);
+            }
+        } else {
+            let mut pty_buffer = self.master.buffer.lock_irq();
+            pty_buffer.extend_from_slice(buffer);
+        }
 
         self.master.wq.notify_complete();
         Ok(buffer.len())

@@ -273,6 +273,7 @@ pub fn generic_do_syscall(
         SYS_EVENT_FD => fs::event_fd(b, c),
         SYS_LINK => fs::link(b, c, d, e),
         SYS_POLL => fs::poll(b, c, d, e),
+        SYS_RENAME => fs::rename(b, c, d, e),
 
         // epoll calls:
         SYS_EPOLL_CREATE => fs::epoll_create(b),

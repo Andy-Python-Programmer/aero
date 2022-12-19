@@ -1,6 +1,6 @@
-From f7b84e6b068490f1cd5516a2fd7e66ec5945beae Mon Sep 17 00:00:00 2001
+From 9f270baad38e7f90bd7c67780ae8f78d66c00de5 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sat, 17 Dec 2022 15:09:28 +1100
+Date: Sun, 18 Dec 2022 14:31:45 +1100
 Subject: [PATCH] <xxx>
 
 ---
@@ -11,12 +11,12 @@ Subject: [PATCH] <xxx>
  options/posix/generic/termios-stubs.cpp |   5 +-
  options/rtdl/generic/linker.cpp         |   2 +-
  sysdeps/aero/generic/aero.cpp           |  71 +++++----
- sysdeps/aero/generic/filesystem.cpp     |  25 +++-
+ sysdeps/aero/generic/filesystem.cpp     |  35 ++++-
  sysdeps/aero/generic/sockets.cpp        |  87 ++++++++++-
  sysdeps/aero/generic/time.cpp           |  24 +++
- sysdeps/aero/include/aero/syscall.h     |   8 +
+ sysdeps/aero/include/aero/syscall.h     |   9 ++
  sysdeps/aero/meson.build                |   1 +
- 12 files changed, 371 insertions(+), 45 deletions(-)
+ 12 files changed, 381 insertions(+), 46 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -440,7 +440,7 @@ index 29fb961..ee09678 100644
  }
  
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index a3e2aca..4187059 100644
+index a3e2aca..a4edac3 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -158,11 +158,6 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
@@ -455,7 +455,24 @@ index a3e2aca..4187059 100644
  int sys_mkdir(const char *path, mode_t) {
      auto result = syscall(SYS_MKDIR, path, strlen(path));
  
-@@ -357,4 +352,24 @@ int sys_eventfd_create(unsigned int initval, int flags, int *fd) {
+@@ -243,7 +238,15 @@ int sys_open_dir(const char *path, int *handle) {
+     return sys_open(path, O_DIRECTORY, 0, handle);
+ }
+ 
+-int sys_rename(const char *path, const char *new_path) UNIMPLEMENTED("sys_rename")
++int sys_rename(const char *path, const char *new_path) {
++    auto result = syscall(SYS_RENAME, path, strlen(path), new_path, strlen(new_path));
++
++    if (result < 0) {
++        return -result;
++    }
++
++    return 0;
++}
+ 
+ int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) {
+     auto result = syscall(SYS_READ_LINK, path, strlen(path), buffer, max_size);
+@@ -357,4 +360,24 @@ int sys_eventfd_create(unsigned int initval, int flags, int *fd) {
      *fd = result;
      return 0;
  }
@@ -621,10 +638,10 @@ index 0000000..460412d
 +}
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc6..7fba5dd 100644
+index 12f8dc6..afb45f8 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -64,6 +64,14 @@
+@@ -64,6 +64,15 @@
  #define SYS_FUTEX_WAIT 57
  #define SYS_FUTEX_WAKE 58
  #define SYS_LINK 59
@@ -636,6 +653,7 @@ index 12f8dc6..7fba5dd 100644
 +#define SYS_GETITIMER 65
 +#define SYS_GETPPID 66
 +#define SYS_SOCKET_PAIR 67
++#define SYS_RENAME 68
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.
