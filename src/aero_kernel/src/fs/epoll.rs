@@ -105,7 +105,7 @@ impl EPoll {
     /// * `max_events`: Maximum number of events.
     ///
     /// * `timeout`: specifies the minimum number of milliseconds that epoll wait will block. Specifying
-    ///              a timeout of `-1` will block indefinitely. While specifing a timeout of `0` will return
+    ///              a timeout of `-1` will block indefinitely. While specifying a timeout of `0` will return
     ///              immediately even if there are available no events.
     ///
     ///

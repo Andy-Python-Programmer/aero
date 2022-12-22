@@ -253,13 +253,13 @@ impl DmaRequest {
         self.sector
     }
 
-    /// Copys the data from the DMA buffer into the given buffer.
+    /// Copies the data from the DMA buffer into the given buffer.
     pub fn copy_into(&self, into: &mut [u8]) {
         let mut offset = 0x00; // Keep track of the offset
-        let mut remaning = into.len(); // Keep track of the remaining data
+        let mut remaining = into.len(); // Keep track of the remaining data
 
         for buffer in self.buffer.iter() {
-            let count = core::cmp::min(remaning, 0x2000);
+            let count = core::cmp::min(remaining, 0x2000);
 
             let buffer_pointer = buffer.start.as_hhdm_virt().as_ptr();
             let buffer = unsafe { core::slice::from_raw_parts::<u8>(buffer_pointer, count) };
@@ -268,7 +268,7 @@ impl DmaRequest {
             // calculated offset.
             into[offset..offset + count].copy_from_slice(buffer);
 
-            remaning -= count; // Subtract the size from the remaining size.
+            remaining -= count; // Subtract the size from the remaining size.
             offset += count; // Add the size to the offset.
         }
     }
@@ -634,7 +634,7 @@ impl HbaPort {
         let ipm = status.interface_power_management();
         let dd = status.device_detection();
 
-        // Check if the port is active and is present. If thats the case
+        // Check if the port is active and is present. If that's the case
         // we can start the AHCI port.
         if let (HbaPortDd::PresentAndE, HbaPortIpm::Active) = (dd, ipm) {
             log::trace!("ahci: enabling port {}", port);
@@ -881,7 +881,7 @@ impl AhciProtected {
                     // Add the port to the ports array.
                     self.ports[i] = Some(port);
 
-                    // Workaround to get access to the HBA and still satify the
+                    // Workaround to get access to the HBA and still satisfy the
                     // borrow checker.
                     hba = self.hba_mem();
                 }

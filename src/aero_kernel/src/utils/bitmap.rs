@@ -20,7 +20,7 @@ pub struct Bitmap<A: Allocator> {
 
 impl<A: Allocator> Bitmap<A> {
     /// Constructs a new bitmap with `size` bits and uses `alloc`
-    /// as the alloctor.
+    /// as the allocator.
     ///
     /// ## Example
     /// ```rust

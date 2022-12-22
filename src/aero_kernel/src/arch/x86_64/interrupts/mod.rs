@@ -110,7 +110,7 @@ impl ApicController {
 
 /// PIC (Programmable Interrupt Controller) manages hardware interrupts and sends
 /// them to the appropriate system interrupt for the x86 architecture. Since APIC
-/// has replaced PIC on modern systems, Aero disables PIC when APIC is avaliable.
+/// has replaced PIC on modern systems, Aero disables PIC when APIC is available.
 ///
 /// ## Notes
 /// * <https://wiki.osdev.org/8259_PIC>

@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-// REFRENCE: PrimeCell UART (PL011) Technical Reference Manual
+// REFERENCE: PrimeCell UART (PL011) Technical Reference Manual
 
 use core::fmt;
 use core::fmt::Write;

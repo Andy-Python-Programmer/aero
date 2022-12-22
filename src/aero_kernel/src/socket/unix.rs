@@ -41,8 +41,8 @@ use super::SocketAddr;
 fn path_from_unix_sock<'sock>(address: &'sock SocketAddrUnix) -> fs::Result<&'sock Path> {
     // The abstract namespace socket allows the creation of a socket
     // connection which does not require a path to be created.
-    let abstrat_namespaced = address.path[0] == 0;
-    assert!(!abstrat_namespaced);
+    let abstract_namespaced = address.path[0] == 0;
+    assert!(!abstract_namespaced);
 
     let path_len = address
         .path

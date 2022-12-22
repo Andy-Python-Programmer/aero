@@ -90,7 +90,7 @@ extern "C" fn arch_aero_main() -> ! {
         .expect("limine: invalid kernel file pointer");
 
     // Before we start the initialization process, we need to make sure
-    // the unwind info is avaliable; just in case if there is a kernel
+    // the unwind info is available; just in case if there is a kernel
     // panic, it will be able to unwind the stack.
     crate::unwind::UNWIND_INFO.call_once(|| {
         use crate::unwind::UnwindInfo;
@@ -110,7 +110,7 @@ extern "C" fn arch_aero_main() -> ! {
 
     // Now that we have unwind info, we can initialize the COM ports. This
     // will be used to print panic messages/logs before the debug renderer is
-    // initialized to the serial output (if avaliable).
+    // initialized to the serial output (if available).
     drivers::uart::init();
     logger::init();
 

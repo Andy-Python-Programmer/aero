@@ -34,7 +34,7 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 # Goals
 
 * Creating a modern, safe, beautiful and fast operating system.
-* Targetting modern 64-bit architectures and CPU features.
+* Targeting modern 64-bit architectures and CPU features.
 * Good source-level compatibility with Linux so we can port programs over easily.
 * Making a usable OS which can run on real hardware, not just on emulators or virtual machines.
 
@@ -119,8 +119,8 @@ will not have any effect when you are simply checking or documenting the build.
 - `--debug` toggles off the release build flag when calling cargo.
 
   **Summary**: If the `--debug` flag is not passed then it will build Aero in release mode
-               and debug symbols will be avaliable. On the other hand, if the debug flag is passed
-               then it will be built in debug mode and debug symbols will be still avaliable. By default
+               and debug symbols will be available. On the other hand, if the debug flag is passed
+               then it will be built in debug mode and debug symbols will be still available. By default
                Aero is built in release mode (with debug symbols) since it generates faster and smaller
                binaries which are easier to test.
 - `--no-run` prevents from running the built disk image in the emulator

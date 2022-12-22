@@ -73,7 +73,7 @@ bitflags::bitflags! {
         const FSGSBASE = 1 << 16;
         /// Enables process-context identifiers (PCIDs).
         const PCID = 1 << 17;
-        /// Enables extendet processor state management instructions, including XGETBV and XSAVE.
+        /// Enables extended processor state management instructions, including XGETBV and XSAVE.
         const OSXSAVE = 1 << 18;
         /// Prevents the execution of instructions that reside in pages accessible by user-mode
         /// software when the processor is in supervisor-mode.
@@ -149,7 +149,7 @@ bitflags::bitflags! {
         const ALIGNMENT_CHECK = 1 << 18;
         /// Enable the virtual-8086 mode.
         const VIRTUAL_8086_MODE = 1 << 17;
-        /// Allows to restart an instruction following an instrucion breakpoint.
+        /// Allows to restart an instruction following an instruction breakpoint.
         const RESUME_FLAG = 1 << 16;
         /// Used by `iret` in hardware task switch mode to determine if current task is nested.
         const NESTED_TASK = 1 << 14;

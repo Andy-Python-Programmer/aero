@@ -130,7 +130,7 @@ impl ArchTask {
             context_switch_rsp: VirtAddr::zero(),
 
             // Since the IDLE task is a special kernel task, we use the kernel's
-            // address space here and we also use the kernel privilage level here.
+            // address space here and we also use the kernel privilege level here.
             address_space: AddressSpace::this(),
             user: false,
 
@@ -484,7 +484,7 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
     unsafe {
         // Load the new thread's kernel stack pointer everywhere it's needed.
         let kstackp = to.context_switch_rsp.as_u64();
-        super::gdt::get_task_state_segement().rsp[0] = kstackp;
+        super::gdt::get_task_state_segment().rsp[0] = kstackp;
         io::wrmsr(io::IA32_SYSENTER_ESP, kstackp);
 
         // switch to the new FS base.

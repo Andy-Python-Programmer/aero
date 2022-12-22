@@ -71,7 +71,7 @@ impl SerialPort {
         // Enable FIFO, clear TX/RX queues and set interrupt watermark at 14 bytes.
         io::outb(self.0 + 2, 0xC7);
 
-        // Mark data terminal ready, signal request to send and enable auxilliary
+        // Mark data terminal ready, signal request to send and enable auxiliary
         // output #2 (used as interrupt line for CPU).
         io::outb(self.0 + 4, 0x0B);
 
@@ -127,7 +127,7 @@ impl fmt::Write for SerialPort {
     }
 }
 
-/// Initialize the serial ports if avaliable.
+/// Initialize the serial ports if available.
 pub fn init() {
     unsafe {
         let com_1 = SerialPort::new(0x3F8).init();

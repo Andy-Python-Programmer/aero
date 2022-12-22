@@ -230,7 +230,7 @@ fn repl(history: &mut Vec<String>) -> Result<(), SyscallError> {
                         argv,
                         &[
                             "TERM=linux",
-                            // The `XDG_RUNTIME_DIR` enviornment variable tells the tells any program you
+                            // The `XDG_RUNTIME_DIR` environment variable tells the tells any program you
                             // run where to find a user-specific directory in which it can store small
                             // temporary files.
                             "XDG_RUNTIME_DIR=tmp",

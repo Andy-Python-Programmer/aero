@@ -74,7 +74,7 @@ impl GroupDescriptors {
     // after the super block.
 
     /// Returns the index of the block group which has free block(s)
-    /// avaliable.
+    /// available.
     pub fn find_free_block(&self) -> Option<usize> {
         let (index, _) = self
             .descriptors
@@ -87,7 +87,7 @@ impl GroupDescriptors {
     }
 
     /// Returns the index of the block group which has free inode(s)
-    /// avaliable.
+    /// available.
     pub fn find_free_inode(&self) -> Option<usize> {
         let (index, _) = self
             .descriptors

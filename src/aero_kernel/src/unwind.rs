@@ -101,10 +101,10 @@ pub fn unwind_stack_trace() {
     }
 
     // Make sure the RBP is not NULL. If it is then we cannot do the stack unwinding/tracing
-    // as no frame pointers were emmited in this build. This should only occur if you
+    // as no frame pointers were emitted in this build. This should only occur if you
     // set the field `eliminate-frame-pointer` in the target file to true or manually resetting
     // the RBP to prevent backtrace to avoid address leaks (for example when jumping to userland).
-    // If thats the case we return (resumes the parent function).
+    // If that's the case we return (resumes the parent function).
     if rbp == 0x00 {
         log::trace!("<empty backtrace>");
         return;
@@ -166,8 +166,8 @@ use crate::utils::sync::IrqGuard;
 extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
     prepare_panic();
 
-    let deafult_panic = &format_args!("");
-    let panic_message = info.message().unwrap_or(deafult_panic);
+    let default_panic = &format_args!("");
+    let panic_message = info.message().unwrap_or(default_panic);
 
     // Get the CPU ID where this panic happened and if PANIC_HOOK_READY is false
     // then we cannot get the CPU where this panic happened.

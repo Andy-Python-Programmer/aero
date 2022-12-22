@@ -132,7 +132,7 @@ impl<'a> Iterator for RangeMemoryIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.cursor_base >= self.cursor_end {
             if let Some(entry) = loop {
-                // We need to find out the next useable memory range from
+                // We need to find out the next usable memory range from
                 // the memory map and set the cursor to the start of it.
                 let next = self.iter.next()?;
 
@@ -347,7 +347,7 @@ impl GlobalFrameAllocator {
         };
 
         // Lets goo! Now lets initialize the bootstrap allocator so we can initialize
-        // our efficient buddy allocator. We need a seperate allocator since some computers
+        // our efficient buddy allocator. We need a separate allocator since some computers
         // such as Macs have a shitload of memory map entries so, we cannt assume the amount
         // of maximum mmap entries and allocate space for it on the stack instead. God damn it.
         let mut i = 0;
@@ -447,17 +447,17 @@ impl GlobalFrameAllocator {
 
     /// Inserts the provided memory range.
     fn insert_range(&mut self, base: PhysAddr, end: PhysAddr) {
-        let mut remaning = end - base;
+        let mut remaining = end - base;
         let mut current = base;
 
-        while remaning > 0 {
-            let order = self.find_order(current, remaning);
+        while remaining > 0 {
+            let order = self.find_order(current, remaining);
             let size = BUDDY_SIZE[order];
 
             self.set_bit(current, order);
 
             current += size;
-            remaning -= size;
+            remaining -= size;
         }
     }
 
@@ -526,15 +526,15 @@ impl GlobalFrameAllocator {
 
             if self.free[i] > 0 {
                 let result = self.find_free(i)?;
-                let mut remaning = bsize - size;
+                let mut remaining = bsize - size;
 
-                if remaning > 0 {
+                if remaining > 0 {
                     for j in (0..=i).rev() {
                         let sizee = BUDDY_SIZE[j];
 
-                        while remaning >= sizee {
-                            self.set_bit(result + (remaning - sizee) + size, j);
-                            remaning -= sizee;
+                        while remaining >= sizee {
+                            self.set_bit(result + (remaining - sizee) + size, j);
+                            remaining -= sizee;
                         }
                     }
                 }

@@ -42,7 +42,7 @@ if __name__ == "__main__":
         import gdb
 
         # Since GDB does not let us pass arguments to the script and we have a big
-        # brain, so we pass the arguments to the program as enviornment variables.
+        # brain, so we pass the arguments to the program as environment variables.
         program = os.getenv("AERO_DEBUG_USERLAND_PROGRAM")
         is_lib = os.environ.get("IS_LIB") == "yes"
 

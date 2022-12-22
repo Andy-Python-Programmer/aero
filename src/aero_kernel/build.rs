@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Some(ext) if ext.eq(&OsString::from("inc")) => {
                 let path = path
                     .to_str()
-                    .expect("invalud UTF-8 for file path (skill issue)");
+                    .expect("invalid UTF-8 for file path (skill issue)");
                 inc_files.push(path.to_string())
             }
 

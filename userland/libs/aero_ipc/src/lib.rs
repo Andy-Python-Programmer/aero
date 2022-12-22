@@ -36,7 +36,7 @@ pub trait MessageHandler: Send + Sync {
     fn handle(&mut self, src: usize, msg: &[u8]) -> Result<Option<Vec<u8>>, ()>;
 }
 
-/// A MessageTransport allows for high-level IPC exchanges over the IPC interfce.
+/// A MessageTransport allows for high-level IPC exchanges over the IPC interface.
 /// It also handles the allocation of request identifiers.
 pub trait MessageTransport {
     fn alloc_id() -> usize;
@@ -44,13 +44,13 @@ pub trait MessageTransport {
     fn exchange(meta: usize, mid: usize, data: &[u8]) -> Vec<u8>;
 }
 
-/// A SendRecieveTransport transfers messages by using the IPC system calls.
-pub struct SendRecieveTransport;
+/// A SendReceiveTransport transfers messages by using the IPC system calls.
+pub struct SendReceiveTransport;
 
 // trust me, this seed is fine
 static IDALLOC: AtomicUsize = AtomicUsize::new(0xde73_ce13_600f_e4e9);
 
-impl MessageTransport for SendRecieveTransport {
+impl MessageTransport for SendReceiveTransport {
     fn alloc_id() -> usize {
         let value = IDALLOC.fetch_add(1, Ordering::SeqCst);
         // a small attempt at seed obfuscation
@@ -65,7 +65,7 @@ impl MessageTransport for SendRecieveTransport {
     fn exchange(meta: usize, mid: usize, msg: &[u8]) -> Vec<u8> {
         // send the data
         sys_ipc_send(meta, msg).expect("exchange failed: request failed!");
-        // now wait for a repsonse
+        // now wait for a response
         loop {
             // get a response
             let rx = service_with_response_finding();
@@ -87,7 +87,7 @@ impl MessageTransport for SendRecieveTransport {
     }
 }
 
-/// The IPC inteface macro
+/// The IPC interface macro
 ///
 /// You can create interfaces like this:
 /// ```no_run
@@ -98,7 +98,7 @@ impl MessageTransport for SendRecieveTransport {
 /// ```
 ///
 /// Then, Hello::Client is the client interface, Hello::Server is the server
-/// inteface and Hello::handler instantiates a MessageHandler that can be added
+/// interface and Hello::handler instantiates a MessageHandler that can be added
 /// to the listening pool.
 #[macro_export]
 macro_rules! ipc {
@@ -133,7 +133,7 @@ macro_rules! ipc {
                 )*
             }
 
-            pub fn open(pid: usize) -> Client<$crate::SendRecieveTransport> {
+            pub fn open(pid: usize) -> Client<$crate::SendReceiveTransport> {
                 Client { pid, phantom: ::core::marker::PhantomData{} }
             }
 
@@ -154,7 +154,7 @@ macro_rules! ipc {
                     use serde::Deserialize;
 
                     let mut deser = postcard::Deserializer::from_bytes(msg);
-                    // TODO(pitust): cache this in the recieve part of the handler
+                    // TODO(pitust): cache this in the receive part of the handler
                     //? i don't think it would help *that* much though
                     let msgid: usize = usize::deserialize(&mut deser).or_else(|_e| {
                         println!("\x1b[31;1merr\x1b[0m message id failed to deserialize!");
@@ -209,7 +209,7 @@ pub fn handle_request(src: usize, msg: &[u8]) -> Option<Vec<u8>> {
 
     if (msg[0] & 1) == 1 {
         println!(
-            "\x1b[32;1mwarn\x1b[0m recieved random response from {}!",
+            "\x1b[32;1mwarn\x1b[0m received random response from {}!",
             src
         );
         return None;
@@ -233,7 +233,7 @@ pub fn handle_request(src: usize, msg: &[u8]) -> Option<Vec<u8>> {
 
 fn service_with_response_finding() -> Option<(usize, Vec<u8>)> {
     let mut src: usize = 0;
-    let mut arena = RX_ARENA.try_lock().expect("recieve arena is locked!");
+    let mut arena = RX_ARENA.try_lock().expect("receive arena is locked!");
     let msg = sys_ipc_recv(&mut src, arena.as_mut(), true).expect("sys_ipc_recv failed!");
 
     // if it's a response
@@ -253,7 +253,7 @@ pub fn service_request() {
     let mut src: usize = 0;
     let mut arena = RX_ARENA
         .try_lock()
-        .expect("service_request: recieve arena is locked!");
+        .expect("service_request: receive arena is locked!");
 
     let msg = sys_ipc_recv(&mut src, arena.as_mut(), true).expect("sys_ipc_recv failed!");
 

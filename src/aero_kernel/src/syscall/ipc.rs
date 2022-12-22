@@ -49,7 +49,7 @@ impl MessageQueue {
     }
 }
 
-fn handle_recieve(
+fn handle_receive(
     pid_ptr: &mut usize,
     output: &mut [u8],
     msg: Message,
@@ -98,7 +98,7 @@ pub fn recv(pid_ptr: &mut usize, output: &mut [u8], block: usize) -> Result<usiz
             return Err(SyscallError::E2BIG);
         }
 
-        return handle_recieve(pid_ptr, output, item);
+        return handle_receive(pid_ptr, output, item);
     }
 
     let mq = &current.message_queue;
@@ -109,13 +109,13 @@ pub fn recv(pid_ptr: &mut usize, output: &mut [u8], block: usize) -> Result<usiz
 
     let msg = our_queue
         .pop_front()
-        .expect("ipc_recieve: someone else stole our message!");
+        .expect("ipc_receive: someone else stole our message!");
 
     if msg.data.len() > output.len() {
         our_queue.push_front(msg);
         Err(SyscallError::E2BIG)
     } else {
-        handle_recieve(pid_ptr, output, msg)
+        handle_receive(pid_ptr, output, msg)
     }
 }
 

@@ -302,22 +302,22 @@ tools:
       - args: |
             cat << EOF > config.toml
             changelog-seen = 2
-            
+
             [llvm]
             targets = "X86"
-            
+
             [build]
             target = ["x86_64-unknown-aero-system", "x86_64-unknown-linux-gnu"]
             build-dir = "@THIS_BUILD_DIR@"
             docs = false
-            
+
             [install]
             prefix = "@PREFIX@"
-            
+
             [rust]
             codegen-tests = false
             deny-warnings = false # work around rust-num-cpus warning
-            
+
             [target.x86_64-unknown-linux-gnu]
             llvm-config = "@BUILD_ROOT@/tools/host-llvm/bin/llvm-config"
 

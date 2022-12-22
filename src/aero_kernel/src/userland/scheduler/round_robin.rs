@@ -34,7 +34,7 @@ use super::SchedulerInterface;
 /// taskes.
 struct TaskQueue {
     /// The kernel idle task is a special kind of task that is run when
-    /// no taskes in the scheduler's queue are avaliable to execute. The idle task
+    /// no taskes in the scheduler's queue are available to execute. The idle task
     /// is to be created for each CPU.
     idle_task: Arc<Task>,
     preempt_task: Arc<Task>,
@@ -255,7 +255,7 @@ impl SchedulerInterface for RoundRobin {
     }
 
     fn preempt(&self) {
-        // We want to preempt under the following curcumstances:
+        // We want to preempt under the following circumstances:
         //
         // 1. When a process switches from the running state to the waiting
         //    state.
