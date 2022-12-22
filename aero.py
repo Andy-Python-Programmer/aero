@@ -295,14 +295,20 @@ def build_userland_sysroot(minimal):
     
     def run_xbstrap(args):
         try:
-            run_command(['xbstrap', *args], cwd=SYSROOT_DIR)
+            return run_command(['xbstrap', *args], cwd=SYSROOT_DIR)
         except FileNotFoundError:
-            run_command([f'{os.environ["HOME"]}/.local/bin/xbstrap', *args], cwd=SYSROOT_DIR)
+            return run_command([f'{os.environ["HOME"]}/.local/bin/xbstrap', *args], cwd=SYSROOT_DIR)
+
+    command = ['install', '-u', '--all']
 
     if minimal:
-        run_xbstrap(['install', '-u', 'bash', 'coreutils'])
-    else:
-        run_xbstrap(['install', '-u', '--all'])
+        command = ['install', '-u', 'bash', 'coreutils']
+
+    code, _, _ = run_xbstrap(command)
+
+    if code != 0:
+        log_error(f"`xbstrap {' '.join(command)}` exited with a non-zero status code")
+        exit(1)
 
 
 def build_userland(args):
