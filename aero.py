@@ -49,7 +49,7 @@ try:
     import requests
     import xbstrap
 except ImportError:
-    log_error('Please install required libraires using the following command:')
+    log_error('Please install required libraries using the following command:')
     log_error(' - python3 -m pip install requests xbstrap')
 
     sys.exit(0)
@@ -575,7 +575,7 @@ def is_kvm_supported() -> bool:
 
         fd.close()
 
-    # KVM is not avaliable on Windows
+    # KVM is not available on Windows
     return False
 
 

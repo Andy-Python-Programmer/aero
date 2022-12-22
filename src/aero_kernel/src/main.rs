@@ -107,7 +107,7 @@ static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
 const IO_VIRTUAL_BASE: VirtAddr = VirtAddr::new(0xffffff0000000000);
 
 fn aero_main() -> ! {
-    // NOTE: In this function we only want to initialize essential serivces, including
+    // NOTE: In this function we only want to initialize essential services, including
     // the task scheduler. Rest of the initializing (including kernel modules) should go
     // into the kernel main thread function instead.
     fs::init().unwrap();

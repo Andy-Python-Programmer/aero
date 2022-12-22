@@ -156,7 +156,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    /// Creates a new file with the provoded `name` in the filesystem.
+    /// Creates a new file with the provided `name` in the filesystem.
     fn touch(&self, _parent: DirCacheItem, _name: &str) -> Result<DirCacheItem> {
         Err(FileSystemError::NotSupported)
     }
@@ -216,7 +216,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    /// ## Saftey
+    /// ## Safety
     ///
     /// The caller is responsible for removing the inode from the cache.
     fn unlink(&self, _name: &str) -> Result<()> {
@@ -262,7 +262,7 @@ pub trait INodeInterface: Send + Sync {
     }
 }
 
-/// Structure representing the curcial, characteristics of an inode. The metadata
+/// Structure representing the crucial, characteristics of an inode. The metadata
 /// of an inode can be retrieved by invoking the [INodeInterface::metadata] function.
 #[derive(Debug, Copy, Clone)]
 pub struct Metadata {

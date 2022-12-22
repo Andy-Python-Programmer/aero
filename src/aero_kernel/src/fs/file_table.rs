@@ -178,7 +178,7 @@ impl FileHandle {
             self.offset.fetch_add(1, Ordering::SeqCst);
             Ok(reclen)
         } else {
-            // nothin to read
+            // nothing to read
             Ok(0)
         }
     }
@@ -255,7 +255,7 @@ impl FileTable {
             let array = &mut files[start..];
 
             // Loop over the current file descriptor table and find the first
-            // avaliable file descriptor.
+            // available file descriptor.
             for (i, file) in array.iter_mut().enumerate() {
                 if file.is_none() {
                     *file = Some(handle.duplicate(i, flags)?);
@@ -323,7 +323,7 @@ impl FileTable {
     pub fn open_file(&self, dentry: DirCacheItem, mut flags: OpenFlags) -> super::Result<usize> {
         let mut files = self.0.write();
 
-        // Remove all of the unneccessary flags.
+        // Remove all of the unnecessary flags.
         flags.remove(OpenFlags::O_CREAT);
         flags.remove(OpenFlags::O_DIRECTORY);
 
@@ -332,7 +332,7 @@ impl FileTable {
             let mut handle = Arc::new(FileHandle::new(i, dentry, flags));
 
             if let Some(inode) = handle.inode.inode().open(flags, handle.clone())? {
-                // TODO: should open be called on the inner file aswell???
+                // TODO: should open be called on the inner file as well???
                 handle = Arc::new(FileHandle::new(i, inode, flags))
             }
 
@@ -344,7 +344,7 @@ impl FileTable {
             let mut handle = Arc::new(FileHandle::new(fd, dentry, flags));
 
             if let Some(inode) = handle.inode.inode().open(flags, handle.clone())? {
-                // TODO: should open be called on the inner file aswell???
+                // TODO: should open be called on the inner file as well???
                 handle = Arc::new(FileHandle::new(fd, inode, flags))
             }
 
@@ -356,8 +356,8 @@ impl FileTable {
         }
     }
 
-    /// Closes a file descriptor, so that its no longer referes to any file
-    /// and can be resued. This function will return false if the provided file
+    /// Closes a file descriptor, so that its no longer refers to any file
+    /// and can be reused. This function will return false if the provided file
     /// descriptor index was invalid.
     pub fn close_file(&self, fd: usize) -> bool {
         let mut files = self.0.write();

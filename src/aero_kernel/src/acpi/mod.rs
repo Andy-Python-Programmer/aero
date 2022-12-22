@@ -18,7 +18,7 @@
  */
 
 //! The ACPI (Advanced Configuration and Power Interface) tables help to gather the
-//! CPU, interrupt, and timer informations.
+//! CPU, interrupt, and timer information.
 //!
 //! **Notes**: <https://wiki.osdev.org/ACPI>
 

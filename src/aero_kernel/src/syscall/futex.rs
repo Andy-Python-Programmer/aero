@@ -126,8 +126,8 @@ impl FutexContainer {
 
 static FUTEX_CONTAINER: Once<FutexContainer> = Once::new();
 
-/// Returns a reference to the futex conatiner; initializing if necessary.
-fn get_futex_conatiner() -> &'static FutexContainer {
+/// Returns a reference to the futex container; initializing if necessary.
+fn get_futex_container() -> &'static FutexContainer {
     FUTEX_CONTAINER.call_once(|| FutexContainer::new())
 }
 
@@ -135,7 +135,7 @@ fn get_futex_conatiner() -> &'static FutexContainer {
 pub fn wait(ptr: usize, expected: usize, timeout: &TimeSpec) -> Result<usize, SyscallError> {
     let ptr = VirtAddr::new(ptr as u64);
 
-    let futex_container = get_futex_conatiner();
+    let futex_container = get_futex_container();
     futex_container.wait(ptr, expected as u32, timeout)?;
 
     Ok(0)
@@ -145,7 +145,7 @@ pub fn wait(ptr: usize, expected: usize, timeout: &TimeSpec) -> Result<usize, Sy
 pub fn wake(ptr: usize) -> Result<usize, SyscallError> {
     let ptr = VirtAddr::new(ptr as u64);
 
-    let futex_container = get_futex_conatiner();
+    let futex_container = get_futex_container();
     futex_container.wake(ptr)?;
 
     Ok(0)

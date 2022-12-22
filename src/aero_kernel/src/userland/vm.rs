@@ -49,7 +49,7 @@ const ELF_PT2_64_SIZE: usize = core::mem::size_of::<HeaderPt2_<P64>>();
 
 #[derive(Debug)]
 pub enum ElfLoadError {
-    /// Unexpected file system error occured on an IO operation on the file.
+    /// Unexpected file system error occurred on an IO operation on the file.
     IOError(FileSystemError),
     /// The PT1 header has an invalid magic number.
     InvalidMagic,
@@ -57,7 +57,7 @@ pub enum ElfLoadError {
     InvalidClass,
     /// The provided program header index is invalid.
     InvalidProgramHeaderIndex,
-    /// Unexpected file system error occured when memory mapping an
+    /// Unexpected file system error occurred when memory mapping an
     /// ELF segment.
     MemoryMapError,
 }
@@ -97,7 +97,7 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfL
             unimplemented!("parse_elf_header: 32-bit executables are not implemented")
         }
 
-        // SAFTEY: ensure the PT1 header has a valid class.
+        // SAFETY: ensure the PT1 header has a valid class.
         Class::None | Class::Other(_) => Err(ElfLoadError::InvalidClass),
     }?;
 
@@ -114,7 +114,7 @@ fn parse_program_header<'pheader>(
 ) -> Result<ProgramHeader<'pheader>, ElfLoadError> {
     let pt2 = &header.pt2;
 
-    // SAFTEY: ensure that the provided program header index is valid.
+    // SAFETY: ensure that the provided program header index is valid.
     if !(index < pt2.ph_count() && pt2.ph_offset() > 0 && pt2.ph_entry_size() > 0) {
         return Err(ElfLoadError::InvalidProgramHeaderIndex);
     }
@@ -145,7 +145,7 @@ fn parse_program_header<'pheader>(
             Ok(ProgramHeader::Ph32(phdr))
         }
 
-        // SAFTEY: ensure the PT1 header has a valid class.
+        // SAFETY: ensure the PT1 header has a valid class.
         Class::None | Class::Other(_) => Err(ElfLoadError::InvalidClass),
     }
 }
@@ -310,7 +310,7 @@ impl From<MMapProt> for PageTableFlags {
 
 enum UnmapResult {
     None,
-    Parital(Mapping),
+    Partial(Mapping),
     Full,
     Start,
     End,
@@ -352,7 +352,7 @@ struct Mapping {
 }
 
 impl Mapping {
-    /// Handler routine for private anonymous pages. Since its an annonymous page is not
+    /// Handler routine for private anonymous pages. Since its an anonymous page is not
     /// backed by a file, we have to alloctate a frame and map it at the faulted address.
     fn handle_pf_private_anon(
         &mut self,
@@ -594,7 +594,7 @@ impl Mapping {
 
             self.end_addr = end;
 
-            Ok(UnmapResult::Parital(new_mapping))
+            Ok(UnmapResult::Partial(new_mapping))
         } else if start <= self.start_addr && end >= self.end_addr {
             // We are unmapping the whole region.
             unmap_range_inner(self.start_addr..self.end_addr)?;
@@ -806,17 +806,17 @@ impl VmProtected {
         }
 
         if file.is_some() {
-            // SAFTEY: We cannot mmap a file with the anonymous flag.
+            // SAFETY: We cannot mmap a file with the anonymous flag.
             if flags.contains(MMapFlags::MAP_ANONYOMUS) {
                 return None;
             }
         } else {
-            // SAFTEY: Mappings not backed by a file must be anonymous.
+            // SAFETY: Mappings not backed by a file must be anonymous.
             if !flags.contains(MMapFlags::MAP_ANONYOMUS) {
                 return None;
             }
 
-            // SAFTEY: We cannot have a shared and an anonymous mapping.
+            // SAFETY: We cannot have a shared and an anonymous mapping.
             if flags.contains(MMapFlags::MAP_SHARED) {
                 return None;
             }
@@ -829,12 +829,12 @@ impl VmProtected {
             self.find_any_above(VirtAddr::new(0x7000_0000_0000), size_aligned as _)
         } else {
             if flags.contains(MMapFlags::MAP_FIXED) {
-                // SAFTEY: The provided address should be page aligned.
+                // SAFETY: The provided address should be page aligned.
                 if !address.is_aligned(Size4KiB::SIZE) {
                     return None;
                 }
 
-                // SAFTEY: The provided (address + size) should be less then
+                // SAFETY: The provided (address + size) should be less then
                 // the userland max address.
                 if (address + size_aligned) > userland_last_address() {
                     return None;
@@ -1064,7 +1064,7 @@ impl VmProtected {
                             cursor.remove_current();
                         }
 
-                        UnmapResult::Parital(mapping) => {
+                        UnmapResult::Partial(mapping) => {
                             cursor.insert_after(mapping);
                             return true;
                         }
@@ -1140,7 +1140,7 @@ impl Vm {
         self.inner.lock_irq().clear()
     }
 
-    /// This function is responsible for handling page faults occured in
+    /// This function is responsible for handling page faults occurred in
     /// user mode. It determines the address, the reason of the page fault
     /// and then passes it off to one of the appropriate page fault handlers.
     pub(crate) fn handle_page_fault(

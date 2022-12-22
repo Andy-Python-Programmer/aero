@@ -57,7 +57,7 @@ impl Mcfg {
 ///
 /// ## Notes
 /// Returns false if called before the ACPI tables were initialized.
-pub fn is_avaliable() -> bool {
+pub fn is_available() -> bool {
     MCFG.get().is_some()
 }
 

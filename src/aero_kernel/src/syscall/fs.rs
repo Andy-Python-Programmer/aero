@@ -510,7 +510,7 @@ pub fn epoll_pwait(
 
     let result = epfd.wait(event, max_events, timeout)?;
 
-    // Restore the orignal signal mask.
+    // Restore the original signal mask.
     signals.set_mask(SigProcMask::Set, Some(old_mask), None);
     Ok(result)
 }
@@ -541,7 +541,7 @@ pub fn link(src_path: &Path, dest_path: &Path) -> Result<usize, SyscallError> {
 
     // Cannot create a hardlink to a file on a different filesystem.
     //
-    // SAFTEY: The pointers to the file system are valid since we know that there are
+    // SAFETY: The pointers to the file system are valid since we know that there are
     // strong references to it.
     //
     // TODO: Should this be moved to the inode impl?
@@ -646,7 +646,7 @@ pub fn poll(fds: &mut [PollFd], timeout: usize, sigmask: usize) -> Result<usize,
 
     let n = do_poll(fds, timeout)?;
 
-    // Restore the orignal signal mask.
+    // Restore the original signal mask.
     signals.set_mask(SigProcMask::Set, Some(old_mask), None);
     Ok(n)
 }

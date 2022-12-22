@@ -65,7 +65,7 @@ impl SignalFrame {
 }
 
 pub fn interrupt_check_signals(stack: &mut InterruptStack) {
-    // SAFTEY: If this interrupt did not originate from userland then we cannot
+    // SAFETY: If this interrupt did not originate from userland then we cannot
     // check for signals since the scheduler might not be initialized.
     if !stack.iret.is_user() {
         return;

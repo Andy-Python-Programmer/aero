@@ -79,7 +79,7 @@ impl BaseDriveSelReg {
 
 bitflags::bitflags! {
     pub struct BaseStatusReg: u8 {
-        const ERR = 0b00000001; // Error occured
+        const ERR = 0b00000001; // Error occurred
         const IDX = 0b00000010; // Index. Always set to zero
         const CORR = 0b00000100; // Corrected data. Always set to zero
         const DRQ = 0b00001000; // Set when the drive has PIO data to transfer, or is ready to accept PIO data
@@ -118,8 +118,8 @@ bitflags::bitflags! {
         const DMA_ACTIVE = 0b0000_0001;
         const DMA_FAILED = 0b0000_0010;
         const DISK_IRQ = 0b0000_0100;
-        const MASTER_DMA_CAPPABLE = 0b0010_0000;
-        const SLAVE_DMA_CAPPABLE = 0b0100_0000;
+        const MASTER_DMA_CAPABLE = 0b0010_0000;
+        const SLAVE_DMA_CAPABLE = 0b0100_0000;
         const NO_DMA_SHARING = 0b1000_0000;
     }
 }

@@ -13,7 +13,7 @@ _start:
     mov rax, 5 ; SYS_EXIT
     syscall
 
-    ud2 ; unreacheable
+    ud2 ; unreachable
 
 section .data
 msg db      "Hello, world!", 0xa

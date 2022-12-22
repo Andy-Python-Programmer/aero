@@ -180,7 +180,7 @@ pub struct Task {
     arch_task: UnsafeCell<ArchTask>,
     state: AtomicU8,
 
-    // Note: Aero implementes the threads and as standard processes. This
+    // Note: Aero implements the threads and as standard processes. This
     // means that when a new process is created its TID == PID and when a new
     // thread is created then the PID of the thread will be the process leader's
     // PID and the TID will be uniquely generated.

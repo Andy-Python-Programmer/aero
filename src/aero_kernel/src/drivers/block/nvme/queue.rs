@@ -12,7 +12,7 @@ const fn calculate_doorbell_offset(queue_id: u16, multiplier: usize, dstrd: usiz
 }
 
 pub struct Completion;
-pub struct Submisson;
+pub struct Submission;
 
 pub trait QueueType {
     type Type;
@@ -24,7 +24,7 @@ impl QueueType for Completion {
     type Type = CompletionEntry;
 }
 
-impl QueueType for Submisson {
+impl QueueType for Submission {
     const DOORBELL_OFFSET: usize = 0;
     type Type = Command;
 }
@@ -94,7 +94,7 @@ impl Queue<'_, Completion> {
     }
 }
 
-impl Queue<'_, Submisson> {
+impl Queue<'_, Submission> {
     pub fn submit_command(&mut self, command: Command) {
         self.queue[self.index] = UnsafeCell::new(command);
 
@@ -111,7 +111,7 @@ pub(super) struct QueuePair<'a> {
 
     cid: u16,
 
-    submission: Queue<'a, Submisson>,
+    submission: Queue<'a, Submission>,
     completion: Queue<'a, Completion>,
 }
 

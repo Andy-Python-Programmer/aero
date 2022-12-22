@@ -649,7 +649,7 @@ impl PciHeader {
         unsafe { self.read::<u32>(0x0c) }.get_bit(23)
     }
 
-    /// Returnes the value stored in the PCI header type register which is used to
+    /// Returns the value stored in the PCI header type register which is used to
     /// indicate layout for bytes,of the device’s configuration space.
     pub fn get_header_type(&self) -> u8 {
         unsafe { self.read::<u8>(0x0E) as u8 & 0b01111111 }
@@ -790,8 +790,8 @@ pub fn register_device_driver(handle: Arc<dyn PciDeviceHandle>) {
 
 /// Lookup and initialize all PCI devices.
 pub fn init(offset_table: &mut OffsetPageTable) {
-    // Check if the MCFG table is avaliable.
-    if mcfg::is_avaliable() {
+    // Check if the MCFG table is available.
+    if mcfg::is_available() {
         let mcfg_table = mcfg::get_mcfg_table();
         let _entry_count = mcfg_table.entry_count();
     }

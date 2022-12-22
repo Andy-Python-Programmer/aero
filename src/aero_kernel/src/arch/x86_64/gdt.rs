@@ -316,7 +316,7 @@ pub fn init_boot() {
     }
 }
 
-pub fn get_task_state_segement() -> &'static mut Tss {
+pub fn get_task_state_segment() -> &'static mut Tss {
     &mut get_kpcr().tss
 }
 
@@ -328,7 +328,7 @@ static STK: [u8; 4096 * 16] = [0; 4096 * 16];
 
 /// Initialize the *actual* GDT stored in TLS.
 ///
-/// ## Saftey
+/// ## Safety
 /// The heap must be initialized before this function is called.
 pub fn init() {
     let gdt = unsafe {
@@ -346,7 +346,7 @@ pub fn init() {
     gdt.copy_from_slice(&GDT);
 
     unsafe {
-        let tss_ref = get_task_state_segement();
+        let tss_ref = get_task_state_segment();
         let tss_ptr = tss_ref as *mut Tss;
 
         gdt[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);

@@ -75,14 +75,14 @@ trait DrmDevice: Send + Sync {
     fn framebuffer_create(&self, buffer_object: &BufferObject, width: u32, height: u32, pitch: u32);
     fn commit(&self, buffer_obj: &BufferObject);
 
-    /// Returns tuple containing the minumum dimensions (`xmin`, `ymin`).
+    /// Returns tuple containing the minimum dimensions (`xmin`, `ymin`).
     fn min_dim(&self) -> (usize, usize);
-    /// Returns tuple containing the miximum dimensions (`xmax`, `ymax`).
+    /// Returns tuple containing the maximum dimensions (`xmax`, `ymax`).
     fn max_dim(&self) -> (usize, usize);
 
-    /// Returns a tuple containg the driver major, minor and patch level respectively.
+    /// Returns a tuple containing the driver major, minor and patch level respectively.
     fn driver_version(&self) -> (usize, usize, usize);
-    /// Returns a tuple contaning the driver name, desc and date respectively.
+    /// Returns a tuple containing the driver name, desc and date respectively.
     fn driver_info(&self) -> (&'static str, &'static str, &'static str);
 }
 
@@ -158,9 +158,9 @@ struct Encoder {
 
     /// The current CRTC for this encoder.
     current_crtc: Arc<Crtc>,
-    /// A vector contaning all the possible CRTCs for this encoder.
+    /// A vector containing all the possible CRTCs for this encoder.
     possible_crtcs: Vec<Arc<Crtc>>,
-    /// A vector contaning all the possible sibling encoders for cloning.
+    /// A vector containing all the possible sibling encoders for cloning.
     possible_clones: Vec<Arc<Encoder>>,
 
     object_id: u32,
@@ -206,9 +206,9 @@ struct Connector {
     status: DrmModeConStatus,
     /// The current encoder for this connector.
     current_encoder: Arc<Encoder>,
-    /// A vector contaning all the possible encoders for this connector.
+    /// A vector containing all the possible encoders for this connector.
     possible_encoders: Vec<Arc<Encoder>>,
-    /// A vector contaning all of the possible display modes for this connector.
+    /// A vector containing all of the possible display modes for this connector.
     modes: Vec<DrmModeInfo>,
 
     connector_typ: u32,
@@ -450,7 +450,7 @@ impl INodeInterface for Drm {
                     .read_mut::<DrmModeCardRes>()
                     .unwrap();
 
-                /// Copies the mode object IDs into the user provided buffer. For saftey, checkout
+                /// Copies the mode object IDs into the user provided buffer. For safety, checkout
                 /// the [`copy_field`] function.
                 fn copy_mode_obj_id<T: ModeObject>(
                     obj: &Mutex<Vec<Arc<T>>>,
@@ -558,7 +558,7 @@ impl INodeInterface for Drm {
                     .as_connector()
                     .unwrap();
 
-                // Fill in the array contaning all of the possible encoders and its length.
+                // Fill in the array containing all of the possible encoders and its length.
                 let encoder_ids_ptr = struc.encoders_ptr as *mut u32;
                 let mut encoder_count = 0;
 
@@ -585,7 +585,7 @@ impl INodeInterface for Drm {
                 struc.mm_height = 0; // todo
                 struc.subpixel = 0; // todo
 
-                // Fill in the array contaning all of the possible modes and its length.
+                // Fill in the array containing all of the possible modes and its length.
                 let modes_ptr = struc.modes_ptr as *mut DrmModeInfo;
                 let mut modes_count = 0;
 

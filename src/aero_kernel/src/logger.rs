@@ -103,7 +103,7 @@ impl log::Log for AeroLogger {
 
 /// Force-unlocks the logger ring buffer to prevent a deadlock.
 ///
-/// ## Saftey
+/// ## Safety
 /// This method is not memory safe and should be only used when absolutely necessary.
 #[inline]
 pub unsafe fn force_unlock() {

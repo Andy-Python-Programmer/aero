@@ -930,7 +930,7 @@ pub fn double_buffer_flush() {
 
 /// Force-unlocks the rendy to prevent a deadlock.
 ///
-/// ## Saftey
+/// ## Safety
 /// This method is not memory safe and should be only used when absolutely necessary.
 pub unsafe fn force_unlock() {
     DEBUG_RENDY.get().map(|l| l.force_unlock());

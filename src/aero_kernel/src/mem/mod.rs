@@ -122,7 +122,7 @@ impl AddressSpace {
         unsafe { &mut *(self.cr3.start_address().as_hhdm_virt().as_mut_ptr()) }
     }
 
-    /// Returns a mutable refernce to the mapper pointing to the page table
+    /// Returns a mutable reference to the mapper pointing to the page table
     /// allocated for this address space.
     pub fn offset_page_table(&mut self) -> OffsetPageTable {
         unsafe { OffsetPageTable::new(self.page_table(), crate::PHYSICAL_MEMORY_OFFSET) }

@@ -47,7 +47,7 @@ global x86_64_syscall_handler
 ;
 ; (note: R12..R15, RBP, RBX are callee-preserved in C ABI)
 ;
-; The instruction saves the RIP to RCX, cleares RFLAGS.RF then saves
+; The instruction saves the RIP to RCX, clears RFLAGS.RF then saves
 ; RFLAGS to R11. Followed by, it loads the new SS, CS, and RIP from
 ; previously programmed MSRs.
 ;

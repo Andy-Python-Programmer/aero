@@ -34,7 +34,7 @@ pub struct Fadt {
     // Field used in ACPI 1.0; no longer in use, for compatibility only
     reserved: u8,
 
-    pub preferred_power_managament: u8,
+    pub preferred_power_management: u8,
     pub sci_interrupt: u16,
     pub smi_command_port: u32,
     pub acpi_enable: u8,

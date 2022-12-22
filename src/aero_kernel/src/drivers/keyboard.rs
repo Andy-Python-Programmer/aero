@@ -34,7 +34,7 @@ pub trait KeyboardListener: Send + Sync {
 }
 
 static PS2_KEYBOARD_STATE: Mutex<Ps2KeyboardState> = Mutex::new(Ps2KeyboardState::new());
-static KEYBOARD_LISTNER: RwLock<Vec<&'static dyn KeyboardListener>> = RwLock::new(Vec::new());
+static KEYBOARD_LISTENER: RwLock<Vec<&'static dyn KeyboardListener>> = RwLock::new(Vec::new());
 
 struct Ps2KeyboardState {
     special: bool,
@@ -301,8 +301,8 @@ pub fn ps2_keyboard_init() {
     devfs::install_device(KEYBOARD.clone()).expect("failed to install keyboard device");
 }
 
-pub fn register_keyboard_listener(listner: &'static dyn KeyboardListener) {
-    KEYBOARD_LISTNER.write().push(listner)
+pub fn register_keyboard_listener(listener: &'static dyn KeyboardListener) {
+    KEYBOARD_LISTENER.write().push(listener)
 }
 
 pub fn keyboard_irq_handler(_stack: &mut InterruptStack) {
@@ -433,8 +433,8 @@ pub fn keyboard_irq_handler(_stack: &mut InterruptStack) {
 
             core::mem::drop(lock);
 
-            let listners = KEYBOARD_LISTNER.read();
-            for listener in listners.iter() {
+            let listeners = KEYBOARD_LISTENER.read();
+            for listener in listeners.iter() {
                 listener.on_key(keycode, released);
             }
         }

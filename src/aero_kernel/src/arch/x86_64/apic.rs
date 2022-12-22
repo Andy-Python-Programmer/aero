@@ -118,7 +118,7 @@ pub struct LocalApic {
 impl LocalApic {
     /// Creates a new local APIC instance.
     ///
-    /// ## Saftey
+    /// ## Safety
     /// The provided `address` points to a valid local APIC memory region and
     /// the `apic_type` is valid.
     fn new(address: VirtAddr, apic_type: ApicType) -> Self {

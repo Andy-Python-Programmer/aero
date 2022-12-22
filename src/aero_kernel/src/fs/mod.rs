@@ -234,7 +234,7 @@ pub fn lookup_path_with(
                     cwd = parent;
                 }
 
-                // Else the entry does not have a parent, ie. the current entry is the root aand
+                // Else the entry does not have a parent, ie. the current entry is the root and
                 // we can't go any further :^)
             }
 
