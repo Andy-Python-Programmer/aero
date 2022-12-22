@@ -147,7 +147,7 @@ impl EPoll {
             let ready: EPollEventFlags = fd.inode().poll(None)?.into();
 
             // If the event mask does not contain any poll(2) events, the event
-            // descriptor is disabled. This is the effe
+            // descriptor is disabled.
             if flags == Self::PRIVATE_BITS {
                 continue;
             }
@@ -184,9 +184,11 @@ impl EPoll {
         }
 
         'search: loop {
+            scheduler::get_scheduler().inner.await_io()?;
+
             for (fd, event, flags) in fds.iter_mut() {
                 // If the event mask does not contain any poll(2) events, the event
-                // descriptor is disabled. This is the effe
+                // descriptor is disabled.
                 if *flags == Self::PRIVATE_BITS {
                     continue;
                 }
