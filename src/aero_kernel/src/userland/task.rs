@@ -477,6 +477,8 @@ impl Task {
             *self.cwd.write() = Some(Cwd::new())
         }
 
+        self.file_table.close_on_exec();
+
         self.file_table.log();
 
         *self.executable.lock() = Some(executable.clone());
@@ -505,6 +507,14 @@ impl Task {
     }
 
     pub(super) fn update_state(&self, state: TaskState) {
+        if state == TaskState::Zombie {
+            for file in self.file_table.0.read().iter() {
+                if let Some(a) = file {
+                    a.inode().close(*a.flags.read());
+                }
+            }
+        }
+
         if state != TaskState::Runnable {
             log::warn!(
                 "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",

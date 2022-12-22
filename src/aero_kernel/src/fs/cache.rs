@@ -204,7 +204,7 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
         Arc::new_cyclic(|this| Cache::<K, V> {
             index: Mutex::new(CacheIndex {
                 used: hashbrown::HashMap::new(),
-                unused: lru::LruCache::new(NonZeroUsize::new(512).unwrap()),
+                unused: lru::LruCache::new(NonZeroUsize::new(4096).unwrap()),
             }),
             self_ref: this.clone(),
         })

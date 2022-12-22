@@ -34,9 +34,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     mem::forget(OpenOptions::new().write(true).open(TTY_PATH)?); // fd=1 for stdout
     mem::forget(OpenOptions::new().write(true).open(TTY_PATH)?); // fd=2 for stderr
 
-    Command::new("/usr/bin/startx")
+    Command::new("startx")
         .env("RUST_BACKTRACE", "full")
-        .env("TERM", "linux")
         .spawn()?;
 
     loop {}

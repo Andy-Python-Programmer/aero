@@ -268,8 +268,8 @@ pub fn pipe(fds: &mut [i32; 2], flags: usize) -> Result<usize, SyscallError> {
 
     let entry = DirEntry::from_inode(pipe, String::from("<pipe>"));
 
-    let flags_1 = OpenFlags::O_RDONLY | (flags & OpenFlags::O_CLOEXEC);
-    let flags_2 = OpenFlags::O_WRONLY | (flags & OpenFlags::O_CLOEXEC);
+    let flags_1 = OpenFlags::O_RDONLY | flags;
+    let flags_2 = OpenFlags::O_WRONLY | flags;
 
     let current_task = scheduler::get_scheduler().current_task();
 
@@ -286,6 +286,9 @@ pub fn pipe(fds: &mut [i32; 2], flags: usize) -> Result<usize, SyscallError> {
 
         Ok(fd2) => fd2,
     };
+
+    log::info!("pipe() = [{}, {}]", fd1, fd2);
+    crate::unwind::unwind_stack_trace();
 
     fds[0] = fd1 as i32;
     fds[1] = fd2 as i32;

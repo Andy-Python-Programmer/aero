@@ -254,7 +254,10 @@ impl INodeInterface for LockedRamINode {
                 return Ok(());
             }
 
-            _ => Err(FileSystemError::NotSupported),
+            _ => {
+                log::warn!("ramfs: truncation is not supported");
+                Ok(())
+            }
         }
     }
 

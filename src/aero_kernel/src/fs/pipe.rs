@@ -2,6 +2,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::OpenFlags;
 use alloc::sync::Arc;
+use spin::Once;
 
 use crate::utils::buffer::Buffer;
 use crate::utils::sync::{BlockQueue, Mutex};
@@ -9,6 +10,7 @@ use crate::utils::sync::{BlockQueue, Mutex};
 use super::cache::DirCacheItem;
 use super::file_table::FileHandle;
 use super::inode::{INodeInterface, PollFlags, PollTable};
+use super::FileSystemError;
 
 pub struct Pipe {
     queue: Mutex<Buffer>,
@@ -18,6 +20,8 @@ pub struct Pipe {
 
     /// The number of writers currently connected to the pipe.
     num_writers: AtomicUsize,
+
+    handle: Once<Arc<FileHandle>>,
 }
 
 impl Pipe {
@@ -29,6 +33,8 @@ impl Pipe {
             writers: BlockQueue::new(),
 
             num_writers: AtomicUsize::new(0),
+
+            handle: Once::new(),
         })
     }
 
@@ -42,11 +48,12 @@ impl INodeInterface for Pipe {
     fn open(
         &self,
         flags: OpenFlags,
-        _handle: Arc<FileHandle>,
+        handle: Arc<FileHandle>,
     ) -> super::Result<Option<DirCacheItem>> {
         // Write end of the pipe:
         if flags.contains(OpenFlags::O_WRONLY) {
             self.num_writers.fetch_add(1, Ordering::SeqCst);
+            self.handle.call_once(|| handle);
         }
 
         Ok(None)
@@ -65,12 +72,20 @@ impl INodeInterface for Pipe {
     }
 
     fn read_at(&self, _offset: usize, buf: &mut [u8]) -> super::Result<usize> {
-        if self.active_writers() == 0 {
-            return Ok(0);
+        let flags = *self
+            .handle
+            .get()
+            .expect("pipe: internal error")
+            .flags
+            .read();
+
+        let nonblock = flags.contains(OpenFlags::O_NONBLOCK);
+        if nonblock && !self.queue.lock_irq().has_data() {
+            return Err(FileSystemError::WouldBlock);
         }
 
         let mut buffer = self.readers.block_on(&self.queue, |lock| {
-            lock.has_data() || self.active_writers() != 0
+            lock.has_data() || self.active_writers() == 0
         })?;
 
         let read = buffer.read_data(buf);

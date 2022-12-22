@@ -35,6 +35,7 @@ use crate::fs::cache::*;
 use crate::fs::devfs;
 use crate::fs::devfs::DEV_FILESYSTEM;
 use crate::fs::inode::FileType;
+use crate::fs::inode::PollFlags;
 use crate::fs::inode::{DirEntry, INodeInterface};
 use crate::fs::FileSystem;
 use crate::fs::Path;
@@ -215,8 +216,16 @@ impl INodeInterface for Slave {
         }
     }
 
-    fn poll(&self, _table: Option<&mut fs::inode::PollTable>) -> fs::Result<fs::inode::PollFlags> {
-        panic!()
+    fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {
+        table.map(|e| e.insert(&self.master.wq));
+
+        let mut flags = PollFlags::OUT;
+
+        if !self.master.slave_buffer.lock_irq().is_empty() {
+            flags |= PollFlags::IN;
+        }
+
+        Ok(flags)
     }
 
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {

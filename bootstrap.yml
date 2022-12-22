@@ -556,6 +556,18 @@ packages:
         environ:
           RUSTFLAGS: '-Cforce-frame-pointers=yes -Clink-args=-no-pie'
 
+  - name: neofetch
+    source:
+      subdir: bundled
+      git: 'https://github.com/Andy-Python-Programmer/neofetch'
+      branch: 'master'
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   # - name: ripgrep
   #   source:
   #     subdir: bundled

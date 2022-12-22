@@ -1,0 +1,34 @@
+From f1fae2e54122bb1342dec30f218a4bdcdaf3c428 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Wed, 21 Dec 2022 17:37:50 +1100
+Subject: [PATCH] <xxx>
+
+---
+ neofetch | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/neofetch b/neofetch
+index 9f2ba30..2d5c4de 100755
+--- a/neofetch
++++ b/neofetch
+@@ -945,7 +945,7 @@ get_os() {
+         AIX)      os=AIX ;;
+         IRIX*)    os=IRIX ;;
+         FreeMiNT) os=FreeMiNT ;;
+-        aero)     os=Aero;;
++        Aero)     os=Aero;;
+ 
+         Linux|GNU*)
+             os=Linux
+@@ -8528,7 +8528,7 @@ EOF
+             # TODO: Add proper art
+             set_colors 2 1 3 5
+             read -rd '' ascii_data <<'EOF'
+-    ,---,
++${c1}    ,---,
+    '  .' \
+   /  ;    '.
+  :  :       \
+-- 
+2.38.1
+

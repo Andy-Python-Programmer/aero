@@ -185,7 +185,7 @@ impl FileHandle {
 }
 
 #[repr(transparent)]
-pub struct FileTable(RwLock<Vec<Option<Arc<FileHandle>>>>);
+pub struct FileTable(pub RwLock<Vec<Option<Arc<FileHandle>>>>);
 
 impl FileTable {
     pub fn new() -> Self {
@@ -217,6 +217,23 @@ impl FileTable {
                     handle.fd,
                     handle.inode.absolute_path_str()
                 )
+            }
+        }
+    }
+
+    pub fn close_on_exec(&self) {
+        let mut files = self.0.write();
+
+        for file in files.iter_mut() {
+            if let Some(handle) = file {
+                let flags = *handle.flags.read();
+
+                if flags.contains(OpenFlags::O_CLOEXEC)
+                    || handle.fd_flags.lock().contains(FdFlags::CLOEXEC)
+                {
+                    handle.inode().close(flags);
+                    *file = None;
+                }
             }
         }
     }
@@ -287,6 +304,19 @@ impl FileTable {
 
     pub fn deep_clone(&self) -> Self {
         let files = self.0.read();
+
+        for file in files.iter() {
+            if let Some(handle) = file {
+                let flags = *handle.flags.read();
+
+                handle
+                    .inode
+                    .inode()
+                    .open(flags, handle.clone())
+                    .expect("FileTable::clone: failed to open file");
+            }
+        }
+
         Self(RwLock::new(files.clone()))
     }
 

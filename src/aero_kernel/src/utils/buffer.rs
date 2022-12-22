@@ -22,7 +22,7 @@ use core::fmt::Write;
 use alloc::vec::Vec;
 
 pub struct Buffer {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl Buffer {

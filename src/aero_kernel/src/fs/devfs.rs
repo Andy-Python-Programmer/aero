@@ -185,8 +185,8 @@ impl INodeInterface for DevNull {
         Ok(0x00)
     }
 
-    fn write_at(&self, _offset: usize, _buffer: &[u8]) -> Result<usize> {
-        Ok(0x00)
+    fn write_at(&self, _offset: usize, buffer: &[u8]) -> Result<usize> {
+        Ok(buffer.len())
     }
 }
 

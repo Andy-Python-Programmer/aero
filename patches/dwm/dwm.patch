@@ -1,6 +1,6 @@
-From 8b93ffe3d30e2b2d7424b2a9fa7fa93e77f362c2 Mon Sep 17 00:00:00 2001
+From 18f9a4c102c12aea6e567501fcb003c4573c844a Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sun, 18 Dec 2022 13:40:10 +1100
+Date: Wed, 21 Dec 2022 12:20:18 +1100
 Subject: [PATCH] <xxx>
 
 ---
@@ -9,7 +9,7 @@ Subject: [PATCH] <xxx>
  2 files changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/config.def.h b/config.def.h
-index 9efa774..20b1681 100644
+index 9efa774..ce9d766 100644
 --- a/config.def.h
 +++ b/config.def.h
 @@ -57,8 +57,8 @@ static const Layout layouts[] = {
@@ -19,7 +19,7 @@ index 9efa774..20b1681 100644
 -static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 -static const char *termcmd[]  = { "st", NULL };
 +static const char *dmenucmd[] = { "alacritty", NULL };
-+static const char *termcmd[]  = { "limine-term", NULL };
++static const char *termcmd[]  = { "glxgears", NULL };
  
  static const Key keys[] = {
  	/* modifier                     key        function        argument */
