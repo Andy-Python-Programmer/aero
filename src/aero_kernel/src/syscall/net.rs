@@ -155,7 +155,7 @@ pub fn socket_pair(
     domain: usize,
     type_and_flags: usize,
     protocol: usize,
-    fds: &mut [i32],
+    fds: &mut [i32; 2],
 ) -> Result<usize, SyscallError> {
     let current_task = scheduler::get_scheduler().current_task();
     let sockfd_flags = SocketFlags::from_bits_truncate(type_and_flags).into();
