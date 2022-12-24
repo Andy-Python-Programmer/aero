@@ -19,7 +19,7 @@ No, Aero runs its own kernel that does *not* originate from Linux and does not s
 **Official Discord Server**: <https://discord.gg/8gwhTTZwt8>
 
 # Screenshots
-<img src="misc/dwm-glxgears-alacritty.png">
+<img src="misc/dwm-alacritty-glxgears.png">
 <p align="center">Running <a href="https://dwm.suckless.org/">DWM</a>, <a href="https://github.com/freedesktop/mesa-demos">mesa-demos</a> and <a href="https://github.com/alacritty/alacritty">Alacritty</a> in Aero!</p>
 
 # Features
