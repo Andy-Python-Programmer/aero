@@ -537,7 +537,7 @@ packages:
         - '--prefix=/usr'
         - '--libdir=lib'
         # The debug build type enables some additional output from Mesa.
-        - '--buildtype=debugoptimized'
+        - '--buildtype=release'
         #- '--buildtype=debug'
         - '-Dglx=gallium-xlib'
         - '-Dplatforms=x11'
@@ -547,7 +547,7 @@ packages:
         - '-Dvulkan-drivers='
         - '@THIS_SOURCE_DIR@'
     build:
-      - args: ['ninja']
+      - args: ['ninja', '-j@PARALLELISM@']
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
