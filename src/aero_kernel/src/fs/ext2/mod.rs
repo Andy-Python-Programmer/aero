@@ -31,7 +31,7 @@ use spin::RwLock;
 
 use crate::fs::block::BlockDeviceInterface;
 use crate::fs::cache::CachedINode;
-use crate::fs::ext2::disk::{FileType, SuperBlock};
+use crate::fs::ext2::disk::{FileType, Revision, SuperBlock};
 use crate::mem::paging::{FrameAllocator, PhysFrame, VirtAddr, FRAME_ALLOCATOR};
 
 use crate::socket::unix::UnixSocket;
@@ -98,7 +98,7 @@ impl INode {
         let block_size = filesystem.superblock.block_size();
 
         let mut progress = 0;
-        let count = core::cmp::min(inode.size_lower as usize - offset, buffer.len());
+        let count = core::cmp::min(inode.size() - offset, buffer.len());
 
         while progress < count {
             let block = (offset + progress) / block_size;
@@ -171,7 +171,7 @@ impl INode {
         let new_block = fs.bgdt.alloc_block_ptr()?;
         let data_ptrs = self.inode.read().data_ptr;
 
-        let mut next_block_num = (self.inode.read().size_lower as usize).ceil_div(block_size);
+        let mut next_block_num = self.inode.read().size().ceil_div(block_size);
 
         if next_block_num < 12 {
             drop(data_ptrs);
@@ -181,7 +181,9 @@ impl INode {
             assert_eq!(inode.data_ptr[next_block_num], 0);
 
             inode.data_ptr[next_block_num] = new_block as u32;
-            inode.size_lower += block_size as u32;
+
+            let size = inode.size() + block_size;
+            inode.set_size(size);
 
             return Some(new_block);
         }
@@ -350,7 +352,7 @@ impl INodeInterface for INode {
         Ok(Metadata {
             id: self.id,
             file_type: inode.file_type().into(),
-            size: inode.size_lower as _,
+            size: inode.size(),
             children_len: 0,
         })
     }
@@ -380,7 +382,7 @@ impl INodeInterface for INode {
         Ok(Stat {
             st_ino: self.id as _,
             st_blksize: filesystem.superblock.block_size() as _,
-            st_size: inode.size_lower as _,
+            st_size: inode.size() as _,
             st_mode: mode,
 
             ..Default::default()
@@ -487,7 +489,7 @@ impl INodeInterface for INode {
 
         let inode = self.inode.read();
 
-        let path_len = inode.size_lower as usize;
+        let path_len = inode.size();
         let data_bytes: &[u8] = bytemuck::cast_slice(&inode.data_ptr);
 
         if path_len <= data_bytes.len() {
@@ -586,7 +588,7 @@ impl Iterator for DirEntryIter {
     type Item = (String, Box<disk::DirEntry>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let file_size = self.inode.inode.read().size_lower as usize;
+        let file_size = self.inode.inode.read().size();
 
         if self.offset + core::mem::size_of::<disk::DirEntry>() > file_size {
             return None;
@@ -645,9 +647,10 @@ impl Ext2 {
         log::trace!(
             "ext2: initialized (block_size={}, entries_per_block={})",
             superblock.block_size(),
-            superblock.entries_per_block()
+            superblock.entries_per_block(),
         );
 
+        assert_eq!(superblock.revision(), Revision::Revision1);
         assert_eq!(
             superblock.inode_size as usize,
             core::mem::size_of::<disk::INode>()

@@ -22,6 +22,16 @@ use bit_field::BitField;
 use crate::fs::inode;
 use crate::utils::CeilDiv;
 
+trait Revsion {}
+
+#[derive(Debug, PartialEq)]
+pub enum Revision {
+    Revision0,
+    /// Revision 1 introduces variable inode sizes, extended
+    /// attributes, etc.
+    Revision1,
+}
+
 #[derive(Debug, Copy, Clone)]
 #[repr(C, packed)]
 pub struct SuperBlock {
@@ -87,6 +97,14 @@ impl SuperBlock {
     /// Returns the number of entries per block.
     pub fn entries_per_block(&self) -> usize {
         self.block_size() / core::mem::size_of::<u32>()
+    }
+
+    pub fn revision(&self) -> Revision {
+        match self.rev_level {
+            0 => Revision::Revision0,
+            1 => Revision::Revision1,
+            revison => unreachable!("ext2: invalid revison {revison}"),
+        }
     }
 
     /// Returns the size of a block in bytes.
@@ -216,6 +234,15 @@ impl INode {
         // The last 4 bits are used to store the filetype.
         let mask = 0b0000_1111_1111_1111u16;
         self.type_and_perm = file_type.bits() | (self.type_and_perm & mask);
+    }
+
+    pub fn set_size(&mut self, size: usize) {
+        self.size_lower = size as u32;
+        self.size_or_acl = (size >> 32) as u32;
+    }
+
+    pub fn size(&self) -> usize {
+        self.size_lower as usize | ((self.size_or_acl as usize) << 32)
     }
 
     pub fn set_permissions(&mut self, permissions: u16) {
