@@ -269,29 +269,6 @@ index fc9fd84..ab57631 100644
  	auto ra = __builtin_extract_return_addr(__builtin_return_address(0));
  	return __dlapi_open(file, flags, ra);
  }
-diff --git a/options/posix/generic/termios-stubs.cpp b/options/posix/generic/termios-stubs.cpp
-index 3e621ad..583c1f5 100644
---- a/options/posix/generic/termios-stubs.cpp
-+++ b/options/posix/generic/termios-stubs.cpp
-@@ -5,6 +5,7 @@
- 
- #include <bits/ensure.h>
- #include <mlibc/posix-sysdeps.hpp>
-+#include <mlibc/debug.hpp>
- 
- speed_t cfgetispeed(const struct termios *tios) {
- 	return tios->ibaud;
-@@ -50,8 +51,8 @@ int tcflow(int fd, int action) {
- }
- 
- int tcflush(int, int) {
--	__ensure(!"Not implemented");
--	__builtin_unreachable();
-+	mlibc::infoLogger() << "mlibc::tcflush: is a stub!" << frg::endlog;
-+	return 0;
- }
- 
- int tcgetattr(int fd, struct termios *attr) {
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
 index 2e2d3f1..3ff5fef 100644
 --- a/options/rtdl/generic/linker.cpp
