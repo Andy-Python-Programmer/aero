@@ -280,9 +280,9 @@ pub fn ps2_keyboard_init() {
 
         let mut config = ConfigFlags::from_bits_truncate(io::inb(0x60));
 
-        config.remove(ConfigFlags::FIRST_DISABLED);
+        config.remove(ConfigFlags::FIRST_DISABLED | ConfigFlags::SECOND_DISABLED);
         config.remove(ConfigFlags::FIRST_TRANSLATE); // Use scancode set 2
-        config.insert(ConfigFlags::FIRST_INTERRUPT);
+        config.insert(ConfigFlags::FIRST_INTERRUPT | ConfigFlags::SECOND_INTERRUPT);
 
         io::outb(0x64, 0x60); // command: write config
         io::outb(0x60, config.bits());
@@ -294,6 +294,8 @@ pub fn ps2_keyboard_init() {
     interrupts::register_handler(keyboard_vector, keyboard_irq_handler);
 
     apic::io_apic_setup_legacy_irq(1, keyboard_vector, 1);
+
+    super::mouse::ps2_mouse_init();
 
     // TODO: Move this into /dev/input instead
     // TODO: Add support for multiple keyboards

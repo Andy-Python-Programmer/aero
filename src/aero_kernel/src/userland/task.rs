@@ -515,15 +515,15 @@ impl Task {
             }
         }
 
-        if state != TaskState::Runnable {
-            log::warn!(
-                "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",
-                self.pid,
-                self.tid
-            );
+        // if state != TaskState::Runnable {
+        //     log::warn!(
+        //         "Task::update_state() updated the task state to {state:?}! (pid={:?}, tid={:?})",
+        //         self.pid,
+        //         self.tid
+        //     );
 
-            crate::unwind::unwind_stack_trace();
-        }
+        //     crate::unwind::unwind_stack_trace();
+        // }
 
         self.state.store(state as _, Ordering::SeqCst);
     }
