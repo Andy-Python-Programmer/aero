@@ -731,18 +731,41 @@ packages:
   #       environ:
   #         DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: linux-headers
+    source:
+      subdir: 'bundled'
+      url: 'https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.1.8.tar.xz'
+      checksum: 'blake2b:1eeab95bf09757131031ebeaa3fb66f01626ecfe3b72d0044176613d027ac6643c688a0bb8f4493ae6faa3d3bf0c89fcdff3c28d7b8375e59ed6e8bd6d856e44'
+      extract_path: 'linux-6.1.8'
+      format: 'tar.xz'
+      version: '6.1.8'
+    implict_package: true
+    configure:
+      - args: ['cp', '-Tr', '@THIS_SOURCE_DIR@', '.']
+    build:
+      - args: ['make', 'ARCH=x86_64', 'headers_install']
+      - args: ['find', 'usr/include', '-type', 'f', '!', '-name', '*.h', '-delete']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr']
+      # remove this file, as mlibc will override this file with one suited to mlibc
+      - args: ['rm', 'usr/include/linux/libc-compat.h']
+      - args: ['cp', '-r', 'usr/include', '@THIS_COLLECT_DIR@/usr']
+
   - name: mlibc-headers
     from_source: mlibc
     implict_package: true
+    pkgs_required:
+      - linux-headers
     configure:
       - args:
         - 'meson'
+        - 'setup'
         - '--cross-file'
         - '@SOURCE_ROOT@/userland/cross-file.ini'
         - '--prefix=/usr'
         - '-Dheaders_only=true'
         - '-Ddisable_iconv_option=true'
         - '-Dbuildtype=debug'
+        - '-Dlinux_kernel_headers=@BUILD_ROOT@/packages/linux-headers/usr/include'
         - '@THIS_SOURCE_DIR@'
     build:
       - args: ['ninja']
@@ -758,9 +781,11 @@ packages:
     implict_package: true
     pkgs_required:
       - mlibc-headers
+      - linux-headers
     configure:
       - args:
         - 'meson'
+        - 'setup'
         - '--cross-file'
         - '@SOURCE_ROOT@/userland/cross-file.ini'
         - '--prefix=/usr'
@@ -768,6 +793,7 @@ packages:
         - '-Dmlibc_no_headers=true'
         - '-Ddisable_iconv_option=true'
         - '-Dbuildtype=debug'
+        - '-Dlinux_kernel_headers=@BUILD_ROOT@/packages/linux-headers/usr/include'
         - '@THIS_SOURCE_DIR@'
     build:
       - args: ['ninja']
