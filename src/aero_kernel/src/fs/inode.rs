@@ -162,7 +162,7 @@ pub trait INodeInterface: Send + Sync {
     }
 
     fn stat(&self) -> Result<aero_syscall::Stat> {
-        Err(FileSystemError::NotSupported)
+        Ok(aero_syscall::Stat::default())
     }
 
     /// Creates a new dev inode with the provided `name` and the device `marker` in

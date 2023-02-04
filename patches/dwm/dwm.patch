@@ -1,6 +1,6 @@
-From 18f9a4c102c12aea6e567501fcb003c4573c844a Mon Sep 17 00:00:00 2001
+From f0efc438a6fe55e4e99e1de9c71b0bd6fe55aa1c Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Wed, 21 Dec 2022 12:20:18 +1100
+Date: Sat, 4 Feb 2023 14:49:42 +1100
 Subject: [PATCH] <xxx>
 
 ---
@@ -9,7 +9,7 @@ Subject: [PATCH] <xxx>
  2 files changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/config.def.h b/config.def.h
-index 9efa774..ce9d766 100644
+index 9efa774..0d8130f 100644
 --- a/config.def.h
 +++ b/config.def.h
 @@ -57,8 +57,8 @@ static const Layout layouts[] = {
@@ -18,8 +18,8 @@ index 9efa774..ce9d766 100644
  static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 -static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 -static const char *termcmd[]  = { "st", NULL };
-+static const char *dmenucmd[] = { "alacritty", NULL };
-+static const char *termcmd[]  = { "glxgears", NULL };
++static const char *dmenucmd[] = { "dmenu_run", NULL };
++static const char *termcmd[]  = { "alacritty", NULL };
  
  static const Key keys[] = {
  	/* modifier                     key        function        argument */
@@ -39,5 +39,5 @@ index ef8acf7..3d7341e 100644
  # freetype
  FREETYPELIBS = -lfontconfig -lXft
 -- 
-2.38.1
+2.39.1
 
