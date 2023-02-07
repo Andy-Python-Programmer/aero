@@ -50,13 +50,6 @@ impl log::Log for AeroLogger {
 
             let line = record.line().unwrap_or(0);
 
-            if let Some(pp) = record.module_path() {
-                // Only log the vm logs if the vmlog feature is enabled ;^).
-                if pp == "aero_kernel::userland::vm" && !cfg!(feature = "vmlog") {
-                    return;
-                }
-            }
-
             let level = record.level();
             let rendy_dbg = RENDY_DEBUG.load(Ordering::Relaxed);
 
@@ -69,7 +62,8 @@ impl log::Log for AeroLogger {
             let mut log_ring = LOG_RING_BUFFER.get().unwrap().lock_irq();
             let _ = writeln!(log_ring, "[{}] {}", level, record.args());
 
-            serial_print!("\x1b[37;1m{file}:{line} ");
+            let ticks = crate::arch::time::get_uptime_ticks();
+            serial_print!("\x1b[37;1m[{}] {file}:{line} ", ticks);
 
             if scheduler::is_initialized() {
                 // fetch the current task, grab the TID and PID.

@@ -40,7 +40,7 @@ use alloc::vec::Vec;
 use spin::Once;
 
 use crate::fs::inode::{DirEntry, INodeInterface};
-use crate::utils::sync::Mutex;
+use crate::utils::sync::BMutex;
 
 use super::FileSystem;
 
@@ -195,14 +195,14 @@ struct CacheIndex<K: CacheKey, V: Cacheable<K>> {
 }
 
 pub struct Cache<K: CacheKey, V: Cacheable<K>> {
-    index: Mutex<CacheIndex<K, V>>,
+    index: BMutex<CacheIndex<K, V>>,
     self_ref: Weak<Cache<K, V>>,
 }
 
 impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
     pub fn new() -> Arc<Self> {
         Arc::new_cyclic(|this| Cache::<K, V> {
-            index: Mutex::new(CacheIndex {
+            index: BMutex::new(CacheIndex {
                 used: hashbrown::HashMap::new(),
                 unused: lru::LruCache::new(NonZeroUsize::new(4096).unwrap()),
             }),
@@ -277,7 +277,7 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
     fn mark_item_unused(&self, item: CacheArc<CacheItem<K, V>>) {
         item.set_used(false);
 
-        let mut index = self.index.lock_irq();
+        let mut index = self.index.lock();
         let key = item.cache_key();
 
         assert!(index.used.remove(&key).is_some());

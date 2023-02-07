@@ -316,8 +316,6 @@ impl ArchTask {
             None,
         );
 
-        vm.log();
-
         address_space.switch(); // Perform the address space switch
 
         self.context = Unique::dangling();

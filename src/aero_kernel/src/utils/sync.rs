@@ -13,8 +13,7 @@ pub struct BlockQueue {
 
 impl BlockQueue {
     /// Creates a new block queue.
-    #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             queue: Mutex::new(Vec::new()),
         }
@@ -118,8 +117,68 @@ impl Drop for IrqGuard {
     }
 }
 
+/// A blocking-based lock providing mutually exclusive access to the data.
+pub struct BMutex<T: ?Sized> {
+    wq: BlockQueue,
+    spin: Mutex<T>,
+}
+
+impl<T> BMutex<T> {
+    pub const fn new(value: T) -> Self {
+        Self {
+            wq: BlockQueue::new(),
+            spin: Mutex::new(value),
+        }
+    }
+
+    pub fn lock(&self) -> BMutexGuard<T> {
+        let task = scheduler::get_scheduler().current_task();
+        self.wq.insert(task.clone());
+
+        loop {
+            if let Some(guard) = self.spin.inner.try_lock() {
+                self.wq.remove(task);
+
+                return BMutexGuard {
+                    guard,
+                    mutex: &self,
+                };
+            }
+
+            let _ = scheduler::get_scheduler().inner.await_io();
+        }
+    }
+}
+
+pub struct BMutexGuard<'a, T: ?Sized + 'a> {
+    guard: spin::MutexGuard<'a, T>,
+    mutex: &'a BMutex<T>,
+}
+
+impl<'a, T: ?Sized> core::ops::Deref for BMutexGuard<'a, T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &T {
+        self.guard.deref()
+    }
+}
+
+impl<'a, T: ?Sized> core::ops::DerefMut for BMutexGuard<'a, T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut T {
+        self.guard.deref_mut()
+    }
+}
+
+impl<'a, T: ?Sized> Drop for BMutexGuard<'a, T> {
+    fn drop(&mut self) {
+        self.mutex.wq.notify_complete();
+    }
+}
+
 /// A spin-based lock providing mutually exclusive access to data.
-pub struct Mutex<T> {
+pub struct Mutex<T: ?Sized> {
     inner: spin::Mutex<T>,
 }
 

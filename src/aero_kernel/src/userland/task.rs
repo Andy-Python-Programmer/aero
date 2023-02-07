@@ -324,7 +324,6 @@ impl Task {
         this.signals().copy_from(self.signals());
 
         this.vm.fork_from(self.vm());
-        this.vm.log();
         this
     }
 

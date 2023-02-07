@@ -58,18 +58,11 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
         // let caller = core::panic::Location::caller();
         // log::debug!("allocation request of 4KiB by {:?}", caller);
 
-        self.0
-            .get()
-            .map(|m| {
-                m.lock_irq()
-                    .allocate_frame_inner(0)
-                    .map(|f| PhysFrame::containing_address(f))
-            })
-            .unwrap_or(None)
-            .map(|frame| {
-                frame.as_slice_mut().fill(0);
-                frame
-            })
+        self.0.get().map(|m| {
+            m.lock_irq()
+                .allocate_frame_inner(0)
+                .map(|f| PhysFrame::containing_address(f))
+        })?
     }
 
     #[track_caller]
@@ -90,18 +83,11 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
         // let caller = core::panic::Location::caller();
         // log::debug!("allocation request of 2MiB by {:?}", caller);
 
-        self.0
-            .get()
-            .map(|m| {
-                m.lock_irq()
-                    .allocate_frame_inner(2)
-                    .map(|f| PhysFrame::containing_address(f))
-            })
-            .unwrap_or(None)
-            .map(|frame| {
-                frame.as_slice_mut().fill(0);
-                frame
-            })
+        self.0.get().map(|m| {
+            m.lock_irq()
+                .allocate_frame_inner(2)
+                .map(|f| PhysFrame::containing_address(f))
+        })?
     }
 
     #[track_caller]
@@ -167,6 +153,7 @@ pub enum BuddyOrdering {
     Size8KiB = 2,
 }
 
+// FIXME: REMOVE THIS FUNCTION
 pub fn pmm_alloc(order: BuddyOrdering) -> PhysAddr {
     let order = order as usize;
     debug_assert!(order <= BUDDY_SIZE.len());
@@ -178,14 +165,6 @@ pub fn pmm_alloc(order: BuddyOrdering) -> PhysAddr {
         .lock()
         .allocate_frame_inner(order)
         .expect("pmm: out of memory");
-
-    let virt = addr.as_hhdm_virt();
-
-    let fill_size = BUDDY_SIZE[order] as usize;
-    let slice = unsafe { core::slice::from_raw_parts_mut(virt.as_mut_ptr::<u8>(), fill_size) };
-
-    // We always zero out memory for security reasons.
-    slice.fill(0x00);
 
     addr
 }

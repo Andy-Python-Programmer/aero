@@ -146,12 +146,12 @@ impl<T> PerCpu<T> {
 
     #[inline]
     pub fn get(&self) -> &T {
-        unsafe { &*self.as_mut_ptr().offset(crate::arch::tls::get_cpuid() as _) }
+        unsafe { &*self.as_mut_ptr().offset(0) }
     }
 
     #[inline]
     pub fn get_mut(&self) -> &mut T {
-        unsafe { &mut *self.as_mut_ptr().offset(crate::arch::tls::get_cpuid() as _) }
+        unsafe { &mut *self.as_mut_ptr().offset(0) }
     }
 }
 

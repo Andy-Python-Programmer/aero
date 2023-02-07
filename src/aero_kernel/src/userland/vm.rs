@@ -40,7 +40,7 @@ use crate::mem::paging::*;
 use crate::mem::AddressSpace;
 
 use crate::syscall::ExecArgs;
-use crate::utils::sync::Mutex;
+use crate::utils::sync::BMutex;
 
 const ELF_HEADER_MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
@@ -363,12 +363,6 @@ impl Mapping {
         let addr_aligned = address.align_down(Size4KiB::SIZE);
 
         if !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
-            log::trace!(
-                "    - private R: {:#x}..{:#x}",
-                addr_aligned,
-                addr_aligned + Size4KiB::SIZE
-            );
-
             let frame: PhysFrame =
                 PhysFrame::containing_address(pmm_alloc(BuddyOrdering::Size4KiB));
 
@@ -389,12 +383,6 @@ impl Mapping {
 
             true
         } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
-            log::trace!(
-                "    - private COW: {:#x}..{:#x}",
-                addr_aligned,
-                addr_aligned + Size4KiB::SIZE
-            );
-
             self.handle_cow(offset_table, addr_aligned, false)
         } else {
             log::error!("    - present page read failed");
@@ -425,13 +413,6 @@ impl Mapping {
 
             if !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
                 // We are writing to private file mapping so copy the content of the page.
-                log::trace!(
-                    "    - private file R: {:?}..{:?} (offset={:#x})",
-                    address,
-                    address + size,
-                    offset
-                );
-
                 let frame = mmap_file
                     .file
                     .inode()
@@ -525,12 +506,9 @@ impl Mapping {
             if let Some(vm_frame) = phys_addr.as_vm_frame() {
                 if vm_frame.ref_count() > 1 || copy {
                     // This page is used by more then one process, so make it a private copy.
-                    log::trace!("    - making {:?} into a private copy", page);
                     Self::map_copied(offset_table, page, self.protection).unwrap();
                 } else {
                     // This page is used by only one process, so make it writable.
-                    log::trace!("    - making {:?} writable", page);
-
                     unsafe {
                         offset_table.update_flags(
                             page,
@@ -635,30 +613,6 @@ impl VmProtected {
         }
     }
 
-    fn log(&self) {
-        for mmap in &self.mappings {
-            if let Some(file) = mmap.file.as_ref() {
-                log::debug!(
-                    "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
-                    mmap.start_addr,
-                    mmap.end_addr,
-                    mmap.protection,
-                    mmap.flags,
-                    file.offset,
-                    file.size,
-                );
-            } else {
-                log::debug!(
-                    "{:?}..{:?} => {:?}, {:?}",
-                    mmap.start_addr,
-                    mmap.end_addr,
-                    mmap.protection,
-                    mmap.flags,
-                );
-            }
-        }
-    }
-
     fn handle_page_fault(
         &mut self,
         reason: PageFaultErrorCode,
@@ -669,8 +623,6 @@ impl VmProtected {
             .iter_mut()
             .find(|e| accessed_address >= e.start_addr && accessed_address < e.end_addr)
         {
-            log::trace!("mapping {:?} on demand", accessed_address);
-
             if map.protection.is_empty() {
                 return false;
             }
@@ -708,7 +660,6 @@ impl VmProtected {
             result
         } else {
             log::trace!("mapping not found for address: {:#x}", accessed_address);
-            self.log();
 
             // else the mapping does not exist, so return false.
             false
@@ -748,7 +699,7 @@ impl VmProtected {
             return Some((address, self.mappings.cursor_front_mut()));
         }
 
-        let mut cursor = self.mappings.cursor_front_mut();
+        let mut cursor = self.mappings.cursor_back_mut();
 
         // Search the mappings starting at the current cursor position for a big
         // enough hole for where the address is above the provided `address`. A hole is
@@ -1048,8 +999,6 @@ impl VmProtected {
         let mut address_space = AddressSpace::this();
         let mut offset_table = address_space.offset_page_table();
 
-        log::debug!("unmapping {:?}..{:?}", start, end);
-
         while let Some(map) = cursor.current() {
             if map.end_addr <= start {
                 cursor.move_next();
@@ -1084,7 +1033,7 @@ impl VmProtected {
     }
 
     fn fork_from(&mut self, parent: &Vm) {
-        let data = parent.inner.lock_irq();
+        let data = parent.inner.lock();
 
         // Copy over all of the mappings from the parent into the child.
         self.mappings = data.mappings.clone();
@@ -1092,14 +1041,14 @@ impl VmProtected {
 }
 
 pub struct Vm {
-    inner: Mutex<VmProtected>,
+    inner: BMutex<VmProtected>,
 }
 
 impl Vm {
     /// Creates a new instance of VM.
     pub(super) fn new() -> Self {
         Self {
-            inner: Mutex::new(VmProtected::new()),
+            inner: BMutex::new(VmProtected::new()),
         }
     }
 
@@ -1113,16 +1062,16 @@ impl Vm {
         file: Option<DirCacheItem>,
     ) -> Option<VirtAddr> {
         self.inner
-            .lock_irq()
+            .lock()
             .mmap(address, size, protection, flags, offset, file)
     }
 
     pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
-        self.inner.lock_irq().munmap(address, size)
+        self.inner.lock().munmap(address, size)
     }
 
     pub(super) fn fork_from(&self, parent: &Vm) {
-        self.inner.lock_irq().fork_from(parent)
+        self.inner.lock().fork_from(parent)
     }
 
     /// Mapping the provided `bin` file into the VM.
@@ -1132,12 +1081,12 @@ impl Vm {
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
     ) -> Result<LoadedBinary, ElfLoadError> {
-        self.inner.lock_irq().load_bin(bin, argv, envv)
+        self.inner.lock().load_bin(bin, argv, envv)
     }
 
     /// Clears and unmaps all of the mappings in the VM.
     pub(super) fn clear(&self) {
-        self.inner.lock_irq().clear()
+        self.inner.lock().clear()
     }
 
     /// This function is responsible for handling page faults occurred in
@@ -1149,11 +1098,7 @@ impl Vm {
         accessed_address: VirtAddr,
     ) -> bool {
         self.inner
-            .lock_irq()
+            .lock()
             .handle_page_fault(reason, accessed_address)
-    }
-
-    pub(crate) fn log(&self) {
-        self.inner.lock_irq().log()
     }
 }

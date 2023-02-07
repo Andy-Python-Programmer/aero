@@ -156,7 +156,6 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
                     .expect("userland application does not have a path set")
             );
 
-            task.vm.log();
             task.file_table.log();
 
             if LOG_PF_PTABLE {

@@ -287,9 +287,6 @@ pub fn pipe(fds: &mut [i32; 2], flags: usize) -> Result<usize, SyscallError> {
         Ok(fd2) => fd2,
     };
 
-    log::info!("pipe() = [{}, {}]", fd1, fd2);
-    crate::unwind::unwind_stack_trace();
-
     fds[0] = fd1 as i32;
     fds[1] = fd2 as i32;
 

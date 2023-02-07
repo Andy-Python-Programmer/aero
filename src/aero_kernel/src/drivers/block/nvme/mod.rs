@@ -37,7 +37,7 @@ use crate::drivers::pci::*;
 use crate::fs::block::{install_block_device, BlockDevice, BlockDeviceInterface};
 use crate::mem::paging::*;
 
-use crate::utils::sync::Mutex;
+use crate::utils::sync::BMutex;
 use crate::utils::{CeilDiv, VolatileCell};
 
 #[derive(Copy, Clone, Debug)]
@@ -226,7 +226,7 @@ struct Namespace<'a> {
     block_size: usize,
     size: usize,
     max_prps: usize,
-    prps: Mutex<Dma<[MaybeUninit<u64>]>>,
+    prps: BMutex<Dma<[MaybeUninit<u64>]>>,
     controller: Arc<Controller<'a>>,
 }
 
@@ -260,16 +260,16 @@ impl<'a> Namespace<'a> {
             read_cmd.data_ptr.prp1 = start.as_u64();
         }
 
-        self.controller.io_queue.lock_irq().submit_command(read_cmd);
+        self.controller.io_queue.lock().submit_command(read_cmd);
     }
 }
 
 struct Controller<'a> {
     identity: Dma<IdentifyController>,
-    namespaces: Mutex<Vec<Namespace<'a>>>,
+    namespaces: BMutex<Vec<Namespace<'a>>>,
 
-    admin: Mutex<QueuePair<'a>>,
-    io_queue: Mutex<QueuePair<'a>>,
+    admin: BMutex<QueuePair<'a>>,
+    io_queue: BMutex<QueuePair<'a>>,
 }
 
 impl<'a> Controller<'a> {
@@ -388,10 +388,10 @@ impl<'a> Controller<'a> {
 
         let this = Arc::new(Self {
             identity,
-            namespaces: Mutex::new(alloc::vec![]),
+            namespaces: BMutex::new(alloc::vec![]),
 
-            admin: Mutex::new(admin),
-            io_queue: Mutex::new(io_queue),
+            admin: BMutex::new(admin),
+            io_queue: BMutex::new(io_queue),
         });
 
         // Discover and initialize the namespaces.
@@ -442,7 +442,7 @@ impl<'a> Controller<'a> {
                 block_size,
                 size: blocks * block_size,
                 max_prps,
-                prps: Mutex::new(Dma::new_uninit_slice(max_prps)),
+                prps: BMutex::new(Dma::new_uninit_slice(max_prps)),
             };
 
             log::trace!(
@@ -488,13 +488,13 @@ impl<'a> BlockDeviceInterface for Controller<'a> {
 
 // PCI device handler for NVMe controllers.
 struct Handler<'admin> {
-    controllers: Mutex<Vec<Arc<Controller<'admin>>>>,
+    controllers: BMutex<Vec<Arc<Controller<'admin>>>>,
 }
 
 impl<'admin> Handler<'admin> {
     fn new() -> Arc<Self> {
         Arc::new(Self {
-            controllers: Mutex::new(Vec::new()),
+            controllers: BMutex::new(Vec::new()),
         })
     }
 }

@@ -25,7 +25,7 @@ use crate::arch;
 use crate::userland::signals::{SignalError, SignalResult};
 use crate::userland::task::{SchedTaskAdapter, Task, TaskState};
 
-use crate::utils::sync::IrqGuard;
+use crate::utils::sync::{BlockQueue, IrqGuard};
 use crate::utils::PerCpu;
 
 use super::SchedulerInterface;
@@ -44,6 +44,8 @@ struct TaskQueue {
     dead: LinkedList<SchedTaskAdapter>,
     awaiting: LinkedList<SchedTaskAdapter>,
     deadline_awaiting: LinkedList<SchedTaskAdapter>,
+
+    dead_wq: BlockQueue,
 }
 
 impl TaskQueue {
@@ -58,6 +60,8 @@ impl TaskQueue {
             dead: LinkedList::new(SchedTaskAdapter::new()),
             awaiting: LinkedList::new(SchedTaskAdapter::new()),
             deadline_awaiting: LinkedList::new(SchedTaskAdapter::new()),
+
+            dead_wq: BlockQueue::new(),
         }
     }
 
@@ -118,7 +122,10 @@ impl RoundRobin {
         let _guard = IrqGuard::new();
         let queue = self.queue.get_mut();
 
-        if let Some(task) = queue.dead.pop_front() {
+        if queue.dead.is_empty() {
+            queue.dead_wq.insert(self.current_task());
+            self.await_io().unwrap();
+        } else if let Some(task) = queue.dead.pop_front() {
             task.update_state(TaskState::Zombie);
             task.into_zombie();
         }
@@ -298,6 +305,7 @@ impl SchedulerInterface for RoundRobin {
             .store(status, core::sync::atomic::Ordering::SeqCst);
 
         queue.push_dead(current_task.clone());
+        queue.dead_wq.notify_complete();
 
         core::mem::drop(guard);
         self.preempt();

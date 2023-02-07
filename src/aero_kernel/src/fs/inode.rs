@@ -35,7 +35,7 @@ use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
 use crate::userland::scheduler;
 use crate::utils::sync::BlockQueue;
-use crate::utils::sync::Mutex;
+use crate::utils::sync::{BMutex, Mutex};
 
 use super::cache;
 use super::cache::Cacheable;
@@ -367,7 +367,7 @@ pub(super) struct DirProtectedData {
 
 /// A directory entry is basically the mapping of filename to its inode.
 pub struct DirEntry {
-    pub(super) data: Mutex<DirProtectedData>,
+    pub(super) data: BMutex<DirProtectedData>,
     pub(super) filesystem: Once<Weak<dyn FileSystem>>,
     pub(super) cache_marker: usize,
 }
@@ -388,7 +388,7 @@ impl DirEntry {
         let cache_me = ![".", ".."].contains(&name.as_str());
 
         let entry = Self {
-            data: Mutex::new(DirProtectedData {
+            data: BMutex::new(DirProtectedData {
                 parent: Some(parent.clone()),
                 inode: inode.clone(),
                 name,
@@ -421,7 +421,7 @@ impl DirEntry {
         let dcache = cache::dcache();
 
         dcache.make_item_no_cache(Self {
-            data: Mutex::new(DirProtectedData {
+            data: BMutex::new(DirProtectedData {
                 parent: None,
                 inode: inode.clone(),
                 name,
@@ -437,7 +437,7 @@ impl DirEntry {
         let inode = icache.make_item_no_cache(CachedINode::new(inode));
 
         cache::dcache().make_item_no_cache(Self {
-            data: Mutex::new(DirProtectedData {
+            data: BMutex::new(DirProtectedData {
                 parent: None,
 
                 name,
@@ -464,7 +464,7 @@ impl DirEntry {
             .make_local_socket_inode(name.as_str(), inode)?;
 
         Ok(cache::dcache().make_item_no_cache(Self {
-            data: Mutex::new(DirProtectedData {
+            data: BMutex::new(DirProtectedData {
                 parent: Some(parent),
                 inode: inode.clone(),
                 name,

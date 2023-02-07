@@ -152,7 +152,7 @@ pub fn is_initialized() -> bool {
 }
 
 static SCHEDULER_VECTOR: Once<u8> = Once::new();
-const SCHEDULER_TIMER_US: usize = 20000;
+const SCHEDULER_TIMER_US: usize = 5000;
 
 fn scheduler_irq_handler(_stack: &mut InterruptStack) {
     #[cfg(target_arch = "x86_64")]
