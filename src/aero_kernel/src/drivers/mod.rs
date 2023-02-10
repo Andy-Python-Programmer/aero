@@ -28,6 +28,7 @@ pub mod keyboard;
 #[cfg(target_arch = "x86_64")]
 pub mod lai;
 // FIXME: aarch64 port
+pub mod e1000;
 pub mod mouse;
 #[cfg(target_arch = "x86_64")]
 pub mod pci;
