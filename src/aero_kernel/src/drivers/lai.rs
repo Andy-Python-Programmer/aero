@@ -121,6 +121,12 @@ impl aml::AmlSubsystem for LaiSubsystem {
     fn enable_acpi(&self, mode: u32) {
         lai::enable_acpi(mode);
     }
+
+    fn pci_route_pin(&self, seg: u16, bus: u8, slot: u8, function: u8, pin: u8) -> u8 {
+        lai::pci_route_pin(seg, bus, slot, function, pin)
+            .expect("lai: failed to route pin")
+            .base as u8
+    }
 }
 
 pub fn init_lai() {
@@ -134,4 +140,4 @@ pub fn init_lai() {
     aml::init(subsystem);
 }
 
-crate::module_init!(init_lai, ModuleType::Other);
+crate::module_init!(init_lai, ModuleType::Block);
