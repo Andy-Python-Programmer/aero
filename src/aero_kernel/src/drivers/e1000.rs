@@ -19,6 +19,8 @@
 
 use alloc::sync::Arc;
 
+use crate::acpi::aml;
+use crate::arch::interrupts::{self, InterruptStack};
 use crate::drivers::pci::*;
 use crate::mem::paging::*;
 
@@ -39,10 +41,15 @@ enum Error {
 #[derive(Copy, Clone)]
 #[repr(usize)]
 enum Register {
-    Control = 0x00,
+    Control = 0x0,
+    Status = 0x8,
+
     Eeprom = 0x14,
 
-    RCtrl = 0x0100,
+    ICause = 0xc0,
+    IMask = 0xd0,
+
+    RCtrl = 0x100,
     /// Lower bits of the 64 bit descriptor base address.
     RxDescLo = 0x2800,
     /// Upper 32 bits of the 64 bit descriptor base address.
@@ -87,6 +94,18 @@ bitflags::bitflags! {
         const EC = 1 << 1; // Excess Collisions
         const LC = 1 << 2; // Late Collision
         const TU = 1 << 3; // Transmit Underrun
+    }
+}
+
+bitflags::bitflags! {
+    struct ECtl: u32 {
+        const LRST          = (1 << 3);
+        const ASDE          = (1 << 5);
+        const SLU           = (1 << 6); // Set Link Up
+        const ILOS          = (1 << 7);
+        const RST           = (1 << 26);
+        const VME           = (1 << 30);
+        const PHY_RST       = (1 << 31);
     }
 }
 
@@ -208,6 +227,11 @@ impl E1000 {
             _ => return Err(Error::UnknownBar),
         };
 
+        log::debug!(
+            "{:?}",
+            header.capabilities().collect::<alloc::vec::Vec<_>>()
+        );
+
         let this = Self {
             base: registers_addr.as_hhdm_virt(),
         };
@@ -242,8 +266,40 @@ impl E1000 {
         this.init_tx()?;
         this.init_rx()?;
 
+        // XXX: The e1000 does not support MSIx and MSI.
+        let gsi = aml::get_subsystem().pci_route_pin(
+            0,
+            header.bus(),
+            header.device(),
+            header.function(),
+            header.interrupt_pin(),
+        );
+
+        let vector = interrupts::allocate_vector();
+        interrupts::register_handler(vector, irq_handler);
+
+        crate::arch::apic::io_apic_setup_legacy_irq(gsi, vector, 0);
+
+        // Enable interrupts!
+        this.write(Register::IMask, 0);
+        this.read(Register::ICause);
+
+        this.link_up();
+
+        this.receive();
+
         log::trace!("e1000: successfully initialized");
         Ok(())
+    }
+
+    fn receive(&self) {}
+
+    fn link_up(&self) {
+        self.insert_flags(Register::Control, ECtl::SLU.bits());
+
+        while self.read(Register::Status) & 2 != 2 {
+            core::hint::spin_loop();
+        }
     }
 
     fn init_tx(&self) -> Result<(), Error> {
@@ -393,6 +449,10 @@ impl PciDeviceHandle for Handler {
     fn start(&self, header: &PciHeader, _offset_table: &mut OffsetPageTable) {
         E1000::new(header).unwrap()
     }
+}
+
+fn irq_handler(_stack: &mut InterruptStack) {
+    unreachable!()
 }
 
 fn init() {

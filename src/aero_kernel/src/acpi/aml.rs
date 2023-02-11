@@ -17,6 +17,7 @@ pub trait AmlSubsystem: Send + Sync {
     /// ## Parameters
     /// * `mode` - IRQ mode (ACPI spec section 5.8.1)
     fn enable_acpi(&self, mode: u32);
+    fn pci_route_pin(&self, seg: u16, bus: u8, slot: u8, function: u8, pin: u8) -> u8;
 }
 
 static AML_SUBSYSTEM: Once<Arc<dyn AmlSubsystem>> = Once::new();

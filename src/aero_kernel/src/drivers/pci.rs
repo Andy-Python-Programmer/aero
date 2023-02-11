@@ -586,10 +586,13 @@ impl PciHeader {
 
         io::outl(PCI_CONFIG_ADDRESS_PORT, address);
 
+        let offset = (offset & 0b11) * 8;
+        let val = io::inl(PCI_CONFIG_DATA_PORT);
+
         match core::mem::size_of::<T>() {
-            1 => io::inb(PCI_CONFIG_DATA_PORT) as u32, // u8
-            2 => io::inw(PCI_CONFIG_DATA_PORT) as u32, // u16
-            4 => io::inl(PCI_CONFIG_DATA_PORT),        // u32
+            1 => (val >> offset) as u8 as u32,  // u8
+            2 => (val >> offset) as u16 as u32, // u16
+            4 => val,                           // u32
             width => unreachable!("unknown PCI read width: `{}`", width),
         }
     }
@@ -728,6 +731,10 @@ impl PciHeader {
         } else {
             Some(Bar::IO(bar.get_bits(2..32)))
         }
+    }
+
+    pub fn interrupt_pin(&self) -> u8 {
+        unsafe { self.read::<u8>(0x3d) as u8 }
     }
 
     // NOTE: The Base Address registers are optional registers used to map internal
