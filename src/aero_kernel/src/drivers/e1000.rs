@@ -22,10 +22,11 @@ use alloc::sync::Arc;
 use crate::drivers::pci::*;
 use crate::mem::paging::*;
 
-const TX_DESC_NUM: usize = 32;
-const TX_DESC_SIZE: usize = TX_DESC_NUM * core::mem::size_of::<TxDescriptor>();
+const TX_DESC_NUM: u32 = 32;
+const TX_DESC_SIZE: u32 = TX_DESC_NUM * core::mem::size_of::<TxDescriptor>() as u32;
 
-const RX_QUEUE_SIZE: usize = 32;
+const RX_DESC_NUM: u32 = 32;
+const RX_DESC_SIZE: u32 = RX_DESC_NUM * core::mem::size_of::<RxDescriptor>() as u32;
 
 #[derive(Copy, Clone, Debug)]
 enum Error {
@@ -40,6 +41,18 @@ enum Error {
 enum Register {
     Control = 0x00,
     Eeprom = 0x14,
+
+    RCtrl = 0x0100,
+    /// Lower bits of the 64 bit descriptor base address.
+    RxDescLo = 0x2800,
+    /// Upper 32 bits of the 64 bit descriptor base address.
+    RxDescHi = 0x2804,
+    /// Descriptor length and must be 128B aligned.
+    RxDescLen = 0x2808,
+    /// Head pointer for the receive descriptor buffer.
+    RxDescHead = 0x2810,
+    /// Tail pointer for the receive descriptor buffer.
+    RxDescTail = 0x2818,
 
     TCtrl = 0x400,
     /// Lower bits of the 64 bit descriptor base address.
@@ -69,7 +82,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
-    pub struct TStatus: u8 {
+    struct TStatus: u8 {
         const DD = 1 << 0; // Descriptor Done
         const EC = 1 << 1; // Excess Collisions
         const LC = 1 << 2; // Late Collision
@@ -78,7 +91,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
-    pub struct TCtl: u32 {
+    struct TCtl: u32 {
         const EN     = 1 << 1;  // Transmit Enable
         const PSP    = 1 << 3;  // Pad Short Packets
         const SWXOFF = 1 << 22; // Software XOFF Transmission
@@ -89,25 +102,70 @@ bitflags::bitflags! {
 impl TCtl {
     /// Sets the number of attempts at retransmission prior to giving
     /// up on the packet (not including the first transmission attempt).
-    pub fn set_collision_threshold(&mut self, value: u8) {
+    fn set_collision_threshold(&mut self, value: u8) {
         self.bits |= (value as u32) << 4;
     }
 
     /// Sets the minimum number of byte times which must elapse for
     /// proper CSMA/CD operation.
-    pub fn set_collision_distance(&mut self, value: u8) {
+    fn set_collision_distance(&mut self, value: u8) {
         self.bits |= (value as u32) << 12;
     }
 }
 
+bitflags::bitflags! {
+    struct RCtl: u32 {
+        const EN            = 1 << 1;  // Receiver Enable
+        const SBP           = 1 << 2;  // Store Bad Packets
+        const UPE           = 1 << 3;  // Unicast Promiscuous Enabled
+        const MPE           = 1 << 4;  // Multicast Promiscuous Enabled
+        const LPE           = 1 << 5;  // Long Packet Reception Enable
+        const LBM_NONE      = 0 << 6;  // No Loopback
+        const LBM_PHY       = 3 << 6;  // PHY or external SerDesc loopback
+        const RDMTS_HALF    = 0 << 8;  // Free Buffer Threshold is 1/2 of RDLEN
+        const RDMTS_QUARTER = 1 << 8;  // Free Buffer Threshold is 1/4 of RDLEN
+        const RDMTS_EIGHTH  = 2 << 8;  // Free Buffer Threshold is 1/8 of RDLEN
+        const MO_36         = 0 << 12; // Multicast Offset - bits 47:36
+        const MO_35         = 1 << 12; // Multicast Offset - bits 46:35
+        const MO_34         = 2 << 12; // Multicast Offset - bits 45:34
+        const MO_32         = 3 << 12; // Multicast Offset - bits 43:32
+        const BAM           = 1 << 15; // Broadcast Accept Mode
+        const VFE           = 1 << 18; // VLAN Filter Enable
+        const CFIEN         = 1 << 19; // Canonical Form Indicator Enable
+        const CFI           = 1 << 20; // Canonical Form Indicator Bit Value
+        const DPF           = 1 << 22; // Discard Pause Frames
+        const PMCF          = 1 << 23; // Pass MAC Control Frames
+        const SECRC         = 1 << 26; // Strip Ethernet CRC
+
+        // Receive Buffer Size - bits 17:16
+        const BSIZE_256     = 3 << 16;
+        const BSIZE_512     = 2 << 16;
+        const BSIZE_1024    = 1 << 16;
+        const BSIZE_2048    = 0 << 16;
+        const BSIZE_4096    = (3 << 16) | (1 << 25);
+        const BSIZE_8192    = (2 << 16) | (1 << 25);
+        const BSIZE_16384   = (1 << 16) | (1 << 25);
+    }
+}
+
 #[repr(C, packed)]
-pub struct TxDescriptor {
+struct TxDescriptor {
     pub addr: u64,
     pub length: u16,
     pub cso: u8,
     pub cmd: u8,
     pub status: TStatus,
     pub css: u8,
+    pub special: u16,
+}
+
+#[repr(C, packed)]
+struct RxDescriptor {
+    pub addr: u64,
+    pub length: u16,
+    pub checksum: u16,
+    pub status: u8,
+    pub errors: u8,
     pub special: u16,
 }
 
@@ -189,25 +247,25 @@ impl E1000 {
     }
 
     fn init_tx(&self) -> Result<(), Error> {
-        assert!(core::mem::size_of::<TxDescriptor>() * TX_DESC_NUM < Size4KiB::SIZE as usize);
+        assert!(TX_DESC_SIZE < Size4KiB::SIZE as u32);
 
         let frame: PhysFrame<Size4KiB> =
             FRAME_ALLOCATOR.allocate_frame().ok_or(Error::OutOfMemory)?;
 
-        let addr = frame.start_address().as_hhdm_virt();
+        let phys = frame.start_address();
+        let addr = phys.as_hhdm_virt();
+
         let descriptors = addr
-            .read_mut::<[TxDescriptor; TX_DESC_NUM]>()
+            .read_mut::<[TxDescriptor; TX_DESC_NUM as usize]>()
             .ok_or(Error::NotSupported)?;
 
         for desc in descriptors {
             desc.status = TStatus::DD;
         }
 
-        let phys = frame.start_address();
-
         self.write(Register::TxDesLo, phys.as_u64() as _);
         self.write(Register::TxDesHi, (phys.as_u64() >> 32) as _);
-        self.write(Register::TxDescLen, TX_DESC_SIZE as _);
+        self.write(Register::TxDescLen, TX_DESC_SIZE);
         self.write(Register::TxDescHead, 0);
         self.write(Register::TxDescTail, 0);
 
@@ -225,6 +283,42 @@ impl E1000 {
     }
 
     fn init_rx(&self) -> Result<(), Error> {
+        assert!(TX_DESC_SIZE < Size4KiB::SIZE as u32);
+
+        let frame: PhysFrame<Size4KiB> =
+            FRAME_ALLOCATOR.allocate_frame().ok_or(Error::OutOfMemory)?;
+
+        let phys = frame.start_address();
+        let addr = phys.as_hhdm_virt();
+
+        let descriptors = addr
+            .read_mut::<[RxDescriptor; RX_DESC_NUM as usize]>()
+            .ok_or(Error::NotSupported)?;
+
+        for desc in descriptors {
+            let frame: PhysFrame<Size4KiB> =
+                FRAME_ALLOCATOR.allocate_frame().ok_or(Error::OutOfMemory)?;
+
+            desc.addr = frame.start_address().as_u64();
+        }
+
+        self.write(Register::RxDescLo, phys.as_u64() as _);
+        self.write(Register::RxDescHi, (phys.as_u64() >> 32) as _);
+        self.write(Register::RxDescLen, RX_DESC_SIZE);
+        self.write(Register::RxDescHead, 0);
+        self.write(Register::RxDescTail, RX_DESC_NUM - 1);
+
+        let flags = RCtl::EN
+            | RCtl::UPE
+            | RCtl::LPE
+            | RCtl::MPE
+            | RCtl::LBM_NONE
+            | RCtl::RDMTS_EIGHTH
+            | RCtl::BAM
+            | RCtl::SECRC
+            | RCtl::BSIZE_4096;
+
+        self.write(Register::RCtrl, flags.bits());
         Ok(())
     }
 
