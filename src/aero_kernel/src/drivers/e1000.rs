@@ -23,6 +23,8 @@ use crate::acpi::aml;
 use crate::arch::interrupts::{self, InterruptStack};
 use crate::drivers::pci::*;
 use crate::mem::paging::*;
+use crate::net::{self, ethernet, MacAddr, NetworkDevice};
+use crate::utils::sync::BMutex;
 
 const TX_DESC_NUM: u32 = 32;
 const TX_DESC_SIZE: u32 = TX_DESC_NUM * core::mem::size_of::<TxDescriptor>() as u32;
@@ -212,10 +214,14 @@ impl<'a> Eeprom<'a> {
 
 struct E1000 {
     base: VirtAddr,
+    mac: MacAddr,
+
+    tx_cur: usize,
+    tx_ring: VirtAddr,
 }
 
 impl E1000 {
-    fn new(header: &PciHeader) -> Result<(), Error> {
+    fn new(header: &PciHeader) -> Result<Self, Error> {
         header.enable_bus_mastering();
         header.enable_mmio();
 
@@ -232,8 +238,12 @@ impl E1000 {
             header.capabilities().collect::<alloc::vec::Vec<_>>()
         );
 
-        let this = Self {
+        let mut this = Self {
             base: registers_addr.as_hhdm_virt(),
+            mac: MacAddr([0; 6]),
+
+            tx_cur: 0,
+            tx_ring: VirtAddr::zero(),
         };
 
         this.reset();
@@ -263,6 +273,8 @@ impl E1000 {
             mac[5]
         );
 
+        this.mac = MacAddr(mac);
+
         this.init_tx()?;
         this.init_rx()?;
 
@@ -289,7 +301,27 @@ impl E1000 {
         this.receive();
 
         log::trace!("e1000: successfully initialized");
-        Ok(())
+        Ok(this)
+    }
+
+    fn send(&mut self, packet: ethernet::Packet) {
+        let cur = self.tx_cur;
+        let ring = self.tx_ring();
+        let e: PhysFrame<Size4KiB> = FRAME_ALLOCATOR.allocate_frame().unwrap();
+
+        unsafe {
+            *(e.start_address().as_hhdm_virt().as_ptr::<u8>() as *mut ethernet::Packet) = packet;
+        }
+
+        ring[cur].addr = e.start_address().as_u64();
+        ring[cur].length = core::mem::size_of::<ethernet::Packet>() as u16;
+        ring[cur].cmd = 0b1011;
+        ring[cur].status = TStatus::empty();
+
+        drop(ring);
+        self.tx_cur = (self.tx_cur + 1) % TX_DESC_NUM as usize;
+
+        self.write(Register::TxDescTail, self.tx_cur as u32);
     }
 
     fn receive(&self) {}
@@ -302,7 +334,13 @@ impl E1000 {
         }
     }
 
-    fn init_tx(&self) -> Result<(), Error> {
+    fn tx_ring(&mut self) -> &mut [TxDescriptor] {
+        self.tx_ring
+            .read_mut::<[TxDescriptor; TX_DESC_NUM as usize]>()
+            .unwrap()
+    }
+
+    fn init_tx(&mut self) -> Result<(), Error> {
         assert!(TX_DESC_SIZE < Size4KiB::SIZE as u32);
 
         let frame: PhysFrame<Size4KiB> =
@@ -318,6 +356,8 @@ impl E1000 {
         for desc in descriptors {
             desc.status = TStatus::DD;
         }
+
+        self.tx_ring = addr;
 
         self.write(Register::TxDesLo, phys.as_u64() as _);
         self.write(Register::TxDesHi, (phys.as_u64() >> 32) as _);
@@ -433,6 +473,24 @@ impl E1000 {
     }
 }
 
+struct Device(BMutex<E1000>);
+
+impl Device {
+    fn new(e1000: E1000) -> Self {
+        Self(BMutex::new(e1000))
+    }
+}
+
+impl NetworkDevice for Device {
+    fn send(&self, packet: ethernet::Packet) {
+        self.0.lock().send(packet)
+    }
+
+    fn mac(&self) -> net::MacAddr {
+        self.0.lock().mac
+    }
+}
+
 struct Handler;
 
 impl Handler {
@@ -447,12 +505,15 @@ impl PciDeviceHandle for Handler {
     }
 
     fn start(&self, header: &PciHeader, _offset_table: &mut OffsetPageTable) {
-        E1000::new(header).unwrap()
+        let e1000 = E1000::new(header).unwrap();
+        let device = Arc::new(Device::new(e1000));
+
+        net::add_device(device);
     }
 }
 
 fn irq_handler(_stack: &mut InterruptStack) {
-    unreachable!()
+    log::debug!("a!")
 }
 
 fn init() {
