@@ -82,6 +82,7 @@ mod fs;
 mod logger;
 mod mem;
 mod modules;
+mod net;
 mod rendy;
 mod socket;
 mod syscall;
@@ -143,6 +144,9 @@ fn aero_main() -> ! {
 fn kernel_main_thread() {
     modules::init();
     log::info!("loaded kernel modules");
+
+    net::init();
+    log::info!("initialized networking stack");
 
     #[cfg(target_arch = "x86_64")]
     arch::enable_acpi();
