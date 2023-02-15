@@ -17,6 +17,9 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub mod inet;
+pub mod unix;
+
 use aero_syscall::*;
 
 use crate::mem::paging::VirtAddr;
@@ -45,6 +48,11 @@ impl<'a> SocketAddr<'a> {
             _ => None,
         }
     }
-}
 
-pub mod unix;
+    pub fn as_inet(&self) -> Option<&'a SocketAddrInet> {
+        match self {
+            SocketAddr::INet(addr) => Some(addr),
+            _ => None,
+        }
+    }
+}

@@ -2,9 +2,9 @@ use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicU16, Ordering};
 
 use crate::mem::paging::PhysAddr;
+use crate::utils::dma::Dma;
 
 use super::command::{Command, CompletionEntry};
-use super::dma::Dma;
 use super::*;
 
 const fn calculate_doorbell_offset(queue_id: u16, multiplier: usize, dstrd: usize) -> usize {

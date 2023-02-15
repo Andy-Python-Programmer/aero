@@ -17,8 +17,12 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use super::arp;
-use super::ip::Ipv4Addr;
+use core::alloc::{Allocator, Layout};
+
+use crate::mem::paging::{PageSize, Size4KiB};
+use crate::utils::dma::DmaAllocator;
+
+use super::*;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 #[repr(C)]
@@ -30,31 +34,55 @@ impl MacAddr {
 
 #[repr(u16)]
 pub enum Type {
-    Ip = 0x800,
+    Ip = 0x800u16.swap_bytes(),
 }
 
 #[repr(C, packed)]
-pub struct Packet {
+pub struct Header {
     pub dest_mac: MacAddr,
     pub src_mac: MacAddr,
     pub typ: Type,
 }
 
-impl Packet {
-    /// Creates a new ethernet packet.
-    pub fn new(typ: Type) -> Self {
+#[derive(Debug, Clone)]
+pub struct Eth;
+
+impl ConstPacketKind for Eth {
+    const HSIZE: usize = core::mem::size_of::<Header>();
+}
+
+impl Packet<Eth> {
+    pub fn create(typ: Type, mut size: usize) -> Packet<Eth> {
+        size += Eth::HSIZE;
+
         let src_mac = super::default_device().mac();
-        Self {
-            src_mac,
-            dest_mac: MacAddr([0; 6]),
-            typ,
-        }
+
+        // Allocate the packet (needs to be 4KiB aligned).
+        let layout = unsafe { Layout::from_size_align_unchecked(size, Size4KiB::SIZE as usize) };
+        let ptr = DmaAllocator.allocate_zeroed(layout).expect("net: OOM!");
+        let addr = VirtAddr::new(ptr.as_mut_ptr() as u64);
+
+        let mut packet = Packet::<Eth>::new(addr, size);
+        let header = packet.header_mut();
+
+        header.src_mac = src_mac;
+        header.typ = typ;
+
+        packet
     }
 }
 
-pub fn send_packet(mut packet: Packet, ip: Ipv4Addr) {
-    if let Some(addr) = arp::get(ip) {
-        packet.dest_mac = addr;
-        super::default_device().send(packet);
+impl PacketHeader<Header> for Packet<Eth> {
+    fn send(&self) {
+        let ip = self.upgrade().header().dest_ip;
+
+        if let Some(addr) = arp::get(ip) {
+            let mut packet = self.clone();
+            {
+                let header = packet.header_mut();
+                header.dest_mac = addr;
+            }
+            super::default_device().send(packet);
+        }
     }
 }

@@ -32,6 +32,7 @@ fn get_cpu_count() -> usize {
 
 pub mod bitmap;
 pub mod buffer;
+pub mod dma;
 pub mod sync;
 
 pub fn validate_mut_ptr<T>(ptr: *mut T) -> Option<&'static mut T> {
