@@ -18,13 +18,17 @@
  */
 
 use alloc::sync::Arc;
+use spin::Once;
 
 use crate::acpi::aml;
 use crate::arch::interrupts::{self, InterruptStack};
 use crate::drivers::pci::*;
 use crate::mem::paging::*;
-use crate::net::{self, ethernet, MacAddr, NetworkDevice};
-use crate::utils::sync::BMutex;
+use crate::userland::scheduler;
+use crate::utils::sync::{BlockQueue, Mutex};
+
+use crate::net::{self, ethernet};
+use crate::net::{MacAddr, NetworkDevice, PacketBaseTrait};
 
 const TX_DESC_NUM: u32 = 32;
 const TX_DESC_SIZE: u32 = TX_DESC_NUM * core::mem::size_of::<TxDescriptor>() as u32;
@@ -49,6 +53,7 @@ enum Register {
     Eeprom = 0x14,
 
     ICause = 0xc0,
+    IRate = 0xc4,
     IMask = 0xd0,
 
     RCtrl = 0x100,
@@ -91,6 +96,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    #[derive(Default)]
     struct TStatus: u8 {
         const DD = 1 << 0; // Descriptor Done
         const EC = 1 << 1; // Excess Collisions
@@ -101,13 +107,13 @@ bitflags::bitflags! {
 
 bitflags::bitflags! {
     struct ECtl: u32 {
-        const LRST          = (1 << 3);
-        const ASDE          = (1 << 5);
-        const SLU           = (1 << 6); // Set Link Up
-        const ILOS          = (1 << 7);
-        const RST           = (1 << 26);
-        const VME           = (1 << 30);
-        const PHY_RST       = (1 << 31);
+        const LRST    = 1 << 3;
+        const ASDE    = 1 << 5;
+        const SLU     = 1 << 6; // Set Link Up
+        const ILOS    = 1 << 7;
+        const RST     = 1 << 26;
+        const VME     = 1 << 30;
+        const PHY_RST = 1 << 31;
     }
 }
 
@@ -169,6 +175,26 @@ bitflags::bitflags! {
     }
 }
 
+bitflags::bitflags! {
+    pub struct InterruptFlags: u32 {
+        const TXDW    = 1 << 0;  // Transmit Descriptor Written Back
+        const TXQE    = 1 << 1;  // Transmit Queue Empty
+        const LSC     = 1 << 2;  // Link Status Change
+        const RXDMT0  = 1 << 4;  // Receive Descriptor Minimum Threshold
+        const DSW     = 1 << 5;  // Disable SW Write Access
+        const RXO     = 1 << 6;  // Receiver Overrun
+        const RXT0    = 1 << 7;  // Receiver Timer Interrupt
+        const MDAC    = 1 << 9;  // MDIO Access Complete
+        const PHYINT  = 1 << 12; // PHY Interrupt
+        const LSECPN  = 1 << 14; // MACsec Packet Number
+        const TXD_LOW = 1 << 15; // Transmit Descriptor Low Threshold hit
+        const SRPD    = 1 << 16; // Small Receive Packet Detected
+        const ACK     = 1 << 17; // Receive ACK Frame Detected
+        const ECCER   = 1 << 22; // ECC Error
+    }
+}
+
+#[derive(Default)]
 #[repr(C, packed)]
 struct TxDescriptor {
     pub addr: u64,
@@ -180,6 +206,7 @@ struct TxDescriptor {
     pub special: u16,
 }
 
+#[derive(Default)]
 #[repr(C, packed)]
 struct RxDescriptor {
     pub addr: u64,
@@ -218,6 +245,9 @@ struct E1000 {
 
     tx_cur: usize,
     tx_ring: VirtAddr,
+
+    rx_cur: usize,
+    rx_ring: VirtAddr,
 }
 
 impl E1000 {
@@ -233,17 +263,15 @@ impl E1000 {
             _ => return Err(Error::UnknownBar),
         };
 
-        log::debug!(
-            "{:?}",
-            header.capabilities().collect::<alloc::vec::Vec<_>>()
-        );
-
         let mut this = Self {
             base: registers_addr.as_hhdm_virt(),
             mac: MacAddr([0; 6]),
 
             tx_cur: 0,
             tx_ring: VirtAddr::zero(),
+
+            rx_cur: 0,
+            rx_ring: VirtAddr::zero(),
         };
 
         this.reset();
@@ -292,29 +320,63 @@ impl E1000 {
 
         crate::arch::apic::io_apic_setup_legacy_irq(gsi, vector, 0);
 
+        // Clear statistical counters.
+        for i in 0..128 {
+            unsafe {
+                this.write_raw(0x5200 + i * 4, 0);
+            }
+        }
+
         // Enable interrupts!
-        this.write(Register::IMask, 0);
+        this.write(
+            Register::IMask,
+            (InterruptFlags::TXDW
+                | InterruptFlags::TXQE
+                | InterruptFlags::LSC
+                | InterruptFlags::RXDMT0
+                | InterruptFlags::DSW
+                | InterruptFlags::RXO
+                | InterruptFlags::RXT0
+                | InterruptFlags::MDAC
+                | InterruptFlags::PHYINT
+                | InterruptFlags::LSECPN
+                | InterruptFlags::TXD_LOW
+                | InterruptFlags::SRPD
+                | InterruptFlags::ACK
+                | InterruptFlags::ECCER)
+                .bits(),
+        );
         this.read(Register::ICause);
 
         this.link_up();
-
-        this.receive();
 
         log::trace!("e1000: successfully initialized");
         Ok(this)
     }
 
-    fn send(&mut self, packet: ethernet::Packet) {
-        let cur = self.tx_cur;
-        let ring = self.tx_ring();
-        let e: PhysFrame<Size4KiB> = FRAME_ALLOCATOR.allocate_frame().unwrap();
-
-        unsafe {
-            *(e.start_address().as_hhdm_virt().as_ptr::<u8>() as *mut ethernet::Packet) = packet;
+    fn handle_irq(&mut self) {
+        let cause = self.read(Register::ICause);
+        log::debug!("cause: {cause}");
+        if cause & 0x80 != 0x80 {
+            return;
         }
 
-        ring[cur].addr = e.start_address().as_u64();
-        ring[cur].length = core::mem::size_of::<ethernet::Packet>() as u16;
+        let idx = self.rx_cur;
+        let descriptor = &self.rx_ring()[idx];
+        log::debug!("{}", descriptor.status);
+
+        if descriptor.status & 0x1 == 0x1 {
+            // we got some packies right here mate. lets notify the boyz
+            DEVICE.get().unwrap().wq.notify_complete();
+        }
+    }
+
+    fn send(&mut self, packet: net::Packet<net::Eth>) {
+        let cur = self.tx_cur;
+        let ring = self.tx_ring();
+
+        ring[cur].addr = unsafe { packet.addr() - crate::PHYSICAL_MEMORY_OFFSET };
+        ring[cur].length = packet.len() as _;
         ring[cur].cmd = 0b1011;
         ring[cur].status = TStatus::empty();
 
@@ -324,7 +386,36 @@ impl E1000 {
         self.write(Register::TxDescTail, self.tx_cur as u32);
     }
 
-    fn receive(&self) {}
+    fn recv(&mut self) -> Option<net::RecvPacket> {
+        let id = self.rx_cur;
+        let desc = &mut self.rx_ring()[id];
+
+        if desc.status & 0x1 != 0x1 {
+            return None;
+        }
+
+        Some(net::RecvPacket {
+            packet: net::Packet::<ethernet::Eth>::new(
+                PhysAddr::new(desc.addr).as_hhdm_virt(),
+                desc.length as usize,
+            ),
+            id,
+        })
+    }
+
+    fn recv_end(&mut self, id: usize) {
+        let desc = &mut self.rx_ring()[id];
+
+        if desc.status & 0x1 != 0x1 {
+            unreachable!()
+        }
+
+        desc.status = 0;
+
+        let old = self.rx_cur;
+        self.rx_cur = (self.rx_cur + 1) % RX_DESC_NUM as usize;
+        self.write(Register::RxDescTail, old as u32);
+    }
 
     fn link_up(&self) {
         self.insert_flags(Register::Control, ECtl::SLU.bits());
@@ -332,6 +423,12 @@ impl E1000 {
         while self.read(Register::Status) & 2 != 2 {
             core::hint::spin_loop();
         }
+    }
+
+    fn rx_ring(&mut self) -> &mut [RxDescriptor] {
+        self.rx_ring
+            .read_mut::<[RxDescriptor; RX_DESC_NUM as usize]>()
+            .unwrap()
     }
 
     fn tx_ring(&mut self) -> &mut [TxDescriptor] {
@@ -354,6 +451,7 @@ impl E1000 {
             .ok_or(Error::NotSupported)?;
 
         for desc in descriptors {
+            *desc = TxDescriptor::default();
             desc.status = TStatus::DD;
         }
 
@@ -365,7 +463,7 @@ impl E1000 {
         self.write(Register::TxDescHead, 0);
         self.write(Register::TxDescTail, 0);
 
-        let mut flags = TCtl::EN | TCtl::PSP | TCtl::RTLC;
+        let mut flags = TCtl { bits: 1 << 28 } | TCtl::EN | TCtl::PSP | TCtl::RTLC;
         flags.set_collision_distance(64);
         flags.set_collision_threshold(15);
 
@@ -373,12 +471,12 @@ impl E1000 {
 
         // TODO: Set the default values for the Tx Inter Packet
         //       Gap Timer.
-        // self.write(Register::Tipg, 0x??????)
+        // self.write(Register::Tipg, 0x???????);
 
         Ok(())
     }
 
-    fn init_rx(&self) -> Result<(), Error> {
+    fn init_rx(&mut self) -> Result<(), Error> {
         assert!(TX_DESC_SIZE < Size4KiB::SIZE as u32);
 
         let frame: PhysFrame<Size4KiB> =
@@ -395,8 +493,11 @@ impl E1000 {
             let frame: PhysFrame<Size4KiB> =
                 FRAME_ALLOCATOR.allocate_frame().ok_or(Error::OutOfMemory)?;
 
+            *desc = RxDescriptor::default();
             desc.addr = frame.start_address().as_u64();
         }
+
+        self.rx_ring = addr;
 
         self.write(Register::RxDescLo, phys.as_u64() as _);
         self.write(Register::RxDescHi, (phys.as_u64() >> 32) as _);
@@ -457,14 +558,18 @@ impl E1000 {
     }
 
     fn write(&self, register: Register, value: u32) {
-        unsafe {
-            let register = self.base.as_mut_ptr::<u8>().add(register as usize);
-            core::ptr::write_volatile(register as *mut u32, value);
-        }
+        unsafe { self.write_raw(register as u32, value) }
     }
 
     fn read(&self, register: Register) -> u32 {
         unsafe { self.read_raw(register as u32) }
+    }
+
+    unsafe fn write_raw(&self, register: u32, value: u32) {
+        unsafe {
+            let register = self.base.as_mut_ptr::<u8>().add(register as usize);
+            core::ptr::write_volatile(register as *mut u32, value);
+        }
     }
 
     unsafe fn read_raw(&self, register: u32) -> u32 {
@@ -473,21 +578,51 @@ impl E1000 {
     }
 }
 
-struct Device(BMutex<E1000>);
+struct Device {
+    e1000: Mutex<E1000>,
+    wq: BlockQueue,
+}
 
 impl Device {
     fn new(e1000: E1000) -> Self {
-        Self(BMutex::new(e1000))
+        Self {
+            e1000: Mutex::new(e1000),
+            wq: BlockQueue::new(),
+        }
+    }
+
+    fn handle_irq(&self) {
+        self.e1000.lock().handle_irq()
     }
 }
 
 impl NetworkDevice for Device {
-    fn send(&self, packet: ethernet::Packet) {
-        self.0.lock().send(packet)
+    fn send(&self, packet: net::Packet<net::Eth>) {
+        self.e1000.lock_irq().send(packet)
+    }
+
+    fn recv(&self) -> net::RecvPacket {
+        let task = scheduler::get_scheduler().current_task();
+        self.wq.insert(task.clone());
+
+        loop {
+            let mut e1000 = self.e1000.lock_irq();
+            if let Some(data) = e1000.recv() {
+                self.wq.remove(task.clone());
+                return data;
+            } else {
+                // drop(e1000);
+                // scheduler::get_scheduler().inner.await_io().unwrap();
+            }
+        }
+    }
+
+    fn recv_end(&self, packet_id: usize) {
+        self.e1000.lock_irq().recv_end(packet_id)
     }
 
     fn mac(&self) -> net::MacAddr {
-        self.0.lock().mac
+        self.e1000.lock_irq().mac
     }
 }
 
@@ -508,12 +643,15 @@ impl PciDeviceHandle for Handler {
         let e1000 = E1000::new(header).unwrap();
         let device = Arc::new(Device::new(e1000));
 
+        DEVICE.call_once(|| device.clone());
         net::add_device(device);
     }
 }
 
+static DEVICE: Once<Arc<Device>> = Once::new();
+
 fn irq_handler(_stack: &mut InterruptStack) {
-    log::debug!("a!")
+    DEVICE.get().map(|e| e.handle_irq());
 }
 
 fn init() {

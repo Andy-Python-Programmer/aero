@@ -63,6 +63,11 @@ pub type DmaBuffer<T> = Box<T, DmaAllocator>;
 pub struct Dma<T: ?Sized>(DmaBuffer<T>);
 
 impl<T> Dma<T> {
+    /// Creates a new DMA buffer intialized with `value`.
+    pub fn new(value: T) -> Self {
+        Dma(DmaBuffer::new_in(value, DmaAllocator))
+    }
+
     /// Creates a new DMA (Direct Memory Access) buffer and is initialized
     /// with zeros.
     ///
@@ -70,7 +75,7 @@ impl<T> Dma<T> {
     /// ```rust,no_run
     /// let dma: Command = Dma::new();
     /// ```
-    pub fn new() -> Self {
+    pub fn zeroed() -> Self {
         let mut buffer = DmaBuffer::new_uninit_in(DmaAllocator);
 
         // SAFETY: Box returns a non-null and aligned pointer.

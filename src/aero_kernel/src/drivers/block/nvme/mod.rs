@@ -18,13 +18,11 @@
  */
 
 mod command;
-mod dma;
 mod queue;
 
 use core::mem::MaybeUninit;
 
 use command::*;
-use dma::*;
 use queue::*;
 
 use alloc::sync::Arc;
@@ -37,6 +35,7 @@ use crate::drivers::pci::*;
 use crate::fs::block::{install_block_device, BlockDevice, BlockDeviceInterface};
 use crate::mem::paging::*;
 
+use crate::utils::dma::*;
 use crate::utils::sync::BMutex;
 use crate::utils::{CeilDiv, VolatileCell};
 
@@ -339,7 +338,7 @@ impl<'a> Controller<'a> {
 
         registers.set_enable(true)?;
 
-        let identity = Dma::<IdentifyController>::new();
+        let identity = Dma::<IdentifyController>::zeroed();
         let mut identify_command = IdentifyCommand::default();
 
         identify_command.opcode = AdminOpcode::Identify as u8;
@@ -417,7 +416,7 @@ impl<'a> Controller<'a> {
                 continue;
             }
 
-            let identity = Dma::<IdentifyNamespace>::new();
+            let identity = Dma::<IdentifyNamespace>::zeroed();
             let mut identify_command = IdentifyCommand::default();
 
             identify_command.opcode = AdminOpcode::Identify as u8;
