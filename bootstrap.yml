@@ -75,8 +75,8 @@ sources:
   - name: llvm
     subdir: 'bundled'
     git: 'https://github.com/llvm/llvm-project.git'
-    tag: 'llvmorg-13.0.0'
-    version: '13.0.0'
+    tag: 'llvmorg-14.0.1'
+    version: '14.0.1'
 
   # ---------------------------------------------------------------------------
   # Rust patched crates start
