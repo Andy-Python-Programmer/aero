@@ -1,14 +1,191 @@
-From c6ec5b50fc2d7bc6b984b5c6910d944664da8e08 Mon Sep 17 00:00:00 2001
+From 06433417feda99e2f407026d95349e3dbde054d1 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sat, 17 Dec 2022 15:50:08 +1100
+Date: Fri, 17 Feb 2023 18:18:23 +1100
 Subject: [PATCH] <xxx>
 
 ---
- src/unix/mlibc/mod.rs | 453 ++++++++++++++++++++++++++++++++++++++----
- 1 file changed, 417 insertions(+), 36 deletions(-)
+ .../linux_like/linux/gnu/b64/x86_64/mod.rs    |   4 +-
+ src/unix/linux_like/linux/gnu/mod.rs          |   4 +-
+ src/unix/linux_like/linux/mod.rs              |  28 +-
+ src/unix/mlibc/mod.rs                         | 457 ++++++++++++++++--
+ 4 files changed, 439 insertions(+), 54 deletions(-)
 
+diff --git a/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs b/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs
+index e6307e2..cae81c4 100644
+--- a/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs
++++ b/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs
+@@ -330,7 +330,7 @@ cfg_if! {
+         impl Eq for user_fpregs_struct {}
+ 
+         impl ::fmt::Debug for user_fpregs_struct {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("user_fpregs_struct")
+                     .field("cwd", &self.cwd)
+                     .field("ftw", &self.ftw)
+@@ -375,7 +375,7 @@ cfg_if! {
+         impl Eq for ucontext_t {}
+ 
+         impl ::fmt::Debug for ucontext_t {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("ucontext_t")
+                     .field("uc_flags", &self.uc_flags)
+                     .field("uc_link", &self.uc_link)
+diff --git a/src/unix/linux_like/linux/gnu/mod.rs b/src/unix/linux_like/linux/gnu/mod.rs
+index b8b6ded..98b49a0 100644
+--- a/src/unix/linux_like/linux/gnu/mod.rs
++++ b/src/unix/linux_like/linux/gnu/mod.rs
+@@ -519,7 +519,7 @@ cfg_if! {
+         impl Eq for utmpx {}
+ 
+         impl ::fmt::Debug for utmpx {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("utmpx")
+                     .field("ut_type", &self.ut_type)
+                     .field("ut_pid", &self.ut_pid)
+@@ -568,7 +568,7 @@ cfg_if! {
+ 
+         #[cfg(libc_union)]
+         impl ::fmt::Debug for __c_anonymous_ptrace_syscall_info_data {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 unsafe {
+                 f.debug_struct("__c_anonymous_ptrace_syscall_info_data")
+                     .field("entry", &self.entry)
+diff --git a/src/unix/linux_like/linux/mod.rs b/src/unix/linux_like/linux/mod.rs
+index be12190..c8762d5 100644
+--- a/src/unix/linux_like/linux/mod.rs
++++ b/src/unix/linux_like/linux/mod.rs
+@@ -840,7 +840,7 @@ cfg_if! {
+         }
+         impl Eq for sockaddr_nl {}
+         impl ::fmt::Debug for sockaddr_nl {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("sockaddr_nl")
+                     .field("nl_family", &self.nl_family)
+                     .field("nl_pid", &self.nl_pid)
+@@ -873,7 +873,7 @@ cfg_if! {
+         impl Eq for dirent {}
+ 
+         impl ::fmt::Debug for dirent {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("dirent")
+                     .field("d_ino", &self.d_ino)
+                     .field("d_off", &self.d_off)
+@@ -911,7 +911,7 @@ cfg_if! {
+         impl Eq for dirent64 {}
+ 
+         impl ::fmt::Debug for dirent64 {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("dirent64")
+                     .field("d_ino", &self.d_ino)
+                     .field("d_off", &self.d_off)
+@@ -941,7 +941,7 @@ cfg_if! {
+         impl Eq for pthread_cond_t {}
+ 
+         impl ::fmt::Debug for pthread_cond_t {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("pthread_cond_t")
+                 // FIXME: .field("size", &self.size)
+                     .finish()
+@@ -963,7 +963,7 @@ cfg_if! {
+         impl Eq for pthread_mutex_t {}
+ 
+         impl ::fmt::Debug for pthread_mutex_t {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("pthread_mutex_t")
+                 // FIXME: .field("size", &self.size)
+                     .finish()
+@@ -985,7 +985,7 @@ cfg_if! {
+         impl Eq for pthread_rwlock_t {}
+ 
+         impl ::fmt::Debug for pthread_rwlock_t {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("pthread_rwlock_t")
+                 // FIXME: .field("size", &self.size)
+                     .finish()
+@@ -1007,7 +1007,7 @@ cfg_if! {
+         impl Eq for pthread_barrier_t {}
+ 
+         impl ::fmt::Debug for pthread_barrier_t {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("pthread_barrier_t")
+                     .field("size", &self.size)
+                     .finish()
+@@ -1041,7 +1041,7 @@ cfg_if! {
+         impl Eq for sockaddr_alg {}
+ 
+         impl ::fmt::Debug for sockaddr_alg {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("sockaddr_alg")
+                     .field("salg_family", &self.salg_family)
+                     .field("salg_type", &self.salg_type)
+@@ -1072,7 +1072,7 @@ cfg_if! {
+         impl Eq for uinput_setup {}
+ 
+         impl ::fmt::Debug for uinput_setup {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("uinput_setup")
+                     .field("id", &self.id)
+                     .field("name", &&self.name[..])
+@@ -1103,7 +1103,7 @@ cfg_if! {
+         impl Eq for uinput_user_dev {}
+ 
+         impl ::fmt::Debug for uinput_user_dev {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("uinput_setup")
+                     .field("name", &&self.name[..])
+                     .field("id", &self.id)
+@@ -1152,7 +1152,7 @@ cfg_if! {
+ 
+         #[allow(deprecated)]
+         impl ::fmt::Debug for af_alg_iv {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("af_alg_iv")
+                     .field("ivlen", &self.ivlen)
+                     .finish()
+@@ -1176,7 +1176,7 @@ cfg_if! {
+         }
+         impl Eq for mq_attr {}
+         impl ::fmt::Debug for mq_attr {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("mq_attr")
+                     .field("mq_flags", &self.mq_flags)
+                     .field("mq_maxmsg", &self.mq_maxmsg)
+@@ -1195,7 +1195,7 @@ cfg_if! {
+         }
+         #[cfg(libc_union)]
+         impl ::fmt::Debug for __c_anonymous_ifr_ifru {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("ifr_ifru")
+                     .field("ifru_addr", unsafe { &self.ifru_addr })
+                     .field("ifru_dstaddr", unsafe { &self.ifru_dstaddr })
+@@ -1214,7 +1214,7 @@ cfg_if! {
+             }
+         }
+         impl ::fmt::Debug for ifreq {
+-            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
++            fn fmt(&self, f: &mut ::fmt::Formatter<'_>) -> ::fmt::Result {
+                 f.debug_struct("ifreq")
+                     .field("ifr_name", &self.ifr_name)
+                     .field("ifr_ifru", &self.ifr_ifru)
 diff --git a/src/unix/mlibc/mod.rs b/src/unix/mlibc/mod.rs
-index 2046530..93fcc61 100644
+index 2046530..abae13c 100644
 --- a/src/unix/mlibc/mod.rs
 +++ b/src/unix/mlibc/mod.rs
 @@ -47,7 +47,6 @@ pub type fsfilcnt_t = ::c_uint;
@@ -557,7 +734,16 @@ index 2046530..93fcc61 100644
  pub const F_GETOWN: ::c_int = 10;
  pub const F_SETOWN: ::c_int = 11;
  pub const O_ACCMODE: ::c_int = 7;
-@@ -649,18 +961,42 @@ pub const WCOREFLAG: ::c_int = 0x80;
+@@ -644,23 +956,51 @@ pub const S_IXGRP: mode_t = 0o10;
+ pub const S_IXOTH: mode_t = 0o1;
+ pub const S_IXUSR: mode_t = 0o100;
+ 
++// Used by utimensat() and friends
++pub const UTIME_NOW: c_long = (1 << 30) - 1;
++pub const UTIME_OMIT: c_long = (1 << 30) - 2;
++
+ // options/posix/include/sys/wait.h
+ pub const WCOREFLAG: ::c_int = 0x80;
  pub const WNOHANG: ::c_int = 2;
  
  // options/linux/include/sys/poll.h
@@ -601,7 +787,7 @@ index 2046530..93fcc61 100644
  
  // options/posix/include/pthread.h
  align_const! {
-@@ -668,9 +1004,12 @@ align_const! {
+@@ -668,9 +1008,12 @@ align_const! {
          __mlibc_state: 0,
          __mlibc_recursion: 0,
          __mlibc_flags: 0,
@@ -614,7 +800,7 @@ index 2046530..93fcc61 100644
      };
      pub const PTHREAD_RWLOCK_INITIALIZER: pthread_rwlock_t = pthread_rwlock_t {
          __mlibc_m: 0,
-@@ -689,11 +1028,40 @@ pub const PTHREAD_PROCESS_PRIVATE: ::c_int = 0;
+@@ -689,11 +1032,40 @@ pub const PTHREAD_PROCESS_PRIVATE: ::c_int = 0;
  pub const PTHREAD_PROCESS_SHARED: ::c_int = 1;
  
  extern "C" {
@@ -655,7 +841,7 @@ index 2046530..93fcc61 100644
      pub fn getgrgid_r(
          gid: ::gid_t,
          grp: *mut ::group,
-@@ -728,13 +1096,24 @@ extern "C" {
+@@ -728,13 +1100,24 @@ extern "C" {
          buflen: ::size_t,
          result: *mut *mut passwd,
      ) -> ::c_int;
@@ -684,7 +870,7 @@ index 2046530..93fcc61 100644
      pub fn pthread_create(
          thread: *mut ::pthread_t,
          attr: *const ::pthread_attr_t,
-@@ -752,6 +1131,8 @@ extern "C" {
+@@ -752,6 +1135,8 @@ extern "C" {
          addr: *mut ::sockaddr,
          addrlen: *mut ::socklen_t,
      ) -> ::ssize_t;
@@ -694,5 +880,5 @@ index 2046530..93fcc61 100644
      pub fn setpwent();
      pub fn writev(fd: ::c_int, iov: *const ::iovec, count: ::c_int) -> ::ssize_t;
 -- 
-2.38.1
+2.39.1
 
