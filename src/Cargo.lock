@@ -11,6 +11,7 @@ dependencies = [
  "bit_field",
  "bitflags",
  "bytemuck",
+ "byteorder",
  "cfg-if",
  "cpio_reader",
  "hashbrown",
@@ -24,6 +25,7 @@ dependencies = [
  "raw-cpuid",
  "rustc-demangle",
  "serde_json",
+ "simple_endian",
  "spin 0.9.4",
  "static_assertions",
  "uapi",
@@ -88,6 +90,12 @@ name = "bytemuck"
 version = "1.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aaa3a8d9a1ca92e282c96a32d6511b695d7d994d1d102ba85d279f9b2756947f"
+
+[[package]]
+name = "byteorder"
+version = "1.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "cc"
@@ -205,7 +213,7 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 [[package]]
 name = "lai"
 version = "0.1.0"
-source = "git+https://github.com/aero-os/lai-rs#dd82efe66790fc59413f084fa48e17ec9f8312b8"
+source = "git+https://github.com/aero-os/lai-rs#a6b2554cfd6e6fd12d8301b4cb8ad8aa0178cb4d"
 dependencies = [
  "cc",
  "log",
@@ -399,6 +407,11 @@ dependencies = [
  "ryu",
  "serde",
 ]
+
+[[package]]
+name = "simple_endian"
+version = "0.2.1"
+source = "git+https://github.com/michalfita/simple-endian-rs?branch=bugfix/4/fix-no_std-support-right-way#7210f40881d16f7f2e3d8d40f6381fa222843caa"
 
 [[package]]
 name = "spin"
