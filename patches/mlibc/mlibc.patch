@@ -1,6 +1,6 @@
-From 9591f4a8fe0242eafb16c5816455f1d763b19b77 Mon Sep 17 00:00:00 2001
+From adcc64e89eb5e570e6ad2bc578fd8b891ee6bd9a Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Wed, 1 Feb 2023 16:53:35 +1100
+Date: Fri, 17 Feb 2023 19:21:05 +1100
 Subject: [PATCH] <xxx>
 
 ---
@@ -10,12 +10,12 @@ Subject: [PATCH] <xxx>
  options/posix/generic/dlfcn-stubs.cpp |   1 +
  options/rtdl/generic/linker.cpp       |   2 +-
  sysdeps/aero/generic/aero.cpp         |  69 ++++++----
- sysdeps/aero/generic/filesystem.cpp   |  35 ++++-
+ sysdeps/aero/generic/filesystem.cpp   |  51 ++++++-
  sysdeps/aero/generic/sockets.cpp      |  87 +++++++++++-
  sysdeps/aero/generic/time.cpp         |  24 ++++
  sysdeps/aero/include/aero/syscall.h   |   9 ++
  sysdeps/aero/meson.build              |   1 +
- 11 files changed, 374 insertions(+), 46 deletions(-)
+ 11 files changed, 389 insertions(+), 47 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -269,7 +269,7 @@ index fc9fd84..ab57631 100644
  	return __dlapi_open(file, flags, ra);
  }
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 2e2d3f1..3ff5fef 100644
+index 6eb9d09..2ab5bc9 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
 @@ -18,7 +18,7 @@ uintptr_t libraryBase = 0x41000000;
@@ -412,10 +412,20 @@ index 29fb961..b5945a8 100644
  }
  
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index a3e2aca..a4edac3 100644
+index a3e2aca..8a1e086 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
-@@ -158,11 +158,6 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
+@@ -118,7 +118,8 @@ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
+         return -sys_res;
+     }
+ 
+-    *result = sys_res;
++    if (result)
++        *result = sys_res;
+     return 0;
+ }
+ 
+@@ -158,11 +159,6 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
      return 0;
  }
  
@@ -427,7 +437,7 @@ index a3e2aca..a4edac3 100644
  int sys_mkdir(const char *path, mode_t) {
      auto result = syscall(SYS_MKDIR, path, strlen(path));
  
-@@ -243,7 +238,15 @@ int sys_open_dir(const char *path, int *handle) {
+@@ -243,7 +239,15 @@ int sys_open_dir(const char *path, int *handle) {
      return sys_open(path, O_DIRECTORY, 0, handle);
  }
  
@@ -444,7 +454,7 @@ index a3e2aca..a4edac3 100644
  
  int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) {
      auto result = syscall(SYS_READ_LINK, path, strlen(path), buffer, max_size);
-@@ -357,4 +360,24 @@ int sys_eventfd_create(unsigned int initval, int flags, int *fd) {
+@@ -357,4 +361,37 @@ int sys_eventfd_create(unsigned int initval, int flags, int *fd) {
      *fd = result;
      return 0;
  }
@@ -468,6 +478,19 @@ index a3e2aca..a4edac3 100644
 +
 +    return sys_ppoll(fds, count, &ts, NULL, num_events);
 +}
++
++#ifndef MLIBC_BUILDING_RTDL
++#include <stdio.h>
++int sys_ptsname(int fd, char *buffer, size_t length) {
++    int index;
++	if(int e = sys_ioctl(fd, TIOCGPTN, &index, NULL); e)
++		return e;
++	if((size_t)snprintf(buffer, length, "/dev/pts/%d", index) >= length) {
++		return ERANGE;
++	}
++	return 0;
++}
++#endif
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
 index b6b18fe..b4635df 100644
