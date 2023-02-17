@@ -70,7 +70,7 @@ sources:
     subdir: 'bundled'
     git: 'https://github.com/rust-lang/rust.git'
     branch: 'master'
-    commit: '22e491ac7ed454d34669151a8b6464cb643c9b41'
+    commit: '0416b1a6f6d5c42696494e1a3a33580fd3f669d8'
 
   - name: llvm
     subdir: 'bundled'
@@ -304,6 +304,7 @@ tools:
             changelog-seen = 2
 
             [llvm]
+            download-ci-llvm = false
             targets = "X86"
 
             [build]
