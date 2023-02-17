@@ -611,8 +611,8 @@ impl NetworkDevice for Device {
                 self.wq.remove(task.clone());
                 return data;
             } else {
-                // drop(e1000);
-                // scheduler::get_scheduler().inner.await_io().unwrap();
+                drop(e1000);
+                scheduler::get_scheduler().inner.await_io().unwrap();
             }
         }
     }
