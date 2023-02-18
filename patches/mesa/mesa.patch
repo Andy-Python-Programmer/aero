@@ -1,6 +1,6 @@
-From caa8eb2b0dbe4a49aecb691e3568fb0dc6d1a8e2 Mon Sep 17 00:00:00 2001
+From 17fb4ad377b2cd0d43a62af25b8c8375909da019 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sun, 20 Nov 2022 17:10:35 +1100
+Date: Sat, 18 Feb 2023 14:31:17 +1100
 Subject: [PATCH] <xxx>
 
 ---
@@ -11,11 +11,12 @@ Subject: [PATCH] <xxx>
  src/gallium/drivers/llvmpipe/lp_texture.c | 1 -
  src/util/debug.c                          | 1 +
  src/util/detect_os.h                      | 8 ++++++++
+ src/util/futex.h                          | 2 +-
  src/util/os_misc.c                        | 4 ++--
  src/util/os_time.c                        | 4 ++--
  src/util/u_printf.h                       | 2 ++
  src/util/u_thread.h                       | 4 ++--
- 11 files changed, 23 insertions(+), 10 deletions(-)
+ 12 files changed, 24 insertions(+), 11 deletions(-)
 
 diff --git a/include/drm-uapi/drm.h b/include/drm-uapi/drm.h
 index 5e54c3a..be0e26d 100644
@@ -121,6 +122,19 @@ index 6506948..f5d49de 100644
 +#endif
  
  #endif /* DETECT_OS_H */
+diff --git a/src/util/futex.h b/src/util/futex.h
+index 43097f4..98af1db 100644
+--- a/src/util/futex.h
++++ b/src/util/futex.h
+@@ -24,7 +24,7 @@
+ #ifndef UTIL_FUTEX_H
+ #define UTIL_FUTEX_H
+ 
+-#if defined(HAVE_LINUX_FUTEX_H)
++#if defined(HAVE_LINUX_FUTEX_H) && defined(__linux__)
+ #define UTIL_FUTEX_SUPPORTED 1
+ 
+ #include <limits.h>
 diff --git a/src/util/os_misc.c b/src/util/os_misc.c
 index 31f1c55..cd3e2c7 100644
 --- a/src/util/os_misc.c
@@ -201,5 +215,5 @@ index 013e8be..a30eada 100644
     clockid_t cid;
  
 -- 
-2.38.1
+2.39.1
 

@@ -349,6 +349,7 @@ struct Mapping {
     end_addr: VirtAddr,
 
     file: Option<MMapFile>,
+    refresh_flags: bool,
 }
 
 impl Mapping {
@@ -385,8 +386,26 @@ impl Mapping {
         } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
             self.handle_cow(offset_table, addr_aligned, false)
         } else {
-            log::error!("    - present page read failed");
-            false
+            if !self.refresh_flags {
+                return false;
+            }
+
+            unsafe {
+                // The page is present but most likely the flags need to be updated after mprotect(2).
+                let page: Page<Size4KiB> = Page::containing_address(address);
+                offset_table
+                    .update_flags(
+                        page,
+                        PageTableFlags::USER_ACCESSIBLE
+                            | PageTableFlags::PRESENT
+                            | self.protection.into(),
+                    )
+                    .unwrap()
+                    .flush();
+            }
+
+            self.refresh_flags = false;
+            true
         }
     }
 
@@ -568,6 +587,7 @@ impl Mapping {
                 start_addr: end,
                 end_addr: end + (self.end_addr - end),
                 file: new_file,
+                refresh_flags: true,
             };
 
             self.end_addr = end;
@@ -599,6 +619,34 @@ impl Mapping {
             self.end_addr = end;
             Ok(UnmapResult::End)
         }
+    }
+
+    fn size(&self) -> usize {
+        (self.end_addr - self.start_addr) as usize
+    }
+
+    fn split(&self, start: VirtAddr, end: VirtAddr) -> (Mapping, Mapping, Mapping) {
+        assert!(start > self.start_addr && end < self.end_addr);
+
+        let mut left = self.clone();
+        left.end_addr = start;
+
+        let mut mid = self.clone();
+        mid.start_addr = start;
+        mid.end_addr = end;
+
+        let mut right = self.clone();
+        right.start_addr = end;
+
+        if self.file.is_some() {
+            left.file.as_mut().unwrap().size = left.size();
+            mid.file.as_mut().unwrap().offset += left.size();
+            mid.file.as_mut().unwrap().size = mid.size();
+            right.file.as_mut().unwrap().offset += mid.size();
+            right.file.as_mut().unwrap().size = right.size();
+        }
+
+        (left, mid, right)
     }
 }
 
@@ -819,6 +867,7 @@ impl VmProtected {
                 end_addr: addr + size_aligned,
 
                 file: file.map(|f| MMapFile::new(f, offset, size)),
+                refresh_flags: true,
             });
 
             Some(addr)
@@ -1032,6 +1081,58 @@ impl VmProtected {
         success
     }
 
+    fn mprotect(&mut self, addr: VirtAddr, size: usize, prot: MMapProt) -> bool {
+        let start = addr.align_up(Size4KiB::SIZE);
+        let end = (addr + size).align_up(Size4KiB::SIZE);
+
+        let mut cursor = self.mappings.cursor_front_mut();
+
+        while let Some(map) = cursor.current() {
+            if map.end_addr <= start {
+                cursor.move_next();
+            } else {
+                if end <= map.start_addr || start >= map.end_addr {
+                    break;
+                } else if start > map.start_addr && end < map.end_addr {
+                    // The address we want to unmap is in the middle of the region. So we
+                    // will need to split the mapping and update the end address accordingly.
+                    let (left, mut mid, right) = map.split(start, end);
+                    mid.protection = prot;
+
+                    cursor.insert_after(right);
+                    cursor.insert_after(mid);
+                    cursor.insert_after(left);
+                    cursor.remove_current();
+                    break;
+                } else if start <= map.start_addr && end >= map.end_addr {
+                    // full
+                    map.protection = prot;
+                    cursor.move_next();
+                } else if start <= map.start_addr && end < map.end_addr {
+                    // start
+                    let mut mapping = map.clone();
+                    mapping.end_addr = end;
+                    mapping.protection = prot;
+
+                    map.start_addr = end;
+                    cursor.insert_before(mapping);
+                    break;
+                } else {
+                    // end
+                    let mut mapping = map.clone();
+                    mapping.start_addr = end;
+                    mapping.protection = prot;
+
+                    map.end_addr = start;
+                    cursor.insert_after(mapping);
+                    cursor.move_next();
+                }
+            }
+        }
+
+        return true;
+    }
+
     fn fork_from(&mut self, parent: &Vm) {
         let data = parent.inner.lock();
 
@@ -1068,6 +1169,10 @@ impl Vm {
 
     pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
         self.inner.lock().munmap(address, size)
+    }
+
+    pub fn mprotect(&self, ptr: VirtAddr, size: usize, prot: MMapProt) {
+        assert!(self.inner.lock().mprotect(ptr, size, prot))
     }
 
     pub(super) fn fork_from(&self, parent: &Vm) {

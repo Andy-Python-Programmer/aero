@@ -513,7 +513,6 @@ packages:
     tools_required:
       - host-pkg-config
       - host-gcc
-      - wayland-scanner
       - virtual: pkgconfig-for-target
         triple: "x86_64-aero"
       - virtual: pkgconfig-for-host
@@ -527,13 +526,21 @@ packages:
       - libx11
       - libxext
       - libxcb
+      - llvm
     configure:
+      - args: ['cp', '@SOURCE_ROOT@/userland/cross-file.ini', 'meson.cross-file']
+      - args:
+        - 'sed'
+        - '-i'
+        - "/^# sed adds binaries here.$/a llvm-config = '@SOURCE_ROOT@/userland/cross-llvm-config'"
+        - 'meson.cross-file'
       - args:
         - 'meson'
+        - 'setup'
         - '--native-file'
         - '@SOURCE_ROOT@/userland/native-file.ini'
         - '--cross-file'
-        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - 'meson.cross-file'
         - '--prefix=/usr'
         - '--libdir=lib'
         # The debug build type enables some additional output from Mesa.
@@ -545,6 +552,8 @@ packages:
         - '-Ddri-drivers='
         - '-Dgallium-drivers=swrast'
         - '-Dvulkan-drivers='
+        # Force Mesa to build with LLVM.
+        - '-Dllvm=enabled'
         - '@THIS_SOURCE_DIR@'
     build:
       - args: ['ninja', '-j@PARALLELISM@']

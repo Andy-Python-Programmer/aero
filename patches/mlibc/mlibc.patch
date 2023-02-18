@@ -1,21 +1,21 @@
-From adcc64e89eb5e570e6ad2bc578fd8b891ee6bd9a Mon Sep 17 00:00:00 2001
+From bf4093ec8e528fb9ebcb248d467784e3ecce47cb Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Fri, 17 Feb 2023 19:21:05 +1100
+Date: Sat, 18 Feb 2023 14:53:00 +1100
 Subject: [PATCH] <xxx>
 
 ---
  .gitignore                            |   2 +
  options/ansi/generic/stdlib-stubs.cpp | 185 ++++++++++++++++++++++++--
+ options/ansi/meson.build              |   1 +
  options/glibc/generic/execinfo.cpp    |   5 +-
- options/posix/generic/dlfcn-stubs.cpp |   1 +
  options/rtdl/generic/linker.cpp       |   2 +-
- sysdeps/aero/generic/aero.cpp         |  69 ++++++----
+ sysdeps/aero/generic/aero.cpp         |  77 +++++++----
  sysdeps/aero/generic/filesystem.cpp   |  51 ++++++-
  sysdeps/aero/generic/sockets.cpp      |  87 +++++++++++-
  sysdeps/aero/generic/time.cpp         |  24 ++++
- sysdeps/aero/include/aero/syscall.h   |   9 ++
+ sysdeps/aero/include/aero/syscall.h   |  10 ++
  sysdeps/aero/meson.build              |   1 +
- 11 files changed, 389 insertions(+), 47 deletions(-)
+ 11 files changed, 398 insertions(+), 47 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -239,6 +239,18 @@ index c0e54fe..6d9cc52 100644
  	// TODO: Print PID only if POSIX option is enabled.
  	if (mlibc::globalConfig().debugMalloc)
  		mlibc::infoLogger() << "mlibc (PID ?): malloc() returns "
+diff --git a/options/ansi/meson.build b/options/ansi/meson.build
+index 0820de3..afd8bbe 100644
+--- a/options/ansi/meson.build
++++ b/options/ansi/meson.build
+@@ -47,6 +47,7 @@ if not no_headers
+ 	install_headers(
+ 		'include/bits/ansi/timespec.h',
+ 		'include/bits/ansi/time_t.h',
++		'include/bits/ansi/fenv.h',
+ 		subdir: 'bits/ansi'
+ 	)
+ endif
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
 index 3474615..10a2109 100644
 --- a/options/glibc/generic/execinfo.cpp
@@ -256,18 +268,6 @@ index 3474615..10a2109 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
-diff --git a/options/posix/generic/dlfcn-stubs.cpp b/options/posix/generic/dlfcn-stubs.cpp
-index fc9fd84..ab57631 100644
---- a/options/posix/generic/dlfcn-stubs.cpp
-+++ b/options/posix/generic/dlfcn-stubs.cpp
-@@ -27,6 +27,7 @@ char *dlerror(void) {
- 
- [[gnu::noinline]]
- void *dlopen(const char *file, int flags) {
-+	mlibc::infoLogger() << "mlibc memes: " << file << frg::endlog;
- 	auto ra = __builtin_extract_return_addr(__builtin_return_address(0));
- 	return __dlapi_open(file, flags, ra);
- }
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
 index 6eb9d09..2ab5bc9 100644
 --- a/options/rtdl/generic/linker.cpp
@@ -282,7 +282,7 @@ index 6eb9d09..2ab5bc9 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 29fb961..b5945a8 100644
+index 29fb961..31b1a9b 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
 @@ -62,29 +62,33 @@ static frg::vector<Slice, MemoryAllocator> create_slice(char *const arg[]) {
@@ -333,7 +333,22 @@ index 29fb961..b5945a8 100644
      return 0;
  }
  
-@@ -124,7 +128,9 @@ int sys_anon_free(void *pointer, size_t size) {
+@@ -114,6 +118,14 @@ int sys_vm_unmap(void *address, size_t size) {
+     return syscall(SYS_MUNMAP, address, size);
+ }
+ 
++int sys_vm_protect(void *pointer, size_t size, int prot) {
++    auto res = syscall(SYS_MPROTECT, pointer, size, prot);
++    if (res < 0)
++        return -res;
++
++    return 0;
++}
++
+ int sys_anon_allocate(size_t size, void **pointer) {
+     return sys_vm_map(nullptr, size, PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0, pointer);
+@@ -124,7 +136,9 @@ int sys_anon_free(void *pointer, size_t size) {
  }
  
  void sys_libc_panic() {
@@ -344,7 +359,7 @@ index 29fb961..b5945a8 100644
      sys_exit(1);
  }
  
-@@ -140,8 +146,15 @@ void sys_exit(int status) {
+@@ -140,8 +154,15 @@ void sys_exit(int status) {
  
  pid_t sys_getpid() {
      auto result = syscall(SYS_GETPID);
@@ -361,7 +376,7 @@ index 29fb961..b5945a8 100644
      return result;
  }
  
-@@ -162,11 +175,6 @@ pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
+@@ -162,11 +183,6 @@ pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
      return 0;
  }
  
@@ -373,7 +388,7 @@ index 29fb961..b5945a8 100644
  int sys_clock_get(int clock, time_t *secs, long *nanos) {
      struct timespec ts;
      auto result = syscall(SYS_GETTIME, clock, &ts);
-@@ -233,7 +241,11 @@ uid_t sys_geteuid() {
+@@ -233,7 +249,11 @@ uid_t sys_geteuid() {
      return 0;
  }
  
@@ -386,7 +401,7 @@ index 29fb961..b5945a8 100644
  int sys_seteuid(uid_t euid) UNIMPLEMENTED("sys_seteuid")
  
  gid_t sys_getgid() {
-@@ -256,16 +268,19 @@ int sys_setegid(gid_t egid) {
+@@ -256,16 +276,19 @@ int sys_setegid(gid_t egid) {
      return 0;
  }
  
@@ -633,10 +648,10 @@ index 0000000..460412d
 +}
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc6..afb45f8 100644
+index 12f8dc6..78fc99d 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -64,6 +64,15 @@
+@@ -64,6 +64,16 @@
  #define SYS_FUTEX_WAIT 57
  #define SYS_FUTEX_WAKE 58
  #define SYS_LINK 59
@@ -649,6 +664,7 @@ index 12f8dc6..afb45f8 100644
 +#define SYS_GETPPID 66
 +#define SYS_SOCKET_PAIR 67
 +#define SYS_RENAME 68
++#define SYS_MPROTECT 69
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.

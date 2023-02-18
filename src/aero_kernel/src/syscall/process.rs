@@ -217,6 +217,17 @@ pub fn munmap(address: usize, size: usize) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
+pub fn mprotect(ptr: usize, size: usize, prot: usize) -> Result<usize, SyscallError> {
+    let ptr = VirtAddr::new(ptr as _);
+    let prot = MMapProt::from_bits(prot).ok_or(SyscallError::EINVAL)?;
+
+    let task = scheduler::get_scheduler().current_task();
+    task.vm().mprotect(ptr, size, prot);
+
+    Ok(0)
+}
+
+#[syscall]
 pub fn backtrace() -> Result<usize, SyscallError> {
     crate::unwind::unwind_stack_trace();
     Ok(0)

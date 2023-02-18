@@ -234,6 +234,7 @@ pub fn generic_do_syscall(
         SYS_FORK => process::fork(),
         SYS_MMAP => process::mmap(b, c, d, e, f, g),
         SYS_MUNMAP => process::munmap(b, c),
+        SYS_MPROTECT => process::mprotect(b, c, d),
         SYS_EXEC => process::exec(b, c, d, e, f, g),
         SYS_LOG => process::log(b, c),
         SYS_UNAME => process::uname(b),
