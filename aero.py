@@ -496,7 +496,13 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
             log_error("unknown target architecture")
             exit(1)
 
-    qemu_binary = f'qemu-system-{build_info.target_arch}'
+    qemu_binary = os.getenv("QEMU_PATH")
+    if not qemu_binary:
+        qemu_binary = f'qemu-system-{build_info.target_arch}'
+    else:
+        qemu_binary = os.path.join(qemu_binary, f'qemu-system-{build_info.target_arch}');
+
+    log_info(f"{qemu_binary} {' '.join(qemu_args)}")
     run_command([qemu_binary, *qemu_args])
 
 
