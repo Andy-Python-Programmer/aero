@@ -1,10 +1,11 @@
-From bf4093ec8e528fb9ebcb248d467784e3ecce47cb Mon Sep 17 00:00:00 2001
+From f4c7bb3f8556d4f50fe132109de2dfedfccac293 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sat, 18 Feb 2023 14:53:00 +1100
+Date: Mon, 20 Feb 2023 18:40:41 +1100
 Subject: [PATCH] <xxx>
 
 ---
  .gitignore                            |   2 +
+ meson.build                           |   4 +
  options/ansi/generic/stdlib-stubs.cpp | 185 ++++++++++++++++++++++++--
  options/ansi/meson.build              |   1 +
  options/glibc/generic/execinfo.cpp    |   5 +-
@@ -15,7 +16,7 @@ Subject: [PATCH] <xxx>
  sysdeps/aero/generic/time.cpp         |  24 ++++
  sysdeps/aero/include/aero/syscall.h   |  10 ++
  sysdeps/aero/meson.build              |   1 +
- 11 files changed, 398 insertions(+), 47 deletions(-)
+ 12 files changed, 402 insertions(+), 47 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -28,6 +29,21 @@ index fdd60a0..9f811f4 100644
  .vscode
 +# clangd cache files:
 +.cache
+diff --git a/meson.build b/meson.build
+index 7dc495d..f419404 100644
+--- a/meson.build
++++ b/meson.build
+@@ -125,6 +125,10 @@ if host_machine.system() == 'linux'
+ elif host_machine.system() == 'aero'
+ 	rtdl_include_dirs += include_directories('sysdeps/aero/include')
+ 	libc_include_dirs += include_directories('sysdeps/aero/include')
++
++	internal_conf.set10('MLIBC_MAP_DSO_SEGMENTS', true)
++	internal_conf.set10('MLIBC_MAP_FILE_WINDOWS', true)
++
+ 	subdir('sysdeps/aero')
+ elif host_machine.system() == 'managarm'
+ 	# TODO: Adopt the include_directories() commands from the managarm meson.build.
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
 index c0e54fe..6d9cc52 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
