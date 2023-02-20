@@ -185,6 +185,73 @@ bitflags::bitflags! {
     }
 }
 
+bitflags::bitflags! {
+    pub struct MxCsr: u32 {
+        const INVALID_OPERATION = 1 << 0;
+        const DENORMAL = 1 << 1;
+        const DIVIDE_BY_ZERO = 1 << 2;
+        const OVERFLOW = 1 << 3;
+        const UNDERFLOW = 1 << 4;
+        const PRECISION = 1 << 5;
+        const DENORMALS_ARE_ZEROS = 1 << 6;
+        const INVALID_OPERATION_MASK = 1 << 7;
+        const DENORMAL_MASK = 1 << 8;
+        const DIVIDE_BY_ZERO_MASK = 1 << 9;
+        const OVERFLOW_MASK = 1 << 10;
+        const UNDERFLOW_MASK = 1 << 11;
+        const PRECISION_MASK = 1 << 12;
+        const ROUNDING_CONTROL_NEGATIVE = 1 << 13;
+        const ROUNDING_CONTROL_POSITIVE = 1 << 14;
+        const ROUNDING_CONTROL_ZERO = 3 << 13;
+        const FLUSH_TO_ZERO = 1 << 15;
+    }
+}
+
+bitflags::bitflags! {
+    /// Configuration flags of the XCr0 register.
+    ///
+    /// For MPX, [`BNDREG`](XCr0Flags::BNDREG) and [`BNDCSR`](XCr0Flags::BNDCSR) must be set/unset simultaneously.
+    /// For AVX-512, [`OPMASK`](XCr0Flags::OPMASK), [`ZMM_HI256`](XCr0Flags::ZMM_HI256), and [`HI16_ZMM`](XCr0Flags::HI16_ZMM)
+    /// must be set/unset simultaneously.
+    #[repr(transparent)]
+    pub struct XCr0Flags: u64 {
+        /// Enables using the x87 FPU state
+        /// with `XSAVE`/`XRSTOR`.
+        ///
+        /// Must be set.
+        const X87 = 1;
+        /// Enables using MXCSR and the XMM registers
+        /// with `XSAVE`/`XRSTOR`.
+        ///
+        /// Must be set if [`AVX`](XCr0Flags::AVX) is set.
+        const SSE = 1 << 1;
+        /// Enables AVX instructions and using the upper halves of the AVX registers
+        /// with `XSAVE`/`XRSTOR`.
+        const AVX = 1 << 2;
+        /// Enables MPX instructions and using the BND0-BND3 bound registers
+        /// with `XSAVE`/`XRSTOR` (Intel Only).
+        const BNDREG = 1 << 3;
+        /// Enables MPX instructions and using the BNDCFGU and BNDSTATUS registers
+        /// with `XSAVE`/`XRSTOR` (Intel Only).
+        const BNDCSR = 1 << 4;
+        /// Enables AVX-512 instructions and using the K0-K7 mask registers
+        /// with `XSAVE`/`XRSTOR` (Intel Only).
+        const OPMASK = 1 << 5;
+        /// Enables AVX-512 instructions and using the upper halves of the lower ZMM registers
+        /// with `XSAVE`/`XRSTOR` (Intel Only).
+        const ZMM_HI256 = 1 << 6;
+        /// Enables AVX-512 instructions and using the upper ZMM registers
+        /// with `XSAVE`/`XRSTOR` (Intel Only).
+        const HI16_ZMM = 1 << 7;
+        /// Enables using the PKRU register
+        /// with `XSAVE`/`XRSTOR`.
+        const MPK = 1 << 9;
+        /// Enables Lightweight Profiling extensions and managing LWP state
+        /// with `XSAVE`/`XRSTOR` (AMD Only).
+        const LWP = 1 << 62;
+    }
+}
+
 /// Returns the current value of the RFLAGS register.
 pub fn read_rflags() -> RFlags {
     let value: u64;
@@ -230,6 +297,35 @@ pub fn read_cr0() -> Cr0Flags {
     Cr0Flags::from_bits_truncate(value) // Get the flags from the bits.
 }
 
+pub fn read_xcr0() -> XCr0Flags {
+    let (low, high): (u32, u32);
+
+    unsafe {
+        asm!(
+            "xgetbv",
+            in("ecx") 0,
+            out("rax") low, out("rdx") high,
+            options(nomem, nostack, preserves_flags),
+        );
+    }
+
+    XCr0Flags::from_bits_truncate((high as u64) << 32 | (low as u64))
+}
+
+pub unsafe fn write_xcr0(value: XCr0Flags) {
+    let low = value.bits() as u32;
+    let high = (value.bits() >> 32) as u32;
+
+    unsafe {
+        asm!(
+            "xsetbv",
+            in("ecx") 0,
+            in("rax") low, in("rdx") high,
+            options(nomem, nostack, preserves_flags),
+        );
+    }
+}
+
 /// Write the given set of CR4 flags.
 ///
 /// ## Safety
@@ -271,5 +367,19 @@ pub fn read_cr2() -> VirtAddr {
         asm!("mov {}, cr2", out(reg) value, options(nomem, nostack, preserves_flags));
 
         VirtAddr::new(value)
+    }
+}
+
+pub fn read_mxcsr() -> MxCsr {
+    let mut mxcsr: u32 = 0;
+    unsafe {
+        asm!("stmxcsr [{}]", in(reg) &mut mxcsr, options(nostack, preserves_flags));
+    }
+    MxCsr::from_bits_truncate(mxcsr)
+}
+
+pub fn write_mxcsr(value: MxCsr) {
+    unsafe {
+        asm!("ldmxcsr [{}]", in(reg) &value, options(nostack, readonly));
     }
 }

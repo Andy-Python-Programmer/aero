@@ -35,17 +35,20 @@
 use alloc::alloc::alloc_zeroed;
 
 use aero_syscall::{MMapFlags, MMapProt};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
+use raw_cpuid::CpuId;
 
 use core::alloc::Layout;
 use core::ptr::Unique;
 
-use crate::arch::interrupts::InterruptErrorStack;
+use crate::arch::controlregs::MxCsr;
 use crate::fs::cache::DirCacheItem;
 use crate::mem::paging::*;
 use crate::syscall::ExecArgs;
 use crate::userland::vm::Vm;
 use crate::utils::StackHelper;
+use crate::{arch::interrupts::InterruptErrorStack, mem::alloc_boxed_buffer};
 
 use super::{controlregs, io};
 
@@ -121,6 +124,8 @@ pub struct ArchTask {
 
     fs_base: VirtAddr,
     gs_base: VirtAddr,
+
+    fpu_storage: Option<Box<[u8]>>,
 }
 
 impl ArchTask {
@@ -136,6 +141,8 @@ impl ArchTask {
 
             fs_base: VirtAddr::zero(),
             gs_base: VirtAddr::zero(),
+
+            fpu_storage: None,
         }
     }
 
@@ -178,6 +185,8 @@ impl ArchTask {
 
             fs_base: VirtAddr::zero(),
             gs_base: VirtAddr::zero(),
+
+            fpu_storage: None,
         }
     }
 
@@ -221,6 +230,9 @@ impl ArchTask {
         context.rip = fork_init as _;
         context.cr3 = address_space.cr3().start_address().as_u64();
 
+        let mut fpu_storage = alloc_boxed_buffer::<u8>(xsave_size() as usize);
+        fpu_storage.copy_from_slice(self.fpu_storage.as_ref().unwrap());
+
         Ok(Self {
             context: unsafe { Unique::new_unchecked(context) },
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
@@ -230,6 +242,8 @@ impl ArchTask {
             // The FS and GS bases are inherited from the parent process.
             fs_base: self.fs_base.clone(),
             gs_base: self.gs_base.clone(),
+
+            fpu_storage: Some(fpu_storage),
         })
     }
 
@@ -272,6 +286,9 @@ impl ArchTask {
         context.rip = fork_init as u64;
         context.cr3 = new_address_space.cr3().start_address().as_u64();
 
+        let mut fpu_storage = alloc_boxed_buffer::<u8>(xsave_size() as usize);
+        fpu_storage.copy_from_slice(self.fpu_storage.as_ref().unwrap());
+
         Ok(Self {
             context: unsafe { Unique::new_unchecked(context) },
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
@@ -281,6 +298,8 @@ impl ArchTask {
             // The FS and GS bases are inherited from the parent process.
             fs_base: self.fs_base.clone(),
             gs_base: self.gs_base.clone(),
+
+            fpu_storage: Some(fpu_storage),
         })
     }
 
@@ -323,6 +342,33 @@ impl ArchTask {
 
         self.fs_base = VirtAddr::zero();
         self.gs_base = VirtAddr::zero();
+
+        let mut fpu_storage = alloc_boxed_buffer::<u8>(xsave_size() as usize);
+
+        unsafe {
+            xrstor(&fpu_storage);
+
+            // The x87 FPU control word is set to 0x37f (default), which masks all
+            // floating-point exceptions, sets rounding to nearest, and sets the x87
+            // FPU precision to 64 bits (as documented in Intel SDM volume 1 section
+            // 8.1.5).
+            const DEFAULT_FPU_CWORD: u16 = 0x37f;
+            asm!("fldcw [{}]", in(reg) &DEFAULT_FPU_CWORD, options(nomem));
+
+            // Set the default MXCSR value at reset as documented in Intel SDM volume 2A.
+            controlregs::write_mxcsr(
+                MxCsr::INVALID_OPERATION_MASK
+                    | MxCsr::DENORMAL_MASK
+                    | MxCsr::DIVIDE_BY_ZERO_MASK
+                    | MxCsr::OVERFLOW_MASK
+                    | MxCsr::UNDERFLOW_MASK
+                    | MxCsr::PRECISION_MASK,
+            );
+
+            xsave(&mut fpu_storage);
+        }
+
+        self.fpu_storage = Some(fpu_storage);
 
         extern "C" {
             fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
@@ -473,6 +519,28 @@ impl ArchTask {
     }
 }
 
+fn xsave_size() -> u32 {
+    static XSAVE_SIZE: Option<u32> = None;
+    XSAVE_SIZE.unwrap_or_else(|| {
+        CpuId::new()
+            .get_extended_state_info()
+            .expect("xsave: cpuid extended state info unavailable")
+            .xsave_size()
+    })
+}
+
+fn xsave(fpu: &mut Box<[u8]>) {
+    unsafe {
+        asm!("xsave [{}]", in(reg) fpu.as_ptr(), in("eax") 0xffffffffu32, in("edx") 0xffffffffu32)
+    }
+}
+
+fn xrstor(fpu: &Box<[u8]>) {
+    unsafe {
+        asm!("xrstor [{}]", in(reg) fpu.as_ptr(), in("eax") 0xffffffffu32, in("edx") 0xffffffffu32);
+    }
+}
+
 /// Check out the module level documentation for more information.
 pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
     extern "C" {
@@ -490,6 +558,14 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
 
         // update the swap GS target to point to the new GS base.
         io::wrmsr(io::IA32_KERNEL_GSBASE, to.gs_base.as_u64());
+
+        if let Some(fpu) = from.fpu_storage.as_mut() {
+            xsave(fpu);
+        }
+
+        if let Some(fpu) = to.fpu_storage.as_ref() {
+            xrstor(fpu);
+        }
 
         task_spinup(&mut from.context, to.context.as_ref());
     }

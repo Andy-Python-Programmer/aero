@@ -58,9 +58,24 @@ interrupt_exception!(fn protection() => "Protection Fault");
 interrupt_exception!(fn fpu_fault() => "FPU floating point fault");
 interrupt_exception!(fn alignment_check() => "Alignment check fault");
 interrupt_exception!(fn machine_check() => "Machine check fault");
-interrupt_exception!(fn simd() => "SIMD floating point fault");
 interrupt_exception!(fn virtualization() => "Virtualization fault");
 interrupt_exception!(fn security() => "Security exception");
+
+pub fn simd(stack: &mut InterruptErrorStack) {
+    unwind::prepare_panic();
+
+    log::error!("EXCEPTION: SIMD floating point fault");
+    log::error!("Stack: {:#x?}", stack);
+    log::error!("MXCSR: {:?}", controlregs::read_mxcsr());
+
+    unwind::unwind_stack_trace();
+
+    unsafe {
+        loop {
+            super::halt();
+        }
+    }
+}
 
 pub fn invalid_opcode(stack: &mut InterruptErrorStack) {
     // Catch SYSENTER on AMD CPUs.

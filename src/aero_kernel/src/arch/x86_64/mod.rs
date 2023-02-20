@@ -235,17 +235,27 @@ pub fn enable_acpi() {
     aml::get_subsystem().enable_acpi(INTERRUPT_CONTROLLER.method() as _);
 }
 
+fn enable_xsave() {
+    use controlregs::XCr0Flags;
+
+    // Enable XSAVE and x{get,set}bv
+    let mut cr4 = controlregs::read_cr4();
+    cr4.insert(controlregs::Cr4Flags::OSXSAVE);
+    unsafe { controlregs::write_cr4(cr4) }
+
+    let mut xcr0 = controlregs::read_xcr0();
+    xcr0.insert(XCr0Flags::X87 | XCr0Flags::SSE);
+    unsafe { controlregs::write_xcr0(xcr0) }
+}
+
 pub fn init_cpu() {
     unsafe {
         // Enable the no-execute page protection feature.
         io::wrmsr(io::IA32_EFER, io::rdmsr(io::IA32_EFER) | 1 << 11);
 
-        // Check if SSE is supported. SSE support is a requirement for running Aero.
-        let has_sse = CpuId::new()
-            .get_feature_info()
-            .map_or(false, |i| i.has_sse());
+        let features = CpuId::new().get_feature_info().unwrap();
 
-        assert!(has_sse);
+        assert!(features.has_sse());
 
         {
             let mut cr0 = controlregs::read_cr0();
@@ -264,5 +274,8 @@ pub fn init_cpu() {
 
             controlregs::write_cr4(cr4);
         }
+
+        assert!(features.has_xsave(), "init: xsave not supported!");
+        enable_xsave();
     }
 }
