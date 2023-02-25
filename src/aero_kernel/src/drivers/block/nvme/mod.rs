@@ -525,7 +525,7 @@ impl PciDeviceHandle for Handler<'static> {
 }
 
 fn irq_handler(_stack: &mut InterruptStack) {
-    unimplemented!("nvme: interrupt handler!")
+    // unimplemented!("nvme: interrupt handler!")
 }
 
 fn nvme_init() {
