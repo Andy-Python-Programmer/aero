@@ -598,17 +598,30 @@ impl PciHeader {
     }
 
     unsafe fn write<T>(&self, offset: u32, value: u32) {
+        let current = self.read::<u32>(offset);
+
         let bus = self.bus() as u32;
         let device = self.device() as u32;
         let func = self.function() as u32;
+
         let address = (bus << 16) | (device << 11) | (func << 8) | (offset & 0xFC) | 0x80000000;
+        let noffset = (offset & 0b11) * 8;
 
         io::outl(PCI_CONFIG_ADDRESS_PORT, address);
-
         match core::mem::size_of::<T>() {
-            1 => io::outb(PCI_CONFIG_DATA_PORT, value as u8), // u8
-            2 => io::outw(PCI_CONFIG_DATA_PORT, value as u16), // u16
-            4 => io::outl(PCI_CONFIG_DATA_PORT, value),       // u32
+            1 => {
+                let mask = !(0xffu32 << offset);
+                let value = (current & mask) | ((value & 0xff) << offset);
+                io::outl(PCI_CONFIG_DATA_PORT, value)
+            } // u8
+
+            2 => {
+                let mask = !(0xffffu32 << noffset);
+                let value = (current & mask) | ((value & 0xffff) << noffset);
+                io::outl(PCI_CONFIG_DATA_PORT, value)
+            } // u16
+
+            4 => io::outl(PCI_CONFIG_DATA_PORT, value), // u32
             width => unreachable!("unknown PCI write width: `{}`", width),
         }
     }
