@@ -124,6 +124,7 @@ impl<'a> Msix<'a> {
             message_control.set_bit(15, true); // enable MSI-X
             message_control.set_bit(14, false); // function mask
 
+            header.disable_legacy_irq();
             header.write::<u16>(offset + 2, message_control as u32);
         }
 
@@ -647,6 +648,15 @@ impl PciHeader {
         let command = unsafe { self.read::<u16>(0x04) };
 
         unsafe { self.write::<u16>(0x04, command | (1 << 2)) }
+    }
+
+    pub fn disable_legacy_irq(&self) {
+        // Set the Interrupt Disable bit, which is bit 10 of the Command register
+        // (at Configuration Space offset 0x4) to disable legacy interrupts.
+        let mut command = unsafe { self.read::<u16>(0x04) };
+        command.set_bit(10, true);
+
+        unsafe { self.write::<u16>(0x04, command) }
     }
 
     /// Returns the value stored in the PCI vendor ID register which is used to identify
