@@ -47,6 +47,13 @@ bitflags::bitflags! {
     }
 }
 
+#[repr(u32)]
+pub enum DeliveryMode {
+    /// Deliver the signal to all the agents listed in the destination. The Trigger Mode for
+    /// fixed delivery mode can be edge or level.
+    Fixed = 0b000,
+}
+
 #[repr(C)]
 struct Message {
     addr_lower: VolatileCell<u32>,
@@ -62,13 +69,18 @@ impl Message {
 
     fn set_masked(&self, masked: bool) {
         self.mask.set(*self.mask.get().set_bit(0, masked));
+        self.mask.set(*self.mask.get().set_bit(30, masked));
     }
 
-    fn set(&mut self, vector: u8) {
+    fn set(&mut self, vector: u8, delivery_mode: DeliveryMode) {
         assert!(self.is_masked(), "msix: message is unmasked");
 
         let mut data = 0;
         data.set_bits(0..8, vector as u32);
+        data.set_bits(8..11, delivery_mode as u32);
+        data.set_bit(14, false);
+        data.set_bit(15, false);
+        data.set_bits(16..32, 0);
 
         let mut addr = 0;
         addr.set_bits(12..20, apic::get_bsp_id() as u32);
@@ -143,7 +155,7 @@ impl<'a> Msix<'a> {
         self.table.set(msix_vector, true);
 
         let message = &mut self.messages[msix_vector];
-        message.set(vector);
+        message.set(vector, DeliveryMode::Fixed);
         message.set_masked(false);
 
         msix_vector
