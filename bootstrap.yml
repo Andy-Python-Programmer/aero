@@ -1,5 +1,6 @@
 imports:
   - file: bootstrap/xorg.yml
+  - file: bootstrap/net.yml
 
 general:
   cargo:

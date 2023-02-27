@@ -409,7 +409,7 @@ impl INodeInterface for UnixSocket {
         Ok(header
             .iovecs_mut()
             .iter_mut()
-            .map(|iovec| buffer.read(iovec.as_mut_slice()))
+            .map(|iovec| buffer.read(iovec.as_slice_mut()))
             .sum::<usize>())
     }
 

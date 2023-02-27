@@ -6,3 +6,17 @@ edition = "2021"
 
 [dependencies]
 bitflags = "1.2.1"
+num-derive = { version = "0.3", default-features = false }
+num-traits = { version = "0.2", default-features = false }
+simple_endian = { git = "https://github.com/michalfita/simple-endian-rs", branch = "bugfix/4/fix-no_std-support-right-way", default_features = false, features = [
+    "bitwise",
+    "comparisons",
+    "format",
+    "math_ops",
+    "neg_ops",
+    "shift_ops",
+    "both_endian",
+    "float_impls",
+    "integer_impls",
+    "byte_impls",
+] }

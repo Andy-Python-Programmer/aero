@@ -19,7 +19,6 @@ version = "0.1.0"
 dependencies = [
  "aero_ipc",
  "aero_syscall",
- "libc 0.2.125",
 ]
 
 [[package]]
@@ -27,6 +26,9 @@ name = "aero_syscall"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "num-derive",
+ "num-traits",
+ "simple_endian",
 ]
 
 [[package]]
@@ -86,7 +88,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c05aeb6a22b8f62540c194aac980f2115af067bfe15a0734d7277a768d396b31"
 dependencies = [
  "cfg-if",
- "libc 0.2.139",
+ "libc",
  "wasi",
 ]
 
@@ -127,7 +129,6 @@ name = "init"
 version = "0.1.0"
 dependencies = [
  "aero_syscall",
- "libc 0.2.125",
 ]
 
 [[package]]
@@ -138,11 +139,6 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 dependencies = [
  "spin 0.5.2",
 ]
-
-[[package]]
-name = "libc"
-version = "0.2.125"
-source = "git+https://github.com/andy-Python-Programmer/libc#403b85dfae3708de1328a8c4b246c437194b8e6d"
 
 [[package]]
 name = "libc"
@@ -158,6 +154,26 @@ checksum = "435011366fe56583b16cf956f9df0095b405b82d76425bc8981c0e22e60ec4df"
 dependencies = [
  "autocfg",
  "scopeguard",
+]
+
+[[package]]
+name = "num-derive"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
+dependencies = [
+ "autocfg",
 ]
 
 [[package]]
@@ -241,6 +257,11 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "simple_endian"
+version = "0.2.1"
+source = "git+https://github.com/michalfita/simple-endian-rs?branch=bugfix/4/fix-no_std-support-right-way#7210f40881d16f7f2e3d8d40f6381fa222843caa"
 
 [[package]]
 name = "spin"

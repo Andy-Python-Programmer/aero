@@ -244,6 +244,10 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSocket)
     }
 
+    fn send(&self, _message_hdr: &mut MessageHeader) -> Result<usize> {
+        Err(FileSystemError::NotSupported)
+    }
+
     fn recv(&self, _message_header: &mut MessageHeader, _non_block: bool) -> Result<usize> {
         Err(FileSystemError::NotSocket)
     }

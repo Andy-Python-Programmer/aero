@@ -42,10 +42,22 @@ static_assertions = "1.1.0"
 lru = "0.8.0"
 bytemuck = "1.12.1"
 # the crate is not mainted but who cares it works (tm)!
-simple_endian = { git = "https://github.com/michalfita/simple-endian-rs", branch = "bugfix/4/fix-no_std-support-right-way", default_features = false, features = ["bitwise", "comparisons", "format", "math_ops", "neg_ops", "shift_ops", "both_endian", "float_impls", "integer_impls", "byte_impls"] }
-byteorder = { version = "*", default-features=false}
+simple_endian = { git = "https://github.com/michalfita/simple-endian-rs", branch = "bugfix/4/fix-no_std-support-right-way", default_features = false, features = [
+    "bitwise",
+    "comparisons",
+    "format",
+    "math_ops",
+    "neg_ops",
+    "shift_ops",
+    "both_endian",
+    "float_impls",
+    "integer_impls",
+    "byte_impls",
+] }
+byteorder = { version = "*", default-features = false }
 limine = { git = "https://github.com/limine-bootloader/limine-rs" }
 cfg-if = "1.0"
+num-traits = { version = "0.2", default-features = false }
 
 # X86_64 specific dependencies:
 [target.'cfg(target_arch = "x86_64")'.dependencies]

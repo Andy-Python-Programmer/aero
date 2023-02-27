@@ -1,0 +1,29 @@
+packages:
+  - name: dhcpd
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/Andy-Python-Programmer/dhcpd'
+      branch: 'main'
+    tools_required:
+      - host-rust
+      - host-gcc
+    sources_required:
+      - rust-patched-libs
+    pkgs_required:
+      - mlibc
+    configure:
+      - args: ['python3', '@SOURCE_ROOT@/tools/cargo-inject-patches.py', '@THIS_SOURCE_DIR@/Cargo.toml']
+    build:
+      - args:
+        - 'cargo'
+        - 'install'
+        - '--locked'
+        - '--target-dir'
+        - '@THIS_BUILD_DIR@'
+        - '--path'
+        - '@THIS_SOURCE_DIR@'
+        - '--root'
+        - '@THIS_COLLECT_DIR@/usr'
+        - '-j@PARALLELISM@'
+        environ:
+          RUSTFLAGS: '-Cforce-frame-pointers=yes -Clink-args=-no-pie'

@@ -27,11 +27,15 @@ use super::*;
 pub const ADDR_SIZE: usize = 4;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
+#[repr(C)]
 pub struct Ipv4Addr(pub [u8; ADDR_SIZE]);
 
 impl Ipv4Addr {
     pub const BROADCAST: Self = Self([0xff; ADDR_SIZE]);
-    pub const EMPTY: Self = Self([0x00; ADDR_SIZE]);
+
+    pub fn new(addr: [u8; ADDR_SIZE]) -> Self {
+        Self(addr)
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -89,8 +93,7 @@ impl Packet<Ipv4> {
 
         // FIXME: Set the source IPv4 address.
         header.src_ip = Ipv4Addr([0; 4]);
-
-        // TODO: Header checksum
+        header.hcrc = checksum::make(checksum::calculate(header));
         packet
     }
 }
@@ -98,14 +101,6 @@ impl Packet<Ipv4> {
 impl PacketUpHierarchy<Ipv4> for Packet<Eth> {}
 impl PacketHeader<Header> for Packet<Ipv4> {
     fn send(&self) {
-        {
-            let mut this = self.clone();
-            let header = this.header_mut();
-            {
-                header.hcrc = BigEndian::from(0);
-                // FIXME:
-            }
-        }
         self.downgrade().send() // send the ethernet packet
     }
 }

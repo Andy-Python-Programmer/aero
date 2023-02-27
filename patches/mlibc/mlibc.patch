@@ -1,6 +1,6 @@
-From f4c7bb3f8556d4f50fe132109de2dfedfccac293 Mon Sep 17 00:00:00 2001
+From a5ec321f99ccfe66889e802626230a792a3d7140 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Mon, 20 Feb 2023 18:40:41 +1100
+Date: Sun, 26 Feb 2023 17:20:53 +1100
 Subject: [PATCH] <xxx>
 
 ---
@@ -12,11 +12,11 @@ Subject: [PATCH] <xxx>
  options/rtdl/generic/linker.cpp       |   2 +-
  sysdeps/aero/generic/aero.cpp         |  77 +++++++----
  sysdeps/aero/generic/filesystem.cpp   |  51 ++++++-
- sysdeps/aero/generic/sockets.cpp      |  87 +++++++++++-
+ sysdeps/aero/generic/sockets.cpp      |  96 ++++++++++++-
  sysdeps/aero/generic/time.cpp         |  24 ++++
- sysdeps/aero/include/aero/syscall.h   |  10 ++
+ sysdeps/aero/include/aero/syscall.h   |  11 ++
  sysdeps/aero/meson.build              |   1 +
- 12 files changed, 402 insertions(+), 47 deletions(-)
+ 12 files changed, 412 insertions(+), 47 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -524,17 +524,18 @@ index a3e2aca..8a1e086 100644
 +#endif
  } // namespace mlibc
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index b6b18fe..b4635df 100644
+index b6b18fe..0ee0838 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
-@@ -1,5 +1,6 @@
+@@ -1,5 +1,7 @@
  #include <mlibc/all-sysdeps.hpp>
  #include <mlibc/thread-entry.hpp>
 +#include <mlibc/debug.hpp>
++#include<abi-bits/in.h>
  
  #include <aero/syscall.h>
  #include <stdint.h>
-@@ -46,8 +47,8 @@ int sys_listen(int fd, int backlog) {
+@@ -46,8 +48,8 @@ int sys_listen(int fd, int backlog) {
      return 0;
  }
  
@@ -545,11 +546,19 @@ index b6b18fe..b4635df 100644
  
      if (result < 0) {
          return -result;
-@@ -56,4 +57,86 @@ int sys_accept(int fd, int *newfd) {
+@@ -56,4 +58,94 @@ int sys_accept(int fd, int *newfd) {
      *newfd = result;
      return 0;
  }
 +
++int sys_msg_send(int fd, const struct msghdr *hdr, int flags, ssize_t *length) {
++	auto result = syscall(SYS_SOCK_SEND, fd, hdr, flags);
++	if (result < 0)
++		return -result;
++
++	*length = result;
++	return 0;
++}
 +
 +int sys_msg_recv(int sockfd, struct msghdr *msg_hdr, int flags, ssize_t *length) {
 +	auto result = syscall(SYS_SOCK_RECV, sockfd, msg_hdr, flags);
@@ -664,10 +673,10 @@ index 0000000..460412d
 +}
 \ No newline at end of file
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 12f8dc6..78fc99d 100644
+index 12f8dc6..432bad2 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -64,6 +64,16 @@
+@@ -64,6 +64,17 @@
  #define SYS_FUTEX_WAIT 57
  #define SYS_FUTEX_WAKE 58
  #define SYS_LINK 59
@@ -681,6 +690,7 @@ index 12f8dc6..78fc99d 100644
 +#define SYS_SOCKET_PAIR 67
 +#define SYS_RENAME 68
 +#define SYS_MPROTECT 69
++#define SYS_SOCK_SEND 70
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.

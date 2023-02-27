@@ -23,7 +23,7 @@ use alloc::{sync::Arc, vec::Vec};
 use spin::RwLock;
 
 pub mod arp;
-pub mod dhcp;
+mod checksum;
 pub mod ethernet;
 pub mod ip;
 pub mod udp;
@@ -78,6 +78,15 @@ pub trait PacketBaseTrait {
 
 pub trait PacketTrait: PacketBaseTrait {
     fn header_size(&self) -> usize;
+
+    fn as_slice_mut(&mut self) -> &mut [u8] {
+        let hsize = self.header_size();
+
+        let start = self.addr() + hsize;
+        let size = self.len() - hsize;
+
+        unsafe { core::slice::from_raw_parts_mut(start.as_mut_ptr(), size) }
+    }
 }
 
 impl<T: ConstPacketKind> PacketTrait for Packet<T> {
@@ -184,5 +193,4 @@ pub fn init() {
 
     arp::init();
     log::info!("net::arp: initialized cache");
-    dhcp::init();
 }

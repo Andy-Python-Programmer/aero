@@ -20,11 +20,16 @@
 #![no_std]
 #![feature(decl_macro)]
 
+#[macro_use]
+extern crate num_derive;
+
 pub mod consts;
 pub mod signal;
 pub mod socket;
 pub mod syscall;
 pub mod time;
+
+use simple_endian::BigEndian;
 
 pub use crate::syscall::*;
 
@@ -665,28 +670,67 @@ impl Default for SocketAddrUnix {
 
 #[derive(Debug, Clone)]
 #[repr(C)]
+pub struct InAddr {
+    pub addr: u32,
+}
+
+#[derive(Debug, Clone)]
+#[repr(C)]
 pub struct SocketAddrInet {
     pub family: u32,
-    pub port: [u8; 2],
-    pub address: [u8; 4],
+    pub port: BigEndian<u16>,
+    pub sin_addr: InAddr,
     pub padding: [u8; 8],
+}
+
+impl SocketAddrInet {
+    pub fn addr(&self) -> [u8; 4] {
+        self.sin_addr.addr.to_be_bytes()
+    }
 }
 
 impl SocketAddr for SocketAddrUnix {}
 impl SocketAddr for SocketAddrInet {}
 
-// constants for the socket types:
-//
-// mlibc/sysdeps/aero/include/abi-bits/socket.h
-pub const SOCK_DGRAM: usize = 1;
-pub const SOCK_RAW: usize = 2;
-pub const SOCK_SEQPACKET: usize = 3;
-pub const SOCK_STREAM: usize = 4;
+// mlibc/abi-bits/mlibc/in.h
+#[derive(Debug, Copy, Clone, FromPrimitive, PartialEq)]
+pub enum IpProtocol {
+    Default = 0,
+    Ip = 1,
+    Ipv6 = 2,
+    Icmp = 3,
+    Raw = 4,
+    Tcp = 5,
+    Udp = 6,
+    Igmp = 7,
+    Ipip = 8,
+    Dccp = 33,
+    Routing = 43,
+    Gre = 47,
+    Esp = 50,
+    Ah = 51,
+    Icmpv6 = 58,
+    Dstopts = 60,
+    Comp = 108,
+    Sctp = 132,
+    Max = 256,
+}
+
+// mlibc/abi-bits/mlibc/socket.h
+#[derive(Debug, Copy, Clone, FromPrimitive, PartialEq)]
+pub enum SocketType {
+    Dgram = 1,
+    Raw = 2,
+    SeqPacket = 3,
+    Stream = 4,
+    Dccp = 5,
+}
 
 bitflags::bitflags! {
     pub struct SocketFlags: usize {
         const NONBLOCK = 0x10000;
-        const CLOEXEC = 0x20000;
+        const CLOEXEC  = 0x20000;
+        const RDM      = 0x40000;
     }
 }
 

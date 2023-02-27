@@ -53,7 +53,12 @@ pub struct IoVec {
 }
 
 impl IoVec {
-    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+    pub fn as_slice(&self) -> &[u8] {
+        // SAFETY: We know that the `base` pointer is valid and initialized.
+        unsafe { core::slice::from_raw_parts_mut(self.base, self.len) }
+    }
+
+    pub fn as_slice_mut(&mut self) -> &mut [u8] {
         // SAFETY: We know that the `base` pointer is valid, initialized and we have
         // exclusive access so, its safe to construct a mutable slice from it.
         unsafe { core::slice::from_raw_parts_mut(self.base, self.len) }

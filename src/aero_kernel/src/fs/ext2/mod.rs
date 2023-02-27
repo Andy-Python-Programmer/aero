@@ -549,6 +549,14 @@ impl INodeInterface for INode {
         return Err(FileSystemError::NotSupported);
     }
 
+    fn send(&self, message_header: &mut MessageHeader) -> super::Result<usize> {
+        if let Some(proxy) = self.proxy.as_ref() {
+            return proxy.send(message_header);
+        }
+
+        return Err(FileSystemError::NotSupported);
+    }
+
     fn recv(&self, message_header: &mut MessageHeader, non_block: bool) -> super::Result<usize> {
         if let Some(proxy) = self.proxy.as_ref() {
             return proxy.recv(message_header, non_block);

@@ -25,7 +25,6 @@ use std::io::{BufRead, BufReader};
 use std::fs::File;
 
 use std::fs;
-use std::process;
 
 use aero_ipc::SystemService;
 use aero_syscall::*;
@@ -440,19 +439,18 @@ fn uname() -> Result<(), SyscallError> {
     Ok(())
 }
 
-fn handle_segmentation_fault(_fault: usize) {
-    error!("segmentation fault");
-    process::exit(1);
-}
+// fn handle_segmentation_fault(_fault: usize) {
+//     error!("segmentation fault");
+//     process::exit(1);
+// }
 
-/// Sets the disposition of the signal number to handler.
-fn install_sighandler(signum: libc::c_int, handler: fn(usize)) -> libc::sighandler_t {
-    unsafe { libc::signal(signum, handler as libc::sighandler_t) }
-}
+// fn install_sighandler(signum: libc::c_int, handler: fn(usize)) -> libc::sighandler_t {
+//     unsafe { libc::signal(signum, handler as libc::sighandler_t) }
+// }
 
 fn main() {
     // install all the necessary signal handlers.
-    install_sighandler(libc::SIGSEGV, handle_segmentation_fault);
+    // install_sighandler(libc::SIGSEGV, handle_segmentation_fault);
 
     let mut history = vec![];
 

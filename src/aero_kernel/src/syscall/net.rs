@@ -1,10 +1,15 @@
+use num_traits::cast::FromPrimitive;
+
 use aero_syscall::socket::MessageHeader;
 use aero_syscall::*;
+use alloc::sync::Arc;
 
 use crate::fs::cache::DirCacheItem;
 use crate::fs::inode::DirEntry;
+use crate::fs::inode::INodeInterface;
 use crate::mem::paging::VirtAddr;
 
+use crate::socket::inet::InetSocket;
 use crate::socket::unix::*;
 use crate::socket::SocketAddr;
 
@@ -62,6 +67,23 @@ pub fn accept(fd: usize, address: usize, length: usize) -> Result<usize, Syscall
 }
 
 #[syscall]
+pub fn sock_send(
+    fd: usize,
+    header: &mut MessageHeader,
+    flags: usize,
+) -> Result<usize, SyscallError> {
+    assert!(flags == 0, "sock_send: flags are not currently supported");
+
+    let current_task = scheduler::get_scheduler().current_task();
+    let socket = current_task
+        .file_table
+        .get_handle(fd)
+        .ok_or(SyscallError::EINVAL)?;
+
+    Ok(socket.inode().send(header)?)
+}
+
+#[syscall]
 pub fn sock_recv(
     sockfd: usize,
     header: &mut MessageHeader,
@@ -98,11 +120,16 @@ fn create_socket(
     socket_type: usize,
     protocol: usize,
 ) -> Result<DirCacheItem, SyscallError> {
+    let typ = SocketType::from_usize(socket_type).ok_or(SyscallError::EINVAL)?;
+    let protocol = IpProtocol::from_usize(protocol).ok_or(SyscallError::EINVAL)?;
+
     let socket = match domain as u32 {
-        AF_UNIX => UnixSocket::new(),
+        AF_UNIX => UnixSocket::new() as Arc<dyn INodeInterface>,
+        PF_INET => InetSocket::new(typ, protocol)? as Arc<dyn INodeInterface>,
+
         _ => {
             log::warn!(
-                "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol}"
+                "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol:?}"
             );
 
             return Err(SyscallError::EINVAL);

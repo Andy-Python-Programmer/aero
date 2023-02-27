@@ -34,6 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     mem::forget(OpenOptions::new().write(true).open(TTY_PATH)?); // fd=1 for stdout
     mem::forget(OpenOptions::new().write(true).open(TTY_PATH)?); // fd=2 for stderr
 
+    Command::new("dhcpd").spawn()?;
     Command::new("startx")
         .env("RUST_BACKTRACE", "full")
         .spawn()?;
