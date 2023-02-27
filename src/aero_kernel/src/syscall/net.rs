@@ -97,8 +97,7 @@ pub fn sock_recv(
         .get_handle(sockfd)
         .ok_or(SyscallError::EINVAL)?;
 
-    let non_block = socket.flags.read().contains(OpenFlags::O_NONBLOCK);
-    Ok(socket.inode().recv(header, non_block)?)
+    Ok(socket.inode().recv(header)?)
 }
 
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming

@@ -388,7 +388,7 @@ impl INodeInterface for UnixSocket {
         Ok(sock)
     }
 
-    fn recv(&self, header: &mut MessageHeader, non_block: bool) -> fs::Result<usize> {
+    fn recv(&self, header: &mut MessageHeader) -> fs::Result<usize> {
         let inner = self.inner.lock_irq();
 
         let peer = match &inner.state {
@@ -396,7 +396,7 @@ impl INodeInterface for UnixSocket {
             _ => return Err(FileSystemError::NotConnected),
         };
 
-        if self.buffer.lock_irq().is_empty() && non_block {
+        if self.buffer.lock_irq().is_empty() && self.is_non_block() {
             return Err(FileSystemError::WouldBlock);
         }
 
