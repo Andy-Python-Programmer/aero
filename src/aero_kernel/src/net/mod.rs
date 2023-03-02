@@ -79,6 +79,7 @@ pub trait PacketBaseTrait {
 pub trait PacketTrait: PacketBaseTrait {
     fn header_size(&self) -> usize;
 
+    // TODO: Rename as_slice{_mut} to payload{_mut}?
     fn as_slice_mut(&mut self) -> &mut [u8] {
         let hsize = self.header_size();
 
@@ -86,6 +87,15 @@ pub trait PacketTrait: PacketBaseTrait {
         let size = self.len() - hsize;
 
         unsafe { core::slice::from_raw_parts_mut(start.as_mut_ptr(), size) }
+    }
+
+    fn as_slice(&self) -> &[u8] {
+        let hsize = self.header_size();
+
+        let start = self.addr() + hsize;
+        let size = self.len() - hsize;
+
+        unsafe { core::slice::from_raw_parts(start.as_ptr(), size) }
     }
 }
 
@@ -138,6 +148,7 @@ pub trait PacketDownHierarchy<B: ConstPacketKind>: PacketBaseTrait {
 
 pub trait PacketHeader<H>: PacketBaseTrait {
     fn send(&self);
+    fn recv(&self);
 
     fn header(&self) -> &H {
         self.addr().read_mut::<H>().unwrap()
@@ -155,9 +166,8 @@ fn packet_processor_thread() {
     let device = default_device();
 
     loop {
-        log::debug!("bruh!");
         let packet = device.recv();
-        log::debug!("{packet:?}");
+        packet.packet.recv();
     }
 }
 

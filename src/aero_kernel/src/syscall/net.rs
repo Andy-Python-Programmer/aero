@@ -124,7 +124,7 @@ fn create_socket(
 
     let socket = match domain as u32 {
         AF_UNIX => UnixSocket::new() as Arc<dyn INodeInterface>,
-        PF_INET => InetSocket::new(typ, protocol)? as Arc<dyn INodeInterface>,
+        AF_INET => InetSocket::new(typ, protocol)? as Arc<dyn INodeInterface>,
 
         _ => {
             log::warn!(

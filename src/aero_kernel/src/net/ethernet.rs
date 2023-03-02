@@ -85,4 +85,13 @@ impl PacketHeader<Header> for Packet<Eth> {
             super::default_device().send(packet);
         }
     }
+
+    fn recv(&self) {
+        match self.header().typ {
+            Type::Ip => {
+                let packet: Packet<ip::Ipv4> = self.upgrade();
+                packet.recv()
+            }
+        }
+    }
 }

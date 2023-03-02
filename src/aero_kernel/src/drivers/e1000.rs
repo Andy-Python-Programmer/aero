@@ -592,7 +592,7 @@ impl Device {
     }
 
     fn handle_irq(&self) {
-        self.e1000.lock().handle_irq()
+        self.e1000.lock_irq().handle_irq()
     }
 }
 

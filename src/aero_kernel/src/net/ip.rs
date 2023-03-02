@@ -63,6 +63,10 @@ impl Header {
     fn set_length(&mut self, length: u16) {
         self.length = BigEndian::from(length);
     }
+
+    fn length(&self) -> BigEndian<u16> {
+        self.length
+    }
 }
 
 #[derive(Clone)]
@@ -102,5 +106,18 @@ impl PacketUpHierarchy<Ipv4> for Packet<Eth> {}
 impl PacketHeader<Header> for Packet<Ipv4> {
     fn send(&self) {
         self.downgrade().send() // send the ethernet packet
+    }
+
+    fn recv(&self) {
+        let mut packet = self.clone();
+        let header = self.header();
+
+        packet.len = header.length().to_native() as usize;
+        match header.protocol {
+            Type::Udp => {
+                let packet: Packet<udp::Udp> = packet.upgrade();
+                packet.recv();
+            }
+        }
     }
 }

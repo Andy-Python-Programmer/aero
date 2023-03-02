@@ -17,16 +17,20 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::{IpProtocol, SocketAddrInet, SocketType, SyscallError};
+use aero_syscall::socket::MessageHeader;
+use aero_syscall::{IpProtocol, OpenFlags, SocketAddrInet, SocketType, SyscallError};
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
+use spin::Once;
 
-use crate::fs::inode::{FileType, INodeInterface, Metadata};
+use crate::fs::cache::DirCacheItem;
+use crate::fs::file_table::FileHandle;
+use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
 use crate::fs::{self, FileSystemError};
 use crate::net::ip::Ipv4Addr;
 use crate::net::udp::{self, Udp, UdpHandler};
 use crate::net::{Packet, PacketHeader, PacketTrait};
-use crate::utils::sync::Mutex;
+use crate::utils::sync::{BlockQueue, Mutex};
 
 #[derive(Default)]
 enum SocketState {
@@ -41,21 +45,31 @@ struct InetSocketInner {
     /// The address that the socket has been bound to.
     address: Option<SocketAddrInet>,
     state: SocketState,
+    incoming: Vec<Packet<Udp>>,
 }
 
 pub struct InetSocket {
     typ: SocketType,
     protocol: IpProtocol,
     inner: Mutex<InetSocketInner>,
+    wq: BlockQueue,
+    handle: Once<Arc<FileHandle>>,
 
     sref: Weak<Self>,
 }
 
 impl InetSocket {
     pub fn new(typ: SocketType, protocol: IpProtocol) -> Result<Arc<Self>, SyscallError> {
+        if typ != SocketType::Dgram && protocol != IpProtocol::Udp {
+            return Err(SyscallError::EINVAL);
+        }
+
         Ok(Arc::new_cyclic(|sref| Self {
             typ,
             protocol,
+
+            wq: BlockQueue::new(),
+            handle: Once::new(),
 
             inner: Mutex::new(Default::default()),
             sref: sref.clone(),
@@ -88,9 +102,27 @@ impl InetSocket {
             _ => unreachable!(),
         }
     }
+
+    pub fn is_non_block(&self) -> bool {
+        self.handle
+            .get()
+            .expect("inet: not bound to an fd")
+            .flags
+            .read()
+            .contains(OpenFlags::O_NONBLOCK)
+    }
 }
 
 impl INodeInterface for InetSocket {
+    fn open(
+        &self,
+        _flags: aero_syscall::OpenFlags,
+        handle: Arc<FileHandle>,
+    ) -> fs::Result<Option<DirCacheItem>> {
+        self.handle.call_once(|| handle);
+        Ok(None)
+    }
+
     fn metadata(&self) -> fs::Result<fs::inode::Metadata> {
         Ok(Metadata {
             id: 0,
@@ -130,7 +162,7 @@ impl INodeInterface for InetSocket {
         }
     }
 
-    fn send(&self, message_hdr: &mut aero_syscall::socket::MessageHeader) -> fs::Result<usize> {
+    fn send(&self, message_hdr: &mut MessageHeader) -> fs::Result<usize> {
         let name = message_hdr
             .name_mut::<SocketAddrInet>()
             .cloned()
@@ -139,9 +171,17 @@ impl INodeInterface for InetSocket {
         let dest_port = name.port.to_native();
         let dest_ip = Ipv4Addr::new(name.addr());
 
-        let src_port = self.src_port().unwrap_or_else(|| {
-            udp::alloc_ephemeral_port(self.sref()).expect("inet: out of ephemeral ports")
-        });
+        let src_port;
+
+        if let Some(port) = self.src_port() {
+            src_port = port;
+        } else {
+            src_port = udp::alloc_ephemeral_port(self.sref()).ok_or(FileSystemError::WouldBlock)?;
+            log::debug!("Inet::send(): allocated ephemeral port {}", src_port);
+
+            // FIXME: handle ephemeral port INET socket
+            return Err(FileSystemError::NotSupported);
+        }
 
         let data = message_hdr
             .iovecs()
@@ -159,6 +199,41 @@ impl INodeInterface for InetSocket {
         packet.send();
         Ok(data.len())
     }
+
+    fn recv(&self, message_hdr: &mut MessageHeader) -> fs::Result<usize> {
+        if self.inner.lock_irq().incoming.is_empty() && self.is_non_block() {
+            return Err(FileSystemError::WouldBlock);
+        }
+
+        let mut this = self.wq.block_on(&self.inner, |e| !e.incoming.is_empty())?;
+        let packet = this.incoming.pop().expect("recv: someone was greedy");
+
+        let mut data = packet.as_slice().to_vec();
+
+        Ok(message_hdr
+            .iovecs_mut()
+            .iter_mut()
+            .map(|iovec| {
+                let iovec = iovec.as_slice_mut();
+                let size = core::cmp::min(iovec.len(), data.len());
+                iovec.copy_from_slice(&data.drain(..size).collect::<Vec<_>>());
+                size
+            })
+            .sum::<usize>())
+    }
+
+    fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {
+        if let Some(table) = table {
+            table.insert(&self.wq);
+        }
+
+        Ok(PollFlags::OUT)
+    }
 }
 
-impl UdpHandler for InetSocket {}
+impl UdpHandler for InetSocket {
+    fn recv(&self, packet: Packet<Udp>) {
+        self.inner.lock_irq().incoming.push(packet);
+        self.wq.notify_complete();
+    }
+}

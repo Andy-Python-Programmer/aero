@@ -62,6 +62,18 @@ impl PacketHeader<Header> for Packet<Udp> {
 
         self.downgrade().send() // send the IP packet
     }
+
+    fn recv(&self) {
+        let header = self.header();
+        let dest_port = header.dst_port().to_native();
+
+        let handlers = HANDLERS.read();
+        let handler = handlers
+            .get(&dest_port)
+            .expect("udp: no handler registered");
+
+        handler.recv(self.clone())
+    }
 }
 
 #[repr(C, packed)]
@@ -82,11 +94,17 @@ impl Header {
             checksum::calculate_with_len(self, length.to_native() as usize),
         ]);
     }
+
+    fn dst_port(&self) -> BigEndian<u16> {
+        self.dst_port
+    }
 }
 
 static HANDLERS: RwLock<BTreeMap<u16, Arc<dyn UdpHandler>>> = RwLock::new(BTreeMap::new());
 
-pub trait UdpHandler: Send + Sync {}
+pub trait UdpHandler: Send + Sync {
+    fn recv(&self, packet: Packet<Udp>);
+}
 
 pub fn alloc_ephemeral_port(socket: Arc<dyn UdpHandler>) -> Option<u16> {
     const EPHEMERAL_START: u16 = 49152;

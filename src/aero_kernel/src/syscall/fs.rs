@@ -381,7 +381,7 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
 
         aero_syscall::prelude::F_SETFL => {
             let flags = OpenFlags::from_bits_truncate(arg);
-            handle.flags.write().insert(flags);
+            *handle.flags.write() = flags;
 
             Ok(0)
         }
