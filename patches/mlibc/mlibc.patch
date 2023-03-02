@@ -255,18 +255,6 @@ index c0e54fe..6d9cc52 100644
  	// TODO: Print PID only if POSIX option is enabled.
  	if (mlibc::globalConfig().debugMalloc)
  		mlibc::infoLogger() << "mlibc (PID ?): malloc() returns "
-diff --git a/options/ansi/meson.build b/options/ansi/meson.build
-index 0820de3..afd8bbe 100644
---- a/options/ansi/meson.build
-+++ b/options/ansi/meson.build
-@@ -47,6 +47,7 @@ if not no_headers
- 	install_headers(
- 		'include/bits/ansi/timespec.h',
- 		'include/bits/ansi/time_t.h',
-+		'include/bits/ansi/fenv.h',
- 		subdir: 'bits/ansi'
- 	)
- endif
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
 index 3474615..10a2109 100644
 --- a/options/glibc/generic/execinfo.cpp
