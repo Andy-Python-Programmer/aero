@@ -19,13 +19,12 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use aero_syscall::prelude::FdFlags;
 use aero_syscall::{OpenFlags, SysDirEntry};
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
-use spin::{Mutex, RwLock};
+use spin::RwLock;
 
 use crate::fs::cache::DirCacheImpl;
 
@@ -46,7 +45,6 @@ pub struct FileHandle {
     // is duplicated, the `offset` needs to be in sync with the parent.
     pub offset: Arc<AtomicUsize>,
     pub flags: RwLock<OpenFlags>,
-    pub fd_flags: Mutex<FdFlags>,
 }
 
 impl FileHandle {
@@ -57,7 +55,6 @@ impl FileHandle {
             inode: inode.clone(),
             offset: Arc::new(AtomicUsize::new(0)),
             flags: RwLock::new(flags),
-            fd_flags: Mutex::new(FdFlags::empty()),
         }
     }
 
@@ -129,7 +126,6 @@ impl FileHandle {
             inode: self.inode.clone(),
             offset: self.offset.clone(),
             flags: RwLock::new(flags),
-            fd_flags: Mutex::new(self.fd_flags.lock().clone()),
         });
 
         new.inode.inode().open(flags, new.clone())?;
@@ -228,9 +224,7 @@ impl FileTable {
             if let Some(handle) = file {
                 let flags = *handle.flags.read();
 
-                if flags.contains(OpenFlags::O_CLOEXEC)
-                    || handle.fd_flags.lock().contains(FdFlags::CLOEXEC)
-                {
+                if flags.contains(OpenFlags::O_CLOEXEC) {
                     handle.inode().close(flags);
                     *file = None;
                 }

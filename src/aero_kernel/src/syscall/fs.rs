@@ -236,7 +236,7 @@ pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, Syscal
         // Sets the close-on-exec file descriptor flag. This is equivalent
         // to `fcntl(fd, F_SETFD, FD_CLOEXEC)`
         FIOCLEX => {
-            handle.fd_flags.lock().insert(FdFlags::CLOEXEC);
+            handle.flags.write().insert(OpenFlags::O_CLOEXEC);
             Ok(0)
         }
 
@@ -327,6 +327,14 @@ pub fn access(fd: usize, path: &Path, _mode: usize, _flags: usize) -> Result<usi
     }
 }
 
+const SETFL_MASK: OpenFlags = OpenFlags::from_bits_truncate(
+    OpenFlags::O_APPEND.bits()
+        | OpenFlags::O_NONBLOCK.bits()
+        // | OpenFlags::O_NDELAY.bits()
+        | OpenFlags::O_DIRECT.bits()
+        | OpenFlags::O_NOATIME.bits(),
+);
+
 #[syscall]
 pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallError> {
     let handle = scheduler::get_scheduler()
@@ -361,14 +369,26 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
 
         // Get the value of file descriptor flags.
         aero_syscall::prelude::F_GETFD => {
-            let flags = handle.fd_flags.lock().bits();
-            Ok(flags)
+            let flags = handle.flags.read();
+            let mut result = FdFlags::empty();
+
+            if flags.contains(OpenFlags::O_CLOEXEC) {
+                result.insert(FdFlags::CLOEXEC);
+            }
+
+            Ok(result.bits())
         }
 
         // Set the value of file descriptor flags:
         aero_syscall::prelude::F_SETFD => {
-            let flags = FdFlags::from_bits(arg).ok_or(SyscallError::EINVAL)?;
-            handle.fd_flags.lock().insert(flags);
+            let mut flags = handle.flags.write();
+            let fd_flags = FdFlags::from_bits_truncate(arg);
+
+            if fd_flags.contains(FdFlags::CLOEXEC) {
+                flags.insert(OpenFlags::O_CLOEXEC);
+            } else {
+                flags.remove(OpenFlags::O_CLOEXEC);
+            }
 
             Ok(0)
         }
@@ -381,7 +401,8 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
 
         aero_syscall::prelude::F_SETFL => {
             let flags = OpenFlags::from_bits_truncate(arg);
-            *handle.flags.write() = flags;
+            let old_flags = *handle.flags.read();
+            *handle.flags.write() = (flags & SETFL_MASK) | (old_flags & !SETFL_MASK);
 
             Ok(0)
         }
