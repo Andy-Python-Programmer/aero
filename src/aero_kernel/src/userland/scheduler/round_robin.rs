@@ -181,15 +181,16 @@ impl RoundRobin {
                         queue.preempt_task.arch_task_mut(),
                         current.arch_task(),
                     );
+                    return;
                 }
-            } else {
-                queue.current_task = None;
-                core::mem::drop(guard);
-                arch::task::arch_task_spinup(
-                    queue.preempt_task.arch_task_mut(),
-                    queue.idle_task.arch_task(),
-                );
             }
+
+            queue.current_task = None;
+            core::mem::drop(guard);
+            arch::task::arch_task_spinup(
+                queue.preempt_task.arch_task_mut(),
+                queue.idle_task.arch_task(),
+            );
         }
     }
 }
