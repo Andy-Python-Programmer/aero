@@ -27,8 +27,8 @@ use crate::mem::paging::*;
 use crate::userland::scheduler;
 use crate::utils::sync::{BlockQueue, Mutex};
 
-use crate::net::{self, ethernet};
-use crate::net::{MacAddr, NetworkDevice, PacketBaseTrait};
+use crate::net::{self, ethernet, NetworkDevice};
+use crate::net::{MacAddr, NetworkDriver, PacketBaseTrait};
 
 const TX_DESC_NUM: u32 = 32;
 const TX_DESC_SIZE: u32 = TX_DESC_NUM * core::mem::size_of::<TxDescriptor>() as u32;
@@ -596,7 +596,7 @@ impl Device {
     }
 }
 
-impl NetworkDevice for Device {
+impl NetworkDriver for Device {
     fn send(&self, packet: net::Packet<net::Eth>) {
         self.e1000.lock_irq().send(packet)
     }
@@ -644,7 +644,7 @@ impl PciDeviceHandle for Handler {
         let device = Arc::new(Device::new(e1000));
 
         DEVICE.call_once(|| device.clone());
-        net::add_device(device);
+        net::add_device(NetworkDevice::new(device));
     }
 }
 

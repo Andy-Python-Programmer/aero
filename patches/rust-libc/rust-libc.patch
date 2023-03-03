@@ -1,14 +1,14 @@
-From 1c11650435d49430ddc9838ae0e59a8bcdad8243 Mon Sep 17 00:00:00 2001
+From 698a2f63c0fde81a3c2aec2c2de0e7ccfe0f3bd8 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Fri, 3 Mar 2023 16:39:55 +1100
+Date: Fri, 3 Mar 2023 18:52:53 +1100
 Subject: [PATCH] <xxx>
 
 ---
  .../linux_like/linux/gnu/b64/x86_64/mod.rs    |   4 +-
  src/unix/linux_like/linux/gnu/mod.rs          |   4 +-
  src/unix/linux_like/linux/mod.rs              |  28 +-
- src/unix/mlibc/mod.rs                         | 460 ++++++++++++++++--
- 4 files changed, 442 insertions(+), 54 deletions(-)
+ src/unix/mlibc/mod.rs                         | 499 ++++++++++++++++--
+ 4 files changed, 481 insertions(+), 54 deletions(-)
 
 diff --git a/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs b/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs
 index e6307e2..cae81c4 100644
@@ -185,7 +185,7 @@ index be12190..c8762d5 100644
                      .field("ifr_name", &self.ifr_name)
                      .field("ifr_ifru", &self.ifr_ifru)
 diff --git a/src/unix/mlibc/mod.rs b/src/unix/mlibc/mod.rs
-index 2046530..0d74760 100644
+index 2046530..b479ed2 100644
 --- a/src/unix/mlibc/mod.rs
 +++ b/src/unix/mlibc/mod.rs
 @@ -47,7 +47,6 @@ pub type fsfilcnt_t = ::c_uint;
@@ -287,7 +287,7 @@ index 2046530..0d74760 100644
      }
      pub struct pthread_rwlock_t {
          pub __mlibc_m: ::c_uint,
-@@ -319,10 +348,73 @@ s! {
+@@ -319,10 +348,111 @@ s! {
      pub struct fd_set {
          pub fds_bits: [c_char; 128],
      }
@@ -334,6 +334,44 @@ index 2046530..0d74760 100644
 +        pub l_len: ::off_t,
 +        pub l_pid: ::pid_t,
 +    }
++}
++
++s_no_extra_traits! {
++    // options/posix/include/net/if.h
++    #[cfg(libc_union)]
++    pub union __c_anonymous_ifr_ifru {
++        pub ifru_addr: ::sockaddr,
++        pub ifru_dstaddr: ::sockaddr,
++        pub ifru_broadaddr: ::sockaddr,
++        pub ifru_netmask: ::sockaddr,
++        pub ifru_hwaddr: ::sockaddr,
++        pub ifru_flags: ::c_short,
++        pub ifru_ifindex: ::c_int,
++        pub ifru_metric: ::c_int,
++        pub ifru_mtu: ::c_int,
++        pub ifru_map: __c_anonymous_ifru_map,
++        pub ifru_slave: [::c_char; ::IFNAMSIZ],
++        pub ifru_newname: [::c_char; ::IFNAMSIZ],
++        pub ifru_data: *mut ::c_char,
++    }
++
++    pub struct __c_anonymous_ifru_map {
++        pub mem_start: ::c_ulong,
++        pub mem_end: ::c_ulong,
++        pub base_addr: ::c_ushort,
++        pub irq: ::c_uchar,
++        pub dma: ::c_uchar,
++        pub port: ::c_uchar,
++    }
++
++    pub struct ifreq {
++        /// if name, e.g. "en0"
++        pub ifr_name: [::c_char; ::IFNAMSIZ],
++        #[cfg(libc_union)]
++        pub ifr_ifru: __c_anonymous_ifr_ifru,
++        #[cfg(not(libc_union))]
++        pub ifr_ifru: ::sockaddr,
++    }
  }
  
  // options/posix/include/sys/wait.h
@@ -361,7 +399,7 @@ index 2046530..0d74760 100644
      pub {const} fn WCOREDUMP(x: ::c_int) -> bool {
          x & WCOREFLAG != 0
      }
-@@ -349,6 +441,104 @@ safe_f! {
+@@ -349,6 +479,104 @@ safe_f! {
      }
  }
  
@@ -466,7 +504,7 @@ index 2046530..0d74760 100644
  // abis/mlibc/vm-flags.h
  pub const MAP_ANON: ::c_int = 8;
  pub const MAP_PRIVATE: ::c_int = 1;
-@@ -356,11 +546,24 @@ pub const MAP_SHARED: ::c_int = 2;
+@@ -356,11 +584,24 @@ pub const MAP_SHARED: ::c_int = 2;
  pub const PROT_EXEC: ::c_int = 4;
  pub const PROT_READ: ::c_int = 1;
  pub const PROT_WRITE: ::c_int = 2;
@@ -491,7 +529,7 @@ index 2046530..0d74760 100644
  
  // options/ansi/include/time.h
  pub const CLOCK_MONOTONIC: clockid_t = 1;
-@@ -369,33 +572,49 @@ pub const CLOCK_REALTIME: clockid_t = 0;
+@@ -369,33 +610,49 @@ pub const CLOCK_REALTIME: clockid_t = 0;
  // options/posix/include/netdb.h
  pub const EAI_SYSTEM: ::c_int = 9;
  
@@ -563,7 +601,7 @@ index 2046530..0d74760 100644
  
  // abis/linux/signal.h
  pub const SIGABRT: ::c_int = 6;
-@@ -436,45 +655,121 @@ pub const SIGSYS: ::c_int = 31;
+@@ -436,45 +693,121 @@ pub const SIGSYS: ::c_int = 31;
  pub const SIGUNUSED: ::c_int = SIGSYS;
  pub const SIGCANCEL: ::c_int = 32;
  
@@ -686,7 +724,7 @@ index 2046530..0d74760 100644
  pub const SOCK_STREAM: ::c_int = 4;
  pub const SOL_SOCKET: ::c_int = 1;
  pub const SO_ACCEPTCONN: ::c_int = 1;
-@@ -494,6 +789,8 @@ pub const SO_SNDLOWAT: ::c_int = 14;
+@@ -494,6 +827,8 @@ pub const SO_SNDLOWAT: ::c_int = 14;
  pub const SO_SNDTIMEO: ::c_int = 15;
  pub const SO_TYPE: ::c_int = 16;
  pub const SO_SNDBUFFORCE: ::c_int = 17;
@@ -695,7 +733,7 @@ index 2046530..0d74760 100644
  pub const SO_PEERCRED: ::c_int = 18;
  pub const SO_ATTACH_FILTER: ::c_int = 19;
  pub const SO_PASSCRED: ::c_int = 20;
-@@ -503,6 +800,12 @@ pub const SO_PROTOCOL: ::c_int = 23;
+@@ -503,6 +838,12 @@ pub const SO_PROTOCOL: ::c_int = 23;
  pub const SO_REUSEPORT: ::c_int = 24;
  pub const SO_TIMESTAMP: ::c_int = 25;
  
@@ -708,7 +746,7 @@ index 2046530..0d74760 100644
  // abis/mlibc/errno.h
  pub const EDOM: ::c_int = 1;
  pub const EILSEQ: ::c_int = 2;
-@@ -592,15 +895,24 @@ pub const ENOTBLK: ::c_int = 1083;
+@@ -592,15 +933,24 @@ pub const ENOTBLK: ::c_int = 1083;
  
  // options/posix/include/fcntl.h
  pub const AT_FDCWD: ::c_int = -100;
@@ -734,7 +772,7 @@ index 2046530..0d74760 100644
  pub const F_GETOWN: ::c_int = 10;
  pub const F_SETOWN: ::c_int = 11;
  pub const O_ACCMODE: ::c_int = 7;
-@@ -644,23 +956,54 @@ pub const S_IXGRP: mode_t = 0o10;
+@@ -644,23 +994,55 @@ pub const S_IXGRP: mode_t = 0o10;
  pub const S_IXOTH: mode_t = 0o1;
  pub const S_IXUSR: mode_t = 0o100;
  
@@ -786,11 +824,12 @@ index 2046530..0d74760 100644
 +pub const PATH_MAX: ::size_t = 4096;
 +
 +// abis/linux/ioctls.h
-+pub const SIOCGIFHWADDR: ::c_ulong = 0x00008927;
++pub const SIOCGIFHWADDR: ::c_ulong = 0x8927;
++pub const SIOCSIFADDR: ::c_ulong = 0x8916;
  
  // options/posix/include/pthread.h
  align_const! {
-@@ -668,9 +1011,12 @@ align_const! {
+@@ -668,9 +1050,12 @@ align_const! {
          __mlibc_state: 0,
          __mlibc_recursion: 0,
          __mlibc_flags: 0,
@@ -803,7 +842,7 @@ index 2046530..0d74760 100644
      };
      pub const PTHREAD_RWLOCK_INITIALIZER: pthread_rwlock_t = pthread_rwlock_t {
          __mlibc_m: 0,
-@@ -689,11 +1035,40 @@ pub const PTHREAD_PROCESS_PRIVATE: ::c_int = 0;
+@@ -689,11 +1074,40 @@ pub const PTHREAD_PROCESS_PRIVATE: ::c_int = 0;
  pub const PTHREAD_PROCESS_SHARED: ::c_int = 1;
  
  extern "C" {
@@ -844,7 +883,7 @@ index 2046530..0d74760 100644
      pub fn getgrgid_r(
          gid: ::gid_t,
          grp: *mut ::group,
-@@ -728,13 +1103,24 @@ extern "C" {
+@@ -728,13 +1142,24 @@ extern "C" {
          buflen: ::size_t,
          result: *mut *mut passwd,
      ) -> ::c_int;
@@ -873,7 +912,7 @@ index 2046530..0d74760 100644
      pub fn pthread_create(
          thread: *mut ::pthread_t,
          attr: *const ::pthread_attr_t,
-@@ -752,6 +1138,8 @@ extern "C" {
+@@ -752,6 +1177,8 @@ extern "C" {
          addr: *mut ::sockaddr,
          addrlen: *mut ::socklen_t,
      ) -> ::ssize_t;

@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::ffi::CStr;
+
 use crate::OpenFlags;
 
 // syscall number constants:
@@ -349,3 +351,28 @@ pub struct FramebufferFScreenInfo {
 
 // networking ioctls:
 pub const SIOCGIFHWADDR: usize = 0x8927;
+pub const SIOCSIFADDR: usize = 0x8916; // set PA address
+
+const IF_NAME_SIZE: usize = 16;
+
+#[repr(C)]
+pub struct IfReq {
+    /// interface name, e.g. "en0"
+    pub name: [u8; IF_NAME_SIZE],
+    pub sa_family: u32,
+    pub sa_data: [u8; 14],
+}
+
+impl IfReq {
+    /// Get the interface name, e.g. "en0". [`None`] is returned if UTF-8
+    /// validation failed.
+    pub fn name(&self) -> Option<&str> {
+        match CStr::from_bytes_until_nul(&self.name) {
+            Ok(s) => s.to_str(),
+            // The name does not have a null terminator, that means
+            // the whole buffer has the name.
+            Err(_) => core::str::from_utf8(&self.name),
+        }
+        .ok()
+    }
+}

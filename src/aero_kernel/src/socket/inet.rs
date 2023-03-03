@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::prelude::SIOCGIFHWADDR;
+use aero_syscall::prelude::{IfReq, SIOCGIFHWADDR, SIOCSIFADDR};
 use aero_syscall::socket::MessageHeader;
 use aero_syscall::{IpProtocol, OpenFlags, SocketAddrInet, SocketType, SyscallError};
 use alloc::sync::{Arc, Weak};
@@ -28,10 +28,13 @@ use crate::fs::cache::DirCacheItem;
 use crate::fs::file_table::FileHandle;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
 use crate::fs::{self, FileSystemError};
+use crate::mem::paging::VirtAddr;
 use crate::net::ip::Ipv4Addr;
 use crate::net::udp::{self, Udp, UdpHandler};
 use crate::net::{self, MacAddr, Packet, PacketHeader, PacketTrait};
 use crate::utils::sync::{BlockQueue, Mutex};
+
+use super::SocketAddr;
 
 #[derive(Default)]
 enum SocketState {
@@ -231,6 +234,29 @@ impl INodeInterface for InetSocket {
 
                 let mac_addr = net::default_device().mac();
                 hwaddr.copy_from_slice(&mac_addr.0.as_slice());
+                Ok(0)
+            }
+
+            SIOCSIFADDR => {
+                let ifreq = VirtAddr::new(arg as _)
+                    .read_mut::<IfReq>()
+                    .ok_or(FileSystemError::NotSupported)?;
+
+                let name = ifreq.name().ok_or(FileSystemError::InvalidPath)?;
+                let socket = SocketAddr::from_family(
+                    VirtAddr::new(&ifreq.sa_family as *const _ as _),
+                    ifreq.sa_family,
+                )
+                .ok_or(FileSystemError::NotSupported)?
+                .as_inet()
+                .ok_or(FileSystemError::NotSupported)?;
+
+                // FIXME:
+                assert!(name == "eth0");
+
+                let device = net::default_device();
+                device.set_ip(Ipv4Addr::new(socket.addr()));
+
                 Ok(0)
             }
 

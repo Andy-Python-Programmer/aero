@@ -35,12 +35,45 @@ use crate::{
     userland::{scheduler, task::Task},
 };
 
+use self::ip::Ipv4Addr;
+
 #[downcastable]
-pub trait NetworkDevice: Send + Sync {
+pub trait NetworkDriver: Send + Sync {
     fn send(&self, packet: Packet<Eth>);
     fn recv(&self) -> RecvPacket;
     fn recv_end(&self, packet_id: usize);
     fn mac(&self) -> MacAddr;
+}
+
+#[derive(Default)]
+struct Metadata {
+    ip: Ipv4Addr,
+}
+
+pub struct NetworkDevice {
+    driver: Arc<dyn NetworkDriver>,
+    metadata: RwLock<Metadata>,
+}
+
+impl NetworkDevice {
+    pub fn new(driver: Arc<dyn NetworkDriver>) -> Self {
+        Self {
+            driver,
+            metadata: RwLock::new(Metadata::default()),
+        }
+    }
+
+    pub fn set_ip(&self, ip: Ipv4Addr) {
+        self.metadata.write().ip = ip;
+    }
+}
+
+impl core::ops::Deref for NetworkDevice {
+    type Target = Arc<dyn NetworkDriver>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.driver
+    }
 }
 
 #[derive(Debug)]
@@ -159,8 +192,8 @@ pub trait PacketHeader<H>: PacketBaseTrait {
     }
 }
 
-static DEVICES: RwLock<Vec<Arc<dyn NetworkDevice>>> = RwLock::new(Vec::new());
-static DEFAULT_DEVICE: RwLock<Option<Arc<dyn NetworkDevice>>> = RwLock::new(None);
+static DEVICES: RwLock<Vec<Arc<NetworkDevice>>> = RwLock::new(Vec::new());
+static DEFAULT_DEVICE: RwLock<Option<Arc<NetworkDevice>>> = RwLock::new(None);
 
 fn packet_processor_thread() {
     let device = default_device();
@@ -171,7 +204,8 @@ fn packet_processor_thread() {
     }
 }
 
-pub fn add_device(device: Arc<dyn NetworkDevice>) {
+pub fn add_device(device: NetworkDevice) {
+    let device = Arc::new(device);
     DEVICES.write().push(device.clone());
 
     let mut default_device = DEFAULT_DEVICE.write();
@@ -186,7 +220,7 @@ pub fn has_default_device() -> bool {
     DEFAULT_DEVICE.read().as_ref().is_some()
 }
 
-pub fn default_device() -> Arc<dyn NetworkDevice> {
+pub fn default_device() -> Arc<NetworkDevice> {
     DEFAULT_DEVICE
         .read()
         .as_ref()
