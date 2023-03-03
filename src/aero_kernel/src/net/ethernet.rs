@@ -26,10 +26,11 @@ use super::*;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 #[repr(C)]
-pub struct MacAddr(pub [u8; 6]);
+pub struct MacAddr(pub [u8; Self::ADDR_SIZE]);
 
 impl MacAddr {
-    pub const BROADCAST: Self = Self([0xff; 6]);
+    pub const ADDR_SIZE: usize = 6;
+    pub const BROADCAST: Self = Self([0xff; Self::ADDR_SIZE]);
 }
 
 #[repr(u16)]

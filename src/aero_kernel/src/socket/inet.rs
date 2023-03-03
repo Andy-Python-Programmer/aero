@@ -17,6 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use aero_syscall::prelude::SIOCGIFHWADDR;
 use aero_syscall::socket::MessageHeader;
 use aero_syscall::{IpProtocol, OpenFlags, SocketAddrInet, SocketType, SyscallError};
 use alloc::sync::{Arc, Weak};
@@ -29,7 +30,7 @@ use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
 use crate::fs::{self, FileSystemError};
 use crate::net::ip::Ipv4Addr;
 use crate::net::udp::{self, Udp, UdpHandler};
-use crate::net::{Packet, PacketHeader, PacketTrait};
+use crate::net::{self, MacAddr, Packet, PacketHeader, PacketTrait};
 use crate::utils::sync::{BlockQueue, Mutex};
 
 #[derive(Default)]
@@ -220,6 +221,21 @@ impl INodeInterface for InetSocket {
                 size
             })
             .sum::<usize>())
+    }
+
+    fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
+        match command {
+            SIOCGIFHWADDR => {
+                let hwaddr =
+                    unsafe { core::slice::from_raw_parts_mut(arg as *mut u8, MacAddr::ADDR_SIZE) };
+
+                let mac_addr = net::default_device().mac();
+                hwaddr.copy_from_slice(&mac_addr.0.as_slice());
+                Ok(0)
+            }
+
+            _ => unreachable!("inet::ioctl(): unknown command {command}"),
+        }
     }
 
     fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {

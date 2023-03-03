@@ -346,3 +346,6 @@ pub struct FramebufferFScreenInfo {
     pub capabilities: u16,
     pub reserved: [u16; 2],
 }
+
+// networking ioctls:
+pub const SIOCGIFHWADDR: usize = 0x8927;
