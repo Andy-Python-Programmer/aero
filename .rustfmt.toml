@@ -1,0 +1,5 @@
+edition = "2021"
+newline_style = "Unix"
+
+comment_width = 100
+wrap_comments = true
