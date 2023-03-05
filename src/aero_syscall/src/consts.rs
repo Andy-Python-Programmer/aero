@@ -17,8 +17,6 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use core::ffi::CStr;
-
 use crate::OpenFlags;
 
 // syscall number constants:
@@ -367,12 +365,8 @@ impl IfReq {
     /// Get the interface name, e.g. "en0". [`None`] is returned if UTF-8
     /// validation failed.
     pub fn name(&self) -> Option<&str> {
-        match CStr::from_bytes_until_nul(&self.name) {
-            Ok(s) => s.to_str(),
-            // The name does not have a null terminator, that means
-            // the whole buffer has the name.
-            Err(_) => core::str::from_utf8(&self.name),
-        }
-        .ok()
+        let null_index = self.name.iter().position(|&x| x == 0).unwrap_or_default();
+        let name = &self.name[..null_index];
+        core::str::from_utf8(name).ok()
     }
 }

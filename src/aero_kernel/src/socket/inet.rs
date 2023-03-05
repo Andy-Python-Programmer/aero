@@ -229,8 +229,16 @@ impl INodeInterface for InetSocket {
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
         match command {
             SIOCGIFHWADDR => {
-                let hwaddr =
-                    unsafe { core::slice::from_raw_parts_mut(arg as *mut u8, MacAddr::ADDR_SIZE) };
+                let ifreq = VirtAddr::new(arg as _)
+                    .read_mut::<IfReq>()
+                    .ok_or(FileSystemError::NotSupported)?;
+
+                let name = ifreq.name().ok_or(FileSystemError::InvalidPath)?;
+                assert!(name == "eth0");
+
+                let hwaddr = unsafe {
+                    core::slice::from_raw_parts_mut(ifreq.sa_data.as_mut_ptr(), MacAddr::ADDR_SIZE)
+                };
 
                 let mac_addr = net::default_device().mac();
                 hwaddr.copy_from_slice(&mac_addr.0.as_slice());
