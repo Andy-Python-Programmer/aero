@@ -22,6 +22,8 @@ mod gpt;
 use gpt::Gpt;
 
 use core::mem::MaybeUninit;
+use core::ops::{Deref, DerefMut};
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use alloc::collections::BTreeMap;
 use alloc::sync::{Arc, Weak};
@@ -45,6 +47,7 @@ struct CachedPage {
     device: Weak<dyn CachedAccess>,
     offset: usize,
     page: PhysFrame,
+    dirty: AtomicBool,
 }
 
 impl CachedPage {
@@ -55,6 +58,7 @@ impl CachedPage {
             page: FRAME_ALLOCATOR
                 .allocate_frame()
                 .expect("page_cache: out of memory"),
+            dirty: AtomicBool::new(false),
         }
     }
 
@@ -77,6 +81,39 @@ impl CachedPage {
     fn make_key(device: Weak<dyn CachedAccess>, offset: usize) -> PageCacheKey {
         (device.as_ptr() as *const u8 as usize, offset)
     }
+
+    /// Returns whether the page has been marked dirty.
+    fn is_dirty(&self) -> bool {
+        self.dirty.load(Ordering::SeqCst)
+    }
+
+    fn mark_dirty(&self) {
+        self.dirty.store(true, Ordering::SeqCst);
+    }
+
+    fn device(&self) -> Arc<dyn CachedAccess> {
+        self.device.upgrade().unwrap()
+    }
+
+    fn sync(&self) {
+        if !self.is_dirty() {
+            return;
+        }
+
+        // Commit the changes made to the cache to the disk.
+        let disk = self.device();
+
+        let offset_bytes = self.offset * Size4KiB::SIZE as usize;
+        let sector = offset_bytes / disk.block_size();
+
+        disk.write_dma(sector, self.data_addr(), Size4KiB::SIZE as usize);
+    }
+}
+
+impl Drop for CachedPage {
+    fn drop(&mut self) {
+        self.sync()
+    }
 }
 
 impl Cacheable<PageCacheKey> for CachedPage {
@@ -96,9 +133,8 @@ impl Cache<PageCacheKey, CachedPage> {
     /// ## Arguments
     ///
     /// * `device` - The device to get the page from.
-    ///
-    /// * `offset` - The offset in bytes to the data. This will be rounded down to
-    ///              the nearest page boundary.
+    /// * `offset` - The offset in bytes to the data. This will be rounded down to the nearest page
+    ///   boundary.
     pub fn get_page(&self, device: Weak<dyn CachedAccess>, offset: usize) -> PageCacheItem {
         let cache_offset = offset / Size4KiB::SIZE as usize;
         let cache_key = CachedPage::make_key(device.clone(), cache_offset);
@@ -121,10 +157,48 @@ impl Cache<PageCacheKey, CachedPage> {
     }
 }
 
+pub struct DirtyRef<T: Sized> {
+    cache: PageCacheItem,
+    ptr: *mut T,
+}
+
+impl<T> DirtyRef<T> {
+    pub fn new(device: Weak<dyn CachedAccess>, offset: usize) -> Self {
+        let cache = PAGE_CACHE.get_page(device, offset);
+
+        let ptr_offset = offset % Size4KiB::SIZE as usize;
+        let ptr = &cache.data_mut()[ptr_offset..ptr_offset + core::mem::size_of::<T>()];
+
+        Self {
+            ptr: ptr.as_ptr() as *mut T,
+            cache,
+        }
+    }
+}
+
+impl<T> Deref for DirtyRef<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.ptr }
+    }
+}
+
+impl<T> DerefMut for DirtyRef<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.cache.mark_dirty();
+        unsafe { &mut *self.ptr }
+    }
+}
+
+unsafe impl<T> Sync for DirtyRef<T> {}
+unsafe impl<T> Send for DirtyRef<T> {}
+
 pub trait BlockDeviceInterface: Send + Sync {
     fn block_size(&self) -> usize;
 
     fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize>;
+    fn write_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize>;
 
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize>;
     fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize>;
@@ -228,6 +302,10 @@ impl BlockDeviceInterface for BlockDevice {
         self.dev.read_dma(sector, start, size)
     }
 
+    fn write_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {
+        self.dev.write_dma(sector, start, size)
+    }
+
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         self.dev.read_block(sector, dest)
     }
@@ -290,6 +368,14 @@ impl BlockDeviceInterface for PartitionBlockDevice {
         }
 
         self.device.write_block(self.offset + sector, buf)
+    }
+
+    fn write_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {
+        if sector >= self.size {
+            return None;
+        }
+
+        self.write_dma(self.offset + sector, start, size)
     }
 
     fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {

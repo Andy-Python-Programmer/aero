@@ -29,10 +29,10 @@ use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
 use spin::RwLock;
 
-use crate::fs::block::BlockDeviceInterface;
+use crate::fs::block::{BlockDeviceInterface, DirtyRef};
 use crate::fs::cache::CachedINode;
 use crate::fs::ext2::disk::{FileType, Revision, SuperBlock};
-use crate::mem::paging::{FrameAllocator, PhysFrame, VirtAddr, FRAME_ALLOCATOR};
+use crate::mem::paging::*;
 
 use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
@@ -40,7 +40,7 @@ use crate::utils::CeilDiv;
 
 use self::group_desc::GroupDescriptors;
 
-use super::block::{BlockDevice, CachedAccess};
+use super::block::{self, BlockDevice, CachedAccess};
 
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::{cache, FileSystemError};
@@ -90,6 +90,24 @@ impl INode {
                 }))),
             )
         }
+    }
+
+    /// Reads the data at `offset` as `T`.
+    ///
+    /// ## Safety
+    /// * The data being read should be of a valid value for `T`.
+    pub unsafe fn read_mut<T: Sized>(&self, offset: usize) -> block::DirtyRef<T> {
+        assert!(core::mem::size_of::<T>() <= Size4KiB::SIZE as usize);
+
+        let filesystem = self.fs.upgrade().unwrap();
+        let block_size = filesystem.superblock.block_size();
+
+        let block = offset / block_size;
+        let loc = offset % block_size;
+
+        let block_index = self.get_block(block).unwrap() as usize;
+
+        block::DirtyRef::new(filesystem.block.sref(), (block_index * block_size) + loc)
     }
 
     pub fn read(&self, offset: usize, buffer: &mut [MaybeUninit<u8>]) -> super::Result<usize> {
@@ -270,6 +288,20 @@ impl INode {
         }
     }
 
+    pub fn make_disk_dirent(&self, inode: Arc<INode>, file_type: u8, name: &str) {
+        // TODO: scan for unused directory entries and check if this can be
+        //       inserted into the existing block.
+        let block = self.append_block().unwrap();
+        let fs = self.fs.upgrade().expect("ext2: filesystem was dropped");
+        let block_size = fs.superblock.block_size();
+
+        let mut entry = DirtyRef::<disk::DirEntry>::new(fs.block.sref(), block * block_size);
+        entry.entry_size = block_size as _;
+        entry.inode = inode.id as _;
+        entry.file_type = file_type;
+        entry.set_name(name);
+    }
+
     pub fn make_inode(
         &self,
         name: &str,
@@ -306,27 +338,12 @@ impl INode {
             inode.hl_count += 1;
         }
 
-        // TODO: scan for unused directory entries and check if this can be
-        //       inserted into the existing block.
-        let block = self.append_block().unwrap();
-        let block_size = fs.superblock.block_size();
-
-        let mut entry = Box::<disk::DirEntry>::new_uninit();
-        fs.block.read(block * block_size, entry.as_bytes_mut());
-
-        // SAFETY: We have initialized the entry above.
-        let mut entry = unsafe { entry.assume_init() };
-
-        entry.entry_size = block_size as _;
-        entry.inode = ext2_inode.id as _;
-        entry.file_type = 2; // FIXME: This is fucked.
-        entry.set_name(name);
-
-        fs.block.write(block * block_size, entry.as_bytes());
+        // FIXME: Fix the filetype!
+        self.make_disk_dirent(ext2_inode, 2, name);
         Ok(inode)
     }
 
-    pub fn make_dir_entry(
+    pub fn make_dirent(
         &self,
         parent: DirCacheItem,
         name: &str,
@@ -391,7 +408,7 @@ impl INodeInterface for INode {
 
     fn dirent(&self, parent: DirCacheItem, index: usize) -> super::Result<Option<DirCacheItem>> {
         if let Some((name, entry)) = DirEntryIter::new(self.sref()).nth(index) {
-            Ok(self.make_dir_entry(parent, &name, &entry))
+            Ok(self.make_dirent(parent, &name, &entry))
         } else {
             Ok(None)
         }
@@ -402,7 +419,7 @@ impl INodeInterface for INode {
             .find(|(ename, _)| ename == name)
             .ok_or(FileSystemError::EntryNotFound)?;
 
-        Ok(self.make_dir_entry(parent, &name, &entry).unwrap())
+        Ok(self.make_dirent(parent, &name, &entry).unwrap())
     }
 
     fn read_at(&self, offset: usize, usr_buffer: &mut [u8]) -> super::Result<usize> {
@@ -435,6 +452,25 @@ impl INodeInterface for INode {
         }
 
         self.write(offset, usr_buffer)
+    }
+
+    fn rename(&self, old: DirCacheItem, dest: &str) -> super::Result<()> {
+        assert!(self.metadata()?.is_directory());
+
+        if DirEntryIter::new(self.sref())
+            .find(|(name, _)| name == dest)
+            .is_some()
+        {
+            return Err(FileSystemError::EntryExists);
+        }
+
+        if let Some(_parent) = old.parent() {
+            // FIXME: Remove the directory entry from the parent
+            self.make_disk_dirent(old.inode().downcast_arc().unwrap(), 2, dest);
+            return Ok(());
+        }
+
+        Err(FileSystemError::NotSupported)
     }
 
     fn link(&self, name: &str, src: DirCacheItem) -> super::Result<()> {
@@ -593,7 +629,7 @@ impl DirEntryIter {
 }
 
 impl Iterator for DirEntryIter {
-    type Item = (String, Box<disk::DirEntry>);
+    type Item = (String, block::DirtyRef<disk::DirEntry>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let file_size = self.inode.inode.read().size();
@@ -602,13 +638,7 @@ impl Iterator for DirEntryIter {
             return None;
         }
 
-        let mut entry = Box::<disk::DirEntry>::new_uninit();
-
-        self.inode.read(self.offset, entry.as_bytes_mut()).ok()?;
-
-        // SAFETY: We have initialized the entry above.
-        let entry = unsafe { entry.assume_init() };
-
+        let entry = unsafe { self.inode.read_mut::<disk::DirEntry>(self.offset) };
         if entry.inode == 0 {
             return None;
         }

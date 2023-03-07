@@ -249,6 +249,20 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
         }
     }
 
+    pub fn rehash<F>(&self, item: CacheArc<CacheItem<K, V>>, update: F)
+    where
+        F: FnOnce(),
+    {
+        let mut index = self.index.lock();
+        let key = item.cache_key();
+
+        index.used.remove(&key).expect("cache: item is not used");
+        update();
+
+        let new_key = item.cache_key();
+        index.used.insert(new_key, Arc::downgrade(&item));
+    }
+
     pub fn log(&self) {
         let index = self.index.lock();
 

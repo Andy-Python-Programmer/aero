@@ -39,6 +39,7 @@ bitflags::bitflags! {
 #[repr(u8)]
 #[derive(Default, Copy, Clone)]
 pub enum CommandOpcode {
+    Write = 0x1,
     Read = 0x2,
 
     #[default]

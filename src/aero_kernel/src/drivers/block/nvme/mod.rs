@@ -230,13 +230,13 @@ struct Namespace<'a> {
 }
 
 impl<'a> Namespace<'a> {
-    fn read(&self, sector: usize, start: PhysAddr, size_bytes: usize) {
+    fn rw_command(&self, opcode: CommandOpcode, sector: usize, start: PhysAddr, size_bytes: usize) {
         assert!(size_bytes != 0);
 
         let blocks = size_bytes.ceil_div(self.block_size);
         let mut read_cmd = ReadWriteCommand::default();
 
-        read_cmd.opcode = CommandOpcode::Read as u8;
+        read_cmd.opcode = opcode as u8;
         read_cmd.nsid = self.nsid;
         read_cmd.start_lba = sector as u64;
         read_cmd.length = (blocks - 1) as u16;
@@ -463,13 +463,23 @@ impl<'a> Controller<'a> {
 
 impl<'a> BlockDeviceInterface for Controller<'a> {
     fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {
-        self.namespaces.lock()[0].read(sector, start, size);
+        self.namespaces.lock()[0].rw_command(CommandOpcode::Read, sector, start, size);
+        Some(size)
+    }
+
+    fn write_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {
+        self.namespaces.lock()[0].rw_command(CommandOpcode::Write, sector, start, size);
         Some(size)
     }
 
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         let buffer = Dma::<u8>::new_uninit_slice(dest.len());
-        self.namespaces.lock()[0].read(sector, buffer.addr(), dest.len());
+        self.namespaces.lock()[0].rw_command(
+            CommandOpcode::Read,
+            sector,
+            buffer.addr(),
+            dest.len(),
+        );
 
         // SAFETY: The buffer is initialized above.
         dest.copy_from_slice(&buffer);

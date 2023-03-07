@@ -166,12 +166,6 @@ impl DirEntry {
 
         name_bytes.copy_from_slice(name.as_bytes());
     }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        unsafe {
-            core::slice::from_raw_parts(self as *const Self as *const u8, self.entry_size as usize)
-        }
-    }
 }
 
 #[repr(u8)]

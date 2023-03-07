@@ -79,6 +79,15 @@ impl BlockDeviceInterface for IdeDrive {
         unimplemented!()
     }
 
+    fn write_dma(
+        &self,
+        _sector: usize,
+        _start: crate::mem::paging::PhysAddr,
+        _size: usize,
+    ) -> Option<usize> {
+        todo!()
+    }
+
     fn write_block(&self, _sector: usize, _buf: &[u8]) -> Option<usize> {
         unimplemented!()
     }

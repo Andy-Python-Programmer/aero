@@ -125,9 +125,8 @@ pub trait INodeInterface: Send + Sync {
     /// to the file.
     ///
     /// ## Errors
-    /// - `FileSystemError::NotSupported` - If the inode is not a symbolic link or
-    ///                                     the filesystem does not support symbolic
-    ///                                     links.
+    /// - `FileSystemError::NotSupported` - If the inode is not a symbolic link or the filesystem
+    ///   does not support symbolic links.
     fn resolve_link(&self) -> Result<String> {
         Err(FileSystemError::NotSupported)
     }
@@ -195,6 +194,16 @@ pub trait INodeInterface: Send + Sync {
 
     fn open(&self, _flags: OpenFlags, _handle: Arc<FileHandle>) -> Result<Option<DirCacheItem>> {
         Ok(None)
+    }
+
+    /// Renames a file (`src`) to `dest`, moving it between directories if required. Any other hard
+    /// links to the file (as created using [`INodeInterface::link`]) are unaffected.
+    ///
+    /// ## Atomicity
+    /// * If `dest` already exists, it will be atomically replaced.
+    /// * There can be a window in which both `src` and `dest` refer to the file being renamed.
+    fn rename(&self, _src: DirCacheItem, _dest: &str) -> Result<()> {
+        Err(FileSystemError::NotSupported)
     }
 
     fn close(&self, _flags: OpenFlags) {}
@@ -349,7 +358,9 @@ impl From<FileType> for aero_syscall::SysFileType {
         match file {
             FileType::File => aero_syscall::SysFileType::File,
             FileType::Directory => aero_syscall::SysFileType::Directory,
-            FileType::Device => aero_syscall::SysFileType::CharDevice, // FIXME: determine if it is a character or block device.
+            FileType::Device => aero_syscall::SysFileType::CharDevice, /* FIXME: determine if it */
+            // is a character or
+            // block device.
             FileType::Socket => aero_syscall::SysFileType::Socket,
             FileType::Symlink => aero_syscall::SysFileType::Symlink,
         }
@@ -383,8 +394,8 @@ impl DirEntry {
         let dcache = cache::dcache();
 
         /*
-         * Helper bool to avoid situations where the directory entry is already cached. The possible
-         * cases are:
+         * Helper bool to avoid situations where the directory entry is already cached. The
+         * possible cases are:
          *
          * "." (ie. we do not want to re-cache the current directory)
          * ".." (ie. we do not want to re-cache the current directory's, parent directory).
@@ -484,6 +495,14 @@ impl DirEntry {
 
     pub fn name(&self) -> String {
         self.data.lock().name.clone()
+    }
+
+    pub fn set_name(&self, name: &str) {
+        self.data.lock().name = name.into();
+    }
+
+    pub fn set_parent(&self, parent: DirCacheItem) {
+        self.data.lock().parent = Some(parent);
     }
 
     /// Returns the inner cached inode item of the directory entry.

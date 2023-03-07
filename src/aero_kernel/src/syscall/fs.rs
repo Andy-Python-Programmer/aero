@@ -21,7 +21,7 @@ use aero_syscall::signal::SigProcMask;
 use aero_syscall::{prelude::*, TimeSpec};
 use aero_syscall::{OpenFlags, Stat, SyscallError};
 
-use crate::fs::cache::DirCacheImpl;
+use crate::fs::cache::{self, DirCacheImpl};
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::DuplicateHint;
@@ -584,9 +584,9 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
     for (i, fd) in fds.iter_mut().enumerate() {
         fd.revents = PollEventFlags::empty();
 
-        // TODO: If an invalid file descriptor is provided then return EBADFD. Not implemented currently,
-        // since the init process (libc?) tries to POLL on the stdout, stdin and stdout file descriptors
-        // which are currently not present.
+        // TODO: If an invalid file descriptor is provided then return EBADFD. Not implemented
+        // currently, since the init process (libc?) tries to POLL on the stdout, stdin and
+        // stdout file descriptors which are currently not present.
         //
         // One possible solution is to open the file descriptors when the init process
         // is a kernel process?
@@ -671,5 +671,17 @@ pub fn poll(fds: &mut [PollFd], timeout: usize, sigmask: usize) -> Result<usize,
 
 #[syscall]
 pub fn rename(src: &Path, dest: &Path) -> Result<usize, SyscallError> {
+    let src = fs::lookup_path(src)?;
+    let (dest, name) = {
+        let (dir, name) = dest.parent_and_basename();
+        (fs::lookup_path(dir)?, name)
+    };
+
+    dest.inode().rename(src.clone(), name)?;
+
+    cache::dcache().rehash(src.clone(), || {
+        src.set_name(name);
+        src.set_parent(dest);
+    });
     Ok(0)
 }
