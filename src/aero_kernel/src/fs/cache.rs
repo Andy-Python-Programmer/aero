@@ -294,7 +294,7 @@ impl<K: CacheKey, V: Cacheable<K>> Cache<K, V> {
         let mut index = self.index.lock();
         let key = item.cache_key();
 
-        assert!(index.used.remove(&key).is_some());
+        index.used.remove(&key);
         index.unused.put(key, item.0.clone());
     }
 }

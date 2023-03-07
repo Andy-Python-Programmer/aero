@@ -407,6 +407,11 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
             Ok(0)
         }
 
+        aero_syscall::prelude::F_SETLKW | aero_syscall::prelude::F_SETLK => {
+            log::warn!("fcntl: F_SETLKW,F_SETLK are a stub!");
+            Ok(0)
+        }
+
         _ => unimplemented!("fcntl: unknown command {command}"),
     }
 }
