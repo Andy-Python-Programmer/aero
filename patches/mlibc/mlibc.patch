@@ -1,22 +1,20 @@
-From a5ec321f99ccfe66889e802626230a792a3d7140 Mon Sep 17 00:00:00 2001
+From 6350f126765046a3a97d6acf40dc7d85ccddffad Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sun, 26 Feb 2023 17:20:53 +1100
+Date: Sat, 11 Mar 2023 15:20:58 +1100
 Subject: [PATCH] <xxx>
 
 ---
  .gitignore                            |   2 +
- meson.build                           |   4 +
- options/ansi/generic/stdlib-stubs.cpp | 185 ++++++++++++++++++++++++--
- options/ansi/meson.build              |   1 +
+ options/ansi/generic/stdlib-stubs.cpp | 183 +++++++++++++++++++++++++-
  options/glibc/generic/execinfo.cpp    |   5 +-
  options/rtdl/generic/linker.cpp       |   2 +-
  sysdeps/aero/generic/aero.cpp         |  77 +++++++----
  sysdeps/aero/generic/filesystem.cpp   |  51 ++++++-
- sysdeps/aero/generic/sockets.cpp      |  96 ++++++++++++-
+ sysdeps/aero/generic/sockets.cpp      |  96 +++++++++++++-
  sysdeps/aero/generic/time.cpp         |  24 ++++
  sysdeps/aero/include/aero/syscall.h   |  11 ++
  sysdeps/aero/meson.build              |   1 +
- 12 files changed, 412 insertions(+), 47 deletions(-)
+ 10 files changed, 406 insertions(+), 46 deletions(-)
  create mode 100644 sysdeps/aero/generic/time.cpp
 
 diff --git a/.gitignore b/.gitignore
@@ -30,7 +28,7 @@ index fdd60a0..9f811f4 100644
 +# clangd cache files:
 +.cache
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
-index c0e54fe..6d9cc52 100644
+index c0e54fe..b988dea 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
 +++ b/options/ansi/generic/stdlib-stubs.cpp
 @@ -319,13 +319,182 @@ void qsort(void *base, size_t count, size_t size,
@@ -231,15 +229,6 @@ index c0e54fe..6d9cc52 100644
  
  			return nseq.it - mb;
  		} else {
-@@ -450,7 +619,7 @@ void free(void *ptr) {
- }
- 
- void *malloc(size_t size) {
--	auto nptr = getAllocator().allocate(size);
-+	auto nptr = getAllocator().allocate(size + 16);
- 	// TODO: Print PID only if POSIX option is enabled.
- 	if (mlibc::globalConfig().debugMalloc)
- 		mlibc::infoLogger() << "mlibc (PID ?): malloc() returns "
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
 index 3474615..10a2109 100644
 --- a/options/glibc/generic/execinfo.cpp
