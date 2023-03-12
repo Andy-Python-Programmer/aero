@@ -18,7 +18,8 @@
  */
 
 //! # Aero
-//! Aero is a new modern, unix based operating system. It is being developed for educational purposes.
+//! Aero is a new modern, unix based operating system. It is being developed for educational
+//! purposes.
 //!
 //! ## Code organization and architecture
 //! The code is divided into different *modules*, each representing a *subsystem* of the kernel.

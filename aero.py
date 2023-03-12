@@ -491,7 +491,7 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
             qemu_args += ['-device', 'ramfb',
                           '-M', 'virt', '-cpu', 'cortex-a72']
         elif build_info.target_arch == "x86_64":
-            qemu_args += ["-cpu", "qemu64,+la57" if args.la57 else "qemu64"]
+            qemu_args += ["-cpu", "qemu64,+la57" if args.la57 else "max"]
         else:
             log_error("unknown target architecture")
             exit(1)

@@ -129,7 +129,7 @@ impl PageTableEntry {
     ///
     /// - `FrameError::FrameNotPresent` if the entry doesn't have the `PRESENT` flag set.
     /// - `FrameError::HugeFrame` if the entry has the `HUGE_PAGE` flag set (for huge pages the
-    ///    `addr` function must be used)
+    ///   `addr` function must be used)
     pub fn frame(&self) -> Result<PhysFrame, FrameError> {
         if !self.flags().contains(PageTableFlags::PRESENT) {
             Err(FrameError::FrameNotPresent)

@@ -34,7 +34,35 @@ use crate::mem::paging::align_up;
 use crate::utils::bitmap::Bitmap;
 use crate::utils::sync::Mutex;
 
-static BUDDY_SIZE: [u64; 3] = [Size4KiB::SIZE, Size4KiB::SIZE * 4, Size2MiB::SIZE];
+const BUDDY_SIZE: [u64; 10] = [
+    Size4KiB::SIZE,       // 4 KiB
+    Size4KiB::SIZE * 2,   // 8 KiB
+    Size4KiB::SIZE * 4,   // 16 KiB
+    Size4KiB::SIZE * 8,   // 32 KiB
+    Size4KiB::SIZE * 16,  // 64 KiB
+    Size4KiB::SIZE * 32,  // 128 KiB
+    Size4KiB::SIZE * 64,  // 256 KiB
+    Size4KiB::SIZE * 128, // 512 KiB
+    Size4KiB::SIZE * 256, // 1 MiB
+    Size2MiB::SIZE,       // 2 MiB
+];
+
+const fn order_from_size(size: u64) -> usize {
+    // UNSTABLE: We cannot make an iterator from `BUDDY_SIZE` or use a for loop
+    //           in const context.
+    let mut order = 0;
+
+    while order < BUDDY_SIZE.len() {
+        let buddy_size = BUDDY_SIZE[order];
+        if buddy_size >= size {
+            return order;
+        }
+
+        order += 1;
+    }
+
+    unreachable!()
+}
 
 pub struct LockedFrameAllocator(Once<Mutex<GlobalFrameAllocator>>);
 
@@ -60,8 +88,12 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
 
         self.0.get().map(|m| {
             m.lock_irq()
-                .allocate_frame_inner(0)
-                .map(|f| PhysFrame::containing_address(f))
+                .allocate_frame_inner(order_from_size(Size4KiB::SIZE))
+                .map(|f| {
+                    let frame = PhysFrame::containing_address(f);
+                    frame.as_slice_mut().fill(0);
+                    frame
+                })
         })?
     }
 
@@ -70,10 +102,13 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
         // let caller = core::panic::Location::caller();
         // log::debug!("deallocation request of 4KiB by {:?}", caller);
 
-        // self.0
-        //     .get()
-        //     .map(|m| m.lock().deallocate_frame_inner(frame.start_address(), 0))
-        //     .unwrap_or(());
+        self.0
+            .get()
+            .map(|m| {
+                m.lock_irq()
+                    .deallocate_frame_inner(frame.start_address(), order_from_size(Size4KiB::SIZE))
+            })
+            .unwrap_or(());
     }
 }
 
@@ -85,7 +120,7 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
 
         self.0.get().map(|m| {
             m.lock_irq()
-                .allocate_frame_inner(2)
+                .allocate_frame_inner(order_from_size(Size2MiB::SIZE))
                 .map(|f| PhysFrame::containing_address(f))
         })?
     }
@@ -99,7 +134,7 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
             .get()
             .map(|m| {
                 m.lock_irq()
-                    .deallocate_frame_inner(frame.start_address(), 2)
+                    .deallocate_frame_inner(frame.start_address(), order_from_size(Size2MiB::SIZE))
             })
             .unwrap_or(());
     }
@@ -150,7 +185,7 @@ impl<'a> Iterator for RangeMemoryIter<'a> {
 #[repr(usize)]
 pub enum BuddyOrdering {
     Size4KiB = 0,
-    Size8KiB = 2,
+    Size8KiB = 1,
 }
 
 // FIXME: REMOVE THIS FUNCTION
@@ -247,35 +282,32 @@ unsafe impl Send for BootAllocRef {}
 
 static VM_FRAMES: Once<Vec<VmFrame>> = Once::new();
 
-/// Buddy allocator combines power-of-two allocator with free buffer
-/// coalescing.
+/// Buddy allocator combines power-of-two allocator with free buffer coalescing.
 ///
 /// ## Overview
 ///
 /// Overview of the buddy allocation algorithm:
 ///
-/// * Memory is broken up into large blocks of pages where each block
-///   is a power of two number of pages.
+/// * Memory is broken up into large blocks of pages where each block is a power of two number of
+///   pages.
 ///
-/// * If a block of the desired size is not available, a larger block is
-///   broken up in half and the two blocks are marked as buddies then one half
-///   is used for the allocation and the other half is marked free.
+/// * If a block of the desired size is not available, a larger block is broken up in half and the
+///   two blocks are marked as buddies then one half is used for the allocation and the other half
+///   is marked free.
 ///
-/// * The blocks are continuously halved as necessary until a block of the
-///   desired size is available.
+/// * The blocks are continuously halved as necessary until a block of the desired size is
+///   available.
 ///
-/// * When a block is later freed, the buddy is examined and the two coalesced
-///   if it is free.
+/// * When a block is later freed, the buddy is examined and the two coalesced if it is free.
 pub struct GlobalFrameAllocator {
-    buddies: [Bitmap<BootAllocRef>; 3],
-    free: [usize; 3],
+    buddies: [Bitmap<BootAllocRef>; 10],
+    free: [usize; 10],
 
     base: PhysAddr,
     end: PhysAddr,
 }
 
 impl GlobalFrameAllocator {
-    /// Create a new global frame allocator from the memory map provided by the bootloader.
     fn new(memory_map: &mut [NonNullPtr<LimineMemmapEntry>]) -> Self {
         // Find a memory map entry that is big enough to fit all of the items in
         // range memory iter.
@@ -350,8 +382,15 @@ impl GlobalFrameAllocator {
                 Bitmap::empty(bref.clone()),
                 Bitmap::empty(bref.clone()),
                 Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref.clone()),
             ],
-            free: [0; 3],
+            free: [0; 10],
         };
 
         let size = this.end - this.base;
@@ -455,7 +494,7 @@ impl GlobalFrameAllocator {
         let idx = self.get_bit_idx(addr, order);
 
         let buddy = &mut self.buddies[order];
-        let change = buddy.is_set(idx) == true;
+        let change = buddy.is_set(idx);
 
         if change {
             buddy.set(idx, false);
