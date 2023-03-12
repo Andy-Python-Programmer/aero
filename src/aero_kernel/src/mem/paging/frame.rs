@@ -81,11 +81,7 @@ impl LockedFrameAllocator {
 }
 
 unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
-    #[track_caller]
     fn allocate_frame(&self) -> Option<PhysFrame<Size4KiB>> {
-        // let caller = core::panic::Location::caller();
-        // log::debug!("allocation request of 4KiB by {:?}", caller);
-
         self.0.get().map(|m| {
             m.lock_irq()
                 .allocate_frame_inner(order_from_size(Size4KiB::SIZE))
@@ -97,27 +93,19 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
         })?
     }
 
-    #[track_caller]
     fn deallocate_frame(&self, frame: PhysFrame<Size4KiB>) {
-        // let caller = core::panic::Location::caller();
-        // log::debug!("deallocation request of 4KiB by {:?}", caller);
-
         self.0
             .get()
             .map(|m| {
                 m.lock_irq()
                     .deallocate_frame_inner(frame.start_address(), order_from_size(Size4KiB::SIZE))
             })
-            .unwrap_or(());
+            .unwrap()
     }
 }
 
 unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
-    #[track_caller]
     fn allocate_frame(&self) -> Option<PhysFrame<Size2MiB>> {
-        // let caller = core::panic::Location::caller();
-        // log::debug!("allocation request of 2MiB by {:?}", caller);
-
         self.0.get().map(|m| {
             m.lock_irq()
                 .allocate_frame_inner(order_from_size(Size2MiB::SIZE))
@@ -125,18 +113,14 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
         })?
     }
 
-    #[track_caller]
     fn deallocate_frame(&self, frame: PhysFrame<Size2MiB>) {
-        // let caller = core::panic::Location::caller();
-        // log::debug!("deallocation request of 2MiB by {:?}", caller);
-
         self.0
             .get()
             .map(|m| {
                 m.lock_irq()
                     .deallocate_frame_inner(frame.start_address(), order_from_size(Size2MiB::SIZE))
             })
-            .unwrap_or(());
+            .unwrap()
     }
 }
 
