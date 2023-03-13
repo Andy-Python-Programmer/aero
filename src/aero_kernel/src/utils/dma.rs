@@ -35,23 +35,14 @@ pub struct DmaAllocator;
 unsafe impl Allocator for DmaAllocator {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         // XXX: The DMA buffer must be aligned to a page boundary.
-        let size_bytes = layout.size() as u64;
+        let size_bytes = layout.size();
 
-        let phys = if size_bytes <= Size4KiB::SIZE {
-            let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR.allocate_frame().ok_or(AllocError)?;
-            frame.start_address()
-        } else {
-            assert!(size_bytes <= Size2MiB::SIZE);
-
-            let frame: PhysFrame<Size2MiB> = FRAME_ALLOCATOR.allocate_frame().ok_or(AllocError)?;
-            frame.start_address()
-        };
-
+        let phys = FRAME_ALLOCATOR.alloc(size_bytes).ok_or(AllocError)?;
         let virt = phys.as_hhdm_virt();
 
         // SAFETY: The frame is aligned and non-null.
         let ptr = unsafe { NonNull::new_unchecked(virt.as_mut_ptr() as *mut u8) };
-        Ok(NonNull::slice_from_raw_parts(ptr, size_bytes as _))
+        Ok(NonNull::slice_from_raw_parts(ptr, size_bytes))
     }
 
     unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {}
@@ -63,11 +54,6 @@ pub type DmaBuffer<T> = Box<T, DmaAllocator>;
 pub struct Dma<T: ?Sized>(DmaBuffer<T>);
 
 impl<T> Dma<T> {
-    /// Creates a new DMA buffer intialized with `value`.
-    pub fn new(value: T) -> Self {
-        Dma(DmaBuffer::new_in(value, DmaAllocator))
-    }
-
     /// Creates a new DMA (Direct Memory Access) buffer and is initialized
     /// with zeros.
     ///

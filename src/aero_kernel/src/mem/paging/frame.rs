@@ -78,19 +78,26 @@ impl LockedFrameAllocator {
         self.0
             .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
     }
+
+    pub fn alloc(&self, size_bytes: usize) -> Option<PhysAddr> {
+        let order = order_from_size(size_bytes as u64);
+
+        let mut allocator = self.0.get()?.lock_irq();
+        allocator.allocate_frame_inner(order)
+    }
+
+    pub fn alloc_zeroed(&self, size_bytes: usize) -> Option<PhysAddr> {
+        let addr = self.alloc(size_bytes)?;
+        addr.as_hhdm_virt().as_bytes_mut(size_bytes).fill(0);
+
+        Some(addr)
+    }
 }
 
 unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
     fn allocate_frame(&self) -> Option<PhysFrame<Size4KiB>> {
-        self.0.get().map(|m| {
-            m.lock_irq()
-                .allocate_frame_inner(order_from_size(Size4KiB::SIZE))
-                .map(|f| {
-                    let frame = PhysFrame::containing_address(f);
-                    frame.as_slice_mut().fill(0);
-                    frame
-                })
-        })?
+        let phys = self.alloc(Size4KiB::SIZE as _)?;
+        Some(PhysFrame::containing_address(phys))
     }
 
     fn deallocate_frame(&self, frame: PhysFrame<Size4KiB>) {
@@ -106,11 +113,8 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
 
 unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
     fn allocate_frame(&self) -> Option<PhysFrame<Size2MiB>> {
-        self.0.get().map(|m| {
-            m.lock_irq()
-                .allocate_frame_inner(order_from_size(Size2MiB::SIZE))
-                .map(|f| PhysFrame::containing_address(f))
-        })?
+        let phys = self.alloc(Size2MiB::SIZE as _)?;
+        Some(PhysFrame::containing_address(phys))
     }
 
     fn deallocate_frame(&self, frame: PhysFrame<Size2MiB>) {
@@ -177,15 +181,9 @@ pub fn pmm_alloc(order: BuddyOrdering) -> PhysAddr {
     let order = order as usize;
     debug_assert!(order <= BUDDY_SIZE.len());
 
-    let addr = super::FRAME_ALLOCATOR
-        .0
-        .get()
-        .expect("pmm: frame allocator not initialized")
-        .lock()
-        .allocate_frame_inner(order)
-        .expect("pmm: out of memory");
-
-    addr
+    super::FRAME_ALLOCATOR
+        .alloc_zeroed(BUDDY_SIZE[order] as _)
+        .unwrap()
 }
 
 #[derive(Debug)]

@@ -111,6 +111,11 @@ impl VirtAddr {
         }
     }
 
+    pub fn as_bytes_mut(&self, size_bytes: usize) -> &mut [u8] {
+        assert!(self.validate_read::<&[u8]>());
+        unsafe { core::slice::from_raw_parts_mut(self.as_mut_ptr(), size_bytes) }
+    }
+
     /// Converts this HHDM (Higher Half Direct Map) virtual address to its physical address.
     pub fn as_hhdm_phys(&self) -> PhysAddr {
         unsafe { PhysAddr::new(self.clone() - crate::PHYSICAL_MEMORY_OFFSET) }
@@ -118,7 +123,8 @@ impl VirtAddr {
 
     /// Returns if the address is valid to read `sizeof(T)` bytes at the address.
     fn validate_read<T: Sized>(&self) -> bool {
-        // FIXME: (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address() // in-range
+        // FIXME: (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address()
+        // // in-range
         self.0 != 0 // non-null
     }
 
