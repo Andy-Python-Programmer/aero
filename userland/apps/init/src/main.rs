@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2021-2022 The Aero Project Developers.
+ * Copyright (C) 2021-2022 The Aero Project Developers.
  *
  * This file is part of The Aero Project.
  *
@@ -23,18 +23,29 @@ use std::os::fd::AsRawFd;
 use std::process::Command;
 
 const TTY_PATH: &str = "/dev/tty";
+const DEV_NULL: &str = "/dev/null";
 
-fn remove_cloexec(file: &File) {
-    // By default rust automatically sets the close-on-exe flag to prevent
-    // leaking file descriptors.
-    //
-    // OpenOptions::custom_flags() only allows insertion of flags and are
-    // overwritten by the flags set by the standard library. So here, we
-    // need to manually update the flags after opening the file.
-    let fd = file.as_raw_fd();
+struct FileSet<const N: usize>([File; N]);
 
-    unsafe {
-        assert!(libc::fcntl(fd, libc::F_SETFD, 0 /* flags */) == 0);
+impl<const N: usize> FileSet<N> {
+    fn new(files: [File; N]) -> Self {
+        Self(files)
+    }
+
+    fn remove_cloexec(&self) {
+        for file in self.0.iter() {
+            // By default rust automatically sets the close-on-exe flag to prevent
+            // leaking file descriptors.
+            //
+            // OpenOptions::custom_flags() only allows insertion of flags and are
+            // overwritten by the flags set by the standard library. So here, we
+            // need to manually update the flags after opening the file.
+            let fd = file.as_raw_fd();
+
+            unsafe {
+                assert!(libc::fcntl(fd, libc::F_SETFD, 0 /* flags */) == 0);
+            }
+        }
     }
 }
 
@@ -44,17 +55,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     let stdout = OpenOptions::new().write(true).open(TTY_PATH)?; // fd=1
     let stderr = OpenOptions::new().write(true).open(TTY_PATH)?; // fd=2
 
-    remove_cloexec(&stdin);
-    remove_cloexec(&stdout);
-    remove_cloexec(&stderr);
+    {
+        let stdset = FileSet::new([stdin, stdout, stderr]);
+        stdset.remove_cloexec();
 
-    Command::new("dhcpd").spawn()?;
+        Command::new("dhcpd").spawn()?;
+    }
 
-    // Close the std{in,out,err} file descriptors, since now we are going to
-    // start an X session.
-    drop(stdin);
-    drop(stdout);
-    drop(stderr);
+    // Swap the `/dev/tty` std{in,out,err} file descriptors with `/dev/null` to suppress the Xorg
+    // server logs.
+    let stdin = OpenOptions::new().read(true).open(DEV_NULL)?; // fd=0
+    let stdout = OpenOptions::new().write(true).open(DEV_NULL)?; // fd=1
+    let stderr = OpenOptions::new().write(true).open(DEV_NULL)?; // fd=2
+
+    let stdset = FileSet::new([stdin, stdout, stderr]);
+    stdset.remove_cloexec();
 
     Command::new("startx")
         .env("RUST_BACKTRACE", "full")

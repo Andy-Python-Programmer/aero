@@ -188,6 +188,10 @@ impl INodeInterface for DevNull {
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> Result<usize> {
         Ok(buffer.len())
     }
+
+    fn poll(&self, _table: Option<&mut PollTable>) -> Result<PollFlags> {
+        Ok(PollFlags::OUT)
+    }
 }
 
 struct DevKmsg(usize);
