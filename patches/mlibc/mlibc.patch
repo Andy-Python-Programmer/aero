@@ -1,21 +1,15 @@
-From fb1766aa2abfb310b6c1b0904f849f5d6c8fb62b Mon Sep 17 00:00:00 2001
+From 7ffa4a93ab4c1a5a5dd129dce1d03f784ace2e06 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sat, 11 Mar 2023 16:55:47 +1100
+Date: Mon, 13 Mar 2023 16:14:34 +1100
 Subject: [PATCH] <xxx>
 
 ---
- .gitignore                            |  2 +
- options/ansi/generic/stdlib-stubs.cpp |  6 +-
- options/glibc/generic/execinfo.cpp    |  5 +-
+ .gitignore                            |  2 ++
+ options/ansi/generic/stdlib-stubs.cpp |  6 ++++--
+ options/glibc/generic/execinfo.cpp    |  5 +++--
  options/rtdl/generic/linker.cpp       |  2 +-
- sysdeps/aero/generic/aero.cpp         | 77 +++++++++++++--------
- sysdeps/aero/generic/filesystem.cpp   | 51 ++++++++++++--
- sysdeps/aero/generic/sockets.cpp      | 96 ++++++++++++++++++++++++++-
- sysdeps/aero/generic/time.cpp         | 24 +++++++
- sysdeps/aero/include/aero/syscall.h   | 11 +++
- sysdeps/aero/meson.build              |  1 +
- 10 files changed, 234 insertions(+), 41 deletions(-)
- create mode 100644 sysdeps/aero/generic/time.cpp
+ sysdeps/aero/generic/sockets.cpp      | 25 +++++++++++++++++++++++++
+ 5 files changed, 35 insertions(+), 5 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index fdd60a0..9f811f4 100644
@@ -73,7 +67,49 @@ index 6eb9d09..2ab5bc9 100644
 +constexpr bool logBaseAddresses = true;
  constexpr bool logRpath = false;
  constexpr bool eagerBinding = true;
-
+ 
+diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
+index c730bff..39cacb4 100644
+--- a/sysdeps/aero/generic/sockets.cpp
++++ b/sysdeps/aero/generic/sockets.cpp
+@@ -4,7 +4,11 @@
+ #include <abi-bits/in.h>
+ 
+ #include <aero/syscall.h>
++
++#include <unistd.h>
+ #include <stdint.h>
++#include <net/if.h>
++#include <sys/ioctl.h>
+ 
+ namespace mlibc {
+ int sys_socket(int family, int type, int protocol, int *fd) {
+@@ -187,4 +191,25 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
+         __builtin_unreachable();
+     }
+ }
++
++int sys_if_nametoindex(const char *name, unsigned int *ret) {
++    int fd = 0;
++
++    // TODO(andypython): is the SOCK_CLOEXEC flag required in this case?
++    int r = sys_socket(AF_INET, SOCK_DGRAM, AF_UNSPEC, &fd);
++    if (r)
++        return r;
++
++    struct ifreq ifr;
++    strncpy(ifr.ifr_name, name, sizeof ifr.ifr_name);
++
++    r = sys_ioctl(fd, SIOCGIFINDEX, &ifr, NULL);
++    close(fd);
++
++    if (r)
++        return r;
++
++    *ret = ifr.ifr_ifindex;
++    return 0;
++}
+ } // namespace mlibc
 -- 
-2.39.1
+2.39.2
 

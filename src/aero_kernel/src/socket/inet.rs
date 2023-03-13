@@ -17,7 +17,7 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::prelude::{IfReq, SIOCGIFHWADDR, SIOCSIFADDR};
+use aero_syscall::prelude::{IfReq, SIOCGIFHWADDR, SIOCGIFINDEX, SIOCSIFADDR};
 use aero_syscall::socket::MessageHeader;
 use aero_syscall::{IpProtocol, OpenFlags, SocketAddrInet, SocketType, SyscallError};
 use alloc::sync::{Arc, Weak};
@@ -64,7 +64,9 @@ pub struct InetSocket {
 
 impl InetSocket {
     pub fn new(typ: SocketType, protocol: IpProtocol) -> Result<Arc<Self>, SyscallError> {
-        if typ != SocketType::Dgram && protocol != IpProtocol::Udp {
+        if typ != SocketType::Dgram
+            && (protocol != IpProtocol::Udp || protocol != IpProtocol::Default)
+        {
             return Err(SyscallError::EINVAL);
         }
 
@@ -228,6 +230,18 @@ impl INodeInterface for InetSocket {
 
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
         match command {
+            SIOCGIFINDEX => {
+                let ifreq = VirtAddr::new(arg as _)
+                    .read_mut::<IfReq>()
+                    .ok_or(FileSystemError::NotSupported)?;
+
+                let name = ifreq.name().unwrap();
+                assert!(name == "eth0");
+
+                ifreq.data.ifindex = 1; // FIXME: Fill the actual interface index
+                Ok(0)
+            }
+
             SIOCGIFHWADDR => {
                 let ifreq = VirtAddr::new(arg as _)
                     .read_mut::<IfReq>()
@@ -237,7 +251,10 @@ impl INodeInterface for InetSocket {
                 assert!(name == "eth0");
 
                 let hwaddr = unsafe {
-                    core::slice::from_raw_parts_mut(ifreq.sa_data.as_mut_ptr(), MacAddr::ADDR_SIZE)
+                    core::slice::from_raw_parts_mut(
+                        ifreq.data.addr.sa_data.as_mut_ptr(),
+                        MacAddr::ADDR_SIZE,
+                    )
                 };
 
                 let mac_addr = net::default_device().mac();
@@ -250,10 +267,12 @@ impl INodeInterface for InetSocket {
                     .read_mut::<IfReq>()
                     .ok_or(FileSystemError::NotSupported)?;
 
+                let family = unsafe { ifreq.data.addr.sa_family };
+
                 let name = ifreq.name().ok_or(FileSystemError::InvalidPath)?;
                 let socket = SocketAddr::from_family(
-                    VirtAddr::new(&ifreq.sa_family as *const _ as _),
-                    ifreq.sa_family,
+                    VirtAddr::new(&unsafe { ifreq.data.addr } as *const _ as _),
+                    family,
                 )
                 .ok_or(FileSystemError::NotSupported)?
                 .as_inet()

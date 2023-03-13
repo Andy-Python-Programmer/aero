@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::ffi;
+
 use crate::OpenFlags;
 
 // syscall number constants:
@@ -348,17 +350,36 @@ pub struct FramebufferFScreenInfo {
 }
 
 // networking ioctls:
+pub const SIOCGIFINDEX: usize = 0x8933;
 pub const SIOCGIFHWADDR: usize = 0x8927;
 pub const SIOCSIFADDR: usize = 0x8916; // set PA address
 
 const IF_NAME_SIZE: usize = 16;
 
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct SockAddrStorage {
+    pub sa_family: u32,
+    pub sa_data: [u8; 14],
+}
+
+#[repr(C)]
+pub union IfrIfru {
+    pub addr: SockAddrStorage,
+    pub flags: ffi::c_short,
+    pub ifindex: ffi::c_int,
+    pub metric: ffi::c_int,
+    pub mtu: ffi::c_int,
+    pub slave: [u8; IF_NAME_SIZE],
+    pub newname: [u8; IF_NAME_SIZE],
+    pub data: *mut u8,
+}
+
 #[repr(C)]
 pub struct IfReq {
     /// interface name, e.g. "en0"
     pub name: [u8; IF_NAME_SIZE],
-    pub sa_family: u32,
-    pub sa_data: [u8; 14],
+    pub data: IfrIfru,
 }
 
 impl IfReq {
