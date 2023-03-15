@@ -44,7 +44,8 @@
     nonnull_slice_from_raw_parts,
     maybe_uninit_write_slice,
     slice_ptr_get,
-    maybe_uninit_as_bytes
+    maybe_uninit_as_bytes,
+    pointer_is_aligned
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]

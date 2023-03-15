@@ -41,7 +41,13 @@ enum Error {
     UnknownBar,
     NoEeprom,
     OutOfMemory,
-    NotSupported,
+    ReadErr(ReadErr),
+}
+
+impl From<ReadErr> for Error {
+    fn from(value: ReadErr) -> Self {
+        Self::ReadErr(value)
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -446,9 +452,7 @@ impl E1000 {
         let phys = frame.start_address();
         let addr = phys.as_hhdm_virt();
 
-        let descriptors = addr
-            .read_mut::<[TxDescriptor; TX_DESC_NUM as usize]>()
-            .ok_or(Error::NotSupported)?;
+        let descriptors = addr.read_mut::<[TxDescriptor; TX_DESC_NUM as usize]>()?;
 
         for desc in descriptors {
             *desc = TxDescriptor::default();
@@ -485,9 +489,7 @@ impl E1000 {
         let phys = frame.start_address();
         let addr = phys.as_hhdm_virt();
 
-        let descriptors = addr
-            .read_mut::<[RxDescriptor; RX_DESC_NUM as usize]>()
-            .ok_or(Error::NotSupported)?;
+        let descriptors = addr.read_mut::<[RxDescriptor; RX_DESC_NUM as usize]>()?;
 
         for desc in descriptors {
             let frame: PhysFrame<Size4KiB> =

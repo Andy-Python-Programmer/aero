@@ -280,11 +280,11 @@ fn process_call_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<Expr> {
                             ArgType::Slice(is_mut) => {
                                 let slice_expr: Expr = if is_mut {
                                     syn::parse_quote! {
-                                        crate::utils::validate_slice_mut(#data_ident as *mut _, #len_ident).ok_or(SyscallError::EINVAL)?
+                                        crate::utils::validate_slice_mut(#data_ident as *mut _, #len_ident)?
                                     }
                                 } else {
                                     syn::parse_quote! {
-                                        crate::utils::validate_slice(#data_ident as *const _, #len_ident).ok_or(SyscallError::EINVAL)?
+                                        crate::utils::validate_slice(#data_ident as *const _, #len_ident)?
                                     }
                                 };
 
@@ -293,7 +293,7 @@ fn process_call_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<Expr> {
                             ArgType::Array(is_mut) => {
                                 let array_expr: Expr = if is_mut {
                                     syn::parse_quote! {
-                                        crate::utils::validate_array_mut(#data_ident as *mut _).ok_or(SyscallError::EINVAL)?
+                                        crate::utils::validate_array_mut(#data_ident as *mut _)?
                                     }
                                 } else {
                                     unimplemented!()
@@ -313,22 +313,22 @@ fn process_call_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<Expr> {
                             ArgType::Reference(is_mut) => {
                                 let ref_expr: Expr = if is_mut {
                                     syn::parse_quote!({
-                                        crate::utils::validate_mut_ptr(#ident as *mut _).ok_or(SyscallError::EINVAL)?
+                                        crate::utils::validate_mut_ptr(#ident as *mut _)?
                                     })
                                 } else {
                                     syn::parse_quote!({
-                                        crate::utils::validate_ptr(#ident as *const _).ok_or(SyscallError::EINVAL)?
+                                        crate::utils::validate_ptr(#ident as *const _)?
                                     })
                                 };
 
                                 result.push(ref_expr);
                             }
                             ArgType::String => result.push(syn::parse_quote! {
-                                crate::utils::validate_str(#data_ident as *const _, #len_ident).ok_or(SyscallError::EINVAL)?
+                                crate::utils::validate_str(#data_ident as *const _, #len_ident)?
                             }),
                             ArgType::Path => result.push(syn::parse_quote! {
                                 {
-                                    let string = crate::utils::validate_str(#data_ident as *const _, #len_ident).ok_or(SyscallError::EINVAL)?;
+                                    let string = crate::utils::validate_str(#data_ident as *const _, #len_ident)?;
                                     let path = Path::new(string);
                                     path
                                 }

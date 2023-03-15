@@ -231,9 +231,7 @@ impl INodeInterface for InetSocket {
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
         match command {
             SIOCGIFINDEX => {
-                let ifreq = VirtAddr::new(arg as _)
-                    .read_mut::<IfReq>()
-                    .ok_or(FileSystemError::NotSupported)?;
+                let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
 
                 let name = ifreq.name().unwrap();
                 assert!(name == "eth0");
@@ -243,9 +241,7 @@ impl INodeInterface for InetSocket {
             }
 
             SIOCGIFHWADDR => {
-                let ifreq = VirtAddr::new(arg as _)
-                    .read_mut::<IfReq>()
-                    .ok_or(FileSystemError::NotSupported)?;
+                let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
 
                 let name = ifreq.name().ok_or(FileSystemError::InvalidPath)?;
                 assert!(name == "eth0");
@@ -263,9 +259,7 @@ impl INodeInterface for InetSocket {
             }
 
             SIOCSIFADDR => {
-                let ifreq = VirtAddr::new(arg as _)
-                    .read_mut::<IfReq>()
-                    .ok_or(FileSystemError::NotSupported)?;
+                let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
 
                 let family = unsafe { ifreq.data.addr.sa_family };
 
@@ -274,7 +268,7 @@ impl INodeInterface for InetSocket {
                     VirtAddr::new(&unsafe { ifreq.data.addr } as *const _ as _),
                     family,
                 )
-                .ok_or(FileSystemError::NotSupported)?
+                .map_err(|_| FileSystemError::NotSupported)?
                 .as_inet()
                 .ok_or(FileSystemError::NotSupported)?;
 

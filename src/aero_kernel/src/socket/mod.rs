@@ -31,12 +31,12 @@ pub enum SocketAddr<'a> {
 }
 
 impl<'a> SocketAddr<'a> {
-    pub fn from_family(address: VirtAddr, family: u32) -> Option<Self> {
+    pub fn from_family(address: VirtAddr, family: u32) -> Result<Self, SyscallError> {
         match family {
-            AF_UNIX => Some(SocketAddr::Unix(address.read_mut::<SocketAddrUnix>()?)),
-            AF_INET => Some(SocketAddr::INet(address.read_mut::<SocketAddrInet>()?)),
+            AF_UNIX => Ok(SocketAddr::Unix(address.read_mut::<SocketAddrUnix>()?)),
+            AF_INET => Ok(SocketAddr::INet(address.read_mut::<SocketAddrInet>()?)),
 
-            _ => None,
+            _ => Err(SyscallError::EINVAL),
         }
     }
 

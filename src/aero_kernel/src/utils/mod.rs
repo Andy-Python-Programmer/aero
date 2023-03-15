@@ -20,7 +20,7 @@
 use alloc::{alloc::alloc_zeroed, sync::Arc};
 use core::{alloc::Layout, any::Any, cell::UnsafeCell, mem, ptr::Unique};
 
-use crate::mem::paging::{align_down, VirtAddr};
+use crate::mem::paging::{align_down, ReadErr, VirtAddr};
 
 #[cfg(target_arch = "x86_64")]
 use crate::arch::apic::get_cpu_count;
@@ -35,40 +35,42 @@ pub mod buffer;
 pub mod dma;
 pub mod sync;
 
-pub fn validate_mut_ptr<T>(ptr: *mut T) -> Option<&'static mut T> {
+pub fn validate_mut_ptr<T>(ptr: *mut T) -> Result<&'static mut T, ReadErr> {
     VirtAddr::new(ptr as _).read_mut::<T>()
 }
 
-pub fn validate_ptr<T>(ptr: *const T) -> Option<&'static T> {
+pub fn validate_ptr<T>(ptr: *const T) -> Result<&'static T, ReadErr> {
     // SAFETY: Safe to cast const pointer to mutable since the pointer is not
-    // mutated and the returned reference is immutable.
+    //         mutated and the returned reference is immutable.
     validate_mut_ptr(ptr as *mut T).map(|e| &*e)
 }
 
-pub fn validate_slice_mut<T>(ptr: *mut T, len: usize) -> Option<&'static mut [T]> {
+pub fn validate_slice_mut<T>(ptr: *mut T, len: usize) -> Result<&'static mut [T], ReadErr> {
     if len == 0 {
-        Some(&mut [])
+        Ok(&mut [])
     } else {
         let _ = validate_ptr(ptr)?; // ensure non-null and in-range
         let _ = validate_ptr(unsafe { ptr.add(len) })?; // ensure in-range
 
         // SAFETY: We have validated the pointer above.
-        Some(unsafe { core::slice::from_raw_parts_mut(ptr, len) })
+        Ok(unsafe { core::slice::from_raw_parts_mut(ptr, len) })
     }
 }
 
-pub fn validate_slice<T>(ptr: *const T, len: usize) -> Option<&'static [T]> {
+pub fn validate_slice<T>(ptr: *const T, len: usize) -> Result<&'static [T], ReadErr> {
     // SAFETY: Safe to cast const pointer to mutable since the pointer is not
-    // mutated and the returned reference is immutable.
+    //         mutated and the returned reference is immutable.
     validate_slice_mut(ptr as *mut T, len).map(|e| &*e)
 }
 
-pub fn validate_str(ptr: *const u8, len: usize) -> Option<&'static str> {
+pub fn validate_str(ptr: *const u8, len: usize) -> Result<&'static str, ReadErr> {
     let slice = validate_slice(ptr, len)?;
-    core::str::from_utf8(slice).ok()
+    core::str::from_utf8(slice).map_err(|_| ReadErr::Null)
 }
 
-pub fn validate_array_mut<T, const COUNT: usize>(ptr: *mut T) -> Option<&'static mut [T; COUNT]> {
+pub fn validate_array_mut<T, const COUNT: usize>(
+    ptr: *mut T,
+) -> Result<&'static mut [T; COUNT], ReadErr> {
     let slice = validate_slice_mut::<T>(ptr, COUNT);
     // Convert the validated slice to an array.
     //

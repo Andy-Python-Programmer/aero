@@ -89,7 +89,7 @@ impl FutexContainer {
         Self::validate_futex_ptr(uaddr)?;
 
         let key = Self::addr_as_futex_key(uaddr).ok_or(SyscallError::EINVAL)?;
-        let value = uaddr.read_mut::<AtomicU32>().ok_or(SyscallError::EINVAL)?;
+        let value = uaddr.read_mut::<AtomicU32>()?;
 
         if value.load(Ordering::SeqCst) == expected {
             let futex = self.get_alloc(key);

@@ -390,10 +390,7 @@ impl INodeInterface for DevFb {
             // Device independent colormap information can be get and set using
             // the `FBIOGETCMAP` and `FBIOPUTCMAP` ioctls.
             FBIOPUTCMAP => {
-                let struc = VirtAddr::new(arg as _)
-                    .read_mut::<FramebufferCmap>()
-                    .ok_or(FileSystemError::NotSupported);
-
+                let struc = VirtAddr::new(arg as _).read_mut::<FramebufferCmap>()?;
                 log::debug!("fbdev: `FBIOPUTCMAP` is a stub! {struc:?}");
                 Ok(0)
             }

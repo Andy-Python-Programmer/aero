@@ -108,18 +108,12 @@ impl INodeInterface for Master {
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
         match command {
             TIOCGPTN => {
-                let id = VirtAddr::new(arg as u64)
-                    .read_mut::<u32>()
-                    .ok_or(FileSystemError::NotSupported)?;
-
+                let id = VirtAddr::new(arg as u64).read_mut::<u32>()?;
                 *id = self.id;
             }
 
             aero_syscall::TIOCSWINSZ => {
-                let winsize = VirtAddr::new(arg as u64)
-                    .read_mut::<WinSize>()
-                    .ok_or(FileSystemError::NotSupported)?;
-
+                let winsize = VirtAddr::new(arg as u64).read_mut::<WinSize>()?;
                 *self.window_size.lock_irq() = *winsize;
             }
 
@@ -180,29 +174,23 @@ impl INodeInterface for Slave {
 
         match command {
             aero_syscall::TIOCGWINSZ => {
-                let winsize = VirtAddr::new(arg as u64)
-                    .read_mut::<WinSize>()
-                    .ok_or(FileSystemError::NotSupported)?;
-
+                let winsize = VirtAddr::new(arg as u64).read_mut::<WinSize>()?;
                 *winsize = *self.master.window_size.lock_irq();
+
                 Ok(0)
             }
 
             aero_syscall::TCGETS => {
-                let termios = VirtAddr::new(arg as u64)
-                    .read_mut::<Termios>()
-                    .ok_or(FileSystemError::NotSupported)?;
-
+                let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
                 *termios = inner.termios;
+
                 Ok(0)
             }
 
             aero_syscall::TCSETSF => {
-                let termios = VirtAddr::new(arg as u64)
-                    .read_mut::<Termios>()
-                    .ok_or(FileSystemError::NotSupported)?;
-
+                let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
                 inner.termios = *termios;
+
                 Ok(0)
             }
 

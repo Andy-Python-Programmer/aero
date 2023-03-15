@@ -654,7 +654,7 @@ pub fn poll(fds: &mut [PollFd], timeout: usize, sigmask: usize) -> Result<usize,
 
     // The timeout can be NULL.
     let timeout = if timeout != 0x00 {
-        Some(crate::utils::validate_ptr(timeout as *const TimeSpec).ok_or(SyscallError::EINVAL)?)
+        Some(crate::utils::validate_ptr(timeout as *const TimeSpec)?)
     } else {
         None
     };

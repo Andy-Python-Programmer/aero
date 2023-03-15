@@ -111,8 +111,7 @@ pub struct AcceptQueue {
 
 impl AcceptQueue {
     /// # Parameters
-    /// * `backlog`: The maximum number of pending connections that the
-    ///              queue can hold.
+    /// * `backlog`: The maximum number of pending connections that the queue can hold.
     pub fn new(backlog: usize) -> Self {
         Self {
             sockets: VecDeque::with_capacity(backlog),
@@ -370,9 +369,7 @@ impl INodeInterface for UnixSocket {
         }
 
         if let Some((address, length)) = address {
-            let address = address
-                .read_mut::<SocketAddrUnix>()
-                .ok_or(FileSystemError::NotSupported)?;
+            let address = address.read_mut::<SocketAddrUnix>()?;
 
             if let Some(paddr) = peer.inner.lock_irq().address.as_ref() {
                 *address = paddr.clone();

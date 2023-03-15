@@ -23,6 +23,8 @@ use core::fmt;
 use core::iter::Step;
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
+use crate::fs::FileSystemError;
+
 use super::page_table::{PageOffset, PageTableIndex};
 use super::{PageSize, Size4KiB, VmFrame};
 
@@ -52,14 +54,28 @@ pub struct VirtAddr(u64);
 #[repr(transparent)]
 pub struct PhysAddr(u64);
 
-/// A passed `u64` was not a valid virtual address.
-///
-/// This means that bits 48 to 64 are not
-/// a valid sign extension and are not null either. So automatic sign extension would have
-/// overwritten possibly meaningful bits. This likely indicates a bug, for example an invalid
-/// address calculation.
-#[derive(Debug)]
-pub struct VirtAddrNotValid(u64);
+#[derive(Copy, Clone, Debug)]
+pub enum ReadErr {
+    Null,
+    NotAligned,
+}
+
+impl From<ReadErr> for FileSystemError {
+    fn from(_: ReadErr) -> Self {
+        // `FileSystemError::NotSupported` will be converted to `EINVAL` on
+        // syscall error conversion.
+        FileSystemError::NotSupported
+    }
+}
+
+impl From<ReadErr> for aero_syscall::SyscallError {
+    fn from(value: ReadErr) -> Self {
+        match value {
+            ReadErr::Null => Self::EINVAL,
+            ReadErr::NotAligned => Self::EACCES,
+        }
+    }
+}
 
 impl VirtAddr {
     /// Creates a new canonical virtual address.
@@ -99,20 +115,15 @@ impl VirtAddr {
     ///
     /// ## Example
     /// ```no_run
-    /// let address: &mut SomeStruct = VirtAddr::new(0xcafebabe)
-    ///    .read_mut::<SomeStruct>();
-    ///    .ok_or(AeroSyscallError::EFAULT)?;
+    /// let address: &mut SomeStruct = VirtAddr::new(0xcafebabe).read_mut::<SomeStruct>()?;
     /// ```
-    pub fn read_mut<'struc, T: Sized>(&self) -> Option<&'struc mut T> {
-        if self.validate_read::<T>() {
-            Some(unsafe { &mut *(self.as_mut_ptr() as *mut T) })
-        } else {
-            None
-        }
+    pub fn read_mut<'a, T: Sized>(&self) -> Result<&'a mut T, ReadErr> {
+        self.validate_read::<T>()?;
+        Ok(unsafe { &mut *(self.as_mut_ptr() as *mut T) })
     }
 
     pub fn as_bytes_mut(&self, size_bytes: usize) -> &mut [u8] {
-        assert!(self.validate_read::<&[u8]>());
+        self.validate_read::<&[u8]>().unwrap();
         unsafe { core::slice::from_raw_parts_mut(self.as_mut_ptr(), size_bytes) }
     }
 
@@ -122,10 +133,17 @@ impl VirtAddr {
     }
 
     /// Returns if the address is valid to read `sizeof(T)` bytes at the address.
-    fn validate_read<T: Sized>(&self) -> bool {
+    fn validate_read<T: Sized>(&self) -> Result<(), ReadErr> {
         // FIXME: (*self + core::mem::size_of::<T>()) <= crate::arch::task::userland_last_address()
-        // // in-range
-        self.0 != 0 // non-null
+        let raw = self.as_ptr::<T>();
+
+        if raw.is_null() {
+            return Err(ReadErr::Null);
+        } else if !raw.is_aligned() {
+            return Err(ReadErr::NotAligned);
+        }
+
+        Ok(())
     }
 
     /// Aligns the virtual address downwards to the given alignment.
