@@ -22,7 +22,7 @@ use core::ptr::NonNull;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::vec::Vec;
-use limine::{LimineMemmapEntry, LimineMemoryMapEntryType, NonNullPtr};
+use limine::{MemmapEntry, MemoryMapEntryType, NonNullPtr};
 use spin::Once;
 
 use super::mapper::*;
@@ -74,7 +74,7 @@ impl LockedFrameAllocator {
     }
 
     /// Initializes the inner locked global frame allocator.
-    pub(super) fn init(&self, memory_map: &mut [NonNullPtr<LimineMemmapEntry>]) {
+    pub(super) fn init(&self, memory_map: &mut [NonNullPtr<MemmapEntry>]) {
         self.0
             .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
     }
@@ -129,7 +129,7 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
 }
 
 struct RangeMemoryIter<'a> {
-    iter: core::slice::Iter<'a, NonNullPtr<LimineMemmapEntry>>,
+    iter: core::slice::Iter<'a, NonNullPtr<MemmapEntry>>,
 
     cursor_base: PhysAddr,
     cursor_end: PhysAddr,
@@ -145,7 +145,7 @@ impl<'a> Iterator for RangeMemoryIter<'a> {
                 // the memory map and set the cursor to the start of it.
                 let next = self.iter.next()?;
 
-                if next.typ == LimineMemoryMapEntryType::Usable {
+                if next.typ == MemoryMapEntryType::Usable {
                     break Some(next);
                 }
             } {
@@ -290,7 +290,7 @@ pub struct GlobalFrameAllocator {
 }
 
 impl GlobalFrameAllocator {
-    fn new(memory_map: &mut [NonNullPtr<LimineMemmapEntry>]) -> Self {
+    fn new(memory_map: &mut [NonNullPtr<MemmapEntry>]) -> Self {
         // Find a memory map entry that is big enough to fit all of the items in
         // range memory iter.
         let requested_size = (core::mem::size_of::<MemoryRange>() * memory_map.len()) as u64;
@@ -300,7 +300,7 @@ impl GlobalFrameAllocator {
             let entry = &mut memory_map[i];
 
             // Make sure that the memory map entry is marked as usable.
-            if entry.typ != LimineMemoryMapEntryType::Usable {
+            if entry.typ != MemoryMapEntryType::Usable {
                 continue;
             }
 

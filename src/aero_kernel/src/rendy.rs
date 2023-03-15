@@ -24,7 +24,7 @@ use core::u8;
 
 use alloc::boxed::Box;
 
-use limine::LimineFramebuffer;
+use limine::Framebuffer;
 use spin::Once;
 
 use crate::cmdline::CommandLine;
@@ -823,8 +823,8 @@ pub fn reset_default() {
     set_text_color(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
 }
 
-/// Returns the terminal's resolution in the form of a `(horizontal_resolution, vertical_resolution)`
-/// tuple.
+/// Returns the terminal's resolution in the form of a `(horizontal_resolution,
+/// vertical_resolution)` tuple.
 ///
 /// # Panics
 /// This function was called before the terminal was initialized.
@@ -936,7 +936,7 @@ pub unsafe fn force_unlock() {
     DEBUG_RENDY.get().map(|l| l.force_unlock());
 }
 
-pub fn init(framebuffer_tag: &LimineFramebuffer, cmdline: &CommandLine) {
+pub fn init(framebuffer_tag: &Framebuffer, cmdline: &CommandLine) {
     let framebuffer_info = RendyInfo {
         byte_len: framebuffer_tag.size(),
         bits_per_pixel: framebuffer_tag.bpp as usize,

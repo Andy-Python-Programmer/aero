@@ -30,7 +30,7 @@ pub use self::mapper::*;
 pub use self::page::*;
 pub use self::page_table::*;
 
-use limine::LimineMemmapEntry;
+use limine::MemmapEntry;
 use limine::NonNullPtr;
 
 pub use frame::LockedFrameAllocator;
@@ -81,7 +81,7 @@ pub const fn level_5_paging_enabled() -> bool {
 
 /// Initialize paging.
 pub fn init(
-    memory_regions: &mut [NonNullPtr<LimineMemmapEntry>],
+    memory_regions: &mut [NonNullPtr<MemmapEntry>],
 ) -> Result<OffsetPageTable<'static>, MapToError<Size4KiB>> {
     let active_level_4 = unsafe { active_level_4_table() };
     let offset_table = unsafe { OffsetPageTable::new(active_level_4, PHYSICAL_MEMORY_OFFSET) };

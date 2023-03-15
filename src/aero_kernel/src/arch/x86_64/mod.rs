@@ -48,15 +48,15 @@ use limine::*;
 
 use self::interrupts::INTERRUPT_CONTROLLER;
 
-static MEMMAP: LimineMemmapRequest = LimineMemmapRequest::new(0);
-static SMP: LimineSmpRequest = LimineSmpRequest::new(0);
-static KERNEL_FILE: LimineKernelFileRequest = LimineKernelFileRequest::new(0);
-static MODULES: LimineModuleRequest = LimineModuleRequest::new(0);
-static FRAMEBUFFER: LimineFramebufferRequest = LimineFramebufferRequest::new(0);
-static RSDP: LimineRsdpRequest = LimineRsdpRequest::new(0);
-static BOOT_TIME: LimineBootTimeRequest = LimineBootTimeRequest::new(0);
-static STACK: LimineStackSizeRequest = LimineStackSizeRequest::new(0).stack_size(0x1000 * 32); // 16KiB of stack for both the BSP and the APs
-static HHDM: LimineHhdmRequest = LimineHhdmRequest::new(0);
+static MEMMAP: MemmapRequest = MemmapRequest::new(0);
+static SMP: SmpRequest = SmpRequest::new(0);
+static KERNEL_FILE: KernelFileRequest = KernelFileRequest::new(0);
+static MODULES: ModuleRequest = ModuleRequest::new(0);
+static FRAMEBUFFER: FramebufferRequest = FramebufferRequest::new(0);
+static RSDP: RsdpRequest = RsdpRequest::new(0);
+static BOOT_TIME: BootTimeRequest = BootTimeRequest::new(0);
+static STACK: StackSizeRequest = StackSizeRequest::new(0).stack_size(0x1000 * 32); // 16KiB of stack for both the BSP and the APs
+static HHDM: HhdmRequest = HhdmRequest::new(0);
 
 #[no_mangle]
 extern "C" fn arch_aero_main() -> ! {
@@ -203,7 +203,7 @@ extern "C" fn arch_aero_main() -> ! {
 }
 
 #[no_mangle]
-extern "C" fn x86_64_aero_ap_main(boot_info: *const LimineSmpInfo) -> ! {
+extern "C" fn x86_64_aero_ap_main(boot_info: *const SmpInfo) -> ! {
     let boot_info = unsafe { &*boot_info };
     let ap_id = boot_info.processor_id as usize;
 
