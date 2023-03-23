@@ -20,33 +20,56 @@
 use core::alloc;
 use core::alloc::{GlobalAlloc, Layout};
 
-use super::paging::FRAME_ALLOCATOR;
+use super::slab::{SlabHeader, SmallSlab};
 use super::vmalloc;
 use crate::mem::paging::*;
+use crate::utils::sync::IrqGuard;
 
-struct Allocator {}
+struct Allocator {
+    zones: [SmallSlab; 9],
+}
 
 impl Allocator {
     const fn new() -> Self {
-        Self {}
+        Self {
+            zones: [
+                SmallSlab::new(8),
+                SmallSlab::new(16),
+                SmallSlab::new(32),
+                SmallSlab::new(64),
+                SmallSlab::new(128),
+                SmallSlab::new(256),
+                SmallSlab::new(512),
+                SmallSlab::new(1024),
+                SmallSlab::new(2048),
+            ],
+        }
     }
 
     fn alloc(&self, layout: Layout) -> *mut u8 {
+        let _guard = IrqGuard::new();
+
         let size = align_up(layout.size() as _, layout.align() as _);
 
-        if size <= Size4KiB::SIZE {
-            let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR.allocate_frame().unwrap();
-            frame.start_address().as_hhdm_virt().as_mut_ptr()
-        } else if size <= Size2MiB::SIZE {
-            let frame: PhysFrame<Size2MiB> = FRAME_ALLOCATOR.allocate_frame().unwrap();
-            frame.start_address().as_hhdm_virt().as_mut_ptr()
+        for slab in self.zones.iter() {
+            if size as usize <= slab.size() {
+                return slab.alloc();
+            }
+        }
+
+        if size <= Size2MiB::SIZE {
+            FRAME_ALLOCATOR
+                .alloc(size as usize)
+                .unwrap()
+                .as_hhdm_virt()
+                .as_mut_ptr()
         } else {
             let size = align_up(size, Size4KiB::SIZE) / Size4KiB::SIZE;
 
             vmalloc::get_vmalloc()
                 .alloc(size as usize)
                 .map(|addr| addr.as_mut_ptr::<u8>())
-                .unwrap_or(core::ptr::null_mut())
+                .unwrap()
         }
     }
 
@@ -58,7 +81,13 @@ impl Allocator {
             return;
         }
 
-        // TODO: free the slab.
+        let _guard = IrqGuard::new();
+        if layout.size() <= 1024 {
+            let slab_header = (ptr as usize & !(0xfff)) as *mut SlabHeader;
+
+            let slab_header = unsafe { &mut *slab_header };
+            slab_header.ptr.dealloc(ptr);
+        }
     }
 }
 

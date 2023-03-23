@@ -45,7 +45,10 @@
     maybe_uninit_write_slice,
     slice_ptr_get,
     maybe_uninit_as_bytes,
-    pointer_is_aligned
+    pointer_is_aligned,
+    const_trait_impl,
+    int_roundings,
+    const_ptr_is_null
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]

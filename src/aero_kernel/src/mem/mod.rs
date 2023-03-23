@@ -20,6 +20,7 @@
 pub mod alloc;
 pub mod paging;
 pub mod pti;
+mod slab;
 mod vmalloc;
 
 use core::alloc::Layout;
