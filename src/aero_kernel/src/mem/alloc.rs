@@ -83,10 +83,8 @@ impl Allocator {
 
         let _guard = IrqGuard::new();
         if layout.size() <= 1024 {
-            let slab_header = (ptr as usize & !(0xfff)) as *mut SlabHeader;
-
-            let slab_header = unsafe { &mut *slab_header };
-            slab_header.ptr.dealloc(ptr);
+            let slab_header = SlabHeader::from_object(ptr);
+            slab_header.as_slab().dealloc(ptr);
         }
     }
 }

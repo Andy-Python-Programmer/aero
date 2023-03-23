@@ -26,10 +26,29 @@ use crate::utils::sync::Mutex;
 
 #[repr(C)]
 pub struct SlabHeader {
-    pub ptr: UnsafeRef<SmallSlab>,
+    /// Reference to the slab pool.
+    ptr: UnsafeRef<SmallSlab>,
+}
+
+impl SlabHeader {
+    /// Gets the [`SlabHeader`] from an allocated object.
+    pub fn from_object<'a>(ptr: *const u8) -> &'a Self {
+        assert!(!ptr.is_null());
+
+        let ptr = (ptr as usize & !(0xfff)) as *mut SlabHeader;
+        unsafe { &*ptr }
+    }
+
+    /// Returns the slab pool to which this header belongs to.
+    pub fn as_slab<'a>(&'a self) -> &'a SmallSlab {
+        self.ptr.as_ref()
+    }
 }
 
 const_assert_eq!(core::mem::size_of::<SlabHeader>(), 8);
+
+unsafe impl Send for SlabHeader {}
+unsafe impl Sync for SlabHeader {}
 
 /// For small slabs, the [`BufCtl`]s are stored inline.
 struct BufCtl(Option<NonNull<BufCtl>>);
@@ -47,6 +66,9 @@ impl BufCtl {
 }
 
 const_assert_eq!(core::mem::size_of::<BufCtl>(), 8);
+
+unsafe impl Send for BufCtl {}
+unsafe impl Sync for BufCtl {}
 
 /// Used for allocations smaller than `1/8` of a page.
 pub struct SmallSlab {
@@ -136,6 +158,3 @@ impl SmallSlab {
         self.size
     }
 }
-
-unsafe impl Send for SmallSlab {}
-unsafe impl Sync for SmallSlab {}
