@@ -431,15 +431,11 @@ impl INodeInterface for INode {
             return Err(FileSystemError::NotSupported);
         }
 
-        // TODO: We really should not allocate another buffer here.
-        let mut buffer = Box::<[u8]>::new_uninit_slice(usr_buffer.len());
-        let count = self.read(offset, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
+        let buffer = unsafe {
+            core::slice::from_raw_parts_mut(usr_buffer.as_mut_ptr().cast(), usr_buffer.len())
+        };
 
-        // SAFETY: We have initialized the data buffer above.
-        let buffer = unsafe { buffer.assume_init() };
-        usr_buffer.copy_from_slice(&*buffer);
-
-        Ok(count)
+        self.read(offset, buffer)
     }
 
     fn write_at(&self, offset: usize, usr_buffer: &[u8]) -> super::Result<usize> {
