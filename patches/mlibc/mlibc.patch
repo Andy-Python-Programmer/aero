@@ -1,15 +1,16 @@
-From 7ffa4a93ab4c1a5a5dd129dce1d03f784ace2e06 Mon Sep 17 00:00:00 2001
+From 8b458716d4a65d2da069678130c32c30395fed89 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Mon, 13 Mar 2023 16:14:34 +1100
+Date: Tue, 28 Mar 2023 17:15:29 +1100
 Subject: [PATCH] <xxx>
 
 ---
  .gitignore                            |  2 ++
- options/ansi/generic/stdlib-stubs.cpp |  6 ++++--
+ meson.build                           | 32 ++++++++++++++++-----------
+ options/ansi/generic/stdlib-stubs.cpp |  6 +++--
  options/glibc/generic/execinfo.cpp    |  5 +++--
  options/rtdl/generic/linker.cpp       |  2 +-
- sysdeps/aero/generic/sockets.cpp      | 25 +++++++++++++++++++++++++
- 5 files changed, 35 insertions(+), 5 deletions(-)
+ sysdeps/aero/generic/sockets.cpp      | 25 +++++++++++++++++++++
+ 6 files changed, 54 insertions(+), 18 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index fdd60a0..9f811f4 100644
@@ -21,6 +22,49 @@ index fdd60a0..9f811f4 100644
  .vscode
 +# clangd cache files:
 +.cache
+diff --git a/meson.build b/meson.build
+index 2261926..92b936d 100644
+--- a/meson.build
++++ b/meson.build
+@@ -315,19 +315,25 @@ subdir('options/bsd')
+ rtlib_deps = []
+ 
+ if not headers_only
+-	libgcc = meson.get_compiler('c').find_library('gcc', required: false)
+-
+-	compiler_rt_name = 'libclang_rt.builtins-' + host_machine.cpu_family()
+-	compiler_rt = meson.get_compiler('c').find_library(compiler_rt_name, required: false)
+-
+-	if libgcc.found()
+-		rtlib_deps += libgcc
+-	elif compiler_rt.found()
+-		rtlib_deps += compiler_rt
+-	else
+-		error('neither libgcc nor ' + compiler_rt_name + ' was found')
+-	endif
+-
++	# XXX: for Aero and Lyre, we force link mlibc against prebuilt 
++	# libgcc-binaries; the alternative is to build GCC twice (which
++	# is a tedious task).
++	#
++	# TODO: maybe upstream this by having a libgcc path option.
++	
++	# libgcc = meson.get_compiler('c').find_library('gcc', required: false)
++	#
++	# compiler_rt_name = 'libclang_rt.builtins-' + host_machine.cpu_family()
++	# compiler_rt = meson.get_compiler('c').find_library(compiler_rt_name, required: false)
++	#
++	# if libgcc.found()
++	# 	rtlib_deps += libgcc
++	# elif compiler_rt.found()
++	# 	rtlib_deps += compiler_rt
++	# else
++	# 	error('neither libgcc nor ' + compiler_rt_name + ' was found')
++	# endif
++	
+ 	ld_cpp_args = [
+ 		'-fvisibility=hidden',
+ 		'-fno-stack-protector',
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
 index c0e54fe..ddeec8a 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
