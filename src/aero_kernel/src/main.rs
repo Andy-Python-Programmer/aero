@@ -37,7 +37,6 @@
     linked_list_cursors,
     extern_types,
     new_uninit,
-    box_syntax,
     step_trait,
     prelude_import,
     allocator_api,
