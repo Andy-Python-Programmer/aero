@@ -219,8 +219,6 @@ pub trait CachedAccess: BlockDeviceInterface {
             let data = &page.data_mut()[page_offset..page_offset + size];
             dest[loc..loc + size].copy_from_slice(data);
 
-            core::mem::forget(page);
-
             loc += size;
             offset = align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
         }
@@ -247,8 +245,6 @@ pub trait CachedAccess: BlockDeviceInterface {
                 &mut page.data_mut()[page_offset..page_offset + size],
                 &buffer[loc..loc + size],
             );
-
-            core::mem::forget(page);
 
             loc += size;
             offset = align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;
