@@ -74,6 +74,7 @@ PROTOCOL=limine
 KASLR=no
 KERNEL_PATH=boot:///aero.elf
 CMDLINE=term-background=background theme-background=0x50000000
+#RESOLUTION=1920x1080
 
 MODULE_PATH=boot:///term_background.bmp
 MODULE_CMDLINE=background
