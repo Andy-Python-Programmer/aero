@@ -547,6 +547,7 @@ impl INodeInterface for INode {
         assert!(!flags.contains(MMapFlags::MAP_SHARED));
 
         let private_cp: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
+        private_cp.as_slice_mut().fill(0);
 
         let buffer = &mut private_cp.as_slice_mut()[..size];
         self.read_at(offset, buffer)?;

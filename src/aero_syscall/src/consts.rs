@@ -93,6 +93,7 @@ pub const SYS_SOCKET_PAIR: usize = 67;
 pub const SYS_RENAME: usize = 68;
 pub const SYS_MPROTECT: usize = 69; // haha funny number
 pub const SYS_SOCK_SEND: usize = 70;
+pub const SYS_TRACE: usize = 71;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

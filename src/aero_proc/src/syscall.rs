@@ -151,13 +151,18 @@ pub fn parse(attr: TokenStream, item: TokenStream) -> TokenStream {
         })
         .collect::<Vec<_>>();
 
-    let syslog = quote::quote! {
-        #[cfg(feature = "syslog")]
-        crate::syscall::SysLog::new(stringify!(#name))
-            #(#syslog_args)*
-            .set_result(result)
-            .flush();
-    };
+    let syslog = quote::quote! {{
+        // Check if the current task has systrace enabled.
+        use crate::userland::scheduler;
+
+        let current_task = scheduler::get_scheduler().current_task();
+        if current_task.systrace() {
+            crate::syscall::SysLog::new(stringify!(#name))
+                #(#syslog_args)*
+                .set_result(result)
+                .flush();
+        }
+    }};
 
     let compiled_body = if config.no_return {
         quote::quote! {

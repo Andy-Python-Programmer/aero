@@ -209,6 +209,8 @@ pub struct Task {
     cwd: RwLock<Option<Cwd>>,
 
     pub(super) exit_status: AtomicIsize,
+
+    systrace: AtomicBool,
 }
 
 impl Task {
@@ -248,6 +250,8 @@ impl Task {
 
             signals: Signals::new(),
             cwd: RwLock::new(None),
+
+            systrace: AtomicBool::new(false),
         })
     }
 
@@ -285,6 +289,8 @@ impl Task {
 
             signals: Signals::new(),
             cwd: RwLock::new(None),
+
+            systrace: AtomicBool::new(false),
         })
     }
 
@@ -318,6 +324,8 @@ impl Task {
 
             cwd: RwLock::new(Some(self.cwd.read().as_ref().unwrap().fork())),
             signals: Signals::new(),
+
+            systrace: AtomicBool::new(self.systrace()),
         });
 
         self.add_child(this.clone());
@@ -375,6 +383,8 @@ impl Task {
 
             cwd: RwLock::new(Some(self.cwd.read().as_ref().unwrap().fork())),
             signals: Signals::new(),
+
+            systrace: AtomicBool::new(self.process_leader().systrace()),
         });
 
         self.add_child(this.clone());
@@ -631,6 +641,14 @@ impl Task {
                 // parent.signal(aero_syscall::signal::SIGCHLD);
             }
         }
+    }
+
+    pub fn systrace(&self) -> bool {
+        self.systrace.load(Ordering::SeqCst)
+    }
+
+    pub fn enable_systrace(&self) {
+        self.systrace.store(true, Ordering::SeqCst);
     }
 }
 

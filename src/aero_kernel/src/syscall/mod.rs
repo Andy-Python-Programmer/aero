@@ -155,7 +155,6 @@ pub fn exec_args_from_slice(args: usize, size: usize) -> ExecArgs {
     ExecArgs { inner: result }
 }
 
-#[cfg(feature = "syslog")]
 pub(super) struct SysLog {
     name: &'static str,
     /// The result of the syscall.
@@ -164,7 +163,6 @@ pub(super) struct SysLog {
     args: Vec<String>,
 }
 
-#[cfg(feature = "syslog")]
 impl SysLog {
     pub fn new(name: &'static str) -> Self {
         Self {
@@ -250,6 +248,7 @@ pub fn generic_do_syscall(
         SYS_CLONE => process::clone(b, c),
         SYS_KILL => process::kill(b, c),
         SYS_BACKTRACE => process::backtrace(),
+        SYS_TRACE => process::trace(),
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),

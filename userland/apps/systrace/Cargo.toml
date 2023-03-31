@@ -1,0 +1,7 @@
+[package]
+name = "systrace"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aero_syscall = { path = "../../../src/aero_syscall" }

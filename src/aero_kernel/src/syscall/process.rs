@@ -233,6 +233,16 @@ pub fn backtrace() -> Result<usize, SyscallError> {
     Ok(0)
 }
 
+/// Enables syscall tracer for this process/thread.
+///
+/// When the tracer is enabled for a process, it also applies to any child processes spawned by the
+/// process.
+#[syscall]
+pub fn trace() -> Result<usize, SyscallError> {
+    scheduler::get_scheduler().current_task().enable_systrace();
+    Ok(0)
+}
+
 #[syscall]
 pub fn getpid() -> Result<usize, SyscallError> {
     Ok(scheduler::get_scheduler().current_task().pid().as_usize())
