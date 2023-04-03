@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
@@ -199,6 +201,8 @@ struct Tty {
 
     stdin: Mutex<StdinBuffer>,
     block_queue: BlockQueue,
+
+    connected: AtomicUsize,
 }
 
 impl Tty {
@@ -218,12 +222,35 @@ impl Tty {
             }),
             block_queue: BlockQueue::new(),
             stdin: Mutex::new(StdinBuffer::new()),
+            connected: AtomicUsize::new(0),
             sref: sref.clone(),
         })
     }
 }
 
 impl INodeInterface for Tty {
+    fn open(
+        &self,
+        _flags: aero_syscall::OpenFlags,
+        _handle: Arc<fs::file_table::FileHandle>,
+    ) -> fs::Result<Option<fs::cache::DirCacheItem>> {
+        let connected = self.connected.fetch_add(1, Ordering::SeqCst);
+        if connected == 0 {
+            super::keyboard::register_keyboard_listener(TTY.clone());
+        }
+
+        Ok(None)
+    }
+
+    fn close(&self, _flags: aero_syscall::OpenFlags) {
+        let connected = self.connected.fetch_sub(1, Ordering::SeqCst);
+        if connected == 1 {
+            // We were the last process that was connected to the TTY; remove
+            // the keyboard listener.
+            super::keyboard::remove_keyboard_listener(TTY.clone());
+        }
+    }
+
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         self.block_queue
             .block_on(&self.stdin, |future| future.is_complete())?;
@@ -824,18 +851,24 @@ impl vte::Perform for AnsiEscape {
                                                     let p1 = arg_typee[0];
 
                                                     match p1 {
-                                                        // A colour number from 0 to 255, for use in 256-colour terminal
+                                                        // A colour number from 0 to 255, for use in
+                                                        // 256-colour terminal
                                                         // environments.
                                                         //
-                                                        // - Colours 0 to 7 are the `Black` to `White` variants respectively.
-                                                        // - Colours 8 to 15 are brighter versions of the eight colours above.
-                                                        // - Colours 16 to 231 contain several palettes of bright colours,
-                                                        // - Colours 232 to 255 are shades of grey from black to white.
+                                                        // - Colours 0 to 7 are the `Black` to
+                                                        //   `White` variants respectively.
+                                                        // - Colours 8 to 15 are brighter versions
+                                                        //   of the eight colours above.
+                                                        // - Colours 16 to 231 contain several
+                                                        //   palettes of bright colours,
+                                                        // - Colours 232 to 255 are shades of grey
+                                                        //   from black to white.
                                                         //
                                                         // [cc]: https://upload.wikimedia.org/wikipedia/commons/1/15/Xterm_256color_chart.svg
                                                         5 => parse_fixed(setter, piter),
 
-                                                        // A 24-bit RGB color, as specified by ISO-8613-3.
+                                                        // A 24-bit RGB color, as specified by
+                                                        // ISO-8613-3.
                                                         2 => parse_rgb(setter, piter),
 
                                                         _ => (),
@@ -865,10 +898,6 @@ impl vte::Perform for AnsiEscape {
 }
 
 fn init_tty() {
-    // TODO: aarch64 port
-    #[cfg(target_arch = "x86_64")]
-    super::keyboard::register_keyboard_listener(TTY.as_ref().clone());
-
     devfs::install_device(TTY.clone()).expect("failed to register tty as a device");
 }
 
