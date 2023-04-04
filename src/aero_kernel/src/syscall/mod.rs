@@ -249,6 +249,7 @@ pub fn generic_do_syscall(
         SYS_KILL => process::kill(b, c),
         SYS_BACKTRACE => process::backtrace(),
         SYS_TRACE => process::trace(),
+        SYS_SETPGID => process::setpgid(b, c),
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),

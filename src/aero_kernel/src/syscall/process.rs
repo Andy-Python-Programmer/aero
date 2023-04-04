@@ -364,3 +364,29 @@ pub fn shutdown() -> Result<usize, SyscallError> {
 
     unreachable!("aml: failed to shutdown (enter state S5)")
 }
+
+pub fn setpgid(pid: usize, pgid: usize) -> Result<usize, SyscallError> {
+    // If `pid` is 0, the process ID of the calling process is used. If `pgid` is 0, the process ID
+    // of the process specified by the `pid` argument. process shall be used.
+    let current_task = scheduler::get_scheduler().current_task();
+    let _process = if pid == 0 || pid == current_task.pid().as_usize() {
+        current_task.clone()
+    } else {
+        let task = scheduler::get_scheduler()
+            .find_task(TaskId::new(pid))
+            .ok_or(SyscallError::ESRCH)?;
+
+        if !task.is_process_leader() {
+            return Err(SyscallError::EPERM);
+        }
+
+        task
+    };
+
+    // if process.is_session_leader() {
+    //     return Err(SyscallError::EPERM);
+    // }
+
+    log::debug!("setpgid: is a stub! (pid={pid} pgid={pgid})");
+    Ok(0)
+}
