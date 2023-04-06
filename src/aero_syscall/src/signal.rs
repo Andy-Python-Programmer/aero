@@ -70,7 +70,7 @@ pub const SIG_IGN: i64 = 1; // ignore
 pub enum SignalHandler {
     Ignore,
     Default,
-    Handle(fn(usize)),
+    Handle(extern "C" fn(usize)),
 }
 
 impl Default for SignalHandler {
@@ -85,7 +85,9 @@ impl From<u64> for SignalHandler {
         match v {
             SIG_IGN => SignalHandler::Ignore,
             SIG_DFL => SignalHandler::Default,
-            v => SignalHandler::Handle(unsafe { core::mem::transmute::<u64, fn(usize)>(v as u64) }),
+            v => SignalHandler::Handle(unsafe {
+                core::mem::transmute::<u64, extern "C" fn(usize)>(v as u64)
+            }),
         }
     }
 }

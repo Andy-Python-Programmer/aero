@@ -139,7 +139,7 @@ fn signal_handler() -> Result<(), SyscallError> {
         static PIPE_WRITE: AtomicUsize = AtomicUsize::new(0);
         PIPE_WRITE.store(pipe[1], Ordering::SeqCst);
 
-        fn handle_segmentation_fault(fault: usize) {
+        extern "C" fn handle_segmentation_fault(fault: usize) {
             core::assert_eq!(fault, 11);
 
             let pfd = PIPE_WRITE.load(Ordering::SeqCst);

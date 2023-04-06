@@ -92,8 +92,7 @@ pub(super) extern "C" fn x86_64_do_syscall(stack: &mut InterruptErrorStack) {
     match syscall_number {
         // handle arch-specific syscalls (`sigreturn` and `arch_prctl`):
         aero_syscall::prelude::SYS_SIGRETURN => {
-            let result = super::signals::sigreturn(stack);
-            stack.scratch.rax = result as u64;
+            super::signals::sigreturn(stack);
             return;
         }
 

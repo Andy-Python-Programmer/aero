@@ -52,15 +52,21 @@ impl SignalFrame {
         frame: &mut InterruptStack,
         sigmask: u64,
     ) -> SignalFrame {
-        SignalFrame {
+        let mut frame = SignalFrame {
             restart_syscall: if restart {
                 frame.scratch.rax // syscall number
             } else {
-                syscall_result
+                u64::MAX
             },
             frame: *frame,
             sigmask,
+        };
+
+        if !restart {
+            frame.frame.scratch.rax = syscall_result;
         }
+
+        frame
     }
 }
 
@@ -152,7 +158,7 @@ pub fn syscall_check_signals(syscall_result: isize, stack: &mut InterruptStack) 
     }
 }
 
-pub fn sigreturn(stack: &mut InterruptStack) -> usize {
+pub fn sigreturn(stack: &mut InterruptStack) {
     let mut writer = StackHelper::new(&mut stack.iret.rsp);
     let signal_frame = unsafe { writer.get::<SignalFrame>() };
 
@@ -166,12 +172,9 @@ pub fn sigreturn(stack: &mut InterruptStack) -> usize {
 
     writer.get_by(REDZONE_SIZE);
 
-    let result = signal_frame.frame.scratch.rax;
     *stack = signal_frame.frame;
 
     if signal_frame.restart_syscall != u64::MAX {
         stack.iret.rip -= SYSCALL_INSTRUCTION_SIZE;
     }
-
-    result as usize
 }
