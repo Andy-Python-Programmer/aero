@@ -30,6 +30,7 @@ use spin::Once;
 
 use self::round_robin::RoundRobin;
 use super::signals::SignalResult;
+use super::task::sessions::SESSIONS;
 use super::task::{Task, TaskId};
 
 static SCHEDULER: Once<Scheduler> = Once::new();
@@ -99,6 +100,7 @@ impl Scheduler {
     pub fn register_task(&self, task: Arc<Task>) {
         self.tasks.register_task(task.pid(), task.clone());
         self.inner.register_task(task.clone());
+        SESSIONS.register_task(task);
     }
 
     #[inline]

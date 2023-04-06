@@ -1,6 +1,6 @@
-From dff703a240b871909f3618835ca8f74a2c619eef Mon Sep 17 00:00:00 2001
+From 64a5317fc58a29c4c2cf99b836c9d2d00cec0a8d Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Mon, 3 Apr 2023 18:29:16 +1000
+Date: Thu, 6 Apr 2023 14:57:57 +1000
 Subject: [PATCH] <xxx>
 
 ---
@@ -9,10 +9,10 @@ Subject: [PATCH] <xxx>
  options/ansi/generic/stdlib-stubs.cpp |  6 ++++--
  options/glibc/generic/execinfo.cpp    |  5 +++--
  options/rtdl/generic/linker.cpp       |  2 +-
- sysdeps/aero/generic/aero.cpp         |  7 +++++++
+ sysdeps/aero/generic/aero.cpp         | 27 +++++++++++++++++++--------
  sysdeps/aero/generic/sockets.cpp      | 25 +++++++++++++++++++++++++
- sysdeps/aero/include/aero/syscall.h   |  8 ++++++++
- 8 files changed, 53 insertions(+), 8 deletions(-)
+ sysdeps/aero/include/aero/syscall.h   | 10 ++++++++++
+ 8 files changed, 67 insertions(+), 16 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index fdd60a0..9f811f4 100644
@@ -98,16 +98,38 @@ index 6eb9d09..2ab5bc9 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 0faf386..3a5b40f 100644
+index 0faf386..e6bd277 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
-@@ -239,6 +239,13 @@ int sys_sleep(time_t *sec, long *nanosec) {
+@@ -176,13 +176,6 @@ int sys_kill(int pid, int sig) {
      return 0;
  }
  
+-pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
+-    mlibc::infoLogger() << "sys_getpgid() is unimplemented" << frg::endlog;
+-    *pgid = 0;
+-
+-    return 0;
+-}
+-
+ int sys_clock_get(int clock, time_t *secs, long *nanos) {
+     struct timespec ts;
+     auto result = syscall(SYS_GETTIME, clock, &ts);
+@@ -239,6 +232,21 @@ int sys_sleep(time_t *sec, long *nanosec) {
+     return 0;
+ }
+ 
++pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
++    auto ret = syscall(SYS_GETPGID, pid);
++    if(int e = sc_error(ret); e)
++        return e;
++    *pgid = ret;
++    return 0;
++}
++
 +int sys_setpgid(pid_t pid, pid_t pgid) {
 +    auto ret = syscall(SYS_SETPGID, pid, pgid);
-+    if (int e = sc_error(ret); e)
++    if(int e = sc_error(ret); e)
 +		return e;
 +	return 0;
 +}
@@ -115,6 +137,18 @@ index 0faf386..3a5b40f 100644
  uid_t sys_getuid() {
      mlibc::infoLogger() << "mlibc: sys_setuid is a stub" << frg::endlog;
      return 0;
+@@ -250,7 +258,10 @@ uid_t sys_geteuid() {
+ }
+ 
+ int sys_setsid(pid_t *sid) {
+-    mlibc::infoLogger() << "mlibc: sys_setsid is a stub" << frg::endlog;
++    auto ret = syscall(SYS_SETSID);
++    if(int e = sc_error(ret); e)
++        return e;
++    *sid = ret;
+     return 0;
+ }
+ 
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
 index c730bff..39cacb4 100644
 --- a/sysdeps/aero/generic/sockets.cpp
@@ -158,19 +192,21 @@ index c730bff..39cacb4 100644
 +}
  } // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 432bad2..2ffde22 100644
+index 432bad2..ba56ce9 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -75,6 +75,8 @@
+@@ -75,6 +75,10 @@
  #define SYS_RENAME 68
  #define SYS_MPROTECT 69
  #define SYS_SOCK_SEND 70
 +#define SYS_TRACE 71
 +#define SYS_SETPGID 72
++#define SYS_SETSID 73
++#define SYS_GETPGID 74
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.
-@@ -217,4 +219,10 @@ __attribute__((always_inline)) static inline long syscall(sc_word_t call,
+@@ -217,4 +221,10 @@ __attribute__((always_inline)) static inline long syscall(sc_word_t call,
                                                            T... args) {
      return _syscall(call, sc_cast(args)...);
  }

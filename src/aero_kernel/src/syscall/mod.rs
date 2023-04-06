@@ -250,6 +250,8 @@ pub fn generic_do_syscall(
         SYS_BACKTRACE => process::backtrace(),
         SYS_TRACE => process::trace(),
         SYS_SETPGID => process::setpgid(b, c),
+        SYS_SETSID => process::setsid(),
+        SYS_GETPGID => process::getpgid(b),
 
         SYS_READ => fs::read(b, c, d),
         SYS_OPEN => fs::open(b, c, d, e),

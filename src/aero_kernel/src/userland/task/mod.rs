@@ -17,6 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub mod sessions;
+
 use aero_syscall::WaitPidFlags;
 use alloc::sync::{Arc, Weak};
 
@@ -40,6 +42,7 @@ use intrusive_collections::{intrusive_adapter, LinkedList, LinkedListLink};
 
 use super::scheduler;
 use super::signals::{SignalResult, TriggerResult};
+use super::terminal::TerminalDevice;
 use super::vm::Vm;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -183,6 +186,9 @@ pub struct Task {
     pid: TaskId,
     tid: TaskId,
 
+    sid: AtomicUsize,
+    gid: AtomicUsize,
+
     parent: Mutex<Option<Arc<Task>>>,
     children: Mutex<intrusive_collections::LinkedList<TaskAdapter>>,
 
@@ -206,6 +212,7 @@ pub struct Task {
 
     pub(super) exit_status: AtomicIsize,
 
+    controlling_terminal: Mutex<Option<Arc<dyn TerminalDevice>>>,
     systrace: AtomicBool,
 }
 
@@ -226,6 +233,8 @@ impl Task {
             message_queue: MessageQueue::new(),
 
             tid: pid.clone(),
+            sid: AtomicUsize::new(pid.as_usize()),
+            gid: AtomicUsize::new(pid.as_usize()),
             pid,
 
             executable: Mutex::new(None),
@@ -248,6 +257,7 @@ impl Task {
             cwd: RwLock::new(None),
 
             systrace: AtomicBool::new(false),
+            controlling_terminal: Mutex::new(None),
         })
     }
 
@@ -269,6 +279,8 @@ impl Task {
             state: AtomicU8::new(TaskState::Runnable as _),
 
             tid: pid.clone(),
+            gid: AtomicUsize::new(pid.as_usize()),
+            sid: AtomicUsize::new(pid.as_usize()),
             pid,
 
             link: Default::default(),
@@ -287,6 +299,7 @@ impl Task {
             cwd: RwLock::new(None),
 
             systrace: AtomicBool::new(false),
+            controlling_terminal: Mutex::new(None),
         })
     }
 
@@ -310,6 +323,8 @@ impl Task {
             exit_status: AtomicIsize::new(0),
 
             tid: pid.clone(),
+            sid: AtomicUsize::new(self.session_id()),
+            gid: AtomicUsize::new(self.group_id()),
             pid,
 
             executable: Mutex::new(self.executable.lock().clone()),
@@ -322,6 +337,7 @@ impl Task {
             signals: Signals::new(),
 
             systrace: AtomicBool::new(self.systrace()),
+            controlling_terminal: Mutex::new(self.controlling_terminal.lock_irq().clone()),
         });
 
         self.add_child(this.clone());
@@ -369,6 +385,8 @@ impl Task {
             exit_status: AtomicIsize::new(0),
 
             tid: pid.clone(),
+            sid: AtomicUsize::new(self.session_id()),
+            gid: AtomicUsize::new(self.group_id()),
             pid,
 
             executable: Mutex::new(self.executable.lock().clone()),
@@ -381,6 +399,12 @@ impl Task {
             signals: Signals::new(),
 
             systrace: AtomicBool::new(self.process_leader().systrace()),
+            controlling_terminal: Mutex::new(
+                self.process_leader()
+                    .controlling_terminal
+                    .lock_irq()
+                    .clone(),
+            ),
         });
 
         self.add_child(this.clone());
@@ -565,7 +589,7 @@ impl Task {
         self.cwd.write().as_mut().unwrap().filesystem = filesystem;
     }
 
-    fn get_parent(&self) -> Option<Arc<Task>> {
+    pub fn get_parent(&self) -> Option<Arc<Task>> {
         let parent = self.parent.lock();
         parent.clone()
     }
@@ -645,6 +669,47 @@ impl Task {
 
     pub fn enable_systrace(&self) {
         self.systrace.store(true, Ordering::SeqCst);
+    }
+
+    pub fn attach(&self, terminal: Arc<dyn TerminalDevice>) {
+        if self.is_session_leader() {
+            terminal.attach(self.sref.upgrade().unwrap());
+            *self.controlling_terminal.lock_irq() = Some(terminal);
+        } else {
+            // FIXME: If its not the session leader then we needs to be a part of the the same
+            // session as the terminal's foreground group.
+            // todo!()
+        }
+    }
+
+    /// Returns whether the task is the session leader (`pid` == `sid`).
+    pub fn is_session_leader(&self) -> bool {
+        self.session_id() == self.pid().as_usize()
+    }
+
+    /// Returns whether the task is the group leader (`pid` == `gid`).
+    pub fn is_group_leader(&self) -> bool {
+        self.group_id() == self.pid().as_usize()
+    }
+
+    /// Returns the group identifier of the task (`GID`).
+    pub fn group_id(&self) -> usize {
+        self.gid.load(Ordering::SeqCst)
+    }
+
+    /// Returns the session identifier of the task (`SID`).
+    pub fn session_id(&self) -> usize {
+        self.sid.load(Ordering::SeqCst)
+    }
+
+    /// Sets the session identifier of the task (`SID`) to `session_id`.
+    pub(super) fn set_session_id(&self, session_id: usize) {
+        self.sid.store(session_id, Ordering::SeqCst);
+    }
+
+    /// Sets the group identifier of the task (`GID`) to `group_id`.
+    pub(super) fn set_group_id(&self, group_id: usize) {
+        self.gid.store(group_id, Ordering::SeqCst);
     }
 }
 

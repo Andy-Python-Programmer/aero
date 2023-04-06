@@ -95,6 +95,8 @@ pub const SYS_MPROTECT: usize = 69; // haha funny number
 pub const SYS_SOCK_SEND: usize = 70;
 pub const SYS_TRACE: usize = 71;
 pub const SYS_SETPGID: usize = 72;
+pub const SYS_SETSID: usize = 73;
+pub const SYS_GETPGID: usize = 74;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

@@ -43,6 +43,10 @@ use crate::fs::MOUNT_MANAGER;
 use crate::fs::{self, FileSystemError};
 
 use crate::mem::paging::VirtAddr;
+use crate::userland::scheduler;
+use crate::userland::task::Task;
+use crate::userland::terminal::LineDiscipline;
+use crate::userland::terminal::TerminalDevice;
 use crate::utils::sync::BlockQueue;
 use crate::utils::sync::Mutex;
 
@@ -57,8 +61,9 @@ struct Master {
     id: u32,
     wq: BlockQueue,
     window_size: Mutex<WinSize>,
-    slave_buffer: Mutex<Vec<u8>>,
     buffer: Mutex<Vec<u8>>,
+
+    discipline: LineDiscipline,
 }
 
 impl Master {
@@ -67,8 +72,9 @@ impl Master {
             id: PTY_ID.fetch_add(1, Ordering::SeqCst),
             wq: BlockQueue::new(),
             window_size: Mutex::new(WinSize::default()),
-            slave_buffer: Mutex::new(Vec::new()),
             buffer: Mutex::new(Vec::new()),
+
+            discipline: LineDiscipline::new(),
         }
     }
 }
@@ -87,10 +93,7 @@ impl INodeInterface for Master {
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
-        let mut pty_buffer = self.slave_buffer.lock_irq();
-        pty_buffer.extend_from_slice(buffer);
-
-        self.wq.notify_complete();
+        self.discipline.write(buffer);
         Ok(buffer.len())
     }
 
@@ -123,6 +126,13 @@ impl INodeInterface for Master {
         }
 
         Ok(0)
+    }
+}
+
+impl TerminalDevice for Master {
+    fn attach(&self, task: Arc<Task>) {
+        assert!(task.is_session_leader());
+        self.discipline.set_foreground(task);
     }
 }
 
@@ -195,8 +205,10 @@ impl INodeInterface for Slave {
             }
 
             aero_syscall::TIOCSCTTY => {
-                // TODO(alacritty): stub!
-                log::error!("TIOCSCTTY is a stub!");
+                let current_task = scheduler::get_scheduler().current_task();
+                assert!(current_task.is_session_leader());
+
+                current_task.attach(self.master.clone());
                 Ok(0)
             }
 
@@ -205,11 +217,14 @@ impl INodeInterface for Slave {
     }
 
     fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {
-        table.map(|e| e.insert(&self.master.wq));
+        if let Some(table) = table {
+            table.insert(&self.master.wq);
+            table.insert(self.master.discipline.wait_queue());
+        }
 
         let mut flags = PollFlags::OUT;
 
-        if !self.master.slave_buffer.lock_irq().is_empty() {
+        if !self.master.discipline.is_empty() {
             flags |= PollFlags::IN;
         }
 
@@ -217,15 +232,7 @@ impl INodeInterface for Slave {
     }
 
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        let mut pty_buffer = self
-            .master
-            .wq
-            .block_on(&self.master.slave_buffer, |e| !e.is_empty())?;
-
-        let size = core::cmp::min(pty_buffer.len(), buffer.len());
-
-        buffer[..size].copy_from_slice(&pty_buffer.drain(..size).collect::<Vec<_>>());
-        Ok(size)
+        Ok(self.master.discipline.read(buffer)?)
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {

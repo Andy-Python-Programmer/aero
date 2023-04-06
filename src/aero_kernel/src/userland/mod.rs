@@ -23,6 +23,7 @@ use crate::fs::Path;
 pub mod scheduler;
 pub mod signals;
 pub mod task;
+pub mod terminal;
 pub mod vm;
 
 pub fn run() -> fs::Result<()> {

@@ -19,6 +19,7 @@
 
 use aero_syscall::signal::{SigAction, SigProcMask};
 use aero_syscall::*;
+use alloc::sync::Arc;
 use spin::{Mutex, Once};
 
 use crate::acpi::aml;
@@ -28,7 +29,8 @@ use crate::fs::Path;
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::signals::SignalEntry;
-use crate::userland::task::TaskId;
+use crate::userland::task::sessions::SESSIONS;
+use crate::userland::task::{Task, TaskId};
 use crate::utils::sync::IrqGuard;
 
 static HOSTNAME: Once<Mutex<String>> = Once::new();
@@ -365,28 +367,60 @@ pub fn shutdown() -> Result<usize, SyscallError> {
     unreachable!("aml: failed to shutdown (enter state S5)")
 }
 
-pub fn setpgid(pid: usize, pgid: usize) -> Result<usize, SyscallError> {
-    // If `pid` is 0, the process ID of the calling process is used. If `pgid` is 0, the process ID
-    // of the process specified by the `pid` argument. process shall be used.
+fn find_task_by_pid(pid: usize) -> Result<Arc<Task>, SyscallError> {
     let current_task = scheduler::get_scheduler().current_task();
-    let _process = if pid == 0 || pid == current_task.pid().as_usize() {
-        current_task.clone()
-    } else {
-        let task = scheduler::get_scheduler()
-            .find_task(TaskId::new(pid))
-            .ok_or(SyscallError::ESRCH)?;
 
-        if !task.is_process_leader() {
+    // If `pid` is 0, the process ID of the calling process is used.
+    if pid == 0 || pid == current_task.pid().as_usize() {
+        Ok(current_task)
+    } else {
+        scheduler::get_scheduler()
+            .find_task(TaskId::new(pid))
+            .ok_or(SyscallError::ESRCH)
+    }
+}
+
+#[syscall]
+pub fn getpgid(pid: usize) -> Result<usize, SyscallError> {
+    let task = find_task_by_pid(pid)?;
+    let group = SESSIONS.find_group(task).unwrap();
+
+    Ok(group.id())
+}
+
+#[syscall]
+pub fn setpgid(pid: usize, pgid: usize) -> Result<usize, SyscallError> {
+    let current_task = scheduler::get_scheduler().current_task();
+    let task = find_task_by_pid(pid)?;
+
+    if task.is_session_leader()
+        || !task.is_process_leader()
+        || task.session_id() != current_task.session_id()
+    {
+        return Err(SyscallError::EPERM);
+    }
+
+    if let Some(parent) = task.get_parent() {
+        if parent.tid() != current_task.tid() {
             return Err(SyscallError::EPERM);
         }
+    } else {
+        return Err(SyscallError::EPERM);
+    }
 
-        task
-    };
+    // If `pgid` is 0, the process ID of the process specified by the `pid` argument shall
+    // be used.
+    log::error!("setpgid: is a stub! (pid={pid} pgid={pgid})");
+    Ok(0)
+}
 
-    // if process.is_session_leader() {
-    //     return Err(SyscallError::EPERM);
-    // }
+#[syscall]
+pub fn setsid() -> Result<usize, SyscallError> {
+    let current_task = scheduler::get_scheduler().current_task();
+    if current_task.is_group_leader() {
+        return Err(SyscallError::EPERM);
+    }
 
-    log::debug!("setpgid: is a stub! (pid={pid} pgid={pgid})");
+    SESSIONS.isolate(current_task);
     Ok(0)
 }
