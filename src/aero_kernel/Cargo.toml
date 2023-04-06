@@ -21,7 +21,7 @@ kmemleak = []
 default = ["round-robin"]
 
 [dependencies]
-spin = { version = "0.9.4", default-features = false, features = [
+spin = { version = "0.9.8", default-features = false, features = [
     "spin_mutex",
     "rwlock",
     "once",
