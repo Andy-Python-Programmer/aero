@@ -27,7 +27,7 @@ use crate::fs;
 use crate::fs::Path;
 
 use crate::mem::paging::VirtAddr;
-use crate::userland::scheduler;
+use crate::userland::scheduler::{self, ExitStatus};
 use crate::userland::signals::SignalEntry;
 use crate::userland::task::sessions::SESSIONS;
 use crate::userland::task::{Task, TaskId};
@@ -53,7 +53,7 @@ pub fn exit(status: usize) -> Result<usize, SyscallError> {
         log::trace!("exiting the process (pid={pid}, path={path:?}) with status: {status}");
 
         crate::unwind::unwind_stack_trace();
-        scheduler::get_scheduler().exit(status as isize);
+        scheduler::get_scheduler().exit(ExitStatus::Normal(status as isize));
     }
 }
 

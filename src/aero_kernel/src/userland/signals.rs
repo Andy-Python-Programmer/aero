@@ -28,17 +28,18 @@ use bit_field::BitField;
 
 use aero_syscall::SyscallError;
 
-use super::scheduler;
+use super::scheduler::{self, ExitStatus};
 use crate::fs::FileSystemError;
 use crate::utils::sync::{Mutex, MutexGuard};
 
 mod default {
     use crate::userland::scheduler;
+    use crate::userland::scheduler::ExitStatus;
 
     #[derive(Copy, Clone, PartialEq)]
     pub enum Action {
         Ignore,
-        Handle(fn()),
+        Handle(fn(usize)),
     }
 
     /// Some of the default actions for the signals.
@@ -80,15 +81,15 @@ mod default {
         Action::Ignore,                   // UNUSED
     ];
 
-    fn terminate() {
-        scheduler::get_scheduler().exit(1);
+    fn terminate(signal: usize) {
+        scheduler::get_scheduler().exit(ExitStatus::Signal(signal));
     }
 
-    fn terminate_thread() {
+    fn terminate_thread(_signal: usize) {
         unimplemented!()
     }
 
-    fn stop() {
+    fn stop(_signal: usize) {
         unimplemented!()
     }
 
@@ -102,7 +103,7 @@ mod default {
         let action = DEFAULT_ACTIONS[signal];
 
         if let Action::Handle(f) = action {
-            (f)();
+            (f)(signal);
         }
     }
 }
@@ -436,7 +437,7 @@ pub fn check_for_signals() -> Option<(usize, SignalEntry)> {
     // Check if a SIGKILL is pending, and if so, kill the task.
     if signals.is_pending(SIGKILL as u64) {
         signals.clear_pending(SIGKILL as u64);
-        scheduler::get_scheduler().exit(1);
+        scheduler::get_scheduler().exit(ExitStatus::Normal(1));
     }
 
     for i in 0..SIGNAL_COUNT {

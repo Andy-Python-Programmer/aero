@@ -22,10 +22,10 @@ pub mod sessions;
 use aero_syscall::WaitPidFlags;
 use alloc::sync::{Arc, Weak};
 
-use spin::RwLock;
+use spin::{Once, RwLock};
 
 use core::cell::UnsafeCell;
-use core::sync::atomic::{AtomicBool, AtomicIsize, AtomicU8, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 
 use crate::fs::cache::{DirCacheImpl, DirCacheItem};
 use crate::fs::{self, FileSystem};
@@ -40,7 +40,7 @@ use crate::userland::signals::Signals;
 
 use intrusive_collections::{intrusive_adapter, LinkedList, LinkedListLink};
 
-use super::scheduler;
+use super::scheduler::{self, ExitStatus};
 use super::signals::{SignalResult, TriggerResult};
 use super::terminal::TerminalDevice;
 use super::vm::Vm;
@@ -147,7 +147,7 @@ impl Zombies {
             while let Some(t) = cursor.get() {
                 for pid in pids {
                     if t.pid().as_usize() == *pid {
-                        captured = Some((t.pid(), t.exit_status()));
+                        captured = Some((t.pid(), t.exit_status().clone()));
                         cursor.remove();
 
                         return true;
@@ -164,9 +164,18 @@ impl Zombies {
             false
         })?;
 
-        if let Some((tid, st)) = captured {
-            log::debug!("waitpid: status = {st}");
-            *status = st as u32;
+        if let Some((tid, exit_status)) = captured {
+            // mlibc/abis/linux/wait.h (`W_EXITCODE`)
+            match exit_status {
+                ExitStatus::Normal(code) => {
+                    *status = ((code as u32) << 8) | 0;
+                }
+
+                ExitStatus::Signal(signal) => {
+                    *status = (0 << 8) | signal as u32;
+                }
+            }
+
             Ok(tid.as_usize())
         } else {
             // If `WNOHANG` was specified in flags and there were no children in a waitable
@@ -210,7 +219,7 @@ pub struct Task {
 
     cwd: RwLock<Option<Cwd>>,
 
-    pub(super) exit_status: AtomicIsize,
+    pub(super) exit_status: Once<ExitStatus>,
 
     controlling_terminal: Mutex<Option<Arc<dyn TerminalDevice>>>,
     systrace: AtomicBool,
@@ -248,7 +257,7 @@ impl Task {
             pending_io: AtomicBool::new(false),
 
             sleep_duration: AtomicUsize::new(0),
-            exit_status: AtomicIsize::new(0),
+            exit_status: Once::new(),
 
             children: Mutex::new(Default::default()),
             parent: Mutex::new(None),
@@ -287,7 +296,7 @@ impl Task {
             clink: Default::default(),
 
             sleep_duration: AtomicUsize::new(0),
-            exit_status: AtomicIsize::new(0),
+            exit_status: Once::new(),
 
             executable: Mutex::new(None),
             pending_io: AtomicBool::new(false),
@@ -320,7 +329,7 @@ impl Task {
             clink: Default::default(),
 
             sleep_duration: AtomicUsize::new(0),
-            exit_status: AtomicIsize::new(0),
+            exit_status: Once::new(),
 
             tid: pid.clone(),
             sid: AtomicUsize::new(self.session_id()),
@@ -382,7 +391,7 @@ impl Task {
             clink: Default::default(),
 
             sleep_duration: AtomicUsize::new(0),
-            exit_status: AtomicIsize::new(0),
+            exit_status: Once::new(),
 
             tid: pid.clone(),
             sid: AtomicUsize::new(self.session_id()),
@@ -449,8 +458,8 @@ impl Task {
         children.push_back(child);
     }
 
-    fn exit_status(&self) -> isize {
-        self.exit_status.load(Ordering::SeqCst)
+    fn exit_status(&self) -> &ExitStatus {
+        self.exit_status.get().unwrap()
     }
 
     pub fn set_sleep_duration(&self, duration: usize) {
@@ -658,7 +667,7 @@ impl Task {
             parent.zombies.add_zombie(self.this());
 
             if self.is_process_leader() {
-                // parent.signal(aero_syscall::signal::SIGCHLD);
+                parent.signal(aero_syscall::signal::SIGCHLD);
             }
         }
     }

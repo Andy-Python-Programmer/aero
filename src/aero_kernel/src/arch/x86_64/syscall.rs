@@ -3,7 +3,7 @@ use raw_cpuid::CpuId;
 
 use crate::arch::gdt::GdtEntryType;
 use crate::mem::paging::VirtAddr;
-use crate::userland::scheduler;
+use crate::userland::scheduler::{self, ExitStatus};
 use crate::utils::sync::IrqGuard;
 
 use super::interrupts::InterruptErrorStack;
@@ -73,7 +73,7 @@ pub(super) extern "sysv64" fn x86_64_check_sysenter(stack: &mut InterruptErrorSt
         log::error!("bad sysenter: rip={:#018x},rsp={:#018x}", rip, rsp);
 
         // Forcibly kill the process, we have nowhere to return to.
-        scheduler::get_scheduler().exit(-1);
+        scheduler::get_scheduler().exit(ExitStatus::Normal(-1));
     }
 }
 

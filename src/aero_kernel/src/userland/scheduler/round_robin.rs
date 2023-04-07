@@ -28,7 +28,7 @@ use crate::userland::task::{SchedTaskAdapter, Task, TaskState};
 use crate::utils::sync::{BlockQueue, IrqGuard};
 use crate::utils::PerCpu;
 
-use super::SchedulerInterface;
+use super::{ExitStatus, SchedulerInterface};
 
 /// Scheduler queue containing a vector of all of the task of the enqueued
 /// taskes.
@@ -291,7 +291,7 @@ impl SchedulerInterface for RoundRobin {
         self.sleep(None)
     }
 
-    fn exit(&self, status: isize) -> ! {
+    fn exit(&self, status: ExitStatus) -> ! {
         let guard = IrqGuard::new();
         let queue = self.queue.get_mut();
 
@@ -301,9 +301,7 @@ impl SchedulerInterface for RoundRobin {
             .expect("attempted to exit current task before it was initialized")
             .clone();
 
-        current_task
-            .exit_status
-            .store(status, core::sync::atomic::Ordering::SeqCst);
+        current_task.exit_status.call_once(|| status);
 
         queue.push_dead(current_task.clone());
         queue.dead_wq.notify_complete();

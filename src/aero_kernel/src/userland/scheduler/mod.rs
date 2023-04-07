@@ -57,7 +57,7 @@ pub trait SchedulerInterface: Send + Sync {
     fn preempt(&self);
 
     /// Exits the current task.
-    fn exit(&self, status: isize) -> !;
+    fn exit(&self, status: ExitStatus) -> !;
 }
 
 struct TaskContainer(Mutex<hashbrown::HashMap<TaskId, Arc<Task>>>);
@@ -78,6 +78,12 @@ impl TaskContainer {
 
 unsafe impl Send for TaskContainer {}
 unsafe impl Sync for TaskContainer {}
+
+#[derive(Debug, Clone)]
+pub enum ExitStatus {
+    Normal(isize),
+    Signal(usize),
+}
 
 pub struct Scheduler {
     tasks: TaskContainer,
@@ -117,7 +123,7 @@ impl Scheduler {
         self.inner.current_task()
     }
 
-    pub fn exit(&self, status: isize) -> ! {
+    pub fn exit(&self, status: ExitStatus) -> ! {
         let current_task = self.inner.current_task();
         SESSIONS.remove_task(current_task.clone());
         self.tasks.remove_task(current_task);
