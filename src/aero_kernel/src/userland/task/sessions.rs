@@ -55,6 +55,14 @@ impl Group {
         assert!(self.tasks.lock_irq().insert(task.pid(), task).is_none());
     }
 
+    pub fn remove_task(&self, task: Arc<Task>) {
+        assert!(self.tasks.lock_irq().remove(&task.pid()).is_some());
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.tasks.lock_irq().is_empty()
+    }
+
     pub fn signal(&self, target: usize) {
         for (_, task) in self.tasks.lock_irq().iter() {
             log::error!("Sending signal to task: {:?}", task.path());
@@ -98,6 +106,24 @@ impl Session {
             groups.insert(task.group_id(), Group::new(task));
         }
     }
+
+    pub fn remove_task(&self, task: Arc<Task>) {
+        let mut groups = self.groups.lock();
+        let group = groups
+            .get(&task.group_id())
+            .expect("Session::remove_task: ESRCH");
+
+        group.remove_task(task.clone());
+
+        if group.is_empty() {
+            assert!(task.is_group_leader());
+            groups.remove(&task.group_id());
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.groups.lock_irq().is_empty()
+    }
 }
 
 pub struct SessionList(Mutex<HashMap<usize, Arc<Session>>>);
@@ -124,6 +150,20 @@ impl SessionList {
         } else {
             drop(sessions);
             self.create_session(task);
+        }
+    }
+
+    pub fn remove_task(&self, task: Arc<Task>) {
+        let mut sessions = self.0.lock_irq();
+        let session = sessions
+            .get(&task.session_id())
+            .expect("SessionList::remove_task: ESRCH");
+
+        session.remove_task(task.clone());
+
+        if session.is_empty() {
+            assert!(task.is_session_leader());
+            sessions.remove(&task.session_id());
         }
     }
 

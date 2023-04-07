@@ -119,8 +119,8 @@ impl Scheduler {
 
     pub fn exit(&self, status: isize) -> ! {
         let current_task = self.inner.current_task();
+        SESSIONS.remove_task(current_task.clone());
         self.tasks.remove_task(current_task);
-
         self.inner.exit(status)
     }
 
