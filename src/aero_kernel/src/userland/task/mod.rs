@@ -179,7 +179,7 @@ impl Zombies {
             Ok(tid.as_usize())
         } else {
             // If `WNOHANG` was specified in flags and there were no children in a waitable
-            // state, then waitid() returns 0 immediately.
+            // state, then waipid() returns 0 immediately.
             *status = 0;
             Ok(0)
         }

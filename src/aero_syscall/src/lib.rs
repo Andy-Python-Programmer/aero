@@ -302,7 +302,27 @@ pub struct WinSize {
     pub ws_ypixel: u16,
 }
 
+// indices for the c_cc array in struct termios
+//
 // abis/linux/termios.h
+pub const VINTR: usize = 0;
+pub const VQUIT: usize = 1;
+pub const VERASE: usize = 2;
+pub const VKILL: usize = 3;
+pub const VEOF: usize = 4;
+pub const VTIME: usize = 5;
+pub const VMIN: usize = 6;
+pub const VSWTC: usize = 7;
+pub const VSTART: usize = 8;
+pub const VSTOP: usize = 9;
+pub const VSUSP: usize = 10;
+pub const VEOL: usize = 11;
+pub const VREPRINT: usize = 12;
+pub const VDISCARD: usize = 13;
+pub const VWERASE: usize = 14;
+pub const VLNEXT: usize = 15;
+pub const VEOL2: usize = 16;
+
 bitflags::bitflags! {
     #[derive(Default)]
     pub struct TermiosIFlag: u32 {
@@ -334,6 +354,11 @@ bitflags::bitflags! {
         const NOFLSH  = 0x80;
         const TOSTOP  = 0x100;
         const ECHOPRT = 0x400;
+        // options/posix/include/termios.h
+        const ECHOCTL = 0o001000;
+        const FLUSHO  = 0o010000;
+        const IMAXBEL = 0o020000;
+        const ECHOKE  = 0o040000;
     }
 }
 

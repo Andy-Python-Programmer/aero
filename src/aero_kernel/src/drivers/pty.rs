@@ -147,20 +147,42 @@ struct Slave {
 
 impl Slave {
     pub fn new(master: Arc<Master>) -> Self {
+        use aero_syscall::*;
+
+        // converts ^X into X
+        let ctrl = |c| (c as u8 - 0x40);
+
+        let mut termios = Termios {
+            c_iflag: aero_syscall::TermiosIFlag::empty(),
+            c_oflag: aero_syscall::TermiosOFlag::ONLCR,
+            c_cflag: aero_syscall::TermiosCFlag::empty(),
+            c_lflag: TermiosLFlag::ECHOKE
+                | TermiosLFlag::ECHOE
+                | TermiosLFlag::ECHOK
+                | TermiosLFlag::ECHO
+                | TermiosLFlag::ECHOCTL
+                | TermiosLFlag::ISIG
+                | TermiosLFlag::ICANON
+                | TermiosLFlag::IEXTEN,
+            c_line: 0,
+            c_cc: [0; 32],
+            c_ispeed: 0,
+            c_ospeed: 0,
+        };
+
+        termios.c_cc[VINTR] = ctrl('C');
+        termios.c_cc[VQUIT] = ctrl('\\');
+        termios.c_cc[VERASE] = 127; // DEL character
+        termios.c_cc[VKILL] = ctrl('U');
+        termios.c_cc[VEOF] = ctrl('D');
+        termios.c_cc[VMIN] = 1;
+        termios.c_cc[VSTART] = ctrl('Q');
+        termios.c_cc[VSTOP] = ctrl('S');
+        termios.c_cc[VSUSP] = ctrl('Z');
+
         Self {
             master,
-            inner: Mutex::new(SlaveInner {
-                termios: Termios {
-                    c_iflag: aero_syscall::TermiosIFlag::empty(),
-                    c_oflag: aero_syscall::TermiosOFlag::ONLCR,
-                    c_cflag: aero_syscall::TermiosCFlag::empty(),
-                    c_lflag: aero_syscall::TermiosLFlag::ECHO | aero_syscall::TermiosLFlag::ICANON,
-                    c_line: 0,
-                    c_cc: [0; 32],
-                    c_ispeed: 0,
-                    c_ospeed: 0,
-                },
-            }),
+            inner: Mutex::new(SlaveInner { termios }),
         }
     }
 }
