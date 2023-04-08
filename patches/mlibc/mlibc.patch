@@ -24,32 +24,6 @@ index fdd60a0..9f811f4 100644
  .vscode
 +# clangd cache files:
 +.cache
-diff --git a/meson.build b/meson.build
-index 2261926..b7078fb 100644
---- a/meson.build
-+++ b/meson.build
-@@ -316,10 +316,10 @@ rtlib_deps = []
- 
- if not headers_only
- 	libgcc = meson.get_compiler('c').find_library('gcc', required: false)
--
-+	
- 	compiler_rt_name = 'libclang_rt.builtins-' + host_machine.cpu_family()
- 	compiler_rt = meson.get_compiler('c').find_library(compiler_rt_name, required: false)
--
-+	
- 	if libgcc.found()
- 		rtlib_deps += libgcc
- 	elif compiler_rt.found()
-@@ -327,7 +327,7 @@ if not headers_only
- 	else
- 		error('neither libgcc nor ' + compiler_rt_name + ' was found')
- 	endif
--
-+	
- 	ld_cpp_args = [
- 		'-fvisibility=hidden',
- 		'-fno-stack-protector',
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
 index c0e54fe..ddeec8a 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
