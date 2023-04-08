@@ -458,7 +458,7 @@ impl Task {
         children.push_back(child);
     }
 
-    fn exit_status(&self) -> &ExitStatus {
+    pub fn exit_status(&self) -> &ExitStatus {
         self.exit_status.get().unwrap()
     }
 
@@ -660,6 +660,7 @@ impl Task {
     }
 
     pub(super) fn into_zombie(&self) {
+        self.detach();
         self.arch_task_mut().dealloc();
 
         if let Some(parent) = self.get_parent() {
@@ -680,6 +681,15 @@ impl Task {
         self.systrace.store(true, Ordering::SeqCst);
     }
 
+    pub fn detach(&self) {
+        let mut controlling_terminal = self.controlling_terminal.lock_irq();
+
+        if let Some(term) = controlling_terminal.as_ref() {
+            term.detach(self.sref.upgrade().unwrap());
+            *controlling_terminal = None;
+        }
+    }
+
     pub fn attach(&self, terminal: Arc<dyn TerminalDevice>) {
         if self.is_session_leader() {
             terminal.attach(self.sref.upgrade().unwrap());
@@ -687,7 +697,7 @@ impl Task {
         } else {
             // FIXME: If its not the session leader then we needs to be a part of the the same
             // session as the terminal's foreground group.
-            // todo!()
+            *self.controlling_terminal.lock_irq() = Some(terminal);
         }
     }
 

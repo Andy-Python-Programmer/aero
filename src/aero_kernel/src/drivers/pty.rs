@@ -44,6 +44,7 @@ use crate::fs::{self, FileSystemError};
 
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
+use crate::userland::scheduler::ExitStatus;
 use crate::userland::task::Task;
 use crate::userland::terminal::LineDiscipline;
 use crate::userland::terminal::TerminalDevice;
@@ -62,20 +63,59 @@ struct Master {
     wq: BlockQueue,
     window_size: Mutex<WinSize>,
     buffer: Mutex<Vec<u8>>,
+    termios: Mutex<Termios>,
 
     discipline: LineDiscipline,
 }
 
 impl Master {
     pub fn new() -> Self {
+        use aero_syscall::*;
+
+        // converts `^X` into `X`
+        let ctrl = |c| (c as u8 - 0x40);
+
+        let mut termios = Termios {
+            c_iflag: aero_syscall::TermiosIFlag::empty(),
+            c_oflag: aero_syscall::TermiosOFlag::ONLCR,
+            c_cflag: aero_syscall::TermiosCFlag::empty(),
+            c_lflag: TermiosLFlag::ECHOKE
+                | TermiosLFlag::ECHOE
+                | TermiosLFlag::ECHOK
+                | TermiosLFlag::ECHO
+                | TermiosLFlag::ECHOCTL
+                | TermiosLFlag::ISIG
+                | TermiosLFlag::ICANON
+                | TermiosLFlag::IEXTEN,
+            c_line: 0,
+            c_cc: [0; 32],
+            c_ispeed: 0,
+            c_ospeed: 0,
+        };
+
+        termios.c_cc[VINTR] = ctrl('C');
+        termios.c_cc[VQUIT] = ctrl('\\');
+        termios.c_cc[VERASE] = 127; // DEL character
+        termios.c_cc[VKILL] = ctrl('U');
+        termios.c_cc[VEOF] = ctrl('D');
+        termios.c_cc[VMIN] = 1;
+        termios.c_cc[VSTART] = ctrl('Q');
+        termios.c_cc[VSTOP] = ctrl('S');
+        termios.c_cc[VSUSP] = ctrl('Z');
+
         Self {
             id: PTY_ID.fetch_add(1, Ordering::SeqCst),
             wq: BlockQueue::new(),
             window_size: Mutex::new(WinSize::default()),
             buffer: Mutex::new(Vec::new()),
+            termios: Mutex::new(termios),
 
             discipline: LineDiscipline::new(),
         }
+    }
+
+    pub fn is_cooked(&self) -> bool {
+        self.termios.lock_irq().is_cooked()
     }
 }
 
@@ -134,56 +174,39 @@ impl TerminalDevice for Master {
         assert!(task.is_session_leader());
         self.discipline.set_foreground(task);
     }
-}
 
-struct SlaveInner {
-    termios: Termios,
+    fn detach(&self, task: Arc<Task>) {
+        use aero_syscall::signal::*;
+        use aero_syscall::*;
+
+        if !self.is_cooked() {
+            return;
+        }
+
+        if let ExitStatus::Signal(signo) = task.exit_status() {
+            let mut buffer = self.buffer.lock_irq();
+            let termios = self.termios.lock_irq();
+
+            // converts `X` into `^X` and pushes the result into the master PTY buffer.
+            let mut ctrl = |c| {
+                buffer.extend_from_slice(&[b'^', c + 0x40]);
+            };
+
+            match *signo {
+                SIGINT => ctrl(termios.c_cc[VINTR]),
+                _ => {}
+            };
+        }
+    }
 }
 
 struct Slave {
     master: Arc<Master>,
-    inner: Mutex<SlaveInner>,
 }
 
 impl Slave {
     pub fn new(master: Arc<Master>) -> Self {
-        use aero_syscall::*;
-
-        // converts ^X into X
-        let ctrl = |c| (c as u8 - 0x40);
-
-        let mut termios = Termios {
-            c_iflag: aero_syscall::TermiosIFlag::empty(),
-            c_oflag: aero_syscall::TermiosOFlag::ONLCR,
-            c_cflag: aero_syscall::TermiosCFlag::empty(),
-            c_lflag: TermiosLFlag::ECHOKE
-                | TermiosLFlag::ECHOE
-                | TermiosLFlag::ECHOK
-                | TermiosLFlag::ECHO
-                | TermiosLFlag::ECHOCTL
-                | TermiosLFlag::ISIG
-                | TermiosLFlag::ICANON
-                | TermiosLFlag::IEXTEN,
-            c_line: 0,
-            c_cc: [0; 32],
-            c_ispeed: 0,
-            c_ospeed: 0,
-        };
-
-        termios.c_cc[VINTR] = ctrl('C');
-        termios.c_cc[VQUIT] = ctrl('\\');
-        termios.c_cc[VERASE] = 127; // DEL character
-        termios.c_cc[VKILL] = ctrl('U');
-        termios.c_cc[VEOF] = ctrl('D');
-        termios.c_cc[VMIN] = 1;
-        termios.c_cc[VSTART] = ctrl('Q');
-        termios.c_cc[VSTOP] = ctrl('S');
-        termios.c_cc[VSUSP] = ctrl('Z');
-
-        Self {
-            master,
-            inner: Mutex::new(SlaveInner { termios }),
-        }
+        Self { master }
     }
 }
 
@@ -202,8 +225,6 @@ impl INodeInterface for Slave {
     }
 
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
-        let mut inner = self.inner.lock_irq();
-
         match command {
             aero_syscall::TIOCGWINSZ => {
                 let winsize = VirtAddr::new(arg as u64).read_mut::<WinSize>()?;
@@ -214,14 +235,14 @@ impl INodeInterface for Slave {
 
             aero_syscall::TCGETS => {
                 let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
-                *termios = inner.termios;
+                *termios = *self.master.termios.lock_irq();
 
                 Ok(0)
             }
 
             aero_syscall::TCSETSF => {
                 let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
-                inner.termios = *termios;
+                *self.master.termios.lock_irq() = *termios;
 
                 Ok(0)
             }
@@ -259,9 +280,9 @@ impl INodeInterface for Slave {
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
         if self
-            .inner
-            .lock_irq()
+            .master
             .termios
+            .lock_irq()
             .c_oflag
             .contains(aero_syscall::TermiosOFlag::ONLCR)
         {

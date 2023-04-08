@@ -240,10 +240,13 @@ impl INodeInterface for Tty {
         let connected = self.connected.fetch_add(1, Ordering::SeqCst);
         if connected == 0 {
             super::keyboard::register_keyboard_listener(TTY.clone());
-        }
 
-        let current_task = scheduler::get_scheduler().current_task();
-        current_task.attach(self.sref.upgrade().unwrap());
+            // FIXME: This is wrong since programs assume that /dev/tty points to the controlling
+            // terminal not TTY1,TTY2, etc.. This means that the Aero rendy should be another device
+            // node.
+            let current_task = scheduler::get_scheduler().current_task();
+            current_task.attach(self.sref.upgrade().unwrap());
+        }
 
         Ok(None)
     }
@@ -375,6 +378,10 @@ impl devfs::Device for Tty {
 impl TerminalDevice for Tty {
     fn attach(&self, _task: Arc<Task>) {
         /* FIXME: We should handle foreground groups in TTY aswell */
+    }
+
+    fn detach(&self, _task: Arc<Task>) {
+        /* FIXME: TTY handle */
     }
 }
 

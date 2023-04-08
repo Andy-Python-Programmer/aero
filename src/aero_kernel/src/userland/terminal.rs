@@ -35,6 +35,7 @@ pub trait TerminalDevice: Send + Sync {
     /// The processs group of `task` will be set as the active process group that is associated with
     /// the terminal (foreground).
     fn attach(&self, task: Arc<Task>);
+    fn detach(&self, task: Arc<Task>);
 }
 
 /// Line Discipline
@@ -79,7 +80,6 @@ impl LineDiscipline {
                 // ETX: End of Text (`Ctrl+C`)
                 0x3 => {
                     if let Some(foreground) = self.foreground() {
-                        log::warn!("LineDiscipline: recieved End of Text (`Ctrl+C`)");
                         foreground.signal(signal::SIGINT);
                     }
                 }

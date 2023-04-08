@@ -428,6 +428,12 @@ pub struct Termios {
     pub c_ospeed: u32,
 }
 
+impl Termios {
+    pub fn is_cooked(&self) -> bool {
+        self.c_lflag.contains(TermiosLFlag::ICANON)
+    }
+}
+
 pub const AT_FDCWD: isize = -100;
 
 #[repr(C)]
