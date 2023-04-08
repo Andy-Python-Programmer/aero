@@ -1,18 +1,18 @@
-From 64a5317fc58a29c4c2cf99b836c9d2d00cec0a8d Mon Sep 17 00:00:00 2001
+From 986ca7e14a843967eab13d704b8a3fe742ef2bfc Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Thu, 6 Apr 2023 14:57:57 +1000
+Date: Sat, 8 Apr 2023 14:20:23 +1000
 Subject: [PATCH] <xxx>
 
 ---
  .gitignore                            |  2 ++
- meson.build                           |  6 +++---
  options/ansi/generic/stdlib-stubs.cpp |  6 ++++--
  options/glibc/generic/execinfo.cpp    |  5 +++--
  options/rtdl/generic/linker.cpp       |  2 +-
  sysdeps/aero/generic/aero.cpp         | 27 +++++++++++++++++++--------
+ sysdeps/aero/generic/filesystem.cpp   | 14 ++++++++------
  sysdeps/aero/generic/sockets.cpp      | 25 +++++++++++++++++++++++++
  sysdeps/aero/include/aero/syscall.h   | 10 ++++++++++
- 8 files changed, 67 insertions(+), 16 deletions(-)
+ 8 files changed, 72 insertions(+), 19 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index fdd60a0..9f811f4 100644
@@ -123,6 +123,33 @@ index 0faf386..e6bd277 100644
      return 0;
  }
  
+diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
+index 38b0e1b..acbcef9 100644
+--- a/sysdeps/aero/generic/filesystem.cpp
++++ b/sysdeps/aero/generic/filesystem.cpp
+@@ -155,14 +155,16 @@ int sys_tcgetattr(int fd, struct termios *attr) {
+ }
+ 
+ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
+-    if (optional_action)
+-        mlibc::infoLogger()
+-            << "mlibc: warning: sys_tcsetattr ignores optional_action"
+-            << frg::endlog;
++    int req;
+ 
+-    int result;
++    switch (optional_action) {
++		case TCSANOW: req = TCSETS; break;
++		case TCSADRAIN: req = TCSETSW; break;
++		case TCSAFLUSH: req = TCSETSF; break;
++		default: return EINVAL;
++	}
+ 
+-    if (int e = sys_ioctl(fd, TCSETSF, (void *)attr, &result); e)
++    if (int e = sys_ioctl(fd, req, (void *)attr, NULL); e)
+         return e;
+ 
+     return 0;
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
 index c730bff..39cacb4 100644
 --- a/sysdeps/aero/generic/sockets.cpp
