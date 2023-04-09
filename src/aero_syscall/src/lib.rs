@@ -289,25 +289,9 @@ impl From<usize> for SeekWhence {
 
 pub const TIOCGWINSZ: usize = 0x5413;
 pub const TIOCSWINSZ: usize = 0x5414;
-
-// 0x54 is just a magic number to make these relatively unique ('T')
-//
-// linux-headers/include/uapi/asm-generic/ioctls.h
 pub const TCGETS: usize = 0x5401;
-pub const TCSETS: usize = 0x5402;
-pub const TCSETSW: usize = 0x5403;
 pub const TCSETSF: usize = 0x5404;
-
-pub const TCXONC: usize = 0x540a;
 pub const TIOCSCTTY: usize = 0x540e;
-
-// constants for tcflow()
-//
-// mlibc/options/posix/include/termios.h
-pub const TCIOFF: usize = 1;
-pub const TCION: usize = 2;
-pub const TCOOFF: usize = 3;
-pub const TCOON: usize = 4;
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
