@@ -1,6 +1,6 @@
-From 986ca7e14a843967eab13d704b8a3fe742ef2bfc Mon Sep 17 00:00:00 2001
+From 37a6ba3adc5c0f3594703bf55e8c0411f1f674bd Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sat, 8 Apr 2023 14:20:23 +1000
+Date: Sun, 9 Apr 2023 15:36:45 +1000
 Subject: [PATCH] <xxx>
 
 ---
@@ -9,10 +9,10 @@ Subject: [PATCH] <xxx>
  options/glibc/generic/execinfo.cpp    |  5 +++--
  options/rtdl/generic/linker.cpp       |  2 +-
  sysdeps/aero/generic/aero.cpp         | 27 +++++++++++++++++++--------
- sysdeps/aero/generic/filesystem.cpp   | 14 ++++++++------
+ sysdeps/aero/generic/filesystem.cpp   | 22 ++++++++++++++++------
  sysdeps/aero/generic/sockets.cpp      | 25 +++++++++++++++++++++++++
  sysdeps/aero/include/aero/syscall.h   | 10 ++++++++++
- 8 files changed, 72 insertions(+), 19 deletions(-)
+ 8 files changed, 80 insertions(+), 19 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index fdd60a0..9f811f4 100644
@@ -124,10 +124,10 @@ index 0faf386..e6bd277 100644
  }
  
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index 38b0e1b..acbcef9 100644
+index 38b0e1b..4f85512 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
-@@ -155,14 +155,16 @@ int sys_tcgetattr(int fd, struct termios *attr) {
+@@ -155,19 +155,29 @@ int sys_tcgetattr(int fd, struct termios *attr) {
  }
  
  int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
@@ -150,6 +150,19 @@ index 38b0e1b..acbcef9 100644
          return e;
  
      return 0;
+ }
+ 
++int sys_tcflow(int fd, int action) {
++    int res = syscall(SYS_IOCTL, fd, TCXONC, action);
++	if (int e = sc_error(res); e)
++        return e;
++
++	return 0;
++}
++
+ int sys_mkdir(const char *path, mode_t) {
+     auto result = syscall(SYS_MKDIR, path, strlen(path));
+ 
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
 index c730bff..39cacb4 100644
 --- a/sysdeps/aero/generic/sockets.cpp
