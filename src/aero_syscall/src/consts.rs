@@ -141,6 +141,7 @@ pub union EPollData {
 
 // options/linux/include/sys/epoll.h
 bitflags::bitflags! {
+    #[repr(transparent)]
     pub struct EPollEventFlags: u32 {
         const IN        = 0x001;
         /// There is an exceptional condition on the file descriptor.
@@ -162,7 +163,7 @@ bitflags::bitflags! {
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
+#[cfg_attr(target_arch = "x86_64", repr(packed))]
 pub struct EPollEvent {
     pub events: EPollEventFlags,
     pub data: EPollData,
@@ -170,8 +171,10 @@ pub struct EPollEvent {
 
 impl core::fmt::Debug for EPollEvent {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let events = self.events;
+
         f.debug_struct("EPollEvent")
-            .field("events", &self.events)
+            .field("events", &events)
             .finish()
     }
 }
