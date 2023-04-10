@@ -27,3 +27,151 @@ packages:
         - '-j@PARALLELISM@'
         environ:
           RUSTFLAGS: '-Cforce-frame-pointers=yes -Clink-args=-no-pie'
+
+  # C library for the Public Suffix List
+  #
+  # This package provides a library for accessing and resolving information from the Public 
+  # Suffix List (PSL). The PSL is a set of domain names beyond the standard suffixes, such 
+  # as .com.
+  - name: libpsl
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/rockdaboot/libpsl.git'
+      tag: '0.21.1'
+      version: '0.21.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libidn2
+      - libunistring
+      - libiconv
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--enable-builtin=libidn2'
+        - '--enable-runtime=libidn2'
+        # Gentoo disables asan, cfi and ubsan
+        - '--disable-asan'
+        - '--disable-cfi'
+        - '--disable-ubsan'
+        - '--disable-man'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libidn2
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.com/libidn/libidn2.git'
+      tag: 'v2.3.2'
+      version: '2.3.2'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./bootstrap']
+        - args: ['autoreconf', '-fvi']
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - libunistring
+      - libiconv
+    configure:
+      # Remove some files from the source directory if they exist.
+      - args: |
+              if [ -f @THIS_SOURCE_DIR@/lib/gendata ]; then
+                  rm -rv @THIS_SOURCE_DIR@/lib/gendata
+              fi
+      - args: |
+              if [ -f @THIS_SOURCE_DIR@/lib/gentr46map ]; then
+                  rm -rv @THIS_SOURCE_DIR@/lib/gentr46map
+              fi
+      # Configure for the host, we need some files to be generated
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--disable-doc'
+        - '--disable-nls'
+      # Broken out of tree build, but also broken in tree for some reason, work around it
+      - args: ['cp', '-v', '@THIS_SOURCE_DIR@/lib/idna-tables-properties.csv', '@THIS_BUILD_DIR@/lib/']
+      - args: ['cp', '-v', '@THIS_BUILD_DIR@/lib/idn2.h', '@THIS_SOURCE_DIR@/lib/']
+      # Build it so we get our files
+      - args: ['make', '-j@PARALLELISM@']
+      # Copy the files to the source dir, where libidn2 wants them
+      - args: ['cp', '-v', '@THIS_BUILD_DIR@/lib/gendata', '@THIS_SOURCE_DIR@/lib/gendata']
+      - args: ['cp', '-v', '@THIS_BUILD_DIR@/lib/gentr46map', '@THIS_SOURCE_DIR@/lib/gentr46map']
+      # Finally, configure for managarm
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        - '--disable-static'
+        - '--disable-doc'
+        - '--disable-nls'
+      # Again, copy the header, it might've changed due to configure.
+      - args: ['cp', '-v', '@THIS_BUILD_DIR@/lib/idn2.h', '@THIS_SOURCE_DIR@/lib/']
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: curl
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/curl/curl.git'
+      tag: 'curl-7_84_0'
+      version: '7.84.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-autoconf-archive
+      regenerate:
+        - args: ['autoreconf', '-fiv']
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - libidn2
+      - libpsl
+      - openssl
+      - zlib
+      - zstd
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--with-ca-path=/etc/ssl/certs'
+        - '--enable-threaded-resolver'
+        - '--with-openssl'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'

@@ -195,11 +195,11 @@ sources:
         environ:
           'NOCONFIGURE': 'yes'
 
-  - name: wayland
-    subdir: 'bundled'
-    git: 'https://github.com/wayland-project/wayland.git'
-    tag: '1.20.0'
-    version: '1.20.0'
+  # - name: wayland
+  #   subdir: 'bundled'
+  #   git: 'https://github.com/wayland-project/wayland.git'
+  #   tag: '1.20.0'
+  #   version: '1.20.0'
 
   - name: libxtrans
     subdir: 'bundled'
@@ -292,6 +292,17 @@ tools:
     install:
       - args: ['make', 'install-strip']
       - args: ['ln', '-sf', '@PREFIX@/share/aclocal-1.16', '@PREFIX@/share/aclocal']
+
+  - name: host-autoconf-archive
+    exports_aclocal: true
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/autoconf-archive/autoconf-archive.git'
+      tag: 'v2019.01.06'
+      version: '2019.01.06'
+    install:
+      - args: ['mkdir', '-p', '@BUILD_ROOT@/tools/host-autoconf-archive/share/']
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/m4', '@BUILD_ROOT@/tools/host-autoconf-archive/share/aclocal']
 
   - name: host-rust
     from_source: rust
@@ -542,26 +553,26 @@ tools:
     install:
       - args: ['make', 'install']
 
-  - name: wayland-scanner
-    from_source: wayland
-    tools_required:
-      - virtual: pkgconfig-for-host
-        program_name: host-pkg-config
-    configure:
-      - args:
-        - 'meson'
-        - '--native-file'
-        - '@SOURCE_ROOT@/userland/native-file.ini'
-        - '--prefix=@PREFIX@'
-        - '-Ddtd_validation=false'
-        - '-Ddocumentation=false'
-        - '-Dscanner=true'
-        - '-Dlibraries=false'
-        - '@THIS_SOURCE_DIR@'
-    compile:
-      - args: ['ninja']
-    install:
-      - args: ['ninja', 'install']
+  # - name: wayland-scanner
+  #   from_source: wayland
+  #   tools_required:
+  #     - virtual: pkgconfig-for-host
+  #       program_name: host-pkg-config
+  #   configure:
+  #     - args:
+  #       - 'meson'
+  #       - '--native-file'
+  #       - '@SOURCE_ROOT@/userland/native-file.ini'
+  #       - '--prefix=@PREFIX@'
+  #       - '-Ddtd_validation=false'
+  #       - '-Ddocumentation=false'
+  #       - '-Dscanner=true'
+  #       - '-Dlibraries=false'
+  #       - '@THIS_SOURCE_DIR@'
+  #   compile:
+  #     - args: ['ninja']
+  #   install:
+  #     - args: ['ninja', 'install']
 
 packages:
   - name: llvm
@@ -1288,30 +1299,30 @@ packages:
       - args: ['make', 'install', 'INSTALL_TOP=@THIS_COLLECT_DIR@/usr']
 
   # -------------------- wayland --------------------
-  - name: wayland-protocols
-    source:
-      subdir: 'bundled'
-      git: 'https://github.com/wayland-project/wayland-protocols.git'
-      tag: '1.24'
-      version: '1.24'
-    tools_required:
-      - host-gcc
-      - wayland-scanner
-    configure:
-      - args:
-        - 'meson'
-        - '--cross-file'
-        - '@SOURCE_ROOT@/userland/cross-file.ini'
-        - '--prefix=/usr'
-        - '--buildtype=release'
-        - '-Dtests=false'
-        - '@THIS_SOURCE_DIR@'
-    build:
-      - args: ['ninja']
-      - args: ['ninja', 'install']
-        environ:
-          DESTDIR: '@THIS_COLLECT_DIR@'
-        quiet: true
+  # - name: wayland-protocols
+  #   source:
+  #     subdir: 'bundled'
+  #     git: 'https://github.com/wayland-project/wayland-protocols.git'
+  #     tag: '1.24'
+  #     version: '1.24'
+  #   tools_required:
+  #     - host-gcc
+  #     - wayland-scanner
+  #   configure:
+  #     - args:
+  #       - 'meson'
+  #       - '--cross-file'
+  #       - '@SOURCE_ROOT@/userland/cross-file.ini'
+  #       - '--prefix=/usr'
+  #       - '--buildtype=release'
+  #       - '-Dtests=false'
+  #       - '@THIS_SOURCE_DIR@'
+  #   build:
+  #     - args: ['ninja']
+  #     - args: ['ninja', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'
+  #       quiet: true
 
   - name: libexpat
     source:
@@ -1378,41 +1389,41 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
-  - name: wayland
-    from_source: wayland
-    tools_required:
-      - host-pkg-config
-      - host-gcc
-      - wayland-scanner
-      - host-libtool
-      - virtual: pkgconfig-for-target
-        triple: "x86_64-aero"
-      - virtual: pkgconfig-for-host
-        program_name: host-pkg-config
-    pkgs_required:
-      - mlibc
-      - libexpat
-      - libffi
-    configure:
-      - args:
-        - 'meson'
-        - '--native-file'
-        - '@SOURCE_ROOT@/userland/native-file.ini'
-        - '--cross-file'
-        - '@SOURCE_ROOT@/userland/cross-file.ini'
-        - '--prefix=/usr'
-        - '--buildtype=debugoptimized'
-        - '-Ddtd_validation=false'
-        - '-Ddocumentation=false'
-        - '-Dscanner=false'
-        - '@THIS_SOURCE_DIR@'
-        environ:
-          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
-    build:
-      - args: ['ninja']
-      - args: ['ninja', 'install']
-        environ:
-          DESTDIR: '@THIS_COLLECT_DIR@'
+  # - name: wayland
+  #   from_source: wayland
+  #   tools_required:
+  #     - host-pkg-config
+  #     - host-gcc
+  #     - wayland-scanner
+  #     - host-libtool
+  #     - virtual: pkgconfig-for-target
+  #       triple: "x86_64-aero"
+  #     - virtual: pkgconfig-for-host
+  #       program_name: host-pkg-config
+  #   pkgs_required:
+  #     - mlibc
+  #     - libexpat
+  #     - libffi
+  #   configure:
+  #     - args:
+  #       - 'meson'
+  #       - '--native-file'
+  #       - '@SOURCE_ROOT@/userland/native-file.ini'
+  #       - '--cross-file'
+  #       - '@SOURCE_ROOT@/userland/cross-file.ini'
+  #       - '--prefix=/usr'
+  #       - '--buildtype=debugoptimized'
+  #       - '-Ddtd_validation=false'
+  #       - '-Ddocumentation=false'
+  #       - '-Dscanner=false'
+  #       - '@THIS_SOURCE_DIR@'
+  #       environ:
+  #         PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+  #   build:
+  #     - args: ['ninja']
+  #     - args: ['ninja', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'
 
   - name: zlib
     source:
@@ -1430,6 +1441,73 @@ packages:
         environ:
           CHOST: 'x86_64-aero'
           prefix: '/usr'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # zstd fast compression library
+  #
+  # This package provides the programs to interact with Zstandard compressed files.
+  - name: zstd
+    source:
+      subdir: bundled
+      git: 'https://github.com/facebook/zstd.git'
+      tag: 'v1.5.2'
+      version: '1.5.2'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - zlib
+      - xz-utils
+    revision: 2
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+        environ:
+          CC: 'x86_64-aero-gcc'
+          CXX: 'x86_64-aero-g++'
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+          PREFIX: '/usr'
+
+  # Utilities for managing LZMA compressed files
+  #
+  # This package provides the programs to compress and decompress lzma and 
+  # xz compressed files.
+  - name: xz-utils
+    source:
+      subdir: 'bundled'
+      git: 'https://git.tukaani.org/xz.git'
+      tag: 'v5.2.5'
+      version: '5.2.5'
+      disable_shallow_fetch: true
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['./autogen.sh', '--no-po4a']
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - zlib
+    revision: 4
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--disable-nls'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install']
@@ -1679,6 +1757,43 @@ packages:
         - '--disable-nls'
         - '--enable-shared'
         - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # Library for manipulating Unicode and C strings according to Unicode standard
+  #
+  # This package provides a library containing functions for manipulating Unicode 
+  # strings and for manipulating C strings according to the Unicode standard.
+  - name: libunistring
+    source:
+      subdir: 'bundled'
+      url: 'https://ftp.gnu.org/gnu/libunistring/libunistring-1.0.tar.xz'
+      format: 'tar.xz'
+      checksum: blake2b:8208fe33d4ac2f015b0efb56b0c7dd87afc4bb1c6ca4eb3ded86d7e2101d7b7f68bfd8991af4b6dd408282ec73f134ee0b884e761ff6d52e8a1e398326aec420
+      extract_path: 'libunistring-1.0'
+      version: '1.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+      - args: ['autoreconf', '-fvi']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        - '--disable-static'
+        - '--docdir=/usr/share/doc/libunistring-1.0'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install']
