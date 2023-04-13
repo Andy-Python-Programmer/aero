@@ -1,8 +1,9 @@
-From 1c62d94e16ce0981d6d8ed646192bf1bbeb2a772 Mon Sep 17 00:00:00 2001
+From 5e9f6dd73080e121201fd2a26f282b2921053871 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Mon, 10 Apr 2023 15:19:49 +1000
+Date: Thu, 13 Apr 2023 16:28:35 +1000
 Subject: [PATCH] <xxx>
 
+Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                            |  2 ++
  options/ansi/generic/stdlib-stubs.cpp |  6 ++++--
@@ -15,7 +16,7 @@ Subject: [PATCH] <xxx>
  8 files changed, 74 insertions(+), 21 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
-index fdd60a00..9f811f47 100644
+index fdd60a0..9f811f4 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -3,3 +3,5 @@ subprojects
@@ -25,7 +26,7 @@ index fdd60a00..9f811f47 100644
 +# clangd cache files:
 +.cache
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
-index 4c5c3975..38d8d9d5 100644
+index c33dfba..ec8baa4 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
 +++ b/options/ansi/generic/stdlib-stubs.cpp
 @@ -396,8 +396,10 @@ int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
@@ -42,7 +43,7 @@ index 4c5c3975..38d8d9d5 100644
  			return nseq.it - mb;
  		} else {
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
-index 3474615e..10a2109e 100644
+index 3474615..10a2109 100644
 --- a/options/glibc/generic/execinfo.cpp
 +++ b/options/glibc/generic/execinfo.cpp
 @@ -1,9 +1,10 @@
@@ -59,7 +60,7 @@ index 3474615e..10a2109e 100644
  
  char **backtrace_symbols(void *const *, int) {
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 003a162d..ab01a7a4 100644
+index 003a162..ab01a7a 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
 @@ -18,7 +18,7 @@ uintptr_t libraryBase = 0x41000000;
@@ -72,7 +73,7 @@ index 003a162d..ab01a7a4 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 0faf386d..e6bd277e 100644
+index 0faf386..e6bd277 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
 @@ -176,13 +176,6 @@ int sys_kill(int pid, int sig) {
@@ -124,7 +125,7 @@ index 0faf386d..e6bd277e 100644
  }
  
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index 38b0e1bf..acbcef9a 100644
+index a2c483b..5332f22 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -155,14 +155,16 @@ int sys_tcgetattr(int fd, struct termios *attr) {
@@ -151,11 +152,11 @@ index 38b0e1bf..acbcef9a 100644
  
      return 0;
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index c730bff9..a32a34fb 100644
+index 4db9956..4cb3ee8 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
-@@ -4,7 +4,11 @@
- #include <abi-bits/in.h>
+@@ -5,7 +5,11 @@
+ #include <abi-bits/errno.h>
  
  #include <aero/syscall.h>
 +
@@ -164,9 +165,9 @@ index c730bff9..a32a34fb 100644
 +#include <net/if.h>
 +#include <sys/ioctl.h>
  
- namespace mlibc {
- int sys_socket(int family, int type, int protocol, int *fd) {
-@@ -181,10 +185,31 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
+ namespace {
+ 
+@@ -210,10 +214,31 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
                              << frg::endlog;
          return 0;
      } else {
@@ -201,7 +202,7 @@ index c730bff9..a32a34fb 100644
 +}
  } // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 432bad2f..ba56ce95 100644
+index aa642e5..d8bf99e 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
 @@ -75,6 +75,10 @@
@@ -215,7 +216,7 @@ index 432bad2f..ba56ce95 100644
  
  // Invalid syscall used to trigger a log error in the kernel (as a hint)
  // so, that we can implement the syscall in the kernel.
-@@ -217,4 +221,10 @@ __attribute__((always_inline)) static inline long syscall(sc_word_t call,
+@@ -217,4 +221,10 @@ __attribute__((__always_inline__)) static inline long syscall(sc_word_t call,
                                                            T... args) {
      return _syscall(call, sc_cast(args)...);
  }
