@@ -17,21 +17,32 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-// Address Resolution Protocol
+//! Address Resolution Protocol
 
 use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
+use simple_endian::BigEndian;
 use spin::{Once, RwLock};
+
+use crate::net::{default_device, ethernet, PacketUpHierarchy};
 
 use super::ethernet::MacAddr;
 use super::ip::Ipv4Addr;
+use super::{ConstPacketKind, Eth, Packet, PacketDownHierarchy, PacketHeader};
+
+enum Status {
+    Resolved,
+    Pending(Vec<Packet<Eth>>),
+}
 
 struct Entry {
     mac: MacAddr,
+    status: Status,
 }
 
 impl Entry {
-    fn new(mac: MacAddr) -> Self {
-        Self { mac }
+    fn new(mac: MacAddr, status: Status) -> Self {
+        Self { mac, status }
     }
 }
 
@@ -43,10 +54,32 @@ impl Cache {
     }
 
     fn insert(&mut self, ip: Ipv4Addr, mac: MacAddr) {
-        if let Some(_entry) = self.0.get_mut(&ip) {
+        if let Some(entry) = self.0.get_mut(&ip) {
+            let status = core::mem::replace(&mut entry.status, Status::Resolved);
+
+            if let Status::Pending(queue) = status {
+                entry.mac = mac;
+                entry.status = Status::Resolved;
+
+                for mut packet in queue {
+                    log::trace!("[ ARP ] (!!) Sending queued packed to {ip:?} {mac:?}");
+                    packet.header_mut().dest_mac = mac;
+                    super::default_device().send(packet);
+                }
+            }
+        } else {
+            self.0.insert(ip, Entry::new(mac, Status::Resolved));
+        }
+    }
+
+    fn request(&mut self, ip: Ipv4Addr, packet: Packet<Eth>) {
+        if let Some(_) = self.0.get_mut(&ip) {
             todo!()
         } else {
-            self.0.insert(ip, Entry::new(mac));
+            let queue = alloc::vec![packet];
+            let entry = Entry::new(MacAddr::NULL, Status::Pending(queue));
+
+            self.0.insert(ip, entry);
         }
     }
 
@@ -77,4 +110,98 @@ pub fn init() {
 
         RwLock::new(cache)
     });
+}
+
+/// Hardware Address Space (e.g., Ethernet, Packet Radio Net.)
+#[derive(Copy, Clone)]
+#[repr(u16)]
+pub enum HType {
+    Ethernet = 1u16.swap_bytes(),
+}
+
+/// Internetwork Protocol for which the ARP request is intended.
+#[derive(Copy, Clone)]
+#[repr(u16)]
+pub enum PType {
+    Ipv4 = 0x0800u16.swap_bytes(),
+}
+
+/// ARP Opcode
+#[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(u16)]
+pub enum Opcode {
+    Request = 1u16.swap_bytes(),
+    // Reply = 2u16.swap_bytes(),
+}
+
+#[repr(C, packed)]
+pub struct ArpHeader {
+    pub htype: HType,
+    pub ptype: PType,
+    /// Length (in octets) of a hardware address.
+    pub hlen: BigEndian<u8>,
+    /// Length (in octets) of internetwork addresses.
+    pub plen: BigEndian<u8>,
+    pub opcode: Opcode,
+    pub src_mac: MacAddr,
+    pub src_ip: Ipv4Addr,
+    pub dest_mac: MacAddr,
+    pub dest_ip: Ipv4Addr,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Arp {}
+
+impl ConstPacketKind for Arp {
+    const HSIZE: usize = core::mem::size_of::<ArpHeader>();
+}
+
+impl PacketUpHierarchy<Arp> for Packet<Eth> {}
+impl PacketHeader<ArpHeader> for Packet<Arp> {
+    fn send(&self) {
+        self.downgrade().send()
+    }
+
+    fn recv(&self) {
+        let header = self.header();
+
+        CACHE
+            .get()
+            .as_ref()
+            .expect("arp: cache not initialized")
+            .write()
+            .insert(header.src_ip, header.src_mac);
+
+        // if header.opcode() == Opcode::Request {} else if header.opcode() == Opcode::Reply {}
+    }
+}
+
+pub fn request_ip(target: Ipv4Addr, to: Packet<Eth>) {
+    let mut packet: Packet<Arp> =
+        Packet::<Eth>::create(ethernet::Type::Arp, core::mem::size_of::<ArpHeader>()).upgrade();
+
+    let device = default_device();
+
+    let header = packet.header_mut();
+    header.htype = HType::Ethernet;
+    header.ptype = PType::Ipv4;
+    header.hlen = BigEndian::from(MacAddr::ADDR_SIZE as u8);
+    header.plen = BigEndian::from(Ipv4Addr::ADDR_SIZE as u8);
+
+    header.opcode = Opcode::Request;
+    header.src_ip = device.ip();
+    header.src_mac = device.mac();
+    header.dest_ip = target;
+    header.dest_mac = MacAddr::NULL;
+
+    log::debug!("[ ARP ] (!!) Sending request for {target:?}");
+
+    CACHE
+        .get()
+        .as_ref()
+        .expect("arp: cache not initialized")
+        .write()
+        .request(target, to);
+
+    packet.send();
 }

@@ -1,6 +1,28 @@
 use crate::SocketAddr;
 
-// sysdeps/aero/include/abi-bits/socket.h
+bitflags::bitflags! {
+    // mlibc/abis/mlibc/socket.h
+    pub struct MessageFlags: usize {
+        const CTRUNC = 0x1;
+        const DONTROUTE = 0x2;
+        const EOR = 0x4;
+        const OOB = 0x8;
+        const NOSIGNAL = 0x10;
+        const PEEK = 0x20;
+        const TRUNC = 0x40;
+        const WAITALL = 0x80;
+        const FIN = 0x200;
+        const CONFIRM = 0x800;
+
+        // Linux extensions.
+        const DONTWAIT = 0x1000;
+        const CMSG_CLOEXEC = 0x2000;
+        const MORE = 0x4000;
+        const FASTOPEN = 0x20000000;
+    }
+}
+
+// mlibc/abis/mlibc/socket.h
 #[derive(Debug)]
 #[repr(C)]
 pub struct MessageHeader {
@@ -26,9 +48,9 @@ impl MessageHeader {
 
         assert!(self.name_len == core::mem::size_of::<T>());
 
-        // SAFETY: We know that the `name` pointer is valid and we have an exclusive reference to it.
-        // The size of name is checked above with the size of `T` and `T` is a `SocketAddr` so, its
-        // safe to create a mutable reference of `T` from the ptr.
+        // SAFETY: We know that the `name` pointer is valid and we have an exclusive reference to
+        // it. The size of name is checked above with the size of `T` and `T` is a `SocketAddr` so,
+        // its safe to create a mutable reference of `T` from the ptr.
         unsafe { Some(&mut *(self.name as *mut T)) }
     }
 
@@ -38,8 +60,8 @@ impl MessageHeader {
     }
 
     pub fn iovecs_mut(&mut self) -> &mut [IoVec] {
-        // SAFETY: We know that the `iovec` pointer is valid, initialized and we have
-        // exclusive access so, its safe to construct a mutable slice from it.
+        // SAFETY: We know that the `iovec` pointer is valid, initialized and we have exclusive
+        // access so, its safe to construct a mutable slice from it.
         unsafe { core::slice::from_raw_parts_mut(self.iovec, self.iovec_len as usize) }
     }
 }
@@ -59,8 +81,8 @@ impl IoVec {
     }
 
     pub fn as_slice_mut(&mut self) -> &mut [u8] {
-        // SAFETY: We know that the `base` pointer is valid, initialized and we have
-        // exclusive access so, its safe to construct a mutable slice from it.
+        // SAFETY: We know that the `base` pointer is valid, initialized and we have exclusive
+        // access so, its safe to construct a mutable slice from it.
         unsafe { core::slice::from_raw_parts_mut(self.base, self.len) }
     }
 

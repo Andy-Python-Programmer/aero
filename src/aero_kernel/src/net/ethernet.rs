@@ -25,17 +25,19 @@ use crate::utils::dma::DmaAllocator;
 use super::*;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
-#[repr(C)]
+#[repr(transparent)]
 pub struct MacAddr(pub [u8; Self::ADDR_SIZE]);
 
 impl MacAddr {
     pub const ADDR_SIZE: usize = 6;
     pub const BROADCAST: Self = Self([0xff; Self::ADDR_SIZE]);
+    pub const NULL: Self = Self([0; Self::ADDR_SIZE]);
 }
 
 #[repr(u16)]
 pub enum Type {
     Ip = 0x800u16.swap_bytes(),
+    Arp = 0x0806u16.swap_bytes(),
 }
 
 #[repr(C, packed)]
@@ -75,7 +77,14 @@ impl Packet<Eth> {
 
 impl PacketHeader<Header> for Packet<Eth> {
     fn send(&self) {
-        let ip = self.upgrade().header().dest_ip;
+        let ip = match self.header().typ {
+            Type::Ip => {
+                let packet: Packet<ip::Ipv4> = self.upgrade();
+                packet.header().dest_ip
+            }
+
+            Type::Arp => Ipv4Addr::BROADCAST,
+        };
 
         if let Some(addr) = arp::get(ip) {
             let mut packet = self.clone();
@@ -84,6 +93,8 @@ impl PacketHeader<Header> for Packet<Eth> {
                 header.dest_mac = addr;
             }
             super::default_device().send(packet);
+        } else {
+            arp::request_ip(ip, self.clone());
         }
     }
 
@@ -91,6 +102,11 @@ impl PacketHeader<Header> for Packet<Eth> {
         match self.header().typ {
             Type::Ip => {
                 let packet: Packet<ip::Ipv4> = self.upgrade();
+                packet.recv()
+            }
+
+            Type::Arp => {
+                let packet: Packet<arp::Arp> = self.upgrade();
                 packet.recv()
             }
         }

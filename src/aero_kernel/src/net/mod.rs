@@ -48,6 +48,8 @@ pub trait NetworkDriver: Send + Sync {
 #[derive(Default)]
 struct Metadata {
     ip: Ipv4Addr,
+    #[allow(dead_code)]
+    subnet_mask: Ipv4Addr,
 }
 
 pub struct NetworkDevice {
@@ -57,14 +59,30 @@ pub struct NetworkDevice {
 
 impl NetworkDevice {
     pub fn new(driver: Arc<dyn NetworkDriver>) -> Self {
+        // FIXME(andy): DHCPD should handle static IP assignment.
+        let mut metadata = Metadata::default();
+        metadata.ip = Ipv4Addr::new([192, 168, 122, 0]);
+
         Self {
             driver,
-            metadata: RwLock::new(Metadata::default()),
+            metadata: RwLock::new(metadata),
         }
     }
 
     pub fn set_ip(&self, ip: Ipv4Addr) {
         self.metadata.write().ip = ip;
+    }
+
+    pub fn set_subnet_mask(&self, mask: Ipv4Addr) {
+        self.metadata.write().ip = mask;
+    }
+
+    pub fn ip(&self) -> Ipv4Addr {
+        self.metadata.read().ip
+    }
+
+    pub fn subnet_mask(&self) -> Ipv4Addr {
+        self.metadata.read().subnet_mask
     }
 }
 

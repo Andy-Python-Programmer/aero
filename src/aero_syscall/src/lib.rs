@@ -716,7 +716,7 @@ pub struct SocketAddrInet {
 
 impl SocketAddrInet {
     pub fn addr(&self) -> [u8; 4] {
-        self.sin_addr.addr.to_be_bytes()
+        self.sin_addr.addr.to_le_bytes()
     }
 }
 

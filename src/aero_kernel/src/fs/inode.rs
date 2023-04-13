@@ -20,7 +20,7 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::prelude::{EPollEventFlags, PollEventFlags};
-use aero_syscall::socket::MessageHeader;
+use aero_syscall::socket::{MessageFlags, MessageHeader};
 use aero_syscall::{MMapFlags, OpenFlags, SyscallError};
 
 use alloc::sync::Arc;
@@ -253,11 +253,11 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSocket)
     }
 
-    fn send(&self, _message_hdr: &mut MessageHeader) -> Result<usize> {
+    fn send(&self, _message_hdr: &mut MessageHeader, _flags: MessageFlags) -> Result<usize> {
         Err(FileSystemError::NotSupported)
     }
 
-    fn recv(&self, _message_hdr: &mut MessageHeader) -> Result<usize> {
+    fn recv(&self, _message_hdr: &mut MessageHeader, _flags: MessageFlags) -> Result<usize> {
         Err(FileSystemError::NotSocket)
     }
 

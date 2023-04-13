@@ -360,6 +360,7 @@ pub struct FramebufferFScreenInfo {
 pub const SIOCGIFINDEX: usize = 0x8933;
 pub const SIOCGIFHWADDR: usize = 0x8927;
 pub const SIOCSIFADDR: usize = 0x8916; // set PA address
+pub const SIOCSIFNETMASK: usize = 0x891c; // set network PA mask
 
 const IF_NAME_SIZE: usize = 16;
 

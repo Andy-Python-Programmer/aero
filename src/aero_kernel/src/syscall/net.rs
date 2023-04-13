@@ -1,3 +1,4 @@
+use aero_syscall::socket::MessageFlags;
 use num_traits::cast::FromPrimitive;
 
 use aero_syscall::socket::MessageHeader;
@@ -66,7 +67,7 @@ pub fn sock_send(
     header: &mut MessageHeader,
     flags: usize,
 ) -> Result<usize, SyscallError> {
-    assert!(flags == 0, "sock_send: flags are not currently supported");
+    let flags = MessageFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     let current_task = scheduler::get_scheduler().current_task();
     let socket = current_task
@@ -74,7 +75,7 @@ pub fn sock_send(
         .get_handle(fd)
         .ok_or(SyscallError::EINVAL)?;
 
-    Ok(socket.inode().send(header)?)
+    Ok(socket.inode().send(header, flags)?)
 }
 
 #[syscall]
@@ -83,7 +84,7 @@ pub fn sock_recv(
     header: &mut MessageHeader,
     flags: usize,
 ) -> Result<usize, SyscallError> {
-    assert!(flags == 0, "sock_recv: flags are not currently supported");
+    let flags = MessageFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     let current_task = scheduler::get_scheduler().current_task();
     let socket = current_task
@@ -91,7 +92,7 @@ pub fn sock_recv(
         .get_handle(sockfd)
         .ok_or(SyscallError::EINVAL)?;
 
-    Ok(socket.inode().recv(header)?)
+    Ok(socket.inode().recv(header, flags)?)
 }
 
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming

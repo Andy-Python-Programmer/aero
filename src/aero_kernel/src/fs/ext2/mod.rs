@@ -22,7 +22,7 @@ mod group_desc;
 
 use core::mem::MaybeUninit;
 
-use aero_syscall::socket::MessageHeader;
+use aero_syscall::socket::{MessageFlags, MessageHeader};
 use aero_syscall::{MMapFlags, SyscallError};
 use alloc::boxed::Box;
 use alloc::string::ToString;
@@ -582,20 +582,20 @@ impl INodeInterface for INode {
         return Err(FileSystemError::NotSupported);
     }
 
-    fn send(&self, message_hdr: &mut MessageHeader) -> super::Result<usize> {
+    fn send(&self, message_hdr: &mut MessageHeader, flags: MessageFlags) -> super::Result<usize> {
         if let Some(proxy) = self.proxy.as_ref() {
-            return proxy.send(message_hdr);
+            proxy.send(message_hdr, flags)
+        } else {
+            Err(FileSystemError::NotSupported)
         }
-
-        return Err(FileSystemError::NotSupported);
     }
 
-    fn recv(&self, message_hdr: &mut MessageHeader) -> super::Result<usize> {
+    fn recv(&self, message_hdr: &mut MessageHeader, flags: MessageFlags) -> super::Result<usize> {
         if let Some(proxy) = self.proxy.as_ref() {
-            return proxy.recv(message_hdr);
+            proxy.recv(message_hdr, flags)
+        } else {
+            Err(FileSystemError::NotSupported)
         }
-
-        return Err(FileSystemError::NotSupported);
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> super::Result<PollFlags> {

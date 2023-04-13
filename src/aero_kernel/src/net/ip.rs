@@ -21,19 +21,18 @@ use simple_endian::BigEndian;
 
 use super::*;
 
-/// Size of IPv4 adderess in octets.
-///
-/// [RFC 8200 § 2]: https://www.rfc-editor.org/rfc/rfc791#section-3.2
-pub const ADDR_SIZE: usize = 4;
-
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 #[repr(C)]
-pub struct Ipv4Addr(pub [u8; ADDR_SIZE]);
+pub struct Ipv4Addr(pub [u8; Self::ADDR_SIZE]);
 
 impl Ipv4Addr {
-    pub const BROADCAST: Self = Self([0xff; ADDR_SIZE]);
+    /// Size of IPv4 adderess in octets.
+    ///
+    /// [RFC 8200 § 2]: https://www.rfc-editor.org/rfc/rfc791#section-3.2
+    pub const ADDR_SIZE: usize = 4;
+    pub const BROADCAST: Self = Self([0xff; Self::ADDR_SIZE]);
 
-    pub fn new(addr: [u8; ADDR_SIZE]) -> Self {
+    pub fn new(addr: [u8; Self::ADDR_SIZE]) -> Self {
         Self(addr)
     }
 }
@@ -80,7 +79,7 @@ impl Packet<Ipv4> {
     pub fn create(protocol: Type, dest: Ipv4Addr, mut size: usize) -> Packet<Ipv4> {
         size += Ipv4::HSIZE;
 
-        let mut packet = Packet::<Eth>::create(ethernet::Type::Ip, size).upgrade();
+        let mut packet: Packet<Ipv4> = Packet::<Eth>::create(ethernet::Type::Ip, size).upgrade();
         let header = packet.header_mut();
 
         header.v = BigEndian::<u8>::from(0x45);
@@ -95,8 +94,8 @@ impl Packet<Ipv4> {
         header.protocol = protocol;
         header.dest_ip = dest;
 
-        // FIXME: Set the source IPv4 address.
-        header.src_ip = Ipv4Addr([0; 4]);
+        header.src_ip = default_device().ip();
+        log::debug!("{:?}", header.src_ip);
         header.hcrc = checksum::make(checksum::calculate(header));
         packet
     }

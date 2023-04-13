@@ -17,8 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use aero_syscall::prelude::{IfReq, SIOCGIFHWADDR, SIOCGIFINDEX, SIOCSIFADDR};
-use aero_syscall::socket::MessageHeader;
+use aero_syscall::prelude::{IfReq, SIOCGIFHWADDR, SIOCGIFINDEX, SIOCSIFADDR, SIOCSIFNETMASK};
+use aero_syscall::socket::{MessageFlags, MessageHeader};
 use aero_syscall::{IpProtocol, OpenFlags, SocketAddrInet, SocketType, SyscallError};
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
@@ -64,12 +64,6 @@ pub struct InetSocket {
 
 impl InetSocket {
     pub fn new(typ: SocketType, protocol: IpProtocol) -> Result<Arc<Self>, SyscallError> {
-        if typ != SocketType::Dgram
-            && (protocol != IpProtocol::Udp || protocol != IpProtocol::Default)
-        {
-            return Err(SyscallError::EINVAL);
-        }
-
         Ok(Arc::new_cyclic(|sref| Self {
             typ,
             protocol,
@@ -148,7 +142,7 @@ impl INodeInterface for InetSocket {
                 Ok(())
             }
 
-            _ => unreachable!(),
+            _ => unreachable!("bind: {:?} {:?}", self.typ, self.protocol),
         }
     }
 
@@ -156,7 +150,7 @@ impl INodeInterface for InetSocket {
         let address = address.as_inet().ok_or(FileSystemError::NotSupported)?;
 
         match (self.typ, self.protocol) {
-            (SocketType::Dgram, IpProtocol::Default) => {
+            (SocketType::Dgram | SocketType::Stream, IpProtocol::Default) => {
                 let host_addr = Ipv4Addr::new(address.sin_addr.addr.to_be_bytes());
                 udp::connect(host_addr, address.port.to_native());
 
@@ -164,11 +158,11 @@ impl INodeInterface for InetSocket {
                 Ok(())
             }
 
-            _ => unreachable!(),
+            _ => unreachable!("connect: {:?} {:?}", self.typ, self.protocol),
         }
     }
 
-    fn send(&self, message_hdr: &mut MessageHeader) -> fs::Result<usize> {
+    fn send(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
         let name = message_hdr
             .name_mut::<SocketAddrInet>()
             .cloned()
@@ -184,8 +178,10 @@ impl INodeInterface for InetSocket {
         } else {
             src_port = udp::alloc_ephemeral_port(self.sref()).ok_or(FileSystemError::WouldBlock)?;
             log::debug!("Inet::send(): allocated ephemeral port {}", src_port);
+        }
 
-            // FIXME: handle ephemeral port INET socket
+        // FIXME: loopback
+        if dest_ip == Ipv4Addr::new([127, 0, 0, 1]) {
             return Err(FileSystemError::NotSupported);
         }
 
@@ -206,7 +202,9 @@ impl INodeInterface for InetSocket {
         Ok(data.len())
     }
 
-    fn recv(&self, message_hdr: &mut MessageHeader) -> fs::Result<usize> {
+    fn recv(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
+        // assert!(flags.is_empty());
+
         if self.inner.lock_irq().incoming.is_empty() && self.is_non_block() {
             return Err(FileSystemError::WouldBlock);
         }
@@ -222,7 +220,7 @@ impl INodeInterface for InetSocket {
             .map(|iovec| {
                 let iovec = iovec.as_slice_mut();
                 let size = core::cmp::min(iovec.len(), data.len());
-                iovec.copy_from_slice(&data.drain(..size).collect::<Vec<_>>());
+                iovec[..size].copy_from_slice(&data.drain(..size).collect::<Vec<_>>());
                 size
             })
             .sum::<usize>())
@@ -260,23 +258,35 @@ impl INodeInterface for InetSocket {
 
             SIOCSIFADDR => {
                 let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
-
-                let family = unsafe { ifreq.data.addr.sa_family };
+                let socket = SocketAddr::from_ifreq(ifreq)
+                    .map_err(|_| FileSystemError::NotSupported)?
+                    .as_inet()
+                    .ok_or(FileSystemError::NotSupported)?;
 
                 let name = ifreq.name().ok_or(FileSystemError::InvalidPath)?;
-                let socket = SocketAddr::from_family(
-                    VirtAddr::new(&unsafe { ifreq.data.addr } as *const _ as _),
-                    family,
-                )
-                .map_err(|_| FileSystemError::NotSupported)?
-                .as_inet()
-                .ok_or(FileSystemError::NotSupported)?;
 
                 // FIXME:
                 assert!(name == "eth0");
 
                 let device = net::default_device();
                 device.set_ip(Ipv4Addr::new(socket.addr()));
+                Ok(0)
+            }
+
+            SIOCSIFNETMASK => {
+                let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
+                let socket = SocketAddr::from_ifreq(ifreq)
+                    .map_err(|_| FileSystemError::NotSupported)?
+                    .as_inet()
+                    .ok_or(FileSystemError::NotSupported)?;
+
+                let name = ifreq.name().ok_or(FileSystemError::InvalidPath)?;
+
+                // FIXME:
+                assert!(name == "eth0");
+
+                let device = net::default_device();
+                device.set_subnet_mask(Ipv4Addr::new(socket.addr()));
 
                 Ok(0)
             }
@@ -290,7 +300,13 @@ impl INodeInterface for InetSocket {
             table.insert(&self.wq);
         }
 
-        Ok(PollFlags::OUT)
+        let mut flags = PollFlags::OUT;
+
+        if !self.inner.lock_irq().incoming.is_empty() {
+            flags |= PollFlags::IN;
+        }
+
+        Ok(flags)
     }
 }
 

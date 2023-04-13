@@ -1,6 +1,6 @@
-From 1771fe68c2fd9d0e35a2396634c9b79fcb1bb2ab Mon Sep 17 00:00:00 2001
+From 56759ca28e1aa33227e0085bcafd535ebbfdcf4c Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Mon, 10 Apr 2023 11:45:10 +1000
+Date: Mon, 10 Apr 2023 14:02:17 +1000
 Subject: [PATCH] <xxx>
 
 ---
@@ -10,8 +10,8 @@ Subject: [PATCH] <xxx>
  .../linux_like/linux/gnu/b64/x86_64/mod.rs    |   4 +-
  src/unix/linux_like/linux/gnu/mod.rs          |   4 +-
  src/unix/linux_like/linux/mod.rs              |  28 +-
- src/unix/mlibc/mod.rs                         | 560 ++++++++++++++++--
- 7 files changed, 542 insertions(+), 54 deletions(-)
+ src/unix/mlibc/mod.rs                         | 561 ++++++++++++++++--
+ 7 files changed, 543 insertions(+), 54 deletions(-)
  create mode 100644 checkedout.xbstrap
  create mode 100644 fetched.xbstrap
  create mode 100644 patched.xbstrap
@@ -200,7 +200,7 @@ index be12190..c8762d5 100644
                      .field("ifr_name", &self.ifr_name)
                      .field("ifr_ifru", &self.ifr_ifru)
 diff --git a/src/unix/mlibc/mod.rs b/src/unix/mlibc/mod.rs
-index 2046530..3436cb1 100644
+index 2046530..a19b7fa 100644
 --- a/src/unix/mlibc/mod.rs
 +++ b/src/unix/mlibc/mod.rs
 @@ -47,7 +47,6 @@ pub type fsfilcnt_t = ::c_uint;
@@ -848,7 +848,7 @@ index 2046530..3436cb1 100644
  pub const F_GETOWN: ::c_int = 10;
  pub const F_SETOWN: ::c_int = 11;
  pub const O_ACCMODE: ::c_int = 7;
-@@ -644,23 +1055,55 @@ pub const S_IXGRP: mode_t = 0o10;
+@@ -644,23 +1055,56 @@ pub const S_IXGRP: mode_t = 0o10;
  pub const S_IXOTH: mode_t = 0o1;
  pub const S_IXUSR: mode_t = 0o100;
  
@@ -902,10 +902,11 @@ index 2046530..3436cb1 100644
 +// abis/linux/ioctls.h
 +pub const SIOCGIFHWADDR: ::c_ulong = 0x8927;
 +pub const SIOCSIFADDR: ::c_ulong = 0x8916;
++pub const SIOCSIFNETMASK: ::c_ulong = 0x891c;
  
  // options/posix/include/pthread.h
  align_const! {
-@@ -668,9 +1111,12 @@ align_const! {
+@@ -668,9 +1112,12 @@ align_const! {
          __mlibc_state: 0,
          __mlibc_recursion: 0,
          __mlibc_flags: 0,
@@ -918,7 +919,7 @@ index 2046530..3436cb1 100644
      };
      pub const PTHREAD_RWLOCK_INITIALIZER: pthread_rwlock_t = pthread_rwlock_t {
          __mlibc_m: 0,
-@@ -689,11 +1135,40 @@ pub const PTHREAD_PROCESS_PRIVATE: ::c_int = 0;
+@@ -689,11 +1136,40 @@ pub const PTHREAD_PROCESS_PRIVATE: ::c_int = 0;
  pub const PTHREAD_PROCESS_SHARED: ::c_int = 1;
  
  extern "C" {
@@ -959,7 +960,7 @@ index 2046530..3436cb1 100644
      pub fn getgrgid_r(
          gid: ::gid_t,
          grp: *mut ::group,
-@@ -728,13 +1203,24 @@ extern "C" {
+@@ -728,13 +1204,24 @@ extern "C" {
          buflen: ::size_t,
          result: *mut *mut passwd,
      ) -> ::c_int;
@@ -988,7 +989,7 @@ index 2046530..3436cb1 100644
      pub fn pthread_create(
          thread: *mut ::pthread_t,
          attr: *const ::pthread_attr_t,
-@@ -752,6 +1238,8 @@ extern "C" {
+@@ -752,6 +1239,8 @@ extern "C" {
          addr: *mut ::sockaddr,
          addrlen: *mut ::socklen_t,
      ) -> ::ssize_t;

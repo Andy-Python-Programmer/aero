@@ -19,7 +19,7 @@
 
 use aero_syscall::{OpenFlags, SocketAddrUnix, SyscallError, AF_UNIX};
 
-use aero_syscall::socket::MessageHeader;
+use aero_syscall::socket::{MessageFlags, MessageHeader};
 
 use alloc::collections::VecDeque;
 use alloc::sync::{Arc, Weak};
@@ -385,7 +385,9 @@ impl INodeInterface for UnixSocket {
         Ok(sock)
     }
 
-    fn recv(&self, header: &mut MessageHeader) -> fs::Result<usize> {
+    fn recv(&self, header: &mut MessageHeader, flags: MessageFlags) -> fs::Result<usize> {
+        assert!(flags.is_empty());
+
         let inner = self.inner.lock_irq();
 
         let peer = match &inner.state {

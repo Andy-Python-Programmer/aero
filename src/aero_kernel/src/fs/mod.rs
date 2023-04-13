@@ -180,16 +180,6 @@ impl Path {
         &self.0
     }
 
-    pub fn container(&self) -> &Path {
-        let dir = self.0.rfind("/");
-
-        match dir {
-            Some(0) => Path::new(&self.0[1..]),
-            Some(v) => Path::new(&self.0[v + 1..]),
-            None => Path::new(&self.0),
-        }
-    }
-
     /// Helper function that returns the parent path and the base name
     /// of the path.
     pub fn parent_and_basename(&self) -> (&Self, &str) {

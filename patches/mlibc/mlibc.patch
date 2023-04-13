@@ -1,6 +1,6 @@
-From 986ca7e14a843967eab13d704b8a3fe742ef2bfc Mon Sep 17 00:00:00 2001
+From 1c62d94e16ce0981d6d8ed646192bf1bbeb2a772 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sat, 8 Apr 2023 14:20:23 +1000
+Date: Mon, 10 Apr 2023 15:19:49 +1000
 Subject: [PATCH] <xxx>
 
 ---
@@ -8,14 +8,14 @@ Subject: [PATCH] <xxx>
  options/ansi/generic/stdlib-stubs.cpp |  6 ++++--
  options/glibc/generic/execinfo.cpp    |  5 +++--
  options/rtdl/generic/linker.cpp       |  2 +-
- sysdeps/aero/generic/aero.cpp         | 27 +++++++++++++++++++--------
- sysdeps/aero/generic/filesystem.cpp   | 14 ++++++++------
- sysdeps/aero/generic/sockets.cpp      | 25 +++++++++++++++++++++++++
- sysdeps/aero/include/aero/syscall.h   | 10 ++++++++++
- 8 files changed, 72 insertions(+), 19 deletions(-)
+ sysdeps/aero/generic/aero.cpp         | 27 +++++++++++++++++--------
+ sysdeps/aero/generic/filesystem.cpp   | 14 +++++++------
+ sysdeps/aero/generic/sockets.cpp      | 29 +++++++++++++++++++++++++--
+ sysdeps/aero/include/aero/syscall.h   | 10 +++++++++
+ 8 files changed, 74 insertions(+), 21 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
-index fdd60a0..9f811f4 100644
+index fdd60a00..9f811f47 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -3,3 +3,5 @@ subprojects
@@ -25,10 +25,10 @@ index fdd60a0..9f811f4 100644
 +# clangd cache files:
 +.cache
 diff --git a/options/ansi/generic/stdlib-stubs.cpp b/options/ansi/generic/stdlib-stubs.cpp
-index c0e54fe..ddeec8a 100644
+index 4c5c3975..38d8d9d5 100644
 --- a/options/ansi/generic/stdlib-stubs.cpp
 +++ b/options/ansi/generic/stdlib-stubs.cpp
-@@ -391,8 +391,10 @@ int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
+@@ -396,8 +396,10 @@ int mbtowc(wchar_t *__restrict wc, const char *__restrict mb, size_t max_size) {
  			mlibc::code_seq<wchar_t> wseq{wc, wc + 1};
  			mlibc::code_seq<const char> nseq{mb, mb + max_size};
  			auto e = cc->decode_wtranscode(nseq, wseq, mbtowc_state);
@@ -42,7 +42,7 @@ index c0e54fe..ddeec8a 100644
  			return nseq.it - mb;
  		} else {
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
-index 3474615..10a2109 100644
+index 3474615e..10a2109e 100644
 --- a/options/glibc/generic/execinfo.cpp
 +++ b/options/glibc/generic/execinfo.cpp
 @@ -1,9 +1,10 @@
@@ -59,7 +59,7 @@ index 3474615..10a2109 100644
  
  char **backtrace_symbols(void *const *, int) {
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 6eb9d09..2ab5bc9 100644
+index 003a162d..ab01a7a4 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
 @@ -18,7 +18,7 @@ uintptr_t libraryBase = 0x41000000;
@@ -72,7 +72,7 @@ index 6eb9d09..2ab5bc9 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 0faf386..e6bd277 100644
+index 0faf386d..e6bd277e 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
 @@ -176,13 +176,6 @@ int sys_kill(int pid, int sig) {
@@ -124,7 +124,7 @@ index 0faf386..e6bd277 100644
  }
  
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index 38b0e1b..acbcef9 100644
+index 38b0e1bf..acbcef9a 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -155,14 +155,16 @@ int sys_tcgetattr(int fd, struct termios *attr) {
@@ -151,7 +151,7 @@ index 38b0e1b..acbcef9 100644
  
      return 0;
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index c730bff..39cacb4 100644
+index c730bff9..a32a34fb 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
 @@ -4,7 +4,11 @@
@@ -166,8 +166,16 @@ index c730bff..39cacb4 100644
  
  namespace mlibc {
  int sys_socket(int family, int type, int protocol, int *fd) {
-@@ -187,4 +191,25 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
-         __builtin_unreachable();
+@@ -181,10 +185,31 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
+                             << frg::endlog;
+         return 0;
+     } else {
+-        mlibc::panicLogger()
++        mlibc::infoLogger()
+             << "\e[31mmlibc: Unexpected setsockopt() call, layer: " << layer
+             << " number: " << number << "\e[39m" << frg::endlog;
+-        __builtin_unreachable();
++        return 0;
      }
  }
 +
@@ -193,7 +201,7 @@ index c730bff..39cacb4 100644
 +}
  } // namespace mlibc
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index 432bad2..ba56ce9 100644
+index 432bad2f..ba56ce95 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
 @@ -75,6 +75,10 @@

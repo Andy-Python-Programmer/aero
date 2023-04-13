@@ -20,7 +20,7 @@
 pub mod inet;
 pub mod unix;
 
-use aero_syscall::*;
+use aero_syscall::{prelude::IfReq, *};
 
 use crate::mem::paging::VirtAddr;
 
@@ -38,6 +38,15 @@ impl<'a> SocketAddr<'a> {
 
             _ => Err(SyscallError::EINVAL),
         }
+    }
+
+    pub fn from_ifreq(ifreq: &IfReq) -> Result<Self, SyscallError> {
+        // SAFETY???
+        let family = unsafe { ifreq.data.addr.sa_family };
+        SocketAddr::from_family(
+            VirtAddr::new(&unsafe { ifreq.data.addr } as *const _ as _),
+            family,
+        )
     }
 
     /// Converts the socket address into a unix socket address. Returns [`None`] if
