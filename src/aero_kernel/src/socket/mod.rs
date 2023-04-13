@@ -17,7 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod inet;
+pub mod tcp;
+pub mod udp;
 pub mod unix;
 
 use aero_syscall::{prelude::IfReq, *};

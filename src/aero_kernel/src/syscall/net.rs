@@ -10,7 +10,8 @@ use crate::fs::inode::DirEntry;
 use crate::fs::inode::INodeInterface;
 use crate::mem::paging::VirtAddr;
 
-use crate::socket::inet::InetSocket;
+use crate::socket::tcp::TcpSocket;
+use crate::socket::udp::UdpSocket;
 use crate::socket::unix::*;
 use crate::socket::SocketAddr;
 
@@ -119,7 +120,23 @@ fn create_socket(
 
     let socket = match domain as u32 {
         AF_UNIX => UnixSocket::new() as Arc<dyn INodeInterface>,
-        AF_INET => InetSocket::new(typ, protocol)? as Arc<dyn INodeInterface>,
+        AF_INET => match (typ, protocol) {
+            (SocketType::Dgram, IpProtocol::Default | IpProtocol::Udp) => {
+                UdpSocket::new() as Arc<dyn INodeInterface>
+            }
+
+            (SocketType::Stream, IpProtocol::Default | IpProtocol::Tcp) => {
+                TcpSocket::new() as Arc<dyn INodeInterface>
+            }
+
+            _ => {
+                log::warn!(
+                    "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol:?}"
+                );
+
+                return Err(SyscallError::EINVAL);
+            }
+        },
 
         _ => {
             log::warn!(

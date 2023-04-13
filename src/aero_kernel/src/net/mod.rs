@@ -26,6 +26,7 @@ pub mod arp;
 mod checksum;
 pub mod ethernet;
 pub mod ip;
+pub mod tcp;
 pub mod udp;
 
 pub use ethernet::{Eth, MacAddr};

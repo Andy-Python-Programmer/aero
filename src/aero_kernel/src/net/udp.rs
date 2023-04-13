@@ -39,7 +39,7 @@ impl Packet<Udp> {
         size += Udp::HSIZE;
 
         let ip_packet = Packet::<Ipv4>::create(ip::Type::Udp, target, size);
-        let mut packet = ip_packet.upgrade();
+        let mut packet: Packet<Udp> = ip_packet.upgrade();
 
         let header = packet.header_mut();
 
@@ -68,11 +68,12 @@ impl PacketHeader<Header> for Packet<Udp> {
         let dest_port = header.dst_port().to_native();
 
         let handlers = HANDLERS.read();
-        let handler = handlers
-            .get(&dest_port)
-            .expect("udp: no handler registered");
 
-        handler.recv(self.clone())
+        if let Some(handler) = handlers.get(&dest_port) {
+            handler.recv(self.clone());
+        } else {
+            log::warn!("udp: no handler registered for port {}", dest_port);
+        }
     }
 }
 

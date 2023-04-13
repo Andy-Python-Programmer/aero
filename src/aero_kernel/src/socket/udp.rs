@@ -19,7 +19,7 @@
 
 use aero_syscall::prelude::{IfReq, SIOCGIFHWADDR, SIOCGIFINDEX, SIOCSIFADDR, SIOCSIFNETMASK};
 use aero_syscall::socket::{MessageFlags, MessageHeader};
-use aero_syscall::{IpProtocol, OpenFlags, SocketAddrInet, SocketType, SyscallError};
+use aero_syscall::{OpenFlags, SocketAddrInet};
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::Once;
@@ -45,35 +45,30 @@ enum SocketState {
 }
 
 #[derive(Default)]
-struct InetSocketInner {
+struct UdpSocketInner {
     /// The address that the socket has been bound to.
     address: Option<SocketAddrInet>,
     state: SocketState,
     incoming: Vec<Packet<Udp>>,
 }
 
-pub struct InetSocket {
-    typ: SocketType,
-    protocol: IpProtocol,
-    inner: Mutex<InetSocketInner>,
+pub struct UdpSocket {
+    inner: Mutex<UdpSocketInner>,
     wq: BlockQueue,
     handle: Once<Arc<FileHandle>>,
 
     sref: Weak<Self>,
 }
 
-impl InetSocket {
-    pub fn new(typ: SocketType, protocol: IpProtocol) -> Result<Arc<Self>, SyscallError> {
-        Ok(Arc::new_cyclic(|sref| Self {
-            typ,
-            protocol,
-
+impl UdpSocket {
+    pub fn new() -> Arc<Self> {
+        Arc::new_cyclic(|sref| Self {
             wq: BlockQueue::new(),
             handle: Once::new(),
 
             inner: Mutex::new(Default::default()),
             sref: sref.clone(),
-        }))
+        })
     }
 
     fn sref(&self) -> Arc<Self> {
@@ -113,7 +108,7 @@ impl InetSocket {
     }
 }
 
-impl INodeInterface for InetSocket {
+impl INodeInterface for UdpSocket {
     fn open(
         &self,
         _flags: aero_syscall::OpenFlags,
@@ -135,31 +130,19 @@ impl INodeInterface for InetSocket {
     fn bind(&self, address: super::SocketAddr, _length: usize) -> fs::Result<()> {
         let address = address.as_inet().ok_or(FileSystemError::NotSupported)?;
 
-        match (self.typ, self.protocol) {
-            (SocketType::Dgram, IpProtocol::Default) => {
-                self.set_addr(address.clone());
-                udp::bind(address.port.to_native(), self.sref());
-                Ok(())
-            }
-
-            _ => unreachable!("bind: {:?} {:?}", self.typ, self.protocol),
-        }
+        self.set_addr(address.clone());
+        udp::bind(address.port.to_native(), self.sref());
+        Ok(())
     }
 
     fn connect(&self, address: super::SocketAddr, _length: usize) -> fs::Result<()> {
         let address = address.as_inet().ok_or(FileSystemError::NotSupported)?;
 
-        match (self.typ, self.protocol) {
-            (SocketType::Dgram | SocketType::Stream, IpProtocol::Default) => {
-                let host_addr = Ipv4Addr::new(address.sin_addr.addr.to_be_bytes());
-                udp::connect(host_addr, address.port.to_native());
+        let host_addr = Ipv4Addr::new(address.sin_addr.addr.to_be_bytes());
+        udp::connect(host_addr, address.port.to_native());
 
-                self.set_state(SocketState::Connected(address.clone()));
-                Ok(())
-            }
-
-            _ => unreachable!("connect: {:?} {:?}", self.typ, self.protocol),
-        }
+        self.set_state(SocketState::Connected(address.clone()));
+        Ok(())
     }
 
     fn send(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
@@ -310,7 +293,7 @@ impl INodeInterface for InetSocket {
     }
 }
 
-impl UdpHandler for InetSocket {
+impl UdpHandler for UdpSocket {
     fn recv(&self, packet: Packet<Udp>) {
         self.inner.lock_irq().incoming.push(packet);
         self.wq.notify_complete();
