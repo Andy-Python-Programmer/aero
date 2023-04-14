@@ -123,8 +123,13 @@ impl TcpHeader {
         (flags.to_native().get_bits(12..=15) * 4) as u8
     }
 
+    /// Sets the ACK number to `val` and sets the [`TcpFlags::ACK`] flag.
     pub fn set_ack_number(&mut self, val: u32) {
         self.ack_nr = val.into();
+
+        let mut flags = self.flags();
+        flags.insert(TcpFlags::ACK);
+        self.set_flags(flags);
     }
 
     pub fn set_header_len(&mut self, val: u8) {
