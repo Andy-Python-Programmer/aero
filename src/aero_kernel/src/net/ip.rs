@@ -40,6 +40,7 @@ impl Ipv4Addr {
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
 pub enum Type {
+    Tcp = 6u8.swap_bytes(),
     Udp = 17u8.swap_bytes(),
 }
 
@@ -63,8 +64,8 @@ impl Header {
         self.length = BigEndian::from(length);
     }
 
-    fn length(&self) -> BigEndian<u16> {
-        self.length
+    pub fn length(&self) -> u16 {
+        self.length.into()
     }
 }
 
@@ -95,7 +96,6 @@ impl Packet<Ipv4> {
         header.dest_ip = dest;
 
         header.src_ip = default_device().ip();
-        log::debug!("{:?}", header.src_ip);
         header.hcrc = checksum::make(checksum::calculate(header));
         packet
     }
@@ -111,10 +111,15 @@ impl PacketHeader<Header> for Packet<Ipv4> {
         let mut packet = self.clone();
         let header = self.header();
 
-        packet.len = header.length().to_native() as usize;
+        packet.len = header.length() as usize;
         match header.protocol {
             Type::Udp => {
                 let packet: Packet<udp::Udp> = packet.upgrade();
+                packet.recv();
+            }
+
+            Type::Tcp => {
+                let packet: Packet<tcp::Tcp> = packet.upgrade();
                 packet.recv();
             }
         }

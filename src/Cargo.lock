@@ -26,7 +26,7 @@ dependencies = [
  "raw-cpuid",
  "rustc-demangle",
  "serde_json",
- "simple_endian",
+ "simple_endian 0.2.1 (git+https://github.com/Andy-Python-Programmer/simple-endian-rs)",
  "spin 0.9.8",
  "static_assertions",
  "uapi",
@@ -51,7 +51,7 @@ dependencies = [
  "bitflags",
  "num-derive",
  "num-traits",
- "simple_endian",
+ "simple_endian 0.2.1 (git+https://github.com/michalfita/simple-endian-rs?branch=bugfix/4/fix-no_std-support-right-way)",
 ]
 
 [[package]]
@@ -436,6 +436,11 @@ dependencies = [
 name = "simple_endian"
 version = "0.2.1"
 source = "git+https://github.com/michalfita/simple-endian-rs?branch=bugfix/4/fix-no_std-support-right-way#7210f40881d16f7f2e3d8d40f6381fa222843caa"
+
+[[package]]
+name = "simple_endian"
+version = "0.2.1"
+source = "git+https://github.com/Andy-Python-Programmer/simple-endian-rs#626b4f2a7dfb8bfaa46a728fd6db886fe8b42fa3"
 
 [[package]]
 name = "spin"

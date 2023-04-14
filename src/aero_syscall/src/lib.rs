@@ -718,6 +718,10 @@ impl SocketAddrInet {
     pub fn addr(&self) -> [u8; 4] {
         self.sin_addr.addr.to_le_bytes()
     }
+
+    pub fn port(&self) -> u16 {
+        self.port.to_native()
+    }
 }
 
 impl SocketAddr for SocketAddrUnix {}
