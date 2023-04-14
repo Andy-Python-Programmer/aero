@@ -40,7 +40,6 @@
     step_trait,
     prelude_import,
     allocator_api,
-    nonnull_slice_from_raw_parts,
     maybe_uninit_write_slice,
     slice_ptr_get,
     maybe_uninit_as_bytes,
