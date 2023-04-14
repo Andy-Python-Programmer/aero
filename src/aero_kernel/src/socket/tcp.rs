@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use alloc::boxed::Box;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::Once;
@@ -23,10 +24,54 @@ use crate::fs::cache::DirCacheItem;
 use crate::fs::file_table::FileHandle;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
 use crate::fs::{self, FileSystemError};
+use crate::mem::alloc_boxed_buffer;
 use crate::net::ip::Ipv4Addr;
 use crate::net::tcp::{self, Tcp, TcpFlags, TcpHandler};
 use crate::net::{Packet, PacketHeader, PacketTrait};
 use crate::utils::sync::Mutex;
+
+/// TCP Stream
+struct Stream {
+    read_cursor: usize,
+    write_cursor: usize,
+
+    buffer: Box<[u8]>,
+}
+
+impl Stream {
+    fn write(&mut self, buffer: &[u8]) {
+        assert!(self.write_cursor < self.buffer.len());
+
+        self.buffer[self.write_cursor..self.write_cursor + buffer.len()].copy_from_slice(buffer);
+        self.write_cursor += buffer.len();
+    }
+
+    fn read(&mut self, buffer: &mut [u8]) -> usize {
+        assert!(self.write_cursor > self.read_cursor);
+
+        let size = buffer.len().min(self.write_cursor - self.read_cursor);
+
+        buffer[..size].copy_from_slice(&self.buffer[self.read_cursor..self.read_cursor + size]);
+        self.read_cursor += buffer.len();
+
+        size
+    }
+
+    fn is_empty(&self) -> bool {
+        self.read_cursor == self.write_cursor
+    }
+}
+
+impl Default for Stream {
+    fn default() -> Self {
+        Self {
+            read_cursor: 0,
+            write_cursor: 0,
+
+            buffer: alloc_boxed_buffer(4096),
+        }
+    }
+}
 
 #[derive(Default)]
 struct TransmissionControl {
@@ -51,6 +96,8 @@ struct TcpData {
     src_port: u16,
     dest_port: u16,
     target: Ipv4Addr,
+
+    stream: Stream,
 }
 
 impl TcpData {
@@ -89,25 +136,26 @@ impl TcpData {
         match self.state {
             State::SynSent => {
                 assert!(header.flags().contains(TcpFlags::ACK | TcpFlags::SYN));
-                self.control.recv_next = header.sequence_number().wrapping_add(packet.ack_len());
-
-                self.send_packet(self.make_ack_packet(0));
                 self.state = State::Established;
             }
 
             State::Established => {
                 if !packet.as_slice().is_empty() {
                     let data = packet.as_slice();
-                    log::debug!("{:?}", core::str::from_utf8(data));
+                    self.stream.write(data);
                 } else if header.flags().contains(TcpFlags::FIN) {
                     todo!()
                 } else {
                     log::trace!("[ TCP ] Connection Established!");
+                    return;
                 }
             }
 
             State::Closed => unreachable!(),
         }
+
+        self.control.recv_next = header.sequence_number().wrapping_add(packet.ack_len());
+        self.send_packet(self.make_ack_packet(0));
     }
 }
 
@@ -169,10 +217,20 @@ impl INodeInterface for TcpSocket {
 
     fn recv(
         &self,
-        _message_hdr: &mut aero_syscall::socket::MessageHeader,
+        message_hdr: &mut aero_syscall::socket::MessageHeader,
         _flags: aero_syscall::socket::MessageFlags,
     ) -> fs::Result<usize> {
-        todo!()
+        let mut data = self.data.lock_irq();
+        assert!(!data.stream.is_empty());
+
+        Ok(message_hdr
+            .iovecs_mut()
+            .iter_mut()
+            .map(|iovec| {
+                let iovec = iovec.as_slice_mut();
+                data.stream.read(iovec)
+            })
+            .sum::<usize>())
     }
 
     fn send(
@@ -205,8 +263,14 @@ impl INodeInterface for TcpSocket {
         let mut flags = PollFlags::empty();
         let data = self.data.lock_irq();
 
-        if data.state != State::Closed {
-            flags |= PollFlags::OUT;
+        if data.state == State::Closed {
+            return Ok(flags);
+        }
+
+        flags |= PollFlags::OUT;
+
+        if !data.stream.is_empty() {
+            flags |= PollFlags::IN;
         }
 
         Ok(flags)
