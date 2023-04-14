@@ -16,6 +16,7 @@
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use alloc::sync::{Arc, Weak};
+use alloc::vec::Vec;
 use spin::Once;
 
 use crate::fs::cache::DirCacheItem;
@@ -64,19 +65,22 @@ impl TcpData {
         packet
     }
 
-    fn send_sync(&mut self) {
-        self.make_packet(0, TcpFlags::SYN).send();
-        self.state = State::SynSent;
-    }
-
-    fn send_ack(&mut self) {
-        let mut packet = self.make_packet(0, TcpFlags::empty());
+    fn make_ack_packet(&self, size: usize) -> Packet<Tcp> {
+        let mut packet = self.make_packet(size, TcpFlags::empty());
         let header = packet.header_mut();
 
         header.set_ack_number(self.control.recv_next);
-        packet.send();
+        packet
+    }
 
-        self.state = State::Established;
+    fn send_packet(&mut self, packet: Packet<Tcp>) {
+        self.control.send_next = self.control.send_next.wrapping_add(packet.ack_len());
+        packet.send();
+    }
+
+    fn send_sync(&mut self) {
+        self.send_packet(self.make_packet(0, TcpFlags::SYN));
+        self.state = State::SynSent;
     }
 
     fn recv(&mut self, packet: Packet<Tcp>) {
@@ -86,12 +90,20 @@ impl TcpData {
             State::SynSent => {
                 assert!(header.flags().contains(TcpFlags::ACK | TcpFlags::SYN));
                 self.control.recv_next = header.sequence_number().wrapping_add(packet.ack_len());
-                self.send_ack();
+
+                self.send_packet(self.make_ack_packet(0));
+                self.state = State::Established;
             }
 
             State::Established => {
-                assert!(packet.as_slice().is_empty() && !header.flags().contains(TcpFlags::FIN));
-                log::trace!("[ TCP ] Connection Established!");
+                if !packet.as_slice().is_empty() {
+                    let data = packet.as_slice();
+                    log::debug!("{:?}", core::str::from_utf8(data));
+                } else if header.flags().contains(TcpFlags::FIN) {
+                    todo!()
+                } else {
+                    log::trace!("[ TCP ] Connection Established!");
+                }
             }
 
             State::Closed => unreachable!(),
@@ -165,10 +177,28 @@ impl INodeInterface for TcpSocket {
 
     fn send(
         &self,
-        _message_hdr: &mut aero_syscall::socket::MessageHeader,
+        message_hdr: &mut aero_syscall::socket::MessageHeader,
         _flags: aero_syscall::socket::MessageFlags,
     ) -> fs::Result<usize> {
-        todo!()
+        const MAX_MTU: usize = 1460;
+
+        let data = message_hdr
+            .iovecs()
+            .iter()
+            .map(|e| e.as_slice())
+            .flatten()
+            .copied()
+            .collect::<Vec<_>>();
+
+        let mut inner = self.data.lock_irq();
+
+        for chunk in data.chunks(MAX_MTU) {
+            let mut packet = inner.make_ack_packet(chunk.len());
+            packet.as_slice_mut().copy_from_slice(chunk);
+            inner.send_packet(packet);
+        }
+
+        Ok(data.len())
     }
 
     fn poll(&self, _table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {
