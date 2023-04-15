@@ -1,6 +1,7 @@
 imports:
   - file: bootstrap/xorg.yml
   - file: bootstrap/net.yml
+  - file: bootstrap/vcs.yml
 
 general:
   cargo:
@@ -1799,6 +1800,47 @@ packages:
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: pcre
+    source:
+      subdir: 'bundled'
+      # Use a git mirror as pcre retired their svn repositories
+      git: 'https://github.com/vinix-os/pcre'
+      tag: '1767'
+      # Seems to be 8.45?
+      version: '8.45'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-autoconf-archive
+      regenerate:
+        - args: ['./autogen.sh']
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        - '--enable-unicode-properties'
+        - '--enable-pcre8'
+        - '--enable-pcre16'
+        - '--enable-pcre32'
+        - '--disable-static'
+        environ:
+          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+          PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
+
 
   # - name: weston
   #   labels: [aarch64]

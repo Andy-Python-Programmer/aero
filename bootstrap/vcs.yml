@@ -1,0 +1,51 @@
+packages:
+  # The Git version control system
+  #
+  # Git is one of the most used version control systems designed to 
+  # handle large projects efficiently.
+  - name: git
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/git/git.git'
+      tag: 'v2.32.0'
+      version: '2.32.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['autoreconf']
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - python
+      - libexpat
+      - zlib
+      - openssl
+      - curl
+      - libiconv
+      - pcre
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+      - args:
+        - './configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-python=python3'
+        - '--with-gitconfig=/etc/gitconfig'
+        - '--with-curl=@SYSROOT_DIR@/usr'
+        - '--without-iconv'
+        - '--with-libpcre'
+        - 'ac_cv_fread_reads_directories=1'
+        - 'ac_cv_snprintf_returns_bogus=1'
+        environ:
+          CURL_CONFIG: '@SYSROOT_DIR@/usr/bin/curl-config'
+    build:
+      - args: ['make', 'NO_GETTEXT=YesPlease', '-j@PARALLELISM@']
+      - args: ['make', 'NO_GETTEXT=YesPlease', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
