@@ -175,3 +175,57 @@ packages:
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: links
+    source:
+      subdir: 'bundled'
+      url: 'http://links.twibright.com/download/links-2.28.tar.gz'
+      format: 'tar.gz'
+      checksum: blake2b:5695cfa26fac30f021ef415e75edb9456ad0360b0edeefa02d2862b149f757a1f1f4d5e5a1e6f3f198696bf35129c93f0f46bdf06ab1b0eb6c91f22e08fffb07
+      extract_path: 'links-2.28'
+      version: '2.28'
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: x86_64-aero
+    pkgs_required:
+      - mlibc
+      - zlib
+      - openssl
+      - libpng
+      - zstd
+      - libxext
+      - freetype
+      - fontconfig
+      - xz-utils
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--mandir=/usr/share/man'
+        - '--enable-graphics'
+        - '--without-directfb'
+        - '--without-librsvg'
+        - '--with-bzip2'
+        - '--with-X'
+        - '--x-includes=@SYSROOT_DIR@/usr/include'
+        - '--x-libraries=@SYSROOT_DIR@/usr/lib'
+        - '--with-zlib'
+        - '--with-zstd'
+        - '--with-openssl'
+        - '--with-libjpeg'
+        - '--without-libtiff'
+        - '--without-openmp'
+        - '--with-lzma'
+        - '--with-freetype'
+        - '--without-ipv6'
+        environ:
+          # Configure doesn't set CC correctly and assumes gcc unless manually overridden.
+          CC: 'x86_64-aero-gcc'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'

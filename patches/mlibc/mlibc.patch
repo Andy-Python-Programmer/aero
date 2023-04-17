@@ -1,6 +1,6 @@
-From 5e9f6dd73080e121201fd2a26f282b2921053871 Mon Sep 17 00:00:00 2001
+From 9a74ab891ad2f1e2c47ef495767e5b3a25c33fa2 Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Thu, 13 Apr 2023 16:28:35 +1000
+Date: Sun, 16 Apr 2023 14:21:09 +1000
 Subject: [PATCH] <xxx>
 
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
@@ -73,14 +73,14 @@ index 003a162..ab01a7a 100644
  constexpr bool eagerBinding = true;
  
 diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
-index 0faf386..e6bd277 100644
+index 6eeb980..e6bd277 100644
 --- a/sysdeps/aero/generic/aero.cpp
 +++ b/sysdeps/aero/generic/aero.cpp
 @@ -176,13 +176,6 @@ int sys_kill(int pid, int sig) {
      return 0;
  }
  
--pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
+-int sys_getpgid(pid_t pid, pid_t *pgid) {
 -    mlibc::infoLogger() << "sys_getpgid() is unimplemented" << frg::endlog;
 -    *pgid = 0;
 -

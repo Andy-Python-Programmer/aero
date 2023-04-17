@@ -62,7 +62,7 @@ impl NetworkDevice {
     pub fn new(driver: Arc<dyn NetworkDriver>) -> Self {
         // FIXME(andy): DHCPD should handle static IP assignment.
         let mut metadata = Metadata::default();
-        metadata.ip = Ipv4Addr::new([192, 168, 122, 0]);
+        metadata.ip = Ipv4Addr::new([192, 168, 100, 0]);
 
         Self {
             driver,

@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-use alloc::boxed::Box;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::Once;
@@ -24,52 +23,37 @@ use crate::fs::cache::DirCacheItem;
 use crate::fs::file_table::FileHandle;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
 use crate::fs::{self, FileSystemError};
-use crate::mem::alloc_boxed_buffer;
 use crate::net::ip::Ipv4Addr;
 use crate::net::tcp::{self, Tcp, TcpFlags, TcpHandler};
 use crate::net::{Packet, PacketHeader, PacketTrait};
-use crate::utils::sync::Mutex;
+use crate::utils::sync::{BlockQueue, Mutex};
 
 /// TCP Stream
 struct Stream {
-    read_cursor: usize,
-    write_cursor: usize,
-
-    buffer: Box<[u8]>,
+    buffer: Vec<u8>,
 }
 
 impl Stream {
     fn write(&mut self, buffer: &[u8]) {
-        assert!(self.write_cursor < self.buffer.len());
-
-        self.buffer[self.write_cursor..self.write_cursor + buffer.len()].copy_from_slice(buffer);
-        self.write_cursor += buffer.len();
+        self.buffer.extend_from_slice(buffer);
     }
 
     fn read(&mut self, buffer: &mut [u8]) -> usize {
-        assert!(self.write_cursor > self.read_cursor);
+        let size = buffer.len().min(self.buffer.len());
+        let target = self.buffer.drain(..size).collect::<Vec<_>>();
 
-        let size = buffer.len().min(self.write_cursor - self.read_cursor);
-
-        buffer[..size].copy_from_slice(&self.buffer[self.read_cursor..self.read_cursor + size]);
-        self.read_cursor += buffer.len();
-
+        buffer[..size].copy_from_slice(target.as_slice());
         size
     }
 
     fn is_empty(&self) -> bool {
-        self.read_cursor == self.write_cursor
+        self.buffer.is_empty()
     }
 }
 
 impl Default for Stream {
     fn default() -> Self {
-        Self {
-            read_cursor: 0,
-            write_cursor: 0,
-
-            buffer: alloc_boxed_buffer(4096),
-        }
+        Self { buffer: Vec::new() }
     }
 }
 
@@ -163,14 +147,18 @@ pub struct TcpSocket {
     sref: Weak<Self>,
     data: Mutex<TcpData>,
     handle: Once<Arc<FileHandle>>,
+    wq: BlockQueue,
 }
 
 impl TcpSocket {
+    const MAX_MTU: usize = 1460;
+
     pub fn new() -> Arc<Self> {
         Arc::new_cyclic(|sref| Self {
             handle: Once::new(),
             sref: sref.clone(),
             data: Mutex::new(TcpData::default()),
+            wq: BlockQueue::new(),
         })
     }
 
@@ -215,6 +203,15 @@ impl INodeInterface for TcpSocket {
         Ok(())
     }
 
+    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+        let mut data = self
+            .wq
+            .block_on(&self.data, |e| e.state == State::Established)?;
+
+        assert!(!data.stream.is_empty());
+        Ok(data.stream.read(buffer))
+    }
+
     fn recv(
         &self,
         message_hdr: &mut aero_syscall::socket::MessageHeader,
@@ -233,13 +230,25 @@ impl INodeInterface for TcpSocket {
             .sum::<usize>())
     }
 
+    fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
+        let mut data = self
+            .wq
+            .block_on(&self.data, |e| e.state == State::Established)?;
+
+        for chunk in buffer.chunks(Self::MAX_MTU) {
+            let mut packet = data.make_ack_packet(chunk.len());
+            packet.as_slice_mut().copy_from_slice(chunk);
+            data.send_packet(packet);
+        }
+
+        Ok(buffer.len())
+    }
+
     fn send(
         &self,
         message_hdr: &mut aero_syscall::socket::MessageHeader,
         _flags: aero_syscall::socket::MessageFlags,
     ) -> fs::Result<usize> {
-        const MAX_MTU: usize = 1460;
-
         let data = message_hdr
             .iovecs()
             .iter()
@@ -250,7 +259,7 @@ impl INodeInterface for TcpSocket {
 
         let mut inner = self.data.lock_irq();
 
-        for chunk in data.chunks(MAX_MTU) {
+        for chunk in data.chunks(Self::MAX_MTU) {
             let mut packet = inner.make_ack_packet(chunk.len());
             packet.as_slice_mut().copy_from_slice(chunk);
             inner.send_packet(packet);
