@@ -1604,8 +1604,8 @@ packages:
     source:
       subdir: 'bundled'
       git: 'https://gitlab.freedesktop.org/freetype/freetype.git'
-      tag: 'VER-2-12-1'
-      version: '2.12.1'
+      tag: 'VER-2-13-0'
+      version: '2.13.0'
       tools_required:
         - host-autoconf-v2.69
         - host-automake-v1.16
