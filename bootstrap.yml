@@ -80,6 +80,12 @@ sources:
     tag: 'llvmorg-14.0.1'
     version: '14.0.1'
 
+  - name: glib
+    subdir: 'bundled'
+    git: 'https://gitlab.gnome.org/GNOME/glib.git'
+    tag: '2.72.3'
+    version: '2.72.3'
+
   # ---------------------------------------------------------------------------
   # Rust patched crates start
   # ---------------------------------------------------------------------------
@@ -219,6 +225,20 @@ sources:
           NOCONFIGURE: 'yes'
 
 tools:
+  - name: host-glib
+    exports_aclocal: true
+    from_source: glib
+    configure:
+      - args:
+        - 'meson'
+        - '--prefix=@PREFIX@'
+        - '--libdir=lib'
+        - '@THIS_SOURCE_DIR@'
+    compile:
+      - args: ['ninja']
+    install:
+      - args: ['ninja', 'install']
+
   - name: host-cmake
     source:
       subdir: 'bundled'
@@ -1841,62 +1861,134 @@ packages:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
 
-
-  # - name: weston
-  #   labels: [aarch64]
-  #   architecture: '@OPTION:arch@'
+  # - name: dbus
   #   source:
-  #     subdir: 'ports'
-  #     git: 'https://github.com/wayland-project/weston.git'
-  #     tag: '10.0.0'
-  #     version: '10.0.0'
+  #     subdir: 'bundled'
+  #     git: 'https://gitlab.freedesktop.org/dbus/dbus.git'
+  #     tag: 'dbus-1.12.20'
+  #     version: '1.12.20'
+  #     tools_required:
+  #       - host-autoconf-v2.69
+  #       - host-automake-v1.16
+  #       - host-libtool
+  #       - host-autoconf-archive
+  #     regenerate:
+  #       - args: ['./autogen.sh']
+  #         environ:
+  #           NOCONFIGURE: 'yes'
   #   tools_required:
+  #     - host-gcc
   #     - host-autoconf-v2.69
   #     - host-automake-v1.16
-  #     - host-libtool
   #     - host-pkg-config
-  #     - system-gcc
-  #     - wayland-scanner
+  #     - host-python
   #     - virtual: pkgconfig-for-target
-  #       triple: "@OPTION:arch-triple@"
-  #     - virtual: pkgconfig-for-host
-  #       program_name: host-pkg-config
+  #       triple: 'x86_64-aero'
   #   pkgs_required:
   #     - mlibc
-  #     - cairo
-  #     - libinput
-  #     - libxkbcommon
-  #     - mesa
-  #     - wayland
-  #     - wayland-protocols
-  #     - dejavu
-  #     - libxcursor
-  #     - xorg-server
-  #     - pango
   #     - glib
-  #     - libjpeg-turbo
+  #     - libexpat
+  #   configure:
+  #     - args:
+  #       - '@THIS_SOURCE_DIR@/configure'
+  #       - '--host=x86_64-aero'
+  #       - '--prefix=/usr'
+  #       - '--sysconfdir=/etc'
+  #       - '--localstatedir=/var'
+  #       - '--disable-doxygen-docs'
+  #       - '--disable-xml-docs'
+  #       - '--disable-static'
+  #       - '--enable-shared'
+  #       - '--enable-verbose-mode'
+  #       - '--with-systemdsystemunitdir=no'
+  #       - '--with-systemduserunitdir=no'
+  #       - '--docdir=/usr/share/doc/dbus-1.12.20'
+  #       - '--with-console-auth-dir=/run/console'
+  #       - '--with-system-pid-file=/run/dbus/pid'
+  #       - '--with-system-socket=/run/dbus/system_bus_socket'
+  #       - '--disable-selinux'
+  #       - '--disable-apparmor'
+  #       - '--disable-libaudit'
+  #       - '--disable-kqueue'
+  #       - '--disable-launchd'
+  #       - '--disable-systemd'
+  #       - '--disable-tests'
+  #   build:
+  #     - args: ['make', '-j@PARALLELISM@']
+  #     - args: ['make', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # - name: libintl
+  #   source:
+  #     subdir: 'bundled'
+  #     url: 'https://ftp.gnu.org/gnu/gettext/gettext-0.21.tar.xz'
+  #     format: 'tar.xz'
+  #     extract_path: 'gettext-0.21'
+  #     version: '0.21'
+  #     tools_required:
+  #       - host-autoconf-v2.69
+  #       - host-automake-v1.16
+  #       - host-libtool
+  #     regenerate:
+  #       - args: ['autoreconf', '-fvi']
+  #   tools_required:
+  #     - host-gcc
+  #   pkgs_required:
+  #     - libiconv
+  #   configure:
+  #     - args:
+  #       - '@THIS_SOURCE_DIR@/configure'
+  #       - '--host=x86_64-aero'
+  #       - '--prefix=/usr'
+  #       - '--without-emacs'
+  #       - '--without-lispdir'
+  #       # Normally this controls nls behavior in general, but the libintl
+  #       # subdir is skipped unless this is explicitly set.
+  #       - '--enable-nls'
+  #       # This magic flag enables libintl.
+  #       - '--with-included-gettext'
+  #       - '--disable-c++'
+  #       - '--disable-libasprintf'
+  #       - '--disable-java'
+  #       - '--enable-shared'
+  #       - '--disable-static'
+  #       - '--enable-threads=posix'
+  #       - '--disable-curses'
+  #       - '--without-git'
+  #       - '--without-cvs'
+  #       - '--without-bzip2'
+  #       - '--without-xz'
+  #   build:
+  #     - args: ['make', '-C', 'gettext-runtime/intl', '-j@PARALLELISM@']
+  #     - args: ['make', '-C', 'gettext-runtime/intl', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # - name: glib
+  #   from_source: glib
+  #   tools_required:
+  #     - host-gcc
+  #     - host-libtool
+  #     - host-pkg-config
+  #     - virtual: pkgconfig-for-target
+  #       triple: "x86_64-aero"
+  #   pkgs_required:
+  #     - mlibc
+  #     - pcre
+  #     - libffi
+  #     - zlib
+  #     - libiconv
+  #     - libintl
   #   configure:
   #     - args:
   #       - 'meson'
-  #       - '--native-file'
-  #       - '@SOURCE_ROOT@/scripts/meson.native-file'
   #       - '--cross-file'
-  #       - '@SOURCE_ROOT@/scripts/meson-@OPTION:arch-triple@.cross-file'
+  #       - '@SOURCE_ROOT@/userland/cross-file.ini'
   #       - '--prefix=/usr'
   #       - '--libdir=lib'
   #       - '--buildtype=debugoptimized'
-  #       - '-Dbackend-x11=false'
-  #       - '-Dsimple-clients=damage,im,egl,shm,touch'
-  #       - '-Dimage-jpeg=true'
-  #       - '-Dimage-webp=false'
-  #       - '-Dlauncher-logind=false'
-  #       - '-Dbackend-drm-screencast-vaapi=false'
-  #       - '-Dbackend-rdp=false'
-  #       - '-Dcolor-management-colord=false'
-  #       - '-Dcolor-management-lcms=false'
-  #       - '-Dsystemd=false'
-  #       - '-Dremoting=false'
-  #       - '-Dpipewire=false'
+  #       - '-Dxattr=false'
   #       - '@THIS_SOURCE_DIR@'
   #       environ:
   #         PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
@@ -1906,7 +1998,10 @@ packages:
   #     - args: ['ninja', 'install']
   #       environ:
   #         DESTDIR: '@THIS_COLLECT_DIR@'
-  #       quiet: true
+  #   scripts:
+  #       post_install:
+  #         - args: ['glib-compile-schemas /usr/share/glib-2.0/schemas']
+  #         - args: ['gio-querymodules /usr/lib/gio/modules']
 
 tasks:
   - name: sysroot

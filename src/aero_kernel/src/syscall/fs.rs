@@ -60,15 +60,15 @@ pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, SyscallError> {
         .get_handle(fd)
         .ok_or(SyscallError::EBADFD)?;
 
-    if handle
-        .flags
-        .read()
-        .intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR)
-    {
-        Ok(handle.read(buffer)?)
-    } else {
-        Err(SyscallError::EACCES)
-    }
+    // if handle
+    //     .flags
+    //     .read()
+    //     .intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR)
+    // {
+    Ok(handle.read(buffer)?)
+    // } else {
+    //     Err(SyscallError::EACCES)
+    // }
 }
 
 #[syscall]
