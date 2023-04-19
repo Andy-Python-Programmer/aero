@@ -45,7 +45,36 @@ sources:
         environ:
           NOCONFIGURE: 'yes'
 
+  - name: gobject-introspection
+    subdir: 'bundled'
+    git: 'https://gitlab.gnome.org/GNOME/gobject-introspection.git'
+    # New meson versions break old builds, but the fix isn't in a stable release yet
+    branch: 'main'
+    commit: '7368d58a2d615e7cade85afd3f88df65256b699f'
+
 tools:
+  #- name: host-gobject-introspection
+  #  exports_aclocal: true
+  #  from_source: gobject-introspection
+  #  tools_required:
+  #    - host-python
+  #    - host-glib
+  #   - host-pkg-config
+  #    - virtual: pkgconfig-for-host
+  #      program_name: host-pkg-config
+  #  configure:
+  #    - args:
+  #      - 'meson'
+  #      - '--prefix=@PREFIX@'
+  #      - '--native-file'
+  #      - '@SOURCE_ROOT@/userland/native-file.ini'
+  #      - '-Dbuild_introspection_data=false'
+  #      - '@THIS_SOURCE_DIR@'
+  #  compile:
+  #    - args: ['ninja']
+  #  install:
+  #    - args: ['ninja', 'install']
+
   - name: host-xorg-macros
     exports_aclocal: true
     from_source: xorg-util-macros
@@ -2053,3 +2082,314 @@ packages:
       - args: ['make', 'install-strip']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libxtst
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxtst.git'
+      tag: 'libXtst-1.2.4'
+      version: '1.2.4'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-autoconf-archive
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libx11
+      - libxtrans
+      - libxext
+      - libxi
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # X Damage Extension library
+  - name: libxdamage
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxdamage.git'
+      tag: 'libXdamage-1.1.5'
+      version: '1.1.5'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-autoconf-archive
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libx11
+      - libxtrans
+      - libxfixes
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: pango
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/pango.git'
+      tag: '1.50.11'
+      version: '1.50.11'
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - host-glib
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - glib
+      - fontconfig
+      - freetype
+      - fribidi
+      - cairo
+      - xorg-proto
+      - libx11
+      - libxtrans
+      - libxext
+      - harfbuzz
+      - libxft
+    revision: 2
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--buildtype=release'
+        - '-Dintrospection=disabled'
+        - '--wrap-mode=nofallback'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: gdk-pixbuf
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/gdk-pixbuf.git'
+      tag: '2.40.0'
+      version: '2.40.0'
+    tools_required:
+      - host-gcc
+      - host-libtool
+      - host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - glib
+      - libjpeg-turbo
+      - libpng
+      - shared-mime-info
+      - libx11
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '-Dgir=false'
+        - '-Dman=false'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+    scripts:
+        post_install:
+          - args: ['gdk-pixbuf-query-loaders', '--update-cache']
+
+  - name: shared-mime-info
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xdg/shared-mime-info.git'
+      tag: 'Release-1-15'
+      version: '1.15'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+      - host-python
+    pkgs_required:
+      - mlibc
+      - glib
+      - libxml
+      - itstool
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-update-mimedb'
+        environ:  
+          'ITSTOOL': '/usr/bin/itstool'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+    scripts:
+        post_install:
+          - args: 'echo "Running update-mime-database; this may take a minute or 2..."'
+          - args: '/usr/bin/update-mime-database /usr/share/mime/'
+
+  # Collection of GSettings schemas for GNOME desktop
+  #
+  # This package contains a collection of GSettings schemas for 
+  # settings shared by various components of a GNOME Desktop.
+  #- name: gsettings-desktop-schemas
+  #  source:
+  #    subdir: 'bundled'
+  #    git: 'https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas.git'
+  #    tag: '42.0'
+  #    version: '42.0'
+  #  tools_required:
+  #    - host-gcc
+  #    - host-gobject-introspection
+  #    - host-libtool
+  #    - host-pkg-config
+  #    - virtual: pkgconfig-for-target
+  #      triple: "x86_64-aero"
+  #  pkgs_required:
+  #    - mlibc
+  #    - glib
+  #  configure:
+  #    - args: |
+  #            sed -i -r 's:"(/system):"/org/gnome\1:g' @THIS_SOURCE_DIR@/schemas/*.in
+  #    - args:
+  #      - 'meson'
+  #      - '--cross-file'
+  #      - '@SOURCE_ROOT@/userland/cross-file.ini'
+  #      - '--prefix=/usr'
+  #      - '-Dintrospection=false'
+  #      - '@THIS_SOURCE_DIR@'
+  #  build:
+  #    - args: ['ninja']
+  #    - args: ['ninja', 'install']
+  #      environ:
+  #        DESTDIR: '@THIS_COLLECT_DIR@'
+  #  scripts:
+  #      post_install:
+  #        - args: 'glib-compile-schemas /usr/share/glib-2.0/schemas'
+
+  - name: gtk+-3
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/gtk.git'
+      tag: '3.24.23'
+      version: '3.24.23'
+    tools_required:
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+      - host-glib
+    pkgs_required:
+      - mlibc
+      - atk
+      - at-spi2-atk
+      - cairo
+      - glib
+      - gdk-pixbuf
+      - libx11
+      - libxext
+      - libxcb
+      - libxrender
+      - libxrandr
+      - libxfixes
+      - libxdamage
+      - pango
+      - fribidi
+      - libepoxy
+      - libxkbcommon
+      - fontconfig
+      - freetype
+      - libxi
+      - harfbuzz
+      - libxcursor
+      #- gsettings-desktop-schemas
+      - dbus
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Dprint_backends=file'
+        - '-Dintrospection=false'
+        - '-Dx11_backend=true'
+        - '-Dwayland_backend=false'
+        - '-Dbroadway_backend=true'
+        - '-Dgtk_doc=false'
+        - '-Dcolord=no'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+    scripts:
+        post_install:
+          - args: ['gtk-query-immodules-3.0', '--update-cache']
+          - args: ['glib-compile-schemas', '/usr/share/glib-2.0/schemas']

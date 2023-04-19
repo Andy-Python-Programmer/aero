@@ -83,8 +83,8 @@ sources:
   - name: glib
     subdir: 'bundled'
     git: 'https://gitlab.gnome.org/GNOME/glib.git'
-    tag: '2.72.3'
-    version: '2.72.3'
+    tag: '2.74.7'
+    version: '2.74.7'
 
   # ---------------------------------------------------------------------------
   # Rust patched crates start
@@ -223,6 +223,20 @@ sources:
       - args: ['./autogen.sh']
         environ:
           NOCONFIGURE: 'yes'
+
+  - name: icu
+    subdir: 'bundled'
+    git: 'https://github.com/unicode-org/icu.git'
+    tag: 'release-70-1'
+    version: '70.1'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+    regenerate:
+      - args: ['cp',
+          '@BUILD_ROOT@/tools/host-automake-v1.15/share/automake-1.15/config.sub',
+          '@THIS_SOURCE_DIR@/icu4c/source']
 
 tools:
   - name: host-glib
@@ -397,6 +411,17 @@ tools:
     configure:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+
+  - name: host-icu
+    from_source: icu
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/icu4c/source/configure'
         - '--prefix=@PREFIX@'
     compile:
       - args: ['make', '-j@PARALLELISM@']
@@ -1821,6 +1846,156 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  # GTK+ & GNOME Accessibility Toolkit
+  #
+  # This package provides a set of accessibility interfaces used extensively througout GTK and GNOME.
+  - name: atk
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/atk.git'
+      tag: '2.38.0'
+      version: '2.38.0'
+    tools_required:
+      - host-gcc
+      - host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - glib
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Dintrospection=false'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: cairo
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/cairo/cairo.git'
+      tag: '1.17.6'
+      version: '1.17.6'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - freetype
+      - fontconfig
+      - libpng
+      - pixman
+      - libxcb
+      - libx11
+      - libxext
+      - mesa
+      - libxrender
+      - glib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        - '--enable-xlib-xcb'
+        - '--enable-xml'
+        - '--enable-tee'
+        - '--enable-gl'
+        environ:
+          # freetype-config does not support cross-compilation.
+          FREETYPE_CONFIG: 'no'
+          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+          PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: at-spi2-atk
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/at-spi2-atk.git'
+      tag: 'AT_SPI2_ATK_2_38_0'
+      version: '2.38.0'
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: 'x86_64-aero'
+    pkgs_required:
+      - mlibc
+      - at-spi2-core
+      - atk
+      - dbus
+      - glib
+      - libxml
+    configure:
+      - args:
+          - 'meson'
+          - '--cross-file'
+          - '@SOURCE_ROOT@/userland/cross-file.ini'
+          - '--prefix=/usr'
+          - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: at-spi2-core
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/at-spi2-core.git'
+      tag: 'AT_SPI2_CORE_2_38_0'
+      version: '2.38.0'
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: 'x86_64-aero'
+    pkgs_required:
+      - mlibc
+      - dbus
+      - glib
+      - libxtst
+    configure:
+      - args:
+          - 'meson'
+          - '--cross-file'
+          - '@SOURCE_ROOT@/userland/cross-file.ini'
+          - '--prefix=/usr'
+          - '--sysconfdir=/etc'
+          - '-Dsystemd_user_dir=/tmp'
+          - '-Dintrospection=no'
+          - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: pcre
     source:
       subdir: 'bundled'
@@ -1861,147 +2036,348 @@ packages:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
 
-  # - name: dbus
-  #   source:
-  #     subdir: 'bundled'
-  #     git: 'https://gitlab.freedesktop.org/dbus/dbus.git'
-  #     tag: 'dbus-1.12.20'
-  #     version: '1.12.20'
-  #     tools_required:
-  #       - host-autoconf-v2.69
-  #       - host-automake-v1.16
-  #       - host-libtool
-  #       - host-autoconf-archive
-  #     regenerate:
-  #       - args: ['./autogen.sh']
-  #         environ:
-  #           NOCONFIGURE: 'yes'
-  #   tools_required:
-  #     - host-gcc
-  #     - host-autoconf-v2.69
-  #     - host-automake-v1.16
-  #     - host-pkg-config
-  #     - host-python
-  #     - virtual: pkgconfig-for-target
-  #       triple: 'x86_64-aero'
-  #   pkgs_required:
-  #     - mlibc
-  #     - glib
-  #     - libexpat
-  #   configure:
-  #     - args:
-  #       - '@THIS_SOURCE_DIR@/configure'
-  #       - '--host=x86_64-aero'
-  #       - '--prefix=/usr'
-  #       - '--sysconfdir=/etc'
-  #       - '--localstatedir=/var'
-  #       - '--disable-doxygen-docs'
-  #       - '--disable-xml-docs'
-  #       - '--disable-static'
-  #       - '--enable-shared'
-  #       - '--enable-verbose-mode'
-  #       - '--with-systemdsystemunitdir=no'
-  #       - '--with-systemduserunitdir=no'
-  #       - '--docdir=/usr/share/doc/dbus-1.12.20'
-  #       - '--with-console-auth-dir=/run/console'
-  #       - '--with-system-pid-file=/run/dbus/pid'
-  #       - '--with-system-socket=/run/dbus/system_bus_socket'
-  #       - '--disable-selinux'
-  #       - '--disable-apparmor'
-  #       - '--disable-libaudit'
-  #       - '--disable-kqueue'
-  #       - '--disable-launchd'
-  #       - '--disable-systemd'
-  #       - '--disable-tests'
-  #   build:
-  #     - args: ['make', '-j@PARALLELISM@']
-  #     - args: ['make', 'install']
-  #       environ:
-  #         DESTDIR: '@THIS_COLLECT_DIR@'
+  - name: dbus
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/dbus/dbus.git'
+      tag: 'dbus-1.12.20'
+      version: '1.12.20'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-autoconf-archive
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-pkg-config
+      - host-python
+      - virtual: pkgconfig-for-target
+        triple: 'x86_64-aero'
+    pkgs_required:
+      - mlibc
+      - glib
+      - libexpat
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-doxygen-docs'
+        - '--disable-xml-docs'
+        - '--disable-static'
+        - '--enable-shared'
+        - '--enable-verbose-mode'
+        - '--with-systemdsystemunitdir=no'
+        - '--with-systemduserunitdir=no'
+        - '--docdir=/usr/share/doc/dbus-1.12.20'
+        - '--with-console-auth-dir=/run/console'
+        - '--with-system-pid-file=/run/dbus/pid'
+        - '--with-system-socket=/run/dbus/system_bus_socket'
+        - '--disable-selinux'
+        - '--disable-apparmor'
+        - '--disable-libaudit'
+        - '--disable-kqueue'
+        - '--disable-launchd'
+        - '--disable-systemd'
+        - '--disable-tests'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
 
-  # - name: libintl
-  #   source:
-  #     subdir: 'bundled'
-  #     url: 'https://ftp.gnu.org/gnu/gettext/gettext-0.21.tar.xz'
-  #     format: 'tar.xz'
-  #     extract_path: 'gettext-0.21'
-  #     version: '0.21'
-  #     tools_required:
-  #       - host-autoconf-v2.69
-  #       - host-automake-v1.16
-  #       - host-libtool
-  #     regenerate:
-  #       - args: ['autoreconf', '-fvi']
-  #   tools_required:
-  #     - host-gcc
-  #   pkgs_required:
-  #     - libiconv
-  #   configure:
-  #     - args:
-  #       - '@THIS_SOURCE_DIR@/configure'
-  #       - '--host=x86_64-aero'
-  #       - '--prefix=/usr'
-  #       - '--without-emacs'
-  #       - '--without-lispdir'
-  #       # Normally this controls nls behavior in general, but the libintl
-  #       # subdir is skipped unless this is explicitly set.
-  #       - '--enable-nls'
-  #       # This magic flag enables libintl.
-  #       - '--with-included-gettext'
-  #       - '--disable-c++'
-  #       - '--disable-libasprintf'
-  #       - '--disable-java'
-  #       - '--enable-shared'
-  #       - '--disable-static'
-  #       - '--enable-threads=posix'
-  #       - '--disable-curses'
-  #       - '--without-git'
-  #       - '--without-cvs'
-  #       - '--without-bzip2'
-  #       - '--without-xz'
-  #   build:
-  #     - args: ['make', '-C', 'gettext-runtime/intl', '-j@PARALLELISM@']
-  #     - args: ['make', '-C', 'gettext-runtime/intl', 'install']
-  #       environ:
-  #         DESTDIR: '@THIS_COLLECT_DIR@'
+  - name: libintl
+    source:
+      subdir: 'bundled'
+      url: 'https://ftp.gnu.org/gnu/gettext/gettext-0.21.1.tar.xz'
+      format: 'tar.xz'
+      extract_path: 'gettext-0.21.1'
+      version: '0.21.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['autoreconf', '-fvi']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - libiconv
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--without-emacs'
+        - '--without-lispdir'
+        # Normally this controls nls behavior in general, but the libintl
+        # subdir is skipped unless this is explicitly set.
+        - '--enable-nls'
+        # This magic flag enables libintl.
+        - '--with-included-gettext'
+        - '--disable-c++'
+        - '--disable-libasprintf'
+        - '--disable-java'
+        - '--enable-shared'
+        - '--disable-static'
+        - '--enable-threads=posix'
+        - '--disable-curses'
+        - '--without-git'
+        - '--without-cvs'
+        - '--without-bzip2'
+        - '--without-xz'
+    build:
+      - args: ['make', '-C', 'gettext-runtime/intl', '-j@PARALLELISM@']
+      - args: ['make', '-C', 'gettext-runtime/intl', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
 
-  # - name: glib
-  #   from_source: glib
-  #   tools_required:
-  #     - host-gcc
-  #     - host-libtool
-  #     - host-pkg-config
-  #     - virtual: pkgconfig-for-target
-  #       triple: "x86_64-aero"
-  #   pkgs_required:
-  #     - mlibc
-  #     - pcre
-  #     - libffi
-  #     - zlib
-  #     - libiconv
-  #     - libintl
-  #   configure:
-  #     - args:
-  #       - 'meson'
-  #       - '--cross-file'
-  #       - '@SOURCE_ROOT@/userland/cross-file.ini'
-  #       - '--prefix=/usr'
-  #       - '--libdir=lib'
-  #       - '--buildtype=debugoptimized'
-  #       - '-Dxattr=false'
-  #       - '@THIS_SOURCE_DIR@'
-  #       environ:
-  #         PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
-  #         PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
-  #   build:
-  #     - args: ['ninja']
-  #     - args: ['ninja', 'install']
-  #       environ:
-  #         DESTDIR: '@THIS_COLLECT_DIR@'
-  #   scripts:
-  #       post_install:
-  #         - args: ['glib-compile-schemas /usr/share/glib-2.0/schemas']
-  #         - args: ['gio-querymodules /usr/lib/gio/modules']
+  - name: glib
+    from_source: glib
+    tools_required:
+      - host-gcc
+      - host-libtool
+      - host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - pcre
+      - libffi
+      - zlib
+      - libiconv
+      - libintl
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Dxattr=false'
+        - '@THIS_SOURCE_DIR@'
+        environ:
+          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+          PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+    scripts:
+        post_install:
+          - args: ['glib-compile-schemas /usr/share/glib-2.0/schemas']
+          - args: ['gio-querymodules /usr/lib/gio/modules']
+
+  - name: libjpeg-turbo
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/libjpeg-turbo/libjpeg-turbo.git'
+      tag: '2.1.4'
+      version: '2.1.4'
+    tools_required:
+      - host-pkg-config
+      - host-gcc
+      - host-cmake
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - 'cmake'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/userland/CMakeToolchain-x86_64.cmake'
+        - '-DCMAKE_INSTALL_PREFIX=/usr'
+        - '-DCMAKE_BUILD_TYPE=RELEASE'
+        - '-DENABLE_STATIC=FALSE'
+        - '-DCMAKE_INSTALL_DOCDIR=/usr/share/doc/libjpeg-turbo-2.1.4'
+        - '-DCMAKE_INSTALL_DEFAULT_LIBDIR=lib'
+        - '-DWITH_JPEG8=ON'
+        - '-DCMAKE_SYSTEM_PROCESSOR=x86_64'
+        - '@THIS_SOURCE_DIR@/'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+  
+  # A free implementation of the unicode bidirectional algorithm
+  #
+  # This package provides a library with an implementation of the Unicode 
+  # Bidirectional Algorithm (BIDI). This is used for supporting Arabic and 
+  # Hebrew alphabets in other packages.
+  - name: fribidi
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/fribidi/fribidi.git'
+      tag: 'v1.0.12'
+      version: '1.0.12'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+        - args: 'sed -i s/"SUBDIRS = gen.tab lib bin doc test"/"SUBDIRS = gen.tab lib bin test"/ @THIS_SOURCE_DIR@/Makefile.am'
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # Translation tool for XML documents that uses gettext files and ITS rules
+  #
+  # This package contains a program for translating XML with PO files using W3C 
+  # Internationalization Tag Set rules.
+  - name: itstool
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/itstool/itstool.git'
+      tag: '2.0.7'
+      version: '2.0.7'
+      tools_required:
+          - host-autoconf-v2.69
+          - host-automake-v1.16
+          - host-libtool
+          - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+      - host-python
+    pkgs_required:
+      - mlibc
+      - libxml
+      - python
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        environ:
+          'PYTHON': '/usr/bin/python3'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: icu
+    from_source: icu
+    tools_required:
+      - host-gcc
+      - host-icu
+    pkgs_required:
+      - mlibc
+    configure:
+      - args: ['cp',
+          '@THIS_SOURCE_DIR@/icu4c/source/config/mh-linux',
+          '@THIS_SOURCE_DIR@/icu4c/source/config/mh-unknown']
+      - args:
+        - '@THIS_SOURCE_DIR@/icu4c/source/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-cross-build=@BUILD_ROOT@/tool-builds/host-icu'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: graphite2
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/silnrsi/graphite.git'
+      tag: '1.3.14'
+      version: '1.3.14'
+    tools_required:
+      - host-gcc
+      - host-python
+      - host-cmake
+    pkgs_required:
+      - mlibc
+      - gcc # Actually requires libstdc++.so in the system root, otherwise it links against the host libstdc++.so.6
+    configure:
+      - args:
+        - 'cmake'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/userland/CMakeToolchain-x86_64.cmake'
+        - '-DCMAKE_INSTALL_PREFIX=/usr'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: harfbuzz
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/harfbuzz/harfbuzz.git'
+      tag: '3.1.2'
+      version: '3.1.2'
+    tools_required:
+      - host-gcc
+      - host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - graphite2
+      - glib
+      - zlib
+      - freetype
+      - cairo
+      - icu
+    configure:
+      - args:
+        - 'meson'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--libdir=lib'
+        - '--buildtype=debugoptimized'
+        - '-Dgraphite2=enabled'
+        - '-Dglib=enabled'
+        - '-Dgobject=disabled'
+        - '-Dicu=enabled'
+        - '-Dfreetype=enabled'
+        - '-Dcairo=enabled'
+        - '-Dintrospection=disabled'
+        - '-Ddocs=disabled'
+        - '-Dtests=disabled' # Disabled due to a linking error
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
 
 tasks:
   - name: sysroot

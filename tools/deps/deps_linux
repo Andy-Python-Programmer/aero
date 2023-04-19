@@ -89,6 +89,7 @@ packages=(
     "libisoburn"
     "boost-libs"
     "cmake"
+    "itstool"
 )
 
 function install_package() { pacman -S $1 --noconfirm; }
