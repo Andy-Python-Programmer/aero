@@ -1,10 +1,6 @@
 #!/usr/bin/bash
 
-# We are going to use /etc/os-release to identify which
-# Linux distribution we are currently running.
-. /etc/os-release
-
-if [[ $ID_LIKE == "debian" ]]; then
+if [ -x "$(command -v apt)" ]; then
 PKGMAN="apt"
 
 packages=(
@@ -48,7 +44,7 @@ packages=(
 
 function install_package() { apt-get install -y $1; }
 function query_package() { dpkg -l | grep -q $1; }
-elif [[ $ID == "arch" ]]; then # if [[ $ID_LIKE == "debian" ]]; then
+elif [ -x "$(command -v pacman)" ]; then # if [ -x "$(command -v apt)" ]; then
 PKGMAN="pacman"
 
 packages=(
@@ -94,4 +90,4 @@ packages=(
 
 function install_package() { pacman -S $1 --noconfirm; }
 function query_package() { pacman -Q | grep -q $1; }
-fi # elif [[ $ID == "arch" ]]; then
+fi # elif [ -x "$(command -v pacman)" ]; then
