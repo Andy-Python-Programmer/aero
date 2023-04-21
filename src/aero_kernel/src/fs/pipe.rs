@@ -5,7 +5,7 @@ use alloc::sync::Arc;
 use spin::Once;
 
 use crate::utils::buffer::Buffer;
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 use super::cache::DirCacheItem;
 use super::file_table::FileHandle;
@@ -15,8 +15,8 @@ use super::FileSystemError;
 pub struct Pipe {
     queue: Mutex<Buffer>,
 
-    readers: BlockQueue,
-    writers: BlockQueue,
+    readers: WaitQueue,
+    writers: WaitQueue,
 
     /// The number of writers currently connected to the pipe.
     num_writers: AtomicUsize,
@@ -29,8 +29,8 @@ impl Pipe {
         Arc::new(Self {
             queue: Mutex::new(Buffer::new()),
 
-            readers: BlockQueue::new(),
-            writers: BlockQueue::new(),
+            readers: WaitQueue::new(),
+            writers: WaitQueue::new(),
 
             num_writers: AtomicUsize::new(0),
 

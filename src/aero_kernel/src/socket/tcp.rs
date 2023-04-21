@@ -26,7 +26,7 @@ use crate::fs::{self, FileSystemError};
 use crate::net::ip::Ipv4Addr;
 use crate::net::tcp::{self, Tcp, TcpFlags, TcpHandler};
 use crate::net::{Packet, PacketHeader, PacketTrait};
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 /// TCP Stream
 struct Stream {
@@ -147,7 +147,7 @@ pub struct TcpSocket {
     sref: Weak<Self>,
     data: Mutex<TcpData>,
     handle: Once<Arc<FileHandle>>,
-    wq: BlockQueue,
+    wq: WaitQueue,
 }
 
 impl TcpSocket {
@@ -158,7 +158,7 @@ impl TcpSocket {
             handle: Once::new(),
             sref: sref.clone(),
             data: Mutex::new(TcpData::default()),
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
         })
     }
 

@@ -25,7 +25,7 @@ use crate::arch::interrupts::{self, InterruptStack};
 use crate::drivers::pci::*;
 use crate::mem::paging::*;
 use crate::userland::scheduler;
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 use crate::net::{self, ethernet, NetworkDevice};
 use crate::net::{MacAddr, NetworkDriver, PacketBaseTrait};
@@ -582,14 +582,14 @@ impl E1000 {
 
 struct Device {
     e1000: Mutex<E1000>,
-    wq: BlockQueue,
+    wq: WaitQueue,
 }
 
 impl Device {
     fn new(e1000: E1000) -> Self {
         Self {
             e1000: Mutex::new(e1000),
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
         }
     }
 

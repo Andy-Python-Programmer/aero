@@ -32,7 +32,7 @@ use crate::mem::paging::VirtAddr;
 use crate::net::ip::Ipv4Addr;
 use crate::net::udp::{self, Udp, UdpHandler};
 use crate::net::{self, MacAddr, Packet, PacketHeader, PacketTrait};
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 use super::SocketAddr;
 
@@ -54,7 +54,7 @@ struct UdpSocketInner {
 
 pub struct UdpSocket {
     inner: Mutex<UdpSocketInner>,
-    wq: BlockQueue,
+    wq: WaitQueue,
     handle: Once<Arc<FileHandle>>,
 
     sref: Weak<Self>,
@@ -63,7 +63,7 @@ pub struct UdpSocket {
 impl UdpSocket {
     pub fn new() -> Arc<Self> {
         Arc::new_cyclic(|sref| Self {
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
             handle: Once::new(),
 
             inner: Mutex::new(Default::default()),

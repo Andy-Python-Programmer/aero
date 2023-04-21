@@ -25,7 +25,7 @@ use crate::arch;
 use crate::userland::signals::{SignalError, SignalResult};
 use crate::userland::task::{SchedTaskAdapter, Task, TaskState};
 
-use crate::utils::sync::{BlockQueue, IrqGuard};
+use crate::utils::sync::{IrqGuard, WaitQueue};
 use crate::utils::PerCpu;
 
 use super::{ExitStatus, SchedulerInterface};
@@ -45,7 +45,7 @@ struct TaskQueue {
     awaiting: LinkedList<SchedTaskAdapter>,
     deadline_awaiting: LinkedList<SchedTaskAdapter>,
 
-    dead_wq: BlockQueue,
+    dead_wq: WaitQueue,
 }
 
 impl TaskQueue {
@@ -61,7 +61,7 @@ impl TaskQueue {
             awaiting: LinkedList::new(SchedTaskAdapter::new()),
             deadline_awaiting: LinkedList::new(SchedTaskAdapter::new()),
 
-            dead_wq: BlockQueue::new(),
+            dead_wq: WaitQueue::new(),
         }
     }
 

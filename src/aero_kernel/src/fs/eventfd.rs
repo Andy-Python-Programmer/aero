@@ -20,17 +20,17 @@
 use alloc::sync::Arc;
 
 use super::inode::{INodeInterface, PollFlags, PollTable};
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 pub struct EventFd {
-    wq: BlockQueue,
+    wq: WaitQueue,
     count: Mutex<u64>,
 }
 
 impl EventFd {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
             count: Mutex::new(0),
         })
     }
@@ -81,7 +81,8 @@ impl INodeInterface for EventFd {
         }
 
         if *count < (u64::MAX - 1) {
-            events.insert(PollFlags::OUT); // possible to write a value of at least "1" without blocking.
+            events.insert(PollFlags::OUT); // possible to write a value of at least "1" without
+                                           // blocking.
         }
 
         Ok(events)

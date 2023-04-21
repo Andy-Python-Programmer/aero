@@ -22,7 +22,7 @@ use alloc::vec::Vec;
 
 use spin::RwLock;
 
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 use super::signals::SignalError;
 use super::task::sessions::{Group, SESSIONS};
@@ -46,7 +46,7 @@ pub trait TerminalDevice: Send + Sync {
 /// (`Ctrl+C`), the erase character (Backspace or Delete), and the kill character (`Ctrl+U`) on
 /// input.
 pub struct LineDiscipline {
-    wq: BlockQueue,
+    wq: WaitQueue,
     buffer: Mutex<Vec<u8>>,
     foreground: RwLock<Weak<Group>>,
 }
@@ -55,7 +55,7 @@ impl LineDiscipline {
     /// Creates a new line discipline.
     pub fn new() -> Self {
         Self {
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
             buffer: Mutex::new(Vec::new()),
             foreground: RwLock::new(Weak::default()),
         }
@@ -106,7 +106,7 @@ impl LineDiscipline {
     }
 
     /// Returns the line discipline's wait queue.
-    pub fn wait_queue(&self) -> &BlockQueue {
+    pub fn wait_queue(&self) -> &WaitQueue {
         &self.wq
     }
 }

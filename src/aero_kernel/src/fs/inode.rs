@@ -34,7 +34,7 @@ use crate::mem::paging::{PhysFrame, VirtAddr};
 use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
 use crate::userland::scheduler;
-use crate::utils::sync::BlockQueue;
+use crate::utils::sync::WaitQueue;
 use crate::utils::sync::{BMutex, Mutex};
 
 use super::cache;
@@ -49,11 +49,11 @@ static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 
 #[derive(Default)]
 pub struct PollTable {
-    pub queues: Vec<UnsafeRef<BlockQueue>>,
+    pub queues: Vec<UnsafeRef<WaitQueue>>,
 }
 
 impl PollTable {
-    pub fn insert(&mut self, queue: &BlockQueue) {
+    pub fn insert(&mut self, queue: &WaitQueue) {
         queue.insert(scheduler::get_scheduler().current_task());
         unsafe { self.queues.push(UnsafeRef::from_raw(queue as *const _)) }
     }

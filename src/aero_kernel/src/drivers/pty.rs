@@ -48,8 +48,8 @@ use crate::userland::scheduler::ExitStatus;
 use crate::userland::task::Task;
 use crate::userland::terminal::LineDiscipline;
 use crate::userland::terminal::TerminalDevice;
-use crate::utils::sync::BlockQueue;
 use crate::utils::sync::Mutex;
+use crate::utils::sync::WaitQueue;
 
 lazy_static::lazy_static! {
     static ref PTMX: Arc<Ptmx> = Arc::new(Ptmx::new());
@@ -60,7 +60,7 @@ static PTY_ID: AtomicU32 = AtomicU32::new(0);
 
 struct Master {
     id: u32,
-    wq: BlockQueue,
+    wq: WaitQueue,
     window_size: Mutex<WinSize>,
     buffer: Mutex<Vec<u8>>,
     termios: Mutex<Termios>,
@@ -105,7 +105,7 @@ impl Master {
 
         Self {
             id: PTY_ID.fetch_add(1, Ordering::SeqCst),
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
             window_size: Mutex::new(WinSize::default()),
             buffer: Mutex::new(Vec::new()),
             termios: Mutex::new(termios),

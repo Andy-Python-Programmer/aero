@@ -34,7 +34,7 @@ use crate::mem::paging::*;
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
 use crate::syscall::{ExecArgs, MessageQueue};
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 use crate::userland::signals::Signals;
 
@@ -110,14 +110,14 @@ impl Cwd {
 
 struct Zombies {
     list: Mutex<LinkedList<SchedTaskAdapter>>,
-    block: BlockQueue,
+    block: WaitQueue,
 }
 
 impl Zombies {
     fn new() -> Self {
         Self {
             list: Mutex::new(Default::default()),
-            block: BlockQueue::new(),
+            block: WaitQueue::new(),
         }
     }
 

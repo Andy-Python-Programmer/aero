@@ -26,10 +26,10 @@ use spin::Once;
 use crate::mem::paging::{PhysAddr, Translate, VirtAddr};
 use crate::mem::AddressSpace;
 use crate::userland::scheduler;
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 pub struct FutexContainer {
-    futexes: Mutex<hashbrown::HashMap<PhysAddr, Arc<BlockQueue>>>,
+    futexes: Mutex<hashbrown::HashMap<PhysAddr, Arc<WaitQueue>>>,
 }
 
 impl FutexContainer {
@@ -60,20 +60,20 @@ impl FutexContainer {
     }
 
     /// Returns the futex at the given key; allocating it if it doesn't exist.
-    fn get_alloc(&self, key: PhysAddr) -> Arc<BlockQueue> {
+    fn get_alloc(&self, key: PhysAddr) -> Arc<WaitQueue> {
         let mut container = self.futexes.lock();
 
         if let Some(futex) = container.get(&key) {
             futex.clone()
         } else {
-            let futex = Arc::new(BlockQueue::new());
+            let futex = Arc::new(WaitQueue::new());
             container.insert(key, futex.clone());
             futex
         }
     }
 
     /// Returns the futex at the given key, or None if it doesn't exist.
-    fn get(&self, key: PhysAddr) -> Option<Arc<BlockQueue>> {
+    fn get(&self, key: PhysAddr) -> Option<Arc<WaitQueue>> {
         self.futexes.lock_irq().get(&key).map(|e| e.clone())
     }
 

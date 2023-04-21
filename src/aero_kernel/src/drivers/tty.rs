@@ -32,7 +32,7 @@ use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::task::Task;
 use crate::userland::terminal::TerminalDevice;
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 #[cfg(target_arch = "x86_64")]
 use super::keyboard::KeyCode;
@@ -203,7 +203,7 @@ struct Tty {
     sref: Weak<Self>,
 
     stdin: Mutex<StdinBuffer>,
-    block_queue: BlockQueue,
+    block_queue: WaitQueue,
 
     connected: AtomicUsize,
 }
@@ -223,7 +223,7 @@ impl Tty {
 
                 parser: vte::Parser::new(),
             }),
-            block_queue: BlockQueue::new(),
+            block_queue: WaitQueue::new(),
             stdin: Mutex::new(StdinBuffer::new()),
             connected: AtomicUsize::new(0),
             sref: sref.clone(),

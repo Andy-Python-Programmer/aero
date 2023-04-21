@@ -20,7 +20,7 @@
 use crate::userland::scheduler::get_scheduler;
 use crate::userland::task::TaskId;
 
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 use aero_syscall::SyscallError;
 use alloc::{collections::VecDeque, vec::Vec};
@@ -37,14 +37,14 @@ struct Message {
 
 pub struct MessageQueue {
     queue: Mutex<VecDeque<Message>>,
-    blockqueue: BlockQueue,
+    blockqueue: WaitQueue,
 }
 
 impl MessageQueue {
     pub fn new() -> MessageQueue {
         MessageQueue {
             queue: Mutex::new(VecDeque::new()),
-            blockqueue: BlockQueue::new(),
+            blockqueue: WaitQueue::new(),
         }
     }
 }

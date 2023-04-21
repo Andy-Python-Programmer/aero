@@ -27,7 +27,7 @@ use crate::fs;
 use crate::arch::{apic, io};
 use crate::fs::devfs::{self, Device};
 use crate::fs::inode::{INodeInterface, PollFlags};
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 pub trait KeyboardListener: Send + Sync {
     fn on_key(&self, key: KeyCode, released: bool);
@@ -189,7 +189,7 @@ struct KeyboardDevice {
     marker: usize,
     buffer: Mutex<Vec<u8>>,
     sref: Weak<Self>,
-    wq: BlockQueue,
+    wq: WaitQueue,
 }
 
 impl KeyboardDevice {
@@ -198,7 +198,7 @@ impl KeyboardDevice {
             marker: devfs::alloc_device_marker(),
             buffer: Mutex::new(Vec::new()),
             sref: this.clone(),
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
         })
     }
 }

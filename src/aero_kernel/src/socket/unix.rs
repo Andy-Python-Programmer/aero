@@ -34,7 +34,7 @@ use crate::fs::inode::*;
 use crate::fs::{FileSystemError, Path};
 
 use crate::mem::paging::VirtAddr;
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 use super::SocketAddr;
 
@@ -192,7 +192,7 @@ struct UnixSocketInner {
 pub struct UnixSocket {
     inner: Mutex<UnixSocketInner>,
     buffer: Mutex<MessageQueue>,
-    wq: BlockQueue,
+    wq: WaitQueue,
     weak: Weak<UnixSocket>,
     handle: Once<Arc<FileHandle>>,
 }
@@ -203,7 +203,7 @@ impl UnixSocket {
             inner: Mutex::new(UnixSocketInner::default()),
 
             buffer: Mutex::new(MessageQueue::default()),
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
             weak: weak.clone(),
             handle: Once::new(),
         })

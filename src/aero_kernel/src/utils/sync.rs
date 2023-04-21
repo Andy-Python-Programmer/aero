@@ -7,11 +7,11 @@ use crate::userland::signals::SignalResult;
 use crate::userland::task::Task;
 
 /// Used to manage and block threads that are waiting for a condition to be true.
-pub struct BlockQueue {
+pub struct WaitQueue {
     queue: Mutex<Vec<Arc<Task>>>,
 }
 
-impl BlockQueue {
+impl WaitQueue {
     /// Creates a new block queue.
     pub const fn new() -> Self {
         Self {
@@ -119,14 +119,14 @@ impl Drop for IrqGuard {
 
 /// A blocking-based lock providing mutually exclusive access to the data.
 pub struct BMutex<T: ?Sized> {
-    wq: BlockQueue,
+    wq: WaitQueue,
     spin: Mutex<T>,
 }
 
 impl<T> BMutex<T> {
     pub const fn new(value: T) -> Self {
         Self {
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
             spin: Mutex::new(value),
         }
     }
@@ -206,8 +206,8 @@ impl<T> Mutex<T> {
     ///
     /// The returned value may be dereferenced for data access and the lock will be dropped and
     /// interrupts will be re-enabled when the guard falls out of scope. Deadlocks occur if a thread
-    /// tries to acquire a lock that will never become free. Thus, locking interrupts is useful for volatile
-    /// operations where we might be interrupted.
+    /// tries to acquire a lock that will never become free. Thus, locking interrupts is useful for
+    /// volatile operations where we might be interrupted.
     pub fn lock_irq(&self) -> MutexGuard<T> {
         let irq_lock = interrupts::is_enabled();
 

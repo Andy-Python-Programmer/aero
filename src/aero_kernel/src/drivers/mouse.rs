@@ -25,7 +25,7 @@ use crate::arch::{apic, interrupts, io};
 use crate::fs::devfs::Device;
 use crate::fs::inode::{INodeInterface, PollFlags, PollTable};
 use crate::fs::{self, devfs};
-use crate::utils::sync::{BlockQueue, Mutex};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 bitflags::bitflags! {
     /// Represents the flags currently set for the mouse.
@@ -62,7 +62,7 @@ struct Packet {
 
 struct Mouse {
     packet: Mutex<(Packet, usize)>,
-    wq: BlockQueue,
+    wq: WaitQueue,
     marker: usize,
 }
 
@@ -70,7 +70,7 @@ impl Mouse {
     fn new() -> Mouse {
         Self {
             packet: Mutex::new((Packet::default(), 0)),
-            wq: BlockQueue::new(),
+            wq: WaitQueue::new(),
             marker: devfs::alloc_device_marker(),
         }
     }
