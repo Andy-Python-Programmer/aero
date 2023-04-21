@@ -229,3 +229,177 @@ packages:
       - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # Network-related giomodules for glib
+  # 
+  # This package contains network related gio modules for GLib.
+  - name: glib-networking
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/glib-networking.git'
+      tag: '2.72.2'
+      version: '2.72.2'
+    tools_required:
+      - host-gcc
+      - host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - glib
+      # - gnutls
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--buildtype=debugoptimized'
+        - '-Dgnutls=disabled'
+        - '-Dopenssl=enabled'
+        - '-Dinstalled_tests=false'
+        - '-Dstatic_modules=false'
+        - '-Dlibproxy=disabled'
+        - '-Dgnome_proxy=disabled'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+    scripts:
+        post_install:
+          - args: ['gio-querymodules', '/usr/lib/gio/modules']
+
+  # This package is a HTTP client/server library for GNOME. It uses GObject and the GLib main 
+  # loop to integrate with GNOME applications and it also has an asynchronous API for use in 
+  # threaded applications.
+  - name: libsoup
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/libsoup.git'
+      tag: '2.74.2'
+      version: '2.74.2'
+    tools_required:
+      - host-gcc
+      - host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - glib
+      - glib-networking
+      - zlib
+      - libxml
+      - libpsl
+      - sqlite
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '--buildtype=debugoptimized'
+        - '-Dintrospection=disabled'
+        - '-Dinstalled_tests=false'
+        - '-Dsysprof=disabled'
+        - '-Dgtk_doc=false'
+        - '-Dvapi=disabled'
+        - '-Dgnome=false'
+        - '-Dtls_check=false'
+        - '-Dbrotli=disabled'
+        - '-Dntlm=disabled'
+        - '-Dgssapi=disabled'
+        - '-Dtests=false'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # - name: webkitgtk
+  #   metadata:
+  #     summary: 'An open source web browser engine, with a small example browser'
+  #     description: 'This package provides WebKitGTK, a port of the portable web rendering engine WebKit to the GTK+ 3 and GTK 4 platforms.'
+  #     spdx: 'LGPL-2.0-or-later BSD-2-Clause'
+  #     website: 'https://webkitgtk.org'
+  #     maintainer: "Dennis Bonke <dennis@managarm.org>"
+  #     categories: ['net-libs']
+  #   source:
+  #     subdir: 'bundled'
+  #     git: 'https://github.com/WebKit/WebKit.git'
+  #     # I think? Apple is weird with naming
+  #     tag: 'Safari-612.1.27.0.24'
+  #     version: '2.33.3'
+  #   tools_required:
+  #     - host-gcc
+  #     - host-cmake
+  #   pkgs_required:
+  #     - mlibc
+  #     - cairo
+  #     - fontconfig
+  #     - freetype
+  #     - libgcrypt
+  #     - glib
+  #     - harfbuzz
+  #     - icu
+  #     - libjpeg-turbo
+  #     - zlib
+  #     - libpng
+  #     - libxml
+  #     - atk
+  #     - sqlite
+  #     - libwebp
+  #     - gtk+-3
+  #     - libsoup
+  #     - libxslt
+  #     - at-spi2-core
+  #     - libtasn
+  #     - libx11
+  #     - libxcomposite
+  #     - libxdamage
+  #     - libxrender
+  #     - libxt
+  #     - mesa
+  #     # - gst-plugins-base
+  #   configure:
+  #     - args:
+  #       - 'cmake'
+  #       - '-GNinja'
+  #       - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/userland/CMakeToolchain-x86_64.cmake'
+  #       - '-DCMAKE_INSTALL_PREFIX=/usr'
+  #       - '-DCMAKE_SYSTEM_PROCESSOR=x86_64'
+  #       - '-DCMAKE_BUILD_TYPE=Release'
+  #       - '-DCMAKE_SKIP_RPATH=ON'
+  #       - '-DPORT=GTK'
+  #       - '-DLIB_INSTALL_DIR=/usr/lib'
+  #       - '-DUSE_LIBHYPHEN=OFF'
+  #       - '-DENABLE_GAMEPAD=OFF'
+  #       - '-DENABLE_MINIBROWSER=ON'
+  #       - '-DUSE_WOFF2=OFF'
+  #       - '-DUSE_SYSTEMD=OFF'
+  #       - '-DENABLE_BUBBLEWRAP_SANDBOX=OFF'
+  #       - '-Wno-dev -G Ninja'
+  #       - '-DUSE_LIBNOTIFY=OFF'
+  #       - '-DUSE_SYSTEM_MALLOC=ON'
+  #       - '-DENABLE_GEOLOCATION=OFF'
+  #       - '-DENABLE_VIDEO=OFF'
+  #       - '-DENABLE_WEB_AUDIO=OFF'
+  #       - '-DENABLE_INTROSPECTION=OFF'
+  #       - '-DUSE_LIBSECRET=OFF'
+  #       - '-DUSE_OPENJPEG=OFF'
+  #       - '-DENABLE_SPELLCHECK=OFF'
+  #       - '-DENABLE_WAYLAND_TARGET=OFF'
+  #       - '-DENABLE_X11_TARGET=ON'
+  #       - '-DENABLE_WEBGL=ON'
+  #       - '-DUSE_WPE_RENDERER=OFF'
+  #       - '-DENABLE_WEBGL2=OFF'
+  #       - '-DUSE_SOUP2=ON'
+  #       - '-DUSE_LCMS=OFF'
+  #       - '@THIS_SOURCE_DIR@'
+  #   build:
+  #     - args: ['ninja', '-j8']
+  #     - args: ['ninja', 'install']
+  #       environ:
+  #         DESTDIR: '@THIS_COLLECT_DIR@'

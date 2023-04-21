@@ -1,0 +1,38 @@
+packages:
+  - name: sqlite
+    source:
+      subdir: 'bundled'
+      url: 'https://sqlite.org/2021/sqlite-autoconf-3370000.tar.gz'
+      format: 'tar.gz'
+      checksum: blake2b:35e72700f20c35701d26f7b66da126242ea1d253f710f299a9b6f180f0a53d417114af022161a6cd9ebf20b791f0645f7a30290210fac197d5fda3a647067fd0
+      extract_path: 'sqlite-autoconf-3370000'
+      version: '3.37.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['autoreconf', '-fvi']
+    tools_required:
+      - host-gcc
+      - host-libtool
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+    pkgs_required:
+      - mlibc
+      - readline
+      - zlib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--enable-readline'
+        - '--enable-fts5'
+        - 'CFLAGS=-g -O2 -DSQLITE_ENABLE_FTS3=1 -DSQLITE_ENABLE_FTS4=1 -DSQLITE_ENABLE_COLUMN_METADATA=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY=1 -DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_SECURE_DELETE=1 -DSQLITE_ENABLE_FTS3_TOKENIZER=1'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'

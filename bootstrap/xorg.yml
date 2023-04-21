@@ -48,32 +48,31 @@ sources:
   - name: gobject-introspection
     subdir: 'bundled'
     git: 'https://gitlab.gnome.org/GNOME/gobject-introspection.git'
-    # New meson versions break old builds, but the fix isn't in a stable release yet
-    branch: 'main'
-    commit: '7368d58a2d615e7cade85afd3f88df65256b699f'
+    tag: '1.76.1'
+    version: '1.76.1'
 
 tools:
-  #- name: host-gobject-introspection
-  #  exports_aclocal: true
-  #  from_source: gobject-introspection
-  #  tools_required:
-  #    - host-python
-  #    - host-glib
-  #   - host-pkg-config
-  #    - virtual: pkgconfig-for-host
-  #      program_name: host-pkg-config
-  #  configure:
-  #    - args:
-  #      - 'meson'
-  #      - '--prefix=@PREFIX@'
-  #      - '--native-file'
-  #      - '@SOURCE_ROOT@/userland/native-file.ini'
-  #      - '-Dbuild_introspection_data=false'
-  #      - '@THIS_SOURCE_DIR@'
-  #  compile:
-  #    - args: ['ninja']
-  #  install:
-  #    - args: ['ninja', 'install']
+  - name: host-gobject-introspection
+    exports_aclocal: true
+    from_source: gobject-introspection
+    tools_required:
+      - host-python
+      - host-glib
+      - host-pkg-config
+      - virtual: pkgconfig-for-host
+        program_name: host-pkg-config
+    configure:
+      - args:
+        - 'meson'
+        - '--prefix=@PREFIX@'
+        - '--native-file'
+        - '@SOURCE_ROOT@/userland/native-file.ini'
+        - '-Dbuild_introspection_data=false'
+        - '@THIS_SOURCE_DIR@'
+    compile:
+      - args: ['ninja']
+    install:
+      - args: ['ninja', 'install']
 
   - name: host-xorg-macros
     exports_aclocal: true
@@ -2393,3 +2392,85 @@ packages:
         post_install:
           - args: ['gtk-query-immodules-3.0', '--update-cache']
           - args: ['glib-compile-schemas', '/usr/share/glib-2.0/schemas']
+
+  # X.Org Xcomposite library
+  - name: libxcomposite
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxcomposite.git'
+      tag: 'libXcomposite-0.4.5'
+      version: '0.4.5'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-autoconf-archive
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - xorg-util-macros
+      - xorg-proto
+      - libx11
+      - libxfixes
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--localstatedir=/var'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libxslt
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/libxslt.git'
+      tag: 'v1.1.34'
+      version: '1.1.34'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libxml
+    configure:
+      # BLFS increases the recursion limit, apparently some packages need that to build their documentation.
+      - args: ['sed', '-i', 's/3000/5000/', '@THIS_SOURCE_DIR@/libxslt/transform.c']
+      - args: ['sed', '-i', 's/3000/5000/', '@THIS_SOURCE_DIR@/doc/xsltproc.1']
+      - args: ['sed', '-i', 's/3000/5000/', '@THIS_SOURCE_DIR@/doc/xsltproc.xml']
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--without-crypto'
+        - '--without-debug'
+        - '--without-debugger'
+        - '--without-profiler'
+        - '--without-python'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'

@@ -2,6 +2,7 @@ imports:
   - file: bootstrap/xorg.yml
   - file: bootstrap/net.yml
   - file: bootstrap/vcs.yml
+  - file: bootstrap/db.yml
 
 general:
   cargo:
@@ -2281,6 +2282,183 @@ packages:
         - '--prefix=/usr'
         environ:
           'PYTHON': '/usr/bin/python3'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: readline
+    source:
+      subdir: 'bundled'
+      git: 'https://git.savannah.gnu.org/git/readline.git'
+      tag: 'readline-8.1'
+      version: '8.1'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - ncurses
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--enable-multibyte'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # General purpose crypto library based on the code used in GnuPG
+  #
+  # This package contains a general purpose crypto library based on the code used 
+  # in GnuPG. The library provides a high level interface to cryptographic building 
+  # blocks using an extendable and flexible API.
+  - name: libgcrypt
+    source:
+      subdir: 'bundled'
+      git: 'https://dev.gnupg.org/source/libgcrypt.git'
+      tag: 'libgcrypt-1.10.1'
+      version: '1.10.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['./autogen.sh']
+        - args: ['autoreconf', '-fvi']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libgpg-error
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--enable-shared'
+        - '--disable-static'
+        - '--prefix=/usr'
+        - '--disable-nls'
+        - '--disable-doc'
+        - '--disable-dev-random'
+        - '--with-libgpg-error-prefix=@SYSROOT_DIR@/usr'
+        - '--disable-asm'
+        environ:
+          LIBS: '-lgpg-error'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # A lossy image compression format
+  #
+  # This package contains a library and support programs to encode and decode images in WebP format.
+  - name: libwebp
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/webmproject/libwebp.git'
+      tag: 'v1.3.0'
+      version: '1.3.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - libjpeg-turbo
+      - libpng
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--enable-libwebpmux'
+        - '--enable-libwebpdemux'
+        - '--enable-libwebpdecoder'
+        - '--enable-libwebpextras'
+        - '--enable-swap-16bit-csp'
+        - '--disable-static'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libtasn
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.com/gnutls/libtasn1.git'
+      tag: 'v4.18.0'
+      version: '4.18.0'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-pkg-config
+        - host-libtool
+      regenerate:
+        - args: ['./bootstrap']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
+            '@THIS_SOURCE_DIR@/build-aux/']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--disable-doc'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # Contains error handling functions used by GnuPG software
+  #
+  # This package contains a library that defines common error values for 
+  # all GnuPG components.
+  - name: libgpg-error
+    source:
+      subdir: 'bundled'
+      git: 'https://dev.gnupg.org/source/libgpg-error.git'
+      tag: 'libgpg-error-1.45'
+      version: '1.45'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['./autogen.sh']
+        - args: ['autoreconf', '-f', '-v', '-i']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      # libgpg-error does not know about managarm, teach it
+      - args: ['cp', '-v', '@THIS_SOURCE_DIR@/src/syscfg/lock-obj-pub.x86_64-unknown-linux-gnu.h',
+          '@THIS_SOURCE_DIR@/src/syscfg/lock-obj-pub.aero.h']
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-nls'
+        - '--disable-doc'
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'install']

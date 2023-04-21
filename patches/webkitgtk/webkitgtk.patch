@@ -1,0 +1,242 @@
+From 9c3401a68d96016e19aafc60897ae450db07ead7 Mon Sep 17 00:00:00 2001
+From: Dennis Bonke <admin@dennisbonke.com>
+Date: Sun, 2 Jan 2022 00:19:17 +0100
+Subject: [PATCH] Initial Aero support
+
+Signed-off-by: Dennis Bonke <admin@dennisbonke.com>
+---
+ Source/JavaScriptCore/heap/BlockDirectory.cpp      | 2 +-
+ Source/JavaScriptCore/runtime/MachineContext.h     | 8 ++++----
+ Source/JavaScriptCore/runtime/Options.cpp          | 1 +
+ Source/ThirdParty/ANGLE/src/common/platform.h      | 2 +-
+ Source/WTF/wtf/InlineASM.h                         | 8 +++++---
+ Source/WTF/wtf/PlatformHave.h                      | 4 ++--
+ Source/WTF/wtf/PlatformOS.h                        | 6 ++++++
+ Source/WebCore/platform/sql/SQLiteDatabase.cpp     | 6 +++---
+ Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp | 2 +-
+ Source/WebKit/Platform/unix/SharedMemoryUnix.cpp   | 4 +++-
+ 10 files changed, 27 insertions(+), 16 deletions(-)
+
+diff --git a/Source/JavaScriptCore/heap/BlockDirectory.cpp b/Source/JavaScriptCore/heap/BlockDirectory.cpp
+index e2a3540f86..d58513333e 100644
+--- a/Source/JavaScriptCore/heap/BlockDirectory.cpp
++++ b/Source/JavaScriptCore/heap/BlockDirectory.cpp
+@@ -60,7 +60,7 @@ void BlockDirectory::setSubspace(Subspace* subspace)
+ void BlockDirectory::updatePercentageOfPagedOutPages(SimpleStats& stats)
+ {
+     // FIXME: We should figure out a solution for Windows.
+-#if OS(UNIX)
++#if OS(UNIX) && !OS(AERO)
+     size_t pageSize = WTF::pageSize();
+     ASSERT(!(MarkedBlock::blockSize % pageSize));
+     auto numberOfPagesInMarkedBlock = MarkedBlock::blockSize / pageSize;
+diff --git a/Source/JavaScriptCore/runtime/MachineContext.h b/Source/JavaScriptCore/runtime/MachineContext.h
+index 7857bfc167..c14fbb5b6c 100644
+--- a/Source/JavaScriptCore/runtime/MachineContext.h
++++ b/Source/JavaScriptCore/runtime/MachineContext.h
+@@ -346,7 +346,7 @@ static inline void*& framePointerImpl(mcontext_t& machineContext)
+ #error Unknown Architecture
+ #endif
+
+-#elif OS(FUCHSIA) || OS(LINUX)
++#elif OS(FUCHSIA) || OS(LINUX) || OS(AERO)
+
+ // The following sequence depends on glibc's sys/ucontext.h.
+ #if CPU(X86)
+@@ -497,7 +497,7 @@ static inline void*& instructionPointerImpl(mcontext_t& machineContext)
+ #error Unknown Architecture
+ #endif
+
+-#elif OS(FUCHSIA) || OS(LINUX)
++#elif OS(FUCHSIA) || OS(LINUX) || OS(AERO)
+
+ // The following sequence depends on glibc's sys/ucontext.h.
+ #if CPU(X86)
+@@ -655,7 +655,7 @@ inline void*& argumentPointer<1>(mcontext_t& machineContext)
+ #error Unknown Architecture
+ #endif
+
+-#elif OS(FUCHSIA) || OS(LINUX)
++#elif OS(FUCHSIA) || OS(LINUX) || OS(AERO)
+
+ // The following sequence depends on glibc's sys/ucontext.h.
+ #if CPU(X86)
+@@ -772,7 +772,7 @@ inline void*& llintInstructionPointer(mcontext_t& machineContext)
+ #error Unknown Architecture
+ #endif
+
+-#elif OS(FUCHSIA) || OS(LINUX)
++#elif OS(FUCHSIA) || OS(LINUX) || OS(AERO)
+
+ // The following sequence depends on glibc's sys/ucontext.h.
+ #if CPU(X86)
+diff --git a/Source/JavaScriptCore/runtime/Options.cpp b/Source/JavaScriptCore/runtime/Options.cpp
+index e54387ef28..d159806731 100644
+--- a/Source/JavaScriptCore/runtime/Options.cpp
++++ b/Source/JavaScriptCore/runtime/Options.cpp
+@@ -35,6 +35,7 @@
+ #include <mutex>
+ #include <stdlib.h>
+ #include <string.h>
++#include <strings.h>
+ #include <wtf/ASCIICType.h>
+ #include <wtf/Compiler.h>
+ #include <wtf/DataLog.h>
+diff --git a/Source/ThirdParty/ANGLE/src/common/platform.h b/Source/ThirdParty/ANGLE/src/common/platform.h
+index 41f3cf4ff7..77c4a91f29 100644
+--- a/Source/ThirdParty/ANGLE/src/common/platform.h
++++ b/Source/ThirdParty/ANGLE/src/common/platform.h
+@@ -28,7 +28,7 @@
+ #    define ANGLE_PLATFORM_POSIX 1
+ #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) ||              \
+     defined(__DragonFly__) || defined(__sun) || defined(__GLIBC__) || defined(__GNU__) || \
+-    defined(__QNX__) || defined(__Fuchsia__) || defined(__HAIKU__)
++    defined(__QNX__) || defined(__Fuchsia__) || defined(__HAIKU__) || defined(__aero__)
+ #    define ANGLE_PLATFORM_POSIX 1
+ #else
+ #    error Unsupported platform.
+diff --git a/Source/WTF/wtf/InlineASM.h b/Source/WTF/wtf/InlineASM.h
+index 8379a69659..8f7493769f 100644
+--- a/Source/WTF/wtf/InlineASM.h
++++ b/Source/WTF/wtf/InlineASM.h
+@@ -43,11 +43,11 @@
+ #define THUMB_FUNC_PARAM(name)
+ #endif
+
+-#if (OS(LINUX) || OS(FREEBSD)) && CPU(X86_64)
++#if (OS(LINUX) || OS(FREEBSD) || OS(AERO)) && CPU(X86_64)
+ #define GLOBAL_REFERENCE(name) #name "@plt"
+ #elif CPU(X86) && COMPILER(MINGW)
+ #define GLOBAL_REFERENCE(name) "@" #name "@4"
+-#elif OS(LINUX) && CPU(X86) && defined(__PIC__)
++#elif (OS(LINUX) || OS(AERO)) && CPU(X86) && defined(__PIC__)
+ #define GLOBAL_REFERENCE(name) SYMBOL_STRING(name) "@plt"
+ #else
+ #define GLOBAL_REFERENCE(name) SYMBOL_STRING(name)
+@@ -70,7 +70,8 @@
+     || OS(FUCHSIA)             \
+     || OS(OPENBSD)             \
+     || OS(HPUX)                \
+-    || OS(NETBSD)
++    || OS(NETBSD)              \
++    || OS(AERO)
+     // ELF platform
+ #define HIDE_SYMBOL(name) ".hidden " #name
+ #else
+@@ -88,6 +89,7 @@
+     || OS(OPENBSD)             \
+     || OS(HURD)                \
+     || OS(NETBSD)              \
++    || OS(AERO)            \
+     || COMPILER(MINGW)
+     // GNU as-compatible syntax.
+ #define LOCAL_LABEL_STRING(name) ".L" #name
+diff --git a/Source/WTF/wtf/PlatformHave.h b/Source/WTF/wtf/PlatformHave.h
+index 61f13c2b73..de93124ef8 100644
+--- a/Source/WTF/wtf/PlatformHave.h
++++ b/Source/WTF/wtf/PlatformHave.h
+@@ -226,7 +226,7 @@
+ #define HAVE_HOSTED_CORE_ANIMATION 1
+ #endif
+
+-#if OS(DARWIN) || OS(FUCHSIA) || ((OS(FREEBSD) || OS(LINUX)) && (CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS)))
++#if OS(DARWIN) || OS(FUCHSIA) || OS(AERO) || ((OS(FREEBSD) || OS(LINUX)) && (CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS)))
+ #define HAVE_MACHINE_CONTEXT 1
+ #endif
+
+@@ -238,7 +238,7 @@
+ #define HAVE_BACKTRACE_SYMBOLS 1
+ #endif
+
+-#if OS(DARWIN) || OS(LINUX)
++#if OS(DARWIN) || OS(LINUX) || OS(AERO)
+ #define HAVE_DLADDR 1
+ #endif
+
+diff --git a/Source/WTF/wtf/PlatformOS.h b/Source/WTF/wtf/PlatformOS.h
+index e61715fb72..ed72f251a9 100644
+--- a/Source/WTF/wtf/PlatformOS.h
++++ b/Source/WTF/wtf/PlatformOS.h
+@@ -118,6 +118,11 @@
+ #define WTF_OS_WINDOWS 1
+ #endif
+
++/* OS(AERO) - Aero */
++#if defined(__aero__)
++#define WTF_OS_AERO 1
++#endif
++
+
+ /* OS(UNIX) - Any Unix-like system */
+ #if    OS(AIX)              \
+@@ -128,6 +133,7 @@
+     || OS(LINUX)            \
+     || OS(NETBSD)           \
+     || OS(OPENBSD)          \
++    || OS(AERO)         \
+     || defined(unix)        \
+     || defined(__unix)      \
+     || defined(__unix__)
+diff --git a/Source/WebCore/platform/sql/SQLiteDatabase.cpp b/Source/WebCore/platform/sql/SQLiteDatabase.cpp
+index 743ef3dc84..3a61bc1dc3 100644
+--- a/Source/WebCore/platform/sql/SQLiteDatabase.cpp
++++ b/Source/WebCore/platform/sql/SQLiteDatabase.cpp
+@@ -148,8 +148,8 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
+             LOG_ERROR("SQLite database could not set temp_store to memory");
+     }
+
+-    if (openMode != OpenMode::ReadOnly)
+-        useWALJournalMode();
++    // if (openMode != OpenMode::ReadOnly)
++        // useWALJournalMode();
+
+     auto shmFileName = makeString(filename, "-shm"_s);
+     if (FileSystem::fileExists(shmFileName)) {
+@@ -727,7 +727,7 @@ Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatement(ASCIILiteral que
+ {
+     auto sqlStatement = constructAndPrepareStatement(*this, query.characters(), query.length());
+     if (!sqlStatement) {
+-        RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %{public}s", query.characters());
++        RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %s" /*%{public}s"*/, query.characters());
+         return makeUnexpected(sqlStatement.error());
+     }
+     return SQLiteStatement { *this, sqlStatement.value() };
+diff --git a/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp b/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
+index efcd663f84..11e5467c10 100644
+--- a/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
++++ b/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
+@@ -46,7 +46,7 @@
+
+ // Although it's available on Darwin, SOCK_SEQPACKET seems to work differently
+ // than in traditional Unix so fallback to STREAM on that platform.
+-#if defined(SOCK_SEQPACKET) && !OS(DARWIN)
++#if defined(SOCK_SEQPACKET) && !OS(DARWIN) && !OS(AERO)
+ #define SOCKET_TYPE SOCK_SEQPACKET
+ #else
+ #if USE(GLIB)
+diff --git a/Source/WebKit/Platform/unix/SharedMemoryUnix.cpp b/Source/WebKit/Platform/unix/SharedMemoryUnix.cpp
+index 998a2a7679..a490b3fb5f 100644
+--- a/Source/WebKit/Platform/unix/SharedMemoryUnix.cpp
++++ b/Source/WebKit/Platform/unix/SharedMemoryUnix.cpp
+@@ -47,8 +47,10 @@
+
+ #if HAVE(LINUX_MEMFD_H)
+ #include <linux/memfd.h>
++#if !OS(AERO)
+ #include <sys/syscall.h>
+ #endif
++#endif
+
+ #if PLATFORM(PLAYSTATION)
+ #include "ArgumentCoders.h"
+@@ -132,7 +134,7 @@ static int createSharedMemory()
+     static bool isMemFdAvailable = true;
+     if (isMemFdAvailable) {
+         do {
+-            fileDescriptor = syscall(__NR_memfd_create, "WebKitSharedMemory", MFD_CLOEXEC);
++            fileDescriptor = memfd_create("WebKitSharedMemory", MFD_CLOEXEC);
+         } while (fileDescriptor == -1 && errno == EINTR);
+
+         if (fileDescriptor != -1)
+-- 
+2.40.0
