@@ -296,6 +296,6 @@ impl INodeInterface for UdpSocket {
 impl UdpHandler for UdpSocket {
     fn recv(&self, packet: Packet<Udp>) {
         self.inner.lock_irq().incoming.push(packet);
-        self.wq.notify_complete();
+        self.wq.notify_all();
     }
 }

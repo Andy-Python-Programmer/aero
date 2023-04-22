@@ -479,7 +479,7 @@ impl KeyboardListener for Tty {
             }
 
             self.stdin.lock_irq().cursor = 0;
-            self.block_queue.notify_complete();
+            self.block_queue.notify_all();
             return;
         }
 
@@ -495,7 +495,7 @@ impl KeyboardListener for Tty {
                     rendy::print!("\n");
                 }
 
-                self.block_queue.notify_complete();
+                self.block_queue.notify_all();
             }
 
             KeyCode::KEY_BACKSPACE if !released => backspace(),

@@ -225,7 +225,7 @@ impl KeyboardListener for KeyboardDevice {
             self.buffer.lock_irq().push(keycode as u8);
         }
 
-        self.wq.notify_complete()
+        self.wq.notify_all()
     }
 }
 

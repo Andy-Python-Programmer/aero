@@ -302,7 +302,7 @@ impl INodeInterface for Slave {
             pty_buffer.extend_from_slice(buffer);
         }
 
-        self.master.wq.notify_complete();
+        self.master.wq.notify_all();
         Ok(buffer.len())
     }
 }

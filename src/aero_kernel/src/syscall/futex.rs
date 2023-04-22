@@ -117,7 +117,7 @@ impl FutexContainer {
         let key = Self::addr_as_futex_key(uaddr).ok_or(SyscallError::EINVAL)?;
         let futex = self.get(key).ok_or(SyscallError::EINVAL)?;
 
-        futex.notify_complete();
+        futex.notify_all();
 
         // todo: early reschedule if the futex is not empty.
         Ok(())

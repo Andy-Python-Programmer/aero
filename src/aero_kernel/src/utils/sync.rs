@@ -71,13 +71,22 @@ impl WaitQueue {
             .map(|i| tasks.remove(i));
     }
 
-    /// Notify's all of the tasks in the blocker's queue that the future has been
-    /// completed.
-    pub fn notify_complete(&self) {
+    /// Wakes up all of the process in the wait queue.
+    pub fn notify_all(&self) {
         let scheduler = scheduler::get_scheduler();
         let this = self.queue.lock_irq();
 
         for task in this.iter() {
+            scheduler.inner.wake_up(task.clone());
+        }
+    }
+
+    /// Wakes up only the first process in the wait queue.
+    pub fn notify(&self) {
+        let scheduler = scheduler::get_scheduler();
+        let this: MutexGuard<Vec<Arc<Task>>> = self.queue.lock_irq();
+
+        if let Some(task) = this.first() {
             scheduler.inner.wake_up(task.clone());
         }
     }
@@ -173,7 +182,7 @@ impl<'a, T: ?Sized> core::ops::DerefMut for BMutexGuard<'a, T> {
 
 impl<'a, T: ?Sized> Drop for BMutexGuard<'a, T> {
     fn drop(&mut self) {
-        self.mutex.wq.notify_complete();
+        self.mutex.wq.notify();
     }
 }
 

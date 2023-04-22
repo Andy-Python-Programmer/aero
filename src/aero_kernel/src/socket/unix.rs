@@ -277,7 +277,7 @@ impl INodeInterface for UnixSocket {
         };
 
         peer.buffer.lock_irq().write(buffer);
-        peer.wq.notify_complete();
+        peer.wq.notify_all();
 
         Ok(buffer.len())
     }
@@ -338,7 +338,7 @@ impl INodeInterface for UnixSocket {
         };
 
         queue.push(self.sref()).unwrap();
-        target.wq.notify_complete();
+        target.wq.notify_all();
         core::mem::drop(itarget); // release the lock
 
         let _ = self.wq.block_on(&self.inner, |e| e.state.is_connected())?;
@@ -381,7 +381,7 @@ impl INodeInterface for UnixSocket {
             *length = core::mem::size_of::<SocketAddrUnix>() as u32;
         }
 
-        peer.wq.notify_complete();
+        peer.wq.notify_all();
         Ok(sock)
     }
 

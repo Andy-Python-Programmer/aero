@@ -89,7 +89,7 @@ impl LineDiscipline {
         }
 
         drop(buffer);
-        self.wq.notify_complete();
+        self.wq.notify_all();
     }
 
     pub fn foreground(&self) -> Option<Arc<Group>> {

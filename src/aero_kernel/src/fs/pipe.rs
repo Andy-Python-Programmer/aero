@@ -66,7 +66,7 @@ impl INodeInterface for Pipe {
 
             // There are no active writers and no data to read (reached EOF).
             if active_writers == 0 {
-                self.readers.notify_complete();
+                self.readers.notify_all();
             }
         }
     }
@@ -92,7 +92,7 @@ impl INodeInterface for Pipe {
 
         if read > 0 {
             // TODO: Notify only the first process
-            self.writers.notify_complete();
+            self.writers.notify_all();
         }
 
         Ok(read)
@@ -100,7 +100,7 @@ impl INodeInterface for Pipe {
 
     fn write_at(&self, _offset: usize, buf: &[u8]) -> super::Result<usize> {
         let res = self.queue.lock_irq().write_data(buf);
-        self.readers.notify_complete();
+        self.readers.notify_all();
 
         Ok(res)
     }

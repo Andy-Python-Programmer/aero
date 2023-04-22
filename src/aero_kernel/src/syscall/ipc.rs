@@ -77,7 +77,7 @@ pub fn send(pid: usize, payload: &[u8]) -> Result<usize, SyscallError> {
     });
 
     // Notify the task that it has a new message if its awaiting for one!
-    message_queue.blockqueue.notify_complete();
+    message_queue.blockqueue.notify_all();
 
     Ok(0)
 }

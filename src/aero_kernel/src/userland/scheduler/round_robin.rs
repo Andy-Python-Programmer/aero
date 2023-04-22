@@ -304,7 +304,7 @@ impl SchedulerInterface for RoundRobin {
         current_task.exit_status.call_once(|| status);
 
         queue.push_dead(current_task.clone());
-        queue.dead_wq.notify_complete();
+        queue.dead_wq.notify_all();
 
         core::mem::drop(guard);
         self.preempt();

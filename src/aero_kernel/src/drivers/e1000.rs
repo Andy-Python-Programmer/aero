@@ -373,7 +373,7 @@ impl E1000 {
 
         if descriptor.status & 0x1 == 0x1 {
             // we got some packies right here mate. lets notify the boyz
-            DEVICE.get().unwrap().wq.notify_complete();
+            DEVICE.get().unwrap().wq.notify_all();
         }
     }
 

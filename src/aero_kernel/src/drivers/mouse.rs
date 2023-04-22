@@ -113,7 +113,7 @@ impl Mouse {
                     }
 
                     PACKETS.lock_irq().push(this.clone());
-                    self.wq.notify_complete();
+                    self.wq.notify_all();
                 }
             }
 

@@ -49,7 +49,7 @@ impl INodeInterface for EventFd {
         *value = *count;
         *count = 0; // reset the counter
 
-        self.wq.notify_complete();
+        self.wq.notify_all();
         Ok(size)
     }
 
@@ -62,7 +62,7 @@ impl INodeInterface for EventFd {
         let value = unsafe { *(buffer.as_ptr() as *const u64) };
 
         *self.count.lock_irq() += value;
-        self.wq.notify_complete();
+        self.wq.notify_all();
         Ok(size)
     }
 

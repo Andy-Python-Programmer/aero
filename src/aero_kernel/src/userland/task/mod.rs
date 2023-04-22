@@ -130,7 +130,7 @@ impl Zombies {
         log::debug!("making process a zombie: (pid={:?})", zombie.pid());
 
         list.push_back(zombie);
-        self.block.notify_complete();
+        self.block.notify_all();
     }
 
     fn waitpid(
