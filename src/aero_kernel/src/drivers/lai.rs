@@ -34,20 +34,20 @@ struct LaiHost;
 
 impl lai::Host for LaiHost {
     fn scan(&self, signature: &str, index: usize) -> *const u8 {
-        assert!(index == 0);
-
         if signature == "DSDT" {
             // The DSDT table is put inside the FADT table, instead of listing it in
             // another ACPI table. So, we need to extract the DSDT table from the FADT
             // table.
-            get_acpi_table().lookup_entry(fadt::SIGNATURE).map(|fadt| {
-                let fadt: &'static fadt::Fadt = unsafe { fadt.as_ref() };
-                let addr = PhysAddr::new(fadt.dsdt as u64).as_hhdm_virt();
-                addr.as_ptr::<u8>()
-            })
+            get_acpi_table()
+                .lookup_entry(fadt::SIGNATURE, 0)
+                .map(|fadt| {
+                    let fadt: &'static fadt::Fadt = unsafe { fadt.as_ref() };
+                    let addr = PhysAddr::new(fadt.dsdt as u64).as_hhdm_virt();
+                    addr.as_ptr::<u8>()
+                })
         } else {
             get_acpi_table()
-                .lookup_entry(signature)
+                .lookup_entry(signature, index)
                 .map(|table| table as *const _ as *const u8)
         }
         .unwrap_or(core::ptr::null())

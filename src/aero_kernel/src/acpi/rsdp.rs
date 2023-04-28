@@ -120,7 +120,8 @@ impl Rsdt<u32> {
         (self.header.length as usize - core::mem::size_of::<Self>()) / core::mem::size_of::<u32>()
     }
 
-    pub fn lookup_entry(&self, signature: &str) -> Option<&'static Sdt> {
+    pub fn lookup_entry(&self, signature: &str, index: usize) -> Option<&'static Sdt> {
+        let mut current = 0;
         let header_data_address = self.header.data_address() as *const u32;
 
         for i in 0..self.entries_count() {
@@ -131,7 +132,11 @@ impl Rsdt<u32> {
             let item = unsafe { Sdt::from_address(item_addr_virt) };
 
             if item.signature == signature.as_bytes() {
-                return Some(item);
+                if current == index {
+                    return Some(item);
+                }
+
+                current += 1;
             }
         }
 
@@ -156,7 +161,8 @@ impl Rsdt<u64> {
         (self.header.length as usize - core::mem::size_of::<Self>()) / core::mem::size_of::<u64>()
     }
 
-    pub fn lookup_entry(&self, signature: &str) -> Option<&'static Sdt> {
+    pub fn lookup_entry(&self, signature: &str, index: usize) -> Option<&'static Sdt> {
+        let mut current = 0;
         let header_data_address = self.header.data_address() as *const u64;
 
         for i in 0..self.entries_count() {
@@ -168,7 +174,11 @@ impl Rsdt<u64> {
             let item = unsafe { Sdt::from_address(item_addr_virt) };
 
             if item.signature == signature.as_bytes() {
-                return Some(item);
+                if current == index {
+                    return Some(item);
+                }
+
+                current += 1;
             }
         }
 

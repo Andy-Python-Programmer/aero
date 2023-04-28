@@ -72,10 +72,10 @@ impl AcpiTable {
     }
 
     /// Lookup ACPI table entry with the provided signature.
-    pub fn lookup_entry(&self, signature: &str) -> Option<&'static Sdt> {
+    pub fn lookup_entry(&self, signature: &str, index: usize) -> Option<&'static Sdt> {
         match self.header {
-            AcpiHeader::Rsdt(rsdt) => rsdt.lookup_entry(signature),
-            AcpiHeader::Xsdt(xsdt) => xsdt.lookup_entry(signature),
+            AcpiHeader::Rsdt(rsdt) => rsdt.lookup_entry(signature, index),
+            AcpiHeader::Xsdt(xsdt) => xsdt.lookup_entry(signature, index),
         }
     }
 
@@ -112,19 +112,19 @@ pub fn init(rsdp_address: VirtAddr) {
     let acpi_table = get_acpi_table();
 
     macro init_table($sig:path => $ty:ty) {
-        if let Some(table) = acpi_table.lookup_entry($sig) {
+        if let Some(table) = acpi_table.lookup_entry($sig, 0) {
             <$ty>::new(table);
         }
     }
 
-    if let Some(header) = acpi_table.lookup_entry(mcfg::SIGNATURE) {
+    if let Some(header) = acpi_table.lookup_entry(mcfg::SIGNATURE, 0) {
         unsafe {
             let mcfg: &'static Mcfg = header.as_ref();
             mcfg.init();
         }
     }
 
-    if let Some(header) = acpi_table.lookup_entry(madt::SIGNATURE) {
+    if let Some(header) = acpi_table.lookup_entry(madt::SIGNATURE, 0) {
         unsafe {
             // Not a valid MADT table without the local apic address and the flags.
             if header.data_len() < 8 {
