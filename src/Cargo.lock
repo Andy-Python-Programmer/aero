@@ -483,8 +483,8 @@ checksum = "6ceab39d59e4c9499d4e5a8ee0e2735b891bb7308ac83dfb4e80cad195c9f6f3"
 
 [[package]]
 name = "utf8parse"
-version = "0.2.0"
-source = "git+https://github.com/Andy-Python-Programmer/vte#a9d8bf899d7f7a07ddfd22d08491ac9131eebda2"
+version = "0.2.1"
+source = "git+https://github.com/aero-os/vte#401bd5ab59f903c48c78b179a93390428ceb2215"
 
 [[package]]
 name = "version_check"
@@ -494,10 +494,11 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vte"
-version = "0.10.1"
-source = "git+https://github.com/Andy-Python-Programmer/vte#a9d8bf899d7f7a07ddfd22d08491ac9131eebda2"
+version = "0.11.0"
+source = "git+https://github.com/aero-os/vte#401bd5ab59f903c48c78b179a93390428ceb2215"
 dependencies = [
  "arrayvec",
+ "log",
  "utf8parse",
  "vte_generate_state_changes",
 ]
@@ -505,7 +506,7 @@ dependencies = [
 [[package]]
 name = "vte_generate_state_changes"
 version = "0.1.1"
-source = "git+https://github.com/Andy-Python-Programmer/vte#a9d8bf899d7f7a07ddfd22d08491ac9131eebda2"
+source = "git+https://github.com/aero-os/vte#401bd5ab59f903c48c78b179a93390428ceb2215"
 dependencies = [
  "proc-macro2",
  "quote",

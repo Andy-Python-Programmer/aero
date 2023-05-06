@@ -171,7 +171,7 @@ extern "C" fn arch_aero_main() -> ! {
         .expect("limine: no framebuffer found!");
 
     rendy::init(&*framebuffer, &command_line);
-    logger::set_rendy_debug(command_line.rendy_debug);
+    logger::set_rendy_debug(true);
 
     interrupts::init();
     log::info!("loaded IDT");

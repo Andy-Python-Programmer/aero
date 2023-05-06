@@ -20,18 +20,24 @@
 use core::fmt::Write;
 
 use core::fmt;
+use core::ops::Index;
+use core::ops::IndexMut;
 use core::u8;
 
 use alloc::boxed::Box;
 
 use limine::Framebuffer;
 use spin::Once;
+use vte::ansi::NamedColor;
+use vte::ansi::SyncHandler;
 
 use crate::cmdline::CommandLine;
 use crate::mem;
 use crate::mem::paging::align_up;
 
 use crate::utils::sync::Mutex;
+
+use vte::ansi::{Attr, Processor};
 
 static FONT: &[[u8; FONT_HEIGHT]; FONT_GLYPHS] =
     unsafe { &core::mem::transmute(*include_bytes!("../../font.bin")) };
@@ -200,9 +206,69 @@ fn parse_bmp_image(data: &[u8]) -> Image {
     }
 }
 
-pub struct DebugRendy<'this> {
-    /// The raw framebuffer pointer queried from the BIOS or UEFI firmware represented
-    /// as a [u8] slice.
+#[derive(Default)]
+struct RendySync;
+
+impl SyncHandler for RendySync {
+    fn update_timeout(&mut self, _: Option<core::time::Duration>) {
+        unreachable!()
+    }
+
+    fn pending_timeout(&self) -> bool {
+        false
+    }
+}
+
+const COLOR_COUNT: usize = 269;
+
+struct ColorList([u32; COLOR_COUNT]);
+
+impl ColorList {
+    fn new() -> Self {
+        let mut list = Self([0; COLOR_COUNT]);
+
+        // The color values are based from the default alacritty colors.
+        //
+        // Normal colors:
+        list[NamedColor::Black] = 0x1d1f21;
+        list[NamedColor::Red] = 0xcc6666;
+        list[NamedColor::Green] = 0xb5bd68;
+        list[NamedColor::Yellow] = 0xf0c674;
+        list[NamedColor::Blue] = 0x81a2be;
+        list[NamedColor::Magenta] = 0xb294bb;
+        list[NamedColor::Cyan] = 0x8abeb7;
+        list[NamedColor::White] = 0xc5c8c6;
+        // Bright colors:
+        list[NamedColor::BrightBlack] = 0x666666;
+        list[NamedColor::BrightRed] = 0xd54e53;
+        list[NamedColor::BrightGreen] = 0xb9ca4a;
+        list[NamedColor::BrightYellow] = 0xe7c547;
+        list[NamedColor::BrightBlue] = 0x7aa6da;
+        list[NamedColor::BrightMagenta] = 0xc397d8;
+        list[NamedColor::BrightCyan] = 0x70c0b1;
+        list[NamedColor::BrightWhite] = 0xeaeaea;
+
+        list
+    }
+}
+
+impl Index<NamedColor> for ColorList {
+    type Output = u32;
+
+    #[inline]
+    fn index(&self, idx: NamedColor) -> &Self::Output {
+        &self.0[idx as usize]
+    }
+}
+
+impl IndexMut<NamedColor> for ColorList {
+    #[inline]
+    fn index_mut(&mut self, idx: NamedColor) -> &mut Self::Output {
+        &mut self.0[idx as usize]
+    }
+}
+
+pub struct Inner<'this> {
     buffer: &'this mut [u32],
     info: RendyInfo,
 
@@ -230,72 +296,11 @@ pub struct DebugRendy<'this> {
 
     cursor_visibility: bool,
     auto_flush: bool,
+
+    color_list: ColorList,
 }
 
-impl<'this> DebugRendy<'this> {
-    /// Create a new debug renderer with the default foreground color set to white and
-    /// background color set to black.
-    pub fn new(buffer: &'this mut [u32], info: RendyInfo, cmdline: &CommandLine) -> Self {
-        let width = info.horizontal_resolution;
-        let height = info.vertical_resolution;
-
-        let offset_x = DEFAULT_MARGIN + ((width - DEFAULT_MARGIN * 2) % FONT_WIDTH) / 2;
-        let offset_y = DEFAULT_MARGIN + ((height - DEFAULT_MARGIN * 2) % FONT_HEIGHT) / 2;
-
-        let cols = (width - DEFAULT_MARGIN * 2) / FONT_WIDTH;
-        let rows = (height - DEFAULT_MARGIN * 2) / FONT_HEIGHT;
-
-        let grid_size = rows * cols * core::mem::size_of::<Character>();
-        let grid = mem::alloc_boxed_buffer::<Character>(grid_size);
-
-        let queue_size = rows * cols * core::mem::size_of::<QueueCharacter>();
-        let queue = mem::alloc_boxed_buffer::<QueueCharacter>(queue_size);
-
-        let map_size = rows * cols * core::mem::size_of::<Option<*const QueueCharacter>>();
-        let map = mem::alloc_boxed_buffer::<Option<*mut QueueCharacter>>(map_size);
-
-        let bg_canvas_size = width * height * core::mem::size_of::<u32>();
-        let bg_canvas = mem::alloc_boxed_buffer::<u32>(bg_canvas_size);
-
-        let mut this = Self {
-            buffer,
-            info,
-
-            x_pos: 0,
-            y_pos: 0,
-
-            old_x_pos: 0,
-            old_y_pos: 0,
-
-            rows,
-            cols,
-
-            theme_background: cmdline.theme_background,
-            color: ColorCode::new(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND),
-
-            queue,
-            grid,
-            map,
-            bg_canvas,
-
-            queue_cursor: 0,
-
-            offset_x,
-            offset_y,
-
-            cursor_visibility: true,
-            auto_flush: true,
-        };
-
-        let image = cmdline.term_background.map(|a| parse_bmp_image(a));
-
-        this.generate_canvas(image);
-        this.clear(true);
-        this.double_buffer_flush();
-
-        this
-    }
-
+impl<'a> Inner<'a> {
     fn genloop<F>(
         &mut self,
         image: &Image,
@@ -373,7 +378,7 @@ impl<'this> DebugRendy<'this> {
         }
     }
 
-    pub fn get_framebuffer<'a>(&'a mut self) -> &'a mut [u32] {
+    pub fn get_framebuffer<'b>(&'b mut self) -> &'b mut [u32] {
         self.buffer
     }
 
@@ -511,16 +516,6 @@ impl<'this> DebugRendy<'this> {
 
     fn set_auto_flush(&mut self, yes: bool) {
         self.auto_flush = yes;
-    }
-
-    fn write_string(&mut self, string: &str) {
-        for char in string.chars() {
-            self.write_character(char)
-        }
-
-        if self.auto_flush {
-            self.double_buffer_flush();
-        }
     }
 
     fn draw_cursor(&mut self) {
@@ -740,11 +735,156 @@ impl<'this> DebugRendy<'this> {
     }
 }
 
+pub struct DebugRendy<'a> {
+    inner: Inner<'a>,
+    performer: Processor<RendySync>,
+}
+
+impl<'this> DebugRendy<'this> {
+    /// Create a new debug renderer with the default foreground color set to white and
+    /// background color set to black.
+    pub fn new(buffer: &'this mut [u32], info: RendyInfo, cmdline: &CommandLine) -> Self {
+        let width = info.horizontal_resolution;
+        let height = info.vertical_resolution;
+
+        let offset_x = DEFAULT_MARGIN + ((width - DEFAULT_MARGIN * 2) % FONT_WIDTH) / 2;
+        let offset_y = DEFAULT_MARGIN + ((height - DEFAULT_MARGIN * 2) % FONT_HEIGHT) / 2;
+
+        let cols = (width - DEFAULT_MARGIN * 2) / FONT_WIDTH;
+        let rows = (height - DEFAULT_MARGIN * 2) / FONT_HEIGHT;
+
+        let grid_size = rows * cols * core::mem::size_of::<Character>();
+        let grid = mem::alloc_boxed_buffer::<Character>(grid_size);
+
+        let queue_size = rows * cols * core::mem::size_of::<QueueCharacter>();
+        let queue = mem::alloc_boxed_buffer::<QueueCharacter>(queue_size);
+
+        let map_size = rows * cols * core::mem::size_of::<Option<*const QueueCharacter>>();
+        let map = mem::alloc_boxed_buffer::<Option<*mut QueueCharacter>>(map_size);
+
+        let bg_canvas_size = width * height * core::mem::size_of::<u32>();
+        let bg_canvas = mem::alloc_boxed_buffer::<u32>(bg_canvas_size);
+
+        let mut this = Self {
+            inner: Inner {
+                buffer,
+                info,
+
+                x_pos: 0,
+                y_pos: 0,
+
+                old_x_pos: 0,
+                old_y_pos: 0,
+
+                rows,
+                cols,
+
+                theme_background: cmdline.theme_background,
+                color: ColorCode::new(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND),
+
+                queue,
+                grid,
+                map,
+                bg_canvas,
+
+                queue_cursor: 0,
+
+                offset_x,
+                offset_y,
+
+                cursor_visibility: true,
+                auto_flush: true,
+
+                color_list: ColorList::new(),
+            },
+            performer: Processor::new(),
+        };
+
+        let image = cmdline.term_background.map(|a| parse_bmp_image(a));
+
+        this.generate_canvas(image);
+        this.clear(true);
+        this.double_buffer_flush();
+
+        this
+    }
+}
+
+impl<'a> core::ops::Deref for DebugRendy<'a> {
+    type Target = Inner<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<'a> core::ops::DerefMut for DebugRendy<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
 impl<'this> fmt::Write for DebugRendy<'this> {
     fn write_str(&mut self, string: &str) -> fmt::Result {
-        self.write_string(string);
-
+        for b in string.bytes() {
+            self.performer.advance(&mut self.inner, b);
+        }
         Ok(())
+    }
+}
+
+impl<'a> vte::ansi::Handler for Inner<'a> {
+    fn input(&mut self, c: char) {
+        self.write_character(c);
+
+        if self.auto_flush {
+            self.double_buffer_flush();
+        }
+    }
+
+    fn linefeed(&mut self) {
+        self.input('\n');
+    }
+
+    fn terminal_attribute(&mut self, attr: Attr) {
+        match attr {
+            Attr::Reset => {
+                self.color = ColorCode::new(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
+            }
+
+            // Attr::Bold => todo!(),
+            // Attr::Dim => todo!(),
+            // Attr::Italic => todo!(),
+            // Attr::Underline => todo!(),
+            // Attr::DoubleUnderline => todo!(),
+            // Attr::Undercurl => todo!(),
+            // Attr::DottedUnderline => todo!(),
+            // Attr::DashedUnderline => todo!(),
+            // Attr::BlinkSlow => todo!(),
+            // Attr::BlinkFast => todo!(),
+            // Attr::Reverse => todo!(),
+            // Attr::Hidden => todo!(),
+            // Attr::Strike => todo!(),
+            // Attr::CancelBold => todo!(),
+            // Attr::CancelBoldDim => todo!(),
+            // Attr::CancelItalic => todo!(),
+            // Attr::CancelUnderline => todo!(),
+            // Attr::CancelBlink => todo!(),
+            // Attr::CancelReverse => todo!(),
+            // Attr::CancelHidden => todo!(),
+            // Attr::CancelStrike => todo!(),
+            Attr::Foreground(color) => {
+                let code = match color {
+                    vte::ansi::Color::Named(c) => self.color_list[c],
+                    _ => unimplemented!(),
+                };
+
+                self.color.0 = code;
+            }
+            // Attr::Background(_) => todo!(),
+            // Attr::UnderlineColor(_) => todo!(),
+            _ => {}
+        }
     }
 }
 

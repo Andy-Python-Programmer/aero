@@ -53,8 +53,9 @@ num-traits = { version = "0.2", default-features = false }
 raw-cpuid = "10.0.0"
 
 [dependencies.vte]
-git = "https://github.com/Andy-Python-Programmer/vte"
-features = ["no_std"]
+git = "https://github.com/aero-os/vte"
+default-features = false
+features = ["no_std", "ansi"]
 
 [dependencies.lazy_static]
 version = "1.4.0"

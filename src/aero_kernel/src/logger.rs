@@ -53,9 +53,13 @@ impl log::Log for AeroLogger {
             let level = record.level();
             let rendy_dbg = RENDY_DEBUG.load(Ordering::Relaxed);
 
-            macro log_ln($($arg:tt)*) {
-                serial_println!("{}", format_args!($($arg)*));
-                if rendy_dbg { $crate::rendy::println!("{}", format_args!($($arg)*)); }
+            macro generic_log($($arg:tt)*) {
+                {
+                    serial_print!("{}", format_args!($($arg)*));
+                    if rendy_dbg {
+                        $crate::rendy::print!("{}", format_args!($($arg)*));
+                    }
+                }
             }
 
             // Append the log message to the log ring buffer.
@@ -80,15 +84,15 @@ impl log::Log for AeroLogger {
             }
 
             match record.level() {
-                Level::Info => serial_print!("\x1b[32;1minfo "), // green info
-                Level::Warn => serial_print!("\x1b[33;1mwarn "), // yellow warn
-                Level::Error => serial_print!("\x1b[32;1merror "), // red error
-                Level::Debug => serial_print!("\x1b[35;1mdebug "), // gray debug
-                Level::Trace => serial_print!("\x1b[34;1mtrace "), // blue trace
+                Level::Info => generic_log!("\x1b[32;1minfo "), // green info
+                Level::Warn => generic_log!("\x1b[33;1mwarn "), // yellow warn
+                Level::Error => generic_log!("\x1b[32;1merror "), // red error
+                Level::Debug => generic_log!("\x1b[35;1mdebug "), // gray debug
+                Level::Trace => generic_log!("\x1b[34;1mtrace "), // blue trace
             }
 
-            serial_print!("\x1b[0m");
-            log_ln!("{}", record.args());
+            generic_log!("\x1b[0m");
+            generic_log!("{}\n", record.args());
         }
     }
 
