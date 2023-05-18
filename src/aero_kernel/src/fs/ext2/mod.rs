@@ -187,13 +187,10 @@ impl INode {
         let entries_per_block = fs.superblock.entries_per_block();
 
         let new_block = fs.bgdt.alloc_block_ptr()?;
-        let data_ptrs = self.inode.read().data_ptr;
 
         let mut next_block_num = self.inode.read().size().ceil_div(block_size);
 
         if next_block_num < 12 {
-            drop(data_ptrs);
-
             let mut inode = self.inode.write();
 
             assert_eq!(inode.data_ptr[next_block_num], 0);

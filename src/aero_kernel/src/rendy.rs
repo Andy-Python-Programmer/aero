@@ -22,6 +22,7 @@ use core::fmt::Write;
 use core::fmt;
 use core::ops::Index;
 use core::ops::IndexMut;
+use core::time::Duration;
 use core::u8;
 
 use alloc::boxed::Box;
@@ -210,7 +211,7 @@ fn parse_bmp_image(data: &[u8]) -> Image {
 struct RendySync;
 
 impl Timeout for RendySync {
-    fn set_timeout(&mut self, duration: core::time::Duration) {
+    fn set_timeout(&mut self, _duration: Duration) {
         unimplemented!()
     }
 

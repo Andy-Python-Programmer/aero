@@ -872,10 +872,6 @@ impl AhciProtected {
                 if port.probe(offset_table, i)? {
                     // Get the address of the HBA port.
                     let address = VirtAddr::new(port as *const _ as _);
-
-                    drop(port); // Drop the reference to the port.
-                    drop(hba); // Drop the reference to the HBA.
-
                     let port = Arc::new(AhciPort::new(address));
 
                     // Add the port to the ports array.

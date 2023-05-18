@@ -386,7 +386,6 @@ impl E1000 {
         ring[cur].cmd = 0b1011;
         ring[cur].status = TStatus::empty();
 
-        drop(ring);
         self.tx_cur = (self.tx_cur + 1) % TX_DESC_NUM as usize;
 
         self.write(Register::TxDescTail, self.tx_cur as u32);
