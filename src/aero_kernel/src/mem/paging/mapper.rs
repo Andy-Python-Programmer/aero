@@ -137,12 +137,13 @@ pub trait Mapper<S: PageSize> {
     /// This function might need additional physical frames to create new page tables. These
     /// frames are allocated from the `allocator` argument. At most three frames are required.
     ///
-    /// Parent page table entries are automatically updated with `PRESENT | WRITABLE | USER_ACCESSIBLE`
-    /// if present in the `PageTableFlags`. Depending on the used mapper implementation
-    /// the `PRESENT` and `WRITABLE` flags might be set for parent tables,
+    /// Parent page table entries are automatically updated with `PRESENT | WRITABLE |
+    /// USER_ACCESSIBLE` if present in the `PageTableFlags`. Depending on the used mapper
+    /// implementation the `PRESENT` and `WRITABLE` flags might be set for parent tables,
     /// even if they are not set in `PageTableFlags`.
     ///
-    /// The `map_to_with_table_flags` method gives explicit control over the parent page table flags.
+    /// The `map_to_with_table_flags` method gives explicit control over the parent page table
+    /// flags.
     ///
     /// ## Safety
     ///
@@ -156,16 +157,16 @@ pub trait Mapper<S: PageSize> {
     /// violations can occur through the new mapping. Among other things, the
     /// caller must prevent the following:
     ///
-    /// - Aliasing of `&mut` references, i.e. two `&mut` references that point to
-    ///   the same physical address. This is undefined behavior in Rust.
-    ///     - This can be ensured by mapping each page to an individual physical
-    ///       frame that is not mapped anywhere else.
-    /// - Creating uninitialized or invalid values: Rust requires that all values
-    ///   have a correct memory layout. For example, a `bool` must be either a 0
-    ///   or a 1 in memory, but not a 3 or 4. An exception is the `MaybeUninit`
-    ///   wrapper type, which abstracts over possibly uninitialized memory.
-    ///     - This is only a problem when re-mapping pages to different physical
-    ///       frames. Mapping a page that is not in use yet is fine.
+    /// - Aliasing of `&mut` references, i.e. two `&mut` references that point to the same physical
+    ///   address. This is undefined behavior in Rust.
+    ///     - This can be ensured by mapping each page to an individual physical frame that is not
+    ///       mapped anywhere else.
+    /// - Creating uninitialized or invalid values: Rust requires that all values have a correct
+    ///   memory layout. For example, a `bool` must be either a 0 or a 1 in memory, but not a 3 or
+    ///   4. An exception is the `MaybeUninit` wrapper type, which abstracts over possibly
+    ///   uninitialized memory.
+    ///     - This is only a problem when re-mapping pages to different physical frames. Mapping a
+    ///       page that is not in use yet is fine.
     ///
     /// Special care must be taken when sharing pages with other address spaces,
     /// e.g. by setting the `GLOBAL` flag. For example, a global mapping must be
@@ -210,16 +211,16 @@ pub trait Mapper<S: PageSize> {
     /// violations can occur through the new mapping. Among other things, the
     /// caller must prevent the following:
     ///
-    /// - Aliasing of `&mut` references, i.e. two `&mut` references that point to
-    ///   the same physical address. This is undefined behavior in Rust.
-    ///     - This can be ensured by mapping each page to an individual physical
-    ///       frame that is not mapped anywhere else.
-    /// - Creating uninitialized or invalid values: Rust requires that all values
-    ///   have a correct memory layout. For example, a `bool` must be either a 0
-    ///   or a 1 in memory, but not a 3 or 4. An exception is the `MaybeUninit`
-    ///   wrapper type, which abstracts over possibly uninitialized memory.
-    ///     - This is only a problem when re-mapping pages to different physical
-    ///       frames. Mapping a page that is not in use yet is fine.
+    /// - Aliasing of `&mut` references, i.e. two `&mut` references that point to the same physical
+    ///   address. This is undefined behavior in Rust.
+    ///     - This can be ensured by mapping each page to an individual physical frame that is not
+    ///       mapped anywhere else.
+    /// - Creating uninitialized or invalid values: Rust requires that all values have a correct
+    ///   memory layout. For example, a `bool` must be either a 0 or a 1 in memory, but not a 3 or
+    ///   4. An exception is the `MaybeUninit` wrapper type, which abstracts over possibly
+    ///   uninitialized memory.
+    ///     - This is only a problem when re-mapping pages to different physical frames. Mapping a
+    ///       page that is not in use yet is fine.
     ///
     /// Special care must be taken when sharing pages with other address spaces,
     /// e.g. by setting the `GLOBAL` flag. For example, a global mapping must be
@@ -390,10 +391,10 @@ impl<'a, P: PageTableFrameMapping> MappedPageTable<'a, P> {
     ///
     /// ## Safety
     ///
-    /// This function is unsafe because the caller must guarantee that the passed `page_table_frame_mapping`
-    /// closure is correct. Also, the passed `page_table` must point to the level 4 page table
-    /// of a valid page table hierarchy. Otherwise this function might break memory safety, e.g.
-    /// by writing to an illegal memory location.
+    /// This function is unsafe because the caller must guarantee that the passed
+    /// `page_table_frame_mapping` closure is correct. Also, the passed `page_table` must point
+    /// to the level 4 page table of a valid page table hierarchy. Otherwise this function might
+    /// break memory safety, e.g. by writing to an illegal memory location.
     #[inline]
     pub unsafe fn new(page_table: &'a mut PageTable, page_table_frame_mapping: P) -> Self {
         Self {

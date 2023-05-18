@@ -391,7 +391,8 @@ impl Mapping {
             }
 
             unsafe {
-                // The page is present but most likely the flags need to be updated after mprotect(2).
+                // The page is present but most likely the flags need to be updated after
+                // mprotect(2).
                 let page: Page<Size4KiB> = Page::containing_address(address);
                 offset_table
                     .update_flags(
@@ -502,10 +503,10 @@ impl Mapping {
         Ok(())
     }
 
-    /// Handler routine for a COW (Copy-On-Write) pages. A COW page is shared between multiple processes
-    /// until a write occurs after which a private copy is made for the writing process. A COW page
-    /// is recognised because the VMA for the region is marked writable even though the individual page
-    /// table entry is not.
+    /// Handler routine for a COW (Copy-On-Write) pages. A COW page is shared between multiple
+    /// processes until a write occurs after which a private copy is made for the writing
+    /// process. A COW page is recognised because the VMA for the region is marked writable even
+    /// though the individual page table entry is not.
     ///
     /// ## Panics
     /// * The provided `address` is not aligned to a page boundary.
@@ -961,6 +962,7 @@ impl VmProtected {
                     prot.insert(MMapProt::PROT_EXEC);
                 }
 
+                #[rustfmt::skip]
                 /*
                  * The last non-bss frame of the segment consists partly of data and partly of bss
                  * memory, which must be zeroed. Unfortunately, the file representation might have

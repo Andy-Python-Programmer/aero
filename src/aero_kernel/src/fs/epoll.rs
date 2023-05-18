@@ -100,13 +100,13 @@ impl EPoll {
     /// ## Arguments
     ///
     /// * `events`: Used to return information from the ready list about file descriptors in the
-    ///             interest list that have some events available.
+    ///   interest list that have some events available.
     ///
     /// * `max_events`: Maximum number of events.
     ///
-    /// * `timeout`: specifies the minimum number of milliseconds that epoll wait will block. Specifying
-    ///              a timeout of `-1` will block indefinitely. While specifying a timeout of `0` will return
-    ///              immediately even if there are available no events.
+    /// * `timeout`: specifies the minimum number of milliseconds that epoll wait will block.
+    ///   Specifying a timeout of `-1` will block indefinitely. While specifying a timeout of `0`
+    ///   will return immediately even if there are available no events.
     ///
     ///
     /// ## Blocking

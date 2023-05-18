@@ -179,6 +179,11 @@ def parse_args():
                         default='9800M',
                         help='amount of memory to allocate to QEMU')
 
+    parser.add_argument('--fmt',
+                        default=False,
+                        action='store_true',
+                        help='format the source code')
+
     return parser.parse_args()
 
 
@@ -587,9 +592,13 @@ def is_kvm_supported() -> bool:
 
 
 def main():
-    t0 = time.time()
     args = parse_args()
 
+    if args.fmt:
+        run_command(['cargo', 'fmt'], cwd="src")
+        return
+
+    t0 = time.time()
     # arch-aero_os
     target_arch = args.target.split('-')[0]
     build_info = BuildInfo(target_arch, args)

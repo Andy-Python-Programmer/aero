@@ -17,7 +17,8 @@
  * along with Aero. If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! The FADT ACPI table contains information about fixed register blocks pertaining to power management.
+//! The FADT ACPI table contains information about fixed register blocks pertaining to power
+//! management.
 //!
 //! **Notes**: <https://wiki.osdev.org/FADT>
 

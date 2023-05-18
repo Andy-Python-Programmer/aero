@@ -328,7 +328,8 @@ impl INodeInterface for LockedRamINode {
             id: this.id,
             file_type: this.file_type,
             size: match &this.contents {
-                FileContents::Content(bytes) => bytes.lock().len(), // Temporary value dropped and lock is unlocked!
+                FileContents::Content(bytes) => bytes.lock().len(), /* Temporary value dropped */
+                // and lock is unlocked!
                 FileContents::StaticContent(bytes) => bytes.len(),
                 _ => 0x00,
             },

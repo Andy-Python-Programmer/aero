@@ -39,10 +39,10 @@ impl GroupDescriptors {
     ///
     /// ## Arguments
     ///
-    /// * `ext2` - Weak pointer to the EXT2 filesystem. This function does not call `upgrade` on
-    ///            the pointer so, it is valid to pass a semi-constructed `Arc<T>` pointer (e.g
-    ///            through `Arc::new_cyclic`) though invoking other functions on the group descriptors
-    ///            require the pointer to be fully constructed).
+    /// * `ext2` - Weak pointer to the EXT2 filesystem. This function does not call `upgrade` on the
+    ///   pointer so, it is valid to pass a semi-constructed `Arc<T>` pointer (e.g through
+    ///   `Arc::new_cyclic`) though invoking other functions on the group descriptors require the
+    ///   pointer to be fully constructed).
     ///
     /// * `superblock` - Reference to the EXT2 superblock.
     ///

@@ -114,8 +114,7 @@ impl BufferObject {
 //      - has the display mode and params.
 //
 // Encoders:
-//      - takes the raw data from the CRTCs and converts it into a
-//        specific format.
+//      - takes the raw data from the CRTCs and converts it into a specific format.
 //
 // Connectors:
 //      - outputs the encoded data to an external display.

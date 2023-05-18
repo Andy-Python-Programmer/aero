@@ -294,7 +294,8 @@ pub struct Kpcr {
 
 /// Initialize the bootstrap GDT which is required to initialize TLS (Thread Local Storage)
 /// support so, after the kernel heap we will map the TLS section and initialize the *actual* GDT
-/// and then each CPU will have it's own GDT but we only will have to define it once as a `#[thread_local]`.
+/// and then each CPU will have it's own GDT but we only will have to define it once as a
+/// `#[thread_local]`.
 pub fn init_boot() {
     unsafe {
         let gdt_descriptor = GdtDescriptor::new(
