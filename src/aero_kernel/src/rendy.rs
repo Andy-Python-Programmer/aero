@@ -29,7 +29,7 @@ use alloc::boxed::Box;
 use limine::Framebuffer;
 use spin::Once;
 use vte::ansi::NamedColor;
-use vte::ansi::SyncHandler;
+use vte::ansi::Timeout;
 
 use crate::cmdline::CommandLine;
 use crate::mem;
@@ -209,9 +209,13 @@ fn parse_bmp_image(data: &[u8]) -> Image {
 #[derive(Default)]
 struct RendySync;
 
-impl SyncHandler for RendySync {
-    fn update_timeout(&mut self, _: Option<core::time::Duration>) {
-        unreachable!()
+impl Timeout for RendySync {
+    fn set_timeout(&mut self, duration: core::time::Duration) {
+        unimplemented!()
+    }
+
+    fn clear_timeout(&mut self) {
+        unimplemented!()
     }
 
     fn pending_timeout(&self) -> bool {
