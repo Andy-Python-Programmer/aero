@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use alloc::boxed::Box;
 
@@ -27,11 +25,9 @@ use crate::mem::paging::*;
 
 pub struct DmaAllocator;
 
-/*
- * XXX: The main issue with DMA buffers is when they are bigger than one page. DMA buffers
- * must be made of contiguous pages in physical memory because the device transfers the
- * the data using the ISA or PCI system bus (which carry physical addresses).
- */
+// XXX: The main issue with DMA buffers is when they are bigger than one page. DMA buffers
+// must be made of contiguous pages in physical memory because the device transfers the
+// the data using the ISA or PCI system bus (which carry physical addresses).
 unsafe impl Allocator for DmaAllocator {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         // XXX: The DMA buffer must be aligned to a page boundary.

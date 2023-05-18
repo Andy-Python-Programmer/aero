@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
@@ -23,8 +21,7 @@ use aero_syscall::prelude::{EPollEventFlags, PollEventFlags};
 use aero_syscall::socket::{MessageFlags, MessageHeader};
 use aero_syscall::{MMapFlags, OpenFlags, SyscallError};
 
-use alloc::sync::Arc;
-use alloc::sync::Weak;
+use alloc::sync::{Arc, Weak};
 
 use alloc::vec::Vec;
 use intrusive_collections::UnsafeRef;
@@ -34,16 +31,12 @@ use crate::mem::paging::{PhysFrame, VirtAddr};
 use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddr;
 use crate::userland::scheduler;
-use crate::utils::sync::WaitQueue;
-use crate::utils::sync::{BMutex, Mutex};
+use crate::utils::sync::{BMutex, Mutex, WaitQueue};
 
-use super::cache;
-use super::cache::Cacheable;
-use super::cache::CachedINode;
-use super::cache::{DirCacheItem, INodeCacheItem};
+use super::cache::{Cacheable, CachedINode, DirCacheItem, INodeCacheItem};
 use super::devfs::DevINode;
 use super::file_table::FileHandle;
-use super::{FileSystem, FileSystemError, Result};
+use super::{cache, FileSystem, FileSystemError, Result};
 
 static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 
@@ -358,7 +351,7 @@ impl From<FileType> for aero_syscall::SysFileType {
         match file {
             FileType::File => aero_syscall::SysFileType::File,
             FileType::Directory => aero_syscall::SysFileType::Directory,
-            FileType::Device => aero_syscall::SysFileType::CharDevice, /* FIXME: determine if it */
+            FileType::Device => aero_syscall::SysFileType::CharDevice, // FIXME: determine if it
             // is a character or
             // block device.
             FileType::Socket => aero_syscall::SysFileType::Socket,
@@ -393,13 +386,11 @@ impl DirEntry {
     pub fn new(parent: DirCacheItem, inode: INodeCacheItem, name: String) -> DirCacheItem {
         let dcache = cache::dcache();
 
-        /*
-         * Helper bool to avoid situations where the directory entry is already cached. The
-         * possible cases are:
-         *
-         * "." (ie. we do not want to re-cache the current directory)
-         * ".." (ie. we do not want to re-cache the current directory's, parent directory).
-         */
+        // Helper bool to avoid situations where the directory entry is already cached. The
+        // possible cases are:
+        //
+        // "." (ie. we do not want to re-cache the current directory)
+        // ".." (ie. we do not want to re-cache the current directory's, parent directory).
         let cache_me = ![".", ".."].contains(&name.as_str());
 
         let entry = Self {

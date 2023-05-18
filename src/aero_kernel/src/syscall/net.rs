@@ -6,8 +6,7 @@ use aero_syscall::*;
 use alloc::sync::Arc;
 
 use crate::fs::cache::DirCacheItem;
-use crate::fs::inode::DirEntry;
-use crate::fs::inode::INodeInterface;
+use crate::fs::inode::{DirEntry, INodeInterface};
 use crate::mem::paging::VirtAddr;
 
 use crate::socket::tcp::TcpSocket;

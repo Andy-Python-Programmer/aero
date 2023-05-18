@@ -20,13 +20,15 @@ pub trait QueueType {
 }
 
 impl QueueType for Completion {
-    const DOORBELL_OFFSET: usize = 1;
     type Type = CompletionEntry;
+
+    const DOORBELL_OFFSET: usize = 1;
 }
 
 impl QueueType for Submission {
-    const DOORBELL_OFFSET: usize = 0;
     type Type = Command;
+
+    const DOORBELL_OFFSET: usize = 0;
 }
 
 #[repr(C)]

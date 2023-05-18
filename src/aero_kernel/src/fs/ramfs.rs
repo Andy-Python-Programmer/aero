@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
@@ -30,11 +28,13 @@ use spin::RwLock;
 use crate::mem::paging::*;
 use crate::utils::sync::Mutex;
 
-use super::cache::{self, CacheWeak};
-use super::cache::{CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem};
+use super::cache::{
+    self, CacheWeak, CachedINode, DirCacheItem, INodeCacheItem, INodeCacheWeakItem,
+};
 use super::devfs::DevINode;
-use super::inode::{DirEntry, FileType, INodeInterface, PollFlags, PollTable};
-use super::inode::{FileContents, Metadata};
+use super::inode::{
+    DirEntry, FileContents, FileType, INodeInterface, Metadata, PollFlags, PollTable,
+};
 use super::{FileSystem, FileSystemError, Result};
 
 #[derive(Default)]
@@ -328,7 +328,7 @@ impl INodeInterface for LockedRamINode {
             id: this.id,
             file_type: this.file_type,
             size: match &this.contents {
-                FileContents::Content(bytes) => bytes.lock().len(), /* Temporary value dropped */
+                FileContents::Content(bytes) => bytes.lock().len(), // Temporary value dropped
                 // and lock is unlocked!
                 FileContents::StaticContent(bytes) => bytes.len(),
                 _ => 0x00,

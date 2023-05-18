@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 //! The GDT contains entries telling the CPU about memory segments.
 //!
@@ -169,13 +167,13 @@ static GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
 struct GdtAccessFlags;
 
 impl GdtAccessFlags {
+    const EXECUTABLE: u8 = 1 << 3;
     const NULL: u8 = 0;
     const PRESENT: u8 = 1 << 7;
+    const PRIVILEGE: u8 = 1 << 1;
     const RING_0: u8 = 0 << 5;
     const RING_3: u8 = 3 << 5;
     const SYSTEM: u8 = 1 << 4;
-    const EXECUTABLE: u8 = 1 << 3;
-    const PRIVILEGE: u8 = 1 << 1;
     const TSS_AVAIL: u8 = 9;
 }
 
@@ -380,16 +378,14 @@ pub fn init() {
 
 #[inline(always)]
 unsafe fn load_cs(selector: SegmentSelector) {
-    /*
-     * NOTE: We cannot directly move into CS since x86 requires the IP
-     * and CS set at the same time. To do this, we need push the new segment
-     * selector and return value onto the stack and far return to reload CS and
-     * continue execution.
-     *
-     * We also cannot use a far call or a far jump since we would only be
-     * able to jump to 32-bit instruction pointers. Only Intel supports for
-     * 64-bit far calls/jumps in long-mode, AMD does not.
-     */
+    // NOTE: We cannot directly move into CS since x86 requires the IP
+    // and CS set at the same time. To do this, we need push the new segment
+    // selector and return value onto the stack and far return to reload CS and
+    // continue execution.
+    //
+    // We also cannot use a far call or a far jump since we would only be
+    // able to jump to 32-bit instruction pointers. Only Intel supports for
+    // 64-bit far calls/jumps in long-mode, AMD does not.
     asm!(
         "push {selector}",
         "lea {tmp}, [1f + rip]",

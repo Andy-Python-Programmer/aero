@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 // Some code borrowed from the x86_64 crate (MIT + Apache) and add support for 5-level paging
 // and some kernel specific features that cannot be directly done in the crate itself.
@@ -24,13 +22,10 @@ use core::ops::Range;
 
 use crate::mem::AddressSpace;
 
-use super::{
-    addr::{PhysAddr, VirtAddr},
-    page::PhysFrame,
-    page::{AddressNotAligned, Page, PageSize, Size1GiB, Size2MiB, Size4KiB},
-    page_table::{FrameError, PageTable, PageTableEntry, PageTableFlags},
-    FRAME_ALLOCATOR,
-};
+use super::addr::{PhysAddr, VirtAddr};
+use super::page::{AddressNotAligned, Page, PageSize, PhysFrame, Size1GiB, Size2MiB, Size4KiB};
+use super::page_table::{FrameError, PageTable, PageTableEntry, PageTableFlags};
+use super::FRAME_ALLOCATOR;
 
 /// A trait for types that can allocate a frame of memory.
 ///

@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use alloc::alloc::Global;
 use alloc::sync::Arc;
@@ -234,15 +232,11 @@ pub enum Bar {
 pub enum DeviceType {
     Unknown,
 
-    /*
-     * Base Class 0x00 - Devices that predate Class Codes
-     */
+    // Base Class 0x00 - Devices that predate Class Codes
     LegacyVgaCompatible,
     LegacyNotVgaCompatible,
 
-    /*
-     * Base Class 0x01 - Mass Storage Controllers
-     */
+    // Base Class 0x01 - Mass Storage Controllers
     ScsiBusController,
     IdeController,
     FloppyController,
@@ -254,9 +248,7 @@ pub enum DeviceType {
     NvmeController,
     OtherMassStorageController,
 
-    /*
-     * Base Class 0x02 - Network Controllers
-     */
+    // Base Class 0x02 - Network Controllers
     EthernetController,
     TokenRingController,
     FddiController,
@@ -265,32 +257,24 @@ pub enum DeviceType {
     PicmgController,
     OtherNetworkController,
 
-    /*
-     * Base Class 0x03 - Display Controllers
-     */
+    // Base Class 0x03 - Display Controllers
     VgaCompatibleController,
     XgaController,
     ThreeDController,
     OtherDisplayController,
 
-    /*
-     * Base Class 0x04 - Multimedia Devices
-     */
+    // Base Class 0x04 - Multimedia Devices
     VideoDevice,
     AudioDevice,
     TelephonyDevice,
     OtherMultimediaDevice,
 
-    /*
-     * Base Class 0x05 - Memory Controllers
-     */
+    // Base Class 0x05 - Memory Controllers
     RamController,
     FlashController,
     OtherMemoryController,
 
-    /*
-     * Base Class 0x06 - Bridge Devices
-     */
+    // Base Class 0x06 - Bridge Devices
     HostBridge,
     IsaBridge,
     EisaBridge,
@@ -304,9 +288,7 @@ pub enum DeviceType {
     InfinibandPciHostBridge,
     OtherBridgeDevice,
 
-    /*
-     * Base Class 0x07 - Simple Communications Controllers
-     */
+    // Base Class 0x07 - Simple Communications Controllers
     SerialController,
     ParallelPort,
     MultiportSerialController,
@@ -315,9 +297,7 @@ pub enum DeviceType {
     SmartCard,
     OtherCommunicationsDevice,
 
-    /*
-     * Base Class 0x08 - Generic System Peripherals
-     */
+    // Base Class 0x08 - Generic System Peripherals
     InterruptController,
     DmaController,
     SystemTimer,
@@ -326,9 +306,7 @@ pub enum DeviceType {
     SdHostController,
     OtherSystemPeripheral,
 
-    /*
-     * Base Class 0x09 - Input Devices
-     */
+    // Base Class 0x09 - Input Devices
     KeyboardController,
     Digitizer,
     MouseController,
@@ -336,15 +314,11 @@ pub enum DeviceType {
     GameportController,
     OtherInputController,
 
-    /*
-     * Base Class 0x0a - Docking Stations
-     */
+    // Base Class 0x0a - Docking Stations
     GenericDockingStation,
     OtherDockingStation,
 
-    /*
-     * Base Class 0x0b - Processors
-     */
+    // Base Class 0x0b - Processors
     Processor386,
     Processor486,
     ProcessorPentium,
@@ -353,9 +327,7 @@ pub enum DeviceType {
     ProcessorMips,
     CoProcessor,
 
-    /*
-     * Base Class 0x0c - Serial Bus Controllers
-     */
+    // Base Class 0x0c - Serial Bus Controllers
     FirewireController,
     AccessBusController,
     SsaBusController,
@@ -367,9 +339,7 @@ pub enum DeviceType {
     SercosController,
     CanBusController,
 
-    /*
-     * Base Class 0x0d - Wireless Controllers
-     */
+    // Base Class 0x0d - Wireless Controllers
     IrdaController,
     ConsumerIrController,
     RfController,
@@ -379,29 +349,21 @@ pub enum DeviceType {
     Ethernet24GHzController,
     OtherWirelessController,
 
-    /*
-     * Base Class 0x0e - Intelligent IO Controllers
-     */
+    // Base Class 0x0e - Intelligent IO Controllers
     IntelligentIoController,
 
-    /*
-     * Base Class 0x0f - Satellite Communications Controllers
-     */
+    // Base Class 0x0f - Satellite Communications Controllers
     TvSatelliteCommunicationsController,
     AudioSatelliteCommunicationsController,
     VoiceSatelliteCommunicationsController,
     DataSatelliteCommunicationsController,
 
-    /*
-     * Base Class 0x10 - Encryption and Decryption Controllers
-     */
+    // Base Class 0x10 - Encryption and Decryption Controllers
     NetworkCryptionController,
     EntertainmentCryptionController,
     OtherCryptionController,
 
-    /*
-     * Base Class 0x11 - Data Acquisition and Signal Processing Controllers
-     */
+    // Base Class 0x11 - Data Acquisition and Signal Processing Controllers
     DpioModule,
     PerformanceCounter,
     CommunicationsSynchronizationController,
@@ -838,11 +800,9 @@ pub fn init(offset_table: &mut OffsetPageTable) {
         let _entry_count = mcfg_table.entry_count();
     }
 
-    /*
-     * Use the brute force method to go through each possible bus,
-     * device, function ID and check if we have a driver for it. If a driver
-     * for the PCI device is found then initialize it.
-     */
+    // Use the brute force method to go through each possible bus,
+    // device, function ID and check if we have a driver for it. If a driver
+    // for the PCI device is found then initialize it.
     for bus in 0..255 {
         for device in 0..32 {
             let function_count = if PciHeader::new(bus, device, 0x00).has_multiple_functions() {

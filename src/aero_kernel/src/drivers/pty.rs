@@ -1,55 +1,42 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use aero_syscall::Termios;
-use aero_syscall::WinSize;
+use aero_syscall::{Termios, WinSize};
 use alloc::collections::BTreeMap;
 use alloc::string::ToString;
-use alloc::sync::Arc;
-use alloc::sync::Weak;
+use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::{Once, RwLock};
 
 use uapi::pty::*;
 
-use crate::fs::cache;
 use crate::fs::cache::*;
-use crate::fs::devfs;
 use crate::fs::devfs::DEV_FILESYSTEM;
-use crate::fs::inode::FileType;
-use crate::fs::inode::PollFlags;
-use crate::fs::inode::{DirEntry, INodeInterface};
-use crate::fs::FileSystem;
-use crate::fs::Path;
-use crate::fs::MOUNT_MANAGER;
-use crate::fs::{self, FileSystemError};
+use crate::fs::inode::{DirEntry, FileType, INodeInterface, PollFlags};
+use crate::fs::{self, cache, devfs, FileSystem, FileSystemError, Path, MOUNT_MANAGER};
 
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::scheduler::ExitStatus;
 use crate::userland::task::Task;
-use crate::userland::terminal::LineDiscipline;
-use crate::userland::terminal::TerminalDevice;
-use crate::utils::sync::Mutex;
-use crate::utils::sync::WaitQueue;
+use crate::userland::terminal::{LineDiscipline, TerminalDevice};
+use crate::utils::sync::{Mutex, WaitQueue};
 
 lazy_static::lazy_static! {
     static ref PTMX: Arc<Ptmx> = Arc::new(Ptmx::new());

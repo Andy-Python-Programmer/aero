@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use core::fmt::Write;
 
@@ -30,14 +28,11 @@ use xmas_elf::program::*;
 use xmas_elf::*;
 
 use crate::arch::task::userland_last_address;
-use crate::fs;
-use crate::fs::cache::DirCacheImpl;
-use crate::fs::cache::DirCacheItem;
-use crate::fs::FileSystemError;
-use crate::fs::Path;
-use crate::mem;
+use crate::fs::cache::{DirCacheImpl, DirCacheItem};
+use crate::fs::{FileSystemError, Path};
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
+use crate::{fs, mem};
 
 use crate::syscall::ExecArgs;
 use crate::utils::sync::BMutex;
@@ -963,31 +958,29 @@ impl VmProtected {
                 }
 
                 #[rustfmt::skip]
-                /*
-                 * The last non-bss frame of the segment consists partly of data and partly of bss
-                 * memory, which must be zeroed. Unfortunately, the file representation might have
-                 * reused the part of the frame that should be zeroed to store the next segment. This
-                 * means that we can't simply overwrite that part with zeroes, as we might overwrite
-                 * other data this way.
-                 *
-                 * Example:
-                 *
-                 *   XXXXXXXXXXXXXXX000000YYYYYYY000ZZZZZZZZZZZ     virtual memory (XYZ are data)
-                 *   |·············|     /·····/   /·········/
-                 *   |·············| ___/·····/   /·········/
-                 *   |·············|/·····/‾‾‾   /·········/
-                 *   |·············||·····|/·̅·̅·̅·̅·̅·····/‾‾‾‾
-                 *   XXXXXXXXXXXXXXXYYYYYYYZZZZZZZZZZZ              file memory (zeros are not saved)
-                 *   '       '       '       '        '
-                 *   The areas filled with dots (`·`) indicate a mapping between virtual and file
-                 *   memory. We see that the data regions `X`, `Y`, `Z` have a valid mapping, while
-                 *   the regions that are initialized with 0 have not.
-                 *
-                 *   The ticks (`'`) below the file memory line indicate the start of a new frame. We
-                 *   see that the last frames of the `X` and `Y` regions in the file are followed
-                 *   by the bytes of the next region. So we can't zero these parts of the frame
-                 *   because they are needed by other memory regions.
-                 */
+                // The last non-bss frame of the segment consists partly of data and partly of bss
+                // memory, which must be zeroed. Unfortunately, the file representation might have
+                // reused the part of the frame that should be zeroed to store the next segment. This
+                // means that we can't simply overwrite that part with zeroes, as we might overwrite
+                // other data this way.
+                //
+                // Example:
+                //
+                //  XXXXXXXXXXXXXXX000000YYYYYYY000ZZZZZZZZZZZ     virtual memory (XYZ are data)
+                //  |·············|     /·····/   /·········/
+                //  |·············| ___/·····/   /·········/
+                //  |·············|/·····/‾‾‾   /·········/
+                //  |·············||·····|/·̅·̅·̅·̅·̅·····/‾‾‾‾
+                //  XXXXXXXXXXXXXXXYYYYYYYZZZZZZZZZZZ              file memory (zeros are not saved)
+                //  '       '       '       '        '
+                //  The areas filled with dots (`·`) indicate a mapping between virtual and file
+                //  memory. We see that the data regions `X`, `Y`, `Z` have a valid mapping, while
+                //  the regions that are initialized with 0 have not.
+                //
+                //  The ticks (`'`) below the file memory line indicate the start of a new frame. We
+                //  see that the last frames of the `X` and `Y` regions in the file are followed
+                //  by the bytes of the next region. So we can't zero these parts of the frame
+                //  because they are needed by other memory regions.
                 let address = self
                     .mmap(
                         virtual_start,

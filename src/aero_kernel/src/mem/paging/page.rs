@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 //! Abstractions for default-sized and huge virtual memory pages.
 
@@ -148,6 +146,7 @@ impl<S: PageSize> fmt::Debug for Page<S> {
 
 impl<S: PageSize> Add<u64> for Page<S> {
     type Output = Self;
+
     #[inline]
     fn add(self, rhs: u64) -> Self::Output {
         Page::containing_address(self.start_address() + rhs * S::SIZE)
@@ -163,6 +162,7 @@ impl<S: PageSize> AddAssign<u64> for Page<S> {
 
 impl<S: PageSize> Sub<u64> for Page<S> {
     type Output = Self;
+
     #[inline]
     fn sub(self, rhs: u64) -> Self::Output {
         Page::containing_address(self.start_address() - rhs * S::SIZE)
@@ -178,6 +178,7 @@ impl<S: PageSize> SubAssign<u64> for Page<S> {
 
 impl<S: PageSize> Sub<Self> for Page<S> {
     type Output = u64;
+
     #[inline]
     fn sub(self, rhs: Self) -> Self::Output {
         (self.start_address - rhs.start_address) / S::SIZE
@@ -289,6 +290,7 @@ impl<S: PageSize> fmt::Debug for PhysFrame<S> {
 
 impl<S: PageSize> Add<u64> for PhysFrame<S> {
     type Output = Self;
+
     #[inline]
     fn add(self, rhs: u64) -> Self::Output {
         PhysFrame::containing_address(self.start_address() + rhs * S::SIZE)
@@ -304,6 +306,7 @@ impl<S: PageSize> AddAssign<u64> for PhysFrame<S> {
 
 impl<S: PageSize> Sub<u64> for PhysFrame<S> {
     type Output = Self;
+
     #[inline]
     fn sub(self, rhs: u64) -> Self::Output {
         PhysFrame::containing_address(self.start_address() - rhs * S::SIZE)
@@ -319,6 +322,7 @@ impl<S: PageSize> SubAssign<u64> for PhysFrame<S> {
 
 impl<S: PageSize> Sub<PhysFrame<S>> for PhysFrame<S> {
     type Output = u64;
+
     #[inline]
     fn sub(self, rhs: PhysFrame<S>) -> Self::Output {
         (self.start_address - rhs.start_address) / S::SIZE

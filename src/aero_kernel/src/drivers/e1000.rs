@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use alloc::sync::Arc;
 use spin::Once;
@@ -27,8 +25,7 @@ use crate::mem::paging::*;
 use crate::userland::scheduler;
 use crate::utils::sync::{Mutex, WaitQueue};
 
-use crate::net::{self, ethernet, NetworkDevice};
-use crate::net::{MacAddr, NetworkDriver, PacketBaseTrait};
+use crate::net::{self, ethernet, MacAddr, NetworkDevice, NetworkDriver, PacketBaseTrait};
 
 const TX_DESC_NUM: u32 = 32;
 const TX_DESC_SIZE: u32 = TX_DESC_NUM * core::mem::size_of::<TxDescriptor>() as u32;

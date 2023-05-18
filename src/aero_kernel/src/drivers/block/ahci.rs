@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use alloc::sync::Arc;
 
@@ -23,7 +21,8 @@ use alloc::vec::Vec;
 use bit_field::BitField;
 use spin::Once;
 
-use crate::mem::{paging::*, AddressSpace};
+use crate::mem::paging::*;
+use crate::mem::AddressSpace;
 
 use crate::utils::sync::Mutex;
 use crate::utils::{CeilDiv, VolatileCell};
@@ -564,10 +563,8 @@ impl HbaPort {
     fn start(&mut self, offset_table: &mut OffsetPageTable) -> Result<(), MapToError<Size4KiB>> {
         self.stop_cmd(); // Stop the command engine before starting the port
 
-        /*
-         * size = sizeof(CTB) * 32 == 4KiB * 2 (so we need to allocate
-         * two 4KiB size frames).
-         */
+        // size = sizeof(CTB) * 32 == 4KiB * 2 (so we need to allocate
+        // two 4KiB size frames).
         let frame_addr = pmm_alloc(BuddyOrdering::Size8KiB);
         let page_addr = crate::IO_VIRTUAL_BASE + frame_addr.as_u64();
 

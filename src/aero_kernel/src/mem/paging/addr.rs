@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2023 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2023 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 //! Physical and virtual addresses manipulation
 
@@ -261,6 +259,7 @@ impl fmt::Pointer for VirtAddr {
 
 impl Add<u64> for VirtAddr {
     type Output = Self;
+
     #[inline]
     fn add(self, rhs: u64) -> Self::Output {
         VirtAddr::new(self.0 + rhs)
@@ -277,6 +276,7 @@ impl AddAssign<u64> for VirtAddr {
 #[cfg(target_pointer_width = "64")]
 impl Add<usize> for VirtAddr {
     type Output = Self;
+
     #[inline]
     fn add(self, rhs: usize) -> Self::Output {
         self + rhs as u64
@@ -293,6 +293,7 @@ impl AddAssign<usize> for VirtAddr {
 
 impl Sub<u64> for VirtAddr {
     type Output = Self;
+
     #[inline]
     fn sub(self, rhs: u64) -> Self::Output {
         VirtAddr::new(self.0.checked_sub(rhs).unwrap())
@@ -309,6 +310,7 @@ impl SubAssign<u64> for VirtAddr {
 #[cfg(target_pointer_width = "64")]
 impl Sub<usize> for VirtAddr {
     type Output = Self;
+
     #[inline]
     fn sub(self, rhs: usize) -> Self::Output {
         self - rhs as u64
@@ -325,6 +327,7 @@ impl SubAssign<usize> for VirtAddr {
 
 impl Sub<VirtAddr> for VirtAddr {
     type Output = u64;
+
     #[inline]
     fn sub(self, rhs: VirtAddr) -> Self::Output {
         self.as_u64().checked_sub(rhs.as_u64()).unwrap()
@@ -478,6 +481,7 @@ impl fmt::Pointer for PhysAddr {
 
 impl Add<u64> for PhysAddr {
     type Output = Self;
+
     fn add(self, rhs: u64) -> Self::Output {
         PhysAddr::new(self.0 + rhs)
     }
@@ -492,6 +496,7 @@ impl AddAssign<u64> for PhysAddr {
 #[cfg(target_pointer_width = "64")]
 impl Add<usize> for PhysAddr {
     type Output = Self;
+
     fn add(self, rhs: usize) -> Self::Output {
         self + rhs as u64
     }
@@ -506,6 +511,7 @@ impl AddAssign<usize> for PhysAddr {
 
 impl Sub<u64> for PhysAddr {
     type Output = Self;
+
     fn sub(self, rhs: u64) -> Self::Output {
         PhysAddr::new(self.0.checked_sub(rhs).unwrap())
     }
@@ -520,6 +526,7 @@ impl SubAssign<u64> for PhysAddr {
 #[cfg(target_pointer_width = "64")]
 impl Sub<usize> for PhysAddr {
     type Output = Self;
+
     #[inline]
     fn sub(self, rhs: usize) -> Self::Output {
         self - rhs as u64
@@ -535,6 +542,7 @@ impl SubAssign<usize> for PhysAddr {
 
 impl Sub<PhysAddr> for PhysAddr {
     type Output = u64;
+
     fn sub(self, rhs: PhysAddr) -> Self::Output {
         self.as_u64().checked_sub(rhs.as_u64()).unwrap()
     }

@@ -127,10 +127,8 @@ pub(super) fn init() {
     assert!(has_syscall);
 
     unsafe {
-        /*
-         * Enable support for `syscall` and `sysret` instructions if the current
-         * CPU supports them and the target pointer width is 64.
-         */
+        // Enable support for `syscall` and `sysret` instructions if the current
+        // CPU supports them and the target pointer width is 64.
         let syscall_base = GdtEntryType::KERNEL_CODE << 3;
         let sysret_base = (GdtEntryType::KERNEL_TLS << 3) | 3;
 
@@ -147,14 +145,12 @@ pub(super) fn init() {
         io::wrmsr(io::IA32_EFER, efer | 1);
     }
 
-    /*
-     * Enable support for the `sysenter` instruction for system calls.
-     *
-     * This instruction is only supported on AMD processors in Legacy mode,
-     * not in Long mode (Compatibility or 64-bit modes), so still report support
-     * for it via `cpuid`. In this case the #UD exception is caught to handle the
-     * system call.
-     */
+    // Enable support for the `sysenter` instruction for system calls.
+    //
+    // This instruction is only supported on AMD processors in Legacy mode,
+    // not in Long mode (Compatibility or 64-bit modes), so still report support
+    // for it via `cpuid`. In this case the #UD exception is caught to handle the
+    // system call.
     let has_sysenter = cpuid
         .get_feature_info()
         .map_or(false, |i| i.has_sysenter_sysexit());
