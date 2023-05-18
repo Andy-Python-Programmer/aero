@@ -25,7 +25,7 @@ use alloc::boxed::Box;
 
 use limine::Framebuffer;
 use spin::Once;
-use vte::ansi::{NamedColor, Timeout};
+use vte::ansi::{Handler, NamedColor, Timeout};
 
 use crate::cmdline::CommandLine;
 use crate::mem;
@@ -514,10 +514,6 @@ impl<'a> Inner<'a> {
         }
     }
 
-    fn set_auto_flush(&mut self, yes: bool) {
-        self.auto_flush = yes;
-    }
-
     fn draw_cursor(&mut self) {
         let i = self.x_pos + self.y_pos * self.cols;
         let mut char;
@@ -708,24 +704,6 @@ impl<'a> Inner<'a> {
         }
     }
 
-    fn backspace(&mut self) {
-        let empty = Character {
-            char: ' ',
-            fg: self.color.get_foreground(),
-            bg: self.color.get_background(),
-        };
-
-        if self.x_pos == 0 {
-            self.y_pos -= 1;
-            self.x_pos = self.cols - 1;
-        } else {
-            self.x_pos -= 1;
-        }
-
-        self.push_to_queue(&empty, self.x_pos, self.y_pos);
-        self.double_buffer_flush();
-    }
-
     fn set_cursor_position(&mut self, x: usize, y: usize) {
         assert!(x <= self.cols && y <= self.rows);
 
@@ -842,8 +820,27 @@ impl<'a> vte::ansi::Handler for Inner<'a> {
         }
     }
 
+    #[inline]
     fn linefeed(&mut self) {
         self.input('\n');
+    }
+
+    fn backspace(&mut self) {
+        let empty = Character {
+            char: ' ',
+            fg: self.color.get_foreground(),
+            bg: self.color.get_background(),
+        };
+
+        if self.x_pos == 0 {
+            self.y_pos -= 1;
+            self.x_pos = self.cols - 1;
+        } else {
+            self.x_pos -= 1;
+        }
+
+        self.push_to_queue(&empty, self.x_pos, self.y_pos);
+        self.double_buffer_flush();
     }
 
     fn terminal_attribute(&mut self, attr: Attr) {
@@ -944,25 +941,6 @@ pub fn backspace() {
     DEBUG_RENDY.get().map(|l| l.lock_irq().backspace());
 }
 
-pub fn set_text_color(fg: u32, bg: u32) {
-    DEBUG_RENDY
-        .get()
-        .map(|l| l.lock_irq().color = ColorCode::new(fg, bg));
-}
-
-pub fn set_text_fg(fg: u32) {
-    DEBUG_RENDY.get().map(|l| l.lock_irq().color.0 = fg);
-}
-
-pub fn set_text_bg(bg: u32) {
-    DEBUG_RENDY.get().map(|l| l.lock_irq().color.1 = bg);
-}
-
-/// Resets the text foreground and background to their default values.
-pub fn reset_default() {
-    set_text_color(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
-}
-
 /// Returns the terminal's resolution in the form of a `(horizontal_resolution,
 /// vertical_resolution)` tuple.
 ///
@@ -1028,44 +1006,6 @@ pub fn set_cursor_position(x: usize, y: usize) {
     DEBUG_RENDY
         .get()
         .map(|l| l.lock_irq().set_cursor_position(x, y));
-}
-
-pub fn set_cursor_visibility(yes: bool) {
-    DEBUG_RENDY
-        .get()
-        .map(|l| l.lock_irq().cursor_visibility = yes);
-}
-
-/// Returns a tuple of the amount of `(rows, columns)` in the terminal.
-///
-/// ## Panics
-/// This function was called before the terminal was initialized.
-pub fn get_term_info() -> (usize, usize) {
-    DEBUG_RENDY
-        .get()
-        .map(|l| {
-            let lock = l.lock_irq();
-            (lock.rows, lock.cols)
-        })
-        .expect("get_term_info: invoked before the terminal was initialized")
-}
-
-/// ## Panics
-/// This function was called before the terminal was initialized.
-pub fn set_auto_flush(yes: bool) {
-    DEBUG_RENDY
-        .get()
-        .map(|e| e.lock_irq().set_auto_flush(yes))
-        .expect("set_auto_flush: invoked before the terminal was initialized");
-}
-
-/// ## Panics
-/// This function was called before the terminal was initialized.
-pub fn double_buffer_flush() {
-    DEBUG_RENDY
-        .get()
-        .map(|e| e.lock_irq().double_buffer_flush())
-        .expect("double_buffer_flush: invoked before the terminal was initialized");
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.
