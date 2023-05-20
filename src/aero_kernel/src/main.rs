@@ -44,7 +44,8 @@
     pointer_is_aligned,
     const_trait_impl,
     int_roundings,
-    const_ptr_is_null
+    const_ptr_is_null,
+    trait_upcasting, // https://github.com/rust-lang/rust/issues/65991
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]

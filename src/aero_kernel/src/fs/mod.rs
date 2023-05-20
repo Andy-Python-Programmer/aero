@@ -131,6 +131,7 @@ pub enum FileSystemError {
     ConnectionRefused,
     NotConnected,
     WouldBlock,
+    NoTty,
 }
 
 impl From<FileSystemError> for SyscallError {
@@ -150,6 +151,7 @@ impl From<FileSystemError> for SyscallError {
             FileSystemError::IsDir => Self::EISDIR,
             FileSystemError::NotConnected => Self::ENOTCONN,
             FileSystemError::WouldBlock => Self::EAGAIN,
+            FileSystemError::NoTty => Self::ENOTTY,
         }
     }
 }

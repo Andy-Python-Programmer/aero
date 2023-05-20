@@ -22,6 +22,7 @@ use alloc::vec::Vec;
 
 use spin::RwLock;
 
+use crate::fs::inode::INodeInterface;
 use crate::utils::sync::{Mutex, WaitQueue};
 
 use super::signals::SignalError;
@@ -29,7 +30,8 @@ use super::task::sessions::{Group, SESSIONS};
 use super::task::Task;
 
 /// Terminal Device
-pub trait TerminalDevice: Send + Sync {
+#[downcastable]
+pub trait TerminalDevice: Send + Sync + INodeInterface {
     /// Called when a session leader is attached/connected to the terminal device.
     ///
     /// The processs group of `task` will be set as the active process group that is associated with

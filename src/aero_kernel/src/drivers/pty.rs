@@ -156,23 +156,23 @@ impl INodeInterface for Master {
     }
 }
 
-impl TerminalDevice for Master {
+impl TerminalDevice for Slave {
     fn attach(&self, task: Arc<Task>) {
         assert!(task.is_session_leader());
-        self.discipline.set_foreground(task);
+        self.master.discipline.set_foreground(task);
     }
 
     fn detach(&self, task: Arc<Task>) {
         use aero_syscall::signal::*;
         use aero_syscall::*;
 
-        if !self.is_cooked() {
+        if !self.master.is_cooked() {
             return;
         }
 
         if let ExitStatus::Signal(signo) = task.exit_status() {
-            let mut buffer = self.buffer.lock_irq();
-            let termios = self.termios.lock_irq();
+            let mut buffer = self.master.buffer.lock_irq();
+            let termios = self.master.termios.lock_irq();
 
             // converts `X` into `^X` and pushes the result into the master PTY buffer.
             let mut ctrl = |c| {
@@ -188,12 +188,20 @@ impl TerminalDevice for Master {
 }
 
 struct Slave {
+    sref: Weak<Self>,
     master: Arc<Master>,
 }
 
 impl Slave {
-    pub fn new(master: Arc<Master>) -> Self {
-        Self { master }
+    pub fn new(master: Arc<Master>) -> Arc<Self> {
+        Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+            master,
+        })
+    }
+
+    fn sref(&self) -> Arc<Self> {
+        self.sref.upgrade().unwrap()
     }
 }
 
@@ -238,7 +246,7 @@ impl INodeInterface for Slave {
                 let current_task = scheduler::get_scheduler().current_task();
                 assert!(current_task.is_session_leader());
 
-                current_task.attach(self.master.clone());
+                current_task.attach(self.sref());
                 Ok(0)
             }
 
@@ -327,7 +335,7 @@ impl INodeInterface for Ptmx {
         _handle: Arc<fs::file_table::FileHandle>,
     ) -> fs::Result<Option<DirCacheItem>> {
         let master = Arc::new(Master::new());
-        let slave = Arc::new(Slave::new(master.clone()));
+        let slave = Slave::new(master.clone());
         let inode = DirEntry::from_inode(master, String::from("<pty>"));
 
         PTS_FS.get().unwrap().insert_slave(slave);

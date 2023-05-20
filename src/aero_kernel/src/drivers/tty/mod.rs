@@ -15,6 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+// `/dev/ctty`: controlling terminal of the process
+// `/dev/vtty[0-9]`: virtual terminals
+
+mod ctty;
+
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::sync::{Arc, Weak};
@@ -538,6 +543,7 @@ impl KeyboardListener for Tty {
 
 fn init_tty() {
     devfs::install_device(TTY.clone()).expect("failed to register tty as a device");
+    ctty::init().unwrap();
 }
 
 crate::module_init!(init_tty, ModuleType::Other);

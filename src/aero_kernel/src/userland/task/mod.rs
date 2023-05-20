@@ -699,6 +699,11 @@ impl Task {
         }
     }
 
+    /// Returns the controlling terminal of the task.
+    pub fn controlling_terminal(&self) -> Option<Arc<dyn TerminalDevice>> {
+        self.controlling_terminal.lock_irq().clone()
+    }
+
     /// Returns whether the task is the session leader (`pid` == `sid`).
     pub fn is_session_leader(&self) -> bool {
         self.session_id() == self.pid().as_usize()
