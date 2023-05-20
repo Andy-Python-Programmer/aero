@@ -24,9 +24,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm meson ninja-build
+        sudo apt-get install -y nasm
         python3 -m pip install requests xbstrap
-        sudo ./tools/deps.sh
     - name: Build Documentation
       run: ./aero.py --document
     - name: Formatting Check
