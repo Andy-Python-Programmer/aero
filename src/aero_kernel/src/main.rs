@@ -26,25 +26,25 @@
 //! * <https://en.wikipedia.org/wiki/Unix>
 
 #![feature(
-    custom_test_frameworks,
-    alloc_error_handler,
-    lang_items,
-    panic_info_message,
-    decl_macro,
-    ptr_internals,
-    linked_list_cursors,
-    extern_types,
-    new_uninit,
-    step_trait,
-    prelude_import,
-    allocator_api,
-    maybe_uninit_write_slice,
-    slice_ptr_get,
-    maybe_uninit_as_bytes,
-    pointer_is_aligned,
-    const_trait_impl,
-    int_roundings,
-    const_ptr_is_null,
+    custom_test_frameworks, // https://github.com/rust-lang/rust/issues/50297
+    alloc_error_handler, // https://github.com/rust-lang/rust/issues/51540
+    lang_items, // No tracking issue
+    panic_info_message, // https://github.com/rust-lang/rust/issues/66745
+    decl_macro, // https://github.com/rust-lang/rust/issues/39412
+    ptr_internals, // No tracking issue
+    linked_list_cursors, // https://github.com/rust-lang/rust/issues/58533
+    extern_types, // https://github.com/rust-lang/rust/issues/43467
+    new_uninit, // https://github.com/rust-lang/rust/issues/63291
+    step_trait, // https://github.com/rust-lang/rust/issues/42168
+    prelude_import, // No tracking issue
+    allocator_api, // https://github.com/rust-lang/rust/issues/32838
+    maybe_uninit_write_slice, // https://github.com/rust-lang/rust/issues/79995
+    slice_ptr_get, // https://github.com/rust-lang/rust/issues/74265
+    maybe_uninit_as_bytes, // https://github.com/rust-lang/rust/issues/93092
+    pointer_is_aligned, // https://github.com/rust-lang/rust/issues/96284
+    const_trait_impl, // https://github.com/rust-lang/rust/issues/67792
+    int_roundings, // https://github.com/rust-lang/rust/issues/88581
+    const_ptr_is_null, // https://github.com/rust-lang/rust/issues/74939
     trait_upcasting, // https://github.com/rust-lang/rust/issues/65991
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
