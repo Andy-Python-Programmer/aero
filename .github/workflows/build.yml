@@ -9,6 +9,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+  RED: '\033[1;31m'
+  NOCOLOR: '\033[0m'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,8 +27,12 @@ jobs:
         sudo apt-get install -y nasm meson ninja-build
         python3 -m pip install requests xbstrap
         sudo ./tools/deps.sh
-    - name: Build documentation
+    - name: Build Documentation
       run: ./aero.py --document
+    - name: Formatting Check
+      run: |
+        ./aero.py --fmt
+        git diff-index --quiet HEAD -- || (printf "${RED}error${NOCOLOR}: formatting check failed, run \`./aero.py --fmt\`\n" && exit 1)
     - name: Deploy documentation
       uses: peaceiris/actions-gh-pages@v3
       if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
