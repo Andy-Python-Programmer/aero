@@ -1,0 +1,49 @@
+name: Weekly Aero Build
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  aero-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Unshallow repo tags
+        run: git fetch --prune --unshallow --tags
+
+      - name: Check if build is necessary
+        run: test "$(git tag --points-at HEAD)" = ""
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm meson ninja-build
+          python3 -m pip install requests xbstrap
+          sudo ./tools/deps.sh
+      
+      - name: Build Sysroot
+        run: |
+          mkdir build
+
+          pushd build
+          [ -f bootstrap.link ] || xbstrap init ..
+          xbstrap install bash coreutils dwm alacritty
+          popd
+
+      - name: Build Kernel
+        run: ./aero.py --no-run
+      
+      - name: Create weekly release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Weekly Build ${{ env.TAG_DATE }}
+          tag_name: nightly-${{ env.TAG_DATE }}
+          body: Image of an up to date Aero weekly build :^)
+          files: |
+            build/aero.iso
+            build/disk.img
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
