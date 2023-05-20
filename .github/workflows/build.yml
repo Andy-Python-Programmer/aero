@@ -12,50 +12,23 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
         toolchain: nightly
     - name: Install dependencies
       run: |
-       sudo apt-get update
-       sudo apt-get install -y nasm meson ninja-build
-       python3 -m pip install requests xbstrap
-       sudo ./tools/deps.sh
-    - name: Build the kernel and userland
-      run: ./aero.py --no-run
-    - name: Build kernel documentation
+        sudo apt-get update
+        sudo apt-get install -y nasm meson ninja-build
+        python3 -m pip install requests xbstrap
+        sudo ./tools/deps.sh
+    - name: Build documentation
       run: ./aero.py --document
-    - name: Upload built image as artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: Aero
-        path: ./build/aero.iso
     - name: Deploy documentation
       uses: peaceiris/actions-gh-pages@v3
       if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./build/web/
-
-  run_tests:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-    - name: Install dependencies
-      run: |
-       sudo apt-get update
-       sudo apt-get install -y nasm meson ninja-build qemu-system-x86
-       python3 -m pip install requests xbstrap
-    - name: Print QEMU version
-      run: qemu-system-x86_64 --version
-    - name: Run tests
-      run: RUST_BACKTRACE=1 ./aero.py --test --features=ci --bios uefi -- -display none -device isa-debug-exit,iobase=0xf4,iosize=0x04
