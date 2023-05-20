@@ -607,7 +607,8 @@ def main():
         log_error("aarch64 requires UEFI (help: run again with `--bios=uefi`)")
         return
 
-    download_bundled()
+    if not args.document:
+        download_bundled()
 
     if args.only_run:
         iso_path = os.path.join(BUILD_DIR, 'aero.iso')
