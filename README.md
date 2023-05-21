@@ -10,7 +10,7 @@ Aero supports *modern* PC features such as Long Mode, 5-level paging,
 and SMP (multicore), to name a few.
 
 ![workflow](https://github.com/Andy-Python-Programmer/aero/actions/workflows/build.yml/badge.svg)
-[![lines_of_code](https://tokei.rs/b1/github/Andy-Python-Programmer/aero)](https://github.com/Andy-Python-Programmer/aero)
+[![lines_of_code](https://img.shields.io/endpoint?url=https://andypythonappdevelop.npkn.net/f0d517/)](https://github.com/Andy-Python-Programmer/aero)
 [![discord](https://img.shields.io/discord/828564770063122432)](https://discord.gg/8gwhTTZwt8)
 
 **Is this a Linux distribution?**
