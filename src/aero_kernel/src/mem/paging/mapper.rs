@@ -530,17 +530,14 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size2MiB> for MappedPageTable<'a, P> {
         &mut self,
         page: Page<Size2MiB>,
     ) -> Result<(PhysFrame<Size2MiB>, MapperFlush<Size2MiB>), UnmapError> {
-        let p4;
-
-        if self.level_5_paging_enabled {
+        let p4 = if self.level_5_paging_enabled {
             let p5 = &mut self.page_table;
 
-            p4 = self
-                .page_table_walker
-                .next_table_mut(&mut p5[page.p5_index()])?;
+            self.page_table_walker
+                .next_table_mut(&mut p5[page.p5_index()])?
         } else {
-            p4 = &mut self.page_table;
-        }
+            &mut self.page_table
+        };
 
         let p3 = self
             .page_table_walker
@@ -573,17 +570,14 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size2MiB> for MappedPageTable<'a, P> {
         page: Page<Size2MiB>,
         flags: PageTableFlags,
     ) -> Result<MapperFlush<Size2MiB>, FlagUpdateError> {
-        let p4;
-
-        if self.level_5_paging_enabled {
+        let p4 = if self.level_5_paging_enabled {
             let p5 = &mut self.page_table;
 
-            p4 = self
-                .page_table_walker
-                .next_table_mut(&mut p5[page.p5_index()])?;
+            self.page_table_walker
+                .next_table_mut(&mut p5[page.p5_index()])?
         } else {
-            p4 = &mut self.page_table;
-        }
+            &mut self.page_table
+        };
 
         let p3 = self
             .page_table_walker
@@ -1156,9 +1150,7 @@ impl<'a> OffsetPageTable<'a> {
                                i: usize|
          -> Result<(bool, &mut PageTable), MapToError<Size4KiB>> {
             let entry = &mut table[i];
-            let created;
-
-            if !entry.flags().contains(PageTableFlags::PRESENT) {
+            let created = if !entry.flags().contains(PageTableFlags::PRESENT) {
                 let frame = FRAME_ALLOCATOR
                     .allocate_frame()
                     .ok_or(MapToError::FrameAllocationFailed)?;
@@ -1170,7 +1162,7 @@ impl<'a> OffsetPageTable<'a> {
                         | PageTableFlags::USER_ACCESSIBLE,
                 );
 
-                created = true;
+                true
             } else {
                 entry.set_flags(
                     PageTableFlags::PRESENT
@@ -1178,8 +1170,8 @@ impl<'a> OffsetPageTable<'a> {
                         | PageTableFlags::USER_ACCESSIBLE,
                 );
 
-                created = false;
-            }
+                false
+            };
 
             let page_table_ptr = {
                 let addr = entry.frame().unwrap().start_address().as_hhdm_virt();

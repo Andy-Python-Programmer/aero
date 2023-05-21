@@ -383,12 +383,12 @@ pub fn io_apic_set_redirect(vec: u8, gsi: u32, flags: u16, status: i32) {
         let mut redirect = 0x00;
 
         // Active high(0) or low(1)
-        if flags & 2 == 1 {
+        if (flags & (1 << 1)) != 0 {
             redirect |= (1 << 13) as u8;
         }
 
         // Edge(0) or level(1) triggered
-        if flags & 8 == 1 {
+        if (flags & (1 << 3)) != 0 {
             redirect |= (1 << 15) as u8;
         }
 

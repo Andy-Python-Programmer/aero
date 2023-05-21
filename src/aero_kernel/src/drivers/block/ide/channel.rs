@@ -121,7 +121,7 @@ impl IdeChannelData {
         self.base.set_drive_select(slave, false, 0);
         delay(1000);
 
-        self.base.set_command(AtaCommand::AtaCommandIdentifyDevice);
+        self.base.set_command(AtaCommand::IdentifyDevice);
         delay(1000);
 
         let status = self.base.status();
@@ -146,15 +146,7 @@ impl IdeChannelData {
         let lm = self.base.lba_mid();
         let lh = self.base.lba_hi();
 
-        match (lm, lh) {
-            (0x0, 0x0) => {
-                return true;
-            }
-
-            _ => {}
-        }
-
-        false
+        lm == 0 && lh == 0
     }
 
     pub fn setup_prdt(&mut self) {

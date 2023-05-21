@@ -181,10 +181,9 @@ impl TerminalDevice for Slave {
                 buffer.extend_from_slice(&[b'^', c + 0x40]);
             };
 
-            match *signo {
-                SIGINT => ctrl(termios.c_cc[VINTR]),
-                _ => {}
-            };
+            if *signo == SIGINT {
+                ctrl(termios.c_cc[VINTR])
+            }
         }
     }
 }

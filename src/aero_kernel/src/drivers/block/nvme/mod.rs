@@ -103,7 +103,7 @@ impl Capability {
 
 #[repr(u32)]
 enum CommandSet {
-    NVM = 0b000,
+    Nvm = 0b000,
 }
 
 const_assert_eq!(core::mem::size_of::<CommandSet>(), 4);
@@ -329,7 +329,7 @@ impl<'a> Controller<'a> {
         registers.acq.set(admin.completion_addr().as_u64());
 
         // Set the controller configuration and admin queue base addresses.
-        registers.cc.set_css(CommandSet::NVM);
+        registers.cc.set_css(CommandSet::Nvm);
         registers.cc.set_ams(ArbitrationMechanism::RoundRobin);
         registers.cc.set_iosqes(6); // 64 bytes
         registers.cc.set_iocqes(4); // 16 bytes

@@ -415,7 +415,7 @@ impl<'a> Inner<'a> {
 
         self.genloop(image, xstart, xend, ystart, yend, |_, __, color| {
             color_blend(theme_background, color) as usize
-        })
+        });
     }
 
     fn generate_canvas(&mut self, image: Option<Image>) {
@@ -1039,7 +1039,7 @@ pub fn init(framebuffer_tag: &Framebuffer, cmdline: &CommandLine) {
 
     let framebuffer = unsafe {
         core::slice::from_raw_parts_mut::<u32>(
-            framebuffer_tag.address.as_ptr().unwrap() as *mut u32,
+            framebuffer_tag.address.as_ptr().unwrap().cast::<u32>(),
             framebuffer_info.byte_len,
         )
     };

@@ -29,14 +29,14 @@ bitflags::bitflags! {
     /// Represents the flags currently set for the mouse.
     #[derive(Default)]
     pub struct MouseFlags: u8 {
-        const LEFT_BUTTON = 0b00000001;
-        const RIGHT_BUTTON = 0b00000010;
-        const MIDDLE_BUTTON = 0b00000100;
-        const ALWAYS_ONE = 0b00001000;
-        const X_SIGN = 0b00010000;
-        const Y_SIGN = 0b00100000;
-        const X_OVERFLOW = 0b01000000;
-        const Y_OVERFLOW = 0b10000000;
+        const LEFT_BUTTON = 0b0000_0001;
+        const RIGHT_BUTTON = 0b0000_0010;
+        const MIDDLE_BUTTON = 0b0000_0100;
+        const ALWAYS_ONE = 0b0000_1000;
+        const X_SIGN = 0b0001_0000;
+        const Y_SIGN = 0b0010_0000;
+        const X_OVERFLOW = 0b0100_0000;
+        const Y_OVERFLOW = 0b1000_0000;
     }
 }
 

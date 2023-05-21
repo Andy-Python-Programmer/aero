@@ -74,7 +74,7 @@ impl log::Log for AeroLogger {
                         "(tid={}, pid={}) ",
                         task.tid().as_usize(),
                         task.pid().as_usize()
-                    )
+                    );
                 }
             }
 

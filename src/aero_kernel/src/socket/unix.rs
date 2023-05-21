@@ -399,9 +399,9 @@ impl INodeInterface for UnixSocket {
 
         let mut buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
 
-        header
-            .name_mut::<SocketAddrUnix>()
-            .map(|e| *e = peer.inner.lock_irq().address.as_ref().cloned().unwrap());
+        if let Some(addr) = header.name_mut::<SocketAddrUnix>() {
+            *addr = peer.inner.lock_irq().address.as_ref().cloned().unwrap();
+        }
 
         Ok(header
             .iovecs_mut()
@@ -420,15 +420,11 @@ impl INodeInterface for UnixSocket {
 
         let mut events = PollFlags::OUT;
 
-        match &inner.state {
-            UnixSocketState::Listening(queue) => {
-                if !queue.is_empty() {
-                    events.insert(PollFlags::IN);
-                    return Ok(events);
-                }
+        if let UnixSocketState::Listening(queue) = &inner.state {
+            if !queue.is_empty() {
+                events.insert(PollFlags::IN);
+                return Ok(events);
             }
-            UnixSocketState::Disconnected => todo!(),
-            UnixSocketState::Connected(_) => todo!(),
         }
 
         if !buffer.is_empty() {

@@ -33,11 +33,11 @@ fn calculate_checksum(data: &[u8]) -> u32 {
         )
     };
 
-    let mut sum = 0;
-
-    for i in 0..(data.len() / 2) {
-        sum += bytes[i].to_native() as u32
-    }
+    let mut sum = bytes
+        .iter()
+        .take(data.len() / 2)
+        .map(|byte| byte.to_native() as u32)
+        .sum();
 
     // Add left-over byte, if any.
     if data.len() % 2 == 1 {

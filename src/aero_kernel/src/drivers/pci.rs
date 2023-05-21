@@ -502,8 +502,8 @@ impl DeviceType {
 #[derive(Debug, PartialEq)]
 pub enum Vendor {
     Intel,
-    AMD,
-    NVIDIA,
+    Amd,
+    Nvidia,
     Qemu,
     Unknown(u32),
 }
@@ -512,8 +512,8 @@ impl Vendor {
     pub fn new(id: u32) -> Self {
         match id {
             0x8086 => Self::Intel,
-            0x1022 => Self::AMD,
-            0x10DE => Self::NVIDIA,
+            0x1022 => Self::Amd,
+            0x10DE => Self::Nvidia,
             0x1234 => Self::Qemu,
             _ => Self::Unknown(id),
         }

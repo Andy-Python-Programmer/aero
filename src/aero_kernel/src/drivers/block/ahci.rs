@@ -278,9 +278,9 @@ impl DmaRequest {
         match self.command {
             DmaCommand::Read => {
                 if lba48 {
-                    AtaCommand::AtaCommandReadDmaExt
+                    AtaCommand::ReadDmaExt
                 } else {
-                    AtaCommand::AtaCommandReadDma
+                    AtaCommand::ReadDma
                 }
             }
         }
@@ -295,65 +295,59 @@ impl DmaRequest {
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
 pub enum AtaCommand {
-    AtaCommandWriteDma = 0xCA,
-    AtaCommandWriteDmaQueued = 0xCC,
-    AtaCommandWriteMultiple = 0xC5,
-    AtaCommandWriteSectors = 0x30,
+    WriteDma = 0xCA,
+    WriteDmaQueued = 0xCC,
+    WriteMultiple = 0xC5,
+    WriteSectors = 0x30,
 
-    AtaCommandReadDma = 0xC8,
-    AtaCommandReadDmaQueued = 0xC7,
-    AtaCommandReadMultiple = 0xC4,
-    AtaCommandReadSectors = 0x20,
+    ReadDma = 0xC8,
+    ReadDmaQueued = 0xC7,
+    ReadMultiple = 0xC4,
+    ReadSectors = 0x20,
 
-    AtaCommandWriteDmaExt = 0x35,
-    AtaCommandWriteDmaQueuedExt = 0x36,
-    AtaCommandWriteMultipleExt = 0x39,
-    AtaCommandWriteSectorsExt = 0x34,
+    WriteDmaExt = 0x35,
+    WriteDmaQueuedExt = 0x36,
+    WriteMultipleExt = 0x39,
+    WriteSectorsExt = 0x34,
 
-    AtaCommandReadDmaExt = 0x25,
-    AtaCommandReadDmaQueuedExt = 0x26,
-    AtaCommandReadMultipleExt = 0x29,
-    AtaCommandReadSectorsExt = 0x24,
+    ReadDmaExt = 0x25,
+    ReadDmaQueuedExt = 0x26,
+    ReadMultipleExt = 0x29,
+    ReadSectorsExt = 0x24,
 
-    AtaCommandPacket = 0xA0,
-    AtaCommandDeviceReset = 0x08,
+    Packet = 0xA0,
+    DeviceReset = 0x08,
 
-    AtaCommandService = 0xA2,
-    AtaCommandNop = 0,
-    AtaCommandNopNopAutopoll = 1,
+    Service = 0xA2,
+    Nop = 0,
+    NopNopAutopoll = 1,
 
-    AtaCommandGetMediaStatus = 0xDA,
+    GetMediaStatus = 0xDA,
 
-    AtaCommandFlushCache = 0xE7,
-    AtaCommandFlushCacheExt = 0xEA,
+    FlushCache = 0xE7,
+    FlushCacheExt = 0xEA,
 
-    AtaCommandDataSetManagement = 0x06,
+    DataSetManagement = 0x06,
 
-    AtaCommandMediaEject = 0xED,
+    MediaEject = 0xED,
 
-    AtaCommandIdentifyPacketDevice = 0xA1,
-    AtaCommandIdentifyDevice = 0xEC,
+    IdentifyPacketDevice = 0xA1,
+    IdentifyDevice = 0xEC,
 
-    AtaCommandSetFeatures = 0xEF,
-    AtaCommandSetFeaturesEnableReleaseInt = 0x5D,
-    AtaCommandSetFeaturesEnableServiceInt = 0x5E,
-    AtaCommandSetFeaturesDisableReleaseInt = 0xDD,
-    AtaCommandSetFeaturesDisableServiceInt = 0xDE,
+    SetFeatures = 0xEF,
+    SetFeaturesEnableReleaseInt = 0x5D,
+    SetFeaturesEnableServiceInt = 0x5E,
+    SetFeaturesDisableReleaseInt = 0xDD,
+    SetFeaturesDisableServiceInt = 0xDE,
 }
 
 impl AtaCommand {
     pub fn is_lba48(&self) -> bool {
-        match self {
-            AtaCommand::AtaCommandReadDmaExt | AtaCommand::AtaCommandWriteDmaExt => true,
-            _ => false,
-        }
+        matches!(self, AtaCommand::ReadDmaExt | AtaCommand::WriteDmaExt)
     }
 
     pub fn is_write(&self) -> bool {
-        match self {
-            AtaCommand::AtaCommandWriteDmaExt | AtaCommand::AtaCommandWriteDma => true,
-            _ => false,
-        }
+        matches!(self, AtaCommand::WriteDmaExt | AtaCommand::WriteDma)
     }
 }
 
@@ -655,8 +649,7 @@ impl HbaPort {
         let header = self.cmd_header_at(slot);
         let mut flags = header.flags.get();
 
-        if command == AtaCommand::AtaCommandWriteDmaExt || command == AtaCommand::AtaCommandWriteDma
-        {
+        if command == AtaCommand::WriteDmaExt || command == AtaCommand::WriteDma {
             flags.insert(HbaCmdHeaderFlags::W); // If its a write command add the write flag.
         } else {
             flags.remove(HbaCmdHeaderFlags::W); // If its a read command remove the write flag.
@@ -932,11 +925,10 @@ struct AhciDriver {
 
 impl PciDeviceHandle for AhciDriver {
     fn handles(&self, vendor_id: Vendor, device_id: DeviceType) -> bool {
-        match (vendor_id, device_id) {
-            (Vendor::Intel, DeviceType::SataController) => true,
-
-            _ => false,
-        }
+        matches!(
+            (vendor_id, device_id),
+            (Vendor::Intel, DeviceType::SataController)
+        )
     }
 
     fn start(&self, header: &PciHeader, _offset_table: &mut OffsetPageTable) {

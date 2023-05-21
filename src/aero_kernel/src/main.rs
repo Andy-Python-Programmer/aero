@@ -52,6 +52,7 @@
 #![no_std]
 #![no_main]
 #![reexport_test_harness_main = "test_main"]
+// #![warn(clippy::pedantic)]
 
 #[macro_use]
 extern crate aero_proc;
