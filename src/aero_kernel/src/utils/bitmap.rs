@@ -100,20 +100,18 @@ impl<A: Allocator> Bitmap<A> {
         for (i, block) in self.bitmap.iter().enumerate() {
             let mut block_value = *block;
 
-            if block_value == 0 {
-                return Some(i * BLOCK_BITS);
+            if block_value != usize::MAX {
+                let mut bit = 0;
+
+                // Loop through the bits in the block and find
+                // the first unset bit.
+                while block_value.get_bit(0) {
+                    block_value >>= 1;
+                    bit += 1;
+                }
+
+                return Some((i * BLOCK_BITS) + bit);
             }
-
-            let mut bit = 0;
-
-            // Loop through the bits in the block and find
-            // the first unset bit.
-            while block_value.get_bit(0) {
-                block_value >>= 1;
-                bit += 1;
-            }
-
-            return Some((i * BLOCK_BITS) + bit);
         }
 
         None
