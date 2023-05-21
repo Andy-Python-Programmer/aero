@@ -1,30 +1,15 @@
-From 56759ca28e1aa33227e0085bcafd535ebbfdcf4c Mon Sep 17 00:00:00 2001
-From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Mon, 10 Apr 2023 14:02:17 +1000
+From a23324fdc96748fc48b5deb824db43b693b6c5dc Mon Sep 17 00:00:00 2001
+From: Anhad Singh <andypythonappdeveloper@gmail.com>
+Date: Sun, 21 May 2023 12:58:08 +1000
 Subject: [PATCH] <xxx>
 
 ---
- checkedout.xbstrap                            |   0
- fetched.xbstrap                               |   0
- patched.xbstrap                               |   0
  .../linux_like/linux/gnu/b64/x86_64/mod.rs    |   4 +-
  src/unix/linux_like/linux/gnu/mod.rs          |   4 +-
  src/unix/linux_like/linux/mod.rs              |  28 +-
- src/unix/mlibc/mod.rs                         | 561 ++++++++++++++++--
- 7 files changed, 543 insertions(+), 54 deletions(-)
- create mode 100644 checkedout.xbstrap
- create mode 100644 fetched.xbstrap
- create mode 100644 patched.xbstrap
+ src/unix/mlibc/mod.rs                         | 568 ++++++++++++++++--
+ 4 files changed, 550 insertions(+), 54 deletions(-)
 
-diff --git a/checkedout.xbstrap b/checkedout.xbstrap
-new file mode 100644
-index 0000000..e69de29
-diff --git a/fetched.xbstrap b/fetched.xbstrap
-new file mode 100644
-index 0000000..e69de29
-diff --git a/patched.xbstrap b/patched.xbstrap
-new file mode 100644
-index 0000000..e69de29
 diff --git a/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs b/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs
 index e6307e2..cae81c4 100644
 --- a/src/unix/linux_like/linux/gnu/b64/x86_64/mod.rs
@@ -200,7 +185,7 @@ index be12190..c8762d5 100644
                      .field("ifr_name", &self.ifr_name)
                      .field("ifr_ifru", &self.ifr_ifru)
 diff --git a/src/unix/mlibc/mod.rs b/src/unix/mlibc/mod.rs
-index 2046530..a19b7fa 100644
+index 2046530..8a4f974 100644
 --- a/src/unix/mlibc/mod.rs
 +++ b/src/unix/mlibc/mod.rs
 @@ -47,7 +47,6 @@ pub type fsfilcnt_t = ::c_uint;
@@ -989,7 +974,7 @@ index 2046530..a19b7fa 100644
      pub fn pthread_create(
          thread: *mut ::pthread_t,
          attr: *const ::pthread_attr_t,
-@@ -752,6 +1239,8 @@ extern "C" {
+@@ -752,7 +1239,16 @@ extern "C" {
          addr: *mut ::sockaddr,
          addrlen: *mut ::socklen_t,
      ) -> ::ssize_t;
@@ -998,6 +983,14 @@ index 2046530..a19b7fa 100644
      pub fn setgroups(ngroups: ::c_int, ptr: *const ::gid_t) -> ::c_int;
      pub fn setpwent();
      pub fn writev(fd: ::c_int, iov: *const ::iovec, count: ::c_int) -> ::ssize_t;
++
++    // Non standard extensions, also found on modern BSD's.
++    //
++    // options/posix/include/sys/uio.h
++    pub fn preadv(fd: ::c_int, iov: *const ::iovec, iovcnt: ::c_int, offset: ::off_t) -> ::ssize_t;
++    pub fn pwritev(fd: ::c_int, iov: *const ::iovec, iovcnt: ::c_int, offset: ::off_t)
++        -> ::ssize_t;
+ }
 -- 
-2.40.0
+2.40.1
 
