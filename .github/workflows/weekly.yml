@@ -31,7 +31,7 @@ jobs:
 
           pushd build
           [ -f bootstrap.link ] || xbstrap init ..
-          xbstrap install bash coreutils dwm xorg-xserver xorg-xinit alacritty
+          xbstrap install bash coreutils dwm xorg-server xorg-xinit alacritty
           popd
 
       - name: Build Kernel
