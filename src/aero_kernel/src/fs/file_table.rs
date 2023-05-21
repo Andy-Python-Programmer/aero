@@ -192,10 +192,8 @@ impl FileTable {
     pub fn get_handle(&self, fd: usize) -> Option<Arc<FileHandle>> {
         let files = self.0.read();
 
-        if let Some(file) = &files.get(fd) {
-            if let Some(handle) = file {
-                return Some(handle.clone());
-            }
+        if let Some(Some(handle)) = &files.get(fd) {
+            return Some(handle.clone());
         }
 
         None
@@ -204,14 +202,12 @@ impl FileTable {
     pub fn log(&self) {
         let files = self.0.read();
 
-        for handle in files.iter() {
-            if let Some(handle) = handle {
-                log::debug!(
-                    "file handle: (fd={}, path=`{}`)",
-                    handle.fd,
-                    handle.inode.absolute_path_str()
-                )
-            }
+        for handle in files.iter().flatten() {
+            log::debug!(
+                "file handle: (fd={}, path=`{}`)",
+                handle.fd,
+                handle.inode.absolute_path_str()
+            )
         }
     }
 
@@ -297,16 +293,14 @@ impl FileTable {
     pub fn deep_clone(&self) -> Self {
         let files = self.0.read();
 
-        for file in files.iter() {
-            if let Some(handle) = file {
-                let flags = *handle.flags.read();
+        for handle in files.iter().flatten() {
+            let flags = *handle.flags.read();
 
-                handle
-                    .inode
-                    .inode()
-                    .open(flags, handle.clone())
-                    .expect("FileTable::clone: failed to open file");
-            }
+            handle
+                .inode
+                .inode()
+                .open(flags, handle.clone())
+                .expect("FileTable::clone: failed to open file");
         }
 
         Self(RwLock::new(files.clone()))

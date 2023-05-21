@@ -106,10 +106,10 @@ impl INodeInterface for Pipe {
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> super::Result<PollFlags> {
-        table.map(|e| {
-            e.insert(&self.readers);
-            e.insert(&self.writers)
-        });
+        if let Some(table) = table {
+            table.insert(&self.readers);
+            table.insert(&self.writers);
+        }
 
         let mut flags = PollFlags::OUT;
 

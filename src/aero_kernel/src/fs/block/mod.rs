@@ -373,7 +373,7 @@ impl BlockDeviceInterface for PartitionBlockDevice {
             return None;
         }
 
-        self.write_dma(self.offset + sector, start, size)
+        self.device.write_dma(self.offset + sector, start, size)
     }
 
     fn read_dma(&self, sector: usize, start: PhysAddr, size: usize) -> Option<usize> {

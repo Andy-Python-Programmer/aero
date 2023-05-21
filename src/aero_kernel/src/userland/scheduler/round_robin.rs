@@ -123,7 +123,7 @@ impl RoundRobin {
             self.await_io().unwrap();
         } else if let Some(task) = queue.dead.pop_front() {
             task.update_state(TaskState::Zombie);
-            task.into_zombie();
+            task.make_zombie();
         }
     }
 

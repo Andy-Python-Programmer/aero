@@ -657,7 +657,7 @@ impl Task {
         }
     }
 
-    pub(super) fn into_zombie(&self) {
+    pub(super) fn make_zombie(&self) {
         self.detach();
         self.arch_task_mut().dealloc();
 

@@ -45,7 +45,7 @@ pub enum ModuleType {
 #[derive(Debug)]
 #[repr(C)]
 pub struct Module {
-    pub init: *const fn() -> (),
+    pub init: *const (),
     pub ty: ModuleType,
 }
 
@@ -59,7 +59,7 @@ macro_rules! module_init {
         #[used]
         #[link_section = ".kernel_modules.init"]
         static __MODULE_INIT: $crate::modules::Module = $crate::modules::Module {
-            init: $init_function as *const fn() -> (),
+            init: $init_function as *const (),
             ty: $ty,
         };
     };
@@ -102,7 +102,7 @@ pub(crate) fn init() {
                 launched_fs = true;
             }
 
-            let init = core::mem::transmute::<*const fn() -> (), fn() -> ()>(module.init);
+            let init = core::mem::transmute::<*const (), fn() -> ()>(module.init);
             init();
         }
     }

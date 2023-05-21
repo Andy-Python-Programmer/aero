@@ -236,7 +236,7 @@ impl INodeInterface for LockedRamINode {
     fn unlink(&self, name: &str) -> Result<()> {
         let mut this = self.0.write();
 
-        if let Some(_) = this.children.remove(name) {
+        if this.children.remove(name).is_some() {
             Ok(())
         } else {
             Err(FileSystemError::EntryNotFound)
@@ -445,7 +445,7 @@ impl INodeInterface for LockedRamINode {
         {
             let this = self.0.read();
 
-            if this.children.iter().any(|(e, _)| e == &name) {
+            if this.children.iter().any(|(e, _)| e == name) {
                 return Err(FileSystemError::EntryExists);
             }
         }

@@ -46,33 +46,34 @@ fn get_cpuinfo_cached() -> &'static str {
 
         let mut data = json!({ "processors": [] });
 
-        data.get_mut("processors")
+        if let Some(processors) = data
+            .get_mut("processors")
             .and_then(|processors| processors.as_array_mut())
-            .map(|processors| {
-                let mut cpu_info = vec![];
+        {
+            let mut cpu_info = vec![];
 
-                #[cfg(target_arch = "x86_64")]
-                tls::for_cpu_info_cached(|info| {
-                    let mut processor = json!({});
+            #[cfg(target_arch = "x86_64")]
+            tls::for_cpu_info_cached(|info| {
+                let mut processor = json!({});
 
-                    processor["id"] = Value::Number(Number::from(info.cpuid));
-                    processor["fpu"] = Value::Bool(info.fpu);
+                processor["id"] = Value::Number(Number::from(info.cpuid));
+                processor["fpu"] = Value::Bool(info.fpu);
 
-                    push_string_if_some(&mut processor, "brand", info.brand.clone());
-                    push_string_if_some(&mut processor, "vendor", info.vendor.clone());
+                push_string_if_some(&mut processor, "brand", info.brand.clone());
+                push_string_if_some(&mut processor, "vendor", info.vendor.clone());
 
-                    processor["features"] = Value::Array(
-                        info.features
-                            .iter()
-                            .map(|feature| Value::String(feature.to_string()))
-                            .collect(),
-                    );
+                processor["features"] = Value::Array(
+                    info.features
+                        .iter()
+                        .map(|feature| Value::String(feature.to_string()))
+                        .collect(),
+                );
 
-                    cpu_info.push(processor);
-                });
-
-                *processors = cpu_info;
+                cpu_info.push(processor);
             });
+
+            *processors = cpu_info;
+        }
 
         data.to_string()
     })

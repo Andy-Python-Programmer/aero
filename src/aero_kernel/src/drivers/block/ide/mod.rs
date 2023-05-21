@@ -197,11 +197,10 @@ struct Ide {
 
 impl PciDeviceHandle for Ide {
     fn handles(&self, vendor_id: Vendor, device_id: DeviceType) -> bool {
-        match (vendor_id, device_id) {
-            (Vendor::Intel, DeviceType::IdeController) => true,
-
-            _ => false,
-        }
+        matches!(
+            (vendor_id, device_id),
+            (Vendor::Intel, DeviceType::IdeController)
+        )
     }
 
     fn start(&self, header: &PciHeader, _offset_table: &mut OffsetPageTable) {

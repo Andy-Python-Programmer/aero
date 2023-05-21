@@ -158,7 +158,7 @@ impl SignalEntry {
         })
     }
 
-    pub fn into_sigaction(&self) -> SigAction {
+    pub fn sigaction(&self) -> SigAction {
         let handler: usize = self.handler.into();
 
         SigAction {
@@ -369,7 +369,7 @@ impl Signals {
         let mut signals = self.entries();
 
         if let Some(old) = old {
-            *old = signals[signal].into_sigaction();
+            *old = signals[signal].sigaction();
         }
 
         if let Some(handler) = handler {
