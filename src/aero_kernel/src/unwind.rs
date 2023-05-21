@@ -81,7 +81,7 @@ pub fn unwind_stack_trace() {
     for section in kernel_elf.section_iter() {
         if section.get_type() == Ok(ShType::SymTab) {
             let section_data = section
-                .get_data(&kernel_elf)
+                .get_data(kernel_elf)
                 .expect("Failed to get kernel section data information");
 
             if let SectionData::SymbolTable64(symtab) = section_data {
@@ -136,7 +136,7 @@ pub fn unwind_stack_trace() {
                 let st_size = data.size() as usize;
 
                 if rip >= st_value && rip < (st_value + st_size) {
-                    let mangled_name = data.get_name(&kernel_elf).unwrap_or("<unknown>");
+                    let mangled_name = data.get_name(kernel_elf).unwrap_or("<unknown>");
                     let demangled_name = rustc_demangle::demangle(mangled_name);
 
                     name = Some(demangled_name);

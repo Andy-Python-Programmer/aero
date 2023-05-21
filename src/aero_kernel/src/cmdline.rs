@@ -51,7 +51,7 @@ fn parse_number(mut string: &str) -> Result<usize, ParseIntError> {
         string = string.trim_start_matches("0o");
         usize::from_str_radix(string, 8)
     } else {
-        usize::from_str_radix(string, 10)
+        string.parse::<usize>()
     }
 }
 

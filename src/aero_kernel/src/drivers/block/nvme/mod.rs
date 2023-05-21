@@ -143,7 +143,7 @@ impl ControllerConfig {
     /// Sets the command set to be used.
     fn set_css(&mut self, command_set: CommandSet) {
         // XXX: This field shall only be changed when the controller is disabled.
-        assert_eq!(self.is_enabled(), false);
+        assert!(!self.is_enabled());
 
         let mut cfg = self.0.get();
         cfg.set_bits(4..7, command_set as u32);
@@ -316,7 +316,7 @@ impl<'a> Controller<'a> {
 
         let queue_size = registers.capability.max_queue_entries() as usize;
 
-        let mut admin = QueuePair::new(&registers, queue_size)?;
+        let mut admin = QueuePair::new(registers, queue_size)?;
 
         registers
             .aqa
@@ -352,7 +352,7 @@ impl<'a> Controller<'a> {
         );
 
         // Create and initialize the I/O queues.
-        let io_queue = QueuePair::new(&registers, queue_size)?;
+        let io_queue = QueuePair::new(registers, queue_size)?;
 
         let mut io_cq_cmd = CreateCQCommand::default();
 

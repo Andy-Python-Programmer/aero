@@ -151,7 +151,7 @@ impl Gpt {
         // SAFETY: The entries list is initialized above.
         let entries = unsafe { entry_list.assume_init() };
 
-        return Some(Self { entries });
+        Some(Self { entries })
     }
 
     pub fn entries(&self) -> &[GptEntry] {

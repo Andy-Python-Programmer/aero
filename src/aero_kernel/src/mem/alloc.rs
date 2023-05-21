@@ -210,12 +210,11 @@ unsafe impl GlobalAlloc for LockedHeap {
         // SAFETY: We we need to be careful to not cause a deadlock as the interrupt
         // handlers utilize the heap and might interrupt an in-progress allocation. So, we
         // lock the interrupts during the allocation.
-        let ptr = self.0.alloc(layout);
 
         #[cfg(feature = "kmemleak")]
         kmemleak::MEM_LEAK_CATCHER.track_caller(ptr, layout);
 
-        ptr
+        self.0.alloc(layout)
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {

@@ -64,7 +64,7 @@ impl TaskQueue {
     }
 
     fn push_runnable(&mut self, task: Arc<Task>) {
-        debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
+        debug_assert!(!task.link.is_linked()); // Make sure the task is not already linked
 
         task.update_state(TaskState::Runnable);
         self.runnable.push_back(task);
@@ -72,13 +72,13 @@ impl TaskQueue {
 
     fn push_dead(&mut self, task: Arc<Task>) {
         debug_assert_eq!(task.state(), TaskState::Runnable);
-        debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
+        debug_assert!(!task.link.is_linked()); // Make sure the task is not already linked
 
         self.dead.push_back(task);
     }
 
     fn push_deadline_awaiting(&mut self, task: Arc<Task>, duration: usize) {
-        debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
+        debug_assert!(!task.link.is_linked()); // Make sure the task is not already linked
 
         task.update_state(TaskState::AwaitingIo);
         task.set_sleep_duration(crate::arch::time::get_uptime_ticks() + duration);
@@ -87,7 +87,7 @@ impl TaskQueue {
     }
 
     fn push_awaiting(&mut self, task: Arc<Task>) {
-        debug_assert_eq!(task.link.is_linked(), false); // Make sure the task is not already linked
+        debug_assert!(!task.link.is_linked()); // Make sure the task is not already linked
 
         task.update_state(TaskState::AwaitingIo);
         self.awaiting.push_back(task);
@@ -109,11 +109,9 @@ impl RoundRobin {
     /// Creates a new instance of the round robin scheduler and return a
     /// reference-counting pointer to itself.
     pub fn new() -> Arc<Self> {
-        let this = Arc::new(Self {
-            queue: PerCpu::new(|| TaskQueue::new()),
-        });
-
-        this
+        Arc::new(Self {
+            queue: PerCpu::new(TaskQueue::new),
+        })
     }
 
     fn sweep_dead(&self) {
@@ -141,7 +139,7 @@ impl RoundRobin {
             if task.load_sleep_duration() <= time {
                 let ptr = cursor.remove().unwrap();
 
-                assert_eq!(ptr.link.is_linked(), false);
+                assert!(!ptr.link.is_linked());
 
                 ptr.update_state(TaskState::Runnable);
                 ptr.set_sleep_duration(0);
@@ -301,7 +299,7 @@ impl SchedulerInterface for RoundRobin {
 
         current_task.exit_status.call_once(|| status);
 
-        queue.push_dead(current_task.clone());
+        queue.push_dead(current_task);
         queue.dead_wq.notify_all();
 
         core::mem::drop(guard);

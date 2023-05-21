@@ -331,7 +331,7 @@ impl Device for BlockDevice {
     }
 
     fn inode(&self) -> Arc<dyn INodeInterface> {
-        self.sref.upgrade().unwrap().clone()
+        self.sref.upgrade().unwrap()
     }
 }
 
@@ -427,7 +427,7 @@ pub fn launch() -> Result<()> {
                     log::info!("gpt: found ext2 filesystem on {}!", device.name());
 
                     super::ROOT_FS.call_once(|| ext2.clone());
-                    super::ROOT_DIR.call_once(|| ext2.root_dir().clone());
+                    super::ROOT_DIR.call_once(|| ext2.root_dir());
                 }
             }
         }

@@ -115,7 +115,7 @@ const IMMUTABLE_MASK: u64 = (1u64 << SIGSTOP) | (1u64 << SIGCONT) | (1u64 << SIG
 
 /// Returns [`true`] if the provided `signal` is overridable.
 fn can_override(signal: usize) -> bool {
-    IMMUTABLE_MASK.get_bit(signal) == false
+    !IMMUTABLE_MASK.get_bit(signal)
 }
 
 pub type SignalResult<T> = core::result::Result<T, SignalError>;

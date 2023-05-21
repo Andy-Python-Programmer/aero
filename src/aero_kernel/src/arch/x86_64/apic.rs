@@ -404,7 +404,7 @@ pub fn io_apic_set_redirect(vec: u8, gsi: u32, flags: u16, status: i32) {
         let ioredtbl = (gsi - entry.global_system_interrupt_base) * 2 + 16;
 
         unsafe {
-            io_apic_write(io_apic, ioredtbl + 0, redirect as _);
+            io_apic_write(io_apic, ioredtbl, redirect as _);
             io_apic_write(io_apic, ioredtbl + 1, (redirect as u64 >> 32) as _);
         }
 
@@ -468,5 +468,5 @@ pub fn init() -> ApicType {
         INTERRUPT_CONTROLLER.switch_to_apic();
     }
 
-    return apic_type;
+    apic_type
 }

@@ -68,7 +68,9 @@ impl INodeInterface for EventFd {
         let count = self.count.lock_irq();
         let mut events = PollFlags::empty();
 
-        table.map(|e| e.insert(&self.wq)); // listen for changes
+        if let Some(e) = table {
+            e.insert(&self.wq)
+        } // listen for changes
 
         if *count > 0 {
             events.insert(PollFlags::IN);

@@ -172,7 +172,7 @@ impl Path {
 
     /// Returns an iterator over the components of the path.
     pub fn components(&self) -> impl Iterator<Item = &str> {
-        self.0.split("/").filter(|e| *e != "" && *e != ".")
+        self.0.split('/').filter(|e| !e.is_empty() && *e != ".")
     }
 
     pub fn as_str(&self) -> &str {

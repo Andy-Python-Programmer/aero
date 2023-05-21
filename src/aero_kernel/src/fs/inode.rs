@@ -395,7 +395,7 @@ impl DirEntry {
 
         let entry = Self {
             data: BMutex::new(DirProtectedData {
-                parent: Some(parent.clone()),
+                parent: Some(parent),
                 inode: inode.clone(),
                 name,
             }),
@@ -429,7 +429,7 @@ impl DirEntry {
         dcache.make_item_no_cache(Self {
             data: BMutex::new(DirProtectedData {
                 parent: None,
-                inode: inode.clone(),
+                inode,
                 name,
             }),
 

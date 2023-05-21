@@ -120,7 +120,7 @@ impl Zombies {
     }
 
     fn add_zombie(&self, zombie: Arc<Task>) {
-        assert_eq!(zombie.link.is_linked(), false);
+        assert!(!zombie.link.is_linked());
         assert_eq!(zombie.state(), TaskState::Zombie);
 
         let mut list = self.list.lock();
@@ -166,11 +166,11 @@ impl Zombies {
             // mlibc/abis/linux/wait.h (`W_EXITCODE`)
             match exit_status {
                 ExitStatus::Normal(code) => {
-                    *status = ((code as u32) << 8) | 0;
+                    *status = (code as u32) << 8;
                 }
 
                 ExitStatus::Signal(signal) => {
-                    *status = (0 << 8) | signal as u32;
+                    *status = signal as u32;
                 }
             }
 
@@ -239,7 +239,7 @@ impl Task {
 
             message_queue: MessageQueue::new(),
 
-            tid: pid.clone(),
+            tid: pid,
             sid: AtomicUsize::new(pid.as_usize()),
             gid: AtomicUsize::new(pid.as_usize()),
             pid,
@@ -285,7 +285,7 @@ impl Task {
             vm: Arc::new(Vm::new()),
             state: AtomicU8::new(TaskState::Runnable as _),
 
-            tid: pid.clone(),
+            tid: pid,
             gid: AtomicUsize::new(pid.as_usize()),
             sid: AtomicUsize::new(pid.as_usize()),
             pid,
@@ -329,7 +329,7 @@ impl Task {
             sleep_duration: AtomicUsize::new(0),
             exit_status: Once::new(),
 
-            tid: pid.clone(),
+            tid: pid,
             sid: AtomicUsize::new(self.session_id()),
             gid: AtomicUsize::new(self.group_id()),
             pid,
@@ -391,7 +391,7 @@ impl Task {
             sleep_duration: AtomicUsize::new(0),
             exit_status: Once::new(),
 
-            tid: pid.clone(),
+            tid: pid,
             sid: AtomicUsize::new(self.session_id()),
             gid: AtomicUsize::new(self.group_id()),
             pid,
@@ -544,11 +544,11 @@ impl Task {
 
     pub(super) fn update_state(&self, state: TaskState) {
         if state == TaskState::Zombie {
-            for file in self.file_table.0.read().iter() {
+            self.file_table.0.read().iter().for_each(|file| {
                 if let Some(a) = file {
                     a.inode().close(*a.flags.read());
                 }
-            }
+            });
         }
 
         // if state != TaskState::Runnable {

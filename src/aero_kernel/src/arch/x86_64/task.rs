@@ -240,8 +240,8 @@ impl ArchTask {
             user: true,
 
             // The FS and GS bases are inherited from the parent process.
-            fs_base: self.fs_base.clone(),
-            gs_base: self.gs_base.clone(),
+            fs_base: self.fs_base,
+            gs_base: self.gs_base,
 
             fpu_storage: Some(fpu_storage),
         })
@@ -296,8 +296,8 @@ impl ArchTask {
             user: true,
 
             // The FS and GS bases are inherited from the parent process.
-            fs_base: self.fs_base.clone(),
-            gs_base: self.gs_base.clone(),
+            fs_base: self.fs_base,
+            gs_base: self.gs_base,
 
             fpu_storage: Some(fpu_storage),
         })

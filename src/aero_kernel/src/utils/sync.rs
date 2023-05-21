@@ -148,10 +148,7 @@ impl<T> BMutex<T> {
             if let Some(guard) = self.spin.inner.try_lock() {
                 self.wq.remove(task);
 
-                return BMutexGuard {
-                    guard,
-                    mutex: &self,
-                };
+                return BMutexGuard { guard, mutex: self };
             }
 
             let _ = scheduler::get_scheduler().inner.await_io();

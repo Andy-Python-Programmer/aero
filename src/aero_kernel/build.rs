@@ -73,8 +73,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     inc_files = inc_files
         .iter()
         .map(|e| {
-            let e = e.split("/").collect::<Vec<_>>();
-            e[..e.len() - 1].join("/").to_string()
+            let e = e.split('/').collect::<Vec<_>>();
+            e[..e.len() - 1].join("/")
         })
         .collect::<Vec<_>>();
 

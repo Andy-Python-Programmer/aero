@@ -154,7 +154,7 @@ impl IdeChannelData {
             _ => {}
         }
 
-        return false;
+        false
     }
 
     pub fn setup_prdt(&mut self) {

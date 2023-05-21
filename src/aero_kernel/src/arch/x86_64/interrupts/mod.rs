@@ -259,7 +259,7 @@ pub fn allocate_vector() -> u8 {
     static IDT_FREE_VECTOR: Mutex<u8> = Mutex::new(32);
 
     let mut fvector = IDT_FREE_VECTOR.lock();
-    let fcopy = fvector.clone();
+    let fcopy = *fvector;
 
     if fcopy == 0xf0 {
         panic!("allocate_vector: vector allocation exhausted")

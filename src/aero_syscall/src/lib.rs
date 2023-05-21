@@ -101,6 +101,7 @@ bitflags::bitflags! {
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(isize)]
+#[allow(clippy::enum_clike_unportable_variant)]
 pub enum SyscallError {
     EDOM = 1,
     EILSEQ = 2,
@@ -498,24 +499,12 @@ pub fn sys_open(path: &str, mode: OpenFlags) -> Result<usize, SyscallError> {
 }
 
 pub fn sys_write(fd: usize, buf: &[u8]) -> Result<usize, SyscallError> {
-    let value = syscall3(
-        prelude::SYS_WRITE,
-        fd as usize,
-        buf.as_ptr() as usize,
-        buf.len(),
-    );
-
+    let value = syscall3(prelude::SYS_WRITE, fd, buf.as_ptr() as usize, buf.len());
     isize_as_syscall_result(value as _)
 }
 
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> Result<usize, SyscallError> {
-    let value = syscall3(
-        prelude::SYS_READ,
-        fd as usize,
-        buf.as_mut_ptr() as usize,
-        buf.len(),
-    );
-
+    let value = syscall3(prelude::SYS_READ, fd, buf.as_mut_ptr() as usize, buf.len());
     isize_as_syscall_result(value as _)
 }
 
@@ -537,7 +526,7 @@ pub fn sys_getcwd(buf: &mut [u8]) -> Result<usize, SyscallError> {
 pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> Result<usize, SyscallError> {
     let value = syscall3(
         prelude::SYS_GETDENTS,
-        fd as usize,
+        fd,
         buf.as_mut_ptr() as usize,
         buf.len(),
     );
@@ -551,7 +540,7 @@ pub fn sys_fork() -> Result<usize, SyscallError> {
 }
 
 pub fn sys_munmap(address: usize, size: usize) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_MUNMAP, address as usize, size as usize);
+    let value = syscall2(prelude::SYS_MUNMAP, address, size);
     isize_as_syscall_result(value as _)
 }
 
@@ -621,7 +610,7 @@ pub fn sys_access(fd: usize, path: &str) -> Result<usize, SyscallError> {
 pub fn sys_waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize, SyscallError> {
     let value = syscall3(
         prelude::SYS_WAITPID,
-        pid as usize,
+        pid,
         status as *mut u32 as usize,
         flags,
     );
@@ -630,7 +619,7 @@ pub fn sys_waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize, 
 }
 
 pub fn sys_ioctl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallError> {
-    let value = syscall3(prelude::SYS_IOCTL, fd as usize, command, arg);
+    let value = syscall3(prelude::SYS_IOCTL, fd, command, arg);
     isize_as_syscall_result(value as _)
 }
 
@@ -872,11 +861,11 @@ pub fn sys_sigaction(
         prelude::SYS_SIGACTION,
         sig,
         sigact
-            .and_then(|f| Some(f as *const signal::SigAction as usize))
+            .map(|f| f as *const signal::SigAction as usize)
             .unwrap_or(0),
         sys_sigreturn as usize,
         old_sigaction
-            .and_then(|f| Some(f as *mut signal::SigAction as usize))
+            .map(|f| f as *mut signal::SigAction as usize)
             .unwrap_or(0),
     );
 
@@ -966,21 +955,21 @@ bitflags::bitflags! {
         const S_IFLNK  = 0x0A000;
         const S_IFSOCK = 0x0C000;
 
-        const S_IRWXU = 0700;
-        const S_IRUSR = 0400;
-        const S_IWUSR = 0200;
-        const S_IXUSR = 0100;
-        const S_IRWXG = 070;
-        const S_IRGRP = 040;
-        const S_IWGRP = 020;
-        const S_IXGRP = 010;
-        const S_IRWXO = 07;
-        const S_IROTH = 04;
-        const S_IWOTH = 02;
-        const S_IXOTH = 01;
-        const S_ISUID = 04000;
-        const S_ISGID = 02000;
-        const S_ISVTX = 01000;
+        const S_IRWXU = 0o700;
+        const S_IRUSR = 0o400;
+        const S_IWUSR = 0o200;
+        const S_IXUSR = 0o100;
+        const S_IRWXG = 0o70;
+        const S_IRGRP = 0o40;
+        const S_IWGRP = 0o20;
+        const S_IXGRP = 0o10;
+        const S_IRWXO = 0o7;
+        const S_IROTH = 0o4;
+        const S_IWOTH = 0o2;
+        const S_IXOTH = 0o1;
+        const S_ISUID = 0o4000;
+        const S_ISGID = 0o2000;
+        const S_ISVTX = 0o1000;
 
         const S_IREAD  = Self::S_IRUSR.bits();
         const S_IWRITE = Self::S_IWUSR.bits();

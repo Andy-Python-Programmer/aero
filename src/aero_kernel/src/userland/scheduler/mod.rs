@@ -142,7 +142,7 @@ impl Scheduler {
     /// Lookup a task by ID
     #[inline]
     pub fn find_task(&self, task_id: TaskId) -> Option<Arc<Task>> {
-        self.tasks.0.lock().get(&task_id).map(|task| task.clone())
+        self.tasks.0.lock().get(&task_id).cloned()
     }
 }
 
@@ -175,7 +175,7 @@ fn scheduler_irq_handler(_stack: &mut InterruptStack) {
 
 /// Initialize the scheduler and set up the scheduler interrupt.
 pub fn init() {
-    SCHEDULER.call_once(|| Scheduler::new()).inner.init();
+    SCHEDULER.call_once(Scheduler::new).inner.init();
 
     let scheduler_vector = interrupts::allocate_vector();
     interrupts::register_handler(scheduler_vector, scheduler_irq_handler);

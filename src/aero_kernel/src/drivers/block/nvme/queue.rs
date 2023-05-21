@@ -92,7 +92,7 @@ impl Queue<'_, Completion> {
 
         self.doorbell.0.set(self.index as u32);
 
-        Some(cmd.clone())
+        Some(*cmd)
     }
 }
 

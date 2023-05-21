@@ -145,7 +145,7 @@ impl ModeObject for Crtc {
     }
 
     fn object(&self) -> Arc<dyn ModeObject> {
-        self.sref.upgrade().unwrap().clone()
+        self.sref.upgrade().unwrap()
     }
 }
 
@@ -189,7 +189,7 @@ impl ModeObject for Encoder {
     }
 
     fn object(&self) -> Arc<dyn ModeObject> {
-        self.sref.upgrade().unwrap().clone()
+        self.sref.upgrade().unwrap()
     }
 }
 
@@ -238,7 +238,7 @@ impl ModeObject for Connector {
     }
 
     fn object(&self) -> Arc<dyn ModeObject> {
-        self.sref.upgrade().unwrap().clone()
+        self.sref.upgrade().unwrap()
     }
 }
 
@@ -266,7 +266,7 @@ impl ModeObject for Framebuffer {
     }
 
     fn object(&self) -> Arc<dyn ModeObject> {
-        self.sref.upgrade().unwrap().clone()
+        self.sref.upgrade().unwrap()
     }
 }
 
@@ -620,7 +620,7 @@ impl INodeInterface for Drm {
                 self.device
                     .framebuffer_create(&handle, struc.width, struc.height, struc.pitch);
 
-                let fb = Framebuffer::new(self.allocate_object_id(), handle.clone());
+                let fb = Framebuffer::new(self.allocate_object_id(), handle);
                 self.install_framebuffer(fb.clone());
 
                 struc.fb_id = fb.id();

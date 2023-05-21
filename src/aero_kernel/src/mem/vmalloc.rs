@@ -107,10 +107,10 @@ impl Vmalloc {
             .find(|(_, area)| area.protected.lock().size >= size_bytes)?;
 
         let mut area_p = area.protected.lock();
-        let address = area_p.addr.clone();
+        let address = area_p.addr;
 
         if area_p.size > size_bytes {
-            area_p.addr = area_p.addr + size_bytes;
+            area_p.addr += size_bytes;
             area_p.size -= size_bytes;
         } else {
             // NOTE: the area is has exactly the requested size, so we can remove it

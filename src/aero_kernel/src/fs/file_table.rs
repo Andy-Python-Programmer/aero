@@ -50,7 +50,7 @@ impl FileHandle {
     pub fn new(fd: usize, inode: DirCacheItem, flags: OpenFlags) -> Self {
         Self {
             fd,
-            inode: inode.clone(),
+            inode,
             offset: Arc::new(AtomicUsize::new(0)),
             flags: RwLock::new(flags),
         }

@@ -175,6 +175,6 @@ where
     let lock = CPU_INFO.lock();
 
     for info in lock.iter() {
-        f(&info);
+        f(info);
     }
 }

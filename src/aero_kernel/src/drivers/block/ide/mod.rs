@@ -54,7 +54,7 @@ impl BlockDeviceInterface for IdeDrive {
         let count = dest.len().ceil_div(512);
         let request = Arc::new(DmaRequest::new(sector, count));
 
-        let res = self.channel.run_request(request.clone(), self.slave);
+        let res = self.channel.run_request(request, self.slave);
 
         if res.is_some() {
             todo!()
@@ -177,22 +177,11 @@ impl IdeDevice {
         if idx > 0 {
             header.enable_bus_mastering();
 
-            for channel in self
-                .channels
-                .iter_mut()
-                .filter(|a| a.is_some())
-                .map(|a| a.as_mut().unwrap())
-            {
+            for channel in self.channels.iter_mut().filter_map(|a| a.as_mut()) {
                 channel.init();
             }
 
-            for (i, drive) in self
-                .ide_devs
-                .iter()
-                .filter(|e| e.is_some())
-                .map(|e| e.as_ref().unwrap())
-                .enumerate()
-            {
+            for (i, drive) in self.ide_devs.iter().filter_map(|e| e.as_ref()).enumerate() {
                 let name = alloc::format!("blck{}", i);
                 let block_device = BlockDevice::new(name, drive.clone());
 

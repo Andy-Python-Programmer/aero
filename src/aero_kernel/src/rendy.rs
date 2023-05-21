@@ -177,8 +177,7 @@ struct Image {
 }
 
 fn parse_bmp_image(data: &[u8]) -> Image {
-    let header: &BmpHeader =
-        unsafe { core::mem::transmute(data as *const [u8] as *const u8 as *const BmpHeader) };
+    let header: &BmpHeader = unsafe { &*(data.as_ptr().cast::<BmpHeader>()) };
 
     // Check if the BMP image has the correct signature (ie. "BM").
     assert!(&header.bf_signature == b"BM");
@@ -189,7 +188,7 @@ fn parse_bmp_image(data: &[u8]) -> Image {
     let mut image = mem::alloc_boxed_buffer::<u8>(header.bf_size as usize);
     let bytes = image.len();
 
-    (&mut image[..bytes - header.bf_offset as usize])
+    image[..bytes - header.bf_offset as usize]
         .copy_from_slice(&data[header.bf_offset as usize..header.bf_size as usize]);
 
     Image {
@@ -378,7 +377,7 @@ impl<'a> Inner<'a> {
         }
     }
 
-    pub fn get_framebuffer<'b>(&'b mut self) -> &'b mut [u32] {
+    pub fn get_framebuffer(&mut self) -> &mut [u32] {
         self.buffer
     }
 
@@ -409,14 +408,13 @@ impl<'a> Inner<'a> {
             let g = (alpha * (fg >> 8) as u8 as u32 + inv_alpha * (bg >> 8) as u8 as u32) / 256;
             let b = (alpha * fg as u8 as u32 + inv_alpha * bg as u8 as u32) / 256;
 
-            (0 << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF)
+            ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF)
         };
 
         let theme_background = self.theme_background;
 
-        self.genloop(image, xstart, xend, ystart, yend, |_, __, c| {
-            let blend = color_blend(theme_background, c) as usize;
-            blend
+        self.genloop(image, xstart, xend, ystart, yend, |_, __, color| {
+            color_blend(theme_background, color) as usize
         })
     }
 
@@ -493,7 +491,7 @@ impl<'a> Inner<'a> {
         let item = self.map[i];
 
         unsafe {
-            (&mut *item.unwrap()).char = *char;
+            (*item.unwrap()).char = *char;
         }
     }
 
@@ -520,21 +518,19 @@ impl<'a> Inner<'a> {
 
         if self.map[i].is_some() {
             unsafe {
-                char = (&mut *self.map[i].unwrap()).char;
+                char = (*self.map[i].unwrap()).char;
             }
         } else {
             char = self.grid[i];
         }
 
-        let temp = char.fg;
-        char.fg = char.bg;
-        char.bg = temp;
+        core::mem::swap(&mut char.fg, &mut char.bg);
 
         self.plot_char(self.x_pos, self.y_pos, char);
 
         if self.map[i].is_some() {
             unsafe {
-                self.grid[i] = (&mut *self.map[i].unwrap()).char;
+                self.grid[i] = (*self.map[i].unwrap()).char;
             }
 
             self.map[i] = None;
@@ -544,7 +540,7 @@ impl<'a> Inner<'a> {
     fn plot_char(&mut self, x: usize, y: usize, char: Character) {
         let ch = match char.char {
             ch if ch.is_ascii() => ch,
-            _ => '?' as char,
+            _ => '?',
         };
 
         if x >= self.cols || y >= self.rows {
@@ -556,7 +552,7 @@ impl<'a> Inner<'a> {
         let glyph = &FONT[ch as usize];
 
         // naming: fx, fy for font coordinates and gx, gy for glyph coordinates
-        for gy in 0..FONT_HEIGHT {
+        for (gy, glyph) in glyph.iter().enumerate().take(FONT_HEIGHT) {
             let fb_line = unsafe {
                 self.buffer
                     .as_mut_ptr()
@@ -570,7 +566,7 @@ impl<'a> Inner<'a> {
             };
 
             for gx in 0..FONT_WIDTH {
-                let draw = glyph[gy] & (1 << (FONT_WIDTH - gx - 1)) != 0;
+                let draw = *glyph & (1 << (FONT_WIDTH - gx - 1)) != 0;
                 let color = if draw {
                     char.fg
                 } else if char.bg == u32::MAX {
@@ -778,7 +774,7 @@ impl<'this> DebugRendy<'this> {
             performer: Processor::new(),
         };
 
-        let image = cmdline.term_background.map(|a| parse_bmp_image(a));
+        let image = cmdline.term_background.map(parse_bmp_image);
 
         this.generate_canvas(image);
         this.clear(true);
@@ -934,11 +930,15 @@ pub fn _print(args: fmt::Arguments) {
 /// Clears the screen and if `mv` is set to true, resets the
 /// cursor position to `0`.
 pub fn clear_screen(mv: bool) {
-    DEBUG_RENDY.get().map(|l| l.lock_irq().clear(mv));
+    if let Some(l) = DEBUG_RENDY.get() {
+        l.lock_irq().clear(mv)
+    }
 }
 
 pub fn backspace() {
-    DEBUG_RENDY.get().map(|l| l.lock_irq().backspace());
+    if let Some(l) = DEBUG_RENDY.get() {
+        l.lock_irq().backspace()
+    }
 }
 
 /// Returns the terminal's resolution in the form of a `(horizontal_resolution,
@@ -1003,9 +1003,9 @@ pub fn get_cursor_position() -> (usize, usize) {
 /// * If the provided `x` position is greator then the amount of columns.
 /// * If the provided `y` position is greator then the amount of rows.
 pub fn set_cursor_position(x: usize, y: usize) {
-    DEBUG_RENDY
-        .get()
-        .map(|l| l.lock_irq().set_cursor_position(x, y));
+    if let Some(l) = DEBUG_RENDY.get() {
+        l.lock_irq().set_cursor_position(x, y)
+    }
 }
 
 /// Force-unlocks the rendy to prevent a deadlock.
@@ -1013,7 +1013,9 @@ pub fn set_cursor_position(x: usize, y: usize) {
 /// ## Safety
 /// This method is not memory safe and should be only used when absolutely necessary.
 pub unsafe fn force_unlock() {
-    DEBUG_RENDY.get().map(|l| l.force_unlock());
+    if let Some(l) = DEBUG_RENDY.get() {
+        l.force_unlock()
+    }
 }
 
 pub fn init(framebuffer_tag: &Framebuffer, cmdline: &CommandLine) {

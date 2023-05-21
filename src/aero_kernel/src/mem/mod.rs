@@ -83,9 +83,8 @@ impl AddressSpace {
                 }
 
                 let addr = PhysAddr::new(value & 0x_000f_ffff_ffff_f000);
-                let frame = PhysFrame::containing_address(addr);
 
-                frame
+                PhysFrame::containing_address(addr)
             };
 
             Self { cr3 }

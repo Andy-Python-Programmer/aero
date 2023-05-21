@@ -484,7 +484,7 @@ pub fn epoll_ctl(
 
     match mode {
         EPOLL_CTL_ADD => {
-            epoll.add_event(fd, event.clone())?;
+            epoll.add_event(fd, *event)?;
             Ok(0)
         }
 
@@ -494,7 +494,7 @@ pub fn epoll_ctl(
         }
 
         EPOLL_CTL_MOD => {
-            epoll.update_event(fd, event.clone())?;
+            epoll.update_event(fd, *event)?;
             Ok(0)
         }
 
@@ -646,7 +646,7 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
 #[syscall]
 pub fn poll(fds: &mut [PollFd], timeout: usize, sigmask: usize) -> Result<usize, SyscallError> {
     // Nothing to poll on.
-    if fds.len() == 0 {
+    if fds.is_empty() {
         return Ok(0);
     }
 

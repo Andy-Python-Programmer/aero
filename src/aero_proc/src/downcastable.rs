@@ -10,13 +10,11 @@ pub fn parse(_: TokenStream, item: TokenStream) -> TokenStream {
     let generics = &parsed_trait.generics;
 
     // `auto` and `unsafe` traits are not allowed:
-    parsed_trait
-        .auto_token
-        .map(|e| emit_error!(e.span(), "`auto` traits are not downcastable"));
-
-    parsed_trait
-        .unsafety
-        .map(|e| emit_error!(e.span(), "`unsafe` traits are not downcastable"));
+    if let Some(token) = parsed_trait.auto_token {
+        emit_error!(token.span(), "`auto` traits are not downcastable")
+    } else if let Some(token) = parsed_trait.unsafety {
+        emit_error!(token.span(), "`unsafe` traits are not downcastable")
+    }
 
     let super_traits = parsed_trait.supertraits.clone();
 

@@ -184,11 +184,7 @@ impl INodeInterface for LockedProcINode {
             .get(name)
             .ok_or(FileSystemError::EntryNotFound)?;
 
-        Ok(DirEntry::new(
-            dir.clone(),
-            child.clone(),
-            String::from(name),
-        ))
+        Ok(DirEntry::new(dir, child.clone(), String::from(name)))
     }
 
     fn metadata(&self) -> Result<Metadata> {
@@ -213,7 +209,7 @@ impl INodeInterface for LockedProcINode {
             0x00 => Some(DirEntry::new(
                 parent,
                 // UNWRAP: The inner node value should not be dropped.
-                this.node.upgrade().unwrap().into(),
+                this.node.upgrade().unwrap(),
                 String::from("."),
             )),
 
@@ -221,7 +217,7 @@ impl INodeInterface for LockedProcINode {
                 Some(DirEntry::new(
                     parent,
                     // UNWRAP: The inner node value should not be dropped.
-                    this.node.upgrade().unwrap().into(),
+                    this.node.upgrade().unwrap(),
                     String::from(".."),
                 ))
             }
@@ -272,7 +268,7 @@ impl ProcFs {
 
         inode.init(
             &ramfs.root_inode.downgrade(),
-            &&root_cached.downgrade(),
+            &root_cached.downgrade(),
             &Arc::downgrade(&ramfs),
             FileType::Directory,
         );

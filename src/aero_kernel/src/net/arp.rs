@@ -71,7 +71,7 @@ impl Cache {
     }
 
     fn request(&mut self, ip: Ipv4Addr, packet: Packet<Eth>) {
-        if let Some(_) = self.0.get_mut(&ip) {
+        if self.0.get_mut(&ip).is_some() {
             todo!()
         } else {
             let queue = alloc::vec![packet];

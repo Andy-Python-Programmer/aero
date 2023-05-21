@@ -169,8 +169,7 @@ impl INodeInterface for UdpSocket {
         let data = message_hdr
             .iovecs()
             .iter()
-            .map(|e| e.as_slice())
-            .flatten()
+            .flat_map(|e| e.as_slice())
             .copied()
             .collect::<Vec<_>>();
 
@@ -233,7 +232,7 @@ impl INodeInterface for UdpSocket {
                 };
 
                 let mac_addr = net::default_device().mac();
-                hwaddr.copy_from_slice(&mac_addr.0.as_slice());
+                hwaddr.copy_from_slice(mac_addr.0.as_slice());
                 Ok(0)
             }
 

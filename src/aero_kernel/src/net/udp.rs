@@ -53,7 +53,7 @@ impl PacketUpHierarchy<Udp> for Packet<Ipv4> {}
 impl PacketHeader<Header> for Packet<Udp> {
     fn send(&self) {
         {
-            let mut this = self.clone();
+            let mut this = *self;
             let header = this.header_mut();
             header.compute_checksum(self.downgrade().header());
         }
@@ -68,7 +68,7 @@ impl PacketHeader<Header> for Packet<Udp> {
         let handlers = HANDLERS.read();
 
         if let Some(handler) = handlers.get(&dest_port) {
-            handler.recv(self.clone());
+            handler.recv(*self);
         } else {
             log::warn!("udp: no handler registered for port {}", dest_port);
         }

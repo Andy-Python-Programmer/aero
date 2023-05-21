@@ -145,7 +145,7 @@ pub macro serial_println {
 
 #[doc(hidden)]
 pub fn _serial_print(args: fmt::Arguments) {
-    COM_1
-        .get()
-        .map(|c| c.lock().write_fmt(args).expect("failed to write to COM1"));
+    if let Some(c) = COM_1.get() {
+        c.lock().write_fmt(args).expect("failed to write to COM1")
+    }
 }

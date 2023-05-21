@@ -125,7 +125,9 @@ impl INodeInterface for Master {
     }
 
     fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<fs::inode::PollFlags> {
-        table.map(|e| e.insert(&self.wq));
+        if let Some(e) = table {
+            e.insert(&self.wq)
+        }
         let mut flags = fs::inode::PollFlags::OUT;
 
         if !self.buffer.lock_irq().is_empty() {
@@ -400,11 +402,7 @@ impl INodeInterface for PtsINode {
             .find(|(&e, _)| e == id)
             .ok_or(FileSystemError::EntryNotFound)?;
 
-        Ok(DirEntry::new(
-            dir.clone(),
-            inode.clone(),
-            String::from(name),
-        ))
+        Ok(DirEntry::new(dir, inode.clone(), String::from(name)))
     }
 
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
@@ -453,7 +451,7 @@ impl fs::FileSystem for PtsFs {
 fn pty_init() {
     devfs::install_device(PTMX.clone()).unwrap();
 
-    let fs = PTS_FS.call_once(|| PtsFs::new());
+    let fs = PTS_FS.call_once(PtsFs::new);
 
     let root = DEV_FILESYSTEM.root_dir().inode();
     root.mkdir("pts").unwrap();

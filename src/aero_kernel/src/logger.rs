@@ -69,16 +69,13 @@ impl log::Log for AeroLogger {
 
             if scheduler::is_initialized() {
                 // fetch the current task, grab the TID and PID.
-                scheduler::get_scheduler()
-                    .inner
-                    .current_task_optional()
-                    .map(|task| {
-                        serial_print!(
-                            "(tid={}, pid={}) ",
-                            task.tid().as_usize(),
-                            task.pid().as_usize()
-                        );
-                    });
+                if let Some(task) = scheduler::get_scheduler().inner.current_task_optional() {
+                    serial_print!(
+                        "(tid={}, pid={}) ",
+                        task.tid().as_usize(),
+                        task.pid().as_usize()
+                    )
+                }
             }
 
             match record.level() {
@@ -103,15 +100,16 @@ impl log::Log for AeroLogger {
 /// This method is not memory safe and should be only used when absolutely necessary.
 #[inline]
 pub unsafe fn force_unlock() {
-    LOG_RING_BUFFER.get().map(|l| l.force_unlock());
+    if let Some(l) = LOG_RING_BUFFER.get() {
+        l.force_unlock()
+    }
 }
 
-pub fn get_log_buffer<'a>() -> String {
+pub fn get_log_buffer() -> String {
     LOG_RING_BUFFER
         .get()
         .map(|l| String::from(l.lock_irq().extract()))
         .expect("log: attempted to get the log ring buffer before it was initialized")
-        .clone()
 }
 
 #[inline]

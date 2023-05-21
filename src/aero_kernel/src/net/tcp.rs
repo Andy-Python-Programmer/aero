@@ -75,7 +75,7 @@ impl PacketHeader<TcpHeader> for Packet<Tcp> {
     fn send(&self) {
         let ip_packet = self.downgrade();
 
-        let mut packet = self.clone();
+        let mut packet = *self;
         let header = packet.header_mut();
 
         header.compute_checksum(ip_packet.header());
@@ -89,7 +89,7 @@ impl PacketHeader<TcpHeader> for Packet<Tcp> {
         let handlers = HANDLERS.read();
 
         if let Some(handler) = handlers.get(&dest_port) {
-            handler.recv(self.clone());
+            handler.recv(*self);
         } else {
             log::warn!("tcp: no handler registered for port {}", dest_port);
         }

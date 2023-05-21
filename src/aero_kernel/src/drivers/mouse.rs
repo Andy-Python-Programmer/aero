@@ -110,7 +110,7 @@ impl Mouse {
                         this.y = packet as i16;
                     }
 
-                    PACKETS.lock_irq().push(this.clone());
+                    PACKETS.lock_irq().push(*this);
                     self.wq.notify_all();
                 }
             }
@@ -154,7 +154,9 @@ impl INodeInterface for Mouse {
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> fs::Result<PollFlags> {
-        table.map(|e| e.insert(&MOUSE.wq));
+        if let Some(e) = table {
+            e.insert(&MOUSE.wq)
+        }
 
         if !PACKETS.lock_irq().is_empty() {
             Ok(PollFlags::IN)

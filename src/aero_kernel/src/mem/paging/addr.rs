@@ -127,7 +127,7 @@ impl VirtAddr {
 
     /// Converts this HHDM (Higher Half Direct Map) virtual address to its physical address.
     pub fn as_hhdm_phys(&self) -> PhysAddr {
-        unsafe { PhysAddr::new(self.clone() - crate::PHYSICAL_MEMORY_OFFSET) }
+        unsafe { PhysAddr::new(*self - crate::PHYSICAL_MEMORY_OFFSET) }
     }
 
     /// Returns if the address is valid to read `sizeof(T)` bytes at the address.

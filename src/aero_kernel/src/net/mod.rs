@@ -177,7 +177,7 @@ impl<T: PacketKind> Packet<T> {
         Packet::<T> {
             addr,
             len,
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }
     }
 }

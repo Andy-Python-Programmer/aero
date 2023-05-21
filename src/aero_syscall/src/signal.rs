@@ -64,17 +64,12 @@ pub const SIG_ERR: i64 = -1; // error
 pub const SIG_DFL: i64 = 0; // default
 pub const SIG_IGN: i64 = 1; // ignore
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub enum SignalHandler {
     Ignore,
+    #[default]
     Default,
     Handle(extern "C" fn(usize)),
-}
-
-impl Default for SignalHandler {
-    fn default() -> Self {
-        SignalHandler::Default
-    }
 }
 
 impl From<u64> for SignalHandler {
@@ -105,6 +100,7 @@ impl From<SignalHandler> for u64 {
         match h {
             SignalHandler::Ignore => SIG_IGN as u64,
             SignalHandler::Default => SIG_DFL as u64,
+            #[allow(clippy::fn_to_numeric_cast)]
             SignalHandler::Handle(f) => f as u64,
         }
     }

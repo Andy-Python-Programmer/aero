@@ -97,9 +97,9 @@ pub struct IdentifyCommand {
     pub reserved11: [u32; 5],
 }
 
-impl Into<Command> for IdentifyCommand {
-    fn into(self) -> Command {
-        Command { identify: self }
+impl From<IdentifyCommand> for Command {
+    fn from(val: IdentifyCommand) -> Self {
+        Command { identify: val }
     }
 }
 
@@ -288,9 +288,9 @@ pub struct ReadWriteCommand {
     pub app_mask: u16,
 }
 
-impl Into<Command> for ReadWriteCommand {
-    fn into(self) -> Command {
-        Command { rw: self }
+impl From<ReadWriteCommand> for Command {
+    fn from(val: ReadWriteCommand) -> Self {
+        Command { rw: val }
     }
 }
 
@@ -310,9 +310,9 @@ pub struct CreateSQCommand {
     pub reserved2: [u32; 4],
 }
 
-impl Into<Command> for CreateSQCommand {
-    fn into(self) -> Command {
-        Command { create_sq: self }
+impl From<CreateSQCommand> for Command {
+    fn from(val: CreateSQCommand) -> Self {
+        Command { create_sq: val }
     }
 }
 
@@ -332,9 +332,9 @@ pub struct CreateCQCommand {
     pub reserved2: [u32; 4],
 }
 
-impl Into<Command> for CreateCQCommand {
-    fn into(self) -> Command {
-        Command { create_cq: self }
+impl From<CreateCQCommand> for Command {
+    fn from(val: CreateCQCommand) -> Self {
+        Command { create_cq: val }
     }
 }
 

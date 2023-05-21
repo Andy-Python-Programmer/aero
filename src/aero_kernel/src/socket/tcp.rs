@@ -29,6 +29,7 @@ use crate::net::{Packet, PacketHeader, PacketTrait};
 use crate::utils::sync::{Mutex, WaitQueue};
 
 /// TCP Stream
+#[derive(Default)]
 struct Stream {
     buffer: Vec<u8>,
 }
@@ -48,12 +49,6 @@ impl Stream {
 
     fn is_empty(&self) -> bool {
         self.buffer.is_empty()
-    }
-}
-
-impl Default for Stream {
-    fn default() -> Self {
-        Self { buffer: Vec::new() }
     }
 }
 
@@ -252,8 +247,7 @@ impl INodeInterface for TcpSocket {
         let data = message_hdr
             .iovecs()
             .iter()
-            .map(|e| e.as_slice())
-            .flatten()
+            .flat_map(|e| e.as_slice())
             .copied()
             .collect::<Vec<_>>();
 

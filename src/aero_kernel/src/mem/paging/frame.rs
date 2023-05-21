@@ -413,7 +413,7 @@ impl GlobalFrameAllocator {
             }
         }
 
-        return 0;
+        0
     }
 
     fn get_bit_idx(&self, addr: PhysAddr, order: usize) -> usize {

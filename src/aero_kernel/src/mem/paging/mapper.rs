@@ -609,7 +609,7 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size2MiB> for MappedPageTable<'a, P> {
 
             p4 = self.page_table_walker.next_table(&p5[page.p5_index()])?;
         } else {
-            p4 = &self.page_table;
+            p4 = self.page_table;
         }
 
         let p3 = self.page_table_walker.next_table(&p4[page.p4_index()])?;
@@ -721,7 +721,7 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size4KiB> for MappedPageTable<'a, P> {
 
             p4 = self.page_table_walker.next_table(&p5[page.p5_index()])?;
         } else {
-            p4 = &self.page_table;
+            p4 = self.page_table;
         }
 
         let p3 = self.page_table_walker.next_table(&p4[page.p4_index()])?;
@@ -755,7 +755,7 @@ impl<'a, P: PageTableFrameMapping> Translate for MappedPageTable<'a, P> {
                 }
             };
         } else {
-            p4 = &self.page_table;
+            p4 = self.page_table;
         }
 
         let p3 = match self.page_table_walker.next_table(&p4[addr.p4_index()]) {
@@ -771,7 +771,7 @@ impl<'a, P: PageTableFrameMapping> Translate for MappedPageTable<'a, P> {
             Err(PageTableWalkError::MappedToHugePage) => {
                 let entry = &p3[addr.p3_index()];
                 let frame = PhysFrame::containing_address(entry.addr());
-                let offset = addr.as_u64() & 0o_777_777_7777;
+                let offset = addr.as_u64() & 0o7_777_777_777;
                 let flags = entry.flags();
                 return TranslateResult::Mapped {
                     frame: MappedFrame::Size1GiB(frame),
@@ -786,7 +786,7 @@ impl<'a, P: PageTableFrameMapping> Translate for MappedPageTable<'a, P> {
             Err(PageTableWalkError::MappedToHugePage) => {
                 let entry = &p2[addr.p2_index()];
                 let frame = PhysFrame::containing_address(entry.addr());
-                let offset = addr.as_u64() & 0o_777_7777;
+                let offset = addr.as_u64() & 0o7_777_777;
                 let flags = entry.flags();
                 return TranslateResult::Mapped {
                     frame: MappedFrame::Size2MiB(frame),

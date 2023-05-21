@@ -171,7 +171,7 @@ impl EPoll {
 
         // If all events are ready, we can return now.
         if n > 0 {
-            debug_assert!(fds.len() == 0);
+            debug_assert!(fds.is_empty());
             return Ok(n);
         }
 

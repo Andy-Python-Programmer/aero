@@ -211,7 +211,7 @@ impl INodeInterface for LockedRamINode {
             0x00 => Some(DirEntry::new(
                 parent,
                 // UNWRAP: The inner node value should not be dropped.
-                this.node.upgrade().unwrap().into(),
+                this.node.upgrade().unwrap(),
                 String::from("."),
             )),
 
@@ -219,7 +219,7 @@ impl INodeInterface for LockedRamINode {
                 Some(DirEntry::new(
                     parent,
                     // UNWRAP: The inner node value should not be dropped.
-                    this.node.upgrade().unwrap().into(),
+                    this.node.upgrade().unwrap(),
                     String::from(".."),
                 ))
             }
@@ -251,7 +251,7 @@ impl INodeInterface for LockedRamINode {
                 let mut vec = vec.lock();
                 vec.resize(size, 0);
 
-                return Ok(());
+                Ok(())
             }
 
             _ => {
@@ -273,7 +273,7 @@ impl INodeInterface for LockedRamINode {
 
                 let size = core::cmp::min(buffer.len(), vec.len() - offset);
 
-                for (i, b) in (&vec.as_slice()[offset..offset + size]).iter().enumerate() {
+                for (i, b) in vec.as_slice()[offset..offset + size].iter().enumerate() {
                     buffer[i] = *b;
                 }
 
@@ -283,7 +283,7 @@ impl INodeInterface for LockedRamINode {
             FileContents::StaticContent(static_buffer) => {
                 let size = core::cmp::min(buffer.len(), static_buffer.len() - offset);
 
-                for (i, b) in (&static_buffer[offset..offset + size]).iter().enumerate() {
+                for (i, b) in static_buffer[offset..offset + size].iter().enumerate() {
                     buffer[i] = *b;
                 }
 
@@ -395,11 +395,7 @@ impl INodeInterface for LockedRamINode {
             .get(name)
             .ok_or(FileSystemError::EntryNotFound)?;
 
-        Ok(DirEntry::new(
-            dir.clone(),
-            child.clone(),
-            String::from(name),
-        ))
+        Ok(DirEntry::new(dir, child.clone(), String::from(name)))
     }
 
     fn as_unix_socket(&self) -> Result<Arc<dyn INodeInterface>> {
@@ -449,7 +445,7 @@ impl INodeInterface for LockedRamINode {
         {
             let this = self.0.read();
 
-            if this.children.iter().find(|(e, _)| e == &name).is_some() {
+            if this.children.iter().any(|(e, _)| e == &name) {
                 return Err(FileSystemError::EntryExists);
             }
         }
@@ -457,7 +453,7 @@ impl INodeInterface for LockedRamINode {
         let mut this = self.0.write();
 
         // Create the link!
-        this.children.insert(name.to_string(), src.clone());
+        this.children.insert(name.to_string(), src);
         Ok(())
     }
 }
@@ -495,7 +491,7 @@ impl RamFs {
             .unwrap()
             .init(
                 &ramfs.root_inode.downgrade(),
-                &&root_cached.downgrade(),
+                &root_cached.downgrade(),
                 &Arc::downgrade(&ramfs),
                 FileType::Directory,
             );

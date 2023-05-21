@@ -36,8 +36,6 @@ pub(super) struct Hpet {
 
 impl Hpet {
     pub fn new(sdt: &'static Sdt) -> Self {
-        let this = unsafe { ptr::read((sdt as *const Sdt) as *const Self) };
-
-        this
+        unsafe { ptr::read((sdt as *const Sdt) as *const Self) }
     }
 }

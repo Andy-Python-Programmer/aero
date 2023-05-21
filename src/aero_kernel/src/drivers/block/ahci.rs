@@ -433,7 +433,7 @@ impl HbaCmdTbl {
     }
 
     fn prdt_entry_mut(&mut self, i: usize) -> &mut HbaPrdtEntry {
-        unsafe { &mut *self.prdt_entry.as_mut_ptr().offset(i as isize) }
+        unsafe { &mut *self.prdt_entry.as_mut_ptr().add(i) }
     }
 }
 
@@ -725,7 +725,7 @@ impl HbaPort {
 
 impl HbaMemory {
     fn port_mut(&mut self, port: usize) -> &mut HbaPort {
-        unsafe { &mut *((self as *mut Self).offset(1) as *mut HbaPort).offset(port as isize) }
+        unsafe { &mut *((self as *mut Self).offset(1) as *mut HbaPort).add(port) }
     }
 }
 

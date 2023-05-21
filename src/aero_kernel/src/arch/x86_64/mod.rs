@@ -165,7 +165,7 @@ extern "C" fn arch_aero_main() -> ! {
         .first()
         .expect("limine: no framebuffer found!");
 
-    rendy::init(&*framebuffer, &command_line);
+    rendy::init(framebuffer, &command_line);
     logger::set_rendy_debug(true);
 
     interrupts::init();

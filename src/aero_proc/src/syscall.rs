@@ -70,17 +70,13 @@ pub fn parse(attr: TokenStream, item: TokenStream) -> TokenStream {
     let parsed_fn = syn::parse_macro_input!(item as syn::ItemFn);
     let signature = &parsed_fn.sig;
 
-    signature
-        .constness
-        .map(|e| emit_error!(e.span(), "syscall functions cannot be `const`"));
-
-    signature
-        .asyncness
-        .map(|e| emit_error!(e.span(), "syscall functions cannot be `async`"));
-
-    signature
-        .unsafety
-        .map(|e| emit_error!(e.span(), "syscalls functions cannot be `unsafe`"));
+    if let Some(token) = signature.constness {
+        emit_error!(token.span(), "syscall functions cannot be `const`");
+    } else if let Some(token) = signature.asyncness {
+        emit_error!(token.span(), "syscall functions cannot be `async`");
+    } else if let Some(token) = signature.unsafety {
+        emit_error!(token.span(), "syscall functions cannot be `unsafe`");
+    }
 
     let generics = &signature.generics;
 
@@ -269,81 +265,77 @@ fn process_call_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<Expr> {
     let mut result = Vec::new();
 
     for arg in args {
-        match arg {
-            FnArg::Typed(arg) => match arg.pat.as_ref() {
-                Pat::Ident(pat) => {
-                    let ty = &arg.ty;
-                    let ident = &pat.ident;
+        if let FnArg::Typed(arg) = arg {
+            if let Pat::Ident(pat) = arg.pat.as_ref() {
+                let ty = &arg.ty;
+                let ident = &pat.ident;
 
-                    if let Some(arg_type) = determine_arg_type(ty) {
-                        let data_ident = Ident::new(&format!("{}_data", ident), Span::call_site());
-                        let len_ident = Ident::new(&format!("{}_len", ident), Span::call_site());
+                if let Some(arg_type) = determine_arg_type(ty) {
+                    let data_ident = Ident::new(&format!("{}_data", ident), Span::call_site());
+                    let len_ident = Ident::new(&format!("{}_len", ident), Span::call_site());
 
-                        match arg_type {
-                            ArgType::Slice(is_mut) => {
-                                let slice_expr: Expr = if is_mut {
-                                    syn::parse_quote! {
-                                        crate::utils::validate_slice_mut(#data_ident as *mut _, #len_ident)?
-                                    }
-                                } else {
-                                    syn::parse_quote! {
-                                        crate::utils::validate_slice(#data_ident as *const _, #len_ident)?
-                                    }
-                                };
+                    match arg_type {
+                                     ArgType::Slice(is_mut) => {
+                                         let slice_expr: Expr = if is_mut {
+                                             syn::parse_quote! {
+                                                 crate::utils::validate_slice_mut(#data_ident as *mut _, #len_ident)?
+                                             }
+                                         } else {
+                                             syn::parse_quote! {
+                                                 crate::utils::validate_slice(#data_ident as *const _, #len_ident)?
+                                             }
+ };
 
-                                result.push(slice_expr);
-                            }
-                            ArgType::Array(is_mut) => {
-                                let array_expr: Expr = if is_mut {
-                                    syn::parse_quote! {
-                                        crate::utils::validate_array_mut(#data_ident as *mut _)?
-                                    }
-                                } else {
-                                    unimplemented!()
-                                };
+                                         result.push(slice_expr);
+                                     }
+                                     ArgType::Array(is_mut) => {
+                                         let array_expr: Expr = if is_mut {
+                                 syn::parse_quote! {
+                                     crate::utils::validate_array_mut(#data_ident as *mut _)?
+                                 }
+                             } else {
+                                 unimplemented!()
+                             };
 
-                                result.push(array_expr);
-                            }
-                            ArgType::Pointer(is_mut) => {
-                                let ptr_expr: Expr = if is_mut {
-                                    syn::parse_quote!(#ident as *mut _)
-                                } else {
-                                    syn::parse_quote!(#ident as *const _)
-                                };
+                             result.push(array_expr);
+                         }
+                         ArgType::Pointer(is_mut) => {
+                             let ptr_expr: Expr = if is_mut {
+                                 syn::parse_quote!(#ident as *mut _)
+                             } else {
+                                 syn::parse_quote!(#ident as *const _)
+                             };
 
-                                result.push(ptr_expr);
-                            }
-                            ArgType::Reference(is_mut) => {
-                                let ref_expr: Expr = if is_mut {
-                                    syn::parse_quote!({
-                                        crate::utils::validate_mut_ptr(#ident as *mut _)?
-                                    })
-                                } else {
-                                    syn::parse_quote!({
-                                        crate::utils::validate_ptr(#ident as *const _)?
-                                    })
-                                };
+                             result.push(ptr_expr);
+                         }
+                         ArgType::Reference(is_mut) => {
+                             let ref_expr: Expr = if is_mut {
+                                 syn::parse_quote!({
+                                     crate::utils::validate_mut_ptr(#ident as *mut _)?
+                                 })
+                             } else {
+                                 syn::parse_quote!({
+                                     crate::utils::validate_ptr(#ident as *const _)?
+                                 })
+                             };
 
-                                result.push(ref_expr);
-                            }
-                            ArgType::String => result.push(syn::parse_quote! {
-                                crate::utils::validate_str(#data_ident as *const _, #len_ident)?
-                            }),
-                            ArgType::Path => result.push(syn::parse_quote! {
-                                {
-                                    let string = crate::utils::validate_str(#data_ident as *const _, #len_ident)?;
-                                    let path = Path::new(string);
-                                    path
-                                }
-                            }),
-                        }
-                    } else {
-                        result.push(syn::parse_quote!(#ident));
-                    }
+                             result.push(ref_expr);
+                         }
+                         ArgType::String => result.push(syn::parse_quote! {
+                             crate::utils::validate_str(#data_ident as *const _, #len_ident)?
+                         }),
+                         ArgType::Path => result.push(syn::parse_quote! {
+                             {
+                                 let string = crate::utils::validate_str(#data_ident as *const _, #len_ident)?;
+                                 let path = Path::new(string);
+                                 path
+                             }
+                         }),
+                     }
+                } else {
+                    result.push(syn::parse_quote!(#ident));
                 }
-                _ => {}
-            },
-            _ => {}
+            }
         }
     }
 

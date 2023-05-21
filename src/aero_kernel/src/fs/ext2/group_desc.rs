@@ -134,7 +134,7 @@ impl GroupDescriptors {
             let mut descriptors = self.descriptors.write();
             let block_group = &mut descriptors[block_group_idx];
 
-            let mut bitmap = Bitmap::new(fs.clone(), block_group.block_bitmap as usize)?;
+            let mut bitmap = Bitmap::new(fs, block_group.block_bitmap as usize)?;
             let block_id = block_group_idx * blocks_per_group + bitmap.alloc()?;
 
             block_group.free_blocks_count -= 1;
@@ -156,7 +156,7 @@ impl GroupDescriptors {
             let mut descriptors = self.descriptors.write();
             let block_group = &mut descriptors[block_group_idx];
 
-            let mut bitmap = Bitmap::new(fs.clone(), block_group.inode_bitmap as usize)?;
+            let mut bitmap = Bitmap::new(fs, block_group.inode_bitmap as usize)?;
             // Since inode numbers start from 1 rather than 0, the first bit in the first block
             // group's inode bitmap represent inode number 1. Thus, we add 1 to the allocated
             // inode number.
@@ -207,7 +207,7 @@ impl Bitmap {
         for (i, e) in self.bitmap.iter_mut().enumerate() {
             if *e != u8::MAX {
                 for bit in 0..8 {
-                    if e.get_bit(bit) == false {
+                    if !e.get_bit(bit) {
                         e.set_bit(bit, true);
 
                         return Some(i * 8 + bit);

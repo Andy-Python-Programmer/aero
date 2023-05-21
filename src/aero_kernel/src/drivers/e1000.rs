@@ -606,7 +606,7 @@ impl NetworkDriver for Device {
         loop {
             let mut e1000 = self.e1000.lock_irq();
             if let Some(data) = e1000.recv() {
-                self.wq.remove(task.clone());
+                self.wq.remove(task);
                 return data;
             } else {
                 drop(e1000);
@@ -649,7 +649,9 @@ impl PciDeviceHandle for Handler {
 static DEVICE: Once<Arc<Device>> = Once::new();
 
 fn irq_handler(_stack: &mut InterruptStack) {
-    DEVICE.get().map(|e| e.handle_irq());
+    if let Some(e) = DEVICE.get() {
+        e.handle_irq()
+    }
 }
 
 fn init() {

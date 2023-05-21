@@ -54,7 +54,7 @@ unsafe impl Sync for Module {}
 #[macro_export]
 macro_rules! module_init {
     ($init_function:expr, $ty:path) => {
-        use crate::modules::ModuleType;
+        use $crate::modules::ModuleType;
 
         #[used]
         #[link_section = ".kernel_modules.init"]

@@ -245,7 +245,9 @@ impl INodeInterface for KeyboardDevice {
     }
 
     fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {
-        table.map(|q| q.insert(&self.wq));
+        if let Some(q) = table {
+            q.insert(&self.wq)
+        }
 
         if !self.buffer.lock_irq().is_empty() {
             Ok(PollFlags::IN)

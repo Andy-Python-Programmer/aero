@@ -179,7 +179,7 @@ impl StdinBuffer {
     }
 
     fn is_complete(&self) -> bool {
-        self.back_buffer.len() > 0 || self.front_buffer.len() > 0
+        !self.back_buffer.is_empty() || !self.front_buffer.is_empty()
     }
 
     fn advance_cursor(&mut self) {
@@ -294,7 +294,9 @@ impl INodeInterface for Tty {
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> fs::Result<PollFlags> {
-        table.map(|e| e.insert(&self.block_queue));
+        if let Some(e) = table {
+            e.insert(&self.block_queue)
+        }
         let mut events = PollFlags::empty();
 
         if self.stdin.lock_irq().is_complete() {
@@ -330,7 +332,7 @@ impl INodeInterface for Tty {
                 let lock = TERMIOS.lock_irq();
                 let this = &*lock;
 
-                *termios = this.clone();
+                *termios = *this;
                 Ok(0x00)
             }
 
@@ -347,7 +349,7 @@ impl INodeInterface for Tty {
                 let mut lock = TERMIOS.lock_irq();
                 let this = &mut *lock;
 
-                *this = termios.clone();
+                *this = *termios;
                 Ok(0x00)
             }
 
@@ -438,11 +440,11 @@ impl KeyboardListener for Tty {
             if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ICANON) {
                 let mut stdin = self.stdin.lock_irq();
 
-                if stdin.back_buffer.pop().is_some() {
-                    if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {
-                        rendy::backspace();
-                        stdin.cursor -= 1;
-                    }
+                if stdin.back_buffer.pop().is_some()
+                    && termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO)
+                {
+                    rendy::backspace();
+                    stdin.cursor -= 1;
                 }
             } else {
                 push_str("\x08");
@@ -483,7 +485,7 @@ impl KeyboardListener for Tty {
             KeyCode::KEY_ENTER | KeyCode::KEY_KPENTER if !released => {
                 let mut stdin = self.stdin.lock_irq();
 
-                stdin.back_buffer.push('\n' as u8);
+                stdin.back_buffer.push(b'\n');
                 stdin.cursor = 0;
 
                 if termios.c_lflag.contains(aero_syscall::TermiosLFlag::ECHO) {

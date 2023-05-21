@@ -59,11 +59,11 @@ pub enum ElfLoadError {
 
 fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfLoadError> {
     // 1. Read the ELF PT1 header:
-    let mut pt1_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT1_SIZE));
+    let pt1_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT1_SIZE));
 
     file.inode()
-        .read_at(0, &mut pt1_hdr_slice)
-        .map_err(|err| ElfLoadError::IOError(err))?;
+        .read_at(0, pt1_hdr_slice)
+        .map_err(ElfLoadError::IOError)?;
 
     let pt1_header: &'header _ = unsafe { &*(pt1_hdr_slice.as_ptr() as *const HeaderPt1) };
 
@@ -75,11 +75,11 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfL
     let pt2_header = match pt1_header.class() {
         // 3. Read the 64-bit PT2 header:
         Class::SixtyFour => {
-            let mut pt2_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT2_64_SIZE));
+            let pt2_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT2_64_SIZE));
 
             file.inode()
-                .read_at(ELF_PT1_SIZE, &mut pt2_hdr_slice)
-                .map_err(|err| ElfLoadError::IOError(err))?;
+                .read_at(ELF_PT1_SIZE, pt2_hdr_slice)
+                .map_err(ElfLoadError::IOError)?;
 
             let pt2_header_ptr = pt2_hdr_slice.as_ptr();
             let pt2_header: &'header _ = unsafe { &*(pt2_header_ptr as *const HeaderPt2_<P64>) };
@@ -119,11 +119,11 @@ fn parse_program_header<'pheader>(
     let size = pt2.ph_entry_size() as usize;
 
     // 2. Read the 64-bit program header:
-    let mut phdr_buffer = Box::leak(mem::alloc_boxed_buffer::<u8>(size));
+    let phdr_buffer = Box::leak(mem::alloc_boxed_buffer::<u8>(size));
 
     file.inode()
-        .read_at(start, &mut phdr_buffer)
-        .map_err(|err| ElfLoadError::IOError(err))?;
+        .read_at(start, phdr_buffer)
+        .map_err(ElfLoadError::IOError)?;
 
     let phdr_ptr = phdr_buffer.as_ptr();
 
@@ -153,7 +153,7 @@ struct Shebang {
 impl Shebang {
     fn new(path: String, argument: String) -> Result<Self, ElfLoadError> {
         let path = Path::new(&path);
-        let interpreter = fs::lookup_path(path).map_err(|err| ElfLoadError::IOError(err))?;
+        let interpreter = fs::lookup_path(path).map_err(ElfLoadError::IOError)?;
 
         Ok(Self {
             interpreter,
@@ -169,9 +169,9 @@ fn contains_shebang(bin: DirCacheItem) -> Result<bool, ElfLoadError> {
 
     bin.inode()
         .read_at(0, shebang)
-        .map_err(|err| ElfLoadError::IOError(err))?;
+        .map_err(ElfLoadError::IOError)?;
 
-    Ok(shebang[0] == '#' as u8 && shebang[1] == '!' as u8)
+    Ok(shebang[0] == b'#' && shebang[1] == b'!')
 }
 
 fn parse_shebang(bin: DirCacheItem) -> Result<Option<Shebang>, ElfLoadError> {
@@ -187,9 +187,7 @@ fn parse_shebang(bin: DirCacheItem) -> Result<Option<Shebang>, ElfLoadError> {
     let read_at_index = |idx: usize| -> Result<char, ElfLoadError> {
         let c = &mut [0u8; 1];
 
-        bin.inode()
-            .read_at(idx, c)
-            .map_err(|err| ElfLoadError::IOError(err))?;
+        bin.inode().read_at(idx, c).map_err(ElfLoadError::IOError)?;
 
         Ok(c[0] as char)
     };
@@ -559,7 +557,7 @@ impl Mapping {
                 // and they are just allocated on faults. So there might be a chance where we
                 // try to unmap a region that is mapped but not actually allocated.
                 Err(UnmapError::PageNotMapped) => Ok(()),
-                Err(err) => return Err(err),
+                Err(err) => Err(err),
             }
         };
 
@@ -578,8 +576,8 @@ impl Mapping {
             });
 
             let new_mapping = Mapping {
-                protection: self.protection.clone(),
-                flags: self.flags.clone(),
+                protection: self.protection,
+                flags: self.flags,
                 start_addr: end,
                 end_addr: end + (self.end_addr - end),
                 file: new_file,
@@ -689,7 +687,7 @@ impl VmProtected {
             let mut address_space = AddressSpace::this();
             let mut offset_table = address_space.offset_page_table();
 
-            let result = match (is_private, is_annon) {
+            match (is_private, is_annon) {
                 (true, true) => {
                     map.handle_pf_private_anon(&mut offset_table, reason, accessed_address)
                 }
@@ -699,9 +697,7 @@ impl VmProtected {
                 }
 
                 (false, true) => unreachable!("shared and anonymous mapping"),
-            };
-
-            result
+            }
         } else {
             log::trace!("mapping not found for address: {:#x}", accessed_address);
 
@@ -722,12 +718,10 @@ impl VmProtected {
                 return None;
             } else if map.start_addr < address {
                 cursor.move_next();
+            } else if address + size > map.start_addr {
+                return None;
             } else {
-                if address + size > map.start_addr {
-                    return None;
-                } else {
-                    break;
-                }
+                break;
             }
         }
 
@@ -754,27 +748,25 @@ impl VmProtected {
 
             if map.start_addr < address {
                 cursor.move_next();
-            } else {
-                if let Some(pmap) = cursor.peek_prev() {
-                    let start = core::cmp::max(address, pmap.end_addr);
-                    let hole = map_start.as_u64() - start.as_u64();
+            } else if let Some(pmap) = cursor.peek_prev() {
+                let start = core::cmp::max(address, pmap.end_addr);
+                let hole = map_start.as_u64() - start.as_u64();
 
-                    if hole as usize >= size {
-                        return Some((start, cursor));
-                    } else {
-                        // The hole is too small
-                        cursor.move_next();
-                    }
+                if hole as usize >= size {
+                    return Some((start, cursor));
                 } else {
-                    let hole = map_start.as_u64() - address.as_u64();
-
-                    return if hole as usize >= size {
-                        Some((address, cursor))
-                    } else {
-                        // The hole is too small
-                        None
-                    };
+                    // The hole is too small
+                    cursor.move_next();
                 }
+            } else {
+                let hole = map_start.as_u64() - address.as_u64();
+
+                return if hole as usize >= size {
+                    Some((address, cursor))
+                } else {
+                    // The hole is too small
+                    None
+                };
             }
         }
 
@@ -791,7 +783,7 @@ impl VmProtected {
         file: Option<DirCacheItem>,
     ) -> Option<VirtAddr> {
         // Offset is required to be a multiple of page size.
-        if (offset as u64 & Size4KiB::SIZE - 1) != 0 {
+        if (offset as u64 & (Size4KiB::SIZE - 1)) != 0 {
             return None;
         }
 
@@ -822,26 +814,24 @@ impl VmProtected {
         if address == VirtAddr::zero() {
             // We need to find a free mapping above 0x7000_0000_0000.
             self.find_any_above(VirtAddr::new(0x7000_0000_0000), size_aligned as _)
-        } else {
-            if flags.contains(MMapFlags::MAP_FIXED) {
-                // SAFETY: The provided address should be page aligned.
-                if !address.is_aligned(Size4KiB::SIZE) {
-                    return None;
-                }
-
-                // SAFETY: The provided (address + size) should be less then
-                // the userland max address.
-                if (address + size_aligned) > userland_last_address() {
-                    return None;
-                }
-
-                self.munmap(address, size_aligned as usize); // Unmap any existing mappings.
-                self.find_fixed_mapping(address, size_aligned as _)
-            } else {
-                self.find_any_above(address, size)
+        } else if flags.contains(MMapFlags::MAP_FIXED) {
+            // SAFETY: The provided address should be page aligned.
+            if !address.is_aligned(Size4KiB::SIZE) {
+                return None;
             }
+
+            // SAFETY: The provided (address + size) should be less then
+            // the userland max address.
+            if (address + size_aligned) > userland_last_address() {
+                return None;
+            }
+
+            self.munmap(address, size_aligned as usize); // Unmap any existing mappings.
+            self.find_fixed_mapping(address, size_aligned as _)
+        } else {
+            self.find_any_above(address, size)
         }
-        .and_then(|(addr, mut cursor)| {
+        .map(|(addr, mut cursor)| {
             // Merge same mappings instead of creating a new one.
             if let Some(prev) = cursor.peek_prev() {
                 if prev.end_addr == addr
@@ -851,7 +841,7 @@ impl VmProtected {
                 {
                     prev.end_addr = addr + size_aligned;
 
-                    return Some(addr);
+                    return addr;
                 }
             }
 
@@ -866,7 +856,7 @@ impl VmProtected {
                 refresh_flags: true,
             });
 
-            Some(addr)
+            addr
         })
     }
 
@@ -893,7 +883,10 @@ impl VmProtected {
             }
 
             largv.push(bin.absolute_path_str().as_bytes());
-            argv.map(|argv| largv.extend(&argv.inner[1..]));
+
+            if let Some(argv) = argv {
+                largv.extend(&argv.inner[1..])
+            }
 
             return self.load_bin(shebang.interpreter, Some(largv), envv);
         }
@@ -1085,47 +1078,45 @@ impl VmProtected {
         while let Some(map) = cursor.current() {
             if map.end_addr <= start {
                 cursor.move_next();
+            } else if end <= map.start_addr || start >= map.end_addr {
+                break;
+            } else if start > map.start_addr && end < map.end_addr {
+                // The address we want to unmap is in the middle of the region. So we
+                // will need to split the mapping and update the end address accordingly.
+                let (left, mut mid, right) = map.split(start, end);
+                mid.protection = prot;
+
+                cursor.insert_after(right);
+                cursor.insert_after(mid);
+                cursor.insert_after(left);
+                cursor.remove_current();
+                break;
+            } else if start <= map.start_addr && end >= map.end_addr {
+                // full
+                map.protection = prot;
+                cursor.move_next();
+            } else if start <= map.start_addr && end < map.end_addr {
+                // start
+                let mut mapping = map.clone();
+                mapping.end_addr = end;
+                mapping.protection = prot;
+
+                map.start_addr = end;
+                cursor.insert_before(mapping);
+                break;
             } else {
-                if end <= map.start_addr || start >= map.end_addr {
-                    break;
-                } else if start > map.start_addr && end < map.end_addr {
-                    // The address we want to unmap is in the middle of the region. So we
-                    // will need to split the mapping and update the end address accordingly.
-                    let (left, mut mid, right) = map.split(start, end);
-                    mid.protection = prot;
+                // end
+                let mut mapping = map.clone();
+                mapping.start_addr = end;
+                mapping.protection = prot;
 
-                    cursor.insert_after(right);
-                    cursor.insert_after(mid);
-                    cursor.insert_after(left);
-                    cursor.remove_current();
-                    break;
-                } else if start <= map.start_addr && end >= map.end_addr {
-                    // full
-                    map.protection = prot;
-                    cursor.move_next();
-                } else if start <= map.start_addr && end < map.end_addr {
-                    // start
-                    let mut mapping = map.clone();
-                    mapping.end_addr = end;
-                    mapping.protection = prot;
-
-                    map.start_addr = end;
-                    cursor.insert_before(mapping);
-                    break;
-                } else {
-                    // end
-                    let mut mapping = map.clone();
-                    mapping.start_addr = end;
-                    mapping.protection = prot;
-
-                    map.end_addr = start;
-                    cursor.insert_after(mapping);
-                    cursor.move_next();
-                }
+                map.end_addr = start;
+                cursor.insert_after(mapping);
+                cursor.move_next();
             }
         }
 
-        return true;
+        true
     }
 
     fn fork_from(&mut self, parent: &Vm) {

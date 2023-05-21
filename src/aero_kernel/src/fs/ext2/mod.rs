@@ -269,7 +269,7 @@ impl INode {
             fs.block.read(offset, res.as_bytes_mut());
 
             // SAFETY: We have initialized the variable above.
-            return Some(unsafe { res.assume_init() });
+            Some(unsafe { res.assume_init() })
         } else {
             // singly indirect block
             let block_ptrs = self.inode.read().data_ptr[12] as usize * block_size;
@@ -279,7 +279,7 @@ impl INode {
             fs.block.read(offset, res.as_bytes_mut());
 
             // SAFETY: We have initialized the variable above.
-            return Some(unsafe { res.assume_init() });
+            Some(unsafe { res.assume_init() })
         }
     }
 
@@ -307,10 +307,7 @@ impl INode {
             return Err(FileSystemError::NotSupported);
         }
 
-        if DirEntryIter::new(self.sref())
-            .find(|(e, _)| e == name)
-            .is_some()
-        {
+        if DirEntryIter::new(self.sref()).any(|(e, _)| e == name) {
             return Err(FileSystemError::EntryExists);
         }
 
@@ -448,10 +445,7 @@ impl INodeInterface for INode {
     fn rename(&self, old: DirCacheItem, dest: &str) -> super::Result<()> {
         assert!(self.metadata()?.is_directory());
 
-        if DirEntryIter::new(self.sref())
-            .find(|(name, _)| name == dest)
-            .is_some()
-        {
+        if DirEntryIter::new(self.sref()).any(|(name, _)| name == dest) {
             return Err(FileSystemError::EntryExists);
         }
 
@@ -506,7 +500,7 @@ impl INodeInterface for INode {
         name: &str,
         inode: Arc<dyn INodeInterface>,
     ) -> super::Result<INodeCacheItem> {
-        Ok(self.make_inode(name, FileType::Socket, Some(inode))?)
+        self.make_inode(name, FileType::Socket, Some(inode))
     }
 
     fn resolve_link(&self) -> super::Result<String> {
@@ -523,7 +517,7 @@ impl INodeInterface for INode {
             let path_bytes = &data_bytes[..path_len];
             let path = core::str::from_utf8(path_bytes).or(Err(FileSystemError::InvalidPath))?;
 
-            return Ok(path.into());
+            Ok(path.into())
         } else {
             let mut buffer = Box::<[u8]>::new_uninit_slice(path_len);
             self.read(0, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
@@ -531,7 +525,7 @@ impl INodeInterface for INode {
             let path_bytes = unsafe { buffer.assume_init() };
             let path = core::str::from_utf8(&path_bytes).or(Err(FileSystemError::InvalidPath))?;
 
-            return Ok(path.into());
+            Ok(path.into())
         }
     }
 
@@ -555,7 +549,7 @@ impl INodeInterface for INode {
             return proxy.listen(backlog);
         }
 
-        return Err(SyscallError::EACCES);
+        Err(SyscallError::EACCES)
     }
 
     // XXX: We do not require to handle `bind` here since if this function
@@ -566,7 +560,7 @@ impl INodeInterface for INode {
             return proxy.connect(address, length);
         }
 
-        return Err(FileSystemError::NotSupported);
+        Err(FileSystemError::NotSupported)
     }
 
     fn accept(&self, address: Option<(VirtAddr, &mut u32)>) -> super::Result<Arc<UnixSocket>> {
@@ -574,7 +568,7 @@ impl INodeInterface for INode {
             return proxy.accept(address);
         }
 
-        return Err(FileSystemError::NotSupported);
+        Err(FileSystemError::NotSupported)
     }
 
     fn send(&self, message_hdr: &mut MessageHeader, flags: MessageFlags) -> super::Result<usize> {
@@ -598,7 +592,7 @@ impl INodeInterface for INode {
             return proxy.poll(table);
         }
 
-        return Err(FileSystemError::NotSupported);
+        Err(FileSystemError::NotSupported)
     }
 
     fn as_unix_socket(&self) -> super::Result<Arc<dyn INodeInterface>> {
@@ -645,7 +639,7 @@ impl Iterator for DirEntryIter {
 
         // SAFETY: We have initialized the name above.
         let name = unsafe { name.assume_init() };
-        let name = unsafe { core::str::from_utf8_unchecked(&*name) };
+        let name = unsafe { core::str::from_utf8_unchecked(&name) };
 
         self.offset += entry.entry_size as usize;
         Some((name.to_string(), entry))

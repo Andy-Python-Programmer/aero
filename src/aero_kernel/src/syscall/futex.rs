@@ -72,7 +72,7 @@ impl FutexContainer {
 
     /// Returns the futex at the given key, or None if it doesn't exist.
     fn get(&self, key: PhysAddr) -> Option<Arc<WaitQueue>> {
-        self.futexes.lock_irq().get(&key).map(|e| e.clone())
+        self.futexes.lock_irq().get(&key).cloned()
     }
 
     /// Tests the that the value at the futex word pointed to by `uaddr` still contains the
@@ -126,7 +126,7 @@ static FUTEX_CONTAINER: Once<FutexContainer> = Once::new();
 
 /// Returns a reference to the futex container; initializing if necessary.
 fn get_futex_container() -> &'static FutexContainer {
-    FUTEX_CONTAINER.call_once(|| FutexContainer::new())
+    FUTEX_CONTAINER.call_once(FutexContainer::new)
 }
 
 #[syscall]

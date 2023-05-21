@@ -390,12 +390,16 @@ impl DirCacheImpl for DirCacheItem {
 
 #[inline]
 pub fn clear_inode_cache() {
-    INODE_CACHE.get().map(|cache| cache.clear());
+    if let Some(cache) = INODE_CACHE.get() {
+        cache.clear()
+    }
 }
 
 #[inline]
 pub fn clear_dir_cache() {
-    DIR_CACHE.get().map(|cache| cache.clear());
+    if let Some(cache) = DIR_CACHE.get() {
+        cache.clear()
+    }
 }
 
 pub fn icache() -> &'static Arc<INodeCache> {
@@ -412,6 +416,6 @@ pub fn dcache() -> &'static Arc<DirCache> {
 
 /// This function is responsible for initializing the inode cache.
 pub fn init() {
-    INODE_CACHE.call_once(|| INodeCache::new());
-    DIR_CACHE.call_once(|| DirCache::new());
+    INODE_CACHE.call_once(INodeCache::new);
+    DIR_CACHE.call_once(DirCache::new);
 }

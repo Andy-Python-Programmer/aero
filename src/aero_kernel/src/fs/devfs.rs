@@ -452,10 +452,10 @@ pub(super) fn init() -> Result<()> {
     let rendy_info = crate::rendy::get_rendy_info();
 
     {
-        let null = DEV_NULL.call_once(|| DevNull::new());
-        let kmsg = DEV_KMSG.call_once(|| DevKmsg::new());
+        let null = DEV_NULL.call_once(DevNull::new);
+        let kmsg = DEV_KMSG.call_once(DevKmsg::new);
         let fb = DEV_FB.call_once(|| DevFb::new(rendy_info));
-        let urandom = DEV_URANDOM.call_once(|| DevUrandom::new());
+        let urandom = DEV_URANDOM.call_once(DevUrandom::new);
 
         install_device(null.clone())?;
         install_device(kmsg.clone())?;

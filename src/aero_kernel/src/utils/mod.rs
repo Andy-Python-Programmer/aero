@@ -147,7 +147,7 @@ impl<T> PerCpu<T> {
 
     #[inline]
     pub fn as_mut_ptr(&self) -> *mut T {
-        unsafe { (&mut *self.data.get()).as_mut() }
+        unsafe { (*self.data.get()).as_mut() }
     }
 
     #[inline]
@@ -163,7 +163,7 @@ impl<T> PerCpu<T> {
 
 pub fn slice_into_bytes<T: Sized>(slice: &[T]) -> &[u8] {
     let data = slice.as_ptr() as *const u8;
-    let size = slice.len() * core::mem::size_of::<T>();
+    let size = core::mem::size_of_val(slice);
 
     unsafe { core::slice::from_raw_parts(data, size) }
 }

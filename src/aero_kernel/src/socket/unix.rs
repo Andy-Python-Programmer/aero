@@ -36,7 +36,7 @@ use crate::utils::sync::{Mutex, WaitQueue};
 
 use super::SocketAddr;
 
-fn path_from_unix_sock<'sock>(address: &'sock SocketAddrUnix) -> fs::Result<&'sock Path> {
+fn path_from_unix_sock(address: &SocketAddrUnix) -> fs::Result<&Path> {
     // The abstract namespace socket allows the creation of a socket
     // connection which does not require a path to be created.
     let abstract_namespaced = address.path[0] == 0;
@@ -219,7 +219,7 @@ impl UnixSocket {
             .ok_or(FileSystemError::NotSocket)?;
 
         a.inner.lock_irq().state = UnixSocketState::Connected(b.clone());
-        b.inner.lock_irq().state = UnixSocketState::Connected(a.clone());
+        b.inner.lock_irq().state = UnixSocketState::Connected(a);
         Ok(())
     }
 
@@ -414,7 +414,9 @@ impl INodeInterface for UnixSocket {
         let buffer = self.buffer.lock_irq();
         let inner = self.inner.lock_irq();
 
-        table.map(|e| e.insert(&self.wq));
+        if let Some(e) = table {
+            e.insert(&self.wq)
+        }
 
         let mut events = PollFlags::OUT;
 
@@ -425,8 +427,8 @@ impl INodeInterface for UnixSocket {
                     return Ok(events);
                 }
             }
-
-            _ => {}
+            UnixSocketState::Disconnected => todo!(),
+            UnixSocketState::Connected(_) => todo!(),
         }
 
         if !buffer.is_empty() {

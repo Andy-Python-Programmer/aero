@@ -116,7 +116,7 @@ pub fn breakpoint(stack: &mut InterruptErrorStack) {
     //
     // So we will set the RIP to RIP - 1, pointing to the int3
     // instruction.
-    (*stack).stack.iret.rip -= 1;
+    stack.stack.iret.rip -= 1;
 }
 
 pub(super) fn page_fault(stack: &mut InterruptErrorStack) {

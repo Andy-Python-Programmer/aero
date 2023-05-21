@@ -199,7 +199,7 @@ pub(super) fn find_rsdt_address(rsdp_address: VirtAddr) -> RsdtAddress {
         assert!(valid, "rsdp: failed to validate RSDP v20 checksum");
 
         let xsdt_address = PhysAddr::new(v20.xsdt_address).as_hhdm_virt();
-        return RsdtAddress::Xsdt(xsdt_address);
+        RsdtAddress::Xsdt(xsdt_address)
     } else {
         let v10 = unsafe { &*(rsdp_address.as_ptr() as *const Rsdp10) };
         let valid = validate_rsdt_checksum(v10);
@@ -207,6 +207,6 @@ pub(super) fn find_rsdt_address(rsdp_address: VirtAddr) -> RsdtAddress {
         assert!(valid, "rsdp: failed to validate RSDP v10 checksum");
 
         let rsdt_address = PhysAddr::new(v10.rsdt_address as u64).as_hhdm_virt();
-        return RsdtAddress::Rsdt(rsdt_address);
+        RsdtAddress::Rsdt(rsdt_address)
     }
 }

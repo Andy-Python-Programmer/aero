@@ -116,7 +116,7 @@ impl<S: AsRef<[u8]> + AsMut<[u8]>> RingBuffer<S> {
             }
         }
 
-        return "";
+        ""
     }
 
     /// Appends the provided byte to the ring buffer.
@@ -144,8 +144,8 @@ mod tests {
     fn partially_overwritten_buffer() {
         let mut buf = RingBuffer::new([0u8; 16]);
         write!(buf, "\nfirst\n").unwrap();
-        write!(buf, "second\n").unwrap();
-        write!(buf, "third\n").unwrap();
+        writeln!(buf, "second").unwrap();
+        writeln!(buf, "third").unwrap();
 
         assert_eq!(buf.extract(), "st\nsecond\nthird\n");
     }

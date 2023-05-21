@@ -38,7 +38,7 @@ impl SlabHeader {
     }
 
     /// Returns the slab pool to which this header belongs to.
-    pub fn as_slab<'a>(&'a self) -> &'a SmallSlab {
+    pub fn as_slab(&self) -> &SmallSlab {
         self.ptr.as_ref()
     }
 }
@@ -142,7 +142,7 @@ impl SmallSlab {
                 let entry = first_free.add(i * fact);
                 let next = first_free.add((i + 1) * fact);
 
-                (&mut *entry).0 = Some(NonNull::new_unchecked(next));
+                (*entry).0 = Some(NonNull::new_unchecked(next));
             }
         }
 

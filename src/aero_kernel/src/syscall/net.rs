@@ -19,8 +19,8 @@ use crate::userland::scheduler;
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
 fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddr<'sys>, SyscallError> {
-    let family = address.read_mut::<u32>()?.clone();
-    Ok(SocketAddr::from_family(address, family)?)
+    let family = *address.read_mut::<u32>()?;
+    SocketAddr::from_family(address, family)
 }
 
 /// Connects the socket to the specified address.
