@@ -26,6 +26,7 @@ packages=(
     "texinfo"
     "groff"
     "gettext"
+    "autopoint"
     "expat"
     "bison"
     "flex"
