@@ -2,7 +2,7 @@ name: Weekly Aero Build
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * 0'
   workflow_dispatch:
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
 
           pushd build
           [ -f bootstrap.link ] || xbstrap init ..
-          xbstrap install bash coreutils dwm alacritty
+          xbstrap install bash coreutils dwm xorg-xserver xorg-xinit alacritty
           popd
 
       - name: Build Kernel
