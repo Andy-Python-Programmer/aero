@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-// `/dev/ctty`: controlling terminal of the process
+// `/dev/tty`: controlling terminal of the process
 // `/dev/vtty[0-9]`: virtual terminals
 
 mod ctty;
@@ -364,7 +364,7 @@ impl devfs::Device for Tty {
     }
 
     fn device_name(&self) -> String {
-        String::from("tty")
+        String::from("vtty")
     }
 
     fn inode(&self) -> Arc<dyn inode::INodeInterface> {

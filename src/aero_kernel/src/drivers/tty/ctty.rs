@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-//! `/dev/ctty`: Controlling terminal of the current process.
+//! `/dev/tty`: Controlling terminal of the current process.
 
 use aero_syscall::TIOCNOTTY;
 use alloc::sync::{Arc, Weak};
@@ -102,7 +102,7 @@ impl Device for Ctty {
 
     #[inline]
     fn device_name(&self) -> String {
-        String::from("ctty")
+        String::from("tty")
     }
 
     #[inline]
