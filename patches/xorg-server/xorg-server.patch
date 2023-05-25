@@ -1,12 +1,10 @@
-From 6a1cb57184179a2971bedd477fa71f30bbac6a09 Mon Sep 17 00:00:00 2001
-From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Thu, 30 Jun 2022 11:10:21 +1000
-Subject: [PATCH] xserver: aero specific changes
+From b43c01a762f484fd03051b57724cdad82584c9aa Mon Sep 17 00:00:00 2001
+From: Anhad Singh <andypythonappdeveloper@gmail.com>
+Date: Tue, 23 May 2023 19:10:14 +1000
+Subject: [PATCH] ^)
 
-Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Signed-off-by: Anhad Singh <andypythonappdeveloper@gmail.com>
 ---
- .gitignore                               |  2 ++
- configure.ac                             |  2 ++
  hw/xfree86/common/xf86Bus.c              |  2 ++
  hw/xfree86/common/xf86Config.c           |  2 ++
  hw/xfree86/common/xf86Configure.c        |  1 +
@@ -15,43 +13,22 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  hw/xfree86/common/xf86Init.c             |  2 ++
  hw/xfree86/fbdevhw/fbdevhw.c             | 36 +++++++++++++++---------
  hw/xfree86/fbdevhw/fbdevhw.h             |  4 +--
+ hw/xfree86/fbdevhw/meson.build           |  2 +-
  hw/xfree86/os-support/shared/posix_tty.c |  3 ++
  hw/xfree86/os-support/shared/sigio.c     |  3 ++
  include/os.h                             |  1 +
+ meson.build                              |  3 +-
  mi/mibitblt.c                            |  2 ++
  os/access.c                              |  2 +-
  os/ospoll.c                              |  2 ++
- os/utils.c                               |  6 ++--
- 17 files changed, 52 insertions(+), 20 deletions(-)
+ os/utils.c                               |  4 +--
+ 17 files changed, 50 insertions(+), 21 deletions(-)
 
-diff --git a/.gitignore b/.gitignore
-index dc56b46..81d9886 100644
---- a/.gitignore
-+++ b/.gitignore
-@@ -80,3 +80,5 @@ core
- doltcompile
- doltlibtool
- xserver.ent
-+# editor configs:
-+.vscode
-diff --git a/configure.ac b/configure.ac
-index 0909cc5..080b906 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -1967,6 +1967,8 @@ if test "x$XORG" = xyes; then
- 		XORG_DRIVER_MODESETTING=yes
- 	fi
- 
-+	XORG_DRIVER_MODESETTING=no
-+
- 	AC_SUBST([XORG_LIBS])
- 	AC_SUBST([XORG_SYS_LIBS])
- 	AC_SUBST([XORG_INCS])
 diff --git a/hw/xfree86/common/xf86Bus.c b/hw/xfree86/common/xf86Bus.c
-index a8f1073..d7399aa 100644
+index fd144db..b232e27 100644
 --- a/hw/xfree86/common/xf86Bus.c
 +++ b/hw/xfree86/common/xf86Bus.c
-@@ -536,6 +536,7 @@ xf86GetDevFromEntity(int entityIndex, int instance)
+@@ -556,6 +556,7 @@ xf86GetDevFromEntity(int entityIndex, int instance)
  void
  xf86PostProbe(void)
  {
@@ -59,29 +36,29 @@ index a8f1073..d7399aa 100644
      if (fbSlotClaimed && (
  #if (defined(__sparc__) || defined(__sparc)) && !defined(__OpenBSD__)
                               sbusSlotClaimed ||
-@@ -551,6 +552,7 @@ xf86PostProbe(void)
+@@ -571,6 +572,7 @@ xf86PostProbe(void)
          ))
          FatalError("Cannot run in framebuffer mode. Please specify busIDs "
                     "       for all framebuffer devices\n");
 +#endif
  }
  
- int
+ Bool
 diff --git a/hw/xfree86/common/xf86Config.c b/hw/xfree86/common/xf86Config.c
-index 09d27ec..83be062 100644
+index 5d814c1..dabfec8 100644
 --- a/hw/xfree86/common/xf86Config.c
 +++ b/hw/xfree86/common/xf86Config.c
-@@ -49,6 +49,8 @@
- #include <sys/types.h>
- #include <grp.h>
+@@ -47,6 +47,8 @@
+ #endif
  
+ #include <sys/types.h>
 +#include <sys/stat.h>
 +
+ #include <grp.h>
+ 
  #include "xf86.h"
- #include "xf86Modes.h"
- #include "xf86Parser.h"
 diff --git a/hw/xfree86/common/xf86Configure.c b/hw/xfree86/common/xf86Configure.c
-index 44e7591..6265f65 100644
+index 4347f6d..3a66af7 100644
 --- a/hw/xfree86/common/xf86Configure.c
 +++ b/hw/xfree86/common/xf86Configure.c
 @@ -27,6 +27,7 @@
@@ -93,7 +70,7 @@ index 44e7591..6265f65 100644
  #include "xf86Config.h"
  #include "xf86_OSlib.h"
 diff --git a/hw/xfree86/common/xf86Events.c b/hw/xfree86/common/xf86Events.c
-index 8a800bd..d847fa8 100644
+index 395bbc7..5937017 100644
 --- a/hw/xfree86/common/xf86Events.c
 +++ b/hw/xfree86/common/xf86Events.c
 @@ -53,6 +53,7 @@
@@ -105,7 +82,7 @@ index 8a800bd..d847fa8 100644
  #include <X11/Xproto.h>
  #include <X11/Xatom.h>
 diff --git a/hw/xfree86/common/xf86Helper.c b/hw/xfree86/common/xf86Helper.c
-index 42a51dd..813bad1 100644
+index 0389945..ac231bf 100644
 --- a/hw/xfree86/common/xf86Helper.c
 +++ b/hw/xfree86/common/xf86Helper.c
 @@ -38,6 +38,7 @@
@@ -114,10 +91,10 @@ index 42a51dd..813bad1 100644
  
 +#include <sys/stat.h>
  #include <X11/X.h>
+ #include "mi.h"
  #include "os.h"
- #include "servermd.h"
 diff --git a/hw/xfree86/common/xf86Init.c b/hw/xfree86/common/xf86Init.c
-index 2ec6b2f..c1d9c24 100644
+index 5695e71..96c2d15 100644
 --- a/hw/xfree86/common/xf86Init.c
 +++ b/hw/xfree86/common/xf86Init.c
 @@ -37,6 +37,8 @@
@@ -130,7 +107,7 @@ index 2ec6b2f..c1d9c24 100644
  #if !defined(WIN32)
  #define HAS_UTSNAME 1
 diff --git a/hw/xfree86/fbdevhw/fbdevhw.c b/hw/xfree86/fbdevhw/fbdevhw.c
-index 9508951..a4c1e6e 100644
+index 3d8b92e..dae3960 100644
 --- a/hw/xfree86/fbdevhw/fbdevhw.c
 +++ b/hw/xfree86/fbdevhw/fbdevhw.c
 @@ -10,12 +10,13 @@
@@ -171,7 +148,7 @@ index 9508951..a4c1e6e 100644
      /* only touch non-PCI devices on this path */
 +#if 0
      {
-         char buf[PATH_MAX];
+         char buf[PATH_MAX] = {0};
          char *sysfs_path = NULL;
 @@ -344,6 +348,7 @@ fbdev_open(int scrnIndex, const char *dev, char **namep)
          }
@@ -262,6 +239,16 @@ index 4984ccf..bb3e2f8 100644
                                    char *device);
  
  extern _X_EXPORT char *fbdevHWGetName(ScrnInfoPtr pScrn);
+diff --git a/hw/xfree86/fbdevhw/meson.build b/hw/xfree86/fbdevhw/meson.build
+index f3146f3..5e5e6e8 100644
+--- a/hw/xfree86/fbdevhw/meson.build
++++ b/hw/xfree86/fbdevhw/meson.build
+@@ -1,4 +1,4 @@
+-if host_machine.system() == 'linux'
++if host_machine.system() == 'linux' or host_machine.system() == 'aero'
+     srcs_fbdevhw = 'fbdevhw.c'
+ else
+     srcs_fbdevhw = 'fbdevhwstub.c'
 diff --git a/hw/xfree86/os-support/shared/posix_tty.c b/hw/xfree86/os-support/shared/posix_tty.c
 index 0cb9788..e8cac5d 100644
 --- a/hw/xfree86/os-support/shared/posix_tty.c
@@ -277,7 +264,7 @@ index 0cb9788..e8cac5d 100644
  #include <xserver_poll.h>
  #include "xf86.h"
 diff --git a/hw/xfree86/os-support/shared/sigio.c b/hw/xfree86/os-support/shared/sigio.c
-index 247bec7..216e8cd 100644
+index ad8af60..6f81278 100644
 --- a/hw/xfree86/os-support/shared/sigio.c
 +++ b/hw/xfree86/os-support/shared/sigio.c
 @@ -56,6 +56,9 @@
@@ -291,7 +278,7 @@ index 247bec7..216e8cd 100644
  #include <xserver_poll.h>
  #include "xf86.h"
 diff --git a/include/os.h b/include/os.h
-index 2a1c29e..2a7fc76 100644
+index bb3348b..64b04dc 100644
 --- a/include/os.h
 +++ b/include/os.h
 @@ -51,6 +51,7 @@ SOFTWARE.
@@ -302,8 +289,22 @@ index 2a1c29e..2a7fc76 100644
  #ifdef MONOTONIC_CLOCK
  #include <time.h>
  #endif
+diff --git a/meson.build b/meson.build
+index 637938a..b5d761c 100644
+--- a/meson.build
++++ b/meson.build
+@@ -439,7 +439,8 @@ if not libdrm_dep.found() and libdrm_required
+     error('DRI requested, but LIBDRM not found')
+ endif
+ 
+-build_modesetting = libdrm_dep.found() and dri2proto_dep.found()
++# build_modesetting = libdrm_dep.found() and dri2proto_dep.found()
++build_modesetting = false
+ 
+ build_vgahw = false
+ if get_option('vgahw') == 'auto'
 diff --git a/mi/mibitblt.c b/mi/mibitblt.c
-index 43d9bd9..740c0d2 100644
+index 0b13e49..aff6539 100644
 --- a/mi/mibitblt.c
 +++ b/mi/mibitblt.c
 @@ -49,6 +49,8 @@ SOFTWARE.
@@ -316,11 +317,11 @@ index 43d9bd9..740c0d2 100644
  #include <X11/Xprotostr.h>
  
 diff --git a/os/access.c b/os/access.c
-index 9724616..81befe3 100644
+index 61ee8e3..24cabae 100644
 --- a/os/access.c
 +++ b/os/access.c
-@@ -117,7 +117,7 @@ SOFTWARE.
- #endif
+@@ -120,7 +120,7 @@ SOFTWARE.
+ #include <sys/un.h>
  #endif
  
 -#if defined(SVR4) ||  (defined(SYSV) && defined(__i386__)) || defined(__GNU__)
@@ -347,10 +348,10 @@ index c68aabc..19006c3 100644
  #if !HAVE_OSPOLL
  #include "xserver_poll.h"
 diff --git a/os/utils.c b/os/utils.c
-index 2ba1c80..ffa961f 100644
+index 92a66e8..646722e 100644
 --- a/os/utils.c
 +++ b/os/utils.c
-@@ -1402,7 +1402,7 @@ System(const char *command)
+@@ -1403,7 +1403,7 @@ System(const char *command)
          return -1;
      }
  
@@ -359,16 +360,7 @@ index 2ba1c80..ffa961f 100644
  }
  
  static struct pid {
-@@ -1474,7 +1474,7 @@ Popen(const char *command, const char *type)
-             }
-             close(pdes[1]);
-         }
--        execl("/bin/sh", "sh", "-c", command, (char *) NULL);
-+        execl("/usr/bin/bash", "sh", "-c", command, (char *) NULL);
-         _exit(127);
-     }
- 
-@@ -1632,7 +1632,7 @@ Pclose(void *iop)
+@@ -1633,7 +1633,7 @@ Pclose(void *iop)
      }
  #endif
  
@@ -378,5 +370,5 @@ index 2ba1c80..ffa961f 100644
  
  int
 -- 
-2.25.1
+2.40.1
 

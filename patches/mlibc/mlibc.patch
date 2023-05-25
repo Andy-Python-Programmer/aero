@@ -1,4 +1,4 @@
-From 9a74ab891ad2f1e2c47ef495767e5b3a25c33fa2 Mon Sep 17 00:00:00 2001
+From 3f789791be46cefe9ff8a5c6196a3a23bed9620f Mon Sep 17 00:00:00 2001
 From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 Date: Sun, 16 Apr 2023 14:21:09 +1000
 Subject: [PATCH] <xxx>
@@ -6,14 +6,14 @@ Subject: [PATCH] <xxx>
 Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
 ---
  .gitignore                            |  2 ++
- options/ansi/generic/stdlib-stubs.cpp |  6 ++++--
- options/glibc/generic/execinfo.cpp    |  5 +++--
+ options/ansi/generic/stdlib-stubs.cpp |  6 +++--
+ options/glibc/generic/execinfo.cpp    |  5 ++--
  options/rtdl/generic/linker.cpp       |  2 +-
- sysdeps/aero/generic/aero.cpp         | 27 +++++++++++++++++--------
- sysdeps/aero/generic/filesystem.cpp   | 14 +++++++------
- sysdeps/aero/generic/sockets.cpp      | 29 +++++++++++++++++++++++++--
- sysdeps/aero/include/aero/syscall.h   | 10 +++++++++
- 8 files changed, 74 insertions(+), 21 deletions(-)
+ sysdeps/aero/generic/aero.cpp         | 27 +++++++++++++++-------
+ sysdeps/aero/generic/filesystem.cpp   | 33 ++++++++++++++-------------
+ sysdeps/aero/generic/sockets.cpp      | 29 +++++++++++++++++++++--
+ sysdeps/aero/include/aero/syscall.h   | 10 ++++++++
+ 8 files changed, 83 insertions(+), 31 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index fdd60a0..9f811f4 100644
@@ -125,7 +125,7 @@ index 6eeb980..e6bd277 100644
  }
  
 diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
-index a2c483b..5332f22 100644
+index a2c483b..fa5a369 100644
 --- a/sysdeps/aero/generic/filesystem.cpp
 +++ b/sysdeps/aero/generic/filesystem.cpp
 @@ -155,14 +155,16 @@ int sys_tcgetattr(int fd, struct termios *attr) {
@@ -151,6 +151,40 @@ index a2c483b..5332f22 100644
          return e;
  
      return 0;
+@@ -178,9 +180,7 @@ int sys_mkdir(const char *path, mode_t) {
+     return 0;
+ }
+ 
+-int sys_rmdir(const char *path) UNIMPLEMENTED("sys_rmdir")
+-
+-    int sys_link(const char *srcpath, const char *destpath) {
++int sys_link(const char *srcpath, const char *destpath) {
+     auto result =
+         syscall(SYS_LINK, srcpath, strlen(srcpath), destpath, strlen(destpath));
+ 
+@@ -191,14 +191,15 @@ int sys_rmdir(const char *path) UNIMPLEMENTED("sys_rmdir")
+     return 0;
+ }
+ 
+-int sys_unlinkat(int fd, const char *path, int flags) {
+-    auto result = syscall(SYS_UNLINK, fd, path, strlen(path), flags);
+-
+-    if (result < 0) {
+-        return -result;
+-    }
++int sys_rmdir(const char *path) {
++    return sys_unlinkat(AT_FDCWD, path, AT_REMOVEDIR);
++}
+ 
+-    return 0;
++int sys_unlinkat(int fd, const char *path, int flags) {
++	auto ret = syscall(SYS_UNLINK, fd, path, strlen(path), flags);
++	if (int e = sc_error(ret); e)
++		return e;
++	return 0;
+ }
+ 
+ struct aero_dir_entry {
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
 index 4db9956..4cb3ee8 100644
 --- a/sysdeps/aero/generic/sockets.cpp
@@ -228,5 +262,5 @@ index aa642e5..d8bf99e 100644
 +}
  #endif // SYSCALL_H
 -- 
-2.40.0
+2.40.1
 
