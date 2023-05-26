@@ -307,15 +307,6 @@ pub fn register_keyboard_listener(listener: Arc<dyn KeyboardListener>) {
     KEYBOARD_LISTENER.write().push(listener)
 }
 
-pub fn remove_keyboard_listener(target: Arc<dyn KeyboardListener>) {
-    for (index, listener) in KEYBOARD_LISTENER.read().iter().enumerate() {
-        if Arc::ptr_eq(listener, &target) {
-            KEYBOARD_LISTENER.write().remove(index);
-            return;
-        }
-    }
-}
-
 pub fn keyboard_irq_handler(_stack: &mut InterruptStack) {
     let scancode = unsafe { io::inb(0x60) };
 
