@@ -9,3 +9,4 @@ hashbrown = "0.12.0"
 spin = "0.9.8"
 aero_syscall = { path = "../../../src/aero_syscall" }
 aero_ipc = { path = "../../libs/aero_ipc" }
+libc = { git = "https://github.com/Andy-Python-Programmer/libc" }

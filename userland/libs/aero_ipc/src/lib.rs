@@ -1,21 +1,19 @@
-/*
- * Copyright (C) 2021-2022 The Aero Project Developers.
- *
- * This file is part of The Aero Project.
- *
- * Aero is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Aero is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Aero. If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2021-2022 The Aero Project Developers.
+//
+// This file is part of The Aero Project.
+//
+// Aero is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aero is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Aero. If not, see <https://www.gnu.org/licenses/>.
 #![feature(decl_macro)]
 
 mod interfaces;
@@ -57,7 +55,8 @@ impl MessageTransport for SendReceiveTransport {
         IDALLOC.fetch_xor(value << 13, Ordering::SeqCst);
         IDALLOC.fetch_xor(value >> 7, Ordering::SeqCst);
         IDALLOC.fetch_xor(value << 17, Ordering::SeqCst);
-        return IDALLOC.fetch_add(1, Ordering::SeqCst) >> 3;
+
+        IDALLOC.fetch_add(1, Ordering::SeqCst) >> 3
     }
 
     fn free_id(_: usize) {}
@@ -69,19 +68,17 @@ impl MessageTransport for SendReceiveTransport {
         loop {
             // get a response
             let rx = service_with_response_finding();
-            match rx {
-                // if we got a response,
-                Some((srcpid, mut msg)) => {
-                    // and the response has the correct message ID...
-                    let mut deser = postcard::Deserializer::from_bytes(&msg);
-                    let msgid = usize::deserialize(&mut deser)
-                        .expect("message ID not present in the message!");
-                    if msgid == (mid << 1) | 1 && meta == srcpid {
-                        // return the message contents!
-                        return msg.split_off(core::mem::size_of::<usize>());
-                    }
+
+            // if we got a response
+            if let Some((srcpid, mut msg)) = rx {
+                // and the response has the correct message ID...
+                let mut deser = postcard::Deserializer::from_bytes(&msg);
+                let msgid =
+                    usize::deserialize(&mut deser).expect("message ID not present in the message!");
+                if msgid == (mid << 1) | 1 && meta == srcpid {
+                    // return the message contents!
+                    return msg.split_off(core::mem::size_of::<usize>());
                 }
-                None => {}
             }
         }
     }
@@ -257,10 +254,7 @@ pub fn service_request() {
 
     let msg = sys_ipc_recv(&mut src, arena.as_mut(), true).expect("sys_ipc_recv failed!");
 
-    match handle_request(src, msg) {
-        Some(data) => {
-            sys_ipc_send(src, &data).expect("sys_ipc_send failed, reply dropped!");
-        }
-        _ => {}
+    if let Some(data) = handle_request(src, msg) {
+        sys_ipc_send(src, &data).expect("sys_ipc_send failed, reply dropped!");
     }
 }

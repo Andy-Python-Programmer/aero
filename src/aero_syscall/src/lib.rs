@@ -481,191 +481,39 @@ pub fn isize_as_syscall_result(value: isize) -> Result<usize, SyscallError> {
     }
 }
 
-pub fn sys_exit(status: usize) -> ! {
-    syscall1(prelude::SYS_EXIT, status);
-    unreachable!()
-}
-
-pub fn sys_open(path: &str, mode: OpenFlags) -> Result<usize, SyscallError> {
-    let value = syscall4(
-        prelude::SYS_OPEN,
-        0x00,
-        path.as_ptr() as usize,
-        path.len(),
-        mode.bits(),
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_write(fd: usize, buf: &[u8]) -> Result<usize, SyscallError> {
-    let value = syscall3(prelude::SYS_WRITE, fd, buf.as_ptr() as usize, buf.len());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_read(fd: usize, buf: &mut [u8]) -> Result<usize, SyscallError> {
-    let value = syscall3(prelude::SYS_READ, fd, buf.as_mut_ptr() as usize, buf.len());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_chdir(path: &str) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_CHDIR, path.as_ptr() as usize, path.len());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_close(fd: usize) -> Result<usize, SyscallError> {
-    let value = syscall1(prelude::SYS_CLOSE, fd);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_getcwd(buf: &mut [u8]) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_GETCWD, buf.as_mut_ptr() as usize, buf.len());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_getdents(fd: usize, buf: &mut [u8]) -> Result<usize, SyscallError> {
+pub fn sys_ipc_send(pid: usize, message: &[u8]) -> Result<(), SyscallError> {
     let value = syscall3(
-        prelude::SYS_GETDENTS,
-        fd,
-        buf.as_mut_ptr() as usize,
-        buf.len(),
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_fork() -> Result<usize, SyscallError> {
-    let value = syscall0(prelude::SYS_FORK);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_munmap(address: usize, size: usize) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_MUNMAP, address, size);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_mkdir(path: &str) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_MKDIR, path.as_ptr() as usize, path.len());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_log(message: &str) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_LOG, message.as_ptr() as usize, message.len());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_mkdirat(dfd: isize, path: &str) -> Result<usize, SyscallError> {
-    let value = syscall3(
-        prelude::SYS_MKDIR_AT,
-        dfd as usize,
-        path.as_ptr() as usize,
-        path.len(),
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_exec(path: &str, argv: &[&str], envv: &[&str]) -> Result<usize, SyscallError> {
-    let value = syscall6(
-        prelude::SYS_EXEC,
-        path.as_ptr() as usize,
-        path.len(),
-        argv.as_ptr() as usize,
-        argv.len(),
-        envv.as_ptr() as usize,
-        envv.len(),
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_rmdir(path: &str) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_RMDIR, path.as_ptr() as usize, path.len());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_uname(struc: &mut Utsname) -> Result<usize, SyscallError> {
-    let value = syscall1(prelude::SYS_UNAME, struc as *mut Utsname as usize);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_shutdown() -> ! {
-    syscall0(prelude::SYS_SHUTDOWN);
-    unreachable!()
-}
-
-pub fn sys_access(fd: usize, path: &str) -> Result<usize, SyscallError> {
-    let value = syscall5(
-        prelude::SYS_ACCESS,
-        fd,
-        path.as_ptr() as usize,
-        path.len(),
-        0,
-        0,
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize, SyscallError> {
-    let value = syscall3(
-        prelude::SYS_WAITPID,
+        prelude::SYS_IPC_SEND,
         pid,
-        status as *mut u32 as usize,
-        flags,
+        message.as_ptr() as usize,
+        message.len(),
     );
-
-    isize_as_syscall_result(value as _)
+    isize_as_syscall_result(value as _).map(|_| ())
 }
 
-pub fn sys_ioctl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallError> {
-    let value = syscall3(prelude::SYS_IOCTL, fd, command, arg);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_mmap(
-    address: usize,
-    size: usize,
-    protection: MMapProt,
-    flags: MMapFlags,
-    fd: usize,
-    offset: usize,
-) -> Result<usize, SyscallError> {
-    let value = syscall6(
-        prelude::SYS_MMAP,
-        address,
-        size,
-        protection.bits(),
-        flags.bits(),
-        fd,
-        offset,
+pub fn sys_ipc_recv<'a>(
+    pid: &mut usize,
+    message: &'a mut [u8],
+    block: bool,
+) -> Result<&'a mut [u8], SyscallError> {
+    let value = syscall4(
+        prelude::SYS_IPC_RECV,
+        pid as *mut usize as usize,
+        message.as_ptr() as usize,
+        message.len(),
+        block as usize,
     );
+    isize_as_syscall_result(value as _).map(|size| &mut message[0..size])
+}
 
+pub fn sys_ipc_discover_root() -> Result<usize, SyscallError> {
+    let value = syscall0(prelude::SYS_IPC_DISCOVER_ROOT);
     isize_as_syscall_result(value as _)
 }
 
-pub fn sys_getpid() -> Result<usize, SyscallError> {
-    let value = syscall0(prelude::SYS_GETPID);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_gettid() -> Result<usize, SyscallError> {
-    let value = syscall0(prelude::SYS_GETTID);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_gethostname(buf: &mut [u8]) -> Result<usize, SyscallError> {
-    let value = syscall2(
-        prelude::SYS_GETHOSTNAME,
-        buf.as_mut_ptr() as usize,
-        buf.len(),
-    );
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_sethostname(name: &str) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_SETHOSTNAME, name.as_ptr() as usize, name.len());
-    isize_as_syscall_result(value as _)
+pub fn sys_ipc_become_root() -> Result<(), SyscallError> {
+    let value = syscall0(prelude::SYS_IPC_BECOME_ROOT);
+    isize_as_syscall_result(value as _).map(|_| ())
 }
 
 // Sockets
@@ -789,159 +637,6 @@ pub const AF_UNSPEC: u32 = PF_UNSPEC;
 pub const AF_NETLINK: u32 = PF_NETLINK;
 pub const AF_BRIDGE: u32 = PF_BRIDGE;
 
-pub fn sys_socket(
-    domain: usize,
-    socket_type: usize,
-    protocol: usize,
-) -> Result<usize, SyscallError> {
-    let value = syscall3(prelude::SYS_SOCKET, domain, socket_type, protocol);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_listen(fd: usize, backlog: usize) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_LISTEN, fd, backlog);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_unlink(fd: usize, path: &str, flags: OpenFlags) -> Result<usize, SyscallError> {
-    let value = syscall4(
-        prelude::SYS_UNLINK,
-        fd,
-        path.as_ptr() as usize,
-        path.len(),
-        flags.bits(),
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_gettime(clock: usize, timespec: &mut TimeSpec) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_GETTIME, clock, timespec as *mut _ as usize);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_seek(fd: usize, offset: usize, whence: SeekWhence) -> Result<usize, SyscallError> {
-    let value = syscall3(prelude::SYS_SEEK, fd, offset, whence as usize);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_sleep(timespec: &TimeSpec) -> Result<usize, SyscallError> {
-    let value = syscall1(prelude::SYS_SLEEP, timespec as *const _ as usize);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_pipe(fds: &mut [usize; 2], flags: OpenFlags) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_PIPE, fds.as_ptr() as usize, flags.bits());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_info(struc: &mut SysInfo) -> Result<usize, SyscallError> {
-    let value = syscall1(prelude::SYS_INFO, struc as *mut _ as usize);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_clone(entry: usize, stack: usize) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_CLONE, entry, stack);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_sigreturn() -> Result<usize, SyscallError> {
-    let value = syscall0(prelude::SYS_SIGRETURN);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_sigaction(
-    sig: usize,
-    sigaction: Option<&signal::SigAction>,
-    old_sigaction: Option<&mut signal::SigAction>,
-) -> Result<usize, SyscallError> {
-    let sigact = sigaction;
-
-    let value = syscall4(
-        prelude::SYS_SIGACTION,
-        sig,
-        sigact
-            .map(|f| f as *const signal::SigAction as usize)
-            .unwrap_or(0),
-        sys_sigreturn as usize,
-        old_sigaction
-            .map(|f| f as *mut signal::SigAction as usize)
-            .unwrap_or(0),
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_sigprocmask(
-    how: signal::SigProcMask,
-    set: &mut u64,
-    old_set: Option<&mut u64>,
-) -> Result<usize, SyscallError> {
-    let old_set = match old_set {
-        Some(e) => e as *const u64 as usize,
-        None => 0,
-    };
-
-    let value = syscall3(
-        prelude::SYS_SIGPROCMASK,
-        how as usize,
-        set as *const u64 as usize,
-        old_set,
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_dup(fd: usize, flags: OpenFlags) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_DUP, fd, flags.bits());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_fcntl(fd: usize, command: usize, argument: usize) -> Result<usize, SyscallError> {
-    let value = syscall3(prelude::SYS_FCNTL, fd, command, argument);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_dup2(fd: usize, new_fd: usize, flags: OpenFlags) -> Result<usize, SyscallError> {
-    let value = syscall3(prelude::SYS_DUP2, fd, new_fd, flags.bits());
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_ipc_send(pid: usize, message: &[u8]) -> Result<(), SyscallError> {
-    let value = syscall3(
-        prelude::SYS_IPC_SEND,
-        pid,
-        message.as_ptr() as usize,
-        message.len(),
-    );
-    isize_as_syscall_result(value as _).map(|_| ())
-}
-
-pub fn sys_ipc_recv<'a>(
-    pid: &mut usize,
-    message: &'a mut [u8],
-    block: bool,
-) -> Result<&'a mut [u8], SyscallError> {
-    let value = syscall4(
-        prelude::SYS_IPC_RECV,
-        pid as *mut usize as usize,
-        message.as_ptr() as usize,
-        message.len(),
-        block as usize,
-    );
-    isize_as_syscall_result(value as _).map(|size| &mut message[0..size])
-}
-
-pub fn sys_ipc_discover_root() -> Result<usize, SyscallError> {
-    let value = syscall0(prelude::SYS_IPC_DISCOVER_ROOT);
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_ipc_become_root() -> Result<(), SyscallError> {
-    let value = syscall0(prelude::SYS_IPC_BECOME_ROOT);
-    isize_as_syscall_result(value as _).map(|_| ())
-}
-
 // sysdeps/aero/include/abi-bits/stat.h
 bitflags::bitflags! {
     #[derive(Default)]
@@ -994,20 +689,4 @@ pub struct Stat {
     pub st_ctim: TimeSpec,
     pub st_blksize: u64,
     pub st_blocks: u64,
-}
-
-pub fn sys_stat(path: &str, stat: &mut Stat) -> Result<usize, SyscallError> {
-    let value = syscall3(
-        prelude::SYS_STAT,
-        path.as_ptr() as usize,
-        path.len(),
-        stat as *mut Stat as usize,
-    );
-
-    isize_as_syscall_result(value as _)
-}
-
-pub fn sys_fstat(fd: usize, stat: &mut Stat) -> Result<usize, SyscallError> {
-    let value = syscall2(prelude::SYS_FSTAT, fd, stat as *mut Stat as usize);
-    isize_as_syscall_result(value as _)
 }
