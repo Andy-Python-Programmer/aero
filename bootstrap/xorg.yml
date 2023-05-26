@@ -974,6 +974,33 @@ packages:
           DESTDIR: '@THIS_COLLECT_DIR@'
       - args: ['cp', '@SOURCE_ROOT@/extra-files/xorg/xinitrc', '@THIS_COLLECT_DIR@/etc/X11/xinit/xinitrc']
 
+  # X.Org xcvt library and cvt program
+  #
+  # VESA CVT standard timing modeline generation library & utility.
+  - name: libxcvt
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xorg/lib/libxcvt.git'
+      tag: 'libxcvt-0.1.2'
+      version: '0.1.2'
+    tools_required:
+      - host-gcc
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja', '-j@PARALLELISM@']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   # The X server accepts requests from client applications to create windows,
   # which are (normally rectangular) "virtual screens" that the client program
   # can draw into.
@@ -1006,6 +1033,7 @@ packages:
       - libepoxy
       - libxkbfile
       - libxfont2
+      - libxcvt
       - pixman
     configure:
       - args:
