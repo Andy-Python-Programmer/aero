@@ -46,10 +46,10 @@ unsafe extern "C" fn copy_to_from_user(
 ) -> bool {
     // Registers used:
     //
-    // %rax = argument 1, `dest`
+    // %rdi = argument 1, `dest`
     // %rsi = argument 2, `src`
     // %rdx = argument 3, `size`
-    // %rcx = argument 4, `fault_resume`
+    // %rcx = argument 4, `fault_resume` (copied to %r10)
     asm!(
         // Copy `fault_resume` out of %rcx because it will be utilized by `rep movsb` latter.
         "mov r10, rcx",

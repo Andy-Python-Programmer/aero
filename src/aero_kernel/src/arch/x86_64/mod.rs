@@ -20,6 +20,7 @@ pub mod controlregs;
 pub mod gdt;
 pub mod interrupts;
 pub mod io;
+pub mod mem;
 pub mod signals;
 pub mod syscall;
 pub mod task;
@@ -32,7 +33,6 @@ use core::sync::atomic::Ordering;
 use crate::acpi::aml;
 use crate::{acpi, cmdline};
 
-use crate::mem;
 use crate::mem::paging;
 use crate::mem::paging::VirtAddr;
 
@@ -136,7 +136,7 @@ extern "C" fn arch_aero_main() -> ! {
     paging::init(memmap).unwrap();
     log::info!("loaded paging");
 
-    mem::alloc::init_heap();
+    crate::mem::alloc::init_heap();
     log::info!("loaded heap");
 
     // SMP initialization.
