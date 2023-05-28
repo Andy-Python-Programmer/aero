@@ -25,6 +25,7 @@ pub mod syscall;
 pub mod task;
 pub mod time;
 pub mod tls;
+pub mod user_copy;
 
 use core::sync::atomic::Ordering;
 

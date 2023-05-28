@@ -196,21 +196,21 @@ pub fn init() {
     INTERRUPT_HANDLERS.lock()[7] = IrqHandler::ErrorHandler(exceptions::device_not_available);
     INTERRUPT_HANDLERS.lock()[8] = IrqHandler::ErrorHandler(exceptions::double_fault);
 
-    // INTERRUPT_HANDLERS.lock()[9] is reserved.
+    // INTERRUPT_HANDLERS[9] is reserved.
     INTERRUPT_HANDLERS.lock()[10] = IrqHandler::ErrorHandler(exceptions::invalid_tss);
     INTERRUPT_HANDLERS.lock()[11] = IrqHandler::ErrorHandler(exceptions::segment_not_present);
     INTERRUPT_HANDLERS.lock()[12] = IrqHandler::ErrorHandler(exceptions::stack_segment);
     INTERRUPT_HANDLERS.lock()[13] = IrqHandler::ErrorHandler(exceptions::protection);
     INTERRUPT_HANDLERS.lock()[14] = IrqHandler::ErrorHandler(exceptions::page_fault);
 
-    // INTERRUPT_HANDLERS.lock()[15] is reserved.
+    // INTERRUPT_HANDLERS[15] is reserved.
     INTERRUPT_HANDLERS.lock()[16] = IrqHandler::ErrorHandler(exceptions::fpu_fault);
     INTERRUPT_HANDLERS.lock()[17] = IrqHandler::ErrorHandler(exceptions::alignment_check);
     INTERRUPT_HANDLERS.lock()[18] = IrqHandler::ErrorHandler(exceptions::machine_check);
     INTERRUPT_HANDLERS.lock()[19] = IrqHandler::ErrorHandler(exceptions::simd);
     INTERRUPT_HANDLERS.lock()[20] = IrqHandler::ErrorHandler(exceptions::virtualization);
 
-    // INTERRUPT_HANDLERS.lock()[21..29] are reserved.
+    // INTERRUPT_HANDLERS[21..29] are reserved.
     INTERRUPT_HANDLERS.lock()[30] = IrqHandler::ErrorHandler(exceptions::security);
 
     unsafe {

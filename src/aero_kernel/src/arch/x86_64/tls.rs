@@ -31,6 +31,7 @@ use alloc::vec::Vec;
 use super::gdt::*;
 use super::io;
 
+use crate::mem::paging::VirtAddr;
 use crate::utils::sync::Mutex;
 
 use raw_cpuid::FeatureInfo;
@@ -115,6 +116,7 @@ pub struct PerCpuData {
     pub lapic_timer_frequency: u32,
 
     pub(super) gdt: &'static mut [GdtEntry],
+    pub(super) pf_resume: VirtAddr,
 }
 
 /// SAFETY: The GS base should point to the kernel PCR.

@@ -24,6 +24,7 @@ use alloc::vec::Vec;
 use bit_field::BitField;
 use hashbrown::HashMap;
 
+use crate::arch::user_copy::UserRef;
 use crate::fs;
 use crate::fs::inode::INodeInterface;
 use crate::fs::{devfs, FileSystemError};
@@ -405,7 +406,7 @@ impl INodeInterface for Drm {
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
         match command {
             DRM_IOCTL_VERSION => {
-                let struc = VirtAddr::new(arg as u64).read_mut::<DrmVersion>().unwrap();
+                let mut struc = unsafe { UserRef::<DrmVersion>::new(VirtAddr::new(arg as u64)) };
 
                 let (major, minor, patch_level) = self.device.driver_version();
                 let (name, desc, date) = self.device.driver_info();
@@ -422,7 +423,7 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_GET_CAP => {
-                let struc = VirtAddr::new(arg as u64).read_mut::<DrmGetCap>().unwrap();
+                let mut struc = unsafe { UserRef::<DrmGetCap>::new(VirtAddr::new(arg as u64)) };
 
                 // NOTE: The user is responsible for zeroing out the structure.
                 match struc.capability {
@@ -442,9 +443,8 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_MODE_GETRESOURCES => {
-                let struc = VirtAddr::new(arg as u64)
-                    .read_mut::<DrmModeCardRes>()
-                    .unwrap();
+                let mut struc =
+                    unsafe { UserRef::<DrmModeCardRes>::new(VirtAddr::new(arg as u64)) };
 
                 /// Copies the mode object IDs into the user provided buffer. For safety, checkout
                 /// the [`copy_field`] function.
@@ -489,7 +489,7 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_GET_CRTC => {
-                let struc = VirtAddr::new(arg as u64).read_mut::<DrmModeCrtc>().unwrap();
+                let struc = unsafe { UserRef::<DrmModeCrtc>::new(VirtAddr::new(arg as u64)) };
                 let _object = self.find_object(struc.crtc_id).unwrap().as_crtc().unwrap();
 
                 log::warn!("drm::get_crtc: is a stub!");
@@ -497,7 +497,7 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_SET_CRTC => {
-                let struc = VirtAddr::new(arg as u64).read_mut::<DrmModeCrtc>().unwrap();
+                let struc = unsafe { UserRef::<DrmModeCrtc>::new(VirtAddr::new(arg as u64)) };
                 let _object = self.find_object(struc.crtc_id).unwrap().as_crtc().unwrap();
 
                 let object = self
@@ -513,9 +513,8 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_GET_ENCODER => {
-                let struc = VirtAddr::new(arg as u64)
-                    .read_mut::<DrmModeGetEncoder>()
-                    .unwrap();
+                let mut struc =
+                    unsafe { UserRef::<DrmModeGetEncoder>::new(VirtAddr::new(arg as u64)) };
 
                 let object = self
                     .find_object(struc.encoder_id)
@@ -544,9 +543,8 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_GET_CONNECTOR => {
-                let struc = VirtAddr::new(arg as u64)
-                    .read_mut::<DrmModeGetConnector>()
-                    .unwrap();
+                let mut struc =
+                    unsafe { UserRef::<DrmModeGetConnector>::new(VirtAddr::new(arg as u64)) };
 
                 let object = self
                     .find_object(struc.connector_id)
@@ -592,9 +590,8 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_MODE_CREATE_DUMB => {
-                let struc = VirtAddr::new(arg as u64)
-                    .read_mut::<DrmModeCreateDumb>()
-                    .unwrap();
+                let mut struc =
+                    unsafe { UserRef::<DrmModeCreateDumb>::new(VirtAddr::new(arg as u64)) };
 
                 let (mut buffer, pitch) =
                     self.device
@@ -612,9 +609,7 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_MODE_ADDFB => {
-                let struc = VirtAddr::new(arg as u64)
-                    .read_mut::<DrmModeFbCmd>()
-                    .unwrap();
+                let mut struc = unsafe { UserRef::<DrmModeFbCmd>::new(VirtAddr::new(arg as u64)) };
 
                 let handle = self.find_handle(struc.handle).unwrap();
                 self.device
@@ -628,9 +623,8 @@ impl INodeInterface for Drm {
             }
 
             DRM_IOCTL_MODE_MAP_DUMB => {
-                let struc = VirtAddr::new(arg as u64)
-                    .read_mut::<DrmModeMapDumb>()
-                    .unwrap();
+                let mut struc =
+                    unsafe { UserRef::<DrmModeMapDumb>::new(VirtAddr::new(arg as u64)) };
 
                 let handle = self.find_handle(struc.handle).unwrap();
                 struc.offset = handle.mapping as _;

@@ -22,6 +22,7 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::Once;
 
+use crate::arch::user_copy::UserRef;
 use crate::fs::cache::DirCacheItem;
 use crate::fs::file_table::FileHandle;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
@@ -209,7 +210,7 @@ impl INodeInterface for UdpSocket {
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
         match command {
             SIOCGIFINDEX => {
-                let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
+                let mut ifreq = unsafe { UserRef::<IfReq>::new(VirtAddr::new(arg as _)) };
 
                 let name = ifreq.name().unwrap();
                 assert!(name == "eth0");
@@ -219,7 +220,7 @@ impl INodeInterface for UdpSocket {
             }
 
             SIOCGIFHWADDR => {
-                let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
+                let mut ifreq = unsafe { UserRef::<IfReq>::new(VirtAddr::new(arg as _)) };
 
                 let name = ifreq.name().ok_or(FileSystemError::InvalidPath)?;
                 assert!(name == "eth0");
@@ -237,8 +238,8 @@ impl INodeInterface for UdpSocket {
             }
 
             SIOCSIFADDR => {
-                let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
-                let socket = SocketAddr::from_ifreq(ifreq)
+                let ifreq = unsafe { UserRef::<IfReq>::new(VirtAddr::new(arg as _)) };
+                let socket = SocketAddr::from_ifreq(&ifreq)
                     .map_err(|_| FileSystemError::NotSupported)?
                     .as_inet()
                     .ok_or(FileSystemError::NotSupported)?;
@@ -254,8 +255,8 @@ impl INodeInterface for UdpSocket {
             }
 
             SIOCSIFNETMASK => {
-                let ifreq = VirtAddr::new(arg as _).read_mut::<IfReq>()?;
-                let socket = SocketAddr::from_ifreq(ifreq)
+                let ifreq = unsafe { UserRef::<IfReq>::new(VirtAddr::new(arg as _)) };
+                let socket = SocketAddr::from_ifreq(&ifreq)
                     .map_err(|_| FileSystemError::NotSupported)?
                     .as_inet()
                     .ok_or(FileSystemError::NotSupported)?;

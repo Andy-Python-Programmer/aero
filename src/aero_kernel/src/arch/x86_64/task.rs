@@ -109,6 +109,12 @@ pub fn userland_last_address() -> VirtAddr {
     })
 }
 
+/// Returns whether the given pointer is within the userland address space.
+pub fn user_access_ok<T>(ptr: *const T) -> bool {
+    let size = core::mem::size_of::<T>();
+    VirtAddr::new(ptr as u64 + size as u64) <= super::task::userland_last_address()
+}
+
 const USERLAND_STACK_SIZE: u64 = 0x64000;
 
 //(1 << 47) - (Size4KiB::SIZE * 2)

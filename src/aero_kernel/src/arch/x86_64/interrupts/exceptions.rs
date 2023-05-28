@@ -18,6 +18,7 @@
 use super::{io, InterruptErrorStack};
 
 use crate::arch::controlregs;
+use crate::arch::tls::get_percpu;
 use crate::mem::paging::PageFaultErrorCode;
 
 use crate::unwind;
@@ -120,6 +121,12 @@ pub fn breakpoint(stack: &mut InterruptErrorStack) {
 }
 
 pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
+    let pf_resume = get_percpu().pf_resume.as_ptr::<u8>();
+    if !pf_resume.is_null() {
+        stack.stack.iret.rip = pf_resume as u64;
+        return;
+    }
+
     let accessed_address = controlregs::read_cr2();
     let reason = PageFaultErrorCode::from_bits_truncate(stack.code);
 

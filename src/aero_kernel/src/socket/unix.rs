@@ -24,6 +24,7 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::Once;
 
+use crate::arch::user_copy::UserRef;
 use crate::fs;
 use crate::fs::cache::DirCacheItem;
 use crate::fs::file_table::FileHandle;
@@ -367,7 +368,7 @@ impl INodeInterface for UnixSocket {
         }
 
         if let Some((address, length)) = address {
-            let address = address.read_mut::<SocketAddrUnix>()?;
+            let mut address = unsafe { UserRef::new(address) };
 
             if let Some(paddr) = peer.inner.lock_irq().address.as_ref() {
                 *address = paddr.clone();
