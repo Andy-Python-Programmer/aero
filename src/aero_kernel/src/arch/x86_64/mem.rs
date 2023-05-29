@@ -70,6 +70,44 @@ unsafe extern "C" fn memset_stosq(dest: *mut u8, byte: i32, len: usize) -> *mut 
     )
 }
 
+#[no_mangle]
+#[naked]
+unsafe extern "C" fn memmove_erms(dest: *mut u8, src: *const u8, len: usize) -> *mut u8 {
+    // Registers used:
+    //
+    // %rdi = argument 1, `dest`
+    // %rsi = argument 2, `src`
+    // %rdx = argument 3, `len`
+    asm!(
+        "mov rax, rdi",
+        // Skip zero length.
+        "test rdx, rdx",
+        "jz 2f",
+        // Copying forwards:
+        "mov rcx, rdx",
+        "cmp rdi, rsi",
+        "jb 1f",
+        // `src` == `dest`
+        "je 2f",
+        "lea rdx, [rsi + rcx]",
+        "cmp rdi, rdx",
+        "jb 3f",
+        "1:",
+        "rep movsb",
+        "2:",
+        "ret",
+        // Copying backwards:
+        "3:",
+        "lea rdi, [rdi + rcx - 1]",
+        "lea rsi, [rsi + rcx - 1]",
+        "std",
+        "rep movsb",
+        "cld",
+        "ret",
+        options(noreturn)
+    )
+}
+
 // FIXME(andypython): pick the best implementation for the current CPU using indirect functions.
 
 #[no_mangle]
@@ -80,4 +118,9 @@ extern "C" fn memcpy(dest: *mut u8, src: *const u8, len: usize) -> *mut u8 {
 #[no_mangle]
 extern "C" fn memset(dest: *mut u8, byte: i32, len: usize) -> *mut u8 {
     unsafe { memset_stosq(dest, byte, len) }
+}
+
+#[no_mangle]
+extern "C" fn memmove(dest: *mut u8, src: *const u8, len: usize) -> *mut u8 {
+    unsafe { memmove_erms(dest, src, len) }
 }
