@@ -72,11 +72,11 @@ struct Context {
 #[repr(u64)]
 #[derive(Debug, Copy, Clone)]
 pub enum AuxvType {
-    AtNull = 0,
-    AtPhdr = 3,
-    AtPhEnt = 4,
-    AtPhNum = 5,
-    AtEntry = 9,
+    Null = 0,
+    Phdr = 3,
+    PhEnt = 4,
+    PhNum = 5,
+    Entry = 9,
 }
 
 /// Returns the first address outside the user range.
@@ -96,14 +96,8 @@ pub fn userland_last_address() -> VirtAddr {
     static CACHED: spin::Once<VirtAddr> = spin::Once::new();
 
     *CACHED.call_once(|| {
-        let virtual_mask_shift: u64;
         let la57 = crate::mem::paging::level_5_paging_enabled();
-
-        if la57 {
-            virtual_mask_shift = 56;
-        } else {
-            virtual_mask_shift = 47;
-        }
+        let virtual_mask_shift: u64 = if la57 { 56 } else { 47 };
 
         VirtAddr::new((1u64 << virtual_mask_shift) - Size4KiB::SIZE)
     })
@@ -386,13 +380,13 @@ impl ArchTask {
         let mut envp = Vec::new();
         let mut argp = Vec::new();
 
-        loaded_binary
-            .envv
-            .map(|envv| envp = envv.push_into_stack(&mut stack));
+        if let Some(envv) = loaded_binary.envv {
+            envp = envv.push_into_stack(&mut stack);
+        }
 
-        loaded_binary
-            .argv
-            .map(|argv| argp = argv.push_into_stack(&mut stack));
+        if let Some(argv) = loaded_binary.argv {
+            argp = argv.push_into_stack(&mut stack);
+        }
 
         stack.align_down();
 
@@ -409,16 +403,16 @@ impl ArchTask {
         unsafe {
             let hdr: [(AuxvType, usize); 4] = [
                 (
-                    AuxvType::AtPhdr,
+                    AuxvType::Phdr,
                     (p2_header.ph_offset() + loaded_binary.base_addr.as_u64()) as usize,
                 ),
-                (AuxvType::AtPhEnt, p2_header.ph_entry_size() as usize),
-                (AuxvType::AtPhNum, p2_header.ph_count() as usize),
-                (AuxvType::AtEntry, p2_header.entry_point() as usize),
+                (AuxvType::PhEnt, p2_header.ph_entry_size() as usize),
+                (AuxvType::PhNum, p2_header.ph_count() as usize),
+                (AuxvType::Entry, p2_header.entry_point() as usize),
             ];
 
             stack.write(0usize); // Make it 16 bytes aligned
-            stack.write(AuxvType::AtNull);
+            stack.write(AuxvType::Null);
             stack.write(hdr);
         }
 
@@ -504,8 +498,7 @@ impl ArchTask {
     /// belongs to. This is required since we also update the GS base register with the
     /// `base` immediately (not waiting for a switch).
     pub unsafe fn set_gs_base(&mut self, base: VirtAddr) {
-        io::wrmsr(io::IA32_KERNEL_GSBASE, base.as_u64());
-        self.gs_base = base;
+        io::set_inactive_gsbase(base);
     }
 
     /// Returns the saved FS base for this task.
@@ -520,8 +513,7 @@ impl ArchTask {
     /// belongs to. This is required since we also update the FS base register with the
     /// `base` immediately (not waiting for a switch).
     pub unsafe fn set_fs_base(&mut self, base: VirtAddr) {
-        io::wrmsr(io::IA32_FS_BASE, base.as_u64());
-        self.fs_base = base;
+        io::set_fsbase(base);
     }
 }
 
@@ -559,11 +551,12 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
         super::gdt::get_task_state_segment().rsp[0] = kstackp;
         io::wrmsr(io::IA32_SYSENTER_ESP, kstackp);
 
-        // switch to the new FS base.
-        io::wrmsr(io::IA32_FS_BASE, to.fs_base.as_u64());
+        // Preserve and restore the %fs, %gs bases.
+        from.fs_base = io::get_fsbase();
+        from.gs_base = io::get_inactive_gsbase();
 
-        // update the swap GS target to point to the new GS base.
-        io::wrmsr(io::IA32_KERNEL_GSBASE, to.gs_base.as_u64());
+        io::set_fsbase(to.fs_base);
+        io::set_inactive_gsbase(to.gs_base);
 
         if let Some(fpu) = from.fpu_storage.as_mut() {
             xsave(fpu);

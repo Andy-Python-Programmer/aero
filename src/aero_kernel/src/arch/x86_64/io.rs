@@ -17,6 +17,8 @@
 
 //! Wrapper functions for the hardware IO using respective assembly instructions.
 
+use crate::mem::paging::VirtAddr;
+
 pub const IA32_EFER: u32 = 0xc0000080;
 
 /// Map of BASE Address of FS (R/W)  See Table 35-2.
@@ -224,5 +226,93 @@ impl BasedPort {
 
     pub fn write_offset<V: InOut>(&mut self, offset: u16, value: V) {
         unsafe { V::port_out(self.base + offset, value) }
+    }
+}
+
+#[inline]
+pub unsafe fn wrfsbase(base: VirtAddr) {
+    asm!("wrfsbase {}", in(reg) base.as_u64(), options(nostack, preserves_flags));
+}
+
+#[inline]
+pub fn rdfsbase() -> VirtAddr {
+    unsafe {
+        let val: u64;
+        asm!("rdfsbase {}", out(reg) val, options(nomem, nostack, preserves_flags));
+
+        VirtAddr::new(val)
+    }
+}
+
+#[inline]
+pub unsafe fn wrgsbase(base: VirtAddr) {
+    asm!("wrgsbase {}", in(reg) base.as_u64(), options(nostack, preserves_flags));
+}
+
+#[inline]
+pub fn rdgsbase() -> VirtAddr {
+    unsafe {
+        let val: u64;
+        asm!("rdgsbase {}", out(reg) val, options(nomem, nostack, preserves_flags));
+
+        VirtAddr::new(val)
+    }
+}
+
+/// # Safety
+/// The caller must ensure that the swap operation does not cause any undefined behavior.
+#[inline]
+pub unsafe fn swapgs() {
+    asm!("swapgs", options(nostack, preserves_flags));
+}
+
+// XXX: There is no variant of the {rd,wr}gsbase instructions for accessing `KERNEL_GS_BASE`, so we
+// wrap those in two `swapgs` instructions. This approach is still faster than reading/writing from
+// the `KERNEL_GS_BASE` MSR.
+
+/// Sets the inactive `GS` segment's base address.
+#[inline]
+pub unsafe fn set_inactive_gsbase(base: VirtAddr) {
+    if super::has_fsgsbase() {
+        swapgs();
+        wrgsbase(base);
+        swapgs();
+    } else {
+        wrmsr(IA32_KERNEL_GSBASE, base.as_u64());
+    }
+}
+
+/// Returns the inactive `GS` segment's base address.
+#[inline]
+pub fn get_inactive_gsbase() -> VirtAddr {
+    if super::has_fsgsbase() {
+        // SAFETY: The GS base is swapped back to the original value after the read.
+        unsafe { swapgs() };
+        let base = rdgsbase();
+        unsafe { swapgs() };
+
+        base
+    } else {
+        VirtAddr::new(unsafe { rdmsr(IA32_KERNEL_GSBASE) })
+    }
+}
+
+/// Returns the `FS` segment's base address.
+#[inline]
+pub fn get_fsbase() -> VirtAddr {
+    if super::has_fsgsbase() {
+        rdfsbase()
+    } else {
+        VirtAddr::new(unsafe { rdmsr(IA32_FS_BASE) })
+    }
+}
+
+/// Sets the `FS` segment's base address.
+#[inline]
+pub unsafe fn set_fsbase(base: VirtAddr) {
+    if super::has_fsgsbase() {
+        wrfsbase(base);
+    } else {
+        wrmsr(IA32_FS_BASE, base.as_u64());
     }
 }

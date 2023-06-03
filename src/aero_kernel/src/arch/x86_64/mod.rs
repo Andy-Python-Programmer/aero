@@ -41,6 +41,7 @@ use crate::{drivers, logger, rendy};
 use raw_cpuid::CpuId;
 
 use limine::*;
+use spin::Once;
 
 use self::interrupts::INTERRUPT_CONTROLLER;
 
@@ -244,6 +245,17 @@ fn enable_xsave() {
     unsafe { controlregs::write_xcr0(xcr0) }
 }
 
+pub fn has_fsgsbase() -> bool {
+    static HAS_FSGSBASE: Once<bool> = Once::new();
+
+    *HAS_FSGSBASE.call_once(|| {
+        CpuId::new()
+            .get_extended_feature_info()
+            .unwrap()
+            .has_fsgsbase()
+    })
+}
+
 pub fn init_cpu() {
     unsafe {
         // Enable the no-execute page protection feature.
@@ -267,6 +279,10 @@ pub fn init_cpu() {
 
             cr4.insert(controlregs::Cr4Flags::OSFXSR);
             cr4.insert(controlregs::Cr4Flags::OSXMMEXCPT_ENABLE);
+
+            if has_fsgsbase() {
+                cr4.insert(controlregs::Cr4Flags::FSGSBASE);
+            }
 
             controlregs::write_cr4(cr4);
         }
