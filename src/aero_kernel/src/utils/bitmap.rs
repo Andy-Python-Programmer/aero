@@ -98,19 +98,9 @@ impl<A: Allocator> Bitmap<A> {
     /// ```
     pub fn find_first_unset(&self) -> Option<usize> {
         for (i, block) in self.bitmap.iter().enumerate() {
-            let mut block_value = *block;
-
-            if block_value != usize::MAX {
-                let mut bit = 0;
-
-                // Loop through the bits in the block and find
-                // the first unset bit.
-                while block_value.get_bit(0) {
-                    block_value >>= 1;
-                    bit += 1;
-                }
-
-                return Some((i * BLOCK_BITS) + bit);
+            let trailing_ones = block.trailing_ones();
+            if trailing_ones < BLOCK_BITS as u32 {
+                return Some(i * BLOCK_BITS + trailing_ones as usize);
             }
         }
 
@@ -130,19 +120,9 @@ impl<A: Allocator> Bitmap<A> {
     /// ```
     pub fn find_first_set(&self) -> Option<usize> {
         for (i, block) in self.bitmap.iter().enumerate() {
-            let mut block_value = *block;
-
-            if block_value != 0 {
-                let mut bit = 0;
-
-                // Loop through the bits in the block and find
-                // the first set bit.
-                while !block_value.get_bit(0) {
-                    block_value >>= 1;
-                    bit += 1;
-                }
-
-                return Some((i * BLOCK_BITS) + bit);
+            let trailing_zeros = block.trailing_zeros();
+            if trailing_zeros < BLOCK_BITS as u32 {
+                return Some(i * BLOCK_BITS + trailing_zeros as usize);
             }
         }
 
@@ -155,33 +135,80 @@ mod test {
     use super::*;
     use alloc::alloc::Global;
 
+    const TEST_BITMAP_SIZE: usize = 4096;
+
     #[test]
-    fn bitmap_first_unset_idx() {
-        let mut bitmap = Bitmap::new_in(Global, 4096);
+    fn find_first_unset() {
+        let mut map = Bitmap::new_in(Global, TEST_BITMAP_SIZE);
 
-        bitmap.set(69, true);
-        assert_eq!(bitmap.find_first_unset(), Some(0));
+        // Set all of the bits to true.
+        for i in 0..TEST_BITMAP_SIZE {
+            assert_eq!(map.find_first_unset(), Some(i));
+            map.set(i, true);
+        }
 
-        bitmap.set(0, true);
-        assert_eq!(bitmap.find_first_unset(), Some(1));
+        assert_eq!(map.find_first_unset(), None);
+
+        map.set(0, false);
+        assert_eq!(map.find_first_unset(), Some(0));
+
+        map.set(0, true);
+        map.set(1, false);
+        assert_eq!(map.find_first_unset(), Some(1));
+
+        map.set(56, false);
+        assert_eq!(map.find_first_unset(), Some(1));
+
+        map.set(1, true);
+        assert_eq!(map.find_first_unset(), Some(56));
+
+        map.set(80, false);
+        assert_eq!(map.find_first_unset(), Some(56));
+
+        map.set(56, true);
+        assert_eq!(map.find_first_unset(), Some(80));
+
+        map.set(82, false);
+        assert_eq!(map.find_first_unset(), Some(80));
+
+        map.set(80, true);
+        assert_eq!(map.find_first_unset(), Some(82));
+
+        map.set(5, false);
+        assert_eq!(map.find_first_unset(), Some(5));
     }
 
     #[test]
-    fn bitmap_first_set_idx() {
-        let mut bitmap = Bitmap::new_in(Global, 4096);
+    fn find_first_set() {
+        let mut map = Bitmap::new_in(Global, TEST_BITMAP_SIZE);
+        assert_eq!(map.find_first_set(), None);
 
-        bitmap.set(69, true);
-        assert_eq!(bitmap.find_first_set(), Some(69));
-    }
+        map.set(0, true);
+        assert_eq!(map.find_first_set(), Some(0));
 
-    #[test]
-    fn bitmap_set_and_test() {
-        let mut bitmap = Bitmap::new_in(Global, 4096);
+        map.set(0, false);
+        map.set(1, true);
+        assert_eq!(map.find_first_set(), Some(1));
 
-        bitmap.set(69, true);
-        assert!(bitmap.is_set(69));
+        map.set(56, true);
+        assert_eq!(map.find_first_set(), Some(1));
 
-        bitmap.set(69, false);
-        assert!(!bitmap.is_set(69));
+        map.set(1, false);
+        assert_eq!(map.find_first_set(), Some(56));
+
+        map.set(80, true);
+        assert_eq!(map.find_first_set(), Some(56));
+
+        map.set(56, false);
+        assert_eq!(map.find_first_set(), Some(80));
+
+        map.set(82, true);
+        assert_eq!(map.find_first_set(), Some(80));
+
+        map.set(80, false);
+        assert_eq!(map.find_first_set(), Some(82));
+
+        map.set(5, true);
+        assert_eq!(map.find_first_set(), Some(5));
     }
 }

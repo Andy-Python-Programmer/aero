@@ -644,6 +644,9 @@ def main():
 
         if not kernel_bin or args.check:
             return
+        
+        if not user_bins:
+            user_bins = []
 
         kernel_bin = kernel_bin[0]
         iso_path = prepare_iso(args, kernel_bin, user_bins)
