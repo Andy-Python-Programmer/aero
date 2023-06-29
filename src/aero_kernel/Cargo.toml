@@ -27,11 +27,11 @@ spin = { version = "0.9.8", default-features = false, features = [
     "once",
 ] }
 bitflags = "1.2.1"
-bit_field = "0.10.1"
-log = "0.4.14"
-xmas-elf = "0.8.0"
-hashbrown = "0.12.3"
-rustc-demangle = "0.1.20"
+bit_field = "0.10.2"
+log = "0.4.19"
+xmas-elf = "0.9.0"
+hashbrown = "0.14.0"
+rustc-demangle = "0.1.23"
 # intrusive-collections:
 #   `nightly`: Get access to const variants of the functions.
 intrusive-collections = { version = "0.9.5", features = ["nightly"] }
@@ -40,10 +40,10 @@ lai = { git = "https://github.com/aero-os/lai-rs" }
 uapi = { path = "../uapi" }
 cpio_reader = { git = "https://github.com/Andy-Python-Programmer/cpio_reader" }
 static_assertions = "1.1.0"
-lru = "0.8.0"
-bytemuck = "1.12.1"
+lru = "0.10.0"
+bytemuck = "1.13.1"
 simple_endian = { git = "https://github.com/Andy-Python-Programmer/simple-endian-rs" }
-byteorder = { version = "*", default-features = false }
+byteorder = { version = "1.4.3", default-features = false }
 limine = { git = "https://github.com/limine-bootloader/limine-rs" }
 cfg-if = "1.0"
 num-traits = { version = "0.2", default-features = false }
@@ -51,7 +51,7 @@ vte = { git = "https://github.com/alacritty/vte", features = ["ansi"] }
 
 # X86_64 specific dependencies:
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-raw-cpuid = "10.0.0"
+raw-cpuid = "11.0.1"
 
 [dependencies.lazy_static]
 version = "1.4.0"
