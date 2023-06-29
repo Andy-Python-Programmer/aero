@@ -261,11 +261,10 @@ impl SchedulerInterface for RoundRobin {
     fn preempt(&self) {
         // We want to preempt under the following circumstances:
         //
-        // 1. When a process switches from the running state to the waiting
-        //    state.
+        // 1. When a process switches from the running state to the waiting state.
         // 2. When the timer interrupt fires.
-        // 3. When the process switches from the waiting state to the runnable state
-        //    (for example, on completion of I/O operation).
+        // 3. When the process switches from the waiting state to the runnable state (for example,
+        //    on completion of I/O operation).
         // 4. When the process is terminated.
 
         let guard = IrqGuard::new();
