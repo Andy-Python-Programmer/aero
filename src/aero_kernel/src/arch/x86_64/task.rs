@@ -548,7 +548,7 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
     unsafe {
         // Load the new thread's kernel stack pointer everywhere it's needed.
         let kstackp = to.context_switch_rsp.as_u64();
-        super::gdt::get_task_state_segment().rsp[0] = kstackp;
+        super::gdt::TSS.rsp[0] = kstackp;
         io::wrmsr(io::IA32_SYSENTER_ESP, kstackp);
 
         // Preserve and restore the %fs, %gs bases.

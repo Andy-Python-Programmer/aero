@@ -23,8 +23,8 @@ extern x86_64_do_syscall
 extern x86_64_check_sysenter
 global x86_64_syscall_handler
 
-%define TSS_TEMP_USTACK_OFF 0x1c
-%define TSS_RSP0_OFF        0x04
+%define TSS_TEMP_USTACK_OFF 0x24
+%define TSS_RSP0_OFF        0xc
 
 %define USERLAND_SS         0x23
 %define USERLAND_CS         0x2b

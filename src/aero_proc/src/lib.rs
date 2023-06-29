@@ -20,6 +20,7 @@
 #[macro_use]
 extern crate proc_macro_error;
 
+mod cpu_local;
 mod downcastable;
 mod syscall;
 mod test;
@@ -56,4 +57,10 @@ pub fn syscall(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn downcastable(attr: TokenStream, item: TokenStream) -> TokenStream {
     downcastable::parse(attr, item)
+}
+
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn cpu_local(attr: TokenStream, item: TokenStream) -> TokenStream {
+    cpu_local::parse(attr, item)
 }

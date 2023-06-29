@@ -29,10 +29,6 @@ use core::mem;
 
 use alloc::alloc::alloc_zeroed;
 
-use crate::arch::tls::PerCpuData;
-
-use super::{io, tls};
-
 bitflags::bitflags! {
     /// Specifies which element to load into a segment from
     /// descriptor tables (i.e., is a index to LDT or GDT table
@@ -283,12 +279,16 @@ pub struct Tss {
     pub iomap_base: u16, // offset 0x66
 }
 
-// Processor Control Region
-#[repr(C)]
-pub struct Kpcr {
-    pub tss: Tss,
-    pub cpu_local: PerCpuData,
-}
+#[cpu_local(subsection = "tss")]
+pub static mut TSS: Tss = Tss {
+    reserved: 0,
+    rsp: [0; 3],
+    reserved2: 0,
+    ist: [0; 7],
+    reserved3: 0,
+    reserved4: 0,
+    iomap_base: 0,
+};
 
 /// Initialize the bootstrap GDT which is required to initialize TLS (Thread Local Storage)
 /// support so, after the kernel heap we will map the TLS section and initialize the *actual* GDT
@@ -315,14 +315,6 @@ pub fn init_boot() {
     }
 }
 
-pub fn get_task_state_segment() -> &'static mut Tss {
-    &mut get_kpcr().tss
-}
-
-pub fn get_kpcr() -> &'static mut Kpcr {
-    unsafe { &mut *(io::rdmsr(io::IA32_GS_BASE) as *mut Kpcr) }
-}
-
 static STK: [u8; 4096 * 16] = [0; 4096 * 16];
 
 /// Initialize the *actual* GDT stored in TLS.
@@ -345,14 +337,13 @@ pub fn init() {
     gdt.copy_from_slice(&GDT);
 
     unsafe {
-        let tss_ref = get_task_state_segment();
-        let tss_ptr = tss_ref as *mut Tss;
+        let tss_ptr = TSS.addr().as_mut_ptr::<Tss>();
 
         gdt[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
         gdt[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
         gdt[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
 
-        tss_ref.rsp[0] = STK.as_ptr().offset(4096 * 16) as u64;
+        TSS.rsp[0] = STK.as_ptr().offset(4096 * 16) as u64;
 
         let gdt_descriptor = GdtDescriptor::new(
             (mem::size_of::<[GdtEntry; GDT_ENTRY_COUNT]>() - 1) as u16,
@@ -371,9 +362,9 @@ pub fn init() {
         load_tss(SegmentSelector::new(GdtEntryType::TSS, Ring::Ring0));
     }
 
-    // Now we update the per-cpu storage to store a reference
-    // to the per-cpu GDT.
-    tls::get_percpu().gdt = gdt;
+    // // Now we update the per-cpu storage to store a reference
+    // // to the per-cpu GDT.
+    // tls::get_percpu().gdt = gdt;
 }
 
 #[inline(always)]

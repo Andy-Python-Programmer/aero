@@ -23,15 +23,8 @@
 //! * <https://wiki.osdev.org/Thread_Local_Storage>
 //! * <https://doc.rust-lang.org/std/thread/struct.LocalKey.html>
 
-use core::alloc::Layout;
-
-use alloc::alloc::alloc_zeroed;
 use alloc::vec::Vec;
 
-use super::gdt::*;
-use super::io;
-
-use crate::mem::paging::VirtAddr;
 use crate::utils::sync::Mutex;
 
 use raw_cpuid::FeatureInfo;
@@ -110,37 +103,11 @@ pub struct CpuInfo {
     pub features: Vec<&'static &'static str>,
 }
 
-#[repr(C)]
-pub struct PerCpuData {
-    pub cpuid: usize,
-    pub lapic_timer_frequency: u32,
-
-    pub(super) gdt: &'static mut [GdtEntry],
-    pub(super) pf_resume: VirtAddr,
-}
-
-/// SAFETY: The GS base should point to the kernel PCR.
 pub fn get_cpuid() -> usize {
-    get_percpu().cpuid
+    0
 }
 
-/// SAFETY: The GS base should point to the kernel PCR.
-pub fn get_percpu() -> &'static mut PerCpuData {
-    &mut get_kpcr().cpu_local
-}
-
-pub fn init(cpuid: usize) {
-    // NOTE: Inside kernel space, the GS base will always point to the CPU local data and when
-    // jumping to userland `swapgs` is called making the GS base point to the userland TLS data.
-    unsafe {
-        let kpcr_layout = Layout::new::<Kpcr>();
-
-        let kpcr_ptr = alloc_zeroed(kpcr_layout) as *mut Kpcr;
-        io::wrmsr(io::IA32_GS_BASE, kpcr_ptr as u64);
-    }
-
-    get_percpu().cpuid = cpuid;
-
+pub fn init() {
     let cpuid = raw_cpuid::CpuId::new();
 
     let features = cpuid

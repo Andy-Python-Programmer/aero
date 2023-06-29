@@ -18,10 +18,10 @@
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
 
+use crate::interrupts::exceptions::PF_RESUME;
 use crate::mem::paging::VirtAddr;
 
 use super::task::user_access_ok;
-use super::tls::get_percpu;
 
 /// Copy to/from a block of data from user space. Returns whether the copy was successful.
 ///
@@ -87,7 +87,7 @@ unsafe extern "C" fn copy_to_from_user(
 /// Copy a structure from userspace memory. Returns whether the copy was successful.
 #[must_use]
 fn copy_from_user<T>(dest: &mut MaybeUninit<T>, src: *const T) -> bool {
-    let fault_resume = &get_percpu().pf_resume as *const _ as *const u8;
+    let fault_resume = unsafe { PF_RESUME.addr() }.as_ptr();
     let size = core::mem::size_of::<T>();
 
     user_access_ok(src);
@@ -99,7 +99,7 @@ fn copy_from_user<T>(dest: &mut MaybeUninit<T>, src: *const T) -> bool {
 /// Copy a structure from userspace memory. Returns whether the copy was successful.
 #[must_use]
 fn copy_to_user<T>(dest: *mut T, src: &T) -> bool {
-    let fault_resume = &get_percpu().pf_resume as *const _ as *const u8;
+    let fault_resume = unsafe { PF_RESUME.addr() }.as_ptr();
     let size = core::mem::size_of::<T>();
     let src_ptr = src as *const T;
 

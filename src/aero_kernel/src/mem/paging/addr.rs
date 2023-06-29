@@ -108,6 +108,11 @@ impl VirtAddr {
         self.as_ptr::<T>() as *mut T
     }
 
+    #[inline]
+    pub fn is_zero(self) -> bool {
+        self.0 == 0
+    }
+
     /// Validate reads `sizeof(T)` bytes from the virtual address and returns a mutable
     /// reference to the value (`&mut T`).
     ///

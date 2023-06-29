@@ -18,8 +18,8 @@
 use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
+use crate::arch::interrupts;
 use crate::arch::interrupts::InterruptStack;
-use crate::arch::{interrupts, tls};
 use crate::mem::paging::{PhysAddr, VirtAddr};
 use raw_cpuid::{CpuId, FeatureInfo};
 use spin::Once;
@@ -108,6 +108,9 @@ fn lapic_error_handler(_stack: &mut InterruptStack) {
     log::error!("ESR={:#0x}", self::get_local_apic().get_esr());
 }
 
+#[cpu_local]
+static mut LAPIC_TIMER_FREQUENCY: u32 = 0;
+
 pub struct LocalApic {
     address: VirtAddr,
     apic_type: ApicType,
@@ -194,7 +197,7 @@ impl LocalApic {
     pub fn timer_oneshot(&mut self, vec: u8, us: usize) {
         self.timer_stop();
 
-        let lapic_timer_frequency = tls::get_percpu().lapic_timer_frequency;
+        let lapic_timer_frequency = unsafe { *LAPIC_TIMER_FREQUENCY };
         let ticks = us * (lapic_timer_frequency / 1000000) as usize;
 
         unsafe {
@@ -225,7 +228,7 @@ impl LocalApic {
             let pit_ticks = initial_pit_tick - final_pit_tick;
             let timer_frequency = (SAMPLES / pit_ticks as u32) * time::PIT_DIVIDEND as u32;
 
-            tls::get_percpu().lapic_timer_frequency = timer_frequency;
+            *LAPIC_TIMER_FREQUENCY = timer_frequency;
         }
 
         self.timer_stop();

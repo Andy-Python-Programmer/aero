@@ -249,3 +249,6 @@ mod tests {
         assert_eq!((7usize).ceil_div(4), 2);
     }
 }
+
+#[repr(transparent)]
+pub struct LinkerSymbol<T: Copy>(core::cell::UnsafeCell<T>);

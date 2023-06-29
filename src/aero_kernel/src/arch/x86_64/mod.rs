@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+pub mod cpu_local;
+
 pub mod apic;
 pub mod controlregs;
 pub mod gdt;
@@ -181,7 +183,8 @@ extern "C" fn arch_aero_main() -> ! {
     acpi::init(rsdp);
     log::info!("loaded ACPI");
 
-    tls::init(0);
+    tls::init();
+    cpu_local::init(0);
     log::info!("loaded TLS");
 
     crate::unwind::set_panic_hook_ready(true);
@@ -209,7 +212,8 @@ extern "C" fn x86_64_aero_ap_main(boot_info: *const SmpInfo) -> ! {
     gdt::init_boot();
     log::info!("AP{}: loaded boot GDT", ap_id);
 
-    tls::init(ap_id);
+    tls::init();
+    cpu_local::init(ap_id);
     log::info!("AP{}: loaded TLS", ap_id);
 
     gdt::init();

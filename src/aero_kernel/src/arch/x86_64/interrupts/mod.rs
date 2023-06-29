@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-mod exceptions;
+pub mod exceptions;
 mod idt;
 
 use core::sync::atomic::{AtomicUsize, Ordering};

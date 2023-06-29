@@ -30,6 +30,14 @@ SECTIONS
         *(.rodata .rodata.*)
     } :rodata
 
+    .cpu_local : {
+        __cpu_local_start = .;
+        KEEP(*(.cpu_local_self_ptr));
+        KEEP(*(.cpu_local_tss));
+        KEEP(*(.cpu_local));
+        __cpu_local_end = .;
+    }
+
     /* Move to the next memory page for .data */
     . += CONSTANT(MAXPAGESIZE);
 
