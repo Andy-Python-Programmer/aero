@@ -34,7 +34,7 @@ hashbrown = "0.12.3"
 rustc-demangle = "0.1.20"
 # intrusive-collections:
 #   `nightly`: Get access to const variants of the functions.
-intrusive-collections = { version = "0.9.2", features = ["nightly"] }
+intrusive-collections = { version = "0.9.5", features = ["nightly"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 lai = { git = "https://github.com/aero-os/lai-rs" }
 uapi = { path = "../uapi" }
