@@ -112,6 +112,32 @@ static mut PHYSICAL_MEMORY_OFFSET: VirtAddr = VirtAddr::zero();
 
 const IO_VIRTUAL_BASE: VirtAddr = VirtAddr::new(0xffffff0000000000);
 
+const STT_GNU_IFUNC: u32 = 37;
+
+pub fn relocate_self() {
+    use xmas_elf::sections::SectionData;
+
+    let unwind_info = unwind::UNWIND_INFO.get().unwrap();
+    let kernel_elf = &unwind_info.kernel_elf;
+
+    for section in kernel_elf.section_iter() {
+        if let Ok(SectionData::Rela64(rela)) = section.get_data(kernel_elf) {
+            for item in rela {
+                if !item.get_type() == STT_GNU_IFUNC {
+                    continue;
+                }
+
+                let offset = unsafe { &mut *(item.get_offset() as *mut usize) };
+
+                let resolver_ptr = item.get_addend() as *const u8;
+                let resolver: fn() -> usize = unsafe { core::mem::transmute(resolver_ptr) };
+
+                *offset = resolver();
+            }
+        }
+    }
+}
+
 fn aero_main() -> ! {
     // NOTE: In this function we only want to initialize essential services, including
     // the task scheduler. Rest of the initializing (including kernel modules) should go

@@ -60,7 +60,7 @@ pub fn prepare_panic() {
 }
 
 pub struct UnwindInfo {
-    kernel_elf: ElfFile<'static>,
+    pub kernel_elf: ElfFile<'static>,
 }
 
 impl UnwindInfo {

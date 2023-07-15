@@ -59,25 +59,6 @@ static HHDM: HhdmRequest = HhdmRequest::new(0);
 
 #[no_mangle]
 extern "C" fn arch_aero_main() -> ! {
-    unsafe {
-        core::ptr::read_volatile(STACK.get_response().as_ptr().unwrap());
-    }
-
-    // SAFETY: We have exclusive access to the memory map.
-    let memmap = MEMMAP
-        .get_response()
-        .get_mut()
-        .expect("limine: invalid memmap response")
-        .memmap_mut();
-
-    unsafe {
-        interrupts::disable_interrupts();
-    }
-
-    unsafe {
-        crate::PHYSICAL_MEMORY_OFFSET = VirtAddr::new(HHDM.get_response().get().unwrap().offset);
-    }
-
     let kernel_file_resp = KERNEL_FILE
         .get_response()
         .get()
@@ -106,6 +87,27 @@ extern "C" fn arch_aero_main() -> ! {
 
         UnwindInfo::new(elf)
     });
+
+    crate::relocate_self();
+
+    unsafe {
+        core::ptr::read_volatile(STACK.get_response().as_ptr().unwrap());
+    }
+
+    // SAFETY: We have exclusive access to the memory map.
+    let memmap = MEMMAP
+        .get_response()
+        .get_mut()
+        .expect("limine: invalid memmap response")
+        .memmap_mut();
+
+    unsafe {
+        interrupts::disable_interrupts();
+    }
+
+    unsafe {
+        crate::PHYSICAL_MEMORY_OFFSET = VirtAddr::new(HHDM.get_response().get().unwrap().offset);
+    }
 
     // Now that we have unwind info, we can initialize the COM ports. This
     // will be used to print panic messages/logs before the debug renderer is
