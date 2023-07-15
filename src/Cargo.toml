@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = ["aero_kernel", "aero_syscall", "aero_proc"]
 
 [profile.release]
