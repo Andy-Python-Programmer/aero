@@ -261,7 +261,7 @@ pub fn rdgsbase() -> VirtAddr {
 
 /// # Safety
 /// The caller must ensure that the swap operation does not cause any undefined behavior.
-#[inline]
+#[inline(always)]
 pub unsafe fn swapgs() {
     asm!("swapgs", options(nostack, preserves_flags));
 }
@@ -271,48 +271,80 @@ pub unsafe fn swapgs() {
 // the `KERNEL_GS_BASE` MSR.
 
 /// Sets the inactive `GS` segment's base address.
-#[inline]
-pub unsafe fn set_inactive_gsbase(base: VirtAddr) {
-    if super::has_fsgsbase() {
+#[indirect]
+pub fn set_inactive_gsbase() -> fn(base: VirtAddr) {
+    unsafe fn with_wrgsbase(base: VirtAddr) {
         swapgs();
         wrgsbase(base);
         swapgs();
-    } else {
+    }
+
+    unsafe fn with_wrmsr(base: VirtAddr) {
         wrmsr(IA32_KERNEL_GSBASE, base.as_u64());
+    }
+
+    if super::has_fsgsbase() {
+        with_wrgsbase
+    } else {
+        with_wrmsr
     }
 }
 
 /// Returns the inactive `GS` segment's base address.
-#[inline]
-pub fn get_inactive_gsbase() -> VirtAddr {
-    if super::has_fsgsbase() {
+#[indirect]
+pub fn get_inactive_gsbase() -> fn() -> VirtAddr {
+    fn with_rdgsbase() -> VirtAddr {
         // SAFETY: The GS base is swapped back to the original value after the read.
         unsafe { swapgs() };
         let base = rdgsbase();
         unsafe { swapgs() };
 
         base
-    } else {
+    }
+
+    fn with_rdmsr() -> VirtAddr {
         VirtAddr::new(unsafe { rdmsr(IA32_KERNEL_GSBASE) })
     }
-}
 
-/// Returns the `FS` segment's base address.
-#[inline]
-pub fn get_fsbase() -> VirtAddr {
     if super::has_fsgsbase() {
-        rdfsbase()
+        with_rdgsbase
     } else {
-        VirtAddr::new(unsafe { rdmsr(IA32_FS_BASE) })
+        with_rdmsr
     }
 }
 
 /// Sets the `FS` segment's base address.
-#[inline]
-pub unsafe fn set_fsbase(base: VirtAddr) {
-    if super::has_fsgsbase() {
+#[indirect]
+pub fn set_fsbase() -> fn(base: VirtAddr) {
+    unsafe fn with_wrfsbase(base: VirtAddr) {
         wrfsbase(base);
-    } else {
+    }
+
+    unsafe fn with_wrmsr(base: VirtAddr) {
         wrmsr(IA32_FS_BASE, base.as_u64());
+    }
+
+    if super::has_fsgsbase() {
+        with_wrfsbase
+    } else {
+        with_wrmsr
+    }
+}
+
+/// Returns the `FS` segment's base address.
+#[indirect]
+pub fn get_fsbase() -> fn() -> VirtAddr {
+    fn with_rdfsbase() -> VirtAddr {
+        rdfsbase()
+    }
+
+    fn with_rdmsr() -> VirtAddr {
+        VirtAddr::new(unsafe { rdmsr(IA32_FS_BASE) })
+    }
+
+    if super::has_fsgsbase() {
+        with_rdfsbase
+    } else {
+        with_rdmsr
     }
 }

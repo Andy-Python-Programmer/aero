@@ -67,7 +67,7 @@ unsafe extern "C" fn memcpy_movsb(dest: *mut u8, src: *const u8, len: usize) -> 
 }
 
 #[indirect]
-extern "C" fn memcpy() -> fn(*mut u8, *const u8, usize) {
+extern "C" fn memcpy() -> fn(dest: *mut u8, src: *const u8, len: usize) {
     if should_store_by_byte() {
         memcpy_movsb
     } else {
@@ -125,7 +125,7 @@ unsafe extern "C" fn memset_stosb(dest: *mut u8, byte: i32, len: usize) -> *mut 
 }
 
 #[indirect]
-extern "C" fn memset() -> fn(*mut u8, i32, usize) {
+extern "C" fn memset() -> fn(dest: *mut u8, byte: i32, len: usize) {
     if should_store_by_byte() {
         memset_stosb
     } else {
