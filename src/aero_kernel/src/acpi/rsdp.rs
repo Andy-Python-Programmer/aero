@@ -39,21 +39,10 @@ pub(super) unsafe fn validate_checksum(ptr: *const u8, size: usize) -> bool {
     sum == 0
 }
 
-pub(super) trait RsdtTyp {
-    fn as_usize(self) -> usize;
-}
+pub(super) trait RsdtTyp {}
 
-impl RsdtTyp for u32 {
-    fn as_usize(self) -> usize {
-        self as _
-    }
-}
-
-impl RsdtTyp for u64 {
-    fn as_usize(self) -> usize {
-        self as _
-    }
-}
+impl RsdtTyp for u32 {}
+impl RsdtTyp for u64 {}
 
 pub(super) trait RsdtHeader {
     fn signature(&self) -> &[u8];
@@ -103,7 +92,7 @@ pub(super) struct Rsdt<T: RsdtTyp + core::marker::Sized> {
 
 impl Rsdt<u32> {
     pub fn new(address: VirtAddr) -> &'static Self {
-        let this = unsafe { &*(address.as_ptr() as *const Self) };
+        let this = unsafe { &*address.as_ptr::<Self>() };
 
         let valid_checksum = this.header.is_valid();
         let valid_signature = this.header.signature() == b"RSDT";
@@ -144,7 +133,7 @@ impl Rsdt<u32> {
 
 impl Rsdt<u64> {
     pub fn new(address: VirtAddr) -> &'static Self {
-        let this = unsafe { &*(address.as_ptr() as *const Self) };
+        let this = unsafe { &*address.as_ptr::<Self>() };
 
         let valid_checksum = this.header.is_valid();
         let valid_signature = this.header.signature() == b"XSDT";
@@ -191,7 +180,7 @@ pub(super) enum RsdtAddress {
 
 pub(super) fn find_rsdt_address(rsdp_address: VirtAddr) -> RsdtAddress {
     // Look for RSDP v2 header, and if it does not exists, look for RSDP v1 header.
-    let v20 = unsafe { &*(rsdp_address.as_ptr() as *const Rsdp20) };
+    let v20 = unsafe { &*rsdp_address.as_ptr::<Rsdp20>() };
     let is_v20 = v20.revision >= 2 && v20.xsdt_address != 0;
 
     if is_v20 {
@@ -201,7 +190,7 @@ pub(super) fn find_rsdt_address(rsdp_address: VirtAddr) -> RsdtAddress {
         let xsdt_address = PhysAddr::new(v20.xsdt_address).as_hhdm_virt();
         RsdtAddress::Xsdt(xsdt_address)
     } else {
-        let v10 = unsafe { &*(rsdp_address.as_ptr() as *const Rsdp10) };
+        let v10 = unsafe { &*rsdp_address.as_ptr::<Rsdp10>() };
         let valid = validate_rsdt_checksum(v10);
 
         assert!(valid, "rsdp: failed to validate RSDP v10 checksum");

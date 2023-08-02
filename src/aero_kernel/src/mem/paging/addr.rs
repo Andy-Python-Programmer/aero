@@ -122,7 +122,7 @@ impl VirtAddr {
     /// ```
     pub fn read_mut<'a, T: Sized>(&self) -> Result<&'a mut T, ReadErr> {
         self.validate_read::<T>()?;
-        Ok(unsafe { &mut *(self.as_mut_ptr() as *mut T) })
+        Ok(unsafe { &mut *self.as_mut_ptr() })
     }
 
     pub fn as_bytes_mut(&self, size_bytes: usize) -> &mut [u8] {

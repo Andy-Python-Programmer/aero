@@ -17,6 +17,8 @@
 
 #![no_std]
 #![feature(decl_macro)]
+// cc <https://github.com/bitflags/bitflags/issues/110>
+#![allow(clippy::bad_bit_mask)]
 
 #[macro_use]
 extern crate num_derive;

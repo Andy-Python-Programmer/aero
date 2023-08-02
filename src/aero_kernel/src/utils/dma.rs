@@ -37,7 +37,7 @@ unsafe impl Allocator for DmaAllocator {
         let virt = phys.as_hhdm_virt();
 
         // SAFETY: The frame is aligned and non-null.
-        let ptr = unsafe { NonNull::new_unchecked(virt.as_mut_ptr() as *mut u8) };
+        let ptr = unsafe { NonNull::new_unchecked(virt.as_mut_ptr()) };
         Ok(NonNull::slice_from_raw_parts(ptr, size_bytes))
     }
 
