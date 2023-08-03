@@ -1,11 +1,10 @@
-From dee75c7161a4ffc5760f7615ed7846a9592bc77c Mon Sep 17 00:00:00 2001
-From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Tue, 31 Aug 2021 11:02:13 +1000
-Subject: [PATCH] targets: add aero target port
+From 4c867374622a04f29a5501dfc74f1057041cc0fc Mon Sep 17 00:00:00 2001
+From: Anhad Singh <andypythonappdeveloper@gmail.com>
+Date: Thu, 3 Aug 2023 12:51:21 +1000
+Subject: [PATCH] gcc: add aero target
 
-Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Signed-off-by: Anhad Singh <andypythonappdeveloper@gmail.com>
 ---
- .vscode/settings.json       |  3 +++
  config.sub                  |  4 ++--
  fixincludes/mkfixinc.sh     |  1 +
  gcc/config.gcc              | 12 ++++++++++++
@@ -14,42 +13,31 @@ Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
  libgcc/libgcov.h            |  1 +
  libstdc++-v3/crossconfig.m4 | 12 ++++++++++++
  libtool.m4                  | 14 ++++++++++++++
- 9 files changed, 83 insertions(+), 2 deletions(-)
- create mode 100644 .vscode/settings.json
+ 8 files changed, 80 insertions(+), 2 deletions(-)
  create mode 100644 gcc/config/aero.h
 
-diff --git a/.vscode/settings.json b/.vscode/settings.json
-new file mode 100644
-index 000000000..560faaa36
---- /dev/null
-+++ b/.vscode/settings.json
-@@ -0,0 +1,3 @@
-+{
-+    "editor.formatOnSave": false,
-+}
-\ No newline at end of file
 diff --git a/config.sub b/config.sub
-index 63c1f1c8b..36fff07fb 100755
+index 38f3d037a..956f31f08 100755
 --- a/config.sub
 +++ b/config.sub
-@@ -133,7 +133,7 @@ case $1 in
- 		case $maybe_os in
+@@ -145,7 +145,7 @@ case $1 in
  			nto-qnx* | linux-* | uclinux-uclibc* \
  			| uclinux-gnu* | kfreebsd*-gnu* | knetbsd*-gnu* | netbsd*-gnu* \
--			| netbsd*-eabi* | kopensolaris*-gnu* | cloudabi*-eabi* \
-+			| netbsd*-eabi* | kopensolaris*-gnu* | cloudabi*-eabi* | aero* \
- 			| storm-chaos* | os2-emx* | rtmk-nova*)
+ 			| netbsd*-eabi* | kopensolaris*-gnu* | cloudabi*-eabi* \
+-			| storm-chaos* | os2-emx* | rtmk-nova*)
++			| storm-chaos* | os2-emx* | rtmk-nova* | aero*)
  				basic_machine=$field1
  				basic_os=$maybe_os
-@@ -1723,7 +1723,7 @@ case $os in
- 	     | scout* | superux* | sysv* | rtmk* | tpf* | windiss* \
- 	     | powermax* | dnix* | nx6 | nx7 | sei* | dragonfly* \
- 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
--	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
-+	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | aero* | bme* \
+ 				;;
+@@ -1749,7 +1749,7 @@ case $os in
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
  	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
- 	     | nsk* | powerunix* | genode* | zvmoe* | qnx* | emx*)
+ 	     | nsk* | powerunix* | genode* | zvmoe* | qnx* | emx* | zephyr* \
+-	     | fiwix* )
++	     | fiwix* | aero*)
  		;;
+ 	# This one is extra strict with allowed versions
+ 	sco3.2v2 | sco3.2v[4-9]* | sco5v6*)
 diff --git a/fixincludes/mkfixinc.sh b/fixincludes/mkfixinc.sh
 index df90720b7..e8c2b21c1 100755
 --- a/fixincludes/mkfixinc.sh
@@ -63,10 +51,10 @@ index df90720b7..e8c2b21c1 100755
      i?86-*-mingw32* | \
      x86_64-*-mingw32* | \
 diff --git a/gcc/config.gcc b/gcc/config.gcc
-index 357b0bed0..a88cface2 100644
+index 648b3dc21..4a13aceda 100644
 --- a/gcc/config.gcc
 +++ b/gcc/config.gcc
-@@ -822,6 +822,15 @@ case ${target} in
+@@ -840,6 +840,15 @@ case ${target} in
    tmake_file="${tmake_file} t-freebsd"
    target_has_targetdm=yes
    ;;
@@ -82,12 +70,12 @@ index 357b0bed0..a88cface2 100644
  *-*-fuchsia*)
    native_system_header_dir=/include
    ;;
-@@ -2240,6 +2249,9 @@ i[34567]86-*-mingw* | x86_64-*-mingw*)
+@@ -2214,6 +2223,9 @@ i[34567]86-*-mingw* | x86_64-*-mingw*)
  			;;
  	esac
  	;;
 +x86_64-*-aero*)
-+	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h gnu-user.h glibc-stdint.h i386/x86-64.h i386/gnu-user-common.h i386/gnu-user64.h aero.h"
++	tm_file="${tm_file} i386/unix.h i386/att.h elfos.h gnu-user.h glibc-stdint.h i386/x86-64.h i386/gnu-user-common.h i386/gnu-user64.h aero.h"
 +	;;
  x86_64-*-fuchsia*)
  	tmake_file="${tmake_file} i386/t-x86_64-elf"
@@ -129,10 +117,10 @@ index 000000000..e8c149e40
 +        builtin_assert("system=posix"); \
 +    } while (0);
 diff --git a/libgcc/config.host b/libgcc/config.host
-index 50f000622..d1aa00f1a 100644
+index 9d7212028..3724a1ac5 100644
 --- a/libgcc/config.host
 +++ b/libgcc/config.host
-@@ -245,6 +245,11 @@ case ${host} in
+@@ -281,6 +281,11 @@ case ${host} in
    tmake_file="$tmake_file t-crtstuff-pic t-libgcc-pic t-eh-dw2-dip t-slibgcc t-slibgcc-fuchsia"
    extra_parts="crtbegin.o crtend.o"
    ;;
@@ -144,7 +132,7 @@ index 50f000622..d1aa00f1a 100644
  *-*-linux* | frv-*-*linux* | *-*-kfreebsd*-gnu | *-*-gnu* | *-*-kopensolaris*-gnu | *-*-uclinuxfdpiceabi)
    tmake_file="$tmake_file t-crtstuff-pic t-libgcc-pic t-eh-dw2-dip t-slibgcc t-slibgcc-gld t-slibgcc-elf-ver t-linux"
    extra_parts="crtbegin.o crtbeginS.o crtbeginT.o crtend.o crtendS.o"
-@@ -703,6 +708,9 @@ x86_64-*-elf* | x86_64-*-rtems*)
+@@ -715,6 +720,9 @@ x86_64-*-elf* | x86_64-*-rtems*)
  x86_64-*-fuchsia*)
  	tmake_file="$tmake_file t-libgcc-pic"
  	;;
@@ -155,7 +143,7 @@ index 50f000622..d1aa00f1a 100644
  	tmake_file="${tmake_file} i386/t-dragonfly i386/t-crtstuff"
  	md_unwind_header=i386/dragonfly-unwind.h
 diff --git a/libgcc/libgcov.h b/libgcc/libgcov.h
-index 7b0d367ec..2bce0a7e1 100644
+index 92df440d4..320f3b500 100644
 --- a/libgcc/libgcov.h
 +++ b/libgcc/libgcov.h
 @@ -44,6 +44,7 @@
@@ -167,7 +155,7 @@ index 7b0d367ec..2bce0a7e1 100644
  #if HAVE_SYS_MMAN_H
  #include <sys/mman.h>
 diff --git a/libstdc++-v3/crossconfig.m4 b/libstdc++-v3/crossconfig.m4
-index ff44d5ae0..8b41eb058 100644
+index b3269cb88..4187dba89 100644
 --- a/libstdc++-v3/crossconfig.m4
 +++ b/libstdc++-v3/crossconfig.m4
 @@ -136,6 +136,18 @@ case "${host}" in
@@ -190,7 +178,7 @@ index ff44d5ae0..8b41eb058 100644
      SECTION_FLAGS='-ffunction-sections -fdata-sections'
      AC_SUBST(SECTION_FLAGS)
 diff --git a/libtool.m4 b/libtool.m4
-index 17f8e5f30..5d29258d9 100644
+index b92e284d9..491d24c54 100644
 --- a/libtool.m4
 +++ b/libtool.m4
 @@ -2491,6 +2491,16 @@ linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu* | uclinuxfdpiceabi)
@@ -210,7 +198,7 @@ index 17f8e5f30..5d29258d9 100644
  netbsd*)
    version_type=sunos
    need_lib_prefix=no
-@@ -3090,6 +3100,10 @@ linux* | k*bsd*-gnu | kopensolaris*-gnu | uclinuxfdpiceabi)
+@@ -3109,6 +3119,10 @@ linux* | k*bsd*-gnu | kopensolaris*-gnu | uclinuxfdpiceabi)
    lt_cv_deplibs_check_method=pass_all
    ;;
  
@@ -222,5 +210,5 @@ index 17f8e5f30..5d29258d9 100644
    if echo __ELF__ | $CC -E - | $GREP __ELF__ > /dev/null; then
      lt_cv_deplibs_check_method='match_pattern /lib[[^/]]+(\.so\.[[0-9]]+\.[[0-9]]+|_pic\.a)$'
 -- 
-2.25.1
+2.41.0
 
