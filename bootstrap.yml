@@ -51,7 +51,7 @@ sources:
 
   - name: mlibc
     subdir: 'bundled'
-    git: 'https://github.com/managarm/mlibc'
+    git: 'https://github.com/aero-os/mlibc'
     branch: 'master'
 
   - name: tzcode
