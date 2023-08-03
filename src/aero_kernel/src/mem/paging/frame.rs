@@ -77,6 +77,13 @@ impl LockedFrameAllocator {
             .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
     }
 
+    pub fn dealloc(&self, addr: PhysAddr, size_bytes: usize) {
+        let order = order_from_size(size_bytes as u64);
+
+        let mut allocator = self.0.get().unwrap().lock_irq();
+        allocator.deallocate_frame_inner(addr, order);
+    }
+
     pub fn alloc(&self, size_bytes: usize) -> Option<PhysAddr> {
         let order = order_from_size(size_bytes as u64);
 

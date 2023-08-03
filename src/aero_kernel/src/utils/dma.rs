@@ -30,7 +30,6 @@ pub struct DmaAllocator;
 // the data using the ISA or PCI system bus (which carry physical addresses).
 unsafe impl Allocator for DmaAllocator {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        // XXX: The DMA buffer must be aligned to a page boundary.
         let size_bytes = layout.size();
 
         let phys = FRAME_ALLOCATOR.alloc_zeroed(size_bytes).ok_or(AllocError)?;
@@ -41,7 +40,14 @@ unsafe impl Allocator for DmaAllocator {
         Ok(NonNull::slice_from_raw_parts(ptr, size_bytes))
     }
 
-    unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {}
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        let size_bytes = layout.size();
+
+        let addr: usize = ptr.addr().into();
+        let addr = VirtAddr::new(addr as u64);
+
+        FRAME_ALLOCATOR.dealloc(addr.as_hhdm_phys(), size_bytes);
+    }
 }
 
 pub type DmaBuffer<T> = Box<T, DmaAllocator>;

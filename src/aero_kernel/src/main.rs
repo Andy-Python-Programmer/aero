@@ -47,6 +47,7 @@
     const_ptr_is_null, // https://github.com/rust-lang/rust/issues/74939
     trait_upcasting, // https://github.com/rust-lang/rust/issues/65991
     naked_functions, // https://github.com/rust-lang/rust/issues/32408
+    strict_provenance
 )]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]
