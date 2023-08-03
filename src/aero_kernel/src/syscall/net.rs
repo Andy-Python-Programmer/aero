@@ -23,6 +23,15 @@ fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddr<'sys>, Sy
     SocketAddr::from_family(address, family)
 }
 
+#[syscall]
+pub fn shutdown(fd: usize, how: usize) -> Result<usize, SyscallError> {
+    let file_table = &scheduler::get_scheduler().current_task().file_table;
+    let socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)?;
+
+    socket.inode().shutdown(how)?;
+    Ok(0)
+}
+
 /// Connects the socket to the specified address.
 #[syscall]
 pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, SyscallError> {

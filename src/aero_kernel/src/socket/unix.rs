@@ -434,4 +434,9 @@ impl INodeInterface for UnixSocket {
 
         Ok(events)
     }
+
+    fn shutdown(&self, how: usize) -> fs::Result<()> {
+        log::warn!("shutdown how={how}");
+        Ok(())
+    }
 }

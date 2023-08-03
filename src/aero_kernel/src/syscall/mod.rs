@@ -289,6 +289,7 @@ pub fn generic_do_syscall(
         SYS_SOCK_RECV => net::sock_recv(b, c, d),
         SYS_SOCK_SEND => net::sock_send(b, c, d),
         SYS_SOCKET_PAIR => net::socket_pair(b, c, d, e),
+        SYS_SOCK_SHUTDOWN => net::shutdown(b, c),
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),

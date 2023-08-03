@@ -157,6 +157,10 @@ pub trait INodeInterface: Send + Sync {
         Ok(aero_syscall::Stat::default())
     }
 
+    fn shutdown(&self, _how: usize) -> Result<()> {
+        Err(FileSystemError::NotSupported)
+    }
+
     /// Creates a new dev inode with the provided `name` and the device `marker` in
     /// the filesystem.
     ///
