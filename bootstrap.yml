@@ -3,6 +3,7 @@ imports:
   - file: bootstrap/net.yml
   - file: bootstrap/vcs.yml
   - file: bootstrap/db.yml
+  - file: bootstrap/editors.yml
 
 general:
   cargo:
