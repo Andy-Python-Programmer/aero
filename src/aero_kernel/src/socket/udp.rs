@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-use aero_syscall::prelude::{IfReq, SIOCGIFHWADDR, SIOCGIFINDEX, SIOCSIFADDR, SIOCSIFNETMASK};
+use aero_syscall::prelude::{IfReq, SIOCGIFHWADDR, SIOCSIFADDR, SIOCSIFNETMASK};
 use aero_syscall::socket::{MessageFlags, MessageHeader};
 use aero_syscall::{OpenFlags, SocketAddrInet};
 use alloc::sync::{Arc, Weak};
@@ -209,16 +209,6 @@ impl INodeInterface for UdpSocket {
 
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
         match command {
-            SIOCGIFINDEX => {
-                let mut ifreq = unsafe { UserRef::<IfReq>::new(VirtAddr::new(arg as _)) };
-
-                let name = ifreq.name().unwrap();
-                assert!(name == "eth0");
-
-                ifreq.data.ifindex = 1; // FIXME: Fill the actual interface index
-                Ok(0)
-            }
-
             SIOCGIFHWADDR => {
                 let mut ifreq = unsafe { UserRef::<IfReq>::new(VirtAddr::new(arg as _)) };
 

@@ -9,6 +9,7 @@ use crate::fs::cache::DirCacheItem;
 use crate::fs::inode::{DirEntry, INodeInterface};
 use crate::mem::paging::VirtAddr;
 
+use crate::socket::ipv4::Ipv4Socket;
 use crate::socket::tcp::TcpSocket;
 use crate::socket::udp::UdpSocket;
 use crate::socket::unix::*;
@@ -123,7 +124,7 @@ fn create_socket(
     socket_type: usize,
     protocol: usize,
 ) -> Result<DirCacheItem, SyscallError> {
-    let typ = SocketType::from_usize(socket_type).ok_or(SyscallError::EINVAL)?;
+    let typ = SocketType::from_usize(socket_type & 0b1111).ok_or(SyscallError::EINVAL)?;
     let protocol = IpProtocol::from_usize(protocol).ok_or(SyscallError::EINVAL)?;
 
     let socket = match domain as u32 {
@@ -133,6 +134,7 @@ fn create_socket(
                 UdpSocket::new() as Arc<dyn INodeInterface>
             }
 
+            (SocketType::Dgram, IpProtocol::Raw) => Ipv4Socket::new() as Arc<dyn INodeInterface>,
             (SocketType::Stream, IpProtocol::Default | IpProtocol::Tcp) => {
                 TcpSocket::new() as Arc<dyn INodeInterface>
             }
