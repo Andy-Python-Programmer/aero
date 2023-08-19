@@ -49,6 +49,11 @@
     naked_functions, // https://github.com/rust-lang/rust/issues/32408
     strict_provenance
 )]
+// TODO(andypython): can we remove the dependency of "prelude_import" and "lang_items"?
+//     `lang_items`     => is currently used for the personality function (`rust_eh_personality`).
+//     `prelude_import` => is currently just used to re-export alloc prelude. This just makes the
+//                         files overall more readable.
+#![allow(internal_features)]
 #![deny(trivial_numeric_casts, unused_allocation)]
 #![test_runner(crate::tests::test_runner)]
 #![no_std]
