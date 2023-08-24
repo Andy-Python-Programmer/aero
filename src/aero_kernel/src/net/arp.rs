@@ -19,7 +19,7 @@
 
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-use simple_endian::BigEndian;
+use byte_endian::BigEndian;
 use spin::{Once, RwLock};
 
 use crate::net::{default_device, ethernet, PacketUpHierarchy};

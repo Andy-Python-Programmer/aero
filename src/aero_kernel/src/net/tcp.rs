@@ -19,7 +19,7 @@ use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 
 use bit_field::BitField;
-use simple_endian::BigEndian;
+use byte_endian::BigEndian;
 use spin::RwLock;
 
 use super::ip::{self, Ipv4, Ipv4Addr};

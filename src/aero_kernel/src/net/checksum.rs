@@ -1,4 +1,4 @@
-use simple_endian::BigEndian;
+use byte_endian::BigEndian;
 
 use super::ip::{self, Ipv4Addr};
 

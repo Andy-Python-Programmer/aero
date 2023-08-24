@@ -18,9 +18,9 @@ name = "aero_syscall"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "byte_endian",
  "num-derive",
  "num-traits",
- "simple_endian",
 ]
 
 [[package]]
@@ -54,6 +54,11 @@ name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+
+[[package]]
+name = "byte_endian"
+version = "0.1.0"
+source = "git+https://github.com/aero-os/byte_endian#47cec808e9c2813563f3a103ac2da2106c65f755"
 
 [[package]]
 name = "byteorder"
@@ -255,11 +260,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "simple_endian"
-version = "0.2.1"
-source = "git+https://github.com/michalfita/simple-endian-rs?branch=bugfix/4/fix-no_std-support-right-way#7210f40881d16f7f2e3d8d40f6381fa222843caa"
 
 [[package]]
 name = "spin"

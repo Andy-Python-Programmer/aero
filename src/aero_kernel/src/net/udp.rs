@@ -17,7 +17,7 @@
 
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
-use simple_endian::BigEndian;
+use byte_endian::BigEndian;
 use spin::RwLock;
 
 use super::ip::{Ipv4, Ipv4Addr};

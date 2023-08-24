@@ -29,7 +29,7 @@ pub mod socket;
 pub mod syscall;
 pub mod time;
 
-use simple_endian::BigEndian;
+use byte_endian::BigEndian;
 
 pub use crate::syscall::*;
 
