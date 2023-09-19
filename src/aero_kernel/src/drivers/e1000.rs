@@ -27,7 +27,7 @@ use crate::userland::scheduler;
 use crate::utils::dma::DmaAllocator;
 use crate::utils::sync::{Mutex, WaitQueue};
 
-use crate::net::{self, ethernet, NetworkDevice, NetworkDriver};
+use crate::net::{self, NetworkDevice, NetworkDriver};
 use netstack::data_link::MacAddr;
 
 const TX_DESC_NUM: u32 = 32;

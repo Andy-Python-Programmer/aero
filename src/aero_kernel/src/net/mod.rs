@@ -15,29 +15,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-use core::marker::PhantomData;
-
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::RwLock;
 
 pub mod arp;
-pub mod ethernet;
 pub mod tcp;
 pub mod udp;
 
-pub use ethernet::Eth;
 use netstack::data_link::MacAddr;
 
-use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::task::Task;
 use crate::utils::dma::DmaAllocator;
 
 use netstack::network::Ipv4Addr;
 
-// #[downcastable]
+#[downcastable]
 pub trait NetworkDriver: Send + Sync {
     fn send(&self, packet: Box<[u8], DmaAllocator>);
     fn recv(&self) -> RecvPacket;
@@ -106,114 +101,11 @@ impl<'a> Drop for RecvPacket<'a> {
     }
 }
 
-pub trait PacketKind {}
-
-pub trait ConstPacketKind: PacketKind {
-    const HSIZE: usize;
-}
-
-impl<T: ConstPacketKind> PacketKind for T {}
-
-impl<U, D> PacketDownHierarchy<D> for Packet<U>
-where
-    U: PacketKind,
-    D: ConstPacketKind,
-    Packet<D>: PacketUpHierarchy<U>,
-{
-}
-
-pub trait PacketBaseTrait {
-    fn addr(&self) -> VirtAddr;
-    fn len(&self) -> usize;
-}
-
-pub trait PacketTrait: PacketBaseTrait {
-    fn header_size(&self) -> usize;
-
-    // TODO: Rename as_slice{_mut} to payload{_mut}?
-    fn as_slice_mut(&mut self) -> &mut [u8] {
-        let hsize = self.header_size();
-
-        let start = self.addr() + hsize;
-        let size = self.len() - hsize;
-
-        unsafe { core::slice::from_raw_parts_mut(start.as_mut_ptr(), size) }
-    }
-
-    fn as_slice(&self) -> &[u8] {
-        let hsize = self.header_size();
-
-        let start = self.addr() + hsize;
-        let size = self.len() - hsize;
-
-        unsafe { core::slice::from_raw_parts(start.as_ptr(), size) }
-    }
-}
-
-impl<T: ConstPacketKind> PacketTrait for Packet<T> {
-    fn header_size(&self) -> usize {
-        T::HSIZE
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct Packet<T: PacketKind> {
-    pub addr: VirtAddr,
-    pub len: usize,
-    _phantom: PhantomData<T>,
-}
-
-impl<T: PacketKind> PacketBaseTrait for Packet<T> {
-    fn addr(&self) -> VirtAddr {
-        self.addr
-    }
-
-    fn len(&self) -> usize {
-        self.len
-    }
-}
-
-impl<T: PacketKind> Packet<T> {
-    pub fn new(addr: VirtAddr, len: usize) -> Packet<T> {
-        Packet::<T> {
-            addr,
-            len,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-pub trait PacketUpHierarchy<B: PacketKind>: PacketTrait {
-    fn upgrade(&self) -> Packet<B> {
-        let header_size = self.header_size();
-        Packet::<B>::new(self.addr() + header_size, self.len() - header_size)
-    }
-}
-
-pub trait PacketDownHierarchy<B: ConstPacketKind>: PacketBaseTrait {
-    fn downgrade(&self) -> Packet<B> {
-        let header_size = B::HSIZE;
-        Packet::<B>::new(self.addr() - header_size, self.len() + header_size)
-    }
-}
-
-pub trait PacketHeader<H>: PacketBaseTrait {
-    fn recv(&self);
-
-    fn header(&self) -> &H {
-        self.addr().read_mut::<H>().unwrap()
-    }
-
-    fn header_mut(&mut self) -> &mut H {
-        self.addr().read_mut::<H>().unwrap()
-    }
-}
-
 static DEVICES: RwLock<Vec<Arc<NetworkDevice>>> = RwLock::new(Vec::new());
 static DEFAULT_DEVICE: RwLock<Option<Arc<NetworkDevice>>> = RwLock::new(None);
 
 fn packet_processor_thread() {
-    use netstack::data_link::{Eth, EthType};
+    use netstack::data_link::{Arp, Eth, EthType};
     use netstack::network::{Ipv4, Ipv4Type};
     use netstack::transport::Udp;
     use netstack::PacketParser;
@@ -236,7 +128,9 @@ fn packet_processor_thread() {
                 }
             }
 
-            EthType::Arp => todo!(),
+            EthType::Arp => {
+                arp::do_recv(parser.next::<Arp>());
+            }
         }
     }
 }
@@ -282,7 +176,7 @@ pub mod shim {
     use crate::net::{self, arp};
     use crate::utils::dma::DmaAllocator;
 
-    use netstack::data_link::{Arp, Eth};
+    use netstack::data_link::{Arp, Eth, EthType, MacAddr};
     use netstack::network::Ipv4;
     use netstack::{IntoBoxedBytes, Protocol, Stacked};
 
@@ -310,16 +204,15 @@ pub mod shim {
         }
     }
 
-    impl PacketSend for Stacked<Eth, Arp> {
+    impl PacketSend for Arp {
         fn send(self) {
-            // let device = net::default_device();
+            let device = net::default_device();
 
-            // let eth = &mut self.upper;
-            // let arp = &mut self.lower;
+            let eth = Eth::new(MacAddr::NULL, MacAddr::BROADCAST, EthType::Arp)
+                .set_dest_mac(self.dest_mac())
+                .set_src_mac(device.mac());
 
-            // eth.src_mac = device.mac();
-            // eth.dest_mac = arp.dest_mac;
-            todo!()
+            device.send((eth / self).into_boxed_bytes_in(DmaAllocator));
         }
     }
 

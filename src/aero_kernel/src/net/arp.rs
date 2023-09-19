@@ -19,13 +19,12 @@
 
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-use byte_endian::BigEndian;
 use spin::{Once, RwLock};
 
 use crate::net::default_device;
 use crate::net::shim::PacketSend;
 
-use netstack::data_link::{Arp, ArpAddress, ArpHardwareType, ArpOpcode, Eth, EthType};
+use netstack::data_link::{Arp, ArpAddress, ArpHardwareType, ArpOpcode, EthType};
 use netstack::network::Ipv4Addr;
 
 // use super::{ConstPacketKind, Eth, Packet, PacketDownHierarchy, PacketHeader};
@@ -68,7 +67,7 @@ impl Cache {
                     log::trace!("[ ARP ] (!!) Sending queued packed to {ip:?} {mac:?}");
                     // packet.header_mut().dest_mac = mac;
                     // super::default_device().send(packet);
-                    unreachable!()
+                    todo!()
                 }
             }
         } else {
@@ -114,49 +113,6 @@ pub fn init() {
 
         RwLock::new(cache)
     });
-}
-
-/// Hardware Address Space (e.g., Ethernet, Packet Radio Net.)
-#[derive(Copy, Clone)]
-#[repr(u16)]
-pub enum HType {
-    Ethernet = 1u16.swap_bytes(),
-}
-
-/// Internetwork Protocol for which the ARP request is intended.
-#[derive(Copy, Clone)]
-#[repr(u16)]
-pub enum PType {
-    Ipv4 = 0x0800u16.swap_bytes(),
-}
-
-/// ARP Opcode
-#[derive(Copy, Clone, Eq, PartialEq)]
-#[repr(u16)]
-pub enum Opcode {
-    Request = 1u16.swap_bytes(),
-    Reply = 2u16.swap_bytes(),
-}
-
-#[repr(C, packed)]
-pub struct ArpHeader {
-    pub htype: HType,
-    pub ptype: PType,
-    /// Length (in octets) of a hardware address.
-    pub hlen: BigEndian<u8>,
-    /// Length (in octets) of internetwork addresses.
-    pub plen: BigEndian<u8>,
-    pub opcode: Opcode,
-    pub src_mac: MacAddr,
-    pub src_ip: Ipv4Addr,
-    pub dest_mac: MacAddr,
-    pub dest_ip: Ipv4Addr,
-}
-
-impl ArpHeader {
-    pub fn opcode(&self) -> Opcode {
-        self.opcode
-    }
 }
 
 // #[derive(Debug, Copy, Clone)]
@@ -214,6 +170,24 @@ impl ArpHeader {
 //     }
 // }
 
+pub fn do_recv(arp: &Arp) {
+    CACHE
+        .get()
+        .as_ref()
+        .expect("arp: cache not initialized")
+        .write()
+        .insert(arp.src_ip(), arp.src_mac());
+
+    let device = default_device();
+
+    if arp.opcode() == ArpOpcode::Request && arp.dest_ip() == device.ip() {
+        let addr = ArpAddress::new(arp.src_mac(), arp.src_ip());
+        let reply_arp = make_arp(ArpOpcode::Reply, addr);
+
+        reply_arp.send();
+    }
+}
+
 pub fn request_ip(target: Ipv4Addr, to: RawPacket) {
     let arp = make_arp(ArpOpcode::Request, ArpAddress::new(MacAddr::NULL, target));
 
@@ -226,8 +200,7 @@ pub fn request_ip(target: Ipv4Addr, to: RawPacket) {
         .write()
         .request(target, to);
 
-    let eth = Eth::new(MacAddr::NULL, MacAddr::BROADCAST, EthType::Arp);
-    (eth / arp).send();
+    arp.send();
 }
 
 fn make_arp(opcode: ArpOpcode, dest_addr: ArpAddress) -> Arp {
