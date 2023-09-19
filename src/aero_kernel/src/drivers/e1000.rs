@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use alloc::boxed::Box;
 use alloc::sync::Arc;
 use spin::Once;
 
@@ -23,9 +24,11 @@ use crate::arch::interrupts::{self, InterruptStack};
 use crate::drivers::pci::*;
 use crate::mem::paging::*;
 use crate::userland::scheduler;
+use crate::utils::dma::DmaAllocator;
 use crate::utils::sync::{Mutex, WaitQueue};
 
-use crate::net::{self, ethernet, MacAddr, NetworkDevice, NetworkDriver, PacketBaseTrait};
+use crate::net::{self, ethernet, NetworkDevice, NetworkDriver};
+use netstack::data_link::MacAddr;
 
 const TX_DESC_NUM: u32 = 32;
 const TX_DESC_SIZE: u32 = TX_DESC_NUM * core::mem::size_of::<TxDescriptor>() as u32;
@@ -374,11 +377,12 @@ impl E1000 {
         }
     }
 
-    fn send(&mut self, packet: net::Packet<net::Eth>) {
+    fn send(&mut self, packet: Box<[u8], DmaAllocator>) {
         let cur = self.tx_cur;
         let ring = self.tx_ring();
 
-        ring[cur].addr = unsafe { packet.addr() - crate::PHYSICAL_MEMORY_OFFSET };
+        ring[cur].addr =
+            unsafe { VirtAddr::new(packet.as_ptr() as u64) - crate::PHYSICAL_MEMORY_OFFSET };
         ring[cur].length = packet.len() as _;
         ring[cur].cmd = 0b1011;
         ring[cur].status = TStatus::empty();
@@ -386,9 +390,10 @@ impl E1000 {
         self.tx_cur = (self.tx_cur + 1) % TX_DESC_NUM as usize;
 
         self.write(Register::TxDescTail, self.tx_cur as u32);
+        core::mem::forget(packet); // FIXME: hack
     }
 
-    fn recv(&mut self) -> Option<net::RecvPacket> {
+    fn recv<'a>(&mut self) -> Option<net::RecvPacket<'a>> {
         let id = self.rx_cur;
         let desc = &mut self.rx_ring()[id];
 
@@ -396,13 +401,11 @@ impl E1000 {
             return None;
         }
 
-        Some(net::RecvPacket {
-            packet: net::Packet::<ethernet::Eth>::new(
-                PhysAddr::new(desc.addr).as_hhdm_virt(),
-                desc.length as usize,
-            ),
-            id,
-        })
+        let packet = PhysAddr::new(desc.addr)
+            .as_hhdm_virt()
+            .as_bytes_mut(desc.length as usize);
+
+        Some(net::RecvPacket { packet, id })
     }
 
     fn recv_end(&mut self, id: usize) {
@@ -595,7 +598,7 @@ impl Device {
 }
 
 impl NetworkDriver for Device {
-    fn send(&self, packet: net::Packet<net::Eth>) {
+    fn send(&self, packet: Box<[u8], DmaAllocator>) {
         self.e1000.lock_irq().send(packet)
     }
 
@@ -619,7 +622,7 @@ impl NetworkDriver for Device {
         self.e1000.lock_irq().recv_end(packet_id)
     }
 
-    fn mac(&self) -> net::MacAddr {
+    fn mac(&self) -> MacAddr {
         self.e1000.lock_irq().mac
     }
 }

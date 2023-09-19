@@ -22,15 +22,20 @@ use alloc::vec::Vec;
 use byte_endian::BigEndian;
 use spin::{Once, RwLock};
 
-use crate::net::{default_device, ethernet, PacketUpHierarchy};
+use crate::net::default_device;
+use crate::net::shim::PacketSend;
 
-use super::ethernet::MacAddr;
-use super::ip::Ipv4Addr;
-use super::{ConstPacketKind, Eth, Packet, PacketDownHierarchy, PacketHeader};
+use netstack::data_link::{Arp, ArpAddress, ArpHardwareType, ArpOpcode, Eth, EthType};
+use netstack::network::Ipv4Addr;
+
+// use super::{ConstPacketKind, Eth, Packet, PacketDownHierarchy, PacketHeader};
+use netstack::data_link::MacAddr;
+
+use super::RawPacket;
 
 enum Status {
     Resolved,
-    Pending(Vec<Packet<Eth>>),
+    Pending(Vec<RawPacket>),
 }
 
 struct Entry {
@@ -61,8 +66,9 @@ impl Cache {
 
                 for mut packet in queue {
                     log::trace!("[ ARP ] (!!) Sending queued packed to {ip:?} {mac:?}");
-                    packet.header_mut().dest_mac = mac;
-                    super::default_device().send(packet);
+                    // packet.header_mut().dest_mac = mac;
+                    // super::default_device().send(packet);
+                    unreachable!()
                 }
             }
         } else {
@@ -70,7 +76,7 @@ impl Cache {
         }
     }
 
-    fn request(&mut self, ip: Ipv4Addr, packet: Packet<Eth>) {
+    fn request(&mut self, ip: Ipv4Addr, packet: RawPacket) {
         if self.0.get_mut(&ip).is_some() {
             todo!()
         } else {
@@ -153,71 +159,63 @@ impl ArpHeader {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct Arp {}
+// #[derive(Debug, Copy, Clone)]
+// pub struct Arp {}
 
-impl Packet<Arp> {
-    pub fn create() -> Packet<Arp> {
-        let device = default_device();
+// impl Packet<Arp> {
+//     pub fn create() -> Packet<Arp> {
+//         let device = default_device();
 
-        let mut packet: Packet<Arp> =
-            Packet::<Eth>::create(ethernet::Type::Arp, core::mem::size_of::<ArpHeader>()).upgrade();
+//         let mut packet: Packet<Arp> =
+//             Packet::<Eth>::create(ethernet::Type::Arp,
+// core::mem::size_of::<ArpHeader>()).upgrade();
 
-        let header = packet.header_mut();
-        header.htype = HType::Ethernet;
-        header.ptype = PType::Ipv4;
-        header.hlen = BigEndian::from(MacAddr::ADDR_SIZE as u8);
-        header.plen = BigEndian::from(Ipv4Addr::ADDR_SIZE as u8);
+//         let header = packet.header_mut();
+//         header.htype = HType::Ethernet;
+//         header.ptype = PType::Ipv4;
+//         header.hlen = BigEndian::from(MacAddr::ADDR_SIZE as u8);
+//         header.plen = BigEndian::from(Ipv4Addr::ADDR_SIZE as u8);
 
-        header.src_ip = device.ip();
-        header.src_mac = device.mac();
+//         header.src_ip = device.ip();
+//         header.src_mac = device.mac();
 
-        packet
-    }
-}
+//         packet
+//     }
+// }
 
-impl ConstPacketKind for Arp {
-    const HSIZE: usize = core::mem::size_of::<ArpHeader>();
-}
+// impl ConstPacketKind for Arp {
+//     const HSIZE: usize = core::mem::size_of::<ArpHeader>();
+// }
 
-impl PacketUpHierarchy<Arp> for Packet<Eth> {}
-impl PacketHeader<ArpHeader> for Packet<Arp> {
-    fn send(&self) {
-        self.downgrade().send()
-    }
+// impl PacketUpHierarchy<Arp> for Packet<Eth> {}
+// impl PacketHeader<ArpHeader> for Packet<Arp> {
+//     fn recv(&self) {
+//         let header = self.header();
 
-    fn recv(&self) {
-        let header = self.header();
+//         CACHE
+//             .get()
+//             .as_ref()
+//             .expect("arp: cache not initialized")
+//             .write()
+//             .insert(header.src_ip, header.src_mac);
 
-        CACHE
-            .get()
-            .as_ref()
-            .expect("arp: cache not initialized")
-            .write()
-            .insert(header.src_ip, header.src_mac);
+//         let device = default_device();
 
-        let device = default_device();
+//         if header.opcode() == Opcode::Request && header.dest_ip == device.ip() {
+//             let mut packet = Packet::<Arp>::create();
+//             let reply_header = packet.header_mut();
 
-        if header.opcode() == Opcode::Request && header.dest_ip == device.ip() {
-            let mut packet = Packet::<Arp>::create();
-            let reply_header = packet.header_mut();
+//             reply_header.opcode = Opcode::Reply;
+//             reply_header.dest_ip = header.src_ip;
+//             reply_header.dest_mac = header.src_mac;
 
-            reply_header.opcode = Opcode::Reply;
-            reply_header.dest_ip = header.src_ip;
-            reply_header.dest_mac = header.src_mac;
+//             packet.send();
+//         }
+//     }
+// }
 
-            packet.send();
-        }
-    }
-}
-
-pub fn request_ip(target: Ipv4Addr, to: Packet<Eth>) {
-    let mut packet = Packet::<Arp>::create();
-    let header = packet.header_mut();
-
-    header.opcode = Opcode::Request;
-    header.dest_ip = target;
-    header.dest_mac = MacAddr::NULL;
+pub fn request_ip(target: Ipv4Addr, to: RawPacket) {
+    let arp = make_arp(ArpOpcode::Request, ArpAddress::new(MacAddr::NULL, target));
 
     log::debug!("[ ARP ] (!!) Sending request for {target:?}");
 
@@ -228,5 +226,19 @@ pub fn request_ip(target: Ipv4Addr, to: Packet<Eth>) {
         .write()
         .request(target, to);
 
-    packet.send();
+    let eth = Eth::new(MacAddr::NULL, MacAddr::BROADCAST, EthType::Arp);
+    (eth / arp).send();
+}
+
+fn make_arp(opcode: ArpOpcode, dest_addr: ArpAddress) -> Arp {
+    let device = default_device();
+    let src_addr = ArpAddress::new(device.mac(), device.ip());
+
+    Arp::new(
+        ArpHardwareType::Ethernet,
+        EthType::Ip,
+        src_addr,
+        dest_addr,
+        opcode,
+    )
 }

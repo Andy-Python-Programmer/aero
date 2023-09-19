@@ -125,7 +125,7 @@ impl VirtAddr {
         Ok(unsafe { &mut *self.as_mut_ptr() })
     }
 
-    pub fn as_bytes_mut(&self, size_bytes: usize) -> &mut [u8] {
+    pub fn as_bytes_mut<'a>(&self, size_bytes: usize) -> &'a mut [u8] {
         self.validate_read::<&[u8]>().unwrap();
         unsafe { core::slice::from_raw_parts_mut(self.as_mut_ptr(), size_bytes) }
     }

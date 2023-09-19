@@ -17,28 +17,29 @@
 
 use core::marker::PhantomData;
 
+use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::RwLock;
 
 pub mod arp;
-mod checksum;
 pub mod ethernet;
-pub mod ip;
 pub mod tcp;
 pub mod udp;
 
-pub use ethernet::{Eth, MacAddr};
+pub use ethernet::Eth;
+use netstack::data_link::MacAddr;
 
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::task::Task;
+use crate::utils::dma::DmaAllocator;
 
-use self::ip::Ipv4Addr;
+use netstack::network::Ipv4Addr;
 
-#[downcastable]
+// #[downcastable]
 pub trait NetworkDriver: Send + Sync {
-    fn send(&self, packet: Packet<Eth>);
+    fn send(&self, packet: Box<[u8], DmaAllocator>);
     fn recv(&self) -> RecvPacket;
     fn recv_end(&self, packet_id: usize);
     fn mac(&self) -> MacAddr;
@@ -94,12 +95,12 @@ impl core::ops::Deref for NetworkDevice {
 }
 
 #[derive(Debug)]
-pub struct RecvPacket {
-    pub packet: Packet<Eth>,
+pub struct RecvPacket<'a> {
+    pub packet: &'a [u8],
     pub id: usize,
 }
 
-impl Drop for RecvPacket {
+impl<'a> Drop for RecvPacket<'a> {
     fn drop(&mut self) {
         default_device().recv_end(self.id)
     }
@@ -197,7 +198,6 @@ pub trait PacketDownHierarchy<B: ConstPacketKind>: PacketBaseTrait {
 }
 
 pub trait PacketHeader<H>: PacketBaseTrait {
-    fn send(&self);
     fn recv(&self);
 
     fn header(&self) -> &H {
@@ -213,11 +213,31 @@ static DEVICES: RwLock<Vec<Arc<NetworkDevice>>> = RwLock::new(Vec::new());
 static DEFAULT_DEVICE: RwLock<Option<Arc<NetworkDevice>>> = RwLock::new(None);
 
 fn packet_processor_thread() {
+    use netstack::data_link::{Eth, EthType};
+    use netstack::network::{Ipv4, Ipv4Type};
+    use netstack::transport::Udp;
+    use netstack::PacketParser;
+
     let device = default_device();
 
     loop {
         let packet = device.recv();
-        packet.packet.recv();
+
+        let mut parser = PacketParser::new(packet.packet);
+        let eth = parser.next::<Eth>();
+
+        match eth.typ() {
+            EthType::Ip => {
+                let ip = parser.next::<Ipv4>();
+
+                match ip.protocol() {
+                    Ipv4Type::Udp => udp::do_recv(parser.next::<Udp>(), parser.payload()),
+                    Ipv4Type::Tcp => todo!(),
+                }
+            }
+
+            EthType::Arp => todo!(),
+        }
     }
 }
 
@@ -254,4 +274,81 @@ pub fn init() {
 
     arp::init();
     log::info!("net::arp: initialized cache");
+}
+
+pub type RawPacket = Box<[u8], DmaAllocator>;
+
+pub mod shim {
+    use crate::net::{self, arp};
+    use crate::utils::dma::DmaAllocator;
+
+    use netstack::data_link::{Arp, Eth};
+    use netstack::network::Ipv4;
+    use netstack::{IntoBoxedBytes, Protocol, Stacked};
+
+    pub trait PacketSend {
+        fn send(self);
+    }
+
+    // Deref<T> for Stacked<T, U> where T: Stacked?
+    impl<T: Protocol, U: Protocol> PacketSend for Stacked<Stacked<Stacked<Eth, Ipv4>, T>, U> {
+        fn send(mut self) {
+            let device = net::default_device();
+
+            let eth = &mut self.upper.upper.upper;
+            let ip = &self.upper.upper.lower;
+
+            eth.src_mac = device.mac();
+
+            if let Some(addr) = arp::get(ip.dest_ip()) {
+                eth.dest_mac = addr;
+                device.send(self.into_boxed_bytes_in(DmaAllocator));
+            } else {
+                // arp::request_ip(ip, self.clone());
+                todo!()
+            }
+        }
+    }
+
+    impl PacketSend for Stacked<Eth, Arp> {
+        fn send(self) {
+            // let device = net::default_device();
+
+            // let eth = &mut self.upper;
+            // let arp = &mut self.lower;
+
+            // eth.src_mac = device.mac();
+            // eth.dest_mac = arp.dest_mac;
+            todo!()
+        }
+    }
+
+    //     struct DefaultDevice;
+
+    // impl<A: Allocator> NetworkDevice<A> for DefaultDevice {
+    //     fn send_bytes(&self, bytes: Box<[u8], A>) {
+    //         panic!("Sending {} bytes", bytes.len());
+    //     }
+    // }
+
+    // pub trait NetworkDevice<A: Allocator = Global> {
+    //     fn send_bytes(&self, bytes: Box<[u8], A>);
+    // }
+
+    // pub trait SendablePacket<A: Allocator = Global>
+    // where
+    //     Self: Sized + IntoBoxedBytes<A>,
+    // {
+    //     #[inline]
+    //     fn send(self) {
+    //         DefaultDevice.send_bytes(self.into_boxed_bytes())
+    //     }
+
+    //     #[inline]
+    //     fn send_in<T: NetworkDevice<A>>(self, device: &T) {
+    //         device.send_bytes(self.into_boxed_bytes())
+    //     }
+    // }
+
+    // impl<T: IntoBoxedBytes> SendablePacket for T {}
 }

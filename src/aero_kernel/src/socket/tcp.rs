@@ -17,16 +17,20 @@
 
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
+use netstack::data_link::MacAddr;
 use spin::Once;
 
 use crate::fs::cache::DirCacheItem;
 use crate::fs::file_table::FileHandle;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
 use crate::fs::{self, FileSystemError};
-use crate::net::ip::Ipv4Addr;
-use crate::net::tcp::{self, Tcp, TcpFlags, TcpHandler};
-use crate::net::{Packet, PacketHeader, PacketTrait};
+use crate::net::tcp::{self, TcpHandler};
 use crate::utils::sync::{Mutex, WaitQueue};
+
+use netstack::data_link::Eth;
+use netstack::network::{Ipv4, Ipv4Addr};
+use netstack::transport::{Tcp, TcpFlags};
+use netstack::Stacked;
 
 /// TCP Stream
 #[derive(Default)]
@@ -80,49 +84,48 @@ struct TcpData {
 }
 
 impl TcpData {
-    fn make_packet(&self, size: usize, flags: TcpFlags) -> Packet<Tcp> {
-        let mut packet = Packet::<Tcp>::create(self.src_port, self.dest_port, size, self.target);
-        let header = packet.header_mut();
-
-        header.set_sequence_number(self.control.send_next);
-        header.set_window(u16::MAX);
-        header.set_flags(flags);
-
-        packet
+    fn make_layer(&self, flags: TcpFlags) -> Tcp {
+        Tcp::new(self.src_port, self.dest_port)
+            .set_sequence_number(self.control.send_next)
+            .set_window(u16::MAX)
+            .set_flags(flags)
     }
 
-    fn make_ack_packet(&self, size: usize) -> Packet<Tcp> {
-        let mut packet = self.make_packet(size, TcpFlags::empty());
-        let header = packet.header_mut();
-
-        header.set_ack_number(self.control.recv_next);
-        packet
+    fn make_ack_packet(&self) -> Tcp {
+        self.make_layer(TcpFlags::empty())
+            .set_ack_number(self.control.recv_next)
     }
 
-    fn send_packet(&mut self, packet: Packet<Tcp>) {
+    fn send_packet(&mut self, tcp: Tcp, payload: &[u8]) {
+        use crate::net::shim::PacketSend;
+
+        use netstack::data_link::{Eth, EthType};
+        use netstack::network::{Ipv4, Ipv4Type};
+
+        let eth = Eth::new(MacAddr::NULL, MacAddr::NULL, EthType::Ip);
+        let ipv4 = Ipv4::new(Ipv4Addr::BROADCAST, Ipv4Addr::BROADCAST, Ipv4Type::Tcp);
+        let packet = eth / ipv4 / tcp / payload;
+
         self.control.send_next = self.control.send_next.wrapping_add(packet.ack_len());
         packet.send();
     }
 
     fn send_sync(&mut self) {
-        self.send_packet(self.make_packet(0, TcpFlags::SYN));
+        self.send_packet(self.make_layer(TcpFlags::SYN), &[]);
         self.state = State::SynSent;
     }
 
-    fn recv(&mut self, packet: Packet<Tcp>) {
-        let header = packet.header();
-
+    fn recv(&mut self, packet: &Tcp, payload: &[u8]) {
         match self.state {
             State::SynSent => {
-                assert!(header.flags().contains(TcpFlags::ACK | TcpFlags::SYN));
+                assert!(packet.flags().contains(TcpFlags::ACK | TcpFlags::SYN));
                 self.state = State::Established;
             }
 
             State::Established => {
-                if !packet.as_slice().is_empty() {
-                    let data = packet.as_slice();
-                    self.stream.write(data);
-                } else if header.flags().contains(TcpFlags::FIN) {
+                if !payload.is_empty() {
+                    self.stream.write(payload);
+                } else if packet.flags().contains(TcpFlags::FIN) {
                     todo!()
                 } else {
                     log::trace!("[ TCP ] Connection Established!");
@@ -133,8 +136,9 @@ impl TcpData {
             State::Closed => unreachable!(),
         }
 
-        self.control.recv_next = header.sequence_number().wrapping_add(packet.ack_len());
-        self.send_packet(self.make_ack_packet(0));
+        // self.control.recv_next = packet.sequence_number().wrapping_add(packet.ack_len());
+        todo!()
+        // self.send_packet(self.make_ack_packet(), &[]);
     }
 }
 
@@ -231,9 +235,8 @@ impl INodeInterface for TcpSocket {
             .block_on(&self.data, |e| e.state == State::Established)?;
 
         for chunk in buffer.chunks(Self::MAX_MTU) {
-            let mut packet = data.make_ack_packet(chunk.len());
-            packet.as_slice_mut().copy_from_slice(chunk);
-            data.send_packet(packet);
+            let mut packet = data.make_ack_packet();
+            data.send_packet(packet, chunk);
         }
 
         Ok(buffer.len())
@@ -254,9 +257,8 @@ impl INodeInterface for TcpSocket {
         let mut inner = self.data.lock_irq();
 
         for chunk in data.chunks(Self::MAX_MTU) {
-            let mut packet = inner.make_ack_packet(chunk.len());
-            packet.as_slice_mut().copy_from_slice(chunk);
-            inner.send_packet(packet);
+            let mut packet = inner.make_ack_packet();
+            inner.send_packet(packet, chunk);
         }
 
         Ok(data.len())
@@ -281,7 +283,7 @@ impl INodeInterface for TcpSocket {
 }
 
 impl TcpHandler for TcpSocket {
-    fn recv(&self, packet: Packet<Tcp>) {
-        self.data.lock_irq().recv(packet);
+    fn recv(&self, packet: &Tcp) {
+        self.data.lock_irq().recv(packet, &[]);
     }
 }

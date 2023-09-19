@@ -42,11 +42,14 @@ cpio_reader = { git = "https://github.com/Andy-Python-Programmer/cpio_reader" }
 static_assertions = "1.1.0"
 lru = "0.10.0"
 bytemuck = "1.13.1"
-byte_endian = { git = "https://github.com/aero-os/byte_endian" }
 limine = { git = "https://github.com/limine-bootloader/limine-rs" }
 cfg-if = "1.0"
 num-traits = { version = "0.2", default-features = false }
 vte = { git = "https://github.com/alacritty/vte", features = ["ansi"] }
+
+byte_endian = { git = "https://github.com/aero-os/byte_endian" }
+netstack = { path = "../../../orgs/aero/netstack" }
+netstack_tcp = { path = "../../../orgs/aero/netstack/netstack_tcp", default-features = false }
 
 # X86_64 specific dependencies:
 [target.'cfg(target_arch = "x86_64")'.dependencies]

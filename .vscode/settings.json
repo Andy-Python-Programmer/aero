@@ -16,5 +16,5 @@
         "termios.h": "c",
         "termios-c_iflag.h": "c"
     },
-    "rust-analyzer.check.command": "clippy",
+    // "rust-analyzer.check.command": "clippy",
 }

@@ -28,12 +28,15 @@ use crate::fs::file_table::FileHandle;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
 use crate::fs::{self, FileSystemError};
 use crate::mem::paging::VirtAddr;
-use crate::net::ip::Ipv4Addr;
-use crate::net::udp::{self, Udp, UdpHandler};
-use crate::net::{self, MacAddr, Packet, PacketHeader, PacketTrait};
+use crate::net::udp::{self, UdpHandler};
+use crate::net::{self};
 use crate::utils::sync::{Mutex, WaitQueue};
 
 use super::SocketAddr;
+
+use netstack::data_link::{Eth, EthType, MacAddr};
+use netstack::network::{Ipv4, Ipv4Addr, Ipv4Type};
+use netstack::transport::Udp;
 
 #[derive(Default)]
 enum SocketState {
@@ -48,7 +51,7 @@ struct UdpSocketInner {
     /// The address that the socket has been bound to.
     address: Option<SocketAddrInet>,
     state: SocketState,
-    incoming: Vec<Packet<Udp>>,
+    incoming: Vec<Vec<u8>>,
 }
 
 pub struct UdpSocket {
@@ -174,10 +177,12 @@ impl INodeInterface for UdpSocket {
             .copied()
             .collect::<Vec<_>>();
 
-        let mut packet = Packet::<Udp>::create(src_port, dest_port, data.len(), dest_ip);
+        use crate::net::shim::PacketSend;
 
-        let dest = packet.as_slice_mut();
-        dest.copy_from_slice(data.as_slice());
+        let eth = Eth::new(MacAddr::NULL, MacAddr::NULL, EthType::Ip);
+        let ipv4 = Ipv4::new(Ipv4Addr::BROADCAST, Ipv4Addr::BROADCAST, Ipv4Type::Udp);
+        let udp = Udp::new(src_port, dest_port);
+        let packet = eth / ipv4 / udp / data.as_slice();
 
         packet.send();
         Ok(data.len())
@@ -282,8 +287,8 @@ impl INodeInterface for UdpSocket {
 }
 
 impl UdpHandler for UdpSocket {
-    fn recv(&self, packet: Packet<Udp>) {
-        self.inner.lock_irq().incoming.push(packet);
+    fn recv(&self, _udp: &Udp, payload: &[u8]) {
+        self.inner.lock_irq().incoming.push(payload.to_vec());
         self.wq.notify_all();
     }
 }
