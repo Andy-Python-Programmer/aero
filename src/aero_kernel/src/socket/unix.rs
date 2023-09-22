@@ -35,7 +35,7 @@ use crate::fs::{FileSystemError, Path};
 use crate::mem::paging::VirtAddr;
 use crate::utils::sync::{Mutex, WaitQueue};
 
-use super::SocketAddr;
+use super::SocketAddrRef;
 
 fn path_from_unix_sock(address: &SocketAddrUnix) -> fs::Result<&Path> {
     // The abstract namespace socket allows the creation of a socket
@@ -301,7 +301,7 @@ impl INodeInterface for UnixSocket {
         }
     }
 
-    fn bind(&self, address: SocketAddr, _length: usize) -> fs::Result<()> {
+    fn bind(&self, address: SocketAddrRef, _length: usize) -> fs::Result<()> {
         let address = address.as_unix().ok_or(FileSystemError::NotSupported)?;
         let path = path_from_unix_sock(address)?;
 
@@ -318,7 +318,7 @@ impl INodeInterface for UnixSocket {
         Ok(())
     }
 
-    fn connect(&self, address: SocketAddr, _length: usize) -> fs::Result<()> {
+    fn connect(&self, address: SocketAddrRef, _length: usize) -> fs::Result<()> {
         let address = address.as_unix().ok_or(FileSystemError::NotSupported)?;
         let path = path_from_unix_sock(address)?;
         let socket = fs::lookup_path(path)?;

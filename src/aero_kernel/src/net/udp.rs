@@ -19,10 +19,10 @@ use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use spin::RwLock;
 
-use netstack::network::Ipv4Addr;
-use netstack::transport::Udp;
+use crabnet::network::Ipv4Addr;
+use crabnet::transport::Udp;
 
-pub fn do_recv(udp: &Udp, payload: &[u8]) {
+pub fn on_packet(udp: &Udp, payload: &[u8]) {
     let dest_port = udp.dst_port();
 
     let handlers = HANDLERS.read();

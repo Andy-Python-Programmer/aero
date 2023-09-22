@@ -18,15 +18,28 @@
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 
+use crabnet::transport::Tcp;
 use spin::RwLock;
 
-static HANDLERS: RwLock<BTreeMap<u16, Arc<dyn TcpHandler>>> = RwLock::new(BTreeMap::new());
+use crate::socket::tcp::TcpSocket;
 
-pub trait TcpHandler: Send + Sync {
-    fn recv(&self, packet: &netstack::transport::Tcp);
+static HANDLERS: RwLock<BTreeMap<u16, Arc<TcpSocket>>> = RwLock::new(BTreeMap::new());
+
+pub fn on_packet(tcp: &Tcp, payload: &[u8]) {
+    let handlers = HANDLERS.read();
+
+    if let Some(handler) = handlers.get(&tcp.dest_port()) {
+        handler.on_packet(tcp, payload);
+    } else {
+        log::warn!("tcp: no handler registered for port {}", tcp.dest_port());
+    }
 }
 
-pub fn alloc_ephemeral_port(socket: Arc<dyn TcpHandler>) -> Option<u16> {
+pub trait TcpHandler: Send + Sync {
+    fn recv(&self, packet: &Tcp, payload: &[u8]);
+}
+
+pub fn alloc_ephemeral_port(socket: Arc<TcpSocket>) -> Option<u16> {
     const EPHEMERAL_START: u16 = 49152;
     const EPHEMERAL_END: u16 = u16::MAX;
 

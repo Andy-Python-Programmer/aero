@@ -14,6 +14,8 @@ dependencies = [
  "bytemuck",
  "cfg-if",
  "cpio_reader",
+ "crabnet",
+ "crabnet_tcp",
  "hashbrown 0.14.0",
  "intrusive-collections",
  "lai",
@@ -22,8 +24,6 @@ dependencies = [
  "log",
  "lru",
  "nasm-rs",
- "netstack",
- "netstack_tcp",
  "num-traits",
  "raw-cpuid",
  "rustc-demangle",
@@ -137,6 +137,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "crabnet"
+version = "0.1.0"
+source = "git+https://github.com/aero-os/crabnet#4e9e10290136ab34b2b73bd7ce81803c2303674c"
+dependencies = [
+ "bit_field",
+ "bitflags 2.4.0",
+ "byte_endian",
+ "static_assertions",
+]
+
+[[package]]
+name = "crabnet_tcp"
+version = "0.1.0"
+source = "git+https://github.com/aero-os/crabnet#4e9e10290136ab34b2b73bd7ce81803c2303674c"
+dependencies = [
+ "crabnet",
+ "log",
+]
+
+[[package]]
 name = "crossbeam-channel"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -184,30 +204,6 @@ name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
-
-[[package]]
-name = "futures-core"
-version = "0.3.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bca583b7e26f571124fe5b7561d49cb2868d79116cfa0eefce955557c6fee8c"
-
-[[package]]
-name = "futures-task"
-version = "0.3.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76d3d132be6c0e6aa1534069c705a74a5997a356c0dc2f86a47765e5617c5b65"
-
-[[package]]
-name = "futures-util"
-version = "0.3.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26b01e40b772d54cf6c6d721c1d1abd0647a0106a12ecaa1c186273392a69533"
-dependencies = [
- "futures-core",
- "futures-task",
- "pin-project-lite",
- "pin-utils",
-]
 
 [[package]]
 name = "hashbrown"
@@ -312,25 +308,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "netstack"
-version = "0.1.0"
-dependencies = [
- "bit_field",
- "bitflags 2.4.0",
- "byte_endian",
- "static_assertions",
-]
-
-[[package]]
-name = "netstack_tcp"
-version = "0.1.0"
-dependencies = [
- "futures-util",
- "log",
- "netstack",
-]
-
-[[package]]
 name = "num-derive"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -365,18 +342,6 @@ name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
-
-[[package]]
-name = "pin-project-lite"
-version = "0.2.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8afb450f006bf6385ca15ef45d71d2288452bc3683ce2e2cacc0d18e4be60b58"
-
-[[package]]
-name = "pin-utils"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "proc-macro-error"

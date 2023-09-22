@@ -28,7 +28,7 @@ use crate::utils::dma::DmaAllocator;
 use crate::utils::sync::{Mutex, WaitQueue};
 
 use crate::net::{self, NetworkDevice, NetworkDriver};
-use netstack::data_link::MacAddr;
+use crabnet::data_link::MacAddr;
 
 const TX_DESC_NUM: u32 = 32;
 const TX_DESC_SIZE: u32 = TX_DESC_NUM * core::mem::size_of::<TxDescriptor>() as u32;

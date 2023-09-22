@@ -17,6 +17,7 @@
 
 pub mod ipv4;
 pub mod tcp;
+// pub mod tcp2;
 pub mod udp;
 pub mod unix;
 
@@ -26,16 +27,21 @@ use aero_syscall::*;
 use crate::mem::paging::VirtAddr;
 
 #[derive(Debug)]
-pub enum SocketAddr<'a> {
+pub enum SocketAddr {
+    Inet(SocketAddrInet),
+}
+
+#[derive(Debug)]
+pub enum SocketAddrRef<'a> {
     Unix(&'a SocketAddrUnix),
     INet(&'a SocketAddrInet),
 }
 
-impl<'a> SocketAddr<'a> {
+impl<'a> SocketAddrRef<'a> {
     pub fn from_family(address: VirtAddr, family: u32) -> Result<Self, SyscallError> {
         match family {
-            AF_UNIX => Ok(SocketAddr::Unix(address.read_mut::<SocketAddrUnix>()?)),
-            AF_INET => Ok(SocketAddr::INet(address.read_mut::<SocketAddrInet>()?)),
+            AF_UNIX => Ok(SocketAddrRef::Unix(address.read_mut::<SocketAddrUnix>()?)),
+            AF_INET => Ok(SocketAddrRef::INet(address.read_mut::<SocketAddrInet>()?)),
 
             _ => Err(SyscallError::EINVAL),
         }
@@ -44,7 +50,7 @@ impl<'a> SocketAddr<'a> {
     pub fn from_ifreq(ifreq: &IfReq) -> Result<Self, SyscallError> {
         // SAFETY???
         let family = unsafe { ifreq.data.addr.sa_family };
-        SocketAddr::from_family(
+        SocketAddrRef::from_family(
             VirtAddr::new(&unsafe { ifreq.data.addr } as *const _ as _),
             family,
         )
@@ -54,14 +60,14 @@ impl<'a> SocketAddr<'a> {
     /// the address is not a unix socket address.
     pub fn as_unix(&self) -> Option<&'a SocketAddrUnix> {
         match self {
-            SocketAddr::Unix(address) => Some(address),
+            SocketAddrRef::Unix(address) => Some(address),
             _ => None,
         }
     }
 
     pub fn as_inet(&self) -> Option<&'a SocketAddrInet> {
         match self {
-            SocketAddr::INet(addr) => Some(addr),
+            SocketAddrRef::INet(addr) => Some(addr),
             _ => None,
         }
     }

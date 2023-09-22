@@ -24,13 +24,12 @@ pub mod arp;
 pub mod tcp;
 pub mod udp;
 
-use netstack::data_link::MacAddr;
-
 use crate::userland::scheduler;
 use crate::userland::task::Task;
 use crate::utils::dma::DmaAllocator;
 
-use netstack::network::Ipv4Addr;
+use crabnet::data_link::MacAddr;
+use crabnet::network::Ipv4Addr;
 
 #[downcastable]
 pub trait NetworkDriver: Send + Sync {
@@ -105,10 +104,10 @@ static DEVICES: RwLock<Vec<Arc<NetworkDevice>>> = RwLock::new(Vec::new());
 static DEFAULT_DEVICE: RwLock<Option<Arc<NetworkDevice>>> = RwLock::new(None);
 
 fn packet_processor_thread() {
-    use netstack::data_link::{Arp, Eth, EthType};
-    use netstack::network::{Ipv4, Ipv4Type};
-    use netstack::transport::Udp;
-    use netstack::PacketParser;
+    use crabnet::data_link::{Arp, Eth, EthType};
+    use crabnet::network::{Ipv4, Ipv4Type};
+    use crabnet::transport::{Tcp, Udp};
+    use crabnet::PacketParser;
 
     let device = default_device();
 
@@ -123,8 +122,23 @@ fn packet_processor_thread() {
                 let ip = parser.next::<Ipv4>();
 
                 match ip.protocol() {
-                    Ipv4Type::Udp => udp::do_recv(parser.next::<Udp>(), parser.payload()),
-                    Ipv4Type::Tcp => todo!(),
+                    Ipv4Type::Udp => {
+                        let udp = parser.next::<Udp>();
+                        let size = ip.payload_len() as usize - core::mem::size_of::<Udp>();
+
+                        let payload = &parser.payload()[..size];
+                        udp::on_packet(udp, payload);
+                    }
+
+                    Ipv4Type::Tcp => {
+                        let tcp = parser.next::<Tcp>();
+                        let options_size = tcp.options_size() as usize;
+                        let size = ip.payload_len() as usize - core::mem::size_of::<Tcp>();
+
+                        // TODO(andypython): do not ignore TCP options.
+                        let payload = &parser.payload()[options_size..size];
+                        tcp::on_packet(tcp, payload)
+                    }
                 }
             }
 
@@ -176,9 +190,9 @@ pub mod shim {
     use crate::net::{self, arp};
     use crate::utils::dma::DmaAllocator;
 
-    use netstack::data_link::{Arp, Eth, EthType, MacAddr};
-    use netstack::network::Ipv4;
-    use netstack::{IntoBoxedBytes, Protocol, Stacked};
+    use crabnet::data_link::{Arp, Eth, EthType, MacAddr};
+    use crabnet::network::Ipv4;
+    use crabnet::{IntoBoxedBytes, Protocol, Stacked};
 
     pub trait PacketSend {
         fn send(self);
@@ -198,8 +212,7 @@ pub mod shim {
                 eth.dest_mac = addr;
                 device.send(self.into_boxed_bytes_in(DmaAllocator));
             } else {
-                // arp::request_ip(ip, self.clone());
-                todo!()
+                arp::request_ip(ip.dest_ip(), self.into_boxed_bytes_in(DmaAllocator));
             }
         }
     }

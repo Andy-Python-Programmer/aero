@@ -1,57 +1,153 @@
-From 3f789791be46cefe9ff8a5c6196a3a23bed9620f Mon Sep 17 00:00:00 2001
-From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
-Date: Sun, 16 Apr 2023 14:21:09 +1000
-Subject: [PATCH] <xxx>
+From 1e4603c9de5ce2dcb596dfb95254b0ae119d1036 Mon Sep 17 00:00:00 2001
+From: Anhad Singh <andypythonappdeveloper@gmail.com>
+Date: Thu, 3 Aug 2023 16:36:12 +1000
+Subject: [PATCH] socket: implement shutdown(2)
 
-Signed-off-by: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Signed-off-by: Anhad Singh <andypythonappdeveloper@gmail.com>
 ---
- .gitignore                            |  2 ++
- options/ansi/generic/stdlib-stubs.cpp |  6 +++--
- options/glibc/generic/execinfo.cpp    |  5 ++--
- options/rtdl/generic/linker.cpp       |  2 +-
- sysdeps/aero/generic/aero.cpp         | 27 +++++++++++++++-------
- sysdeps/aero/generic/filesystem.cpp   | 33 ++++++++++++++-------------
- sysdeps/aero/generic/sockets.cpp      | 29 +++++++++++++++++++++--
- sysdeps/aero/include/aero/syscall.h   | 10 ++++++++
- 8 files changed, 83 insertions(+), 31 deletions(-)
+ options/glibc/generic/execinfo.cpp            |  5 ++--
+ options/posix/generic/sys-socket-stubs.cpp    |  9 ++++++--
+ options/posix/include/mlibc/posix-sysdeps.hpp |  1 +
+ sysdeps/aero/generic/signals.cpp              | 19 ++++++---------
+ sysdeps/aero/generic/sockets.cpp              | 23 +++++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h           |  3 +++
+ 6 files changed, 44 insertions(+), 16 deletions(-)
 
-diff --git a/.gitignore b/.gitignore
-index fdd60a0..9f811f4 100644
---- a/.gitignore
-+++ b/.gitignore
-@@ -3,3 +3,5 @@ subprojects
- *.xbstrap
- # editor configs:
- .vscode
-+# clangd cache files:
-+.cache
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
-index 3474615..10a2109 100644
+index 3474615..aaf593a 100644
 --- a/options/glibc/generic/execinfo.cpp
 +++ b/options/glibc/generic/execinfo.cpp
 @@ -1,9 +1,10 @@
  #include <execinfo.h>
  #include <bits/ensure.h>
-+#include <mlibc/debug.hpp>
++#include <mlibc/charset.hpp>
  
  int backtrace(void **, int) {
 -	__ensure(!"Not implemented");
 -	__builtin_unreachable();
-+	mlibc::infoLogger() << "backtrace() is unimplemented" << frg::endlog;
++	mlibc::infoLogger() << "backtrace: Not implemented" << frg::endlog;
 +	return 0;
  }
  
  char **backtrace_symbols(void *const *, int) {
-diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 003a162..ab01a7a 100644
---- a/options/rtdl/generic/linker.cpp
-+++ b/options/rtdl/generic/linker.cpp
-@@ -18,7 +18,7 @@ uintptr_t libraryBase = 0x41000000;
+diff --git a/options/posix/generic/sys-socket-stubs.cpp b/options/posix/generic/sys-socket-stubs.cpp
+index 1674945..037a994 100644
+--- a/options/posix/generic/sys-socket-stubs.cpp
++++ b/options/posix/generic/sys-socket-stubs.cpp
+@@ -187,8 +187,13 @@ int setsockopt(int fd, int layer, int number,
+ 	return mlibc::sys_setsockopt(fd, layer, number, buffer, size);
+ }
  
- constexpr bool verbose = false;
- constexpr bool stillSlightlyVerbose = false;
--constexpr bool logBaseAddresses = false;
-+constexpr bool logBaseAddresses = true;
- constexpr bool logRpath = false;
- constexpr bool eagerBinding = true;
+-int shutdown(int, int) {
+-	mlibc::infoLogger() << "mlibc: shutdown() is a no-op!" << frg::endlog;
++int shutdown(int sockfd, int how) {
++	auto sysdep = MLIBC_CHECK_OR_ENOSYS(mlibc::sys_shutdown, -1);
++	if(int e = sysdep(sockfd, how); e) {
++		errno = e;
++		return -1;
++	}
++
+ 	return 0;
+ }
+ 
+diff --git a/options/posix/include/mlibc/posix-sysdeps.hpp b/options/posix/include/mlibc/posix-sysdeps.hpp
+index 9918188..c694079 100644
+--- a/options/posix/include/mlibc/posix-sysdeps.hpp
++++ b/options/posix/include/mlibc/posix-sysdeps.hpp
+@@ -159,6 +159,7 @@ int sys_vm_unmap(void *pointer, size_t size);
+ 		void *__restrict buffer, socklen_t *__restrict size);
+ [[gnu::weak]] int sys_setsockopt(int fd, int layer, int number,
+ 		const void *buffer, socklen_t size);
++[[gnu::weak]] int sys_shutdown(int sockfd, int how);
+ [[gnu::weak]] int sys_sigprocmask(int how, const sigset_t *__restrict set,
+ 		sigset_t *__restrict retrieve);
+ [[gnu::weak]] int sys_sigaction(int, const struct sigaction *__restrict,
+diff --git a/sysdeps/aero/generic/signals.cpp b/sysdeps/aero/generic/signals.cpp
+index a6f69ff..611db69 100644
+--- a/sysdeps/aero/generic/signals.cpp
++++ b/sysdeps/aero/generic/signals.cpp
+@@ -29,25 +29,20 @@ int sys_sigaction(int how, const struct sigaction *__restrict action,
+ #endif
+ 
+     auto sigreturn = (sc_word_t)__mlibc_signal_restore;
+-
+-    auto res = syscall(SYS_SIGACTION, how, (sc_word_t)action, sigreturn,
++    auto ret = syscall(SYS_SIGACTION, how, (sc_word_t)action, sigreturn,
+                        (sc_word_t)old_action);
+ 
+-    if (res < 0) {
+-        return -res;
+-    }
+-
++    if(int e = sc_error(ret); e)
++        return e;
+     return 0;
+ }
+ 
+ int sys_sigprocmask(int how, const sigset_t *__restrict set,
+                     sigset_t *__restrict retrieve) {
+-    auto result = syscall(SYS_SIGPROCMASK, how, set, retrieve);
+ 
+-    if (result < 0) {
+-        return -result;
+-    }
+-
+-    return 0;
++    auto ret = syscall(SYS_SIGPROCMASK, how, set, retrieve);
++    if(int e = sc_error(ret); e)
++		return e;
++	return 0;
+ }
+ } // namespace mlibc
+\ No newline at end of file
+diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
+index 2db218c..ed3fc06 100644
+--- a/sysdeps/aero/generic/sockets.cpp
++++ b/sysdeps/aero/generic/sockets.cpp
+@@ -221,6 +221,29 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
+     }
+ }
+ 
++int sys_shutdown(int sockfd, int how) {
++    auto ret = syscall(SYS_SOCK_SHUTDOWN, sockfd, how);
++    if(int e = sc_error(ret); e)
++        return e;
++    return 0;    
++}
++
++int sys_peername(int fd, struct sockaddr *addr_ptr, socklen_t max_addr_length, socklen_t *actual_length) {
++	auto ret = syscall(SYS_GETPEERNAME, fd, addr_ptr, &max_addr_length);
++	if (int e = sc_error(ret); e)
++		return e;
++	*actual_length = max_addr_length;
++	return 0;
++}
++
++int sys_sockname(int fd, struct sockaddr *addr_ptr, socklen_t max_addr_length, socklen_t *actual_length) {
++	auto ret = syscall(SYS_GETSOCKNAME, fd, addr_ptr, &max_addr_length);
++	if (int e = sc_error(ret); e)
++		return e;
++	*actual_length = max_addr_length;
++	return 0;
++}
++
+ int sys_if_nametoindex(const char *name, unsigned int *ret) {
+     int fd = 0;
+     int r = sys_socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, AF_UNSPEC, &fd);
+diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
+index d8bf99e..39c5b65 100644
+--- a/sysdeps/aero/include/aero/syscall.h
++++ b/sysdeps/aero/include/aero/syscall.h
+@@ -79,6 +79,9 @@
+ #define SYS_SETPGID 72
+ #define SYS_SETSID 73
+ #define SYS_GETPGID 74
++#define SYS_SOCK_SHUTDOWN 75
++#define SYS_GETPEERNAME 76
++#define SYS_GETSOCKNAME 77
+ 
+ // Invalid syscall used to trigger a log error in the kernel (as a hint)
+ // so, that we can implement the syscall in the kernel.
+-- 
+2.42.0
 

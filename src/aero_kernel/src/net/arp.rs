@@ -24,11 +24,8 @@ use spin::{Once, RwLock};
 use crate::net::default_device;
 use crate::net::shim::PacketSend;
 
-use netstack::data_link::{Arp, ArpAddress, ArpHardwareType, ArpOpcode, EthType};
-use netstack::network::Ipv4Addr;
-
-// use super::{ConstPacketKind, Eth, Packet, PacketDownHierarchy, PacketHeader};
-use netstack::data_link::MacAddr;
+use crabnet::data_link::{Arp, ArpAddress, ArpHardwareType, ArpOpcode, Eth, EthType, MacAddr};
+use crabnet::network::Ipv4Addr;
 
 use super::RawPacket;
 
@@ -65,9 +62,12 @@ impl Cache {
 
                 for mut packet in queue {
                     log::trace!("[ ARP ] (!!) Sending queued packed to {ip:?} {mac:?}");
-                    // packet.header_mut().dest_mac = mac;
-                    // super::default_device().send(packet);
-                    todo!()
+
+                    // FIXME: make this cleaner
+                    let eth = unsafe { &mut *packet.as_mut_ptr().cast::<Eth>() };
+                    eth.dest_mac = mac;
+
+                    super::default_device().send(packet);
                 }
             }
         } else {

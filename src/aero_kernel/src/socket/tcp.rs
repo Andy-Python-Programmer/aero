@@ -1,252 +1,174 @@
-// Copyright (C) 2021-2023 The Aero Project Developers.
-//
-// This file is part of The Aero Project.
-//
-// Aero is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Aero is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Aero. If not, see <https://www.gnu.org/licenses/>.
-
+use aero_syscall::socket::{MessageFlags, MessageHeader};
+use aero_syscall::{InAddr, OpenFlags, SocketAddrInet, AF_INET};
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
-use netstack::data_link::MacAddr;
+
 use spin::Once;
 
-use crate::fs::cache::DirCacheItem;
+use crabnet::data_link::{Eth, EthType, MacAddr};
+use crabnet::transport::Tcp;
+use crabnet_tcp::{Address, Error as TcpError, State};
+
 use crate::fs::file_table::FileHandle;
-use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags};
+use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags, PollTable};
 use crate::fs::{self, FileSystemError};
-use crate::net::tcp::{self, TcpHandler};
+use crate::net;
+use crate::net::shim::PacketSend;
+use crate::net::{tcp, NetworkDevice};
 use crate::utils::sync::{Mutex, WaitQueue};
 
-use netstack::data_link::Eth;
-use netstack::network::{Ipv4, Ipv4Addr};
-use netstack::transport::{Tcp, TcpFlags};
-use netstack::Stacked;
+// ./aero.py -- -netdev user,id=mynet0 -device e1000,netdev=mynet0,id=ck_nic0 -object
+// filter-dump,id=mynet0,netdev=mynet0,file=qemulog.log
 
-/// TCP Stream
-#[derive(Default)]
-struct Stream {
-    buffer: Vec<u8>,
-}
+struct DeviceShim(Arc<NetworkDevice>);
 
-impl Stream {
-    fn write(&mut self, buffer: &[u8]) {
-        self.buffer.extend_from_slice(buffer);
+impl crabnet_tcp::NetworkDevice for DeviceShim {
+    fn send(
+        &self,
+        ipv4: crabnet::network::Ipv4,
+        tcp: Tcp,
+        payload: &[u8],
+        _handle: crabnet_tcp::RetransmitHandle,
+    ) {
+        // TODO(andypython): Handle TCP retransmission here.
+
+        let eth = Eth::new(MacAddr::NULL, self.0.mac(), EthType::Ip);
+        let ipv4 = ipv4.set_src_ip(self.0.ip());
+
+        (eth / ipv4 / tcp / payload).send();
     }
 
-    fn read(&mut self, buffer: &mut [u8]) -> usize {
-        let size = buffer.len().min(self.buffer.len());
-        let target = self.buffer.drain(..size).collect::<Vec<_>>();
-
-        buffer[..size].copy_from_slice(target.as_slice());
-        size
-    }
-
-    fn is_empty(&self) -> bool {
-        self.buffer.is_empty()
-    }
-}
-
-#[derive(Default)]
-struct TransmissionControl {
-    /// Sequence number of the next byte to be sent.
-    send_next: u32,
-    recv_next: u32,
-}
-
-#[derive(Default, PartialEq, Eq, Debug)]
-enum State {
-    #[default]
-    Closed,
-    SynSent,
-    Established,
-}
-
-#[derive(Default)]
-struct TcpData {
-    control: TransmissionControl,
-    state: State,
-
-    src_port: u16,
-    dest_port: u16,
-    target: Ipv4Addr,
-
-    stream: Stream,
-}
-
-impl TcpData {
-    fn make_layer(&self, flags: TcpFlags) -> Tcp {
-        Tcp::new(self.src_port, self.dest_port)
-            .set_sequence_number(self.control.send_next)
-            .set_window(u16::MAX)
-            .set_flags(flags)
-    }
-
-    fn make_ack_packet(&self) -> Tcp {
-        self.make_layer(TcpFlags::empty())
-            .set_ack_number(self.control.recv_next)
-    }
-
-    fn send_packet(&mut self, tcp: Tcp, payload: &[u8]) {
-        use crate::net::shim::PacketSend;
-
-        use netstack::data_link::{Eth, EthType};
-        use netstack::network::{Ipv4, Ipv4Type};
-
-        let eth = Eth::new(MacAddr::NULL, MacAddr::NULL, EthType::Ip);
-        let ipv4 = Ipv4::new(Ipv4Addr::BROADCAST, Ipv4Addr::BROADCAST, Ipv4Type::Tcp);
-        let packet = eth / ipv4 / tcp / payload;
-
-        self.control.send_next = self.control.send_next.wrapping_add(packet.ack_len());
-        packet.send();
-    }
-
-    fn send_sync(&mut self) {
-        self.send_packet(self.make_layer(TcpFlags::SYN), &[]);
-        self.state = State::SynSent;
-    }
-
-    fn recv(&mut self, packet: &Tcp, payload: &[u8]) {
-        match self.state {
-            State::SynSent => {
-                assert!(packet.flags().contains(TcpFlags::ACK | TcpFlags::SYN));
-                self.state = State::Established;
-            }
-
-            State::Established => {
-                if !payload.is_empty() {
-                    self.stream.write(payload);
-                } else if packet.flags().contains(TcpFlags::FIN) {
-                    todo!()
-                } else {
-                    log::trace!("[ TCP ] Connection Established!");
-                    return;
-                }
-            }
-
-            State::Closed => unreachable!(),
-        }
-
-        // self.control.recv_next = packet.sequence_number().wrapping_add(packet.ack_len());
-        todo!()
-        // self.send_packet(self.make_ack_packet(), &[]);
+    fn remove_retransmit(&self, _seq_number: u32) {
+        // TODO(andypython): Handle TCP retransmission here.
     }
 }
 
 pub struct TcpSocket {
-    sref: Weak<Self>,
-    data: Mutex<TcpData>,
-    handle: Once<Arc<FileHandle>>,
+    tcp: Mutex<Option<crabnet_tcp::Socket<DeviceShim>>>,
     wq: WaitQueue,
+    handle: Once<Arc<FileHandle>>,
+    sref: Weak<TcpSocket>,
+    peer: Once<SocketAddrInet>,
 }
 
 impl TcpSocket {
-    const MAX_MTU: usize = 1460;
-
     pub fn new() -> Arc<Self> {
         Arc::new_cyclic(|sref| Self {
-            handle: Once::new(),
-            sref: sref.clone(),
-            data: Mutex::new(TcpData::default()),
+            tcp: Mutex::new(None),
             wq: WaitQueue::new(),
+            sref: sref.clone(),
+            handle: Once::new(),
+            peer: Once::new(),
         })
     }
 
-    fn sref(&self) -> Arc<Self> {
+    pub fn on_packet(&self, tcp: &Tcp, payload: &[u8]) {
+        if let Some(socket) = self.tcp.lock_irq().as_mut() {
+            socket.on_packet(tcp, payload);
+            self.wq.notify_all();
+        }
+    }
+
+    fn sref(&self) -> Arc<TcpSocket> {
         self.sref.upgrade().unwrap()
+    }
+
+    /// Returns whether the socket is in non-blocking mode.
+    pub fn non_blocking(&self) -> bool {
+        self.handle
+            .get()
+            .map(|handle| handle.flags.read().contains(OpenFlags::O_NONBLOCK))
+            .unwrap_or_default()
+    }
+
+    pub fn do_recv(&self, buf: &mut [u8]) -> Result<usize, FileSystemError> {
+        let mut tcp = self.tcp.lock_irq();
+        let socket = tcp.as_mut().ok_or(FileSystemError::NotConnected)?;
+
+        match socket.recv(buf) {
+            Ok(bytes_read) => Ok(bytes_read),
+
+            Err(TcpError::WouldBlock) if self.non_blocking() => Err(FileSystemError::WouldBlock),
+            Err(TcpError::WouldBlock) => {
+                drop(tcp);
+
+                let mut socket = self.wq.block_on(&self.tcp, |tcp| {
+                    tcp.as_ref()
+                        .map(|socket| !socket.recv_queue.is_empty())
+                        .unwrap_or(true)
+                })?;
+
+                if let Some(socket) = socket.as_mut() {
+                    Ok(socket.recv(buf).unwrap())
+                } else {
+                    Err(FileSystemError::NotConnected)
+                }
+            }
+
+            Err(err) => unreachable!("{err:?}"),
+        }
+    }
+
+    pub fn send(&self, buf: &[u8]) -> Result<usize, FileSystemError> {
+        let mut tcp = self.tcp.lock_irq();
+        let socket = tcp.as_mut().ok_or(FileSystemError::NotConnected)?;
+
+        let bytes_written = socket.send(buf).unwrap();
+        Ok(bytes_written)
     }
 }
 
 impl INodeInterface for TcpSocket {
-    fn metadata(&self) -> fs::Result<fs::inode::Metadata> {
-        Ok(Metadata {
-            id: 0,
-            file_type: FileType::Socket,
-            size: 0,
-            children_len: 0,
-        })
+    fn connect(&self, address: super::SocketAddrRef, _length: usize) -> crate::fs::Result<()> {
+        {
+            let mut tcp = self.tcp.lock_irq();
+            assert!(tcp.is_none(), "connect: socket is already initialized");
+
+            let port = tcp::alloc_ephemeral_port(self.sref()).unwrap();
+
+            let addr = address.as_inet().ok_or(FileSystemError::NotSupported)?;
+            self.peer.call_once(|| addr.clone());
+
+            let addr = Address::new(port, addr.port(), addr.addr().into());
+
+            let device = Arc::new(DeviceShim(net::default_device()));
+            let socket = crabnet_tcp::Socket::connect(device, addr);
+
+            *tcp = Some(socket);
+        }
+
+        let _ = self.wq.block_on(&self.tcp, |x| {
+            x.as_ref().unwrap().state() == State::Established
+        });
+
+        Ok(())
     }
 
     fn open(
         &self,
         _flags: aero_syscall::OpenFlags,
         handle: Arc<FileHandle>,
-    ) -> fs::Result<Option<DirCacheItem>> {
+    ) -> fs::Result<Option<fs::cache::DirCacheItem>> {
         self.handle.call_once(|| handle);
         Ok(None)
     }
 
-    fn bind(&self, _address: super::SocketAddr, _length: usize) -> fs::Result<()> {
-        todo!()
+    #[inline]
+    fn metadata(&self) -> Result<Metadata, FileSystemError> {
+        Ok(Metadata::with_file_type(FileType::Socket))
     }
 
-    fn connect(&self, address: super::SocketAddr, _length: usize) -> fs::Result<()> {
-        let address = address.as_inet().ok_or(FileSystemError::NotSupported)?;
-        let port = tcp::alloc_ephemeral_port(self.sref()).unwrap();
-
-        let mut inner = self.data.lock_irq();
-        inner.src_port = port;
-        inner.dest_port = address.port();
-        inner.target = Ipv4Addr::new(address.addr());
-
-        inner.send_sync();
-        Ok(())
+    #[inline]
+    fn read_at(&self, _offset: usize, buf: &mut [u8]) -> Result<usize, FileSystemError> {
+        self.do_recv(buf)
     }
 
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        let mut data = self
-            .wq
-            .block_on(&self.data, |e| e.state == State::Established)?;
-
-        assert!(!data.stream.is_empty());
-        Ok(data.stream.read(buffer))
+    #[inline]
+    fn write_at(&self, _offset: usize, buf: &[u8]) -> Result<usize, FileSystemError> {
+        self.send(buf)
     }
 
-    fn recv(
-        &self,
-        message_hdr: &mut aero_syscall::socket::MessageHeader,
-        _flags: aero_syscall::socket::MessageFlags,
-    ) -> fs::Result<usize> {
-        let mut data = self.data.lock_irq();
-        assert!(!data.stream.is_empty());
-
-        Ok(message_hdr
-            .iovecs_mut()
-            .iter_mut()
-            .map(|iovec| {
-                let iovec = iovec.as_slice_mut();
-                data.stream.read(iovec)
-            })
-            .sum::<usize>())
-    }
-
-    fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
-        let mut data = self
-            .wq
-            .block_on(&self.data, |e| e.state == State::Established)?;
-
-        for chunk in buffer.chunks(Self::MAX_MTU) {
-            let mut packet = data.make_ack_packet();
-            data.send_packet(packet, chunk);
-        }
-
-        Ok(buffer.len())
-    }
-
-    fn send(
-        &self,
-        message_hdr: &mut aero_syscall::socket::MessageHeader,
-        _flags: aero_syscall::socket::MessageFlags,
-    ) -> fs::Result<usize> {
+    fn send(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
         let data = message_hdr
             .iovecs()
             .iter()
@@ -254,36 +176,75 @@ impl INodeInterface for TcpSocket {
             .copied()
             .collect::<Vec<_>>();
 
-        let mut inner = self.data.lock_irq();
+        let mut tcp = self.tcp.lock_irq();
+        let socket = tcp.as_mut().ok_or(FileSystemError::NotSupported)?;
 
-        for chunk in data.chunks(Self::MAX_MTU) {
-            let mut packet = inner.make_ack_packet();
-            inner.send_packet(packet, chunk);
+        // TODO: handle fragmentation in crabnet_tcp
+        for chunk in data.chunks(1460) {
+            socket.send(chunk).expect("failed to send data");
         }
+
+        // -netdev user,id=mynet0,net=192.168.1.0/24,dhcpstart=192.168.1.128,hostfwd=tcp::4444-:80
+        // -device e1000,netdev=mynet0,id=ck_nic0 -object
+        // filter-dump,id=mynet0,netdev=user,file=qemulog.log
 
         Ok(data.len())
     }
 
-    fn poll(&self, _table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {
-        let mut flags = PollFlags::empty();
-        let data = self.data.lock_irq();
+    fn get_peername(&self) -> fs::Result<super::SocketAddr> {
+        if let Some(peer) = self.peer.get() {
+            let addr = super::SocketAddr::Inet(peer.clone());
+            Ok(addr)
+        } else {
+            Err(FileSystemError::NotConnected)
+        }
+    }
 
-        if data.state == State::Closed {
-            return Ok(flags);
+    fn get_sockname(&self) -> fs::Result<super::SocketAddr> {
+        if let Some(socket) = self.tcp.lock().as_mut() {
+            // FIXME:
+            let addr = SocketAddrInet {
+                family: AF_INET,
+                port: socket.addr.src_port.into(),
+                sin_addr: InAddr { addr: 0 },
+                padding: [0; 8],
+            };
+
+            Ok(super::SocketAddr::Inet(addr))
+        } else {
+            Err(FileSystemError::NotConnected)
+        }
+    }
+
+    fn recv(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
+        Ok(message_hdr
+            .iovecs_mut()
+            .iter_mut()
+            .map(|iovec| {
+                let iovec = iovec.as_slice_mut();
+                self.do_recv(iovec).unwrap()
+            })
+            .sum::<usize>())
+    }
+
+    fn poll(&self, table: Option<&mut PollTable>) -> fs::Result<PollFlags> {
+        if let Some(table) = table {
+            table.insert(&self.wq);
         }
 
-        flags |= PollFlags::OUT;
+        let mut flags = PollFlags::empty();
+        let mut tcp = self.tcp.lock_irq();
 
-        if !data.stream.is_empty() {
-            flags |= PollFlags::IN;
+        if let Some(socket) = tcp.as_mut() {
+            assert_ne!(socket.state(), State::Closed);
+
+            flags |= PollFlags::OUT;
+
+            if !socket.recv_queue.is_empty() {
+                flags |= PollFlags::IN;
+            }
         }
 
         Ok(flags)
-    }
-}
-
-impl TcpHandler for TcpSocket {
-    fn recv(&self, packet: &Tcp) {
-        self.data.lock_irq().recv(packet, &[]);
     }
 }

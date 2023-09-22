@@ -153,6 +153,11 @@ pub fn get_scheduler() -> &'static Scheduler {
         .expect("Attempted to get the scheduler before it was initialized")
 }
 
+#[inline]
+pub fn current_thread() -> Arc<Task> {
+    get_scheduler().current_task()
+}
+
 /// Returns true if the task scheduler has been initiaized.
 pub fn is_initialized() -> bool {
     SCHEDULER.get().is_some()

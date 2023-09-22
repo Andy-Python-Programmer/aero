@@ -33,7 +33,7 @@ use crate::fs::ext2::disk::{FileType, Revision, SuperBlock};
 use crate::mem::paging::*;
 
 use crate::socket::unix::UnixSocket;
-use crate::socket::SocketAddr;
+use crate::socket::SocketAddrRef;
 use crate::utils::CeilDiv;
 
 use self::group_desc::GroupDescriptors;
@@ -555,7 +555,7 @@ impl INodeInterface for INode {
     // XXX: We do not require to handle `bind` here since if this function
     // is being is called on an EXT2 inode then, it has already been bound.
 
-    fn connect(&self, address: SocketAddr, length: usize) -> super::Result<()> {
+    fn connect(&self, address: SocketAddrRef, length: usize) -> super::Result<()> {
         if let Some(proxy) = self.proxy.as_ref() {
             return proxy.connect(address, length);
         }

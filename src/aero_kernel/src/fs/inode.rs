@@ -29,7 +29,7 @@ use spin::Once;
 
 use crate::mem::paging::{PhysFrame, VirtAddr};
 use crate::socket::unix::UnixSocket;
-use crate::socket::SocketAddr;
+use crate::socket::{SocketAddr, SocketAddrRef};
 use crate::userland::scheduler;
 use crate::utils::sync::{BMutex, Mutex, WaitQueue};
 
@@ -234,11 +234,11 @@ pub trait INodeInterface: Send + Sync {
     }
 
     // Socket operations:
-    fn bind(&self, _address: SocketAddr, _length: usize) -> Result<()> {
+    fn bind(&self, _address: SocketAddrRef, _length: usize) -> Result<()> {
         Err(FileSystemError::NotSocket)
     }
 
-    fn connect(&self, _address: SocketAddr, _length: usize) -> Result<()> {
+    fn connect(&self, _address: SocketAddrRef, _length: usize) -> Result<()> {
         Err(FileSystemError::NotSocket)
     }
 
@@ -256,6 +256,14 @@ pub trait INodeInterface: Send + Sync {
 
     fn recv(&self, _message_hdr: &mut MessageHeader, _flags: MessageFlags) -> Result<usize> {
         Err(FileSystemError::NotSocket)
+    }
+
+    fn get_peername(&self) -> Result<SocketAddr> {
+        Err(FileSystemError::NotSupported)
+    }
+
+    fn get_sockname(&self) -> Result<SocketAddr> {
+        Err(FileSystemError::NotSupported)
     }
 
     /// Returns the inner UNIX socket inode if bound to one.
@@ -283,6 +291,15 @@ pub struct Metadata {
 }
 
 impl Metadata {
+    pub fn with_file_type(file_type: FileType) -> Self {
+        Self {
+            file_type,
+            id: 0,
+            size: 0,
+            children_len: 0,
+        }
+    }
+
     #[inline]
     pub fn id(&self) -> usize {
         self.id

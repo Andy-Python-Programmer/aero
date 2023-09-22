@@ -48,8 +48,8 @@ num-traits = { version = "0.2", default-features = false }
 vte = { git = "https://github.com/alacritty/vte", features = ["ansi"] }
 
 byte_endian = { git = "https://github.com/aero-os/byte_endian" }
-netstack = { path = "../../../orgs/aero/netstack" }
-netstack_tcp = { path = "../../../orgs/aero/netstack/netstack_tcp", default-features = false }
+crabnet = { git = "https://github.com/aero-os/crabnet" }
+crabnet_tcp = { git = "https://github.com/aero-os/crabnet", default-features = false }
 
 # X86_64 specific dependencies:
 [target.'cfg(target_arch = "x86_64")'.dependencies]

@@ -32,11 +32,11 @@ use crate::net::udp::{self, UdpHandler};
 use crate::net::{self};
 use crate::utils::sync::{Mutex, WaitQueue};
 
-use super::SocketAddr;
+use super::SocketAddrRef;
 
-use netstack::data_link::{Eth, EthType, MacAddr};
-use netstack::network::{Ipv4, Ipv4Addr, Ipv4Type};
-use netstack::transport::Udp;
+use crabnet::data_link::{Eth, EthType, MacAddr};
+use crabnet::network::{Ipv4, Ipv4Addr, Ipv4Type};
+use crabnet::transport::Udp;
 
 #[derive(Default)]
 enum SocketState {
@@ -129,7 +129,7 @@ impl INodeInterface for UdpSocket {
         })
     }
 
-    fn bind(&self, address: super::SocketAddr, _length: usize) -> fs::Result<()> {
+    fn bind(&self, address: super::SocketAddrRef, _length: usize) -> fs::Result<()> {
         let address = address.as_inet().ok_or(FileSystemError::NotSupported)?;
 
         self.set_addr(address.clone());
@@ -137,7 +137,7 @@ impl INodeInterface for UdpSocket {
         Ok(())
     }
 
-    fn connect(&self, address: super::SocketAddr, _length: usize) -> fs::Result<()> {
+    fn connect(&self, address: super::SocketAddrRef, _length: usize) -> fs::Result<()> {
         let address = address.as_inet().ok_or(FileSystemError::NotSupported)?;
 
         let host_addr = Ipv4Addr::new(address.sin_addr.addr.to_be_bytes());
@@ -234,7 +234,7 @@ impl INodeInterface for UdpSocket {
 
             SIOCSIFADDR => {
                 let ifreq = unsafe { UserRef::<IfReq>::new(VirtAddr::new(arg as _)) };
-                let socket = SocketAddr::from_ifreq(&ifreq)
+                let socket = SocketAddrRef::from_ifreq(&ifreq)
                     .map_err(|_| FileSystemError::NotSupported)?
                     .as_inet()
                     .ok_or(FileSystemError::NotSupported)?;
@@ -251,7 +251,7 @@ impl INodeInterface for UdpSocket {
 
             SIOCSIFNETMASK => {
                 let ifreq = unsafe { UserRef::<IfReq>::new(VirtAddr::new(arg as _)) };
-                let socket = SocketAddr::from_ifreq(&ifreq)
+                let socket = SocketAddrRef::from_ifreq(&ifreq)
                     .map_err(|_| FileSystemError::NotSupported)?
                     .as_inet()
                     .ok_or(FileSystemError::NotSupported)?;

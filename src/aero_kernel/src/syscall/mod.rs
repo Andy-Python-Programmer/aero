@@ -16,61 +16,6 @@
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 //! System Calls are used to call a kernel service from userland.
-//!
-//! | %rax   | Name                    |
-//! |--------|-------------------------|
-//! | 0      | read                    |
-//! | 1      | write                   |
-//! | 2      | open                    |
-//! | 3      | close                   |
-//! | 4      | shutdown                |
-//! | 5      | exit                    |
-//! | 6      | fork                    |
-//! | 7      | reboot                  |
-//! | 8      | mmap                    |
-//! | 9      | munmap                  |
-//! | 10     | arch_prctl              |
-//! | 11     | get_dents               |
-//! | 12     | get_cwd                 |
-//! | 13     | chdir                   |
-//! | 14     | mkdir                   |
-//! | 15     | mkdirat                 |
-//! | 16     | rmdir                   |
-//! | 17     | exec                    |
-//! | 18     | log                     |
-//! | 19     | uname                   |
-//! | 20     | waitpid                 |
-//! | 21     | ioctl                   |
-//! | 22     | getpid                  |
-//! | 23     | socket                  |
-//! | 24     | connect                 |
-//! | 25     | bind                    |
-//! | 26     | listen                  |
-//! | 27     | accept                  |
-//! | 28     | seek                    |
-//! | 29     | gettid                  |
-//! | 30     | gettime                 |
-//! | 31     | sleep                   |
-//! | 32     | access                  |
-//! | 33     | pipe                    |
-//! | 34     | unlink                  |
-//! | 35     | gethostname             |
-//! | 36     | sethostname             |
-//! | 37     | info                    |
-//! | 38     | clone                   |
-//! | 39     | sigreturn               |
-//! | 40     | sigaction               |
-//! | 41     | sigprocmask             |
-//! | 42     | dup                     |
-//! | 43     | fcntl                   |
-//! | 44     | dup2                    |
-//! | 45     | ipc_send                |
-//! | 46     | ipc_recv                |
-//! | 47     | ipc_discover_root       |
-//! | 48     | ipc_become_root         |
-//! | 49     | stat                    |
-//! | 50     | fstat                   |
-//! | 51     | read_link               |
 
 use core::mem::MaybeUninit;
 
@@ -290,6 +235,8 @@ pub fn generic_do_syscall(
         SYS_SOCK_SEND => net::sock_send(b, c, d),
         SYS_SOCKET_PAIR => net::socket_pair(b, c, d, e),
         SYS_SOCK_SHUTDOWN => net::shutdown(b, c),
+        SYS_GETPEERNAME => net::get_peername(b, c, d),
+        SYS_GETSOCKNAME => net::get_sockname(b, c, d),
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),

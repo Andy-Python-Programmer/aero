@@ -1,9 +1,9 @@
-use aero_syscall::socket::MessageFlags;
-use num_traits::cast::FromPrimitive;
-
-use aero_syscall::socket::MessageHeader;
+use aero_syscall::socket::{MessageFlags, MessageHeader};
 use aero_syscall::*;
 use alloc::sync::Arc;
+use num_traits::cast::FromPrimitive;
+
+use crate::arch::user_copy::UserRef;
 
 use crate::fs::cache::DirCacheItem;
 use crate::fs::inode::{DirEntry, INodeInterface};
@@ -13,15 +13,15 @@ use crate::socket::ipv4::Ipv4Socket;
 use crate::socket::tcp::TcpSocket;
 use crate::socket::udp::UdpSocket;
 use crate::socket::unix::*;
-use crate::socket::SocketAddr;
+use crate::socket::{SocketAddr, SocketAddrRef};
 
 use crate::userland::scheduler;
 
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
-fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddr<'sys>, SyscallError> {
+fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddrRef<'sys>, SyscallError> {
     let family = *address.read_mut::<u32>()?;
-    SocketAddr::from_family(address, family)
+    SocketAddrRef::from_family(address, family)
 }
 
 #[syscall]
@@ -192,6 +192,65 @@ pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, SyscallEr
         }
         None => Err(SyscallError::ENOENT),
     }
+}
+
+// TODO(andypython): bindgen the abi-bits from mlibc and use those types instead.
+#[syscall]
+pub fn get_peername(fd: usize, addr: usize, len: &mut u32) -> Result<usize, SyscallError> {
+    let thread = scheduler::current_thread();
+    let file = thread
+        .file_table
+        .get_handle(fd)
+        .ok_or(SyscallError::ENOENT)?;
+
+    let inode = file.inode();
+    if !inode.metadata()?.is_socket() {
+        return Err(SyscallError::ENOTSOCK);
+    }
+
+    let peer = inode.get_peername()?;
+
+    match peer {
+        SocketAddr::Inet(peer) => {
+            let size = core::mem::size_of::<SocketAddrInet>() as u32;
+            assert!(*len >= size);
+
+            let mut target = unsafe { UserRef::<SocketAddrInet>::new(VirtAddr::new(addr as u64)) };
+            *target = peer;
+            *len = size;
+        }
+    }
+
+    Ok(0)
+}
+
+#[syscall]
+pub fn get_sockname(fd: usize, addr: usize, len: &mut u32) -> Result<usize, SyscallError> {
+    let thread = scheduler::current_thread();
+    let file = thread
+        .file_table
+        .get_handle(fd)
+        .ok_or(SyscallError::ENOENT)?;
+
+    let inode = file.inode();
+    if !inode.metadata()?.is_socket() {
+        return Err(SyscallError::ENOTSOCK);
+    }
+
+    let name = inode.get_sockname()?;
+
+    match name {
+        SocketAddr::Inet(name) => {
+            let size = core::mem::size_of::<SocketAddrInet>() as u32;
+            assert!(*len >= size);
+
+            let mut target = unsafe { UserRef::<SocketAddrInet>::new(VirtAddr::new(addr as u64)) };
+            *target = name;
+            *len = size;
+        }
+    }
+
+    Ok(0)
 }
 
 /// Create an unbound pair of connected sockets in a specified domain, of a
