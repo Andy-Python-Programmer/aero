@@ -160,7 +160,7 @@ use crate::emu;
 use crate::utils::sync::IrqGuard;
 
 #[panic_handler]
-extern "C" fn rust_begin_unwind(info: &PanicInfo) -> ! {
+fn rust_begin_unwind(info: &PanicInfo) -> ! {
     prepare_panic();
 
     let default_panic = &format_args!("");
