@@ -18,18 +18,18 @@
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 
-use crabnet::transport::Tcp;
+use crabnet::transport::{Tcp, TcpOptions};
 use spin::RwLock;
 
 use crate::socket::tcp::TcpSocket;
 
 static HANDLERS: RwLock<BTreeMap<u16, Arc<TcpSocket>>> = RwLock::new(BTreeMap::new());
 
-pub fn on_packet(tcp: &Tcp, payload: &[u8]) {
+pub fn on_packet(tcp: &Tcp, options: TcpOptions, payload: &[u8]) {
     let handlers = HANDLERS.read();
 
     if let Some(handler) = handlers.get(&tcp.dest_port()) {
-        handler.on_packet(tcp, payload);
+        handler.on_packet(tcp, options, payload);
     } else {
         log::warn!("tcp: no handler registered for port {}", tcp.dest_port());
     }

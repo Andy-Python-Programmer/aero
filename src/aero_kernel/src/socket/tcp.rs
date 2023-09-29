@@ -3,11 +3,12 @@ use aero_syscall::{InAddr, OpenFlags, SocketAddrInet, AF_INET};
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
+use crabnet::network::Ipv4Addr;
 use spin::Once;
 
 use crabnet::data_link::{Eth, EthType, MacAddr};
-use crabnet::transport::Tcp;
-use crabnet_tcp::{Address, Error as TcpError, State};
+use crabnet::transport::{Tcp, TcpOptions};
+use crabnet_tcp::{Address, Error as TcpError, Packet as TcpPacket, State};
 
 use crate::fs::file_table::FileHandle;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags, PollTable};
@@ -23,19 +24,14 @@ use crate::utils::sync::{Mutex, WaitQueue};
 struct DeviceShim(Arc<NetworkDevice>);
 
 impl crabnet_tcp::NetworkDevice for DeviceShim {
-    fn send(
-        &self,
-        ipv4: crabnet::network::Ipv4,
-        tcp: Tcp,
-        payload: &[u8],
-        _handle: crabnet_tcp::RetransmitHandle,
-    ) {
+    fn ip(&self) -> Ipv4Addr {
+        self.0.ip()
+    }
+
+    fn send(&self, packet: TcpPacket, _handle: crabnet_tcp::RetransmitHandle) {
         // TODO(andypython): Handle TCP retransmission here.
-
         let eth = Eth::new(MacAddr::NULL, self.0.mac(), EthType::Ip);
-        let ipv4 = ipv4.set_src_ip(self.0.ip());
-
-        (eth / ipv4 / tcp / payload).send();
+        (eth / packet.ip / packet.tcp / packet.options / packet.payload).send();
     }
 
     fn remove_retransmit(&self, _seq_number: u32) {
@@ -62,9 +58,15 @@ impl TcpSocket {
         })
     }
 
-    pub fn on_packet(&self, tcp: &Tcp, payload: &[u8]) {
+    pub fn on_packet(&self, tcp: &Tcp, options: TcpOptions, payload: &[u8]) {
         if let Some(socket) = self.tcp.lock_irq().as_mut() {
-            socket.on_packet(tcp, payload);
+            // Ignore any invalid TCP options.
+            let options = options
+                .iter()
+                .filter_map(|option| option.ok())
+                .collect::<Vec<_>>();
+
+            socket.on_packet(tcp, &options, payload);
             self.wq.notify_all();
         }
     }

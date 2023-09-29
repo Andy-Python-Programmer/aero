@@ -139,7 +139,7 @@ dependencies = [
 [[package]]
 name = "crabnet"
 version = "0.1.0"
-source = "git+https://github.com/aero-os/crabnet#4e9e10290136ab34b2b73bd7ce81803c2303674c"
+source = "git+https://github.com/aero-os/crabnet#95894c3885b6b3b50942488075631f087cfa9d75"
 dependencies = [
  "bit_field",
  "bitflags 2.4.0",
@@ -150,7 +150,7 @@ dependencies = [
 [[package]]
 name = "crabnet_tcp"
 version = "0.1.0"
-source = "git+https://github.com/aero-os/crabnet#4e9e10290136ab34b2b73bd7ce81803c2303674c"
+source = "git+https://github.com/aero-os/crabnet#95894c3885b6b3b50942488075631f087cfa9d75"
 dependencies = [
  "crabnet",
  "log",

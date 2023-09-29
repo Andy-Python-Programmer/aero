@@ -50,6 +50,8 @@ vte = { git = "https://github.com/alacritty/vte", features = ["ansi"] }
 byte_endian = { git = "https://github.com/aero-os/byte_endian" }
 crabnet = { git = "https://github.com/aero-os/crabnet" }
 crabnet_tcp = { git = "https://github.com/aero-os/crabnet", default-features = false }
+# crabnet = { path = "../../../orgs/aero/crabnet" }
+# crabnet_tcp = { path = "../../../orgs/aero/crabnet/crabnet_tcp", default-features = false }
 
 # X86_64 specific dependencies:
 [target.'cfg(target_arch = "x86_64")'.dependencies]

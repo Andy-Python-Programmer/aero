@@ -18,6 +18,7 @@
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use crabnet::transport::TcpOptions;
 use spin::RwLock;
 
 pub mod arp;
@@ -132,12 +133,11 @@ fn packet_processor_thread() {
 
                     Ipv4Type::Tcp => {
                         let tcp = parser.next::<Tcp>();
-                        let options_size = tcp.options_size() as usize;
-                        let size = ip.payload_len() as usize - core::mem::size_of::<Tcp>();
+                        let size = ip.payload_len() as usize - tcp.header_size() as usize;
+                        let options = parser.next::<TcpOptions>();
+                        let payload = &parser.payload()[..size];
 
-                        // TODO(andypython): do not ignore TCP options.
-                        let payload = &parser.payload()[options_size..size];
-                        tcp::on_packet(tcp, payload)
+                        tcp::on_packet(tcp, options, payload)
                     }
                 }
             }
@@ -205,6 +205,26 @@ pub mod shim {
 
             let eth = &mut self.upper.upper.upper;
             let ip = &self.upper.upper.lower;
+
+            eth.src_mac = device.mac();
+
+            if let Some(addr) = arp::get(ip.dest_ip()) {
+                eth.dest_mac = addr;
+                device.send(self.into_boxed_bytes_in(DmaAllocator));
+            } else {
+                arp::request_ip(ip.dest_ip(), self.into_boxed_bytes_in(DmaAllocator));
+            }
+        }
+    }
+
+    impl<T: Protocol, U: Protocol, S: Protocol> PacketSend
+        for Stacked<Stacked<Stacked<Stacked<Eth, Ipv4>, T>, U>, S>
+    {
+        fn send(mut self) {
+            let device = net::default_device();
+
+            let eth = &mut self.upper.upper.upper.upper;
+            let ip = &self.upper.upper.upper.lower;
 
             eth.src_mac = device.mac();
 
