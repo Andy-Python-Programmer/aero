@@ -47,6 +47,7 @@
     const_ptr_is_null, // https://github.com/rust-lang/rust/issues/74939
     trait_upcasting, // https://github.com/rust-lang/rust/issues/65991
     naked_functions, // https://github.com/rust-lang/rust/issues/32408
+    cfg_match, // https://github.com/rust-lang/rust/issues/115585
     strict_provenance
 )]
 // TODO(andypython): can we remove the dependency of "prelude_import" and "lang_items"?

@@ -30,22 +30,21 @@ bitflags = "1.2.1"
 bit_field = "0.10.2"
 log = "0.4.19"
 xmas-elf = "0.9.0"
-hashbrown = "0.14.0"
+hashbrown = "0.14.1"
 rustc-demangle = "0.1.23"
 # intrusive-collections:
 #   `nightly`: Get access to const variants of the functions.
-intrusive-collections = { version = "0.9.5", features = ["nightly"] }
+intrusive-collections = { version = "0.9.6", features = ["nightly"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 lai = { git = "https://github.com/aero-os/lai-rs" }
 uapi = { path = "../uapi" }
 cpio_reader = { git = "https://github.com/Andy-Python-Programmer/cpio_reader" }
 static_assertions = "1.1.0"
-lru = "0.10.0"
-bytemuck = "1.13.1"
+lru = "0.11.1"
+bytemuck = "1.14.0"
 limine = { git = "https://github.com/limine-bootloader/limine-rs" }
-cfg-if = "1.0"
 num-traits = { version = "0.2", default-features = false }
-vte = { git = "https://github.com/alacritty/vte", features = ["ansi"] }
+vte = { version = "0.12.0", features = ["ansi"] }
 
 byte_endian = { git = "https://github.com/aero-os/byte_endian" }
 crabnet = { git = "https://github.com/aero-os/crabnet" }

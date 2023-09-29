@@ -33,11 +33,13 @@ pub mod pci;
 pub mod pty;
 pub mod tty;
 
-cfg_if::cfg_if! {
-    if #[cfg(target_arch = "x86_64")] {
+cfg_match! {
+    cfg(target_arch = "x86_64") => {
         pub mod uart_16550;
         pub use self::uart_16550 as uart;
-    } else if #[cfg(target_arch = "aarch64")] {
+    }
+
+    cfg(target_arch = "aarch64") => {
         pub mod uart_pl011;
         pub use self::uart_pl011 as uart;
     }
