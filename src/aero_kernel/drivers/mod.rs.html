@@ -42,6 +42,8 @@
 <a href="#42" id="42">42</a>
 <a href="#43" id="43">43</a>
 <a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (C) 2021-2023 The Aero Project Developers.
 //
 // This file is part of The Aero Project.
@@ -77,11 +79,13 @@
 <span class="kw">pub mod </span>pty;
 <span class="kw">pub mod </span>tty;
 
-<span class="macro">cfg_if::cfg_if! </span>{
-    <span class="kw">if </span><span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)] </span>{
+<span class="macro">cfg_match! </span>{
+    cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>) =&gt; {
         <span class="kw">pub mod </span>uart_16550;
         <span class="kw">pub use </span><span class="self">self</span>::uart_16550 <span class="kw">as </span>uart;
-    } <span class="kw">else if </span><span class="attr">#[cfg(target_arch = <span class="string">&quot;aarch64&quot;</span>)] </span>{
+    }
+
+    cfg(target_arch = <span class="string">&quot;aarch64&quot;</span>) =&gt; {
         <span class="kw">pub mod </span>uart_pl011;
         <span class="kw">pub use </span><span class="self">self</span>::uart_pl011 <span class="kw">as </span>uart;
     }

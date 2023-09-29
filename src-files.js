@@ -12,6 +12,7 @@ var srcIndex = JSON.parse('{\
 "cpio_reader":["",[],["lib.rs"]],\
 "crabnet":["",[["transport",[],["mod.rs","tcp.rs","udp.rs"]]],["checksum.rs","data_link.rs","lib.rs","network.rs"]],\
 "crabnet_tcp":["",[],["lib.rs"]],\
+"cursor_icon":["",[],["lib.rs"]],\
 "hashbrown":["",[["external_trait_impls",[],["mod.rs"]],["raw",[],["alloc.rs","bitmask.rs","generic.rs","mod.rs"]]],["lib.rs","macros.rs","map.rs","scopeguard.rs","set.rs"]],\
 "intrusive_collections":["",[],["adapter.rs","key_adapter.rs","lib.rs","link_ops.rs","linked_list.rs","pointer_ops.rs","rbtree.rs","singly_linked_list.rs","unchecked_option.rs","unsafe_ref.rs","xor_linked_list.rs"]],\
 "itoa":["",[],["lib.rs","udiv128.rs"]],\
