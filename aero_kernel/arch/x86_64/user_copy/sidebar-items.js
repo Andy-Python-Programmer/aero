@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["copy_from_user","copy_to_from_user","copy_to_user"],"struct":["UserRef"]};

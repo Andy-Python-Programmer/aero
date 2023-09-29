@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["alloc_device_marker","init","install_device","install_device_at"],"static":["DEVICES","DEVICE_MARKER","DEV_FB","DEV_KMSG","DEV_NULL","DEV_URANDOM"],"struct":["DEV_FILESYSTEM","DevFb","DevFs","DevINode","DevKmsg","DevNull","DevUrandom"],"trait":["Device"]};

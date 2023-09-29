@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ARCH_GET_FS","ARCH_GET_GS","ARCH_SET_FS","ARCH_SET_GS"],"fn":["arch_prctl","init","x86_64_check_sysenter","x86_64_do_syscall","x86_64_syscall_handler","x86_64_sysenter_handler"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["backtrace","clone","exec","exit","find_task_by_pid","fork","gethostname","getpgid","getpid","getppid","gettid","hostname","info","kill","log","mmap","mprotect","munmap","sethostname","setpgid","setsid","shutdown","sigaction","sigprocmask","trace","uname","waitpid"],"static":["HOSTNAME"]};

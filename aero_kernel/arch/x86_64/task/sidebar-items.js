@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["USERLAND_STACK_BOTTOM","USERLAND_STACK_SIZE","USERLAND_STACK_TOP"],"enum":["AuxvType"],"fn":["arch_task_spinup","user_access_ok","userland_last_address","xrstor","xsave","xsave_size"],"struct":["ArchTask","Context"]};

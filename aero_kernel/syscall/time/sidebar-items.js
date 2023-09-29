@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CLOCK_TYPE_MONOTONIC","CLOCK_TYPE_REALTIME"],"fn":["check_timers","getitimer","gettime","setitimer","sleep"],"static":["TIMERS"]};

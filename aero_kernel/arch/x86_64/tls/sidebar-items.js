@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CPU_FEATURES"],"fn":["for_cpu_info_cached","get_cpuid","init"],"static":["CPU_INFO"],"struct":["CpuInfo"],"type":["ProcFsCpuFeature"]};

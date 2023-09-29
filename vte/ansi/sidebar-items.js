@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Attr","CharsetIndex","ClearMode","Color","CursorShape","LineClearMode","Mode","NamedColor","StandardCharset","TabulationClearMode"],"mod":["C0"],"struct":["CursorStyle","Hyperlink","Processor","Rgb"],"trait":["Handler","Timeout"]};

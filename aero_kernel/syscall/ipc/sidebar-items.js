@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["become_root","discover_root","handle_receive","recv","send"],"static":["IPC_ROOT_NODE"],"struct":["Message","MessageQueue"]};

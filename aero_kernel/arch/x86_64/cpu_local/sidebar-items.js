@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["init"],"static":["CPUID","SELF_PTR","__cpu_local_end","__cpu_local_start"],"struct":["CpuLocal"]};
