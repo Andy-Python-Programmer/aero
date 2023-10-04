@@ -411,6 +411,18 @@ impl INodeInterface for UnixSocket {
             .sum::<usize>())
     }
 
+    fn send(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
+        // FIXME(andyython): figure out the message header stuff...
+        let data = message_hdr
+            .iovecs()
+            .iter()
+            .flat_map(|e| e.as_slice())
+            .copied()
+            .collect::<Vec<_>>();
+
+        self.write_at(0, &data)
+    }
+
     fn poll(&self, table: Option<&mut PollTable>) -> fs::Result<PollFlags> {
         let buffer = self.buffer.lock_irq();
         let inner = self.inner.lock_irq();

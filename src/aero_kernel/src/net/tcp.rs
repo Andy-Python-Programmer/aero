@@ -53,6 +53,8 @@ pub fn alloc_ephemeral_port(socket: Arc<TcpSocket>) -> Option<u16> {
             continue;
         }
 
+        log::warn!("[ TCP ] Listening on port {port}");
+
         handlers.insert(port, socket);
         return Some(port);
     }

@@ -54,6 +54,7 @@ pub fn alloc_ephemeral_port(socket: Arc<dyn UdpHandler>) -> Option<u16> {
             continue;
         }
 
+        log::warn!("[ UDP ] Listening on port {port}");
         handlers.insert(port, socket);
         return Some(port);
     }

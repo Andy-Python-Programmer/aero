@@ -76,6 +76,10 @@ impl Cache {
     }
 
     fn request(&mut self, ip: Ipv4Addr, packet: RawPacket) {
+        if ip == Ipv4Addr::LOOPBACK {
+            panic!()
+        }
+
         if self.0.get_mut(&ip).is_some() {
             todo!()
         } else {

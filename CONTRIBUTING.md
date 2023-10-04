@@ -37,3 +37,5 @@ $ lldb
 ````
 
 Check out the docs for your debugger for information about how to use the debugger.
+
+`./aero.py -- -netdev user,id=spider -device e1000,netdev=spider,id=ck_nic0 -object filter-dump,id=spider,netdev=spider,file=qemulog.log`

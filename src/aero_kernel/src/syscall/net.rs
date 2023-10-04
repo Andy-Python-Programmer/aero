@@ -127,16 +127,19 @@ fn create_socket(
     let typ = SocketType::from_usize(socket_type & 0b1111).ok_or(SyscallError::EINVAL)?;
     let protocol = IpProtocol::from_usize(protocol).ok_or(SyscallError::EINVAL)?;
 
-    let socket = match domain as u32 {
-        AF_UNIX => UnixSocket::new() as Arc<dyn INodeInterface>,
+    let (name, socket) = match domain as u32 {
+        AF_UNIX => ("unix", UnixSocket::new() as Arc<dyn INodeInterface>),
         AF_INET => match (typ, protocol) {
             (SocketType::Dgram, IpProtocol::Default | IpProtocol::Udp) => {
-                UdpSocket::new() as Arc<dyn INodeInterface>
+                ("udp", UdpSocket::new() as Arc<dyn INodeInterface>)
             }
 
-            (SocketType::Dgram, IpProtocol::Raw) => Ipv4Socket::new() as Arc<dyn INodeInterface>,
+            (SocketType::Dgram, IpProtocol::Raw) => {
+                ("ipv4", Ipv4Socket::new() as Arc<dyn INodeInterface>)
+            }
+
             (SocketType::Stream, IpProtocol::Default | IpProtocol::Tcp) => {
-                TcpSocket::new() as Arc<dyn INodeInterface>
+                ("tcp", TcpSocket::new() as Arc<dyn INodeInterface>)
             }
 
             _ => {
@@ -157,7 +160,7 @@ fn create_socket(
         }
     };
 
-    let entry = DirEntry::from_inode(socket, String::from("<socket>"));
+    let entry = DirEntry::from_inode(socket, alloc::format!("<{name}_socket>"));
     Ok(entry)
 }
 

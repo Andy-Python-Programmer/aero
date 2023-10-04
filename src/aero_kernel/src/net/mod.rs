@@ -22,6 +22,7 @@ use crabnet::transport::TcpOptions;
 use spin::RwLock;
 
 pub mod arp;
+pub mod loopback;
 pub mod tcp;
 pub mod udp;
 
@@ -45,8 +46,12 @@ struct Metadata {
     ip: Ipv4Addr,
     #[allow(dead_code)]
     subnet_mask: Ipv4Addr,
+    default_gateway: Ipv4Addr,
 }
 
+// FIXME(andypython): This is very inefficient. We store the driver as an Arc<dyn NetworkDriver> and
+// the device with metadata as an Arc<NetworkDevice>. Two heap allocations for nothing, bruh
+// moments.
 pub struct NetworkDevice {
     driver: Arc<dyn NetworkDriver>,
     metadata: RwLock<Metadata>,
@@ -55,8 +60,15 @@ pub struct NetworkDevice {
 impl NetworkDevice {
     pub fn new(driver: Arc<dyn NetworkDriver>) -> Self {
         // FIXME(andy): DHCPD should handle static IP assignment.
-        let mut metadata = Metadata::default();
-        metadata.ip = Ipv4Addr::new([192, 168, 100, 0]);
+        //
+        // https://wiki.qemu.org/Documentation/Networking
+        let metadata = Metadata {
+            ip: Ipv4Addr::new(192, 168, 100, 0),
+            // What should the default be? Also this should really be handled inside dhcpd.
+            default_gateway: Ipv4Addr::new(10, 0, 2, 2),
+            subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
+            ..Default::default()
+        };
 
         Self {
             driver,
@@ -78,6 +90,11 @@ impl NetworkDevice {
 
     pub fn subnet_mask(&self) -> Ipv4Addr {
         self.metadata.read().subnet_mask
+    }
+
+    #[inline]
+    pub fn default_gateway(&self) -> Ipv4Addr {
+        self.metadata.read().default_gateway
     }
 }
 
@@ -180,6 +197,7 @@ pub fn init() {
         return;
     }
 
+    DEVICES.write().push(loopback::LOOPBACK.clone());
     arp::init();
     log::info!("net::arp: initialized cache");
 }
@@ -199,6 +217,8 @@ pub mod shim {
     }
 
     // Deref<T> for Stacked<T, U> where T: Stacked?
+    //
+    // TODO(andypython): Can all of the packet send impls be refactored?
     impl<T: Protocol, U: Protocol> PacketSend for Stacked<Stacked<Stacked<Eth, Ipv4>, T>, U> {
         fn send(mut self) {
             let device = net::default_device();
@@ -206,13 +226,20 @@ pub mod shim {
             let eth = &mut self.upper.upper.upper;
             let ip = &self.upper.upper.lower;
 
+            let mut dest_ip = ip.dest_ip();
+
+            if !dest_ip.is_broadcast() && !dest_ip.is_same_subnet(device.ip(), device.subnet_mask())
+            {
+                dest_ip = device.default_gateway();
+            }
+
             eth.src_mac = device.mac();
 
-            if let Some(addr) = arp::get(ip.dest_ip()) {
+            if let Some(addr) = arp::get(dest_ip) {
                 eth.dest_mac = addr;
                 device.send(self.into_boxed_bytes_in(DmaAllocator));
             } else {
-                arp::request_ip(ip.dest_ip(), self.into_boxed_bytes_in(DmaAllocator));
+                arp::request_ip(dest_ip, self.into_boxed_bytes_in(DmaAllocator));
             }
         }
     }
@@ -226,13 +253,20 @@ pub mod shim {
             let eth = &mut self.upper.upper.upper.upper;
             let ip = &self.upper.upper.upper.lower;
 
+            let mut dest_ip = ip.dest_ip();
+
+            if !dest_ip.is_broadcast() && !dest_ip.is_same_subnet(device.ip(), device.subnet_mask())
+            {
+                dest_ip = device.default_gateway();
+            }
+
             eth.src_mac = device.mac();
 
-            if let Some(addr) = arp::get(ip.dest_ip()) {
+            if let Some(addr) = arp::get(dest_ip) {
                 eth.dest_mac = addr;
                 device.send(self.into_boxed_bytes_in(DmaAllocator));
             } else {
-                arp::request_ip(ip.dest_ip(), self.into_boxed_bytes_in(DmaAllocator));
+                arp::request_ip(dest_ip, self.into_boxed_bytes_in(DmaAllocator));
             }
         }
     }

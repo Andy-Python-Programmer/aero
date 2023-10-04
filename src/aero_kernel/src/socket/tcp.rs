@@ -131,6 +131,10 @@ impl INodeInterface for TcpSocket {
             let addr = address.as_inet().ok_or(FileSystemError::NotSupported)?;
             self.peer.call_once(|| addr.clone());
 
+            if addr.addr() == Ipv4Addr::LOOPBACK.0 {
+                return Err(FileSystemError::NotSupported);
+            }
+
             let addr = Address::new(port, addr.port(), addr.addr().into());
 
             let device = Arc::new(DeviceShim(net::default_device()));

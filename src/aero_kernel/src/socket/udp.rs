@@ -140,7 +140,7 @@ impl INodeInterface for UdpSocket {
     fn connect(&self, address: super::SocketAddrRef, _length: usize) -> fs::Result<()> {
         let address = address.as_inet().ok_or(FileSystemError::NotSupported)?;
 
-        let host_addr = Ipv4Addr::new(address.sin_addr.addr.to_be_bytes());
+        let host_addr = Ipv4Addr::from(address.sin_addr.addr.to_be_bytes());
         udp::connect(host_addr, address.port.to_native());
 
         self.set_state(SocketState::Connected(address.clone()));
@@ -154,7 +154,7 @@ impl INodeInterface for UdpSocket {
             .unwrap_or_else(|| self.dest());
 
         let dest_port = name.port.to_native();
-        let dest_ip = Ipv4Addr::new(name.addr());
+        let dest_ip = Ipv4Addr::from(name.addr());
 
         let src_port;
 
@@ -165,17 +165,19 @@ impl INodeInterface for UdpSocket {
             log::debug!("Inet::send(): allocated ephemeral port {}", src_port);
         }
 
-        // FIXME: loopback
-        if dest_ip == Ipv4Addr::new([127, 0, 0, 1]) {
-            return Err(FileSystemError::NotSupported);
-        }
-
         let data = message_hdr
             .iovecs()
             .iter()
             .flat_map(|e| e.as_slice())
             .copied()
             .collect::<Vec<_>>();
+
+        // FIXME: loopback
+        if dest_ip == Ipv4Addr::LOOPBACK {
+            log::debug!("looback moments :)");
+            return Err(FileSystemError::NotSupported);
+            // return Ok(data.len());
+        }
 
         use crate::net::shim::PacketSend;
 
@@ -245,7 +247,7 @@ impl INodeInterface for UdpSocket {
                 assert!(name == "eth0");
 
                 let device = net::default_device();
-                device.set_ip(Ipv4Addr::new(socket.addr()));
+                device.set_ip(Ipv4Addr::from(socket.addr()));
                 Ok(0)
             }
 
@@ -262,7 +264,7 @@ impl INodeInterface for UdpSocket {
                 assert!(name == "eth0");
 
                 let device = net::default_device();
-                device.set_subnet_mask(Ipv4Addr::new(socket.addr()));
+                device.set_subnet_mask(Ipv4Addr::from(socket.addr()));
 
                 Ok(0)
             }
