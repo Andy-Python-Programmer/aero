@@ -25,7 +25,7 @@ use crate::mem::paging::*;
 use crate::mem::AddressSpace;
 
 use crate::utils::sync::Mutex;
-use crate::utils::{CeilDiv, VolatileCell};
+use crate::utils::VolatileCell;
 
 use crate::drivers::pci::*;
 
@@ -201,7 +201,7 @@ pub struct DmaBuffer {
 
 impl DmaBuffer {
     pub fn sectors(&self) -> usize {
-        self.data_size.ceil_div(512)
+        self.data_size.div_ceil(512)
     }
 
     pub fn start(&self) -> PhysAddr {

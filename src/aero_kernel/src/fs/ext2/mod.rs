@@ -34,7 +34,6 @@ use crate::mem::paging::*;
 
 use crate::socket::unix::UnixSocket;
 use crate::socket::SocketAddrRef;
-use crate::utils::CeilDiv;
 
 use self::group_desc::GroupDescriptors;
 
@@ -186,7 +185,7 @@ impl INode {
 
         let new_block = fs.bgdt.alloc_block_ptr()?;
 
-        let mut next_block_num = self.inode.read().size().ceil_div(block_size);
+        let mut next_block_num = self.inode.read().size().div_ceil(block_size);
 
         if next_block_num < 12 {
             let mut inode = self.inode.write();

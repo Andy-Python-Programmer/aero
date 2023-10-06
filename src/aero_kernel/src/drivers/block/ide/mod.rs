@@ -32,7 +32,6 @@ use crate::fs::block::{BlockDevice, BlockDeviceInterface};
 
 use crate::mem::paging::OffsetPageTable;
 use crate::utils::sync::Mutex;
-use crate::utils::CeilDiv;
 
 use super::ahci::DmaRequest;
 
@@ -51,7 +50,7 @@ impl IdeDrive {
 
 impl BlockDeviceInterface for IdeDrive {
     fn read_block(&self, sector: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        let count = dest.len().ceil_div(512);
+        let count = dest.len().div_ceil(512);
         let request = Arc::new(DmaRequest::new(sector, count));
 
         let res = self.channel.run_request(request, self.slave);

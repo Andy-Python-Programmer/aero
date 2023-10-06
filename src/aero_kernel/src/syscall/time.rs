@@ -23,14 +23,13 @@ use alloc::vec::Vec;
 use crate::userland::scheduler;
 use crate::userland::task::Task;
 use crate::utils::sync::{IrqGuard, Mutex};
-use crate::utils::CeilDiv;
 
 const CLOCK_TYPE_REALTIME: usize = 0;
 const CLOCK_TYPE_MONOTONIC: usize = 1;
 
 #[syscall]
 pub fn sleep(timespec: &TimeSpec) -> Result<usize, SyscallError> {
-    let duration = (timespec.tv_nsec as usize).ceil_div(1000000000) + timespec.tv_sec as usize;
+    let duration = (timespec.tv_nsec as usize).div_ceil(1000000000) + timespec.tv_sec as usize;
 
     scheduler::get_scheduler().inner.sleep(Some(duration))?;
 

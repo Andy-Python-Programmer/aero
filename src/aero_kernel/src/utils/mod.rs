@@ -223,32 +223,5 @@ impl<'a> StackHelper<'a> {
     }
 }
 
-pub trait CeilDiv {
-    fn ceil_div(self, d: Self) -> Self;
-}
-
-macro_rules! ceil_div_impl {
-    ($($t:ty)*) => ($(
-        impl CeilDiv for $t {
-            fn ceil_div(self, d: $t) -> $t {
-                (self + d - 1) / d
-            }
-        }
-    )*)
-}
-
-ceil_div_impl!(u8 u16 u32 u64 usize u128);
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unsigned_div_ceil() {
-        assert_eq!((8usize).ceil_div(3), 3);
-        assert_eq!((7usize).ceil_div(4), 2);
-    }
-}
-
 #[repr(transparent)]
 pub struct LinkerSymbol<T: Copy>(core::cell::UnsafeCell<T>);

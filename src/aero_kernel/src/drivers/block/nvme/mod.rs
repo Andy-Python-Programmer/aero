@@ -35,7 +35,7 @@ use crate::mem::paging::*;
 
 use crate::utils::dma::*;
 use crate::utils::sync::BMutex;
-use crate::utils::{CeilDiv, VolatileCell};
+use crate::utils::VolatileCell;
 
 #[derive(Copy, Clone, Debug)]
 enum Error {
@@ -231,7 +231,7 @@ impl<'a> Namespace<'a> {
     fn rw_command(&self, opcode: CommandOpcode, sector: usize, start: PhysAddr, size_bytes: usize) {
         assert!(size_bytes != 0);
 
-        let blocks = size_bytes.ceil_div(self.block_size);
+        let blocks = size_bytes.div_ceil(self.block_size);
         let mut read_cmd = ReadWriteCommand::default();
 
         read_cmd.opcode = opcode as u8;

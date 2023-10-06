@@ -18,7 +18,6 @@
 use bit_field::BitField;
 
 use crate::fs::inode;
-use crate::utils::CeilDiv;
 
 trait Revsion {}
 
@@ -112,7 +111,7 @@ impl SuperBlock {
 
     /// Returns the length of the BGDT.
     pub fn bgdt_len(&self) -> usize {
-        self.blocks_count.ceil_div(self.blocks_per_group) as usize
+        self.blocks_count.div_ceil(self.blocks_per_group) as usize
     }
 
     pub fn bgdt_block(&self) -> usize {
