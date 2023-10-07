@@ -163,8 +163,8 @@ use crate::utils::sync::IrqGuard;
 fn rust_begin_unwind(info: &PanicInfo) -> ! {
     prepare_panic();
 
-    let default_panic = &format_args!("");
-    let panic_message = info.message().unwrap_or(default_panic);
+    let message = info.message().unwrap();
+    let location = info.location().unwrap();
 
     // Get the CPU ID where this panic happened and if PANIC_HOOK_READY is false
     // then we cannot get the CPU where this panic happened.
@@ -174,14 +174,8 @@ fn rust_begin_unwind(info: &PanicInfo) -> ! {
         0x00
     };
 
-    log::error!("cpu '{}' panicked at '{}'", cpu_id, panic_message);
-
-    // Print the panic location if it is available.
-    if let Some(panic_location) = info.location() {
-        log::error!("{}", panic_location);
-    }
-
-    // Add a new line to make the stack trace more readable.
+    log::error!("cpu '{cpu_id}' panicked at {location}:");
+    log::error!("{message}");
     log::error!("");
 
     unwind_stack_trace();
