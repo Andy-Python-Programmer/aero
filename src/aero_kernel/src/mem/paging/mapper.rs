@@ -1189,8 +1189,11 @@ impl<'a> OffsetPageTable<'a> {
         let last_level_fork = |entry: &mut PageTableEntry, n1: &mut PageTable, i: usize| {
             let mut flags = entry.flags();
 
-            // Setup copy on write page.
-            flags.remove(PageTableFlags::WRITABLE);
+            // Check if the mapping is shared.
+            if !flags.contains(PageTableFlags::BIT_10) {
+                // Setup copy on write page.
+                flags.remove(PageTableFlags::WRITABLE);
+            }
 
             entry.set_flags(flags);
             n1[i].set_frame(entry.frame().unwrap(), flags);

@@ -247,6 +247,7 @@ pub trait CachedAccess: BlockDeviceInterface {
             );
 
             page.mark_dirty();
+            page.sync();
 
             loc += size;
             offset = align_down(offset as u64 + Size4KiB::SIZE, Size4KiB::SIZE) as usize;

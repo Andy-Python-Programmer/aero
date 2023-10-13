@@ -1,3 +1,10 @@
+sources:
+  - name: nss
+    subdir: 'bundled'
+    git: 'https://github.com/nss-dev/nss.git'
+    tag: 'NSS_3_94_RTM'
+    version: '3.94.RTM'
+
 packages:
   - name: dhcpd
     source:
@@ -318,88 +325,409 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
-  # - name: webkitgtk
-  #   metadata:
-  #     summary: 'An open source web browser engine, with a small example browser'
-  #     description: 'This package provides WebKitGTK, a port of the portable web rendering engine WebKit to the GTK+ 3 and GTK 4 platforms.'
-  #     spdx: 'LGPL-2.0-or-later BSD-2-Clause'
-  #     website: 'https://webkitgtk.org'
-  #     maintainer: "Dennis Bonke <dennis@managarm.org>"
-  #     categories: ['net-libs']
+  - name: alsa-lib
+    source:
+      subdir: 'bundled'
+      git: 'https://github.com/alsa-project/alsa-lib.git'
+      tag: 'v1.2.9'
+      version: '1.2.9'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - virtual: pkgconfig-for-target
+          triple: "x86_64-aero"
+      regenerate:
+        - args: ['autoreconf', '-fvi']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: nspr
+    source:
+      subdir: 'bundled'
+      hg: 'https://hg.mozilla.org/projects/nspr/'
+      tag: 'NSPR_4_35_RTM'
+      version: '4.35.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+      regenerate:
+        - args: ['autoreconf', '-fvi']
+        - args: ['cp',
+            '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
+            '@THIS_SOURCE_DIR@/build/autoconf/']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      # Disable installing two unneeded scripts.
+      - args: ['sed', '-ri', '/^RELEASE/s/^/#/', '@THIS_SOURCE_DIR@/pr/src/misc/Makefile.in']
+      # Disable installing static libraries.
+      - args: ['sed', '-i', 's#$(LIBRARY) ##', '@THIS_SOURCE_DIR@/config/rules.mk']
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-linux'
+        - '--build=x86_64-linux'
+        - '--prefix=/usr'
+        - '--with-mozilla'
+        - '--with-pthreads'
+        - '--enable-64bit'
+        environ:
+          CROSS_COMPILE: '1'
+          ac_cv_func_syscall: 'no'
+    build:
+      # We first build a native nsinstall that the build can use later on.
+      - args: ['make', 'CC=gcc', 'CXX=g++', '-C', '@THIS_BUILD_DIR@/config/']
+      - args: ['mv', '-v', '@THIS_BUILD_DIR@/config/nsinstall', '@THIS_BUILD_DIR@/config/native-nsinstall']
+      - args: ['sed', '-s', 's#/nsinstall$#/native-nsinstall#', '-i', '@THIS_BUILD_DIR@/config/autoconf.mk']
+      - args: ['rm', '-v', '@THIS_BUILD_DIR@/config/nsinstall.o']
+      # Then build the real deal
+      - args: ['make', 'CC=x86_64-aero-gcc', 'CXX=x86_64-aero-g++', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+        quiet: true
+
+  - name: nss
+    from_source: nss
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - nspr
+      - sqlite
+      - zlib
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      # First, build a host version of nsinstall.
+      - args: ['make', '-C', '@THIS_BUILD_DIR@/coreconf/']
+        environ:
+          CC: 'gcc'
+          BUILD_OPT: '1'
+          NSPR_INCLUDE_DIR: '/usr/include/nspr'
+          USE_SYSTEM_ZLIB: '1'
+          ZLIB_LIBS: '-lz'
+          NSS_ENABLE_WERROR: '0'
+          USE_64: '1'
+          NSS_USE_SYSTEM_SQLITE: '1'
+          NS_USE_GCC: '1'
+          CC_IS_GCC: '1'
+          NSDISTMODE: 'copy'
+      # Then, build some configuration items courtesy of BLFS (see the patches).
+      - args: |
+            make V=1 -C @THIS_BUILD_DIR@/config NSINSTALL=@THIS_BUILD_DIR@/$(find -type f -name nsinstall) -j1
+        environ:
+          # Optimized builds.
+          BUILD_OPT: '1'
+          # NSPR is here.
+          NSPR_INCLUDE_DIR: '@SYSROOT_DIR@/usr/include/nspr'
+          # Use our zlib.
+          USE_SYSTEM_ZLIB: '1'
+          # Freestanding freebl yes please.
+          FREEBL_NO_DEPEND: '1'
+          FREEBL_LOWHASH: '1'
+          NSS_SEED_ONLY_DEV_URANDOM: '1'
+          # Link with zlib.
+          ZLIB_LIBS: '-lz'
+          # Do not enable Werror.
+          NSS_ENABLE_WERROR: '0'
+          # We are 64 bit.
+          USE_64: '1'
+          # Use system sqlite.
+          NSS_USE_SYSTEM_SQLITE: '1'
+          # We're using gcc.
+          NS_USE_GCC: '1'
+          CC_IS_GCC: '1'
+          # We're cross compiling.
+          CROSS_COMPILE: '1'
+          # Don't symlink files, copy them.
+          NSDISTMODE: 'copy'
+          # Do not build the tests.
+          NSS_DISABLE_GTESTS: '1'
+          # Put the libs and binaries here.
+          SOURCE_PREFIX: '@THIS_BUILD_DIR@/dist'
+          # Specify the compiler.
+          CC: 'x86_64-aero-gcc'
+          CXX: 'x86_64-aero-g++'
+      # Then build the main libraries and binaries.
+      - args: |
+            make V=1 -C @THIS_BUILD_DIR@/. NSINSTALL=@THIS_BUILD_DIR@/$(find -type f -name nsinstall) -j1
+        environ:
+          BUILD_OPT: '1'
+          NSPR_INCLUDE_DIR: '@SYSROOT_DIR@/usr/include/nspr'
+          USE_SYSTEM_ZLIB: '1'
+          FREEBL_NO_DEPEND: '1'
+          FREEBL_LOWHASH: '1'
+          NSS_SEED_ONLY_DEV_URANDOM: '1'
+          ZLIB_LIBS: '-lz'
+          NSS_ENABLE_WERROR: '0'
+          USE_64: '1'
+          NSS_USE_SYSTEM_SQLITE: '1'
+          NS_USE_GCC: '1'
+          CC_IS_GCC: '1'
+          CROSS_COMPILE: '1'
+          NSDISTMODE: 'copy'
+          NSS_DISABLE_GTESTS: '1'
+          SOURCE_PREFIX: '@THIS_BUILD_DIR@/dist'
+          CC: 'x86_64-aero-gcc'
+          CXX: 'x86_64-aero-g++'
+      # Create some directories to install into.
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/lib/pkgconfig']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/bin']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/include']
+      # And install everything, this _will_ break on a non Linux box, but unfortunately NSS hardcodes kernel names and versions.
+      # If someone wants to patch NSS to not do that, greatly appreciated.
+      # These install instructions are adapted from BLFS, and not Gentoo as I usually do.
+      - args: |
+            cd dist
+            install -v -m755 Linux*/lib/*.so @THIS_COLLECT_DIR@/usr/lib
+            install -v -m644 Linux*/lib/{*.chk,libcrmf.a} @THIS_COLLECT_DIR@/usr/lib
+            install -v -m755 -d @THIS_COLLECT_DIR@/usr/include/nss
+            cp -v -RL {public,private}/nss/* @THIS_COLLECT_DIR@/usr/include/nss
+            chmod -v 644 @THIS_COLLECT_DIR@/usr/include/nss/*
+            install -v -m755 Linux*/bin/{certutil,nss-config,pk12util} @THIS_COLLECT_DIR@/usr/bin
+            install -v -m644 Linux*/lib/pkgconfig/nss.pc @THIS_COLLECT_DIR@/usr/lib/pkgconfig
+
+  - name: libevent
+    source:
+      subdir: bundled
+      git: 'https://github.com/libevent/libevent.git'
+      tag: 'release-2.1.12-stable'
+      version: '2.1.12'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+      regenerate:
+        - args: ['./autogen.sh']
+        # Fix an issue that prevents event_rpcgen.py from working.
+        - args: ['sed', '-i', 's/python/&3/', '@THIS_SOURCE_DIR@/event_rpcgen.py']
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - openssl
+      - zlib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--disable-static'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libvpx
+    source:
+      subdir: 'bundled'
+      git: 'https://chromium.googlesource.com/webm/libvpx.git'
+      tag: 'v1.11.0'
+      version: '1.11.0'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      # Fix ownership and permission of installed files.
+      - args: ['sed', '-i', 's/cp -p/cp/', '@THIS_SOURCE_DIR@/build/make/Makefile']
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=/usr'
+        - '--disable-static'
+        - '--enable-shared'
+        # Generic GNU target to disable optimizations
+        - '--force-target=generic-gnu'
+        - '--enable-pic'
+        - '--enable-vp8'
+        - '--enable-vp9'
+        - '--enable-multithread'
+        - '--enable-vp9-highbitdepth'
+        - '--disable-examples'
+        - '--disable-install-docs'
+        - '--disable-docs'
+    build:
+      - args: ['make', 'HAVE_GNU_STRIP=no', 'CC=x86_64-aero-gcc', 'LD=x86_64-aero-gcc', 'CXX=x86_64-aero-g++', 'AR=x86_64-aero-ar', 'NM=x86_64-aero-nm', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # - name: firefox
   #   source:
   #     subdir: 'bundled'
-  #     git: 'https://github.com/WebKit/WebKit.git'
-  #     # I think? Apple is weird with naming
-  #     tag: 'Safari-612.1.27.0.24'
-  #     version: '2.33.3'
+  #     git: 'https://github.com/mozilla/gecko-dev'
+  #     commit: 7baa783763c946ff667c3faea292e91d3de1e459
+  #     branch: master
+  #   configure:
+  #     - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+  #     - args: ['cp', '@SOURCE_ROOT@/extra-files/firefox/mozconfig', '@THIS_BUILD_DIR@/mozconfig']
   #   tools_required:
   #     - host-gcc
-  #     - host-cmake
+  #     - host-rust
+  #     - host-pkg-config
+  #     # - virtual: pkgconfig-for-target
+  #     #   triple: "x86_64-aero"
   #   pkgs_required:
   #     - mlibc
-  #     - cairo
-  #     - fontconfig
-  #     - freetype
-  #     - libgcrypt
+  #     - alsa-lib
   #     - glib
-  #     - harfbuzz
-  #     - icu
-  #     - libjpeg-turbo
-  #     - zlib
-  #     - libpng
-  #     - libxml
-  #     - atk
-  #     - sqlite
-  #     - libwebp
   #     - gtk+-3
-  #     - libsoup
-  #     - libxslt
-  #     - at-spi2-core
-  #     - libtasn
-  #     - libx11
-  #     - libxcomposite
-  #     - libxdamage
-  #     - libxrender
-  #     - libxt
-  #     - mesa
-  #     # - gst-plugins-base
-  #   configure:
-  #     - args:
-  #       - 'cmake'
-  #       - '-GNinja'
-  #       - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/userland/CMakeToolchain-x86_64.cmake'
-  #       - '-DCMAKE_INSTALL_PREFIX=/usr'
-  #       - '-DCMAKE_SYSTEM_PROCESSOR=x86_64'
-  #       - '-DCMAKE_BUILD_TYPE=Release'
-  #       - '-DCMAKE_SKIP_RPATH=ON'
-  #       - '-DPORT=GTK'
-  #       - '-DLIB_INSTALL_DIR=/usr/lib'
-  #       - '-DUSE_LIBHYPHEN=OFF'
-  #       - '-DENABLE_GAMEPAD=OFF'
-  #       - '-DENABLE_MINIBROWSER=ON'
-  #       - '-DUSE_WOFF2=OFF'
-  #       - '-DUSE_SYSTEMD=OFF'
-  #       - '-DENABLE_BUBBLEWRAP_SANDBOX=OFF'
-  #       - '-Wno-dev -G Ninja'
-  #       - '-DUSE_LIBNOTIFY=OFF'
-  #       - '-DUSE_SYSTEM_MALLOC=ON'
-  #       - '-DENABLE_GEOLOCATION=OFF'
-  #       - '-DENABLE_VIDEO=OFF'
-  #       - '-DENABLE_WEB_AUDIO=OFF'
-  #       - '-DENABLE_INTROSPECTION=OFF'
-  #       - '-DUSE_LIBSECRET=OFF'
-  #       - '-DUSE_OPENJPEG=OFF'
-  #       - '-DENABLE_SPELLCHECK=OFF'
-  #       - '-DENABLE_WAYLAND_TARGET=OFF'
-  #       - '-DENABLE_X11_TARGET=ON'
-  #       - '-DENABLE_WEBGL=ON'
-  #       - '-DUSE_WPE_RENDERER=OFF'
-  #       - '-DENABLE_WEBGL2=OFF'
-  #       - '-DUSE_SOUP2=ON'
-  #       - '-DUSE_LCMS=OFF'
-  #       - '@THIS_SOURCE_DIR@'
+  #     - gtk+-2
+  #     - icu
+  #     - gcc
+  #     - nspr
+  #     - nss
+  #     - libvpx
+  #     - libevent
+  #   sources_required:
+  #     - rust-patched-libs
   #   build:
-  #     - args: ['ninja', '-j8']
-  #     - args: ['ninja', 'install']
+  #     - args: ['./mach', 'build']
   #       environ:
-  #         DESTDIR: '@THIS_COLLECT_DIR@'
+  #         HOST_CC: 'gcc'
+  #         HOST_CXX: 'g++'
+  #         CC: 'x86_64-aero-gcc'
+  #         CXX: 'x86_64-aero-g++'
+  #         CARGOFLAGS: '--verbose'
+  #         MOZ_RUST_TIER: '1'
+  #         BINDGEN_EXTRA_CLANG_ARGS: '-isystem@SYSROOT_DIR/usr/include'
+  #         # CROSS_SYSROOT: '@SYSROOT_DIR@'./system-root/usr/include/c++/11.2.0/memory
+
+  # cargo install cbindgen
+  #
+  # pacman -S autoconf2.13
+  # - name: firefox-esr
+  #   source:
+  #     subdir: 'bundled'
+  #     git: 'https://github.com/mozilla/gecko-dev'
+  #     branch: 'FIREFOX_ESR_68_0_X_RELBRANCH'
+  #   configure:
+  #     - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+  #     - args: ['cp', '@SOURCE_ROOT@/extra-files/firefox/mozconfig', '@THIS_BUILD_DIR@/mozconfig']
+  #   tools_required:
+  #     - host-gcc
+  #     - host-rust
+  #     - host-pkg-config
+  #     # - virtual: pkgconfig-for-target
+  #     #   triple: "x86_64-aero"
+  #   pkgs_required:
+  #     - mlibc
+  #     - alsa-lib
+  #     - glib
+  #     - gtk+-3
+  #     - gtk+-2
+  #     - gcc
+  #   build:
+  #     # python ~/work/aero/tools/cargo-inject-patches.py ./Cargo.toml 
+  #     - args: ['./mach', 'build']
+  #       environ:
+  #         HOST_CC: 'clang'
+  #         CC: 'x86_64-aero-gcc'
+  #         CARGOFLAGS: '--verbose'
+  #     # - args: ['./mach', 'install']
+  #     #   environ:
+  #     #     DESTDIR: '@THIS_COLLECT_DIR@'
+
+  # /home/andy/work/aero/bundled/webkitgtk/Source/ThirdParty/ANGLE/src/common/system_utils_posix.cpp:313:14: error: ‘mkstemps’ was not declared in this scope; did you mean ‘mkstemp’?
+  # 313 |     int fd = mkstemps(&tempFileTemplate[0], static_cast<int>(extension.size()));
+  #     |              ^~~~~~~~
+  #     |              mkstemp
+  - name: webkitgtk
+    source:
+      subdir: bundled
+      git: 'https://github.com/WebKit/WebKit.git'
+      # I think? Apple is weird with naming
+      tag: 'Safari-612.1.27.0.24'
+      version: '2.33.3'
+    tools_required:
+      - host-gcc
+      - host-cmake
+    pkgs_required:
+      - mlibc
+      - cairo
+      - fontconfig
+      - freetype
+      - libgcrypt
+      - glib
+      - harfbuzz
+      - icu
+      - libjpeg-turbo
+      - zlib
+      - sqlite
+      - libpng
+      - libxml
+      - atk
+      - libwebp
+      - gtk+-3
+      - libsoup
+      - libxslt
+      - at-spi2-core
+      - libtasn
+      - libx11
+      - libxcomposite
+      - libxdamage
+      - libxrender
+      - libxt
+      - mesa
+    configure:
+      - args:
+        - 'cmake'
+        - '-GNinja'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/userland/CMakeToolchain-x86_64.cmake'
+        - '-DCMAKE_INSTALL_PREFIX=/usr'
+        - '-DCMAKE_SYSTEM_PROCESSOR=x86_64'
+        - '-DCMAKE_BUILD_TYPE=Release'
+        - '-DCMAKE_SKIP_RPATH=ON'
+        - '-DPORT=GTK'
+        - '-DLIB_INSTALL_DIR=/usr/lib'
+        - '-DUSE_LIBHYPHEN=OFF'
+        - '-DENABLE_GAMEPAD=OFF'
+        - '-DENABLE_MINIBROWSER=ON'
+        - '-DUSE_WOFF2=OFF'
+        - '-DUSE_SYSTEMD=OFF'
+        - '-DENABLE_BUBBLEWRAP_SANDBOX=OFF'
+        - '-Wno-dev -G Ninja'
+        - '-DUSE_LIBNOTIFY=OFF'
+        - '-DUSE_SYSTEM_MALLOC=ON'
+        - '-DENABLE_GEOLOCATION=OFF'
+        - '-DENABLE_VIDEO=OFF'
+        - '-DENABLE_WEB_AUDIO=OFF'
+        - '-DENABLE_INTROSPECTION=OFF'
+        - '-DUSE_LIBSECRET=OFF'
+        - '-DUSE_OPENJPEG=OFF'
+        - '-DENABLE_SPELLCHECK=OFF'
+        - '-DENABLE_WAYLAND_TARGET=OFF'
+        - '-DENABLE_X11_TARGET=ON'
+        - '-DENABLE_WEBGL=ON'
+        - '-DUSE_WPE_RENDERER=OFF'
+        - '-DENABLE_WEBGL2=OFF'
+        - '-DUSE_SOUP2=ON'
+        - '-DUSE_LCMS=OFF'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja', '-j6']
+        # environ:
+        #   CXXFLAGS: '-std=c++11'
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'

@@ -75,6 +75,7 @@ mod prelude {
 
         pub use alloc::string::String;
 
+        pub use crate::rendy::dbg;
         pub use static_assertions::*;
     }
 }

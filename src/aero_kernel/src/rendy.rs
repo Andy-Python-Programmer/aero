@@ -897,7 +897,7 @@ pub macro println {
 
 pub macro dbg {
     () => {
-        $crate::rendy::println!("[{}:{}]", $crate::file!(), $crate::line!());
+        log::debug!("[{}:{}]", $crate::file!(), $crate::line!());
     },
 
     ($val:expr $(,)?) => {
@@ -905,8 +905,7 @@ pub macro dbg {
         // of temporaries - https://stackoverflow.com/a/48732525/1063961
         match $val {
             tmp => {
-                $crate::rendy::println!("[{}:{}] {} = {:#?}",
-                    core::file!(), core::line!(), core::stringify!($val), &tmp);
+                log::debug!("[{}:{}] {} = {:#?}", core::file!(), core::line!(), core::stringify!($val), &tmp);
                 tmp
             }
         }

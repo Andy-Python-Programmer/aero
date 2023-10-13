@@ -77,6 +77,7 @@ pub enum AuxvType {
     PhEnt = 4,
     PhNum = 5,
     Entry = 9,
+    Secure = 23,
 }
 
 /// Returns the first address outside the user range.
@@ -401,7 +402,7 @@ impl ArchTask {
         let p2_header = loaded_binary.elf.header.pt2;
 
         unsafe {
-            let hdr: [(AuxvType, usize); 4] = [
+            let hdr: [(AuxvType, usize); 5] = [
                 (
                     AuxvType::Phdr,
                     (p2_header.ph_offset() + loaded_binary.base_addr.as_u64()) as usize,
@@ -409,6 +410,7 @@ impl ArchTask {
                 (AuxvType::PhEnt, p2_header.ph_entry_size() as usize),
                 (AuxvType::PhNum, p2_header.ph_count() as usize),
                 (AuxvType::Entry, p2_header.entry_point() as usize),
+                (AuxvType::Secure, 0),
             ];
 
             stack.write(0usize); // Make it 16 bytes aligned

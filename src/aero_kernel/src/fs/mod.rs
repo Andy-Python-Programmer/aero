@@ -21,6 +21,7 @@ use aero_syscall::SyscallError;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 
+use crate::fs::cache::DirCacheImpl;
 use crate::userland::scheduler;
 use crate::utils::sync::Mutex;
 use spin::Once;
@@ -198,7 +199,7 @@ impl Path {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum LookupMode {
     None,
     /// Creates the file if it does not exist.
@@ -248,8 +249,17 @@ pub fn lookup_path_with(
                             } else {
                                 // todo: fix this shit
                                 cwd.inode().mkdir(component)?;
-                                cwd =
-                                    lookup_path_with(cwd, Path::new(component), LookupMode::None)?;
+                                cwd = match lookup_path_with(
+                                    cwd.clone(),
+                                    Path::new(component),
+                                    LookupMode::None,
+                                ) {
+                                    Ok(x) => x,
+                                    Err(e) => {
+                                        dbg!(component, cwd.absolute_path_str());
+                                        return Err(dbg!(e));
+                                    }
+                                };
                             }
                         }
 

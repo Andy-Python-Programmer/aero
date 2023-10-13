@@ -1,0 +1,49 @@
+packages:
+  # This package contains a default fallback theme for implementations of the icon theme specification.
+  - name: hicolor-icon-theme
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.freedesktop.org/xdg/default-icon-theme.git'
+      tag: '0.17'
+      version: '0.17'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+      regenerate:
+        - args: ['./autogen.sh', '--no-configure']
+    tools_required:
+      - host-gcc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: adwaita-icon-theme
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/adwaita-icon-theme.git'
+      tag: '45.0'
+      version: '45.0'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - hicolor-icon-theme
+    configure:
+      - args:
+          - 'meson'
+          - '--cross-file'
+          - '@SOURCE_ROOT@/userland/cross-file.ini'
+          - '--prefix=/usr'
+          - '--sysconfdir=/etc'
+          - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'

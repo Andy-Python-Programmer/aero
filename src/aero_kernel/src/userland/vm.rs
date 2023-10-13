@@ -432,17 +432,17 @@ impl Mapping {
                     .mmap(offset as _, size as _, self.flags)
                     .expect("handle_pf_file: file does not support mmap");
 
-                unsafe {
-                    offset_table.map_to(
-                        Page::containing_address(address),
-                        frame,
-                        PageTableFlags::PRESENT
-                            | PageTableFlags::USER_ACCESSIBLE
-                            | self.protection.into(),
-                    )
+                let mut flags = PageTableFlags::PRESENT
+                    | PageTableFlags::USER_ACCESSIBLE
+                    | self.protection.into();
+
+                if self.flags.contains(MMapFlags::MAP_SHARED) {
+                    flags |= PageTableFlags::BIT_10;
                 }
-                .expect("failed to map allocated frame for private file read")
-                .flush();
+
+                unsafe { offset_table.map_to(Page::containing_address(address), frame, flags) }
+                    .expect("failed to map allocated frame for private file read")
+                    .flush();
 
                 true
             } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
