@@ -211,12 +211,17 @@ impl INode {
 
             if block_ptrs == 0 {
                 block_ptrs = fs.bgdt.alloc_block_ptr()?;
+                self.inode.write().data_ptr[12] = block_ptrs as u32;
             }
 
             let block_ptrs = block_ptrs * block_size;
-            let offset = block_ptrs + (new_block * core::mem::size_of::<u32>());
+            let offset = block_ptrs + (next_block_num * core::mem::size_of::<u32>());
 
             fs.block.write(offset, &new_block.to_le_bytes());
+
+            let mut inode = self.inode.write();
+            let inode_size = inode.size() + block_size;
+            inode.set_size(inode_size);
         }
 
         Some(new_block)
@@ -303,7 +308,7 @@ impl INode {
         proxy: Option<Arc<dyn INodeInterface>>,
     ) -> super::Result<INodeCacheItem> {
         if !self.metadata()?.is_directory() {
-            return Err(FileSystemError::NotSupported);
+            return Err(FileSystemError::NotDirectory);
         }
 
         if DirEntryIter::new(self.sref()).any(|(e, _)| e == name) {
@@ -479,7 +484,7 @@ impl INodeInterface for INode {
 
     fn touch(&self, parent: DirCacheItem, name: &str) -> super::Result<DirCacheItem> {
         if !self.metadata()?.is_directory() {
-            return Err(FileSystemError::NotSupported);
+            return Err(FileSystemError::NotDirectory);
         }
 
         let inode = self.make_inode(name, FileType::File, None)?;
@@ -488,7 +493,7 @@ impl INodeInterface for INode {
 
     fn mkdir(&self, name: &str) -> super::Result<INodeCacheItem> {
         if !self.metadata()?.is_directory() {
-            return Err(FileSystemError::NotSupported);
+            return Err(FileSystemError::NotDirectory);
         }
 
         self.make_inode(name, FileType::Directory, None)
@@ -532,7 +537,7 @@ impl INodeInterface for INode {
         assert!(self.proxy.is_none());
 
         // TODO: support shared file mappings.
-        assert!(!flags.contains(MMapFlags::MAP_SHARED));
+        // assert!(!flags.contains(MMapFlags::MAP_SHARED));
 
         let private_cp: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
         private_cp.as_slice_mut().fill(0);

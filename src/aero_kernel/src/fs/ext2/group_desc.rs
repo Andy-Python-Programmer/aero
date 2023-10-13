@@ -204,14 +204,16 @@ impl Bitmap {
 
     /// Allocates a free bit in the bitmap and returns its index.
     pub fn alloc(&mut self) -> Option<usize> {
-        for (i, e) in self.bitmap.iter_mut().enumerate() {
-            if *e != u8::MAX {
-                for bit in 0..8 {
-                    if !e.get_bit(bit) {
-                        e.set_bit(bit, true);
+        for (i, byte) in self.bitmap.iter_mut().enumerate() {
+            if *byte == u8::MAX {
+                continue;
+            }
 
-                        return Some(i * 8 + bit);
-                    }
+            for bit in 0..8 {
+                if !byte.get_bit(bit) {
+                    byte.set_bit(bit, true);
+
+                    return Some(i * 8 + bit);
                 }
             }
         }

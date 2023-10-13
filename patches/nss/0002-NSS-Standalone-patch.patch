@@ -1,0 +1,258 @@
+From ee4b3e43e0143f94289c418c0db5f803119e8be6 Mon Sep 17 00:00:00 2001
+From: Dennis Bonke <admin@dennisbonke.com>
+Date: Wed, 27 Apr 2022 20:35:40 +0200
+Subject: [PATCH 2/2] NSS Standalone patch
+
+Taken from Beyond Linux From Scratch (https://www.linuxfromscratch.org/patches/blfs/svn/nss-3.77-standalone-1.patch)
+
+Adds auto-generated nss.pc and nss-config script, and allows building without nspr in the source tree.
+Minimum NSPR version is now read out from package, instead of hardcoded value in the patch.
+
+Signed-off-by: Dennis Bonke <admin@dennisbonke.com>
+---
+ config/Makefile      |  41 ++++++++++++
+ config/nss-config.in | 152 +++++++++++++++++++++++++++++++++++++++++++
+ config/nss.pc.in     |  11 ++++
+ manifest.mn          |   2 +-
+ 4 files changed, 205 insertions(+), 1 deletion(-)
+ create mode 100644 config/Makefile
+ create mode 100644 config/nss-config.in
+ create mode 100644 config/nss.pc.in
+
+diff --git a/config/Makefile b/config/Makefile
+new file mode 100644
+index 0000000..662020a
+--- /dev/null
++++ b/config/Makefile
+@@ -0,0 +1,41 @@
++CORE_DEPTH = ..
++DEPTH      = ..
++
++include $(CORE_DEPTH)/coreconf/config.mk
++
++NSS_MAJOR_VERSION = `grep "NSS_VMAJOR" ../lib/nss/nss.h | awk '{print $$3}'`
++NSS_MINOR_VERSION = `grep "NSS_VMINOR" ../lib/nss/nss.h | awk '{print $$3}'`
++NSS_PATCH_VERSION = `grep "NSS_VPATCH" ../lib/nss/nss.h | awk '{print $$3}'`
++NSS_NSPR_MINIMUM = `head -n1 ../automation/release/nspr-version.txt`
++PREFIX = /usr
++
++all: export libs
++
++export:
++	# Create the nss.pc file
++	mkdir -p $(DIST)/lib/pkgconfig
++	sed -e "s,@prefix@,$(PREFIX)," \
++	    -e "s,@exec_prefix@,\$${prefix}," \
++	    -e "s,@libdir@,\$${prefix}/lib," \
++	    -e "s,@includedir@,\$${prefix}/include/nss," \
++	    -e "s,@NSS_MAJOR_VERSION@,$(NSS_MAJOR_VERSION),g" \
++	    -e "s,@NSS_MINOR_VERSION@,$(NSS_MINOR_VERSION)," \
++	    -e "s,@NSS_PATCH_VERSION@,$(NSS_PATCH_VERSION)," \
++	    -e "s,@NSS_NSPR_MINIMUM@,$(NSS_NSPR_MINIMUM)," \
++	    nss.pc.in > nss.pc
++	chmod 0644 nss.pc
++	cp -v nss.pc $(DIST)/lib/pkgconfig
++
++	# Create the nss-config script
++	mkdir -p $(DIST)/bin
++	sed -e "s,@prefix@,$(PREFIX)," \
++	    -e "s,@NSS_MAJOR_VERSION@,$(NSS_MAJOR_VERSION)," \
++	    -e "s,@NSS_MINOR_VERSION@,$(NSS_MINOR_VERSION)," \
++	    -e "s,@NSS_PATCH_VERSION@,$(NSS_PATCH_VERSION)," \
++	    nss-config.in > nss-config
++	chmod 0755 nss-config
++	cp -v nss-config $(DIST)/bin
++
++libs:
++
++dummy: all export libs
+diff --git a/config/nss-config.in b/config/nss-config.in
+new file mode 100644
+index 0000000..7e3750d
+--- /dev/null
++++ b/config/nss-config.in
+@@ -0,0 +1,152 @@
++#!/bin/sh
++
++prefix=@prefix@
++
++major_version=@NSS_MAJOR_VERSION@
++minor_version=@NSS_MINOR_VERSION@
++patch_version=@NSS_PATCH_VERSION@
++
++usage()
++{
++	cat <<EOF
++Usage: nss-config [OPTIONS] [LIBRARIES]
++Options:
++	[--prefix[=DIR]]
++	[--exec-prefix[=DIR]]
++	[--includedir[=DIR]]
++	[--libdir[=DIR]]
++	[--version]
++	[--libs]
++	[--cflags]
++Dynamic Libraries:
++	nss
++	nssutil
++	smime
++	ssl
++	softokn
++EOF
++	exit $1
++}
++
++if test $# -eq 0; then
++	usage 1 1>&2
++fi
++
++lib_nss=yes
++lib_nssutil=yes
++lib_smime=yes
++lib_ssl=yes
++lib_softokn=yes
++
++while test $# -gt 0; do
++  case "$1" in
++  -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
++  *) optarg= ;;
++  esac
++
++  case $1 in
++    --prefix=*)
++      prefix=$optarg
++      ;;
++    --prefix)
++      echo_prefix=yes
++      ;;
++    --exec-prefix=*)
++      exec_prefix=$optarg
++      ;;
++    --exec-prefix)
++      echo_exec_prefix=yes
++      ;;
++    --includedir=*)
++      includedir=$optarg
++      ;;
++    --includedir)
++      echo_includedir=yes
++      ;;
++    --libdir=*)
++      libdir=$optarg
++      ;;
++    --libdir)
++      echo_libdir=yes
++      ;;
++    --version)
++      echo ${major_version}.${minor_version}.${patch_version}
++      ;;
++    --cflags)
++      echo_cflags=yes
++      ;;
++    --libs)
++      echo_libs=yes
++      ;;
++    nss)
++      lib_nss=yes
++      ;;
++    nssutil)
++      lib_nssutil=yes
++      ;;
++    smime)
++      lib_smime=yes
++      ;;
++    ssl)
++      lib_ssl=yes
++      ;;
++    softokn)
++      lib_softokn=yes
++      ;;
++    *)
++      usage 1 1>&2
++      ;;
++  esac
++  shift
++done
++
++# Set variables that may be dependent upon other variables
++if test -z "$exec_prefix"; then
++    exec_prefix=`pkg-config --variable=exec_prefix nss`
++fi
++if test -z "$includedir"; then
++    includedir=`pkg-config --variable=includedir nss`
++fi
++if test -z "$libdir"; then
++    libdir=`pkg-config --variable=libdir nss`
++fi
++
++if test "$echo_prefix" = "yes"; then
++    echo $prefix
++fi
++
++if test "$echo_exec_prefix" = "yes"; then
++    echo $exec_prefix
++fi
++
++if test "$echo_includedir" = "yes"; then
++    echo $includedir
++fi
++
++if test "$echo_libdir" = "yes"; then
++    echo $libdir
++fi
++
++if test "$echo_cflags" = "yes"; then
++    echo -I$includedir
++fi
++
++if test "$echo_libs" = "yes"; then
++      libdirs="-L$libdir"
++      if test -n "$lib_nss"; then
++	libdirs="$libdirs -lnss${major_version}"
++      fi
++      if test -n "$lib_nssutil"; then
++        libdirs="$libdirs -lnssutil${major_version}"
++      fi
++      if test -n "$lib_smime"; then
++	libdirs="$libdirs -lsmime${major_version}"
++      fi
++      if test -n "$lib_ssl"; then
++	libdirs="$libdirs -lssl${major_version}"
++      fi
++      if test -n "$lib_softokn"; then
++        libdirs="$libdirs -lsoftokn${major_version}"
++      fi
++      echo $libdirs
++fi
+diff --git a/config/nss.pc.in b/config/nss.pc.in
+new file mode 100644
+index 0000000..c8c263d
+--- /dev/null
++++ b/config/nss.pc.in
+@@ -0,0 +1,11 @@
++prefix=@prefix@
++exec_prefix=@exec_prefix@
++libdir=@libdir@
++includedir=@includedir@
++
++Name: NSS
++Description: Network Security Services
++Version: @NSS_MAJOR_VERSION@.@NSS_MINOR_VERSION@.@NSS_PATCH_VERSION@
++Requires: nspr >= @NSS_NSPR_MINIMUM@
++Libs: -L@libdir@ -lnss@NSS_MAJOR_VERSION@ -lnssutil@NSS_MAJOR_VERSION@ -lsmime@NSS_MAJOR_VERSION@ -lssl@NSS_MAJOR_VERSION@ -lsoftokn@NSS_MAJOR_VERSION@
++Cflags: -I${includedir}
+diff --git a/manifest.mn b/manifest.mn
+index fbc420a..b983d88 100644
+--- a/manifest.mn
++++ b/manifest.mn
+@@ -10,7 +10,7 @@ IMPORTS =	nspr20/v4.8 \
+ 
+ RELEASE = nss
+ 
+-DIRS = coreconf lib cmd cpputil gtests
++DIRS = coreconf lib cmd cpputil gtests config
+ 
+ HAVE_ALL_TARGET := 1
+ 
+-- 
+2.36.0

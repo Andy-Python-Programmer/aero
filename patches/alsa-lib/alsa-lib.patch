@@ -1,0 +1,124 @@
+From 3b4d643d6648ead86648e0033868f903af6aeb70 Mon Sep 17 00:00:00 2001
+From: Dennis Bonke <admin@dennisbonke.com>
+Date: Wed, 2 Aug 2023 13:50:05 +0200
+Subject: [PATCH] Add Managarm support
+
+Signed-off-by: Dennis Bonke <admin@dennisbonke.com>
+---
+ src/conf.c           | 10 ++++++++++
+ src/pcm/pcm_ladspa.c |  5 +++++
+ src/ucm/main.c       |  5 +++++
+ src/ucm/parser.c     |  8 ++++++++
+ src/ucm/ucm_exec.c   |  7 +++++++
+ src/ucm/ucm_subs.c   |  5 +++++
+ 6 files changed, 40 insertions(+)
+
+diff --git a/src/conf.c b/src/conf.c
+index da51182..743e4cd 100644
+--- a/src/conf.c
++++ b/src/conf.c
+@@ -435,6 +435,16 @@ beginning:</P>
+ #include <pthread.h>
+ #endif
+ 
++#ifdef __aero__
++#define stat64 stat
++#define dirent64 dirent
++#define lstat64 lstat
++#define readdir64 readdir
++#define scandir64 scandir
++#define versionsort64 versionsort
++typedef ino_t ino64_t;
++#endif
++
+ #ifndef DOC_HIDDEN
+ 
+ #ifdef HAVE_LIBPTHREAD
+diff --git a/src/pcm/pcm_ladspa.c b/src/pcm/pcm_ladspa.c
+index 9b2b32d..dde5d2a 100644
+--- a/src/pcm/pcm_ladspa.c
++++ b/src/pcm/pcm_ladspa.c
+@@ -41,6 +41,11 @@
+ 
+ #include "ladspa.h"
+ 
++#ifdef __aero__
++#define readdir64 readdir
++#define dirent64 dirent
++#endif
++
+ #ifndef PIC
+ /* entry for static linking */
+ const char *_snd_module_pcm_ladspa = "";
+diff --git a/src/ucm/main.c b/src/ucm/main.c
+index 66ffd00..7448963 100644
+--- a/src/ucm/main.c
++++ b/src/ucm/main.c
+@@ -40,6 +40,11 @@
+ #include <sys/wait.h>
+ #include <limits.h>
+ 
++#ifdef __aero__
++#define stat64 stat
++#define fstat64 fstat
++#endif
++
+ /*
+  * misc
+  */
+diff --git a/src/ucm/parser.c b/src/ucm/parser.c
+index c111661..2115ac7 100644
+--- a/src/ucm/parser.c
++++ b/src/ucm/parser.c
+@@ -36,6 +36,14 @@
+ #include <dirent.h>
+ #include <limits.h>
+ 
++#ifdef __aero__
++#define stat64 stat
++#define lstat64 lstat
++#define scandir64 scandir
++#define versionsort64 versionsort
++#define dirent64 dirent
++#endif
++
+ static int filename_filter(const struct dirent64 *dirent);
+ 
+ static int parse_sequence(snd_use_case_mgr_t *uc_mgr,
+diff --git a/src/ucm/ucm_exec.c b/src/ucm/ucm_exec.c
+index 276cf59..a6890dd 100644
+--- a/src/ucm/ucm_exec.c
++++ b/src/ucm/ucm_exec.c
+@@ -42,6 +42,13 @@ extern char **environ;
+ #endif
+ #endif
+ 
++#ifdef __aero__
++#define stat64 stat
++#define dirent64 dirent
++#define lstat64 lstat
++#define readdir64 readdir
++#endif
++
+ static pthread_mutex_t fork_lock = PTHREAD_MUTEX_INITIALIZER;
+ 
+ /*
+diff --git a/src/ucm/ucm_subs.c b/src/ucm/ucm_subs.c
+index e62290e..b4dbff2 100644
+--- a/src/ucm/ucm_subs.c
++++ b/src/ucm/ucm_subs.c
+@@ -30,6 +30,11 @@
+ #include <limits.h>
+ #include <regex.h>
+ 
++#ifdef __aero__
++#define stat64 stat
++#define lstat64 lstat
++#endif
++
+ static char *rval_open_name(snd_use_case_mgr_t *uc_mgr)
+ {
+ 	const char *name;
+-- 
+2.40.1
+

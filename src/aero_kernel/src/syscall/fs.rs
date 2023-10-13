@@ -410,7 +410,10 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
             Ok(0)
         }
 
-        _ => unimplemented!("fcntl: unknown command {command}"),
+        _ => {
+            log::error!("fcntl: unknown command {command}");
+            Ok(0)
+        }
     }
 }
 

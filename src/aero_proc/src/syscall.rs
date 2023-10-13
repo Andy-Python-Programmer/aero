@@ -275,21 +275,22 @@ fn process_call_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<Expr> {
                     let len_ident = Ident::new(&format!("{}_len", ident), Span::call_site());
 
                     match arg_type {
-                                     ArgType::Slice(is_mut) => {
-                                         let slice_expr: Expr = if is_mut {
-                                             syn::parse_quote! {
-                                                 crate::utils::validate_slice_mut(#data_ident as *mut _, #len_ident)?
-                                             }
-                                         } else {
-                                             syn::parse_quote! {
-                                                 crate::utils::validate_slice(#data_ident as *const _, #len_ident)?
-                                             }
- };
+                        ArgType::Slice(is_mut) => {
+                            let slice_expr: Expr = if is_mut {
+                                syn::parse_quote! {
+                                    crate::utils::validate_slice_mut(#data_ident as *mut _, #len_ident)?
+                                }
+                            } else {
+                                syn::parse_quote! {
+                                    crate::utils::validate_slice(#data_ident as *const _, #len_ident)?
+                                }
+                            };
 
-                                         result.push(slice_expr);
-                                     }
-                                     ArgType::Array(is_mut) => {
-                                         let array_expr: Expr = if is_mut {
+                            result.push(slice_expr);
+                        }
+                        
+                        ArgType::Array(is_mut) => {
+                            let array_expr: Expr = if is_mut {
                                  syn::parse_quote! {
                                      crate::utils::validate_array_mut(#data_ident as *mut _)?
                                  }
@@ -299,6 +300,7 @@ fn process_call_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<Expr> {
 
                              result.push(array_expr);
                          }
+
                          ArgType::Pointer(is_mut) => {
                              let ptr_expr: Expr = if is_mut {
                                  syn::parse_quote!(#ident as *mut _)

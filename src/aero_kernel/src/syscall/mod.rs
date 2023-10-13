@@ -157,6 +157,10 @@ impl SysLog {
 
         result.push_str(alloc::format!(") = {:?}", self.result.unwrap()).as_str());
         log::trace!("{result}");
+
+        if self.result.unwrap().is_err() {
+            crate::unwind::unwind_stack_trace();
+        }
     }
 }
 

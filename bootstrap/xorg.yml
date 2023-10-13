@@ -1008,8 +1008,8 @@ packages:
     source:
       subdir: 'bundled'
       git: 'https://gitlab.freedesktop.org/xorg/xserver.git'
-      tag: 'xorg-server-21.1.8'
-      version: '21.1.8'
+      tag: 'xorg-server-1.20.14'
+      version: '1.20.14'
       tools_required:
         - host-autoconf-v2.69
         - host-automake-v1.16
@@ -2357,6 +2357,104 @@ packages:
   #      post_install:
   #        - args: 'glib-compile-schemas /usr/share/glib-2.0/schemas'
 
+  # Deprecated, please don't depend on this anymore. Only here for gtklife and hexchat.
+  - name: gtk+-2
+    source:
+      subdir: 'bundled'
+      url: 'https://download.gnome.org/sources/gtk+/2.24/gtk+-2.24.32.tar.xz'
+      format: 'tar.xz'
+      checksum: blake2b:03f4c0a8be98473f62bc8c86859937969c4169960a5f93d37ff6dcde00413215fa6c7125b15781bf50d67b40aa0056cb71b83fb50acb2c3467b5deb3c8d938f0
+      extract_path: 'gtk+-2.24.32'
+      patch-path-strip: 1
+      version: '2.24.32'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+        - host-libtool
+        - host-pkg-config
+        - host-xorg-macros
+        - host-glib
+      regenerate:
+        - args: ['autoreconf', '-fvi']
+    tools_required:
+      - host-gcc
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - atk
+      - cairo
+      - glib
+      - gdk-pixbuf
+      - libx11
+      - libxext
+      - libxcb
+      - pango
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--sysconfdir=/etc'
+        - '--with-sysroot=@SYSROOT_DIR@' # Set libtool's lt_sysroot.
+        - '--disable-gtk-doc-html'
+        - '--disable-cups'
+        - '--disable-papi'
+        - '--disable-introspection'
+        - '--disable-glibtest'
+        - '--disable-test-print-backend'
+        - '--enable-xkb'
+        environ:
+          ac_cv_func_getresuid: 'no'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+        quiet: true
+      # Rename a file to avoid conflicts, we will use gtk3 as default, so rename this one.
+      - args: ['mv', '-v', '@THIS_COLLECT_DIR@/usr/bin/gtk-update-icon-cache', '@THIS_COLLECT_DIR@/usr/bin/gtk2-update-icon-cache']
+    scripts:
+        post_install:
+          - args: ['gtk-query-immodules-2.0', '--update-cache']
+          - args: ['glib-compile-schemas', '/usr/share/glib-2.0/schemas']
+
+  # Collection of GSettings schemas for GNOME desktop
+  - name: gsettings-desktop-schemas
+    source:
+      subdir: 'bundled'
+      git: 'https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas.git'
+      tag: '42.0'
+      version: '42.0'
+    tools_required:
+      - host-gcc
+      - host-gobject-introspection
+      - host-libtool
+      - host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - glib
+    configure:
+      - args: |
+              sed -i -r 's:"(/system):"/org/gnome\1:g' @THIS_SOURCE_DIR@/schemas/*.in
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '-Dintrospection=false'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+    scripts:
+        post_install:
+          - args: 'glib-compile-schemas /usr/share/glib-2.0/schemas'
+
   - name: gtk+-3
     source:
       subdir: 'bundled'
@@ -2391,7 +2489,7 @@ packages:
       - libxi
       - harfbuzz
       - libxcursor
-      #- gsettings-desktop-schemas
+      - gsettings-desktop-schemas
       - dbus
     configure:
       - args:
@@ -2502,3 +2600,38 @@ packages:
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: gdk-pixbuf-xlib
+    source:
+      subdir: 'bundled'
+      url: 'https://download.gnome.org/sources/gdk-pixbuf-xlib/2.40/gdk-pixbuf-xlib-2.40.2.tar.xz'
+      format: 'tar.xz'
+      checksum: blake2b:a515e86bc69f59910f61fe9c275ab89c0732f0aa2cfb614ac94e597de420d25708a11b9b21313c7cfe3763434f45a8318412ae5889c24c8ed57dac68e09c0227
+      extract_path: 'gdk-pixbuf-xlib-2.40.2'
+      patch-path-strip: 1
+      version: '2.40.2'
+    tools_required:
+      - host-gcc
+      - host-libtool
+      - host-pkg-config
+      - virtual: pkgconfig-for-target
+        triple: "x86_64-aero"
+    pkgs_required:
+      - mlibc
+      - gdk-pixbuf
+      - libx11
+    configure:
+      - args:
+        - 'meson'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/userland/cross-file.ini'
+        - '--prefix=/usr'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+    scripts:
+        post_install:
+          - args: ['gdk-pixbuf-query-loaders', '--update-cache']

@@ -37,7 +37,7 @@ impl EventFd {
 impl INodeInterface for EventFd {
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> super::Result<usize> {
         let size = core::mem::size_of::<u64>();
-        assert!(buffer.len() == size);
+        assert!(buffer.len() >= size);
 
         // SAFETY: We have above verified that it is safe to dereference
         //         the value.
@@ -53,7 +53,7 @@ impl INodeInterface for EventFd {
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> super::Result<usize> {
         let size = core::mem::size_of::<u64>();
-        assert!(buffer.len() == size);
+        assert!(buffer.len() >= size);
 
         // SAFETY: We have above verified that it is safe to dereference
         //         the value.
