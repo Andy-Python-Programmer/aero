@@ -237,6 +237,7 @@ packages:
       - mlibc
       - xorg-util-macros
       - xorg-proto
+      - libxcb-util
     configure:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
@@ -564,44 +565,44 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
-  - name: mesa-demos
-    source:
-      subdir: 'bundled'
-      git: 'https://gitlab.freedesktop.org/mesa/demos.git/'
-      branch: 'master'
-      tools_required:
-        - host-autoconf-v2.69
-        - host-automake-v1.16
-        - host-libtool
-        - host-pkg-config
-        - host-xorg-macros
-      regenerate:
-        - args: ['./autogen.sh']
-          environ:
-            'NOCONFIGURE': 'yes'
-    tools_required:
-      - host-gcc
-    pkgs_required:
-      - mlibc
-      - mesa
-    configure:
-      - args:
-        - '@THIS_SOURCE_DIR@/configure'
-        - '--host=x86_64-aero'
-        - '--prefix=/usr'
-        - '--sysconfdir=/etc'
-        - '--localstatedir=/var'
-        - '--disable-static'
-        - '--disable-gles1' # Requires some linux header that we don't have
-        - '--disable-vg'
-        - '--disable-osmesa'
-        - '--disable-rbug'
-        - '--with-system-data-files'
-    build:
-    - args: ['make', '-j@PARALLELISM@']
-    - args: ['make', 'install']
-      environ:
-        DESTDIR: '@THIS_COLLECT_DIR@'
+  # - name: mesa-demos
+  #   source:
+  #     subdir: 'bundled'
+  #     git: 'https://gitlab.freedesktop.org/mesa/demos.git/'
+  #     branch: 'master'
+  #     tools_required:
+  #       - host-autoconf-v2.69
+  #       - host-automake-v1.16
+  #       - host-libtool
+  #       - host-pkg-config
+  #       - host-xorg-macros
+  #     regenerate:
+  #       - args: ['./autogen.sh']
+  #         environ:
+  #           'NOCONFIGURE': 'yes'
+  #   tools_required:
+  #     - host-gcc
+  #   pkgs_required:
+  #     - mlibc
+  #     - mesa
+  #   configure:
+  #     - args:
+  #       - '@THIS_SOURCE_DIR@/configure'
+  #       - '--host=x86_64-aero'
+  #       - '--prefix=/usr'
+  #       - '--sysconfdir=/etc'
+  #       - '--localstatedir=/var'
+  #       - '--disable-static'
+  #       - '--disable-gles1' # Requires some linux header that we don't have
+  #       - '--disable-vg'
+  #       - '--disable-osmesa'
+  #       - '--disable-rbug'
+  #       - '--with-system-data-files'
+  #   build:
+  #   - args: ['make', '-j@PARALLELISM@']
+  #   - args: ['make', 'install']
+  #     environ:
+  #       DESTDIR: '@THIS_COLLECT_DIR@'
 
   - name: mesa
     source:
@@ -868,8 +869,8 @@ packages:
     source:
       subdir: 'bundled'
       git: 'https://gitlab.freedesktop.org/pixman/pixman.git'
-      tag: 'pixman-0.40.0'
-      version: '0.40.0'
+      tag: 'pixman-0.42.2'
+      version: '0.42.2'
       tools_required:
         - host-autoconf-v2.69
         - host-automake-v1.16
@@ -2202,8 +2203,8 @@ packages:
     source:
       subdir: 'bundled'
       git: 'https://gitlab.gnome.org/GNOME/pango.git'
-      tag: '1.50.11'
-      version: '1.50.11'
+      tag: '1.50.14'
+      version: '1.50.14'
     tools_required:
       - host-pkg-config
       - host-gcc
@@ -2223,8 +2224,12 @@ packages:
       - libxext
       - harfbuzz
       - libxft
-    revision: 2
+    revision: 3
     configure:
+      # False positive with GCC 13 and -O3, see bug #903259
+      #
+      # https://gitlab.gnome.org/GNOME/pango/-/issues/740
+      - args: ['sed', '-i', '-e', '/\-Werror=array-bounds/d', '@THIS_SOURCE_DIR@/meson.build']
       - args:
         - 'meson'
         - '--cross-file'

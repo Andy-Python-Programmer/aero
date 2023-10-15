@@ -1,26 +1,20 @@
-From 2ac82af89ae503c8743dcd96bca3dcbddccd1eea Mon Sep 17 00:00:00 2001
-From: Dennis Bonke <admin@dennisbonke.com>
-Date: Thu, 23 Feb 2023 00:41:07 +0100
-Subject: [PATCH] aero: initial port
+From 608f6dc307498272ec3a6317cac3bbbe2a8b74b1 Mon Sep 17 00:00:00 2001
+From: Andy-Python-Programmer <andypythonappdeveloper@gmail.com>
+Date: Sun, 20 Nov 2022 12:21:43 +1100
+Subject: [PATCH] <xxx>
 
-Signed-off-by: Dennis Bonke <admin@dennisbonke.com>
 ---
- src/errno.rs           | 218 +++++++++++++++++++++++++++++++++++++++++
- src/features.rs        |   2 +-
- src/lib.rs             |  10 +-
+ src/errno.rs           | 217 +++++++++++++++++++++++++++++++++++++++++
+ src/lib.rs             |  12 ++-
  src/sys/mod.rs         |  10 +-
- src/sys/resource.rs    |   2 +
- src/sys/signal.rs      |  16 +--
- src/sys/socket/addr.rs |  26 +++--
- src/sys/socket/mod.rs  |   6 +-
+ src/sys/socket/addr.rs |  16 +--
+ src/sys/socket/mod.rs  |   5 +-
  src/sys/termios.rs     |  54 +++++++++-
- src/sys/time.rs        |   3 +-
- src/sys/timerfd.rs     |   2 +-
- src/unistd.rs          |  30 ++++++
- 12 files changed, 350 insertions(+), 29 deletions(-)
+ src/unistd.rs          |  27 +++++
+ 7 files changed, 327 insertions(+), 14 deletions(-)
 
 diff --git a/src/errno.rs b/src/errno.rs
-index 41420e8..aedf294 100644
+index 9c2dfe4..d26d63d 100644
 --- a/src/errno.rs
 +++ b/src/errno.rs
 @@ -22,6 +22,7 @@ cfg_if! {
@@ -41,7 +35,7 @@ index 41420e8..aedf294 100644
      match errno {
          UnknownErrno    => "Unknown errno",
          EPERM           => "Operation not permitted",
-@@ -1562,6 +1566,220 @@ mod consts {
+@@ -1557,6 +1561,219 @@ mod consts {
      }
  }
  
@@ -117,7 +111,7 @@ index 41420e8..aedf294 100644
 +        // ENOTDIR         = libc::ENOTDIR,
 +        // ENOTEMPTY       = libc::ENOTEMPTY,
 +        // ENOTSOCK        = libc::ENOTSOCK,
-+        ENOTSUP         = libc::ENOTSUP,
++        // ENOTSUP         = libc::ENOTSUP,
 +        ENOTTY          = libc::ENOTTY,
 +        // ENXIO           = libc::ENXIO,
 +        // EOPNOTSUPP      = libc::EOPNOTSUPP,
@@ -154,7 +148,7 @@ index 41420e8..aedf294 100644
 +
 +    // pub const EL2NSYNC: Errno = Errno::UnknownErrno;
 +
-+    pub const fn from_i32(e: i32) -> Errno {
++    pub fn from_i32(e: i32) -> Errno {
 +        use self::Errno::*;
 +
 +        match e {
@@ -224,7 +218,7 @@ index 41420e8..aedf294 100644
 +            // libc::ENOTDIR => ENOTDIR,
 +            // libc::ENOTEMPTY => ENOTEMPTY,
 +            // libc::ENOTSOCK => ENOTSOCK,
-+            libc::ENOTSUP => ENOTSUP,
++            // libc::ENOTSUP => ENOTSUP,
 +            // libc::ENOTTY => ENOTTY,
 +            // libc::ENXIO => ENXIO,
 +            // libc::EOPNOTSUPP => EOPNOTSUPP,
@@ -258,233 +252,126 @@ index 41420e8..aedf294 100644
 +         }
 +     }
 +}
-+
  
  #[cfg(target_os = "dragonfly")]
  mod consts {
-diff --git a/src/features.rs b/src/features.rs
-index 6108098..1f937e2 100644
---- a/src/features.rs
-+++ b/src/features.rs
-@@ -1,7 +1,7 @@
- //! Feature tests for OS functionality
- pub use self::os::*;
- 
--#[cfg(any(target_os = "linux", target_os = "android"))]
-+#[cfg(any(target_os = "linux", target_os = "android", target_os = "aero"))]
- mod os {
-     use std::os::unix::ffi::OsStrExt;
-     use crate::sys::utsname::uname;
 diff --git a/src/lib.rs b/src/lib.rs
-index d4dcbc4..e5f03c7 100644
+index 3b534a5..f7c8495 100644
 --- a/src/lib.rs
 +++ b/src/lib.rs
-@@ -43,9 +43,10 @@
+@@ -5,12 +5,13 @@
+ #![crate_name = "nix"]
  #![cfg(unix)]
- #![cfg_attr(docsrs, doc(cfg(all())))]
  #![allow(non_camel_case_types)]
 +#![allow(non_snake_case)]
+ // latest bitflags triggers a rustc bug with cross-crate macro expansions causing dead_code
+ // warnings even though the macro expands into something with allow(dead_code)
+ #![allow(dead_code)]
  #![cfg_attr(test, deny(warnings))]
  #![recursion_limit = "500"]
 -#![deny(unused)]
 +// #![deny(unused)]
- #![allow(unused_macros)]
- #![cfg_attr(not(feature = "default"), allow(unused_imports))]
  #![deny(unstable_features)]
-@@ -62,12 +63,13 @@ pub use libc;
+ #![deny(missing_copy_implementations)]
+ #![deny(missing_debug_implementations)]
+@@ -22,11 +23,13 @@ pub use libc;
  #[macro_use] mod macros;
  
  // Public crates
 -#[cfg(not(target_os = "redox"))]
 +#[cfg(not(any(target_os = "redox", target_os = "aero")))]
- feature! {
-     #![feature = "dir"]
-     #[allow(missing_docs)]
-     pub mod dir;
- }
+ pub mod dir;
 +#[cfg(not(target_os = "aero"))]
- feature! {
-     #![feature = "env"]
-     pub mod env;
-@@ -96,7 +98,7 @@ feature! {
-               target_os = "openbsd"))]
-     #[deny(missing_docs)]
-     pub mod ifaddrs;
--    #[cfg(not(target_os = "redox"))]
-+    #[cfg(not(any(target_os = "redox", target_os = "aero")))]
-     #[deny(missing_docs)]
-     pub mod net;
- }
-@@ -124,6 +126,7 @@ feature! {
-     #[allow(missing_docs)]
-     pub mod mqueue;
- }
+ pub mod env;
+ pub mod errno;
+ #[deny(missing_docs)]
 +#[cfg(not(target_os = "aero"))]
- feature! {
-     #![feature = "poll"]
-     pub mod poll;
-@@ -134,6 +137,7 @@ feature! {
-     #[deny(missing_docs)]
-     pub mod pty;
- }
-+#[cfg(not(target_os = "aero"))]
- feature! {
-     #![feature = "sched"]
-     pub mod sched;
-diff --git a/src/sys/mod.rs b/src/sys/mod.rs
-index e5639f2..2cbdff5 100644
---- a/src/sys/mod.rs
-+++ b/src/sys/mod.rs
-@@ -13,7 +13,7 @@ feature! {
- feature! {
-     #![feature = "event"]
- 
--    #[cfg(any(target_os = "android", target_os = "linux"))]
-+    #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
-     #[allow(missing_docs)]
-     pub mod epoll;
- 
-@@ -64,6 +64,7 @@ feature! {
-     pub mod personality;
- }
- 
-+#[cfg(not(target_os = "aero"))]
- feature! {
-     #![feature = "pthread"]
-     pub mod pthread;
-@@ -100,7 +101,7 @@ feature! {
-     pub mod resource;
- }
- 
+ pub mod features;
+ pub mod fcntl;
+ #[deny(missing_docs)]
+@@ -54,15 +57,18 @@ pub mod mount;
+           target_os = "netbsd"))]
+ pub mod mqueue;
+ #[deny(missing_docs)]
 -#[cfg(not(target_os = "redox"))]
 +#[cfg(not(any(target_os = "redox", target_os = "aero")))]
- feature! {
-     #![feature = "poll"]
-     pub mod select;
-@@ -152,6 +153,7 @@ feature! {
-     pub mod statfs;
- }
- 
+ pub mod net;
+ #[deny(missing_docs)]
 +#[cfg(not(target_os = "aero"))]
- feature! {
-     #![feature = "fs"]
-     pub mod statvfs;
-@@ -181,6 +183,7 @@ feature! {
-     pub mod utsname;
- }
- 
+ pub mod poll;
+ #[deny(missing_docs)]
+ #[cfg(not(any(target_os = "redox", target_os = "fuchsia")))]
+ pub mod pty;
 +#[cfg(not(target_os = "aero"))]
- feature! {
-     #![feature = "process"]
-     pub mod wait;
-@@ -192,7 +195,7 @@ feature! {
-     pub mod inotify;
- }
+ pub mod sched;
+ pub mod sys;
++#[cfg(not(target_os = "aero"))]
+ pub mod time;
+ // This can be implemented for other platforms as soon as libc
+ // provides bindings for them.
+diff --git a/src/sys/mod.rs b/src/sys/mod.rs
+index 43877a1..20dd8e5 100644
+--- a/src/sys/mod.rs
++++ b/src/sys/mod.rs
+@@ -6,7 +6,7 @@
+           target_os = "netbsd"))]
+ pub mod aio;
  
 -#[cfg(any(target_os = "android", target_os = "linux"))]
 +#[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
- feature! {
-     #![feature = "time"]
-     pub mod timerfd;
-@@ -203,6 +206,7 @@ feature! {
-         target_os = "freebsd",
-         target_os = "illumos",
-         target_os = "linux",
-+        target_os = "aero",
-         target_os = "netbsd"
-     ),
-     feature = "time",
-diff --git a/src/sys/resource.rs b/src/sys/resource.rs
-index 76ceaf5..3457acd 100644
---- a/src/sys/resource.rs
-+++ b/src/sys/resource.rs
-@@ -14,6 +14,7 @@ cfg_if! {
-         target_os = "openbsd",
-         target_os = "netbsd",
-         target_os = "macos",
-+        target_os = "aero",
-         target_os = "ios",
-         target_os = "android",
-         target_os = "dragonfly",
-@@ -48,6 +49,7 @@ libc_enum! {
-             target_os = "ios",
-             target_os = "android",
-             target_os = "dragonfly",
-+            target_os = "aero",
-             all(target_os = "linux", not(any(target_env = "gnu", target_env = "uclibc")))
-         ), repr(i32))]
-     #[non_exhaustive]
-diff --git a/src/sys/signal.rs b/src/sys/signal.rs
-index f982b4e..5621b6f 100644
---- a/src/sys/signal.rs
-+++ b/src/sys/signal.rs
-@@ -99,13 +99,13 @@ libc_enum!{
-         SIGSYS,
-         #[cfg(not(any(target_os = "android", target_os = "emscripten",
-                       target_os = "fuchsia", target_os = "linux",
--                      target_os = "redox")))]
-+                      target_os = "redox", target_os = "aero")))]
-         #[cfg_attr(docsrs, doc(cfg(all())))]
-         /// Emulator trap
-         SIGEMT,
-         #[cfg(not(any(target_os = "android", target_os = "emscripten",
-                       target_os = "fuchsia", target_os = "linux",
--                      target_os = "redox")))]
-+                      target_os = "redox", target_os = "aero")))]
-         #[cfg_attr(docsrs, doc(cfg(all())))]
-         /// Information request
-         SIGINFO,
-@@ -157,11 +157,11 @@ impl FromStr for Signal {
-             "SIGSYS" => Signal::SIGSYS,
-             #[cfg(not(any(target_os = "android", target_os = "emscripten",
-                           target_os = "fuchsia", target_os = "linux",
--                          target_os = "redox")))]
-+                          target_os = "redox", target_os = "aero")))]
-             "SIGEMT" => Signal::SIGEMT,
-             #[cfg(not(any(target_os = "android", target_os = "emscripten",
-                           target_os = "fuchsia", target_os = "linux",
--                          target_os = "redox")))]
-+                          target_os = "redox", target_os = "aero")))]
-             "SIGINFO" => Signal::SIGINFO,
-             _ => return Err(Errno::EINVAL),
-         })
-@@ -215,11 +215,11 @@ impl Signal {
-             Signal::SIGSYS => "SIGSYS",
-             #[cfg(not(any(target_os = "android", target_os = "emscripten",
-                           target_os = "fuchsia", target_os = "linux",
--                          target_os = "redox")))]
-+                          target_os = "redox", target_os = "aero")))]
-             Signal::SIGEMT => "SIGEMT",
-             #[cfg(not(any(target_os = "android", target_os = "emscripten",
-                           target_os = "fuchsia", target_os = "linux",
--                          target_os = "redox")))]
-+                          target_os = "redox", target_os = "aero")))]
-             Signal::SIGINFO => "SIGINFO",
-         }
-     }
-@@ -242,7 +242,7 @@ impl fmt::Display for Signal {
- #[cfg(feature = "signal")]
- pub use self::Signal::*;
+ pub mod epoll;
  
--#[cfg(target_os = "redox")]
-+#[cfg(any(target_os = "redox", target_os = "aero"))]
- #[cfg(feature = "signal")]
- const SIGNALS: [Signal; 29] = [
-     SIGHUP,
-@@ -349,7 +349,7 @@ const SIGNALS: [Signal; 30] = [
-     SIGSYS];
- #[cfg(not(any(target_os = "linux", target_os = "android",
-               target_os = "fuchsia", target_os = "emscripten",
--              target_os = "redox")))]
-+              target_os = "redox", target_os = "aero")))]
- #[cfg(feature = "signal")]
- const SIGNALS: [Signal; 31] = [
-     SIGHUP,
+ #[cfg(any(target_os = "dragonfly",
+@@ -42,6 +42,7 @@ pub mod mman;
+ #[cfg(target_os = "linux")]
+ pub mod personality;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod pthread;
+ 
+ #[cfg(any(target_os = "android",
+@@ -59,7 +60,8 @@ pub mod quota;
+ #[cfg(any(target_os = "linux"))]
+ pub mod reboot;
+ 
+-#[cfg(not(target_os = "redox"))]
++// #[cfg(not(target_os = "redox"))]
++#[cfg(not(any(target_os = "redox", target_os = "aero")))]
+ pub mod select;
+ 
+ #[cfg(any(target_os = "android",
+@@ -69,6 +71,7 @@ pub mod select;
+           target_os = "macos"))]
+ pub mod sendfile;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod signal;
+ 
+ #[cfg(any(target_os = "android", target_os = "linux"))]
+@@ -89,6 +92,7 @@ pub mod stat;
+ ))]
+ pub mod statfs;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod statvfs;
+ 
+ #[cfg(any(target_os = "android", target_os = "linux"))]
+@@ -100,8 +104,10 @@ pub mod time;
+ 
+ pub mod uio;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod utsname;
+ 
++#[cfg(not(target_os = "aero"))]
+ pub mod wait;
+ 
+ #[cfg(any(target_os = "android", target_os = "linux"))]
 diff --git a/src/sys/socket/addr.rs b/src/sys/socket/addr.rs
-index 4b8ab09..f23da26 100644
+index d486056..b367e18 100644
 --- a/src/sys/socket/addr.rs
 +++ b/src/sys/socket/addr.rs
-@@ -19,6 +19,7 @@ use std::os::unix::io::RawFd;
+@@ -17,6 +17,7 @@ use std::os::unix::io::RawFd;
  use crate::sys::socket::addr::sys_control::SysControlAddr;
  #[cfg(any(target_os = "android",
            target_os = "dragonfly",
@@ -492,7 +379,7 @@ index 4b8ab09..f23da26 100644
            target_os = "freebsd",
            target_os = "ios",
            target_os = "linux",
-@@ -76,6 +77,7 @@ pub enum AddressFamily {
+@@ -46,6 +47,7 @@ pub enum AddressFamily {
      /// Low level packet interface (see [`packet(7)`](https://man7.org/linux/man-pages/man7/packet.7.html))
      #[cfg(any(target_os = "android",
                target_os = "linux",
@@ -500,7 +387,7 @@ index 4b8ab09..f23da26 100644
                target_os = "illumos",
                target_os = "fuchsia",
                target_os = "solaris"))]
-@@ -376,7 +378,7 @@ impl AddressFamily {
+@@ -245,7 +247,7 @@ impl AddressFamily {
              libc::AF_NETLINK => Some(AddressFamily::Netlink),
              #[cfg(any(target_os = "macos", target_os = "macos"))]
              libc::AF_SYSTEM => Some(AddressFamily::System),
@@ -509,45 +396,7 @@ index 4b8ab09..f23da26 100644
              libc::AF_PACKET => Some(AddressFamily::Packet),
              #[cfg(any(target_os = "dragonfly",
                        target_os = "freebsd",
-@@ -707,7 +709,8 @@ pub struct UnixAddr {
-     #[cfg(any(target_os = "android",
-               target_os = "fuchsia",
-               target_os = "illumos",
--              target_os = "linux"
-+              target_os = "linux",
-+              target_os = "aero"
-     ))]
-     sun_len: u8
- }
-@@ -842,7 +845,8 @@ impl UnixAddr {
-             if #[cfg(any(target_os = "android",
-                      target_os = "fuchsia",
-                      target_os = "illumos",
--                     target_os = "linux"
-+                     target_os = "linux",
-+                     target_os = "aero"
-                 ))]
-             {
-                 UnixAddr { sun, sun_len }
-@@ -900,7 +904,8 @@ impl UnixAddr {
-             if #[cfg(any(target_os = "android",
-                      target_os = "fuchsia",
-                      target_os = "illumos",
--                     target_os = "linux"
-+                     target_os = "linux",
-+                     target_os = "aero"
-                 ))]
-             {
-                 self.sun_len
-@@ -940,6 +945,7 @@ impl SockaddrLike for UnixAddr {
-         cfg_if!{
-             if #[cfg(any(target_os = "android",
-                          target_os = "fuchsia",
-+                         target_os = "aero",
-                          target_os = "illumos",
-                          target_os = "linux"
-                 ))] {
-@@ -1817,6 +1823,7 @@ pub enum SockAddr {
+@@ -653,6 +655,7 @@ pub enum SockAddr {
      /// Datalink address (MAC)
      #[cfg(any(target_os = "android",
                target_os = "dragonfly",
@@ -555,64 +404,64 @@ index 4b8ab09..f23da26 100644
                target_os = "freebsd",
                target_os = "ios",
                target_os = "linux",
-@@ -1886,7 +1893,7 @@ impl SockAddr {
-             #[cfg(all(feature = "ioctl",
-                       any(target_os = "ios", target_os = "macos")))]
+@@ -705,7 +708,7 @@ impl SockAddr {
+             SockAddr::Alg(..) => AddressFamily::Alg,
+             #[cfg(any(target_os = "ios", target_os = "macos"))]
              SockAddr::SysControl(..) => AddressFamily::System,
 -            #[cfg(any(target_os = "android", target_os = "linux"))]
 +            #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
-             #[cfg(feature = "net")]
              SockAddr::Link(..) => AddressFamily::Packet,
              #[cfg(any(target_os = "dragonfly",
-@@ -1923,7 +1930,7 @@ impl SockAddr {
+                       target_os = "freebsd",
+@@ -738,7 +741,7 @@ impl SockAddr {
          if addr.is_null() {
              None
          } else {
 -            match AddressFamily::from_i32(i32::from((*addr).sa_family)) {
 +            match AddressFamily::from_i32((*addr).sa_family as i32) {
                  Some(AddressFamily::Unix) => None,
-                 #[cfg(feature = "net")]
                  Some(AddressFamily::Inet) => Some(SockAddr::Inet(
-@@ -1938,7 +1945,7 @@ impl SockAddr {
-                           any(target_os = "ios", target_os = "macos")))]
+                     InetAddr::V4(*(addr as *const libc::sockaddr_in)))),
+@@ -750,7 +753,7 @@ impl SockAddr {
+                 #[cfg(any(target_os = "ios", target_os = "macos"))]
                  Some(AddressFamily::System) => Some(SockAddr::SysControl(
                      SysControlAddr(*(addr as *const libc::sockaddr_ctl)))),
 -                #[cfg(any(target_os = "android", target_os = "linux"))]
 +                #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
-                 #[cfg(feature = "net")]
                  Some(AddressFamily::Packet) => Some(SockAddr::Link(
                      LinkAddr(*(addr as *const libc::sockaddr_ll)))),
-@@ -2026,7 +2033,7 @@ impl SockAddr {
+                 #[cfg(any(target_os = "dragonfly",
+@@ -833,7 +836,7 @@ impl SockAddr {
                  mem::size_of_val(sa) as libc::socklen_t
  
              ),
 -            #[cfg(any(target_os = "android", target_os = "linux"))]
 +            #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
-             #[cfg(feature = "net")]
              SockAddr::Link(LinkAddr(ref addr)) => (
                  // This cast is always allowed in C
-@@ -2077,6 +2084,7 @@ impl fmt::Display for SockAddr {
-                       any(target_os = "ios", target_os = "macos")))]
+                 unsafe {
+@@ -879,6 +882,7 @@ impl fmt::Display for SockAddr {
+             #[cfg(any(target_os = "ios", target_os = "macos"))]
              SockAddr::SysControl(ref sc) => sc.fmt(f),
              #[cfg(any(target_os = "android",
 +                      target_os = "aero",
                        target_os = "dragonfly",
                        target_os = "freebsd",
                        target_os = "ios",
-@@ -2381,7 +2389,7 @@ pub mod sys_control {
+@@ -1064,7 +1068,7 @@ pub mod sys_control {
  }
  
  
 -#[cfg(any(target_os = "android", target_os = "linux", target_os = "fuchsia"))]
-+#[cfg(any(target_os = "android", target_os = "linux", target_os = "fuchsia", target_os = "aero"))]
- #[cfg_attr(docsrs, doc(cfg(all())))]
++#[cfg(any(target_os = "android", target_os = "linux", target_os = "aero", target_os = "fuchsia"))]
  mod datalink {
-     feature! {
+     use super::{fmt, AddressFamily};
+ 
 diff --git a/src/sys/socket/mod.rs b/src/sys/socket/mod.rs
-index 3f26ccf..c83182b 100644
+index da5573c..3bac136 100644
 --- a/src/sys/socket/mod.rs
 +++ b/src/sys/socket/mod.rs
-@@ -344,6 +344,7 @@ libc_bitflags!{
+@@ -251,6 +251,7 @@ libc_bitflags!{
          ///
          /// Only used in [`recvmsg`](fn.recvmsg.html) function.
          #[cfg(any(target_os = "android",
@@ -620,15 +469,7 @@ index 3f26ccf..c83182b 100644
                    target_os = "dragonfly",
                    target_os = "freebsd",
                    target_os = "linux",
-@@ -355,6 +356,7 @@ libc_bitflags!{
-         /// (For more details, see [send(2)](https://linux.die.net/man/2/send)).
-         #[cfg(any(target_os = "android",
-                   target_os = "dragonfly",
-+                  target_os = "aero",
-                   target_os = "freebsd",
-                   target_os = "fuchsia",
-                   target_os = "haiku",
-@@ -1139,13 +1141,13 @@ impl<'a> ControlMessage<'a> {
+@@ -866,13 +867,13 @@ impl<'a> ControlMessage<'a> {
  
      /// The value of CMSG_LEN on this message.
      /// Safe because CMSG_LEN is always safe
@@ -645,10 +486,10 @@ index 3f26ccf..c83182b 100644
      fn cmsg_len(&self) -> libc::c_uint {
          unsafe{CMSG_LEN(self.len() as libc::c_uint)}
 diff --git a/src/sys/termios.rs b/src/sys/termios.rs
-index a107f8b..6a9453e 100644
+index 36a3601..c7bddc3 100644
 --- a/src/sys/termios.rs
 +++ b/src/sys/termios.rs
-@@ -375,10 +375,19 @@ impl From<BaudRate> for u32 {
+@@ -467,10 +467,19 @@ impl From<BaudRate> for u32 {
  }
  
  // TODO: Add TCSASOFT, which will require treating this as a bitfield.
@@ -666,9 +507,9 @@ index a107f8b..6a9453e 100644
 +#[cfg(not(target_os = "aero"))]
 +libc_enum! {
      #[repr(i32)]
-     #[non_exhaustive]
      pub enum SetArg {
-@@ -391,10 +400,19 @@ libc_enum! {
+         /// The change will occur immediately
+@@ -482,10 +491,19 @@ libc_enum! {
      }
  }
  
@@ -686,9 +527,9 @@ index a107f8b..6a9453e 100644
 +#[cfg(not(target_os = "aero"))]
 +libc_enum! {
      #[repr(i32)]
-     #[non_exhaustive]
      pub enum FlushArg {
-@@ -426,8 +444,17 @@ libc_enum! {
+         /// Flush data that was received but not read
+@@ -515,8 +533,17 @@ libc_enum! {
  }
  
  // TODO: Make this usable directly as a slice index.
@@ -704,18 +545,17 @@ index a107f8b..6a9453e 100644
 +#[cfg(not(target_os = "aero"))]
 +libc_enum! {
      #[repr(usize)]
-     #[non_exhaustive]
      pub enum SpecialCharacterIndices {
-@@ -524,7 +551,7 @@ libc_bitflags! {
+         VDISCARD,
+@@ -601,13 +628,22 @@ libc_bitflags! {
+         IXOFF;
          #[cfg(not(target_os = "redox"))]
-         #[cfg_attr(docsrs, doc(cfg(all())))]
          IXANY;
 -        #[cfg(not(target_os = "redox"))]
 +        #[cfg(not(any(target_os = "redox", target_os = "aero")))]
-         #[cfg_attr(docsrs, doc(cfg(all())))]
          IMAXBEL;
          #[cfg(any(target_os = "android", target_os = "linux", target_os = "macos"))]
-@@ -533,6 +560,15 @@ libc_bitflags! {
+         IUTF8;
      }
  }
  
@@ -731,7 +571,7 @@ index a107f8b..6a9453e 100644
  libc_bitflags! {
      /// Flags for configuring the output mode of a terminal
      pub struct OutputFlags: tcflag_t {
-@@ -744,8 +780,16 @@ libc_bitflags! {
+@@ -791,8 +827,16 @@ libc_bitflags! {
      }
  }
  
@@ -748,7 +588,7 @@ index a107f8b..6a9453e 100644
      pub struct ControlFlags: tcflag_t {
          #[cfg(any(target_os = "dragonfly",
                    target_os = "freebsd",
-@@ -824,8 +868,16 @@ libc_bitflags! {
+@@ -859,8 +903,16 @@ libc_bitflags! {
      }
  }
  
@@ -764,46 +604,12 @@ index a107f8b..6a9453e 100644
 +libc_bitflags! {
      pub struct LocalFlags: tcflag_t {
          #[cfg(not(target_os = "redox"))]
-         #[cfg_attr(docsrs, doc(cfg(all())))]
-diff --git a/src/sys/time.rs b/src/sys/time.rs
-index c1ab67b..f43cf63 100644
---- a/src/sys/time.rs
-+++ b/src/sys/time.rs
-@@ -16,6 +16,7 @@ const TIMESPEC_ZERO: libc::timespec = unsafe {
-             target_os = "freebsd",
-             target_os = "illumos",
-             target_os = "linux",
-+            target_os = "aero",
-             target_os = "netbsd"
-         ),
-         feature = "time",
-@@ -82,7 +83,7 @@ pub(crate) mod timer {
-         Interval(TimeSpec),
-     }
- 
--    #[cfg(any(target_os = "android", target_os = "linux"))]
-+    #[cfg(any(target_os = "android", target_os = "linux", target_os = "aero"))]
-     bitflags! {
-         /// Flags that are used for arming the timer.
-         pub struct TimerSetTimeFlags: libc::c_int {
-diff --git a/src/sys/timerfd.rs b/src/sys/timerfd.rs
-index 18acbae..0005b24 100644
---- a/src/sys/timerfd.rs
-+++ b/src/sys/timerfd.rs
-@@ -57,7 +57,7 @@ impl FromRawFd for TimerFd {
- libc_enum! {
-     /// The type of the clock used to mark the progress of the timer. For more
-     /// details on each kind of clock, please refer to [timerfd_create(2)](https://man7.org/linux/man-pages/man2/timerfd_create.2.html).
--    #[repr(i32)]
-+    #[repr(i64)]
-     #[non_exhaustive]
-     pub enum ClockId {
-         /// A settable system-wide real-time clock.
+         ECHOKE;
 diff --git a/src/unistd.rs b/src/unistd.rs
-index d6ccdf1..af3b4a0 100644
+index d94cb99..8e26266 100644
 --- a/src/unistd.rs
 +++ b/src/unistd.rs
-@@ -1132,6 +1132,7 @@ feature! {
+@@ -1081,6 +1081,7 @@ pub fn pipe() -> std::result::Result<(RawFd, RawFd), Error> {
  /// See also [pipe(2)](https://man7.org/linux/man-pages/man2/pipe.2.html)
  #[cfg(any(target_os = "android",
            target_os = "dragonfly",
@@ -811,7 +617,7 @@ index d6ccdf1..af3b4a0 100644
            target_os = "emscripten",
            target_os = "freebsd",
            target_os = "illumos",
-@@ -1550,6 +1551,7 @@ pub fn getgroups() -> Result<Vec<Gid>> {
+@@ -1478,6 +1479,7 @@ pub fn getgroups() -> Result<Vec<Gid>> {
  pub fn setgroups(groups: &[Gid]) -> Result<()> {
      cfg_if! {
          if #[cfg(any(target_os = "dragonfly",
@@ -819,7 +625,7 @@ index d6ccdf1..af3b4a0 100644
                       target_os = "freebsd",
                       target_os = "illumos",
                       target_os = "ios",
-@@ -1886,6 +1888,14 @@ feature! {
+@@ -1799,6 +1801,14 @@ pub fn mkstemp<P: ?Sized + NixPath>(template: &P) -> Result<(RawFd, PathBuf)> {
  /// - [pathconf(2)](https://pubs.opengroup.org/onlinepubs/9699919799/functions/pathconf.html)
  /// - [limits.h](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/limits.h.html)
  /// - [unistd.h](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/unistd.h.html)
@@ -833,8 +639,8 @@ index d6ccdf1..af3b4a0 100644
 +#[cfg(not(target_os = "aero"))]
  #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
  #[repr(i32)]
- #[non_exhaustive]
-@@ -2082,6 +2092,17 @@ feature! {
+ pub enum PathconfVar {
+@@ -1978,6 +1988,17 @@ pub fn pathconf<P: ?Sized + NixPath>(path: &P, var: PathconfVar) -> Result<Optio
  /// - [sysconf(3)](https://pubs.opengroup.org/onlinepubs/9699919799/functions/sysconf.html)
  /// - [unistd.h](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/unistd.h.html)
  /// - [limits.h](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/limits.h.html)
@@ -851,8 +657,8 @@ index d6ccdf1..af3b4a0 100644
 +#[cfg(not(target_os = "aero"))]
  #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
  #[repr(i32)]
- #[non_exhaustive]
-@@ -2875,6 +2896,7 @@ pub struct User {
+ pub enum SysconfVar {
+@@ -2633,6 +2654,7 @@ pub struct User {
      /// Login class
      #[cfg(not(any(target_os = "android",
                    target_os = "fuchsia",
@@ -860,7 +666,7 @@ index d6ccdf1..af3b4a0 100644
                    target_os = "illumos",
                    target_os = "linux",
                    target_os = "solaris")))]
-@@ -2883,6 +2905,7 @@ pub struct User {
+@@ -2640,6 +2662,7 @@ pub struct User {
      /// Last password change
      #[cfg(not(any(target_os = "android",
                    target_os = "fuchsia",
@@ -868,7 +674,7 @@ index d6ccdf1..af3b4a0 100644
                    target_os = "illumos",
                    target_os = "linux",
                    target_os = "solaris")))]
-@@ -2891,6 +2914,7 @@ pub struct User {
+@@ -2647,6 +2670,7 @@ pub struct User {
      /// Expiration time of account
      #[cfg(not(any(target_os = "android",
                    target_os = "fuchsia",
@@ -876,50 +682,27 @@ index d6ccdf1..af3b4a0 100644
                    target_os = "illumos",
                    target_os = "linux",
                    target_os = "solaris")))]
-@@ -2913,18 +2937,21 @@ impl From<&libc::passwd> for User {
-                 gid: Gid::from_raw(pw.pw_gid),
+@@ -2668,18 +2692,21 @@ impl From<&libc::passwd> for User {
+                 gid: Gid::from_raw((*pw).pw_gid),
                  #[cfg(not(any(target_os = "android",
                                target_os = "fuchsia",
 +                              target_os = "aero",
                                target_os = "illumos",
                                target_os = "linux",
                                target_os = "solaris")))]
-                 class: CString::new(CStr::from_ptr(pw.pw_class).to_bytes()).unwrap(),
+                 class: CString::new(CStr::from_ptr((*pw).pw_class).to_bytes()).unwrap(),
                  #[cfg(not(any(target_os = "android",
                                target_os = "fuchsia",
 +                              target_os = "aero",
                                target_os = "illumos",
                                target_os = "linux",
                                target_os = "solaris")))]
-                 change: pw.pw_change,
+                 change: (*pw).pw_change,
                  #[cfg(not(any(target_os = "android",
                                target_os = "fuchsia",
 +                              target_os = "aero",
                                target_os = "illumos",
                                target_os = "linux",
                                target_os = "solaris")))]
-@@ -2960,18 +2987,21 @@ impl From<User> for libc::passwd {
-             pw_gid: u.gid.0,
-             #[cfg(not(any(target_os = "android",
-                           target_os = "fuchsia",
-+                          target_os = "aero",
-                           target_os = "illumos",
-                           target_os = "linux",
-                           target_os = "solaris")))]
-             pw_class: u.class.into_raw(),
-             #[cfg(not(any(target_os = "android",
-                           target_os = "fuchsia",
-+                          target_os = "aero",
-                           target_os = "illumos",
-                           target_os = "linux",
-                           target_os = "solaris")))]
-             pw_change: u.change,
-             #[cfg(not(any(target_os = "android",
-                           target_os = "fuchsia",
-+                          target_os = "aero",
-                           target_os = "illumos",
-                           target_os = "linux",
-                           target_os = "solaris")))]
 -- 
-2.39.1
-
+2.38.1

@@ -53,21 +53,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     let stdout = OpenOptions::new().write(true).open(TTY_PATH)?; // fd=1
     let stderr = OpenOptions::new().write(true).open(TTY_PATH)?; // fd=2
 
-    // {
+    {
+        let stdset = FileSet::new([stdin, stdout, stderr]);
+        stdset.remove_cloexec();
+
+        Command::new("dhcpd").spawn()?;
+    }
+
+    // Swap the `/dev/tty` std{in,out,err} file descriptors with `/dev/null` to suppress the Xorg
+    // server logs.
+    let stdin = OpenOptions::new().read(true).open(DEV_NULL)?; // fd=0
+    let stdout = OpenOptions::new().write(true).open(DEV_NULL)?; // fd=1
+    let stderr = OpenOptions::new().write(true).open(DEV_NULL)?; // fd=2
+
     let stdset = FileSet::new([stdin, stdout, stderr]);
     stdset.remove_cloexec();
-
-    Command::new("dhcpd").spawn()?;
-    // }
-
-    // // Swap the `/dev/tty` std{in,out,err} file descriptors with `/dev/null` to suppress the Xorg
-    // // server logs.
-    // let stdin = OpenOptions::new().read(true).open(DEV_NULL)?; // fd=0
-    // let stdout = OpenOptions::new().write(true).open(DEV_NULL)?; // fd=1
-    // let stderr = OpenOptions::new().write(true).open(DEV_NULL)?; // fd=2
-
-    // let stdset = FileSet::new([stdin, stdout, stderr]);
-    // stdset.remove_cloexec();
 
     Command::new("startx")
         .env("RUST_BACKTRACE", "full")

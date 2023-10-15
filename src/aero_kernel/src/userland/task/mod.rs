@@ -400,6 +400,7 @@ impl Task {
             pending_io: AtomicBool::new(false),
 
             children: Mutex::new(Default::default()),
+            // sus? fixme?
             parent: Mutex::new(None),
 
             cwd: RwLock::new(Some(self.cwd.read().as_ref().unwrap().fork())),

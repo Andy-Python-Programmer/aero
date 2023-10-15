@@ -1190,10 +1190,10 @@ impl<'a> OffsetPageTable<'a> {
             let mut flags = entry.flags();
 
             // Check if the mapping is shared.
-            if !flags.contains(PageTableFlags::BIT_10) {
-                // Setup copy on write page.
-                flags.remove(PageTableFlags::WRITABLE);
-            }
+            // if !flags.contains(PageTableFlags::BIT_10) {
+            // Setup copy on write page.
+            flags.remove(PageTableFlags::WRITABLE);
+            // }
 
             entry.set_flags(flags);
             n1[i].set_frame(entry.frame().unwrap(), flags);

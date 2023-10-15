@@ -126,7 +126,7 @@ pub struct ArchTask {
     fs_base: VirtAddr,
     gs_base: VirtAddr,
 
-    fpu_storage: Option<Box<[u8]>>,
+    pub fpu_storage: Option<FpuState>,
 }
 
 impl ArchTask {
@@ -212,14 +212,15 @@ impl ArchTask {
         let old_registers_frame = unsafe { old_stack.offset::<InterruptErrorStack>() };
 
         let registers_frame = unsafe { new_stack.offset::<InterruptErrorStack>() };
-        *registers_frame = InterruptErrorStack::default();
+        *registers_frame = *old_registers_frame;
 
-        registers_frame.stack.iret.cs = old_registers_frame.stack.iret.cs;
-        registers_frame.stack.iret.ss = old_registers_frame.stack.iret.ss;
+        // registers_frame.stack.iret.cs = old_registers_frame.stack.iret.cs;
+        // registers_frame.stack.iret.ss = old_registers_frame.stack.iret.ss;
+        // registers_frame.stack.iret.rflags = old_registers_frame.stack.iret.rflags;
 
         registers_frame.stack.iret.rip = entry as _;
         registers_frame.stack.iret.rsp = usr_stack as _;
-        registers_frame.stack.iret.rflags = 0x200;
+        // registers_frame.stack.iret.rflags = 0x200;
 
         let context = unsafe { new_stack.offset::<Context>() };
 
@@ -231,8 +232,7 @@ impl ArchTask {
         context.rip = fork_init as _;
         context.cr3 = address_space.cr3().start_address().as_u64();
 
-        let mut fpu_storage = alloc_boxed_buffer::<u8>(xsave_size() as usize);
-        fpu_storage.copy_from_slice(self.fpu_storage.as_ref().unwrap());
+        let mut fpu_storage = self.fpu_storage.unwrap().clone();
 
         Ok(Self {
             context: unsafe { Unique::new_unchecked(context) },
@@ -241,7 +241,7 @@ impl ArchTask {
             user: true,
 
             // The FS and GS bases are inherited from the parent process.
-            fs_base: self.fs_base,
+            fs_base: VirtAddr::new(1),
             gs_base: self.gs_base,
 
             fpu_storage: Some(fpu_storage),
@@ -287,8 +287,7 @@ impl ArchTask {
         context.rip = fork_init as u64;
         context.cr3 = new_address_space.cr3().start_address().as_u64();
 
-        let mut fpu_storage = alloc_boxed_buffer::<u8>(xsave_size() as usize);
-        fpu_storage.copy_from_slice(self.fpu_storage.as_ref().unwrap());
+        let fpu_storage = self.fpu_storage.unwrap().clone();
 
         Ok(Self {
             context: unsafe { Unique::new_unchecked(context) },
@@ -344,30 +343,30 @@ impl ArchTask {
         self.fs_base = VirtAddr::zero();
         self.gs_base = VirtAddr::zero();
 
-        let mut fpu_storage = alloc_boxed_buffer::<u8>(xsave_size() as usize);
+        let mut fpu_storage = FpuState::default();
 
-        unsafe {
-            xrstor(&fpu_storage);
+        // unsafe {
+        //     xrstor(&fpu_storage);
 
-            // The x87 FPU control word is set to 0x37f (default), which masks all
-            // floating-point exceptions, sets rounding to nearest, and sets the x87
-            // FPU precision to 64 bits (as documented in Intel SDM volume 1 section
-            // 8.1.5).
-            const DEFAULT_FPU_CWORD: u16 = 0x37f;
-            asm!("fldcw [{}]", in(reg) &DEFAULT_FPU_CWORD, options(nomem));
+        //     // The x87 FPU control word is set to 0x37f (default), which masks all
+        //     // floating-point exceptions, sets rounding to nearest, and sets the x87
+        //     // FPU precision to 64 bits (as documented in Intel SDM volume 1 section
+        //     // 8.1.5).
+        //     const DEFAULT_FPU_CWORD: u16 = 0x37f;
+        //     asm!("fldcw [{}]", in(reg) &DEFAULT_FPU_CWORD, options(nomem));
 
-            // Set the default MXCSR value at reset as documented in Intel SDM volume 2A.
-            controlregs::write_mxcsr(
-                MxCsr::INVALID_OPERATION_MASK
-                    | MxCsr::DENORMAL_MASK
-                    | MxCsr::DIVIDE_BY_ZERO_MASK
-                    | MxCsr::OVERFLOW_MASK
-                    | MxCsr::UNDERFLOW_MASK
-                    | MxCsr::PRECISION_MASK,
-            );
+        //     // Set the default MXCSR value at reset as documented in Intel SDM volume 2A.
+        //     controlregs::write_mxcsr(
+        //         MxCsr::INVALID_OPERATION_MASK
+        //             | MxCsr::DENORMAL_MASK
+        //             | MxCsr::DIVIDE_BY_ZERO_MASK
+        //             | MxCsr::OVERFLOW_MASK
+        //             | MxCsr::UNDERFLOW_MASK
+        //             | MxCsr::PRECISION_MASK,
+        //     );
 
-            xsave(&mut fpu_storage);
-        }
+        //     xsave(&mut fpu_storage);
+        // }
 
         self.fpu_storage = Some(fpu_storage);
 
@@ -446,11 +445,9 @@ impl ArchTask {
     /// Allocates a new context switch stack for the process and returns the stack
     /// top address. See the module level documentation for more information.
     fn alloc_switch_stack() -> Result<VirtAddr, MapToError<Size4KiB>> {
-        let frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
-            .allocate_frame()
-            .ok_or(MapToError::FrameAllocationFailed)?;
+        let frame = FRAME_ALLOCATOR.alloc_zeroed(4096 * 4).unwrap();
 
-        Ok(frame.start_address().as_hhdm_virt() + Size4KiB::SIZE)
+        Ok(frame.as_hhdm_virt() + (4096u64 * 4))
     }
 
     fn unref_pt(&mut self) {
@@ -500,6 +497,7 @@ impl ArchTask {
     /// belongs to. This is required since we also update the GS base register with the
     /// `base` immediately (not waiting for a switch).
     pub unsafe fn set_gs_base(&mut self, base: VirtAddr) {
+        self.gs_base = base;
         io::set_inactive_gsbase(base);
     }
 
@@ -515,13 +513,14 @@ impl ArchTask {
     /// belongs to. This is required since we also update the FS base register with the
     /// `base` immediately (not waiting for a switch).
     pub unsafe fn set_fs_base(&mut self, base: VirtAddr) {
+        self.fs_base = base;
         io::set_fsbase(base);
     }
 }
 
 fn xsave_size() -> u32 {
-    static XSAVE_SIZE: Option<u32> = None;
-    XSAVE_SIZE.unwrap_or_else(|| {
+    static XSAVE_SIZE: spin::Once<u32> = spin::Once::new();
+    *XSAVE_SIZE.call_once(|| {
         CpuId::new()
             .get_extended_state_info()
             .expect("xsave: cpuid extended state info unavailable")
@@ -529,16 +528,89 @@ fn xsave_size() -> u32 {
     })
 }
 
-fn xsave(fpu: &mut Box<[u8]>) {
-    unsafe {
-        asm!("xsave [{}]", in(reg) fpu.as_ptr(), in("eax") 0xffffffffu32, in("edx") 0xffffffffu32)
+#[derive(Debug, Copy, Clone)]
+#[repr(C, align(16))]
+pub struct FpuState {
+    /// x87 FPU Control Word (16 bits). See Figure 8-6 in the Intel® 64 and IA-32 Architectures
+    /// Software Developer’s Manual Volume 1, for the layout of the x87 FPU control word.
+    pub fcw: u16,
+    /// x87 FPU Status Word (16 bits).
+    pub fsw: u16,
+    /// x87 FPU Tag Word (8 bits) + reserved (8 bits).
+    pub ftw: u16,
+    /// x87 FPU Opcode (16 bits).
+    pub fop: u16,
+    /// x87 FPU Instruction Pointer Offset ([31:0]). The contents of this field differ depending on
+    /// the current addressing mode (32-bit, 16-bit, or 64-bit) of the processor when the
+    /// FXSAVE instruction was executed: 32-bit mode — 32-bit IP offset. 16-bit mode — low 16
+    /// bits are IP offset; high 16 bits are reserved. 64-bit mode with REX.W — 64-bit IP
+    /// offset. 64-bit mode without REX.W — 32-bit IP offset.
+    pub fip: u32,
+    /// x87 FPU Instruction Pointer Selector (16 bits) + reserved (16 bits).
+    pub fcs: u32,
+    /// x87 FPU Instruction Operand (Data) Pointer Offset ([31:0]). The contents of this field
+    /// differ depending on the current addressing mode (32-bit, 16-bit, or 64-bit) of the
+    /// processor when the FXSAVE instruction was executed: 32-bit mode — 32-bit DP offset.
+    /// 16-bit mode — low 16 bits are DP offset; high 16 bits are reserved. 64-bit mode
+    /// with REX.W — 64-bit DP offset. 64-bit mode without REX.W — 32-bit DP offset.
+    pub fdp: u32,
+    /// x87 FPU Instruction Operand (Data) Pointer Selector (16 bits) + reserved.
+    pub fds: u32,
+    /// MXCSR Register State (32 bits).
+    pub mxcsr: u32,
+    /// This mask can be used to adjust values written to the MXCSR register, ensuring that
+    /// reserved bits are set to 0. Set the mask bits and flags in MXCSR to the mode of
+    /// operation desired for SSE and SSE2 SIMD floating-point instructions.
+    pub mxcsr_mask: u32,
+    /// x87 FPU or MMX technology registers. Layout: [12 .. 9 | 9 ... 0] LHS = reserved; RHS = mm.
+    pub mm: [u128; 8],
+    /// XMM registers (128 bits per field).
+    pub xmm: [u128; 16],
+    /// reserved.
+    pub _pad: [u64; 12],
+}
+
+impl Default for FpuState {
+    fn default() -> Self {
+        Self {
+            mxcsr: 0x1f80,
+            mxcsr_mask: 0x037f,
+            // rest are zeroed
+            fcw: 0,
+            fsw: 0,
+            ftw: 0,
+            fop: 0,
+            fip: 0,
+            fcs: 0,
+            fdp: 0,
+            fds: 0,
+            mm: [0; 8],
+            xmm: [u128::MAX; 16],
+            _pad: [0; 12],
+        }
     }
 }
 
-fn xrstor(fpu: &Box<[u8]>) {
-    unsafe {
-        asm!("xrstor [{}]", in(reg) fpu.as_ptr(), in("eax") 0xffffffffu32, in("edx") 0xffffffffu32);
-    }
+fn xsave(fpu: &mut FpuState) {
+    // The implicit EDX:EAX register pair specifies a 64-bit instruction mask. The specific state
+    // components saved correspond to the bits set in the requested-feature bitmap (RFBM), which is
+    // the logical-AND of EDX:EAX and XCR0.
+    // unsafe {
+    //     asm!("xsave64 [{}]", in(reg) fpu.as_ptr(), in("eax") u32::MAX, in("edx") u32::MAX,
+    // options(nomem, nostack)) }
+
+    use core::arch::x86_64::_fxsave64;
+
+    unsafe { _fxsave64(fpu as *mut FpuState as *mut _) }
+}
+
+fn xrstor(fpu: &FpuState) {
+    // unsafe {
+    //     asm!("xrstor [{}]", in(reg) fpu.as_ptr(), in("eax") u32::MAX, in("edx") u32::MAX,
+    // options(nomem, nostack)); }
+    use core::arch::x86_64::_fxrstor64;
+
+    unsafe { _fxrstor64(fpu as *const FpuState as *const _) }
 }
 
 /// Check out the module level documentation for more information.
@@ -548,6 +620,14 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
     }
 
     unsafe {
+        if let Some(fpu) = from.fpu_storage.as_mut() {
+            xsave(fpu);
+        }
+
+        if let Some(fpu) = to.fpu_storage.as_ref() {
+            xrstor(fpu);
+        }
+
         // Load the new thread's kernel stack pointer everywhere it's needed.
         let kstackp = to.context_switch_rsp.as_u64();
         super::gdt::TSS.rsp[0] = kstackp;
@@ -559,14 +639,6 @@ pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
 
         io::set_fsbase(to.fs_base);
         io::set_inactive_gsbase(to.gs_base);
-
-        if let Some(fpu) = from.fpu_storage.as_mut() {
-            xsave(fpu);
-        }
-
-        if let Some(fpu) = to.fpu_storage.as_ref() {
-            xrstor(fpu);
-        }
 
         task_spinup(&mut from.context, to.context.as_ref());
     }

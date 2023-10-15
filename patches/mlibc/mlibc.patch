@@ -1,17 +1,19 @@
-From d33a19a85fd625a2acf53f95f32c369b7f91e230 Mon Sep 17 00:00:00 2001
+From ea350e347faaa97e0499d34582ff068510809542 Mon Sep 17 00:00:00 2001
 From: Anhad Singh <andypythonappdeveloper@gmail.com>
-Date: Thu, 3 Aug 2023 16:36:12 +1000
-Subject: [PATCH] socket: implement shutdown(2)
+Date: Fri, 13 Oct 2023 22:50:34 +1100
+Subject: [PATCH] <xxx>
 
 Signed-off-by: Anhad Singh <andypythonappdeveloper@gmail.com>
 ---
- options/glibc/generic/execinfo.cpp            |  5 ++--
- options/posix/generic/sys-socket-stubs.cpp    |  9 ++++++--
- options/posix/include/mlibc/posix-sysdeps.hpp |  1 +
- sysdeps/aero/generic/signals.cpp              | 19 ++++++---------
- sysdeps/aero/generic/sockets.cpp              | 23 +++++++++++++++++++
- sysdeps/aero/include/aero/syscall.h           |  3 +++
- 6 files changed, 44 insertions(+), 16 deletions(-)
+ options/glibc/generic/execinfo.cpp     |  5 +++--
+ options/posix/generic/posix_stdlib.cpp |  2 +-
+ options/rtdl/generic/linker.cpp        |  2 +-
+ sysdeps/aero/generic/aero.cpp          |  9 ++++++---
+ sysdeps/aero/generic/filesystem.cpp    | 10 ++++++++++
+ sysdeps/aero/generic/signals.cpp       | 19 +++++++------------
+ sysdeps/aero/generic/sockets.cpp       | 16 ++++++++++++++++
+ sysdeps/aero/include/aero/syscall.h    |  2 ++
+ 8 files changed, 46 insertions(+), 19 deletions(-)
 
 diff --git a/options/glibc/generic/execinfo.cpp b/options/glibc/generic/execinfo.cpp
 index 3474615..aaf593a 100644
@@ -30,38 +32,74 @@ index 3474615..aaf593a 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
-diff --git a/options/posix/generic/sys-socket-stubs.cpp b/options/posix/generic/sys-socket-stubs.cpp
-index 1674945..037a994 100644
---- a/options/posix/generic/sys-socket-stubs.cpp
-+++ b/options/posix/generic/sys-socket-stubs.cpp
-@@ -187,8 +187,13 @@ int setsockopt(int fd, int layer, int number,
- 	return mlibc::sys_setsockopt(fd, layer, number, buffer, size);
+diff --git a/options/posix/generic/posix_stdlib.cpp b/options/posix/generic/posix_stdlib.cpp
+index 76b85dc..4b783b3 100644
+--- a/options/posix/generic/posix_stdlib.cpp
++++ b/options/posix/generic/posix_stdlib.cpp
+@@ -464,7 +464,7 @@ int grantpt(int) {
  }
  
--int shutdown(int, int) {
--	mlibc::infoLogger() << "mlibc: shutdown() is a no-op!" << frg::endlog;
-+int shutdown(int sockfd, int how) {
-+	auto sysdep = MLIBC_CHECK_OR_ENOSYS(mlibc::sys_shutdown, -1);
-+	if(int e = sysdep(sockfd, how); e) {
-+		errno = e;
-+		return -1;
-+	}
+ double strtod_l(const char *__restrict__ nptr, char ** __restrict__ endptr, locale_t) {
+-	mlibc::infoLogger() << "mlibc: strtod_l ignores locale!" << frg::endlog;
++	// mlibc::infoLogger() << "mlibc: strtod_l ignores locale!" << frg::endlog;
+ 	return strtod(nptr, endptr);
+ }
+ 
+diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
+index c604a50..eec0b7b 100644
+--- a/options/rtdl/generic/linker.cpp
++++ b/options/rtdl/generic/linker.cpp
+@@ -18,7 +18,7 @@ uintptr_t libraryBase = 0x41000000;
+ 
+ constexpr bool verbose = false;
+ constexpr bool stillSlightlyVerbose = false;
+-constexpr bool logBaseAddresses = false;
++constexpr bool logBaseAddresses = true;
+ constexpr bool logRpath = false;
+ constexpr bool eagerBinding = true;
+ 
+diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
+index e6bd277..a341fcf 100644
+--- a/sysdeps/aero/generic/aero.cpp
++++ b/sysdeps/aero/generic/aero.cpp
+@@ -303,10 +303,13 @@ int sys_clone(void *tcb, pid_t *tid_out, void *stack) {
+     return 0;
+ }
+ 
+-void sys_thread_exit() UNIMPLEMENTED("sys_thread_exit")
++void sys_thread_exit() {
++    syscall(SYS_EXIT);
++	__builtin_trap();
++}
+ 
+-    int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru,
+-                    pid_t *ret_pid) {
++int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru,
++                pid_t *ret_pid) {
+     if (ru) {
+         mlibc::infoLogger()
+             << "mlibc: struct rusage in sys_waitpid is unsupported"
+diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
+index fa5a369..33a11f4 100644
+--- a/sysdeps/aero/generic/filesystem.cpp
++++ b/sysdeps/aero/generic/filesystem.cpp
+@@ -39,6 +39,16 @@ int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
+     return 0;
+ }
+ 
++int sys_fsync(int) {
++	mlibc::infoLogger() << "\e[35mmlibc: fsync is a stub\e[39m" << frg::endlog;
++	return 0;
++}
 +
- 	return 0;
- }
- 
-diff --git a/options/posix/include/mlibc/posix-sysdeps.hpp b/options/posix/include/mlibc/posix-sysdeps.hpp
-index 9918188..c694079 100644
---- a/options/posix/include/mlibc/posix-sysdeps.hpp
-+++ b/options/posix/include/mlibc/posix-sysdeps.hpp
-@@ -159,6 +159,7 @@ int sys_vm_unmap(void *pointer, size_t size);
- 		void *__restrict buffer, socklen_t *__restrict size);
- [[gnu::weak]] int sys_setsockopt(int fd, int layer, int number,
- 		const void *buffer, socklen_t size);
-+[[gnu::weak]] int sys_shutdown(int sockfd, int how);
- [[gnu::weak]] int sys_sigprocmask(int how, const sigset_t *__restrict set,
- 		sigset_t *__restrict retrieve);
- [[gnu::weak]] int sys_sigaction(int, const struct sigaction *__restrict,
++int sys_fdatasync(int) {
++	mlibc::infoLogger() << "\e[35mmlibc: fdatasync() is a no-op\e[39m" << frg::endlog;
++	return 0;
++}
++
+ // clang-format off
+ int sys_pwrite(int fd, const void *buffer, size_t count, off_t off,
+                ssize_t *written) UNIMPLEMENTED("sys_pwrite") 
 diff --git a/sysdeps/aero/generic/signals.cpp b/sysdeps/aero/generic/signals.cpp
 index a6f69ff..611db69 100644
 --- a/sysdeps/aero/generic/signals.cpp
@@ -101,20 +139,13 @@ index a6f69ff..611db69 100644
  } // namespace mlibc
 \ No newline at end of file
 diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
-index 2db218c..ed3fc06 100644
+index 0cce3c0..10af36a 100644
 --- a/sysdeps/aero/generic/sockets.cpp
 +++ b/sysdeps/aero/generic/sockets.cpp
-@@ -221,6 +221,29 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
+@@ -221,6 +221,22 @@ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
      }
  }
  
-+int sys_shutdown(int sockfd, int how) {
-+    auto ret = syscall(SYS_SOCK_SHUTDOWN, sockfd, how);
-+    if(int e = sc_error(ret); e)
-+        return e;
-+    return 0;    
-+}
-+
 +int sys_peername(int fd, struct sockaddr *addr_ptr, socklen_t max_addr_length, socklen_t *actual_length) {
 +	auto ret = syscall(SYS_GETPEERNAME, fd, addr_ptr, &max_addr_length);
 +	if (int e = sc_error(ret); e)
@@ -131,18 +162,17 @@ index 2db218c..ed3fc06 100644
 +	return 0;
 +}
 +
- int sys_if_nametoindex(const char *name, unsigned int *ret) {
-     int fd = 0;
-     int r = sys_socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, AF_UNSPEC, &fd);
+ int sys_shutdown(int sockfd, int how) {
+     auto ret = syscall(SYS_SOCK_SHUTDOWN, sockfd, how);
+     if(int e = sc_error(ret); e)
 diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
-index d8bf99e..39c5b65 100644
+index 3f36e4d..39c5b65 100644
 --- a/sysdeps/aero/include/aero/syscall.h
 +++ b/sysdeps/aero/include/aero/syscall.h
-@@ -79,6 +79,9 @@
- #define SYS_SETPGID 72
+@@ -80,6 +80,8 @@
  #define SYS_SETSID 73
  #define SYS_GETPGID 74
-+#define SYS_SOCK_SHUTDOWN 75
+ #define SYS_SOCK_SHUTDOWN 75
 +#define SYS_GETPEERNAME 76
 +#define SYS_GETSOCKNAME 77
  

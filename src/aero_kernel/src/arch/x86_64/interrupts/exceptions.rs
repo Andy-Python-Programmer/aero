@@ -33,7 +33,24 @@ macro interrupt_exception(fn $name:ident() => $message:expr) {
         unwind::prepare_panic();
 
         log::error!("EXCEPTION: {}", $message);
+        log::error!("FS={:#x}", unsafe { io::rdmsr(io::IA32_FS_BASE) },);
+        log::error!("GS={:#x}", unsafe { io::rdmsr(io::IA32_GS_BASE) });
         log::error!("Stack: {:#x?}", stack);
+        dbg!(
+            scheduler::get_scheduler()
+                .current_task()
+                .arch_task()
+                .fpu_storage
+        );
+
+        if stack.stack.iret.rip != 0 {
+            unsafe {
+                log::error!(
+                    "RIP={:?}",
+                    core::slice::from_raw_parts(stack.stack.iret.rip as *const u8, 512)
+                );
+            }
+        }
 
         unwind::unwind_stack_trace();
 

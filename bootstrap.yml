@@ -125,8 +125,8 @@ sources:
   - name: rust-nix
     subdir: 'bundled'
     git: 'https://github.com/nix-rust/nix.git'
-    tag: 'v0.24.3'
-    version: '0.24.3'
+    tag: 'v0.22.3'
+    version: '0.22.3'
 
   - name: rust-mio-0.6
     subdir: 'bundled'
@@ -150,8 +150,8 @@ sources:
   - name: rust-libloading
     subdir: 'bundled'
     git: 'https://github.com/nagisa/rust_libloading.git'
-    tag: '0.8.1'
-    version: '0.8.1'
+    tag: '0.7.3'
+    version: '0.7.3'
 
   - name: rust-getrandom
     subdir: 'bundled'
@@ -966,7 +966,7 @@ packages:
         - '--libdir=lib'
         - '-Dmlibc_no_headers=true'
         - '-Ddisable_iconv_option=true'
-        - '--buildtype=release'
+        - '--buildtype=debug'
         - '-Dlinux_kernel_headers=@BUILD_ROOT@/packages/linux-headers/usr/include'
         - '@THIS_SOURCE_DIR@'
     build:
@@ -2202,6 +2202,10 @@ packages:
         - '-Dxattr=false'
         - '@THIS_SOURCE_DIR@'
         environ:
+          # The warning is false positive and the more recent versions of GCC. Workaround and disable the warning.
+          #
+          # Bug 1744: https://gitlab.gnome.org/GNOME/glib/-/issues/1744
+          CFLAGS: '-Wno-error=format-nonliteral'
           PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
           PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
     build:
