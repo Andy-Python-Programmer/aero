@@ -436,9 +436,9 @@ impl Mapping {
                     | PageTableFlags::USER_ACCESSIBLE
                     | self.protection.into();
 
-                if self.flags.contains(MMapFlags::MAP_SHARED) {
-                    flags |= PageTableFlags::BIT_10;
-                }
+                // if self.flags.contains(MMapFlags::MAP_SHARED) {
+                //     flags |= PageTableFlags::BIT_10;
+                // }
 
                 unsafe { offset_table.map_to(Page::containing_address(address), frame, flags) }
                     .expect("failed to map allocated frame for private file read")
@@ -784,45 +784,47 @@ impl VmProtected {
     ) -> Option<VirtAddr> {
         // Offset is required to be a multiple of page size.
         if (offset as u64 & (Size4KiB::SIZE - 1)) != 0 {
+            log::warn!("mmap: offset is not a multiple of page size");
             return None;
         }
 
         // The provided size should be non-zero.
         if size == 0 {
+            log::warn!("mmap: size is zero");
             return None;
         }
 
         if file.is_some() {
-            // SAFETY: We cannot mmap a file with the anonymous flag.
             if flags.contains(MMapFlags::MAP_ANONYOMUS) {
+                log::warn!("mmap: cannot map a file with the anonymous flag");
                 return None;
             }
         } else {
-            // SAFETY: Mappings not backed by a file must be anonymous.
             if !flags.contains(MMapFlags::MAP_ANONYOMUS) {
+                log::warn!("mmap: mappings not backed by a file cannot be anonymous");
                 return None;
             }
 
-            // SAFETY: We cannot have a shared and an anonymous mapping.
             if flags.contains(MMapFlags::MAP_SHARED) {
+                log::warn!("mmap: anonymous mappings cannot be shared");
                 return None;
             }
         }
 
         let size_aligned = align_up(size as _, Size4KiB::SIZE);
 
-        if address == VirtAddr::zero() {
+        let x = if address == VirtAddr::zero() {
             // We need to find a free mapping above 0x7000_0000_0000.
             self.find_any_above(VirtAddr::new(0x7000_0000_0000), size_aligned as _)
         } else if flags.contains(MMapFlags::MAP_FIXED) {
             // SAFETY: The provided address should be page aligned.
             if !address.is_aligned(Size4KiB::SIZE) {
+                log::warn!("mmap: fixed mapping address is not page aligned");
                 return None;
             }
 
-            // SAFETY: The provided (address + size) should be less then
-            // the userland max address.
             if (address + size_aligned) > userland_last_address() {
+                log::warn!("mmap: fixed mapping address is out of range");
                 return None;
             }
 
@@ -857,7 +859,38 @@ impl VmProtected {
             });
 
             addr
-        })
+        });
+
+        if x.is_none() {
+            log::warn!("mmap failed");
+            self.log();
+        }
+
+        x
+    }
+
+    fn log(&self) {
+        for mmap in &self.mappings {
+            if let Some(file) = mmap.file.as_ref() {
+                log::debug!(
+                    "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
+                    mmap.start_addr,
+                    mmap.end_addr,
+                    mmap.protection,
+                    mmap.flags,
+                    file.offset,
+                    file.size,
+                );
+            } else {
+                log::debug!(
+                    "{:?}..{:?} => {:?}, {:?}",
+                    mmap.start_addr,
+                    mmap.end_addr,
+                    mmap.protection,
+                    mmap.flags,
+                );
+            }
+        }
     }
 
     fn load_bin<'header>(

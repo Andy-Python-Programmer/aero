@@ -1,7 +1,7 @@
-From 9c3401a68d96016e19aafc60897ae450db07ead7 Mon Sep 17 00:00:00 2001
+From 610aa0dbb9c661c87172c0cf93de06efb019f80b Mon Sep 17 00:00:00 2001
 From: Dennis Bonke <admin@dennisbonke.com>
 Date: Sun, 2 Jan 2022 00:19:17 +0100
-Subject: [PATCH] Initial Aero support
+Subject: [PATCH 1/2] Initial Aero support
 
 Signed-off-by: Dennis Bonke <admin@dennisbonke.com>
 ---
@@ -18,7 +18,7 @@ Signed-off-by: Dennis Bonke <admin@dennisbonke.com>
  10 files changed, 27 insertions(+), 16 deletions(-)
 
 diff --git a/Source/JavaScriptCore/heap/BlockDirectory.cpp b/Source/JavaScriptCore/heap/BlockDirectory.cpp
-index e2a3540f86..d58513333e 100644
+index e2a3540f86..8b14455772 100644
 --- a/Source/JavaScriptCore/heap/BlockDirectory.cpp
 +++ b/Source/JavaScriptCore/heap/BlockDirectory.cpp
 @@ -60,7 +60,7 @@ void BlockDirectory::setSubspace(Subspace* subspace)
@@ -31,7 +31,7 @@ index e2a3540f86..d58513333e 100644
      ASSERT(!(MarkedBlock::blockSize % pageSize));
      auto numberOfPagesInMarkedBlock = MarkedBlock::blockSize / pageSize;
 diff --git a/Source/JavaScriptCore/runtime/MachineContext.h b/Source/JavaScriptCore/runtime/MachineContext.h
-index 7857bfc167..c14fbb5b6c 100644
+index 7857bfc167..4e396fa853 100644
 --- a/Source/JavaScriptCore/runtime/MachineContext.h
 +++ b/Source/JavaScriptCore/runtime/MachineContext.h
 @@ -346,7 +346,7 @@ static inline void*& framePointerImpl(mcontext_t& machineContext)
@@ -83,7 +83,7 @@ index e54387ef28..d159806731 100644
  #include <wtf/Compiler.h>
  #include <wtf/DataLog.h>
 diff --git a/Source/ThirdParty/ANGLE/src/common/platform.h b/Source/ThirdParty/ANGLE/src/common/platform.h
-index 41f3cf4ff7..77c4a91f29 100644
+index 41f3cf4ff7..745e1f4a56 100644
 --- a/Source/ThirdParty/ANGLE/src/common/platform.h
 +++ b/Source/ThirdParty/ANGLE/src/common/platform.h
 @@ -28,7 +28,7 @@
@@ -96,7 +96,7 @@ index 41f3cf4ff7..77c4a91f29 100644
  #else
  #    error Unsupported platform.
 diff --git a/Source/WTF/wtf/InlineASM.h b/Source/WTF/wtf/InlineASM.h
-index 8379a69659..8f7493769f 100644
+index 8379a69659..f2780b7947 100644
 --- a/Source/WTF/wtf/InlineASM.h
 +++ b/Source/WTF/wtf/InlineASM.h
 @@ -43,11 +43,11 @@
@@ -132,7 +132,7 @@ index 8379a69659..8f7493769f 100644
      // GNU as-compatible syntax.
  #define LOCAL_LABEL_STRING(name) ".L" #name
 diff --git a/Source/WTF/wtf/PlatformHave.h b/Source/WTF/wtf/PlatformHave.h
-index 61f13c2b73..de93124ef8 100644
+index 61f13c2b73..c4ff4a6252 100644
 --- a/Source/WTF/wtf/PlatformHave.h
 +++ b/Source/WTF/wtf/PlatformHave.h
 @@ -226,7 +226,7 @@
@@ -154,7 +154,7 @@ index 61f13c2b73..de93124ef8 100644
  #endif
  
 diff --git a/Source/WTF/wtf/PlatformOS.h b/Source/WTF/wtf/PlatformOS.h
-index e61715fb72..ed72f251a9 100644
+index e61715fb72..28cf97f28f 100644
 --- a/Source/WTF/wtf/PlatformOS.h
 +++ b/Source/WTF/wtf/PlatformOS.h
 @@ -118,6 +118,11 @@
@@ -202,7 +202,7 @@ index 743ef3dc84..3a61bc1dc3 100644
      }
      return SQLiteStatement { *this, sqlStatement.value() };
 diff --git a/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp b/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
-index efcd663f84..11e5467c10 100644
+index efcd663f84..81a425a037 100644
 --- a/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
 +++ b/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
 @@ -46,7 +46,7 @@
@@ -215,7 +215,7 @@ index efcd663f84..11e5467c10 100644
  #else
  #if USE(GLIB)
 diff --git a/Source/WebKit/Platform/unix/SharedMemoryUnix.cpp b/Source/WebKit/Platform/unix/SharedMemoryUnix.cpp
-index 998a2a7679..a490b3fb5f 100644
+index 998a2a7679..51c5d38573 100644
 --- a/Source/WebKit/Platform/unix/SharedMemoryUnix.cpp
 +++ b/Source/WebKit/Platform/unix/SharedMemoryUnix.cpp
 @@ -47,8 +47,10 @@
@@ -239,5 +239,5 @@ index 998a2a7679..a490b3fb5f 100644
  
          if (fileDescriptor != -1)
 -- 
-2.40.0
+2.42.0
 

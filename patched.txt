@@ -1,0 +1,5 @@
+bootstrap-host-gcc
+llvm
+rust-libc
+webkitgtk
+pixman

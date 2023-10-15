@@ -128,13 +128,5 @@ impl AddressSpace {
 }
 
 pub fn alloc_boxed_buffer<T>(size: usize) -> Box<[T]> {
-    if size == 0 {
-        return <Box<[T]>>::default();
-    }
-
-    let layout = unsafe { Layout::from_size_align_unchecked(size, 8) };
-    let ptr = unsafe { ::alloc::alloc::alloc_zeroed(layout) as *mut T };
-    let slice_ptr = core::ptr::slice_from_raw_parts_mut(ptr, size);
-
-    unsafe { Box::from_raw(slice_ptr) }
+    unsafe { Box::new_zeroed_slice(size).assume_init() }
 }

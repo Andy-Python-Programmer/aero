@@ -1,0 +1,181 @@
+From 4a70595e159ee5cc7336ed10c78f7f34284506e1 Mon Sep 17 00:00:00 2001
+From: Anhad Singh <andypythonappdeveloper@gmail.com>
+Date: Sat, 14 Oct 2023 16:58:18 +1100
+Subject: [PATCH 2/2] <xxx>
+
+Signed-off-by: Anhad Singh <andypythonappdeveloper@gmail.com>
+---
+ .../ANGLE/include/GLSLANG/ShaderVars.h        |  1 +
+ Source/WTF/wtf/MallocPtr.h                    |  1 +
+ .../WTF/wtf/text/IntegerToStringConversion.h  | 25 ++++++++++---------
+ .../WebCore/accessibility/AXObjectCache.cpp   |  2 ++
+ .../graphics/BifurcatedGraphicsContext.cpp    |  2 ++
+ .../platform/graphics/x11/XUniqueResource.h   |  2 ++
+ 6 files changed, 21 insertions(+), 12 deletions(-)
+
+diff --git a/Source/ThirdParty/ANGLE/include/GLSLANG/ShaderVars.h b/Source/ThirdParty/ANGLE/include/GLSLANG/ShaderVars.h
+index 68dc7e2e32..e127de3373 100644
+--- a/Source/ThirdParty/ANGLE/include/GLSLANG/ShaderVars.h
++++ b/Source/ThirdParty/ANGLE/include/GLSLANG/ShaderVars.h
+@@ -14,6 +14,7 @@
+ #include <array>
+ #include <string>
+ #include <vector>
++#include <cstdint>
+ 
+ // This type is defined here to simplify ANGLE's integration with glslang for SPIRv.
+ using ShCompileOptions = uint64_t;
+diff --git a/Source/WTF/wtf/MallocPtr.h b/Source/WTF/wtf/MallocPtr.h
+index 2cbd861efd..57e8e66100 100644
+--- a/Source/WTF/wtf/MallocPtr.h
++++ b/Source/WTF/wtf/MallocPtr.h
+@@ -25,6 +25,7 @@
+ 
+ #pragma once
+ 
++#include <utility>
+ #include <wtf/FastMalloc.h>
+ #include <wtf/Noncopyable.h>
+ 
+diff --git a/Source/WTF/wtf/text/IntegerToStringConversion.h b/Source/WTF/wtf/text/IntegerToStringConversion.h
+index 03f5861c33..666e53e564 100644
+--- a/Source/WTF/wtf/text/IntegerToStringConversion.h
++++ b/Source/WTF/wtf/text/IntegerToStringConversion.h
+@@ -21,15 +21,17 @@
+ 
+ #pragma once
+ 
++#include <string>
+ #include <wtf/text/LChar.h>
+ 
+ namespace WTF {
+ 
+-enum PositiveOrNegativeNumber { PositiveNumber, NegativeNumber };
++enum PositiveOrNegativeNumber { PositiveNumber,
++    NegativeNumber };
+ 
+-template<typename> struct IntegerToStringConversionTrait;
++template <typename> struct IntegerToStringConversionTrait;
+ 
+-template<typename T, typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType, typename AdditionalArgumentType>
++template <typename T, typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType, typename AdditionalArgumentType>
+ static typename IntegerToStringConversionTrait<T>::ReturnType numberToStringImpl(UnsignedIntegerType number, AdditionalArgumentType additionalArgument)
+ {
+     LChar buf[sizeof(UnsignedIntegerType) * 3 + 1];
+@@ -47,7 +49,7 @@ static typename IntegerToStringConversionTrait<T>::ReturnType numberToStringImpl
+     return IntegerToStringConversionTrait<T>::flush(p, static_cast<unsigned>(end - p), additionalArgument);
+ }
+ 
+-template<typename T, typename SignedIntegerType>
++template <typename T, typename SignedIntegerType>
+ inline typename IntegerToStringConversionTrait<T>::ReturnType numberToStringSigned(SignedIntegerType number, typename IntegerToStringConversionTrait<T>::AdditionalArgumentType* additionalArgument = nullptr)
+ {
+     if (number < 0)
+@@ -55,13 +57,13 @@ inline typename IntegerToStringConversionTrait<T>::ReturnType numberToStringSign
+     return numberToStringImpl<T, typename std::make_unsigned_t<SignedIntegerType>, PositiveNumber>(number, additionalArgument);
+ }
+ 
+-template<typename T, typename UnsignedIntegerType>
++template <typename T, typename UnsignedIntegerType>
+ inline typename IntegerToStringConversionTrait<T>::ReturnType numberToStringUnsigned(UnsignedIntegerType number, typename IntegerToStringConversionTrait<T>::AdditionalArgumentType* additionalArgument = nullptr)
+ {
+     return numberToStringImpl<T, UnsignedIntegerType, PositiveNumber>(number, additionalArgument);
+ }
+ 
+-template<typename CharacterType, typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType>
++template <typename CharacterType, typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType>
+ static void writeIntegerToBufferImpl(UnsignedIntegerType number, CharacterType* destination)
+ {
+     static_assert(!std::is_same_v<bool, std::remove_cv_t<UnsignedIntegerType>>, "'bool' not supported");
+@@ -76,12 +78,12 @@ static void writeIntegerToBufferImpl(UnsignedIntegerType number, CharacterType*
+ 
+     if (NumberType == NegativeNumber)
+         *--p = '-';
+-    
++
+     while (p < end)
+         *destination++ = static_cast<CharacterType>(*p++);
+ }
+ 
+-template<typename CharacterType, typename IntegerType>
++template <typename CharacterType, typename IntegerType>
+ inline void writeIntegerToBuffer(IntegerType integer, CharacterType* destination)
+ {
+     static_assert(std::is_integral_v<IntegerType>);
+@@ -95,7 +97,7 @@ inline void writeIntegerToBuffer(IntegerType integer, CharacterType* destination
+         return writeIntegerToBufferImpl<CharacterType, IntegerType, PositiveNumber>(integer, destination);
+ }
+ 
+-template<typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType>
++template <typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType>
+ constexpr unsigned lengthOfIntegerAsStringImpl(UnsignedIntegerType number)
+ {
+     unsigned length = 0;
+@@ -111,15 +113,14 @@ constexpr unsigned lengthOfIntegerAsStringImpl(UnsignedIntegerType number)
+     return length;
+ }
+ 
+-template<typename IntegerType>
++template <typename IntegerType>
+ constexpr unsigned lengthOfIntegerAsString(IntegerType integer)
+ {
+     static_assert(std::is_integral_v<IntegerType>);
+     if constexpr (std::is_same_v<IntegerType, bool>) {
+         UNUSED_PARAM(integer);
+         return 1;
+-    }
+-    else if constexpr (std::is_signed_v<IntegerType>) {
++    } else if constexpr (std::is_signed_v<IntegerType>) {
+         if (integer < 0)
+             return lengthOfIntegerAsStringImpl<typename std::make_unsigned_t<IntegerType>, NegativeNumber>(-integer);
+         return lengthOfIntegerAsStringImpl<typename std::make_unsigned_t<IntegerType>, PositiveNumber>(integer);
+diff --git a/Source/WebCore/accessibility/AXObjectCache.cpp b/Source/WebCore/accessibility/AXObjectCache.cpp
+index a7a867f60d..a08ce5078d 100644
+--- a/Source/WebCore/accessibility/AXObjectCache.cpp
++++ b/Source/WebCore/accessibility/AXObjectCache.cpp
+@@ -528,9 +528,11 @@ static bool isSimpleImage(const RenderObject& renderer)
+         || (is<HTMLImageElement>(node) && downcast<HTMLImageElement>(node)->hasAttributeWithoutSynchronization(usemapAttr)))
+         return false;
+ 
++#if ENABLE(VIDEO)
+     // Exclude video and audio elements.
+     if (is<HTMLMediaElement>(node))
+         return false;
++#endif
+ 
+     return true;
+ }
+diff --git a/Source/WebCore/platform/graphics/BifurcatedGraphicsContext.cpp b/Source/WebCore/platform/graphics/BifurcatedGraphicsContext.cpp
+index c0ce72c5ff..a2a58df7eb 100644
+--- a/Source/WebCore/platform/graphics/BifurcatedGraphicsContext.cpp
++++ b/Source/WebCore/platform/graphics/BifurcatedGraphicsContext.cpp
+@@ -269,11 +269,13 @@ void BifurcatedGraphicsContext::drawPattern(NativeImage& nativeImage, const Floa
+     m_secondaryContext.drawPattern(nativeImage, imageSize, destRect, tileRect, patternTransform, phase, spacing, options);
+ }
+ 
++#if ENABLE(VIDEO)
+ void BifurcatedGraphicsContext::paintFrameForMedia(MediaPlayer& player, const FloatRect& destination)
+ {
+     m_primaryContext.paintFrameForMedia(player, destination);
+     m_secondaryContext.paintFrameForMedia(player, destination);
+ }
++#endif
+ 
+ void BifurcatedGraphicsContext::scale(const FloatSize& scale)
+ {
+diff --git a/Source/WebCore/platform/graphics/x11/XUniqueResource.h b/Source/WebCore/platform/graphics/x11/XUniqueResource.h
+index 0da8b0c9c0..9296efca23 100644
+--- a/Source/WebCore/platform/graphics/x11/XUniqueResource.h
++++ b/Source/WebCore/platform/graphics/x11/XUniqueResource.h
+@@ -26,6 +26,8 @@
+ #ifndef XUniqueResource_h
+ #define XUniqueResource_h
+ 
++#include <utility>
++
+ #if PLATFORM(X11)
+ 
+ #if USE(GLX)
+-- 
+2.42.0
+

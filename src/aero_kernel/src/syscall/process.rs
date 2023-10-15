@@ -61,7 +61,8 @@ pub fn uname(buffer: &mut Utsname) -> Result<usize, SyscallError> {
         let init_bytes = init.as_bytes();
         let len = init.len();
 
-        fixed[..len].copy_from_slice(init_bytes)
+        fixed[..len].copy_from_slice(init_bytes);
+        fixed[len..].fill(0);
     }
 
     init_array(&mut buffer.sysname, "Aero");
@@ -103,6 +104,8 @@ pub fn clone(entry: usize, stack: usize) -> Result<usize, SyscallError> {
 pub fn kill(pid: usize, signal: usize) -> Result<usize, SyscallError> {
     // If pid is positive, then signal is sent to the process with that pid.
     if pid > 0 {
+        crate::unwind::unwind_stack_trace();
+
         let task = scheduler::get_scheduler()
             .find_task(TaskId::new(pid))
             .ok_or(SyscallError::ESRCH)?;

@@ -11,7 +11,7 @@ patched_libs = {
     "calloop": "0.9.3",
     "libc": "0.2.149",
     "getrandom": "0.2.9",
-    "libloading": "0.8.1",
+    "libloading": "0.7.3",
     "mio": ["0.6.23", "0.8.3"],
     "nix": "0.24.3",
     "num_cpus": "1.15.0",

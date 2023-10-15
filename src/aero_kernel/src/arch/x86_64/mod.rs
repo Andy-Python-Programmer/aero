@@ -247,7 +247,9 @@ fn enable_xsave() {
     unsafe { controlregs::write_cr4(cr4) }
 
     let mut xcr0 = controlregs::read_xcr0();
-    xcr0.insert(XCr0Flags::X87 | XCr0Flags::SSE);
+    xcr0.insert(XCr0Flags::X87 | XCr0Flags::SSE | XCr0Flags::AVX);
+    // xcr0.insert(XCr0Flags::BNDREG | XCr0Flags::BNDCSR);
+    // xcr0.insert(XCr0Flags::ZMM_HI256 | XCr0Flags::HI16_ZMM | XCr0Flags::OPMASK);
     unsafe { controlregs::write_xcr0(xcr0) }
 }
 
