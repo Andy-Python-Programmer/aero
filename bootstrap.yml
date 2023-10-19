@@ -73,9 +73,9 @@ sources:
 
   - name: rust
     subdir: 'bundled'
-    git: 'https://github.com/rust-lang/rust.git'
+    git: 'https://github.com/aero-os/rust.git'
     branch: 'master'
-    commit: '0416b1a6f6d5c42696494e1a3a33580fd3f669d8'
+    commit: 'dee2030a44019048171c03d7ddcb134b945df8c5'
 
   - name: llvm
     subdir: 'bundled'
@@ -386,19 +386,20 @@ tools:
     compile:
       - args: |
             cat << EOF > config.toml
-            changelog-seen = 2
+            change-id = 115898
 
             [llvm]
             download-ci-llvm = false
             targets = "X86"
 
             [build]
-            target = ["x86_64-unknown-aero-system", "x86_64-unknown-linux-gnu"]
+            target = ["x86_64-unknown-aero", "x86_64-unknown-linux-gnu"]
             build-dir = "@THIS_BUILD_DIR@"
             docs = false
 
             [install]
             prefix = "@PREFIX@"
+            sysconfdir = "@PREFIX@/etc"
 
             [rust]
             codegen-tests = false
@@ -407,7 +408,7 @@ tools:
             [target.x86_64-unknown-linux-gnu]
             llvm-config = "@BUILD_ROOT@/tools/host-llvm/bin/llvm-config"
 
-            [target.x86_64-unknown-aero-system]
+            [target.x86_64-unknown-aero]
             llvm-config = "@BUILD_ROOT@/tools/host-llvm/bin/llvm-config"
             EOF
       - args: ['python3', '@THIS_SOURCE_DIR@/x.py', 'build', '--stage', '2', '-j', '@PARALLELISM@']
