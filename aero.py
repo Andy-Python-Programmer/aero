@@ -341,13 +341,13 @@ def build_userland(args):
 
     command = 'build'
     # TODO: handle the unbased architectures.
-    cmd_args = ["--target", "x86_64-unknown-aero-system",
+    cmd_args = ["--target", "x86_64-unknown-aero",
 
                 # cargo config
                 "--config", f"build.rustc = '{get_rustc()}'",
-                "--config", "build.target = 'x86_64-unknown-aero-system'",
+                "--config", "build.target = 'x86_64-unknown-aero'",
                 "--config", f"build.rustflags = ['-C', 'link-args=-no-pie -B {get_binutils()} --sysroot {get_mlibc()}', '-lc']",
-                "--config", f"target.x86_64-unknown-aero-system.linker = '{get_gcc()}'",
+                "--config", f"target.x86_64-unknown-aero.linker = '{get_gcc()}'",
 
                 "-Z", "unstable-options"]
 
