@@ -17,7 +17,7 @@
 
 use aero_syscall::prelude::*;
 use aero_syscall::signal::SigProcMask;
-use aero_syscall::{OpenFlags, Stat, SyscallError, TimeSpec};
+use aero_syscall::{OpenFlags, Stat, SyscallError, TimeSpec, AT_FDCWD};
 
 use crate::fs::cache::{self, DirCacheImpl};
 use crate::fs::epoll::EPoll;
@@ -70,7 +70,19 @@ pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> {
+pub fn open(fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> {
+    let dir = match fd as isize {
+        AT_FDCWD => {
+            if !path.is_absolute() {
+                scheduler::get_scheduler().current_task().cwd_dirent()
+            } else {
+                crate::fs::root_dir().clone()
+            }
+        }
+
+        _ => todo!(),
+    };
+
     let mut flags = OpenFlags::from_bits(mode).ok_or(SyscallError::EINVAL)?;
 
     if !flags.intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR | OpenFlags::O_WRONLY) {
@@ -83,7 +95,7 @@ pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError>
         lookup_mode = LookupMode::Create;
     }
 
-    let inode = fs::lookup_path_with_mode(path, lookup_mode)?;
+    let inode = fs::lookup_path_with(dir, path, lookup_mode)?;
 
     if flags.contains(OpenFlags::O_DIRECTORY) && !inode.inode().metadata()?.is_directory() {
         return Err(SyscallError::ENOTDIR);
