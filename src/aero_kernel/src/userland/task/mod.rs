@@ -204,7 +204,7 @@ pub struct Task {
     sleep_duration: AtomicUsize,
     signals: Signals,
 
-    executable: Mutex<Option<DirCacheItem>>,
+    pub executable: Mutex<Option<DirCacheItem>>,
     pending_io: AtomicBool,
 
     pub(super) link: intrusive_collections::LinkedListLink,
@@ -545,11 +545,47 @@ impl Task {
 
     pub(super) fn update_state(&self, state: TaskState) {
         if state == TaskState::Zombie {
-            self.file_table.0.read().iter().for_each(|file| {
-                if let Some(a) = file {
-                    a.inode().close(*a.flags.read());
-                }
-            });
+            // [41] syscall/net.rs:178 (tid=33, pid=33) debug [aero_kernel/src/syscall/net.rs:178]
+            // current_task.file_table.open_file(entry, sockfd_flags) = Ok( 17,
+            // )
+            // [41] syscall/process.rs:157 (tid=33, pid=33) debug mlibc: getsockopt() call with
+            // SOL_SOCKET and SO_TYPE is unimplemented, hardcoding SOCK_STREAM
+            // [41] syscall/process.rs:157 (tid=33, pid=33) debug mlibc: getsockopt() call with
+            // SOL_SOCKET and SO_KEEPALIVE is unimplemented, hardcoding 0 [41] syscall/
+            // process.rs:157 (tid=33, pid=33) debug mlibc: setsockopt(SO_PASSCRED) is not
+            // implemented correctly [41] socket/netlink.rs:263 (tid=33, pid=33) warn
+            // netlink::send(flags=NOSIGNAL) [41] socket/netlink.rs:228 (tid=33, pid=33)
+            // debug [aero_kernel/src/socket/netlink.rs:228] message_hdr.iovecs_mut() = [
+            // IoVec {
+            // base: 0x0000000000000000,
+            // len: 0,
+            // },
+            // ]
+            // [42] syscall/process.rs:157 (tid=40, pid=40) debug mlibc: sys_setuid is a stub
+            // [42] syscall/process.rs:157 (tid=40, pid=40) debug In function mlock, file
+            // ../../../bundled/mlibc/options/posix/generic/sys-mman-stubs.cpp:22
+            // __ensure(Library function fails due to missing sysdep) failed
+            // [42] syscall/process.rs:157 (tid=40, pid=40) debug mlibc: uselocale() is a no-op
+            // [42] syscall/process.rs:157 (tid=40, pid=40) debug mlibc: sys_setuid is a stub
+            // [42] syscall/process.rs:157 (tid=40, pid=40) debug mlibc: sys_seteuid is a stub
+            // [42] syscall/process.rs:157 (tid=40, pid=40) debug mlibc: sys_setgid is a stub
+            // [42] syscall/process.rs:157 (tid=40, pid=40) debug mlibc: sys_getegid is a stub
+            // [42] syscall/net.rs:178 (tid=40, pid=40) debug [aero_kernel/src/syscall/net.rs:178]
+            // current_task.file_table.open_file(entry, sockfd_flags) = Ok( 0,
+            // )
+            //
+            // exit err 5 Input/output error
+
+            // TODO: is_process_leader() && children.len() == 0 and then
+            // assert!(self.file_table.strong_count() == 1);
+            dbg!(Arc::strong_count(&self.file_table));
+            if Arc::strong_count(&self.file_table) == 1 {
+                self.file_table.0.read().iter().for_each(|file| {
+                    if let Some(handle) = file {
+                        handle.inode().close(handle.flags());
+                    }
+                });
+            }
         }
 
         // if state != TaskState::Runnable {

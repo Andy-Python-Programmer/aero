@@ -229,7 +229,6 @@ impl Tty {
 impl INodeInterface for Tty {
     fn open(
         &self,
-        _flags: aero_syscall::OpenFlags,
         _handle: Arc<fs::file_table::FileHandle>,
     ) -> fs::Result<Option<fs::cache::DirCacheItem>> {
         let connected = self.connected.fetch_add(1, Ordering::SeqCst);

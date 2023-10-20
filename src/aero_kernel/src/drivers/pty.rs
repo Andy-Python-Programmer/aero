@@ -330,11 +330,7 @@ impl devfs::Device for Ptmx {
 }
 
 impl INodeInterface for Ptmx {
-    fn open(
-        &self,
-        _flags: aero_syscall::OpenFlags,
-        _handle: Arc<fs::file_table::FileHandle>,
-    ) -> fs::Result<Option<DirCacheItem>> {
+    fn open(&self, _handle: Arc<fs::file_table::FileHandle>) -> fs::Result<Option<DirCacheItem>> {
         let master = Arc::new(Master::new());
         let slave = Slave::new(master.clone());
         let inode = DirEntry::from_inode(master, String::from("<pty>"));

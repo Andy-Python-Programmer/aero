@@ -29,15 +29,15 @@ pub struct MessageHeader {
     /// Pointer to the socket address structure.
     name: *mut u8,
     /// Size of the socket address structure.
-    name_len: usize,
+    name_len: u32,
 
     iovec: *mut IoVec, // todo: use Option<NonNull<IoVec>>
     iovec_len: i32,    // todo: use ffi::c_int
 
     control: *const u8,
-    control_len: usize,
+    control_len: u32,
 
-    flags: i32, // todo: use ffi::c_int
+    pub flags: i32, // todo: use ffi::c_int
 }
 
 impl MessageHeader {
@@ -46,7 +46,7 @@ impl MessageHeader {
             return None;
         }
 
-        assert!(self.name_len == core::mem::size_of::<T>());
+        assert!(self.name_len >= core::mem::size_of::<T>() as u32);
 
         // SAFETY: We know that the `name` pointer is valid and we have an exclusive reference to
         // it. The size of name is checked above with the size of `T` and `T` is a `SocketAddr` so,
@@ -67,7 +67,7 @@ impl MessageHeader {
 }
 
 // options/posix/include/bits/posix/iovec.h
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[repr(C)]
 pub struct IoVec {
     base: *mut u8, // todo: use Option<NonNull<u8>>

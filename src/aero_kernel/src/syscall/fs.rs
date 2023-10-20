@@ -93,10 +93,9 @@ pub fn open(_fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError>
         inode.inode().truncate(0)?;
     }
 
-    Ok(scheduler::get_scheduler()
-        .current_task()
+    Ok(scheduler::current_thread()
         .file_table
-        .open_file(inode, flags)?)
+        .open_file(inode.clone(), flags)?)
 }
 
 #[syscall]
@@ -234,12 +233,14 @@ pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, Syscal
         // Sets the close-on-exec file descriptor flag. This is equivalent
         // to `fcntl(fd, F_SETFD, FD_CLOEXEC)`
         FIOCLEX => {
-            handle.flags.write().insert(OpenFlags::O_CLOEXEC);
+            let flags = handle.flags();
+            handle.set_flags(flags | OpenFlags::O_CLOEXEC);
             Ok(0)
         }
 
         FIONBIO => {
-            handle.flags.write().insert(OpenFlags::O_NONBLOCK);
+            let flags = handle.flags();
+            handle.set_flags(flags | OpenFlags::O_NONBLOCK);
             Ok(0)
         }
 
@@ -354,7 +355,7 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
         aero_syscall::prelude::F_DUPFD => scheduler::get_scheduler()
             .current_task()
             .file_table
-            .duplicate(fd, DuplicateHint::GreatorOrEqual(arg), *handle.flags.read()),
+            .duplicate(fd, DuplicateHint::GreatorOrEqual(arg), handle.flags()),
 
         aero_syscall::prelude::F_DUPFD_CLOEXEC => scheduler::get_scheduler()
             .current_task()
@@ -362,12 +363,12 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
             .duplicate(
                 fd,
                 DuplicateHint::GreatorOrEqual(arg),
-                *handle.flags.read() | OpenFlags::O_CLOEXEC,
+                handle.flags() | OpenFlags::O_CLOEXEC,
             ),
 
         // Get the value of file descriptor flags.
         aero_syscall::prelude::F_GETFD => {
-            let flags = handle.flags.read();
+            let flags = handle.flags();
             let mut result = FdFlags::empty();
 
             if flags.contains(OpenFlags::O_CLOEXEC) {
@@ -379,7 +380,7 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
 
         // Set the value of file descriptor flags:
         aero_syscall::prelude::F_SETFD => {
-            let mut flags = handle.flags.write();
+            let mut flags = handle.flags();
             let fd_flags = FdFlags::from_bits_truncate(arg);
 
             if fd_flags.contains(FdFlags::CLOEXEC) {
@@ -388,19 +389,17 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
                 flags.remove(OpenFlags::O_CLOEXEC);
             }
 
+            handle.set_flags(flags);
             Ok(0)
         }
 
         // Get the value of file status flags:
-        aero_syscall::prelude::F_GETFL => {
-            let flags = handle.flags.read().bits();
-            Ok(flags)
-        }
+        aero_syscall::prelude::F_GETFL => Ok(handle.flags().bits()),
 
         aero_syscall::prelude::F_SETFL => {
             let flags = OpenFlags::from_bits_truncate(arg);
-            let old_flags = *handle.flags.read();
-            *handle.flags.write() = (flags & SETFL_MASK) | (old_flags & !SETFL_MASK);
+            let old_flags = handle.flags();
+            handle.set_flags((flags & SETFL_MASK) | (old_flags & !SETFL_MASK));
 
             Ok(0)
         }

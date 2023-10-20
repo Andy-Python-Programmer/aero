@@ -52,6 +52,7 @@ dependencies = [
  "byte_endian",
  "num-derive",
  "num-traits",
+ "static_assertions",
 ]
 
 [[package]]

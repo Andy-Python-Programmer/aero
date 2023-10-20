@@ -189,7 +189,7 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    fn open(&self, _flags: OpenFlags, _handle: Arc<FileHandle>) -> Result<Option<DirCacheItem>> {
+    fn open(&self, _handle: Arc<FileHandle>) -> Result<Option<DirCacheItem>> {
         Ok(None)
     }
 

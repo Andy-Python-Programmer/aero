@@ -1,3 +1,4 @@
+use aero_syscall::netlink::sockaddr_nl;
 use aero_syscall::socket::{MessageFlags, MessageHeader};
 use aero_syscall::*;
 use alloc::sync::Arc;
@@ -10,12 +11,14 @@ use crate::fs::inode::{DirEntry, INodeInterface};
 use crate::mem::paging::VirtAddr;
 
 use crate::socket::ipv4::Ipv4Socket;
+use crate::socket::netlink::NetLinkSocket;
 use crate::socket::tcp::TcpSocket;
 use crate::socket::udp::UdpSocket;
 use crate::socket::unix::*;
 use crate::socket::{SocketAddr, SocketAddrRef};
 
 use crate::userland::scheduler;
+use crate::userland::task::TaskId;
 
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
@@ -151,6 +154,8 @@ fn create_socket(
             }
         },
 
+        AF_NETLINK => ("netlink", NetLinkSocket::new() as Arc<dyn INodeInterface>),
+
         _ => {
             log::warn!(
                 "unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol:?}"
@@ -159,6 +164,7 @@ fn create_socket(
             return Err(SyscallError::EINVAL);
         }
     };
+    log::warn!("<{name}_socket> -EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
 
     let entry = DirEntry::from_inode(socket, alloc::format!("<{name}_socket>"));
     Ok(entry)
@@ -171,7 +177,13 @@ pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usiz
     let current_task = scheduler::get_scheduler().current_task();
 
     let sockfd_flags = SocketFlags::from_bits_truncate(socket_type).into();
-    let fd = current_task.file_table.open_file(entry, sockfd_flags)?;
+    let fd = dbg!(current_task.file_table.debug_open_file(entry, sockfd_flags))?;
+    if fd == 17 {
+        scheduler::get_scheduler()
+            .find_task(TaskId::new(40))
+            .unwrap()
+            .enable_systrace();
+    }
 
     Ok(fd)
 }
@@ -222,6 +234,17 @@ pub fn get_peername(fd: usize, addr: usize, len: &mut u32) -> Result<usize, Sysc
             *target = peer;
             *len = size;
         }
+
+        SocketAddr::Netlink(peer) => unimplemented!("{:?}", peer),
+        SocketAddr::Unix(peer) => {
+            // let size = core::mem::size_of::<SocketAddrUnix>() as u32;
+            // assert!(*len >= size);
+
+            // let mut target = unsafe { UserRef::<SocketAddrUnix>::new(VirtAddr::new(addr as u64))
+            // }; *target = peer;
+            // *len = size;
+            return Err(SyscallError::ENOSYS);
+        }
     }
 
     Ok(0)
@@ -242,12 +265,31 @@ pub fn get_sockname(fd: usize, addr: usize, len: &mut u32) -> Result<usize, Sysc
 
     let name = inode.get_sockname()?;
 
+    // CLEANME: TODO: FIXME:
     match name {
         SocketAddr::Inet(name) => {
             let size = core::mem::size_of::<SocketAddrInet>() as u32;
             assert!(*len >= size);
 
             let mut target = unsafe { UserRef::<SocketAddrInet>::new(VirtAddr::new(addr as u64)) };
+            *target = name;
+            *len = size;
+        }
+
+        SocketAddr::Netlink(name) => {
+            let size = core::mem::size_of::<sockaddr_nl>() as u32;
+            assert!(*len >= size);
+
+            let mut target = unsafe { UserRef::<sockaddr_nl>::new(VirtAddr::new(addr as u64)) };
+            *target = name;
+            *len = size;
+        }
+
+        SocketAddr::Unix(name) => {
+            let size = core::mem::size_of::<SocketAddrUnix>() as u32;
+            assert!(*len >= size);
+
+            let mut target = unsafe { UserRef::<SocketAddrUnix>::new(VirtAddr::new(addr as u64)) };
             *target = name;
             *len = size;
         }

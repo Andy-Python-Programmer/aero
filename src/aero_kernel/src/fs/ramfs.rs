@@ -302,11 +302,7 @@ impl INodeInterface for LockedRamINode {
         }
     }
 
-    fn open(
-        &self,
-        flags: aero_syscall::OpenFlags,
-        handle: Arc<super::file_table::FileHandle>,
-    ) -> Result<Option<DirCacheItem>> {
+    fn open(&self, handle: Arc<super::file_table::FileHandle>) -> Result<Option<DirCacheItem>> {
         let this = self.0.read();
 
         match &this.contents {
@@ -314,7 +310,7 @@ impl INodeInterface for LockedRamINode {
                 let device = device.clone();
                 drop(this);
 
-                device.open(flags, handle)
+                device.open(handle)
             }
 
             _ => Ok(None),

@@ -15,14 +15,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use aero_syscall::OpenFlags;
 use alloc::sync::Arc;
+use spin::Once;
 
+use super::file_table::FileHandle;
 use super::inode::{INodeInterface, PollFlags, PollTable};
+use crate::fs::FileSystemError;
 use crate::utils::sync::{Mutex, WaitQueue};
 
 pub struct EventFd {
     wq: WaitQueue,
+    /// Every write(2) on an eventfd, the value written is added to `count` and a wakeup
+    /// is performed on `wq`.
     count: Mutex<u64>,
+    // FIXME: https://github.com/Andy-Python-Programmer/aero/issues/113
+    handle: Once<Arc<FileHandle>>,
 }
 
 impl EventFd {
@@ -30,11 +38,22 @@ impl EventFd {
         Arc::new(Self {
             wq: WaitQueue::new(),
             count: Mutex::new(0),
+            handle: Once::new(),
         })
+    }
+
+    fn is_nonblock(&self) -> bool {
+        let handle = self.handle.get().expect("file handle is not initialized");
+        handle.flags().contains(OpenFlags::O_NONBLOCK)
     }
 }
 
 impl INodeInterface for EventFd {
+    fn open(&self, handle: Arc<FileHandle>) -> super::Result<Option<super::cache::DirCacheItem>> {
+        self.handle.call_once(|| handle);
+        Ok(None)
+    }
+
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> super::Result<usize> {
         let size = core::mem::size_of::<u64>();
         assert!(buffer.len() >= size);
@@ -52,16 +71,28 @@ impl INodeInterface for EventFd {
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> super::Result<usize> {
-        let size = core::mem::size_of::<u64>();
-        assert!(buffer.len() >= size);
+        let chunk_size = core::mem::size_of::<u64>();
+        assert!(buffer.len() >= chunk_size);
 
-        // SAFETY: We have above verified that it is safe to dereference
-        //         the value.
-        let value = unsafe { *(buffer.as_ptr() as *const u64) };
+        // TODO: use bytemuck to remove the unsafe.
+        let target = unsafe { *(buffer.as_ptr() as *const u64) };
 
-        *self.count.lock_irq() += value;
+        if target == u64::MAX {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        let mut count = self.count.lock();
+
+        if u64::MAX - *count > target {
+            *count += target;
+        } else if !self.is_nonblock() {
+            unimplemented!()
+        } else {
+            return Ok(0);
+        };
+
         self.wq.notify_all();
-        Ok(size)
+        Ok(chunk_size)
     }
 
     fn poll(&self, table: Option<&mut PollTable>) -> super::Result<PollFlags> {
@@ -70,7 +101,7 @@ impl INodeInterface for EventFd {
 
         if let Some(e) = table {
             e.insert(&self.wq)
-        } // listen for changes
+        }
 
         if *count > 0 {
             events.insert(PollFlags::IN);

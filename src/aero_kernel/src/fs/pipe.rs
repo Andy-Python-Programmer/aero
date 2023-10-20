@@ -45,13 +45,9 @@ impl Pipe {
 }
 
 impl INodeInterface for Pipe {
-    fn open(
-        &self,
-        flags: OpenFlags,
-        handle: Arc<FileHandle>,
-    ) -> super::Result<Option<DirCacheItem>> {
+    fn open(&self, handle: Arc<FileHandle>) -> super::Result<Option<DirCacheItem>> {
         // Write end of the pipe:
-        if flags.contains(OpenFlags::O_WRONLY) {
+        if handle.flags().contains(OpenFlags::O_WRONLY) {
             self.num_writers.fetch_add(1, Ordering::SeqCst);
             self.handle.call_once(|| handle);
         }
@@ -72,12 +68,7 @@ impl INodeInterface for Pipe {
     }
 
     fn read_at(&self, _offset: usize, buf: &mut [u8]) -> super::Result<usize> {
-        let flags = *self
-            .handle
-            .get()
-            .expect("pipe: internal error")
-            .flags
-            .read();
+        let flags = self.handle.get().expect("pipe: internal error").flags();
 
         let nonblock = flags.contains(OpenFlags::O_NONBLOCK);
         if nonblock && !self.queue.lock_irq().has_data() {
