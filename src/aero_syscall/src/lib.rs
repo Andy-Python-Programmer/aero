@@ -24,6 +24,7 @@
 extern crate num_derive;
 
 pub mod consts;
+pub mod netlink;
 pub mod signal;
 pub mod socket;
 pub mod syscall;

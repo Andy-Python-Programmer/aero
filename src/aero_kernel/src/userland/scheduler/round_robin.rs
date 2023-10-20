@@ -124,6 +124,7 @@ impl RoundRobin {
         } else if let Some(task) = queue.dead.pop_front() {
             task.update_state(TaskState::Zombie);
             task.make_zombie();
+            // TODO: assert strong count here
         }
     }
 

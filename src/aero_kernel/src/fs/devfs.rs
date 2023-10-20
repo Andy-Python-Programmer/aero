@@ -129,12 +129,8 @@ impl INodeInterface for DevINode {
         self.0.inode().poll(table)
     }
 
-    fn open(
-        &self,
-        flags: aero_syscall::OpenFlags,
-        handle: Arc<super::file_table::FileHandle>,
-    ) -> Result<Option<DirCacheItem>> {
-        self.0.inode().open(flags, handle)
+    fn open(&self, handle: Arc<super::file_table::FileHandle>) -> Result<Option<DirCacheItem>> {
+        self.0.inode().open(handle)
     }
 }
 

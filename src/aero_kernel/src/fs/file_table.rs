@@ -42,7 +42,7 @@ pub struct FileHandle {
     // We need to store the `offset` behind an Arc since when the file handle
     // is duplicated, the `offset` needs to be in sync with the parent.
     pub offset: Arc<AtomicUsize>,
-    pub flags: RwLock<OpenFlags>,
+    flags: RwLock<OpenFlags>,
 }
 
 impl FileHandle {
@@ -54,6 +54,14 @@ impl FileHandle {
             offset: Arc::new(AtomicUsize::new(0)),
             flags: RwLock::new(flags),
         }
+    }
+
+    pub fn flags(&self) -> OpenFlags {
+        *self.flags.read()
+    }
+
+    pub fn set_flags(&self, flags: OpenFlags) {
+        *self.flags.write() = flags;
     }
 
     pub fn read(&self, buffer: &mut [u8]) -> super::Result<usize> {
@@ -126,7 +134,7 @@ impl FileHandle {
             flags: RwLock::new(flags),
         });
 
-        new.inode.inode().open(flags, new.clone())?;
+        new.inode.inode().open(new.clone())?;
 
         Ok(new)
     }
@@ -299,11 +307,16 @@ impl FileTable {
             handle
                 .inode
                 .inode()
-                .open(flags, handle.clone())
+                .open(handle.clone())
                 .expect("FileTable::clone: failed to open file");
         }
 
         Self(RwLock::new(files.clone()))
+    }
+
+    pub fn debug_open_file(&self, dirent: DirCacheItem, flags: OpenFlags) -> super::Result<usize> {
+        self.log();
+        self.open_file(dirent, flags)
     }
 
     pub fn open_file(&self, dentry: DirCacheItem, mut flags: OpenFlags) -> super::Result<usize> {
@@ -317,7 +330,7 @@ impl FileTable {
         if let Some((i, f)) = files.iter_mut().enumerate().find(|e| e.1.is_none()) {
             let mut handle = Arc::new(FileHandle::new(i, dentry, flags));
 
-            if let Some(inode) = handle.inode.inode().open(flags, handle.clone())? {
+            if let Some(inode) = handle.inode.inode().open(handle.clone())? {
                 // TODO: should open be called on the inner file as well???
                 handle = Arc::new(FileHandle::new(i, inode, flags))
             }
@@ -329,7 +342,7 @@ impl FileTable {
             let fd = files.len();
             let mut handle = Arc::new(FileHandle::new(fd, dentry, flags));
 
-            if let Some(inode) = handle.inode.inode().open(flags, handle.clone())? {
+            if let Some(inode) = handle.inode.inode().open(handle.clone())? {
                 // TODO: should open be called on the inner file as well???
                 handle = Arc::new(FileHandle::new(fd, inode, flags))
             }
@@ -346,6 +359,10 @@ impl FileTable {
     /// and can be reused. This function will return false if the provided file
     /// descriptor index was invalid.
     pub fn close_file(&self, fd: usize) -> bool {
+        // log::warn!("closing filedescriptor {fd} ---- START");
+        // crate::unwind::unwind_stack_trace();
+        // log::warn!("closing filedescriptor {fd} ---- END");
+
         let mut files = self.0.write();
 
         if let Some(file) = files.get_mut(fd) {

@@ -104,18 +104,13 @@ impl UdpSocket {
         self.handle
             .get()
             .expect("inet: not bound to an fd")
-            .flags
-            .read()
+            .flags()
             .contains(OpenFlags::O_NONBLOCK)
     }
 }
 
 impl INodeInterface for UdpSocket {
-    fn open(
-        &self,
-        _flags: aero_syscall::OpenFlags,
-        handle: Arc<FileHandle>,
-    ) -> fs::Result<Option<DirCacheItem>> {
+    fn open(&self, handle: Arc<FileHandle>) -> fs::Result<Option<DirCacheItem>> {
         self.handle.call_once(|| handle);
         Ok(None)
     }

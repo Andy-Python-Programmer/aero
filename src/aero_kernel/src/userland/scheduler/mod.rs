@@ -139,6 +139,10 @@ impl Scheduler {
         });
     }
 
+    pub fn for_each_task<F: FnMut(&Arc<Task>)>(&self, mut f: F) {
+        self.tasks.0.lock().iter().for_each(|(_, task)| f(task));
+    }
+
     /// Lookup a task by ID
     #[inline]
     pub fn find_task(&self, task_id: TaskId) -> Option<Arc<Task>> {

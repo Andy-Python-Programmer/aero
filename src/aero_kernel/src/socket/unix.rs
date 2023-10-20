@@ -232,8 +232,7 @@ impl UnixSocket {
         self.handle
             .get()
             .expect("unix: not bound to an fd")
-            .flags
-            .read()
+            .flags()
             .contains(OpenFlags::O_NONBLOCK)
     }
 }
@@ -248,11 +247,7 @@ impl INodeInterface for UnixSocket {
         })
     }
 
-    fn open(
-        &self,
-        _flags: aero_syscall::OpenFlags,
-        handle: Arc<FileHandle>,
-    ) -> fs::Result<Option<DirCacheItem>> {
+    fn open(&self, handle: Arc<FileHandle>) -> fs::Result<Option<DirCacheItem>> {
         self.handle.call_once(|| handle);
         Ok(None)
     }
@@ -385,7 +380,7 @@ impl INodeInterface for UnixSocket {
     }
 
     fn recv(&self, header: &mut MessageHeader, flags: MessageFlags) -> fs::Result<usize> {
-        assert!(flags.is_empty());
+        // assert!(flags.is_empty());
 
         let inner = self.inner.lock_irq();
 
@@ -450,5 +445,31 @@ impl INodeInterface for UnixSocket {
     fn shutdown(&self, how: usize) -> fs::Result<()> {
         log::warn!("shutdown how={how}");
         Ok(())
+    }
+
+    fn get_sockname(&self) -> fs::Result<super::SocketAddr> {
+        let inner = self.inner.lock_irq();
+        let address = inner.address.as_ref().cloned().unwrap_or(SocketAddrUnix {
+            family: AF_UNIX,
+            path: [0; 108],
+        });
+
+        Ok(super::SocketAddr::Unix(address.clone()))
+    }
+
+    fn get_peername(&self) -> fs::Result<super::SocketAddr> {
+        let inner = self.inner.lock_irq();
+        let peer = match &inner.state {
+            UnixSocketState::Connected(peer) => peer,
+            _ => return Err(FileSystemError::NotConnected),
+        };
+
+        let peer = peer.inner.lock_irq();
+        let address = peer.address.as_ref().cloned().unwrap_or(SocketAddrUnix {
+            family: AF_UNIX,
+            path: [0; 108],
+        });
+
+        Ok(super::SocketAddr::Unix(address.clone()))
     }
 }

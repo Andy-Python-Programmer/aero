@@ -79,7 +79,7 @@ impl TcpSocket {
     pub fn non_blocking(&self) -> bool {
         self.handle
             .get()
-            .map(|handle| handle.flags.read().contains(OpenFlags::O_NONBLOCK))
+            .map(|handle| handle.flags().contains(OpenFlags::O_NONBLOCK))
             .unwrap_or_default()
     }
 
@@ -150,11 +150,7 @@ impl INodeInterface for TcpSocket {
         Ok(())
     }
 
-    fn open(
-        &self,
-        _flags: aero_syscall::OpenFlags,
-        handle: Arc<FileHandle>,
-    ) -> fs::Result<Option<fs::cache::DirCacheItem>> {
+    fn open(&self, handle: Arc<FileHandle>) -> fs::Result<Option<fs::cache::DirCacheItem>> {
         self.handle.call_once(|| handle);
         Ok(None)
     }
