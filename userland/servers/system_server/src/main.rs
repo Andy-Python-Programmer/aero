@@ -24,7 +24,7 @@ use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use spin::RwLock;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> core::result::Result<(), Box<dyn Error>> {
     sys_ipc_become_root().unwrap();
 
     aero_ipc::listen(SystemService::handler(SystemServer::new()));

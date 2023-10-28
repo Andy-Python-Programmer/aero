@@ -477,8 +477,17 @@ impl INodeInterface for INode {
         Ok(())
     }
 
-    fn truncate(&self, _size: usize) -> super::Result<()> {
-        log::warn!("ext2::truncate is a stub!");
+    fn truncate(&self, size: usize) -> super::Result<()> {
+        let inode = self.inode.read();
+
+        if inode.size() > size {
+            // grow inode
+            log::warn!("ext2::truncate(at=grow) is a stub!");
+        } else if inode.size() < size {
+            log::warn!("ext2::truncate(at=shrink) is a stub!");
+            // shrink inode
+        }
+
         Ok(())
     }
 

@@ -38,7 +38,7 @@ fn hostname() -> &'static Mutex<String> {
 }
 
 #[syscall(no_return)]
-pub fn exit(status: usize) -> Result<usize, SyscallError> {
+pub fn exit(status: usize) -> Result<usize> {
     #[cfg(all(test, feature = "ci"))]
     crate::emu::exit_qemu(crate::emu::ExitStatus::Success);
 
@@ -56,7 +56,7 @@ pub fn exit(status: usize) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn uname(buffer: &mut Utsname) -> Result<usize, SyscallError> {
+pub fn uname(buffer: &mut Utsname) -> Result<usize> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
         let init_bytes = init.as_bytes();
         let len = init.len();
@@ -83,7 +83,7 @@ pub fn uname(buffer: &mut Utsname) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn fork() -> Result<usize, SyscallError> {
+pub fn fork() -> Result<usize> {
     let scheduler = scheduler::get_scheduler();
     let forked = scheduler.current_task().fork();
 
@@ -92,7 +92,7 @@ pub fn fork() -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn clone(entry: usize, stack: usize) -> Result<usize, SyscallError> {
+pub fn clone(entry: usize, stack: usize) -> Result<usize> {
     let scheduler = scheduler::get_scheduler();
     let cloned = scheduler.current_task().clone_process(entry, stack);
 
@@ -101,7 +101,7 @@ pub fn clone(entry: usize, stack: usize) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn kill(pid: usize, signal: usize) -> Result<usize, SyscallError> {
+pub fn kill(pid: usize, signal: usize) -> Result<usize> {
     // If pid is positive, then signal is sent to the process with that pid.
     if pid > 0 {
         crate::unwind::unwind_stack_trace();
@@ -118,13 +118,7 @@ pub fn kill(pid: usize, signal: usize) -> Result<usize, SyscallError> {
 }
 
 #[syscall(no_return)]
-pub fn exec(
-    path: &Path,
-    args: usize,
-    argc: usize,
-    envs: usize,
-    envc: usize,
-) -> Result<usize, SyscallError> {
+pub fn exec(path: &Path, args: usize, argc: usize, envs: usize, envc: usize) -> Result<usize> {
     let executable = fs::lookup_path(path)?;
 
     if executable.inode().metadata()?.is_directory() {
@@ -153,14 +147,14 @@ pub fn exec(
 }
 
 #[syscall]
-pub fn log(msg: &str) -> Result<usize, SyscallError> {
+pub fn log(msg: &str) -> Result<usize> {
     log::debug!("{}", msg);
 
     Ok(0x00)
 }
 
 #[syscall]
-pub fn waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize, SyscallError> {
+pub fn waitpid(pid: usize, status: &mut u32, flags: usize) -> Result<usize> {
     let flags = WaitPidFlags::from_bits_truncate(flags);
     let current_task = scheduler::get_scheduler().current_task();
 
@@ -175,7 +169,7 @@ pub fn mmap(
     flags: usize,
     fd: usize,
     offset: usize,
-) -> Result<usize, SyscallError> {
+) -> Result<usize> {
     let address = VirtAddr::new(address as u64);
     let protection = MMapProt::from_bits(protection).ok_or(SyscallError::EINVAL)?;
     let flags = MMapFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
@@ -205,7 +199,7 @@ pub fn mmap(
 }
 
 #[syscall]
-pub fn munmap(address: usize, size: usize) -> Result<usize, SyscallError> {
+pub fn munmap(address: usize, size: usize) -> Result<usize> {
     let address = VirtAddr::new(address as u64);
 
     if scheduler::get_scheduler()
@@ -220,7 +214,7 @@ pub fn munmap(address: usize, size: usize) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn mprotect(ptr: usize, size: usize, prot: usize) -> Result<usize, SyscallError> {
+pub fn mprotect(ptr: usize, size: usize, prot: usize) -> Result<usize> {
     let ptr = VirtAddr::new(ptr as _);
     let prot = MMapProt::from_bits(prot).ok_or(SyscallError::EINVAL)?;
 
@@ -231,7 +225,7 @@ pub fn mprotect(ptr: usize, size: usize, prot: usize) -> Result<usize, SyscallEr
 }
 
 #[syscall]
-pub fn backtrace() -> Result<usize, SyscallError> {
+pub fn backtrace() -> Result<usize> {
     crate::unwind::unwind_stack_trace();
     Ok(0)
 }
@@ -241,18 +235,18 @@ pub fn backtrace() -> Result<usize, SyscallError> {
 /// When the tracer is enabled for a process, it also applies to any child processes spawned by the
 /// process.
 #[syscall]
-pub fn trace() -> Result<usize, SyscallError> {
+pub fn trace() -> Result<usize> {
     scheduler::get_scheduler().current_task().enable_systrace();
     Ok(0)
 }
 
 #[syscall]
-pub fn getpid() -> Result<usize, SyscallError> {
+pub fn getpid() -> Result<usize> {
     Ok(scheduler::get_scheduler().current_task().pid().as_usize())
 }
 
 #[syscall]
-pub fn getppid() -> Result<usize, SyscallError> {
+pub fn getppid() -> Result<usize> {
     Ok(scheduler::get_scheduler()
         .current_task()
         .parent_pid()
@@ -260,12 +254,12 @@ pub fn getppid() -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn gettid() -> Result<usize, SyscallError> {
+pub fn gettid() -> Result<usize> {
     Ok(scheduler::get_scheduler().current_task().tid().as_usize())
 }
 
 #[syscall]
-pub fn gethostname(buffer: &mut [u8]) -> Result<usize, SyscallError> {
+pub fn gethostname(buffer: &mut [u8]) -> Result<usize> {
     let hostname = hostname().lock();
     let bytes = hostname.as_bytes();
 
@@ -279,14 +273,14 @@ pub fn gethostname(buffer: &mut [u8]) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn info(struc: &mut SysInfo) -> Result<usize, SyscallError> {
+pub fn info(struc: &mut SysInfo) -> Result<usize> {
     struc.uptime = crate::arch::time::get_uptime_ticks() as i64;
 
     Ok(0x00)
 }
 
 #[syscall]
-pub fn sethostname(name: &[u8]) -> Result<usize, SyscallError> {
+pub fn sethostname(name: &[u8]) -> Result<usize> {
     match core::str::from_utf8(name) {
         Ok(name) => {
             *hostname().lock() = name.into();
@@ -298,7 +292,7 @@ pub fn sethostname(name: &[u8]) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn sigprocmask(how: usize, set: *const u64, old_set: *mut u64) -> Result<usize, SyscallError> {
+pub fn sigprocmask(how: usize, set: *const u64, old_set: *mut u64) -> Result<usize> {
     let set = if set.is_null() {
         None
     } else {
@@ -327,7 +321,7 @@ pub fn sigaction(
     sigact: *mut SigAction,
     sigreturn: usize,
     old: *mut SigAction,
-) -> Result<usize, SyscallError> {
+) -> Result<usize> {
     let new = if sigact.is_null() {
         None
     } else {
@@ -356,7 +350,7 @@ pub fn sigaction(
 }
 
 #[syscall(no_return)]
-pub fn shutdown() -> Result<usize, SyscallError> {
+pub fn shutdown() -> Result<usize> {
     fs::cache::dcache().log();
 
     fs::cache::clear_inode_cache();
@@ -368,7 +362,7 @@ pub fn shutdown() -> Result<usize, SyscallError> {
     unreachable!("aml: failed to shutdown (enter state S5)")
 }
 
-fn find_task_by_pid(pid: usize) -> Result<Arc<Task>, SyscallError> {
+fn find_task_by_pid(pid: usize) -> Result<Arc<Task>> {
     let current_task = scheduler::get_scheduler().current_task();
 
     // If `pid` is 0, the process ID of the calling process is used.
@@ -382,7 +376,7 @@ fn find_task_by_pid(pid: usize) -> Result<Arc<Task>, SyscallError> {
 }
 
 #[syscall]
-pub fn getpgid(pid: usize) -> Result<usize, SyscallError> {
+pub fn getpgid(pid: usize) -> Result<usize> {
     let task = find_task_by_pid(pid)?;
     let group = SESSIONS.find_group(task).unwrap();
 
@@ -390,7 +384,7 @@ pub fn getpgid(pid: usize) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn setpgid(pid: usize, pgid: usize) -> Result<usize, SyscallError> {
+pub fn setpgid(pid: usize, pgid: usize) -> Result<usize> {
     let current_task = scheduler::get_scheduler().current_task();
     let task = find_task_by_pid(pid)?;
 
@@ -416,7 +410,7 @@ pub fn setpgid(pid: usize, pgid: usize) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn setsid() -> Result<usize, SyscallError> {
+pub fn setsid() -> Result<usize> {
     let current_task = scheduler::get_scheduler().current_task();
     if current_task.is_group_leader() {
         return Err(SyscallError::EPERM);
