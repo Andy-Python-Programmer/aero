@@ -178,12 +178,12 @@ pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usiz
 
     let sockfd_flags = SocketFlags::from_bits_truncate(socket_type).into();
     let fd = dbg!(current_task.file_table.debug_open_file(entry, sockfd_flags))?;
-    if fd == 17 {
-        scheduler::get_scheduler()
-            .find_task(TaskId::new(40))
-            .unwrap()
-            .enable_systrace();
-    }
+    // if fd == 17 {
+    //     scheduler::get_scheduler()
+    //         .find_task(TaskId::new(40))
+    //         .unwrap()
+    //         .enable_systrace();
+    // }
 
     Ok(fd)
 }
@@ -237,13 +237,12 @@ pub fn get_peername(fd: usize, addr: usize, len: &mut u32) -> Result<usize, Sysc
 
         SocketAddr::Netlink(peer) => unimplemented!("{:?}", peer),
         SocketAddr::Unix(peer) => {
-            // let size = core::mem::size_of::<SocketAddrUnix>() as u32;
-            // assert!(*len >= size);
+            let size = core::mem::size_of::<SocketAddrUnix>() as u32;
+            assert!(*len >= size);
 
-            // let mut target = unsafe { UserRef::<SocketAddrUnix>::new(VirtAddr::new(addr as u64))
-            // }; *target = peer;
-            // *len = size;
-            return Err(SyscallError::ENOSYS);
+            let mut target = unsafe { &mut *(addr as *mut SocketAddrUnix) };
+            *len = peer.path_len() as u32 + core::mem::offset_of!(SocketAddrUnix, path) as u32;
+            *target = peer;
         }
     }
 
@@ -290,8 +289,8 @@ pub fn get_sockname(fd: usize, addr: usize, len: &mut u32) -> Result<usize, Sysc
             assert!(*len >= size);
 
             let mut target = unsafe { UserRef::<SocketAddrUnix>::new(VirtAddr::new(addr as u64)) };
+            *len = name.path_len() as u32 + core::mem::offset_of!(SocketAddrUnix, path) as u32;
             *target = name;
-            *len = size;
         }
     }
 

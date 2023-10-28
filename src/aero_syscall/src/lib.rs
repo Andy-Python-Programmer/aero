@@ -529,6 +529,22 @@ pub struct SocketAddrUnix {
     pub path: [u8; 108],
 }
 
+impl SocketAddrUnix {
+    pub fn path_len(&self) -> u8 {
+        if self.path[0] == 0 {
+            if self.path[1] == 0 {
+                // address is unnamed
+                return 0;
+            } else {
+                // abstract socket address
+                unimplemented!()
+            }
+        }
+
+        (self.path.iter().position(|&c| c == 0).unwrap_or(108) as u8) + 1
+    }
+}
+
 impl Default for SocketAddrUnix {
     fn default() -> Self {
         Self {

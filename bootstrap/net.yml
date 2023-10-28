@@ -724,10 +724,10 @@ packages:
         - '-DUSE_SOUP2=ON'
         - '-DUSE_LCMS=OFF'
         - '@THIS_SOURCE_DIR@'
+        environ:
+          CXXFLAGS: '-DLOG_DISABLED=0'
     build:
       - args: ['ninja', '-j6']
-        # environ:
-        #   CXXFLAGS: '-std=c++11'
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'

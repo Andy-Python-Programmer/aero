@@ -782,6 +782,8 @@ impl VmProtected {
         offset: usize,
         file: Option<DirCacheItem>,
     ) -> Option<VirtAddr> {
+        let z = file.clone();
+
         // Offset is required to be a multiple of page size.
         if (offset as u64 & (Size4KiB::SIZE - 1)) != 0 {
             log::warn!("mmap: offset is not a multiple of page size");
@@ -864,6 +866,17 @@ impl VmProtected {
         if x.is_none() {
             log::warn!("mmap failed");
             self.log();
+
+            dbg!(
+                address,
+                size,
+                protection,
+                flags,
+                offset,
+                z.map(|f| f.absolute_path_str())
+            );
+
+            crate::unwind::unwind_stack_trace();
         }
 
         x
