@@ -2,6 +2,19 @@
 
 set -x -e
 
+ANSI_CLEAR="\033[0m"
+ANSI_YELLOW="\033[1;34m"
+
+function warn() {
+	echo -e "${ANSI_YELLOW}$1${ANSI_CLEAR}"
+}
+
+# check if the pkg-build directory is not newer than the system-root
+if [[ ./sysroot/pkg-build -nt ./sysroot/system-root]]; then
+	warn "mkimage: pkg-build is newer than system-root, run `xbstrap install --all`"
+	exit 1
+fi
+
 # sync the sysroot
 echo "sysroot: syncing base-files"
 cp -r base-files/. sysroot/system-root/

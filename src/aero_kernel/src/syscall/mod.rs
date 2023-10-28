@@ -259,6 +259,8 @@ pub fn generic_do_syscall(
         // Syscall aliases (this should be handled in aero_syscall)
         SYS_MKDIR => fs::mkdirat(aero_syscall::AT_FDCWD as _, b, c),
 
+        SYS_DEBUG => tag_memory(b, c, d, e),
+
         _ => {
             log::error!("invalid syscall: {:#x}", a);
             Err(SyscallError::ENOSYS)
@@ -266,4 +268,20 @@ pub fn generic_do_syscall(
     };
 
     aero_syscall::syscall_result_as_usize(result)
+}
+
+#[syscall]
+pub fn tag_memory(ptr: *const u8, size: usize, tag: &str) -> Result<usize, SyscallError> {
+    use crate::userland::scheduler;
+    use alloc::string::ToString;
+
+    let addr = ptr as usize;
+
+    let thread = scheduler::current_thread();
+    thread
+        .mem_tags
+        .lock()
+        .insert(addr..(addr + size), tag.to_string());
+
+    Ok(0)
 }

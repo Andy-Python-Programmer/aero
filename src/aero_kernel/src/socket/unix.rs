@@ -42,6 +42,7 @@ fn path_from_unix_sock(address: &SocketAddrUnix) -> fs::Result<&Path> {
     // connection which does not require a path to be created.
     let abstract_namespaced = address.path[0] == 0;
     assert!(!abstract_namespaced);
+    assert!(address.path[1] != 0, "unnamed UNIX socket");
 
     let path_len = address
         .path
@@ -351,6 +352,7 @@ impl INodeInterface for UnixSocket {
 
         let peer = queue.pop().expect("UnixSocket::accept(): backlog is empty");
         let sock = Self::new();
+        sock.inner.lock_irq().address = inner.address.clone();
 
         {
             let mut sock_inner = sock.inner.lock_irq();
@@ -362,16 +364,18 @@ impl INodeInterface for UnixSocket {
             peer_data.state = UnixSocketState::Connected(sock.clone());
         }
 
+        // THIS SHOULD NOT BE DONE HERE
         if let Some((address, length)) = address {
             let mut address = unsafe { UserRef::new(address) };
 
-            if let Some(paddr) = peer.inner.lock_irq().address.as_ref() {
+            if let Some(paddr) = inner.address.as_ref() {
                 *address = paddr.clone();
             } else {
                 *address = SocketAddrUnix::default();
                 address.family = AF_UNIX;
             }
 
+            // THIS IS WRONG use addr.name_len() + offset_of!(sockaddr_un, path)
             *length = core::mem::size_of::<SocketAddrUnix>() as u32;
         }
 

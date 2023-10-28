@@ -26,6 +26,7 @@ use xmas_elf::ElfFile;
 use crate::mem::paging::{Translate, VirtAddr};
 use crate::mem::AddressSpace;
 
+use crate::userland::scheduler;
 use crate::{logger, rendy};
 
 use crate::arch::interrupts;
@@ -145,6 +146,20 @@ pub fn unwind_stack_trace() {
 
             if let Some(name) = name {
                 log::trace!("{:>2}: 0x{:016x} - {}", depth, rip, name);
+            } else if scheduler::is_initialized() {
+                if let Some((region, tag)) = scheduler::current_thread()
+                    .mem_tags
+                    .lock()
+                    .iter()
+                    .find(|(region, _tag)| region.contains(&rip))
+                {
+                    let resolved_addr = rip - region.start;
+                    log::trace!(
+                        "{depth:>2}: 0x{rip:016x} - <userland, in={tag}, resolved_addr={resolved_addr:#x}>"
+                    );
+                } else {
+                    log::trace!("{depth:>2}: 0x{rip:016x} - <unknown>");
+                }
             } else {
                 log::trace!("{:>2}: 0x{:016x} - <unknown>", depth, rip);
             }
@@ -152,6 +167,14 @@ pub fn unwind_stack_trace() {
             // RBP has been overflowed...
             break;
         }
+    }
+
+    let thread = scheduler::current_thread();
+    let tags = thread.mem_tags.lock();
+    let mut tags = tags.iter().collect::<alloc::vec::Vec<_>>();
+    tags.sort_by(|x, y| x.0.start.cmp(&y.0.start));
+    for (x, s) in tags.iter() {
+        log::trace!("{:#x}..{:#x} {s}", x.start, x.end);
     }
 }
 

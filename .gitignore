@@ -22,3 +22,6 @@ base-files/doom1.wad
 # Wayland test client and server executables: (todo: remove these)
 base-files/client
 base-files/server
+
+# todo: remove these
+debug

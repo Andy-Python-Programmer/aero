@@ -20,9 +20,11 @@ pub mod sessions;
 use aero_syscall::WaitPidFlags;
 use alloc::sync::{Arc, Weak};
 
+use hashbrown::HashMap;
 use spin::{Once, RwLock};
 
 use core::cell::UnsafeCell;
+use core::ops::Range;
 use core::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 
 use crate::fs::cache::{DirCacheImpl, DirCacheItem};
@@ -221,6 +223,9 @@ pub struct Task {
 
     controlling_terminal: Mutex<Option<Arc<dyn TerminalDevice>>>,
     systrace: AtomicBool,
+
+    // for debugging only. may remove in the future.
+    pub mem_tags: Mutex<HashMap<Range<usize>, String>>,
 }
 
 impl Task {
@@ -265,6 +270,8 @@ impl Task {
 
             systrace: AtomicBool::new(false),
             controlling_terminal: Mutex::new(None),
+
+            mem_tags: Mutex::new(HashMap::new()),
         })
     }
 
@@ -307,6 +314,8 @@ impl Task {
 
             systrace: AtomicBool::new(false),
             controlling_terminal: Mutex::new(None),
+
+            mem_tags: Mutex::new(HashMap::new()),
         })
     }
 
@@ -345,6 +354,8 @@ impl Task {
 
             systrace: AtomicBool::new(self.systrace()),
             controlling_terminal: Mutex::new(self.controlling_terminal.lock_irq().clone()),
+
+            mem_tags: Mutex::new(self.mem_tags.lock().clone()),
         });
 
         self.add_child(this.clone());
@@ -413,6 +424,8 @@ impl Task {
                     .lock_irq()
                     .clone(),
             ),
+
+            mem_tags: Mutex::new(self.mem_tags.lock().clone()),
         });
 
         self.add_child(this.clone());
@@ -514,6 +527,7 @@ impl Task {
             *self.cwd.write() = Some(Cwd::new())
         }
 
+        *self.mem_tags.lock() = HashMap::new();
         self.file_table.close_on_exec();
 
         self.file_table.log();

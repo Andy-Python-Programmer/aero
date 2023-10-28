@@ -98,6 +98,7 @@ pub const SYS_GETPGID: usize = 74;
 pub const SYS_SOCK_SHUTDOWN: usize = 75;
 pub const SYS_GETPEERNAME: usize = 76;
 pub const SYS_GETSOCKNAME: usize = 77;
+pub const SYS_DEBUG: usize = 78;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;
