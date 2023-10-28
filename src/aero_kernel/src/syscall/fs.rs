@@ -15,14 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use core::fmt;
+
 use aero_syscall::prelude::*;
 use aero_syscall::signal::SigProcMask;
 use aero_syscall::{OpenFlags, Stat, SyscallError, TimeSpec, AT_FDCWD};
+use alloc::sync::Arc;
 
 use crate::fs::cache::{self, DirCacheImpl};
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
-use crate::fs::file_table::DuplicateHint;
+use crate::fs::file_table::{DuplicateHint, FileHandle};
 use crate::fs::inode::{DirEntry, PollTable};
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
@@ -30,40 +33,68 @@ use crate::userland::scheduler;
 
 use crate::fs::Path;
 
-#[syscall]
-pub fn write(fd: usize, buffer: &[u8]) -> Result<usize, SyscallError> {
-    let handle = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EBADFD)?;
+#[derive(Debug, Copy, Clone)]
+pub struct FileDescriptor(usize);
 
+impl FileDescriptor {
+    /// Returns the file handle associated with this file descriptor.
+    ///
+    /// ## Errors
+    /// * `EBADFD`: The file descriptor is not a valid open file descriptor.
+    pub fn handle(&self) -> aero_syscall::Result<Arc<FileHandle>> {
+        scheduler::current_thread()
+            .file_table
+            .get_handle(self.0)
+            .ok_or(SyscallError::EBADFD)
+    }
+}
+
+impl fmt::Display for FileDescriptor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Ok(file_handle) = self.handle() {
+            let path = file_handle.inode.absolute_path_str();
+            write!(f, "{{ {} -> {} }}", self.0, path)
+        } else {
+            // invalid file descriptor
+            write!(f, "{{ {} -> INVALID }}", self.0)
+        }
+    }
+}
+
+impl super::SysArg for FileDescriptor {
+    fn from_usize(value: usize) -> Self {
+        Self(value)
+    }
+}
+
+impl Into<usize> for FileDescriptor {
+    fn into(self) -> usize {
+        self.0
+    }
+}
+
+#[syscall]
+pub fn write(fd: FileDescriptor, buffer: &[u8]) -> Result<usize, SyscallError> {
     // FIXME(heck for xeyes): fnctl should update the open flags!
     //
     // if handle
     //     .flags
     //     .intersects(OpenFlags::O_WRONLY | OpenFlags::O_RDWR)
     // {
-    Ok(handle.write(buffer)?)
+    Ok(fd.handle()?.write(buffer)?)
     // } else {
     //     Err(SyscallError::EACCES)
     // }
 }
 
 #[syscall]
-pub fn read(fd: usize, buffer: &mut [u8]) -> Result<usize, SyscallError> {
-    let handle = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EBADFD)?;
-
+pub fn read(fd: FileDescriptor, buffer: &mut [u8]) -> Result<usize, SyscallError> {
     // if handle
     //     .flags
     //     .read()
     //     .intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR)
     // {
-    Ok(handle.read(buffer)?)
+    Ok(fd.handle()?.read(buffer)?)
     // } else {
     //     Err(SyscallError::EACCES)
     // }
@@ -111,42 +142,37 @@ pub fn open(fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> 
 }
 
 #[syscall]
-pub fn dup(fd: usize, flags: usize) -> Result<usize, SyscallError> {
-    let task = scheduler::get_scheduler().current_task();
-    let flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
-
-    task.file_table.duplicate(fd, DuplicateHint::Any, flags)
-}
-
-#[syscall]
-pub fn dup2(fd: usize, new_fd: usize, flags: usize) -> Result<usize, SyscallError> {
+pub fn dup(fd: FileDescriptor, flags: usize) -> Result<usize, SyscallError> {
     let task = scheduler::get_scheduler().current_task();
     let flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
 
     task.file_table
-        .duplicate(fd, DuplicateHint::Exact(new_fd), flags)
+        .duplicate(fd.into(), DuplicateHint::Any, flags)
 }
 
 #[syscall]
-pub fn getdents(fd: usize, buffer: &mut [u8]) -> Result<usize, SyscallError> {
-    let handle = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EBADFD)?;
+pub fn dup2(fd: FileDescriptor, new_fd: usize, flags: usize) -> Result<usize, SyscallError> {
+    let task = scheduler::get_scheduler().current_task();
+    let flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)? & OpenFlags::O_CLOEXEC;
 
-    Ok(handle.get_dents(buffer)?)
+    task.file_table
+        .duplicate(fd.into(), DuplicateHint::Exact(new_fd), flags)
 }
 
 #[syscall]
-pub fn close(fd: usize) -> Result<usize, SyscallError> {
+pub fn getdents(fd: FileDescriptor, buffer: &mut [u8]) -> Result<usize, SyscallError> {
+    Ok(fd.handle()?.get_dents(buffer)?)
+}
+
+#[syscall]
+pub fn close(fd: FileDescriptor) -> Result<usize, SyscallError> {
     let res = scheduler::get_scheduler()
         .current_task()
         .file_table
-        .close_file(fd);
+        .close_file(fd.into());
 
     if res {
-        Ok(0x00)
+        Ok(0)
     } else {
         // FD isn't a valid open file descriptor.
         Err(SyscallError::EBADFD)
@@ -163,7 +189,7 @@ pub fn chdir(path: &str) -> Result<usize, SyscallError> {
     }
 
     scheduler::get_scheduler().current_task().set_cwd(inode);
-    Ok(0x00)
+    Ok(0)
 }
 
 #[syscall]
@@ -234,12 +260,8 @@ pub fn getcwd(buffer: &mut [u8]) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, SyscallError> {
-    let handle = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EBADFD)?;
+pub fn ioctl(fd: FileDescriptor, command: usize, argument: usize) -> Result<usize, SyscallError> {
+    let handle = fd.handle()?;
 
     match command {
         // Sets the close-on-exec file descriptor flag. This is equivalent
@@ -262,13 +284,8 @@ pub fn ioctl(fd: usize, command: usize, argument: usize) -> Result<usize, Syscal
 }
 
 #[syscall]
-pub fn seek(fd: usize, offset: usize, whence: usize) -> Result<usize, SyscallError> {
-    let handle = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EBADFD)?;
-
+pub fn seek(fd: FileDescriptor, offset: usize, whence: usize) -> Result<usize, SyscallError> {
+    let handle = fd.handle()?;
     Ok(handle.seek(offset as isize, aero_syscall::SeekWhence::from(whence))?)
 }
 
@@ -347,12 +364,8 @@ const SETFL_MASK: OpenFlags = OpenFlags::from_bits_truncate(
 );
 
 #[syscall]
-pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallError> {
-    let handle = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EBADFD)?;
+pub fn fcntl(fd: FileDescriptor, command: usize, arg: usize) -> Result<usize, SyscallError> {
+    let handle = fd.handle()?;
 
     match command {
         // F_DUPFD_CLOEXEC and F_DUPFD:
@@ -364,19 +377,17 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
         //
         // F_DUPFD_CLOEXEC additionally sets the close-on-exec flag for the duplicate
         // file descriptor.
-        aero_syscall::prelude::F_DUPFD => scheduler::get_scheduler()
-            .current_task()
-            .file_table
-            .duplicate(fd, DuplicateHint::GreatorOrEqual(arg), handle.flags()),
+        aero_syscall::prelude::F_DUPFD => scheduler::current_thread().file_table.duplicate(
+            fd.into(),
+            DuplicateHint::GreatorOrEqual(arg),
+            handle.flags(),
+        ),
 
-        aero_syscall::prelude::F_DUPFD_CLOEXEC => scheduler::get_scheduler()
-            .current_task()
-            .file_table
-            .duplicate(
-                fd,
-                DuplicateHint::GreatorOrEqual(arg),
-                handle.flags() | OpenFlags::O_CLOEXEC,
-            ),
+        aero_syscall::prelude::F_DUPFD_CLOEXEC => scheduler::current_thread().file_table.duplicate(
+            fd.into(),
+            DuplicateHint::GreatorOrEqual(arg),
+            handle.flags() | OpenFlags::O_CLOEXEC,
+        ),
 
         // Get the value of file descriptor flags.
         aero_syscall::prelude::F_GETFD => {
@@ -429,24 +440,15 @@ pub fn fcntl(fd: usize, command: usize, arg: usize) -> Result<usize, SyscallErro
 }
 
 #[syscall]
-pub fn fstat(fd: usize, stat: &mut Stat) -> Result<usize, SyscallError> {
-    let file = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EBADFD)?;
-
-    *stat = file.inode().stat()?;
-
+pub fn fstat(fd: FileDescriptor, stat: &mut Stat) -> Result<usize, SyscallError> {
+    *stat = fd.handle()?.inode().stat()?;
     Ok(0)
 }
 
 #[syscall]
 pub fn stat(path: &Path, stat: &mut Stat) -> Result<usize, SyscallError> {
     let file = fs::lookup_path(path)?;
-
     *stat = file.inode().stat()?;
-
     Ok(0)
 }
 
@@ -480,16 +482,12 @@ pub fn epoll_create(flags: usize) -> Result<usize, SyscallError> {
 /// the operation be performed for the target file descriptor.
 #[syscall]
 pub fn epoll_ctl(
-    epfd: usize,
+    epfd: FileDescriptor,
     mode: usize,
     fd: usize,
     event: &mut EPollEvent,
 ) -> Result<usize, SyscallError> {
-    let epfd = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(epfd)
-        .ok_or(SyscallError::EBADFD)?;
+    let epfd = epfd.handle()?;
 
     let epoll = epfd
         .inode()
@@ -518,7 +516,7 @@ pub fn epoll_ctl(
 
 #[syscall]
 pub fn epoll_pwait(
-    epfd: usize,
+    epfd: FileDescriptor,
     event: &mut [EPollEvent],
     timeout: usize,
     sigmask: usize,
@@ -528,11 +526,7 @@ pub fn epoll_pwait(
     let current_task = scheduler::get_scheduler().current_task();
     let signals = current_task.signals();
 
-    let epfd = current_task
-        .file_table
-        .get_handle(epfd)
-        .ok_or(SyscallError::EBADFD)?;
-
+    let epfd = epfd.handle()?;
     let epfd = epfd
         .inode()
         .downcast_arc::<EPoll>()

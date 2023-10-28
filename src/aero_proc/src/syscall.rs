@@ -234,11 +234,8 @@ fn process_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<FnArg> {
 
                             result.push(syn::parse_quote!(#data: usize));
                         }
-                        Some(ArgType::Pointer(_)) | Some(ArgType::Reference(_)) => {
+                        _ => {
                             result.push(syn::parse_quote!(#(#attrs)* #ident: usize));
-                        }
-                        None => {
-                            result.push(syn::parse_quote!(#(#attrs)* #ident: #typ));
                         }
                     };
                 }
@@ -324,7 +321,7 @@ fn process_call_args(args: &Punctuated<FnArg, syn::Token![,]>) -> Vec<Expr> {
                         }
                     }
                 } else {
-                    result.push(syn::parse_quote!(#ident));
+                    result.push(syn::parse_quote!(crate::syscall::SysArg::from_usize(#ident)));
                 }
             }
         }

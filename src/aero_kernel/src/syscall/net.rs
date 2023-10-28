@@ -22,13 +22,13 @@ use crate::userland::task::TaskId;
 
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
-fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddrRef<'sys>, SyscallError> {
+fn socket_addr_from_addr<'sys>(address: VirtAddr) -> Result<SocketAddrRef<'sys>> {
     let family = *address.read_mut::<u32>()?;
     SocketAddrRef::from_family(address, family)
 }
 
 #[syscall]
-pub fn shutdown(fd: usize, how: usize) -> Result<usize, SyscallError> {
+pub fn shutdown(fd: usize, how: usize) -> Result<usize> {
     let file_table = &scheduler::get_scheduler().current_task().file_table;
     let socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)?;
 
@@ -38,7 +38,7 @@ pub fn shutdown(fd: usize, how: usize) -> Result<usize, SyscallError> {
 
 /// Connects the socket to the specified address.
 #[syscall]
-pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, SyscallError> {
+pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize> {
     let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
     let file = scheduler::get_scheduler()
         .current_task()
@@ -52,7 +52,7 @@ pub fn connect(fd: usize, address: usize, length: usize) -> Result<usize, Syscal
 
 /// Accept a connection on a socket.
 #[syscall]
-pub fn accept(fd: usize, address: usize, length: usize) -> Result<usize, SyscallError> {
+pub fn accept(fd: usize, address: usize, length: usize) -> Result<usize> {
     let file_table = scheduler::get_scheduler().current_task().file_table.clone();
     let socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)?;
 
@@ -75,11 +75,7 @@ pub fn accept(fd: usize, address: usize, length: usize) -> Result<usize, Syscall
 }
 
 #[syscall]
-pub fn sock_send(
-    fd: usize,
-    header: &mut MessageHeader,
-    flags: usize,
-) -> Result<usize, SyscallError> {
+pub fn sock_send(fd: usize, header: &mut MessageHeader, flags: usize) -> Result<usize> {
     let flags = MessageFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     let current_task = scheduler::get_scheduler().current_task();
@@ -92,11 +88,7 @@ pub fn sock_send(
 }
 
 #[syscall]
-pub fn sock_recv(
-    sockfd: usize,
-    header: &mut MessageHeader,
-    flags: usize,
-) -> Result<usize, SyscallError> {
+pub fn sock_recv(sockfd: usize, header: &mut MessageHeader, flags: usize) -> Result<usize> {
     let flags = MessageFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     let current_task = scheduler::get_scheduler().current_task();
@@ -111,7 +103,7 @@ pub fn sock_recv(
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
 /// connection requests).
 #[syscall]
-pub fn listen(fd: usize, backlog: usize) -> Result<usize, SyscallError> {
+pub fn listen(fd: usize, backlog: usize) -> Result<usize> {
     let file = scheduler::get_scheduler()
         .current_task()
         .file_table
@@ -122,11 +114,7 @@ pub fn listen(fd: usize, backlog: usize) -> Result<usize, SyscallError> {
     Ok(0)
 }
 
-fn create_socket(
-    domain: usize,
-    socket_type: usize,
-    protocol: usize,
-) -> Result<DirCacheItem, SyscallError> {
+fn create_socket(domain: usize, socket_type: usize, protocol: usize) -> Result<DirCacheItem> {
     let typ = SocketType::from_usize(socket_type & 0b1111).ok_or(SyscallError::EINVAL)?;
     let protocol = IpProtocol::from_usize(protocol).ok_or(SyscallError::EINVAL)?;
 
@@ -171,7 +159,7 @@ fn create_socket(
 }
 
 #[syscall]
-pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usize, SyscallError> {
+pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usize> {
     let entry = create_socket(domain, socket_type, protocol)?;
 
     let current_task = scheduler::get_scheduler().current_task();
@@ -189,7 +177,7 @@ pub fn socket(domain: usize, socket_type: usize, protocol: usize) -> Result<usiz
 }
 
 #[syscall]
-pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, SyscallError> {
+pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize> {
     let address = socket_addr_from_addr(VirtAddr::new(address as u64))?;
 
     let current_task = scheduler::get_scheduler().current_task();
@@ -211,7 +199,7 @@ pub fn bind(fd: usize, address: usize, length: usize) -> Result<usize, SyscallEr
 
 // TODO(andypython): bindgen the abi-bits from mlibc and use those types instead.
 #[syscall]
-pub fn get_peername(fd: usize, addr: usize, len: &mut u32) -> Result<usize, SyscallError> {
+pub fn get_peername(fd: usize, addr: usize, len: &mut u32) -> Result<usize> {
     let thread = scheduler::current_thread();
     let file = thread
         .file_table
@@ -250,7 +238,7 @@ pub fn get_peername(fd: usize, addr: usize, len: &mut u32) -> Result<usize, Sysc
 }
 
 #[syscall]
-pub fn get_sockname(fd: usize, addr: usize, len: &mut u32) -> Result<usize, SyscallError> {
+pub fn get_sockname(fd: usize, addr: usize, len: &mut u32) -> Result<usize> {
     let thread = scheduler::current_thread();
     let file = thread
         .file_table
@@ -307,7 +295,7 @@ pub fn socket_pair(
     type_and_flags: usize,
     protocol: usize,
     fds: &mut [i32; 2],
-) -> Result<usize, SyscallError> {
+) -> Result<usize> {
     let current_task = scheduler::get_scheduler().current_task();
     let sockfd_flags = SocketFlags::from_bits_truncate(type_and_flags).into();
 

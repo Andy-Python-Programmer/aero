@@ -17,6 +17,7 @@
 
 //! System Calls are used to call a kernel service from userland.
 
+use core::fmt::Display;
 use core::mem::MaybeUninit;
 
 use aero_syscall::prelude::*;
@@ -96,6 +97,16 @@ pub fn exec_args_from_slice(args: usize, size: usize) -> ExecArgs {
     }
 
     ExecArgs { inner: result }
+}
+
+pub trait SysArg: Display {
+    fn from_usize(value: usize) -> Self;
+}
+
+impl SysArg for usize {
+    fn from_usize(value: usize) -> Self {
+        value
+    }
 }
 
 pub(super) struct SysLog {

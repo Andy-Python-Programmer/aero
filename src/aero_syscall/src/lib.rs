@@ -30,6 +30,8 @@ pub mod socket;
 pub mod syscall;
 pub mod time;
 
+pub type Result<T> = core::result::Result<T, SyscallError>;
+
 use byte_endian::BigEndian;
 
 pub use crate::syscall::*;
@@ -466,7 +468,7 @@ pub struct SysInfo {
     pub _f: [i8; 0],
 }
 
-pub fn syscall_result_as_usize(result: Result<usize, SyscallError>) -> usize {
+pub fn syscall_result_as_usize(result: Result<usize>) -> usize {
     match result {
         Ok(value) => value as _,
         Err(error) => -(error as isize) as _,
@@ -475,7 +477,7 @@ pub fn syscall_result_as_usize(result: Result<usize, SyscallError>) -> usize {
 
 /// Inner helper function that converts the syscall result value into the
 /// Rust [`Result`] type.
-pub fn isize_as_syscall_result(value: isize) -> Result<usize, SyscallError> {
+pub fn isize_as_syscall_result(value: isize) -> Result<usize> {
     if value >= 0 {
         Ok(value as usize)
     } else {
@@ -484,7 +486,7 @@ pub fn isize_as_syscall_result(value: isize) -> Result<usize, SyscallError> {
     }
 }
 
-pub fn sys_ipc_send(pid: usize, message: &[u8]) -> Result<(), SyscallError> {
+pub fn sys_ipc_send(pid: usize, message: &[u8]) -> Result<()> {
     let value = syscall3(
         prelude::SYS_IPC_SEND,
         pid,
@@ -498,7 +500,7 @@ pub fn sys_ipc_recv<'a>(
     pid: &mut usize,
     message: &'a mut [u8],
     block: bool,
-) -> Result<&'a mut [u8], SyscallError> {
+) -> Result<&'a mut [u8]> {
     let value = syscall4(
         prelude::SYS_IPC_RECV,
         pid as *mut usize as usize,
@@ -509,12 +511,12 @@ pub fn sys_ipc_recv<'a>(
     isize_as_syscall_result(value as _).map(|size| &mut message[0..size])
 }
 
-pub fn sys_ipc_discover_root() -> Result<usize, SyscallError> {
+pub fn sys_ipc_discover_root() -> Result<usize> {
     let value = syscall0(prelude::SYS_IPC_DISCOVER_ROOT);
     isize_as_syscall_result(value as _)
 }
 
-pub fn sys_ipc_become_root() -> Result<(), SyscallError> {
+pub fn sys_ipc_become_root() -> Result<()> {
     let value = syscall0(prelude::SYS_IPC_BECOME_ROOT);
     isize_as_syscall_result(value as _).map(|_| ())
 }

@@ -44,7 +44,7 @@ pub enum SocketAddrRef<'a> {
 }
 
 impl<'a> SocketAddrRef<'a> {
-    pub fn from_family(address: VirtAddr, family: u32) -> Result<Self, SyscallError> {
+    pub fn from_family(address: VirtAddr, family: u32) -> Result<Self> {
         match family {
             AF_UNIX => Ok(SocketAddrRef::Unix(address.read_mut::<SocketAddrUnix>()?)),
             AF_INET => Ok(SocketAddrRef::INet(address.read_mut::<SocketAddrInet>()?)),
@@ -54,7 +54,7 @@ impl<'a> SocketAddrRef<'a> {
         }
     }
 
-    pub fn from_ifreq(ifreq: &IfReq) -> Result<Self, SyscallError> {
+    pub fn from_ifreq(ifreq: &IfReq) -> Result<Self> {
         // SAFETY???
         let family = unsafe { ifreq.data.addr.sa_family };
         SocketAddrRef::from_family(
