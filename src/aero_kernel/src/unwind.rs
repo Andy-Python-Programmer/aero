@@ -169,13 +169,13 @@ pub fn unwind_stack_trace() {
         }
     }
 
-    let thread = scheduler::current_thread();
-    let tags = thread.mem_tags.lock();
-    let mut tags = tags.iter().collect::<alloc::vec::Vec<_>>();
-    tags.sort_by(|x, y| x.0.start.cmp(&y.0.start));
-    for (x, s) in tags.iter() {
-        log::trace!("{:#x}..{:#x} {s}", x.start, x.end);
-    }
+    // let thread = scheduler::current_thread();
+    // let tags = thread.mem_tags.lock();
+    // let mut tags = tags.iter().collect::<alloc::vec::Vec<_>>();
+    // tags.sort_by(|x, y| x.0.start.cmp(&y.0.start));
+    // for (x, s) in tags.iter() {
+    //     log::trace!("{:#x}..{:#x} {s}", x.start, x.end);
+    // }
 }
 
 #[cfg(feature = "ci")]

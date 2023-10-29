@@ -410,9 +410,9 @@ impl INodeInterface for UnixSocket {
             .sum::<usize>())
     }
 
-    fn send(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
+    fn send(&self, header: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
         // FIXME(andyython): figure out the message header stuff...
-        let data = message_hdr
+        let data = header
             .iovecs()
             .iter()
             .flat_map(|e| e.as_slice())

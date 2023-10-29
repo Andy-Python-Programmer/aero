@@ -1,5 +1,5 @@
 use aero_syscall::netlink::sockaddr_nl;
-use aero_syscall::socket::{MessageFlags, MessageHeader};
+use aero_syscall::socket::{MessageFlags, MessageHeader, SocketOptionLevel};
 use aero_syscall::*;
 use alloc::sync::Arc;
 use num_traits::cast::FromPrimitive;
@@ -19,6 +19,8 @@ use crate::socket::{SocketAddr, SocketAddrRef};
 
 use crate::userland::scheduler;
 use crate::userland::task::TaskId;
+
+use super::FileDescriptor;
 
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
@@ -76,6 +78,8 @@ pub fn accept(fd: usize, address: usize, length: usize) -> Result<usize> {
 
 #[syscall]
 pub fn sock_send(fd: usize, header: &mut MessageHeader, flags: usize) -> Result<usize> {
+    dbg!(header.control());
+
     let flags = MessageFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     let current_task = scheduler::get_scheduler().current_task();
@@ -100,17 +104,32 @@ pub fn sock_recv(sockfd: usize, header: &mut MessageHeader, flags: usize) -> Res
     Ok(socket.inode().recv(header, flags)?)
 }
 
+#[syscall]
+pub fn setopt(fd: FileDescriptor, layer: usize, number: usize, buf: &[u8]) -> Result<usize> {
+    let layer = SocketOptionLevel::from_usize(layer).ok_or(SyscallError::EINVAL)?;
+
+    match layer {
+        SocketOptionLevel::Socket => {
+            unimplemented!(
+                "setsockopt(fd={:?}, layer={:?}, number={:?}, buf={:?})",
+                fd,
+                layer,
+                number,
+                buf
+            )
+        }
+
+        _ => todo!(),
+    }
+
+    Ok(0)
+}
+
 /// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
 /// connection requests).
 #[syscall]
-pub fn listen(fd: usize, backlog: usize) -> Result<usize> {
-    let file = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EINVAL)?;
-
-    file.inode().listen(backlog)?;
+pub fn listen(fd: FileDescriptor, backlog: usize) -> Result<usize> {
+    fd.handle()?.inode().listen(backlog)?;
     Ok(0)
 }
 

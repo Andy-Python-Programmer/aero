@@ -252,6 +252,7 @@ pub fn generic_do_syscall(
         SYS_SOCK_SHUTDOWN => net::shutdown(b, c),
         SYS_GETPEERNAME => net::get_peername(b, c, d),
         SYS_GETSOCKNAME => net::get_sockname(b, c, d),
+        SYS_SETSOCKOPT => net::setopt(a, b, c, d, e),
 
         SYS_GETTIME => time::gettime(b, c),
         SYS_SLEEP => time::sleep(b),

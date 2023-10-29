@@ -319,7 +319,7 @@ pub struct LoadedBinary<'header> {
     pub envv: Option<ExecArgs>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct MMapFile {
     offset: usize,
     file: DirCacheItem,
@@ -333,7 +333,7 @@ impl MMapFile {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct Mapping {
     protection: MMapProt,
     flags: MMapFlags,
@@ -584,8 +584,7 @@ impl Mapping {
                 refresh_flags: true,
             };
 
-            self.end_addr = end;
-
+            self.end_addr = start;
             Ok(UnmapResult::Partial(new_mapping))
         } else if start <= self.start_addr && end >= self.end_addr {
             // We are unmapping the whole region.
@@ -610,7 +609,7 @@ impl Mapping {
 
             // Update the end address of the mapping since we have unmapped the
             // last chunk of the mapping.
-            self.end_addr = end;
+            self.end_addr = start;
             Ok(UnmapResult::End)
         }
     }

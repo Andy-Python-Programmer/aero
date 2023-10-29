@@ -314,6 +314,14 @@ pub type DirCacheKey = (usize, String);
 pub type DirCache = Cache<DirCacheKey, DirEntry>;
 pub type DirCacheItem = CacheArc<CacheItem<DirCacheKey, DirEntry>>;
 
+impl Debug for DirCacheItem {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("DirCacheItem")
+            .field(&self.absolute_path_str())
+            .finish()
+    }
+}
+
 pub struct CachedINode(Arc<dyn INodeInterface>);
 
 impl CachedINode {
