@@ -3,15 +3,27 @@
 set -x -e
 
 ANSI_CLEAR="\033[0m"
-ANSI_YELLOW="\033[1;34m"
+ANSI_RED="\033[1;31m"
+ANSI_BOLD="\033[1m"
 
 function warn() {
-	echo -e "${ANSI_YELLOW}$1${ANSI_CLEAR}"
+	echo -e "${ANSI_RED}error${ANSI_CLEAR}: ${ANSI_BOLD}$1${ANSI_CLEAR}"
 }
 
-# check if the pkg-build directory is not newer than the system-root
-if [[ ./sysroot/pkg-build -nt ./sysroot/system-root]]; then
-	warn "mkimage: pkg-build is newer than system-root, run `xbstrap install --all`"
+function newest_file() {
+  local latest file
+  for file; do
+    [[ $file && $file -nt $latest ]] || latest=$file
+  done
+}
+
+function has_newer_files_than() {
+  [[ "$(newest_file "$1"/*)" -nt "$(newest_file "$2" "$2"/*)" ]]
+}
+
+# check if the packages directory is not newer than the system-root
+if has_newer_files_than "./sysroot/packages" "./system/system-root"; then
+	warn "\`./sysroot/packages\` is newer than \`./sysroot/system-root\`, run \`xbstrap install --all\`"
 	exit 1
 fi
 
