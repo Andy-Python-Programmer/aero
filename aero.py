@@ -24,10 +24,7 @@ import platform
 import shutil
 import subprocess
 import sys
-import tarfile
 import time
-
-from typing import List
 
 
 def log_info(msg):
@@ -597,6 +594,14 @@ def main():
     if args.fmt:
         run_command(['cargo', 'fmt'], cwd="src")
         return
+
+    if os.path.exists(BUILD_DIR):
+        system_root = os.path.join(SYSROOT_DIR, 'system-root')
+        sysroot_mod = max(os.path.getmtime(os.path.join(system_root, file)) for file in os.listdir(system_root)) 
+        build_mod = os.path.getmtime(BUILD_DIR)
+        if sysroot_mod > build_mod:
+            log_info("sysroot modified, rebuilding")
+            os.rmdir(BUILD_DIR)
 
     t0 = time.time()
     # arch-aero_os

@@ -302,8 +302,6 @@ impl FileTable {
         let files = self.0.read();
 
         for handle in files.iter().flatten() {
-            let flags = *handle.flags.read();
-
             handle
                 .inode
                 .inode()

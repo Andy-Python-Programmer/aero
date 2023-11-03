@@ -23,7 +23,7 @@ mod page_table;
 
 pub use self::addr::*;
 pub use self::frame::*;
-pub use self::mapper::{MapperFlush, *};
+pub use self::mapper::*;
 pub use self::page::*;
 pub use self::page_table::*;
 

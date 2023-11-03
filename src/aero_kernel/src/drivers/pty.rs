@@ -35,7 +35,7 @@ use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::scheduler::ExitStatus;
 use crate::userland::task::Task;
-use crate::userland::terminal::{LineDiscipline, TerminalDevice};
+use crate::userland::terminal::{LineControl, LineDiscipline, TerminalDevice};
 use crate::utils::sync::{Mutex, WaitQueue};
 
 lazy_static::lazy_static! {
@@ -50,8 +50,6 @@ struct Master {
     wq: WaitQueue,
     window_size: Mutex<WinSize>,
     buffer: Mutex<Vec<u8>>,
-    termios: Mutex<Termios>,
-
     discipline: LineDiscipline,
 }
 
@@ -59,50 +57,13 @@ impl Master {
     pub fn new() -> Self {
         use aero_syscall::*;
 
-        // converts `^X` into `X`
-        let ctrl = |c| (c as u8 - 0x40);
-
-        let mut termios = Termios {
-            c_iflag: aero_syscall::TermiosIFlag::empty(),
-            c_oflag: aero_syscall::TermiosOFlag::ONLCR,
-            c_cflag: aero_syscall::TermiosCFlag::empty(),
-            c_lflag: TermiosLFlag::ECHOKE
-                | TermiosLFlag::ECHOE
-                | TermiosLFlag::ECHOK
-                | TermiosLFlag::ECHO
-                | TermiosLFlag::ECHOCTL
-                | TermiosLFlag::ISIG
-                | TermiosLFlag::ICANON
-                | TermiosLFlag::IEXTEN,
-            c_line: 0,
-            c_cc: [0; 32],
-            c_ispeed: 0,
-            c_ospeed: 0,
-        };
-
-        termios.c_cc[VINTR] = ctrl('C');
-        termios.c_cc[VQUIT] = ctrl('\\');
-        termios.c_cc[VERASE] = 127; // DEL character
-        termios.c_cc[VKILL] = ctrl('U');
-        termios.c_cc[VEOF] = ctrl('D');
-        termios.c_cc[VMIN] = 1;
-        termios.c_cc[VSTART] = ctrl('Q');
-        termios.c_cc[VSTOP] = ctrl('S');
-        termios.c_cc[VSUSP] = ctrl('Z');
-
         Self {
             id: PTY_ID.fetch_add(1, Ordering::SeqCst),
             wq: WaitQueue::new(),
             window_size: Mutex::new(WinSize::default()),
             buffer: Mutex::new(Vec::new()),
-            termios: Mutex::new(termios),
-
             discipline: LineDiscipline::new(),
         }
-    }
-
-    pub fn is_cooked(&self) -> bool {
-        self.termios.lock_irq().is_cooked()
     }
 }
 
@@ -120,7 +81,10 @@ impl INodeInterface for Master {
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
-        self.discipline.write(buffer);
+        self.discipline.write(buffer, |ctrl| match ctrl {
+            LineControl::Echo(c) => self.buffer.lock_irq().push(c),
+        });
+        self.wq.notify_all();
         Ok(buffer.len())
     }
 
@@ -150,7 +114,7 @@ impl INodeInterface for Master {
             }
 
             _ => {
-                log::warn!("ptmx: unknown ioctl (command={command:#x})")
+                panic!("ptmx: unknown ioctl (command={command:#x})")
             }
         }
 
@@ -168,13 +132,13 @@ impl TerminalDevice for Slave {
         use aero_syscall::signal::*;
         use aero_syscall::*;
 
-        if !self.master.is_cooked() {
+        if !self.master.discipline.termios.lock().is_cooked() {
             return;
         }
 
         if let ExitStatus::Signal(signo) = task.exit_status() {
             let mut buffer = self.master.buffer.lock_irq();
-            let termios = self.master.termios.lock_irq();
+            let termios = self.master.discipline.termios.lock();
 
             // converts `X` into `^X` and pushes the result into the master PTY buffer.
             let mut ctrl = |c| {
@@ -208,12 +172,7 @@ impl Slave {
 
 impl INodeInterface for Slave {
     fn metadata(&self) -> fs::Result<fs::inode::Metadata> {
-        Ok(fs::inode::Metadata {
-            id: 0,
-            file_type: FileType::Device,
-            children_len: 0,
-            size: 0,
-        })
+        Ok(fs::inode::Metadata::with_file_type(FileType::Device))
     }
 
     fn stat(&self) -> fs::Result<aero_syscall::Stat> {
@@ -229,16 +188,32 @@ impl INodeInterface for Slave {
                 Ok(0)
             }
 
+            aero_syscall::TIOCSWINSZ => {
+                *self.master.window_size.lock_irq() = *VirtAddr::new(arg as u64).read_mut()?;
+                Ok(0)
+            }
+
             aero_syscall::TCGETS => {
                 let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
-                *termios = *self.master.termios.lock_irq();
+                *termios = self.master.discipline.termios();
 
                 Ok(0)
             }
 
             aero_syscall::TCSETSF => {
                 let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
-                *self.master.termios.lock_irq() = *termios;
+                self.master.discipline.set_termios(termios.clone());
+
+                Ok(0)
+            }
+
+            aero_syscall::TCSETSW => {
+                // TODO: Allow the output buffer to drain and then set the current serial port
+                // settings.
+                //
+                // Equivalent to tcsetattr(fd, TCSADRAIN, argp).
+                let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
+                self.master.discipline.set_termios(termios.clone());
 
                 Ok(0)
             }
@@ -251,7 +226,11 @@ impl INodeInterface for Slave {
                 Ok(0)
             }
 
-            _ => Err(FileSystemError::NotSupported),
+            // TIOCGPGRP - Get the process group ID of the foreground process group on this
+            // terminal.
+            0x540f => Err(FileSystemError::NotSupported),
+
+            _ => panic!("pty: unknown ioctl: {command}"),
         }
     }
 
@@ -271,14 +250,16 @@ impl INodeInterface for Slave {
     }
 
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        Ok(self.master.discipline.read(buffer)?)
+        let x = self.master.discipline.read(buffer)?;
+        dbg!(core::str::from_utf8(&buffer[..x]));
+        Ok(x)
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
         if self
             .master
-            .termios
-            .lock_irq()
+            .discipline
+            .termios()
             .c_oflag
             .contains(aero_syscall::TermiosOFlag::ONLCR)
         {

@@ -27,6 +27,8 @@ pub mod keyboard;
 pub mod lai;
 // FIXME: aarch64 port
 pub mod e1000;
+// #[cfg(feature = "gdbstub")]
+pub mod gdbstub;
 pub mod mouse;
 #[cfg(target_arch = "x86_64")]
 pub mod pci;
