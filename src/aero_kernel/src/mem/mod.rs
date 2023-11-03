@@ -21,8 +21,6 @@ pub mod pti;
 mod slab;
 mod vmalloc;
 
-use core::alloc::Layout;
-
 use ::alloc::boxed::Box;
 
 use crate::mem::paging::*;
