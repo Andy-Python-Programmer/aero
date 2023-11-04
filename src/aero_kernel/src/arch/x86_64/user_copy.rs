@@ -15,11 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use core::fmt::{Debug, Display};
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
 
 use crate::interrupts::exceptions::PF_RESUME;
 use crate::mem::paging::VirtAddr;
+use crate::syscall::SysArg;
 
 use super::task::user_access_ok;
 
@@ -131,6 +133,13 @@ impl<T> UserRef<T> {
             val: unsafe { val.assume_init() },
         }
     }
+
+    pub fn take(self) -> T
+    where
+        T: Clone,
+    {
+        self.val.clone()
+    }
 }
 
 impl<T> Deref for UserRef<T> {
@@ -150,5 +159,24 @@ impl<T> DerefMut for UserRef<T> {
 impl<T> Drop for UserRef<T> {
     fn drop(&mut self) {
         assert!(copy_to_user(self.ptr, &self.val));
+    }
+}
+
+impl<T: Debug> Display for UserRef<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.val.fmt(f)
+    }
+}
+
+impl<T: Debug> Debug for UserRef<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "UserRef({:?})", self.val)
+    }
+}
+
+impl<T: Debug> SysArg for UserRef<T> {
+    fn from_usize(value: usize) -> Self {
+        // TODO: SAFETY
+        unsafe { Self::new(VirtAddr::new(value.try_into().unwrap())) }
     }
 }

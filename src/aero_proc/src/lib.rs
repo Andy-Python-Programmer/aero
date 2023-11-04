@@ -23,6 +23,7 @@ extern crate proc_macro_error;
 mod cpu_local;
 mod downcastable;
 mod indirect;
+mod ioctl;
 mod syscall;
 mod test;
 
@@ -70,4 +71,10 @@ pub fn cpu_local(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn indirect(attr: TokenStream, item: TokenStream) -> TokenStream {
     indirect::parse(attr, item)
+}
+
+#[proc_macro_derive(Ioctl, attributes(command))]
+#[proc_macro_error]
+pub fn ioctl(item: TokenStream) -> TokenStream {
+    ioctl::parse(item)
 }
