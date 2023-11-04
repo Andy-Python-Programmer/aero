@@ -5,6 +5,7 @@ imports:
   - file: bootstrap/vcs.yml
   - file: bootstrap/db.yml
   - file: bootstrap/editors.yml
+  - file: bootstrap/app-misc.yml
 
 general:
   cargo:
