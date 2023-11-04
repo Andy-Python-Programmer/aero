@@ -17,7 +17,9 @@
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
+use aero_syscall as libc;
 use aero_syscall::{Termios, WinSize};
+
 use alloc::collections::BTreeMap;
 use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
@@ -26,6 +28,7 @@ use spin::{Once, RwLock};
 
 use uapi::pty::*;
 
+use crate::arch::user_copy::UserRef;
 use crate::fs::cache::*;
 use crate::fs::devfs::DEV_FILESYSTEM;
 use crate::fs::inode::{DirEntry, FileType, INodeInterface, PollFlags};
@@ -44,6 +47,55 @@ lazy_static::lazy_static! {
 
 static PTS_FS: Once<Arc<PtsFs>> = Once::new();
 static PTY_ID: AtomicU32 = AtomicU32::new(0);
+
+#[derive(Debug, Ioctl)]
+pub enum TermiosCmd {
+    /// Get window size.
+    #[command(libc::TIOCGWINSZ)]
+    GetWinSize(UserRef<WinSize>),
+
+    /// Set window size.
+    #[command(libc::TIOCSWINSZ)]
+    SetWinSize(UserRef<WinSize>),
+
+    /// Get the current serial port settings.
+    ///
+    /// Equivalent to `tcgetattr(fd, argp)`.
+    #[command(libc::TCGETS)]
+    TcGets(UserRef<Termios>),
+
+    /// Allow the output buffer to drain, discard pending input, and set the current serial
+    /// port settings.
+    ///
+    /// Equivalent to `tcsetattr(fd, TCSAFLUSH, argp)`.
+    #[command(libc::TCSETSF)]
+    TcSetsf(UserRef<Termios>),
+
+    /// Allow the output buffer to drain, and set the current serial port settings.
+    ///
+    /// Equivalent to `tcsetattr(fd, TCSADRAIN, argp)`.
+    #[command(libc::TCSETSW)]
+    TcSetsw(UserRef<Termios>),
+
+    /// Make the given terminal the controlling terminal of the calling process. The calling
+    /// process must be a session leader and not have a controlling terminal already. For this
+    /// case, arg should be specified as zero.
+    ///
+    /// If this terminal is already the controlling terminal of a different session group, then the
+    /// ioctl fails with EPERM, unless the caller has the CAP_SYS_ADMIN capability and arg equals
+    /// 1, in which case the terminal is stolen, and all processes that had it as controlling
+    /// terminal lose it.
+    // FIXME: argument usize
+    #[command(libc::TIOCSCTTY)]
+    SetCtrlTerm,
+
+    /// Get the process group ID of the foreground process group on this terminal.
+    ///
+    /// When successful, equivalent to `*argp = tcgetpgrp(fd)`.
+    // FIXME: argument usize
+    #[command(libc::TIOCGPGRP)]
+    GetProcGroupId,
+}
 
 struct Master {
     id: u32,
@@ -64,6 +116,16 @@ impl Master {
             buffer: Mutex::new(Vec::new()),
             discipline: LineDiscipline::new(),
         }
+    }
+
+    #[inline]
+    fn set_window_size(&self, size: WinSize) {
+        *self.window_size.lock_irq() = size;
+    }
+
+    #[inline]
+    fn get_window_size(&self) -> WinSize {
+        *self.window_size.lock_irq()
     }
 }
 
@@ -180,58 +242,29 @@ impl INodeInterface for Slave {
     }
 
     fn ioctl(&self, command: usize, arg: usize) -> fs::Result<usize> {
-        match command {
-            aero_syscall::TIOCGWINSZ => {
-                let winsize = VirtAddr::new(arg as u64).read_mut::<WinSize>()?;
-                *winsize = *self.master.window_size.lock_irq();
-
-                Ok(0)
-            }
-
-            aero_syscall::TIOCSWINSZ => {
-                *self.master.window_size.lock_irq() = *VirtAddr::new(arg as u64).read_mut()?;
-                Ok(0)
-            }
-
-            aero_syscall::TCGETS => {
-                let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
-                *termios = self.master.discipline.termios();
-
-                Ok(0)
-            }
-
-            aero_syscall::TCSETSF => {
-                let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
-                self.master.discipline.set_termios(termios.clone());
-
-                Ok(0)
-            }
-
-            aero_syscall::TCSETSW => {
+        match TermiosCmd::from_command_arg(command, arg) {
+            TermiosCmd::GetWinSize(mut size) => *size = self.master.get_window_size(),
+            TermiosCmd::SetWinSize(size) => self.master.set_window_size(*size),
+            TermiosCmd::TcGets(mut termios) => *termios = self.master.discipline.termios(),
+            TermiosCmd::TcSetsf(termios) => self.master.discipline.set_termios(*termios),
+            TermiosCmd::TcSetsw(termios) => {
                 // TODO: Allow the output buffer to drain and then set the current serial port
                 // settings.
-                //
-                // Equivalent to tcsetattr(fd, TCSADRAIN, argp).
-                let termios = VirtAddr::new(arg as u64).read_mut::<Termios>()?;
-                self.master.discipline.set_termios(termios.clone());
-
-                Ok(0)
+                self.master.discipline.set_termios(*termios)
             }
 
-            aero_syscall::TIOCSCTTY => {
+            TermiosCmd::SetCtrlTerm => {
                 let current_task = scheduler::get_scheduler().current_task();
                 assert!(current_task.is_session_leader());
 
                 current_task.attach(self.sref());
-                Ok(0)
             }
 
-            // TIOCGPGRP - Get the process group ID of the foreground process group on this
-            // terminal.
-            0x540f => Err(FileSystemError::NotSupported),
-
-            _ => panic!("pty: unknown ioctl: {command}"),
+            // FIXME: the following ioctls are not implemented.
+            TermiosCmd::GetProcGroupId => return Err(FileSystemError::NotSupported),
         }
+
+        Ok(0)
     }
 
     fn poll(&self, table: Option<&mut fs::inode::PollTable>) -> fs::Result<PollFlags> {
@@ -250,9 +283,7 @@ impl INodeInterface for Slave {
     }
 
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        let x = self.master.discipline.read(buffer)?;
-        dbg!(core::str::from_utf8(&buffer[..x]));
-        Ok(x)
+        Ok(self.master.discipline.read(buffer)?)
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {

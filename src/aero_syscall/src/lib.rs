@@ -298,8 +298,9 @@ pub const TCSETSW: usize = 0x5403;
 pub const TCSETSF: usize = 0x5404;
 pub const TIOCSCTTY: usize = 0x540e;
 pub const TIOCNOTTY: usize = 0x5422;
+pub const TIOCGPGRP: usize = 0x540f;
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 #[repr(C)]
 pub struct WinSize {
     pub ws_row: u16,
