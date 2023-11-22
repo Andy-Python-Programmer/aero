@@ -1,0 +1,291 @@
+From ea30fe59e091c87eb09d24c20946ee7a90d371c2 Mon Sep 17 00:00:00 2001
+From: Anhad Singh <andypythonappdeveloper@gmail.com>
+Date: Tue, 14 Nov 2023 17:51:25 +1100
+Subject: [PATCH] <xxx>
+
+Signed-off-by: Anhad Singh <andypythonappdeveloper@gmail.com>
+
+diff --git a/options/intl/generic/libintl-stubs.cpp b/options/intl/generic/libintl-stubs.cpp
+index 8d4b28f..94ab421 100644
+--- a/options/intl/generic/libintl-stubs.cpp
++++ b/options/intl/generic/libintl-stubs.cpp
+@@ -1,73 +1,57 @@
+ #include <libintl.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <string.h>
+ #include <bits/ensure.h>
+ 
++static char *current_domain;
++
+ char *gettext(const char *msgid) {
+-	(void)msgid;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	// (void)msgid;
++	// __ensure(!"Not implemented");
++	// __builtin_unreachable();
++	return (char*)"";
+ }
+ 
+ char *dgettext(const char *domainname, const char *msgid) {
+-	(void)domainname;
+-	(void)msgid;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	return (char*)"";
+ }
+ 
+ char *dcgettext(const char *domainname, const char *msgid,
+ 		int category) {
+-	(void)domainname;
+-	(void)msgid;
+-	(void)category;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();	
++	return (char*)"";
++
+ }
+ 
+ char *ngettext(const char *msgid, const char *msgid_plural, unsigned long int n) {
+-	(void)msgid;
+-	(void)msgid_plural;
+-	(void)n;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();	
++	return (char*)"";
++	
+ }
+ 
+ char *dngettext(const char *domainname, const char *msgid,
+ 		const char *msgid_plural, unsigned long int n) {
+-	(void)domainname;
+-	(void)msgid;
+-	(void)msgid_plural;
+-	(void)n;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	return (char*)"";
++
+ }
+ 
+ char *dcngettext(const char *domainname, const char *msgid,
+ 		const char *msgid_plural, unsigned long int n, int category) {
+-	(void)domainname;
+-	(void)msgid;
+-	(void)msgid_plural;
+-	(void)n;
+-	(void)category;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	return (char*)"";
++
+ }
+ 
+ char *textdomain(const char *domainname) {
+-	(void)domainname;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	if(!domainname)
++		return current_domain ? current_domain : (char *)"messages";
++	
++	return (char*)"messages";
+ }
+ 
+ char *bindtextdomain(const char *domainname, const char *dirname) {
+-	(void)domainname;
+-	(void)dirname;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	return (char*)"";
++
+ }
+ 
+ char *bind_textdomain_codeset(const char *domainname, const char *codeset) {
+-	(void)domainname;
+-	(void)codeset;
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	return (char*)"";
+ }
+diff --git a/options/posix/generic/pthread-stubs.cpp b/options/posix/generic/pthread-stubs.cpp
+index 5618dc6..cd9350d 100644
+--- a/options/posix/generic/pthread-stubs.cpp
++++ b/options/posix/generic/pthread-stubs.cpp
+@@ -299,7 +299,7 @@ int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr) {
+ 	if (!tcb->stackAddr || !tcb->stackSize) {
+ 		// allocate stack
+ 
+-		attr->__mlibc_stackaddr = 0x00;
++		attr->__mlibc_stackaddr = (void*)0x7ffffff9a000;
+ 		attr->__mlibc_stacksize = 0x20000;
+ 		// get_own_stackinfo(&attr->__mlibc_stackaddr, &attr->__mlibc_stacksize);
+ 	} else {
+diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
+index 50cca94..a095ab0 100644
+--- a/options/rtdl/generic/linker.cpp
++++ b/options/rtdl/generic/linker.cpp
+@@ -438,6 +438,7 @@ void ObjectRepository::_fetchFromFile(SharedObject *object, int fd) {
+ 
+ 	__ensure(!(object->baseAddress & (hugeSize - 1)));
+ 
++	size_t tagSize = highest_address - object->baseAddress;
+ #if MLIBC_MMAP_ALLOCATE_DSO
+ 	void *mappedAddr = nullptr;
+ 
+@@ -457,9 +458,11 @@ void ObjectRepository::_fetchFromFile(SharedObject *object, int fd) {
+ 	libraryBase += (highest_address + (hugeSize - 1)) & ~(hugeSize - 1);
+ #endif
+ 
+-	if(verbose || logBaseAddresses)
++	if(verbose || logBaseAddresses) {
++		mlibc::sys_tag_memory((void *)object->baseAddress, tagSize, object->name.data());
+ 		mlibc::infoLogger() << "rtdl: Loading " << object->name
+ 				<< " at " << (void *)object->baseAddress << frg::endlog;
++	}
+ 
+ 	// Load all segments.
+ 	constexpr size_t pageSize = 0x1000;
+diff --git a/options/rtdl/include/mlibc/rtdl-sysdeps.hpp b/options/rtdl/include/mlibc/rtdl-sysdeps.hpp
+index c35271c..8a941b2 100644
+--- a/options/rtdl/include/mlibc/rtdl-sysdeps.hpp
++++ b/options/rtdl/include/mlibc/rtdl-sysdeps.hpp
+@@ -6,6 +6,7 @@ namespace [[gnu::visibility("hidden")]] mlibc {
+ int sys_tcb_set(void *pointer);
+ 
+ [[gnu::weak]] int sys_vm_readahead(void *pointer, size_t size);
++[[gnu::weak]] int sys_tag_memory(void *ptr, size_t size, char *tag);
+ 
+ } // namespace mlibc
+ 
+diff --git a/sysdeps/aero/generic/aero.cpp b/sysdeps/aero/generic/aero.cpp
+index e19b159..e3c11a4 100644
+--- a/sysdeps/aero/generic/aero.cpp
++++ b/sysdeps/aero/generic/aero.cpp
+@@ -62,6 +62,10 @@ static frg::vector<Slice, MemoryAllocator> create_slice(char *const arg[]) {
+ }
+ 
+ namespace mlibc {
++int sys_tag_memory(void *ptr, size_t size, char *tag) {
++    return syscall(SYS_DEBUG, ptr, size, tag, strlen(tag));
++}
++
+ int sys_uname(struct utsname *buf) {
+     auto result = syscall(SYS_UNAME, buf);
+ 
+@@ -73,6 +77,8 @@ int sys_uname(struct utsname *buf) {
+ }
+ 
+ int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
++    while (*pointer == expected) {}
++
+     // auto result = syscall(SYS_FUTEX_WAIT, pointer, expected, time);
+     //
+     // if (result < 0) {
+@@ -309,7 +315,7 @@ int sys_thread_setname(void *tcb, const char *name) {
+ }
+ 
+ void sys_thread_exit() {
+-    syscall(SYS_EXIT);
++    syscall(SYS_EXIT, 0);
+ 	__builtin_trap();
+ }
+ 
+diff --git a/sysdeps/aero/generic/filesystem.cpp b/sysdeps/aero/generic/filesystem.cpp
+index 33a11f4..4f64ba5 100644
+--- a/sysdeps/aero/generic/filesystem.cpp
++++ b/sysdeps/aero/generic/filesystem.cpp
+@@ -68,15 +68,22 @@ int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
+     return 0;
+ }
+ 
+-int sys_open(const char *filename, int flags, mode_t mode, int *fd) {
+-    auto result = syscall(SYS_OPEN, 0, filename, strlen(filename), flags);
++int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
++	(void)mode;
+ 
+-    if (result < 0) {
+-        return -result;
+-    }
++    auto ret = syscall(SYS_OPEN, dirfd, path, strlen(path), flags);
++	if (int e = sc_error(ret); e)
++		return e;
++	*fd = ret;
++	return 0;
++}
+ 
+-    *fd = result;
+-    return 0;
++int sys_open(const char *path, int flags, mode_t mode, int *fd) {
++	return sys_openat(AT_FDCWD, path, flags, mode, fd);
++}
++
++int sys_open_dir(const char *path, int *fd) {
++    return sys_open(path, O_DIRECTORY, 0, fd);
+ }
+ 
+ int sys_close(int fd) {
+@@ -256,10 +263,6 @@ int sys_read_entries(int handle, void *buffer, size_t max_size,
+     return 0;
+ }
+ 
+-int sys_open_dir(const char *path, int *handle) {
+-    return sys_open(path, O_DIRECTORY, 0, handle);
+-}
+-
+ int sys_rename(const char *path, const char *new_path) {
+     auto result =
+         syscall(SYS_RENAME, path, strlen(path), new_path, strlen(new_path));
+@@ -305,6 +308,13 @@ int sys_dup2(int fd, int flags, int newfd) {
+ }
+ 
+ int sys_fcntl(int fd, int request, va_list args, int *result_value) {
++    if(request == F_GETLK) {
++		struct flock *lock = va_arg(args, struct flock *);
++		lock->l_type = F_UNLCK;
++		mlibc::infoLogger() << "\e[31mmlibc: F_GETLK is stubbed!\e[39m" << frg::endlog;
++		return 0;
++	}
++
+     auto result = syscall(SYS_FCNTL, fd, request, va_arg(args, uint64_t));
+ 
+     if (result < 0) {
+diff --git a/sysdeps/aero/generic/sockets.cpp b/sysdeps/aero/generic/sockets.cpp
+index 10af36a..bf2602f 100644
+--- a/sysdeps/aero/generic/sockets.cpp
++++ b/sysdeps/aero/generic/sockets.cpp
+@@ -174,14 +174,10 @@ int sys_getsockopt(int fd, int layer, int number, void *__restrict buffer,
+ 
+ int sys_setsockopt(int fd, int layer, int number, const void *buffer,
+                    socklen_t size) {
+-    (void)fd;
+-    (void)buffer;
+-    (void)size;
+-
+     if (layer == SOL_SOCKET && number == SO_PASSCRED) {
+-        mlibc::infoLogger() << "\e[31mmlibc: setsockopt(SO_PASSCRED) is not "
+-                               "implemented correctly\e[39m"
+-                            << frg::endlog;
++        auto ret = syscall(SYS_SETSOCKOPT, fd, layer, number, buffer, size);
++        if (int e = sc_error(ret); e)
++            return e;
+         return 0;
+     } else if (layer == SOL_SOCKET && number == SO_ATTACH_FILTER) {
+         mlibc::infoLogger() << "\e[31mmlibc: setsockopt(SO_ATTACH_FILTER) is "
+diff --git a/sysdeps/aero/include/aero/syscall.h b/sysdeps/aero/include/aero/syscall.h
+index 39c5b65..bd2f489 100644
+--- a/sysdeps/aero/include/aero/syscall.h
++++ b/sysdeps/aero/include/aero/syscall.h
+@@ -82,6 +82,9 @@
+ #define SYS_SOCK_SHUTDOWN 75
+ #define SYS_GETPEERNAME 76
+ #define SYS_GETSOCKNAME 77
++#define SYS_DEBUG 78
++#define SYS_SETSOCKOPT 79
++#define SYS_GETSOCKOPT 80
+ 
+ // Invalid syscall used to trigger a log error in the kernel (as a hint)
+ // so, that we can implement the syscall in the kernel.
+-- 
+2.42.1
+

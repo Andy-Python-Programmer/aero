@@ -334,14 +334,14 @@ impl MMapFile {
 }
 
 #[derive(Debug, Clone)]
-struct Mapping {
-    protection: MMapProt,
-    flags: MMapFlags,
+pub struct Mapping {
+    pub protection: MMapProt,
+    pub flags: MMapFlags,
 
-    start_addr: VirtAddr,
-    end_addr: VirtAddr,
+    pub start_addr: VirtAddr,
+    pub end_addr: VirtAddr,
 
-    file: Option<MMapFile>,
+    pub file: Option<MMapFile>,
     refresh_flags: bool,
 }
 
@@ -1236,5 +1236,14 @@ impl Vm {
         self.inner
             .lock()
             .handle_page_fault(reason, accessed_address)
+    }
+
+    pub fn for_each_mapping<F>(&self, mut f: F)
+    where
+        F: FnMut(&Mapping),
+    {
+        for map in &self.inner.lock().mappings {
+            f(map);
+        }
     }
 }

@@ -1,5 +1,6 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use alloc::borrow::ToOwned;
 use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
 use alloc::sync::{Arc, Weak};
@@ -17,6 +18,9 @@ use super::FileSystemError;
 
 use super::inode::*;
 use super::*;
+
+// TODO: put this mf in prelude
+use alloc::vec;
 
 fn push_string_if_some(map: &mut serde_json::Value, key: &str, value: Option<String>) {
     if let Some(value) = value {
@@ -41,7 +45,6 @@ fn get_cpuinfo_cached() -> &'static str {
     static CACHED: Once<String> = Once::new();
 
     CACHED.call_once(|| {
-        use alloc::vec;
         use serde_json::*;
 
         let mut data = json!({ "processors": [] });
@@ -93,6 +96,7 @@ struct ProcINode {
 enum FileContents {
     CpuInfo,
     CmdLine,
+    SelfMaps,
 
     None,
 }
@@ -166,8 +170,25 @@ impl INodeInterface for LockedProcINode {
         let this = self.0.read();
 
         let data = match &this.contents {
-            FileContents::CpuInfo => Ok(get_cpuinfo_cached()),
-            FileContents::CmdLine => Ok(get_cmdline_cached()),
+            FileContents::CpuInfo => Ok(get_cpuinfo_cached().to_owned()),
+            FileContents::CmdLine => Ok(get_cmdline_cached().to_owned()),
+
+            FileContents::SelfMaps => {
+                let current_thread = scheduler::current_thread();
+                let mut result = serde_json::json!({ "maps": [] });
+                let maps = result.get_mut("maps").unwrap().as_array_mut().unwrap();
+
+                current_thread.vm().for_each_mapping(|map| {
+                    maps.push(serde_json::json!({
+                        "start": map.start_addr.as_u64(),
+                        "end": map.end_addr.as_u64(),
+                        "flags": map.flags.bits(),
+                        "protection": map.protection.bits(),
+                    }));
+                });
+
+                Ok(result.to_string())
+            }
 
             _ => Err(FileSystemError::NotSupported),
         }?;
@@ -276,6 +297,11 @@ impl ProcFs {
 
         inode.make_inode("cpuinfo", FileType::File, FileContents::CpuInfo)?;
         inode.make_inode("cmdline", FileType::File, FileContents::CmdLine)?;
+
+        let proc_self = inode.make_inode("self", FileType::Directory, FileContents::None)?;
+        let proc_self = proc_self.downcast_arc::<LockedProcINode>().unwrap();
+
+        proc_self.make_inode("maps", FileType::File, FileContents::SelfMaps)?;
 
         Ok(ramfs)
     }

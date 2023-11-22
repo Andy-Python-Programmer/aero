@@ -32,18 +32,11 @@ sources:
 
   - name: gettext
     subdir: 'bundled'
-    git: 'https://git.savannah.gnu.org/git/gettext.git'
-    tag: 'v0.19.8'
-    version: '0.19.8'
-    tools_required:
-      - host-autoconf-v2.69
-      - host-automake-v1.16
-      - host-libtool
-      - host-pkg-config
-    regenerate:
-      - args: ['./autogen.sh']
-        environ:
-          NOCONFIGURE: 'yes'
+    url: 'https://ftp.gnu.org/pub/gnu/gettext/gettext-0.22.3.tar.gz'
+    checksum: blake2b:aebe85a82cb94c37ed81e9801acf1e89d150f5992fb9be42d53b3f2734c5c95804f0051fabc26b8d0892dfaf89d18df16d4bca6bcb2e9b95eef5d4ae93a64379
+    extract_path: 'gettext-0.22.3'
+    format: 'tar.gz'
+    version: '0.22.3'
 
   - name: gobject-introspection
     subdir: 'bundled'
@@ -2464,8 +2457,8 @@ packages:
     source:
       subdir: 'bundled'
       git: 'https://gitlab.gnome.org/GNOME/gtk.git'
-      tag: '3.24.23'
-      version: '3.24.23'
+      tag: '3.24.28'
+      version: '3.24.28'
     tools_required:
       - host-gcc
       - virtual: pkgconfig-for-target
