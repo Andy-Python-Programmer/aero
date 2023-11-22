@@ -943,6 +943,7 @@ packages:
         - '-Ddisable_iconv_option=true'
         - '--buildtype=release'
         - '-Dlinux_kernel_headers=@BUILD_ROOT@/packages/linux-headers/usr/include'
+        - '-Ddisable_intl_option=true'
         - '@THIS_SOURCE_DIR@'
     build:
       - args: ['ninja']
@@ -970,6 +971,7 @@ packages:
         - '-Ddisable_iconv_option=true'
         - '--buildtype=debug'
         - '-Dlinux_kernel_headers=@BUILD_ROOT@/packages/linux-headers/usr/include'
+        - '-Ddisable_intl_option=true'
         - '@THIS_SOURCE_DIR@'
     build:
       - args: ['ninja']
@@ -2132,13 +2134,43 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: gettext
+    from_source: gettext
+    tools_required:
+      - host-gcc
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-aero'
+        - '--prefix=/usr'
+        - '--docdir=/usr/share/doc/gettext-0.22.3'
+        - '--enable-static=no'
+        - '--enable-shared=yes'
+        - '--disable-java'
+        - '--disable-nls'
+        - '--disable-acl'
+        - '--without-emacs'
+        - '--without-git'
+        - '--without-bzip2'
+        - '--without-xz'
+        - '--disable-curses'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: libintl
     source:
       subdir: 'bundled'
-      url: 'https://ftp.gnu.org/gnu/gettext/gettext-0.21.1.tar.xz'
+      url: 'https://ftp.gnu.org/gnu/gettext/gettext-0.22.tar.xz'
       format: 'tar.xz'
-      extract_path: 'gettext-0.21.1'
-      version: '0.21.1'
+      extract_path: 'gettext-0.22'
+      version: '0.22'
       tools_required:
         - host-autoconf-v2.69
         - host-automake-v1.16
@@ -2148,6 +2180,7 @@ packages:
     tools_required:
       - host-gcc
     pkgs_required:
+      - mlibc
       - libiconv
     configure:
       - args:
