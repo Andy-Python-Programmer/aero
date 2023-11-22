@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"aero_kernel":[["impl <a class=\"trait\" href=\"aero_kernel/prelude/rust_2021/_core/convert/trait.Into.html\" title=\"trait aero_kernel::prelude::rust_2021::_core::convert::Into\">Into</a>&lt;usize&gt; for <a class=\"struct\" href=\"aero_kernel/syscall/fs/struct.FileDescriptor.html\" title=\"struct aero_kernel::syscall::fs::FileDescriptor\">FileDescriptor</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

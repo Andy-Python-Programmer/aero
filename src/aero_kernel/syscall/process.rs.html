@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/syscall/process.rs`."><title>process.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (960754090 2023-10-06)" data-channel="nightly" data-search-js="search-5f5ec5419eadd0c9.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../aero_kernel/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/syscall/process.rs`."><title>process.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -419,9 +419,6 @@
 <a href="#419" id="419">419</a>
 <a href="#420" id="420">420</a>
 <a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (C) 2021-2023 The Aero Project Developers.
 //
 // This file is part of The Aero Project.
@@ -462,7 +459,7 @@
 }
 
 <span class="attr">#[syscall(no_return)]
-</span><span class="kw">pub fn </span>exit(status: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>exit(status: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="attr">#[cfg(all(test, feature = <span class="string">&quot;ci&quot;</span>))]
     </span><span class="kw">crate</span>::emu::exit_qemu(<span class="kw">crate</span>::emu::ExitStatus::Success);
 
@@ -480,12 +477,13 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>uname(buffer: <span class="kw-2">&amp;mut </span>Utsname) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>uname(buffer: <span class="kw-2">&amp;mut </span>Utsname) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">fn </span>init_array(fixed: <span class="kw-2">&amp;mut </span>[u8; <span class="number">65</span>], init: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) {
         <span class="kw">let </span>init_bytes = init.as_bytes();
         <span class="kw">let </span>len = init.len();
 
-        fixed[..len].copy_from_slice(init_bytes)
+        fixed[..len].copy_from_slice(init_bytes);
+        fixed[len..].fill(<span class="number">0</span>);
     }
 
     init_array(<span class="kw-2">&amp;mut </span>buffer.sysname, <span class="string">&quot;Aero&quot;</span>);
@@ -506,7 +504,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>fork() -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>fork() -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>scheduler = scheduler::get_scheduler();
     <span class="kw">let </span>forked = scheduler.current_task().fork();
 
@@ -515,7 +513,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>clone(entry: usize, stack: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>clone(entry: usize, stack: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>scheduler = scheduler::get_scheduler();
     <span class="kw">let </span>cloned = scheduler.current_task().clone_process(entry, stack);
 
@@ -524,9 +522,11 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>kill(pid: usize, signal: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>kill(pid: usize, signal: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="comment">// If pid is positive, then signal is sent to the process with that pid.
     </span><span class="kw">if </span>pid &gt; <span class="number">0 </span>{
+        <span class="kw">crate</span>::unwind::unwind_stack_trace();
+
         <span class="kw">let </span>task = scheduler::get_scheduler()
             .find_task(TaskId::new(pid))
             .ok_or(SyscallError::ESRCH)<span class="question-mark">?</span>;
@@ -539,13 +539,7 @@
 }
 
 <span class="attr">#[syscall(no_return)]
-</span><span class="kw">pub fn </span>exec(
-    path: <span class="kw-2">&amp;</span>Path,
-    args: usize,
-    argc: usize,
-    envs: usize,
-    envc: usize,
-) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>exec(path: <span class="kw-2">&amp;</span>Path, args: usize, argc: usize, envs: usize, envc: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>executable = fs::lookup_path(path)<span class="question-mark">?</span>;
 
     <span class="kw">if </span>executable.inode().metadata()<span class="question-mark">?</span>.is_directory() {
@@ -574,14 +568,14 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>log(msg: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>log(msg: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="macro">log::debug!</span>(<span class="string">&quot;{}&quot;</span>, msg);
 
     <span class="prelude-val">Ok</span>(<span class="number">0x00</span>)
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>waitpid(pid: usize, status: <span class="kw-2">&amp;mut </span>u32, flags: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>waitpid(pid: usize, status: <span class="kw-2">&amp;mut </span>u32, flags: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>flags = WaitPidFlags::from_bits_truncate(flags);
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
 
@@ -596,7 +590,7 @@
     flags: usize,
     fd: usize,
     offset: usize,
-) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>address = VirtAddr::new(address <span class="kw">as </span>u64);
     <span class="kw">let </span>protection = MMapProt::from_bits(protection).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
     <span class="kw">let </span>flags = MMapFlags::from_bits(flags).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
@@ -626,7 +620,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>munmap(address: usize, size: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>munmap(address: usize, size: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>address = VirtAddr::new(address <span class="kw">as </span>u64);
 
     <span class="kw">if </span>scheduler::get_scheduler()
@@ -641,7 +635,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>mprotect(ptr: usize, size: usize, prot: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>mprotect(ptr: usize, size: usize, prot: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>ptr = VirtAddr::new(ptr <span class="kw">as _</span>);
     <span class="kw">let </span>prot = MMapProt::from_bits(prot).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 
@@ -652,7 +646,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>backtrace() -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>backtrace() -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">crate</span>::unwind::unwind_stack_trace();
     <span class="prelude-val">Ok</span>(<span class="number">0</span>)
 }
@@ -662,18 +656,18 @@
 /// When the tracer is enabled for a process, it also applies to any child processes spawned by the
 /// process.
 </span><span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>trace() -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>trace() -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     scheduler::get_scheduler().current_task().enable_systrace();
     <span class="prelude-val">Ok</span>(<span class="number">0</span>)
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>getpid() -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>getpid() -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="prelude-val">Ok</span>(scheduler::get_scheduler().current_task().pid().as_usize())
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>getppid() -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>getppid() -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="prelude-val">Ok</span>(scheduler::get_scheduler()
         .current_task()
         .parent_pid()
@@ -681,12 +675,12 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>gettid() -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>gettid() -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="prelude-val">Ok</span>(scheduler::get_scheduler().current_task().tid().as_usize())
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>gethostname(buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>gethostname(buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>hostname = hostname().lock();
     <span class="kw">let </span>bytes = hostname.as_bytes();
 
@@ -700,14 +694,14 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>info(struc: <span class="kw-2">&amp;mut </span>SysInfo) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>info(struc: <span class="kw-2">&amp;mut </span>SysInfo) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     struc.uptime = <span class="kw">crate</span>::arch::time::get_uptime_ticks() <span class="kw">as </span>i64;
 
     <span class="prelude-val">Ok</span>(<span class="number">0x00</span>)
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>sethostname(name: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>sethostname(name: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">match </span>core::str::from_utf8(name) {
         <span class="prelude-val">Ok</span>(name) =&gt; {
             <span class="kw-2">*</span>hostname().lock() = name.into();
@@ -719,7 +713,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>sigprocmask(how: usize, set: <span class="kw-2">*const </span>u64, old_set: <span class="kw-2">*mut </span>u64) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>sigprocmask(how: usize, set: <span class="kw-2">*const </span>u64, old_set: <span class="kw-2">*mut </span>u64) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>set = <span class="kw">if </span>set.is_null() {
         <span class="prelude-val">None
     </span>} <span class="kw">else </span>{
@@ -748,7 +742,7 @@
     sigact: <span class="kw-2">*mut </span>SigAction,
     sigreturn: usize,
     old: <span class="kw-2">*mut </span>SigAction,
-) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>new = <span class="kw">if </span>sigact.is_null() {
         <span class="prelude-val">None
     </span>} <span class="kw">else </span>{
@@ -777,7 +771,7 @@
 }
 
 <span class="attr">#[syscall(no_return)]
-</span><span class="kw">pub fn </span>shutdown() -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>shutdown() -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     fs::cache::dcache().log();
 
     fs::cache::clear_inode_cache();
@@ -789,7 +783,7 @@
     <span class="macro">unreachable!</span>(<span class="string">&quot;aml: failed to shutdown (enter state S5)&quot;</span>)
 }
 
-<span class="kw">fn </span>find_task_by_pid(pid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;Task&gt;, SyscallError&gt; {
+<span class="kw">fn </span>find_task_by_pid(pid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;Task&gt;&gt; {
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
 
     <span class="comment">// If `pid` is 0, the process ID of the calling process is used.
@@ -803,7 +797,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>getpgid(pid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>getpgid(pid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>task = find_task_by_pid(pid)<span class="question-mark">?</span>;
     <span class="kw">let </span>group = SESSIONS.find_group(task).unwrap();
 
@@ -811,7 +805,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>setpgid(pid: usize, pgid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>setpgid(pid: usize, pgid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
     <span class="kw">let </span>task = find_task_by_pid(pid)<span class="question-mark">?</span>;
 
@@ -837,7 +831,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>setsid() -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>setsid() -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
     <span class="kw">if </span>current_task.is_group_leader() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(SyscallError::EPERM);

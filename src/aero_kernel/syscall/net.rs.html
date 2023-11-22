@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/syscall/net.rs`."><title>net.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (960754090 2023-10-06)" data-channel="nightly" data-search-js="search-5f5ec5419eadd0c9.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../aero_kernel/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/syscall/net.rs`."><title>net.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -279,7 +279,56 @@
 <a href="#279" id="279">279</a>
 <a href="#280" id="280">280</a>
 <a href="#281" id="281">281</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>aero_syscall::socket::{MessageFlags, MessageHeader};
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>aero_syscall::netlink::sockaddr_nl;
+<span class="kw">use </span>aero_syscall::socket::{MessageFlags, MessageHeader, SocketOptionLevel};
 <span class="kw">use </span>aero_syscall::<span class="kw-2">*</span>;
 <span class="kw">use </span>alloc::sync::Arc;
 <span class="kw">use </span>num_traits::cast::FromPrimitive;
@@ -291,22 +340,26 @@
 <span class="kw">use </span><span class="kw">crate</span>::mem::paging::VirtAddr;
 
 <span class="kw">use </span><span class="kw">crate</span>::socket::ipv4::Ipv4Socket;
+<span class="kw">use </span><span class="kw">crate</span>::socket::netlink::NetLinkSocket;
 <span class="kw">use </span><span class="kw">crate</span>::socket::tcp::TcpSocket;
 <span class="kw">use </span><span class="kw">crate</span>::socket::udp::UdpSocket;
 <span class="kw">use </span><span class="kw">crate</span>::socket::unix::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::socket::{SocketAddr, SocketAddrRef};
 
 <span class="kw">use </span><span class="kw">crate</span>::userland::scheduler;
+<span class="kw">use </span><span class="kw">crate</span>::userland::task::TaskId;
+
+<span class="kw">use </span><span class="kw">super</span>::FileDescriptor;
 
 <span class="doccomment">/// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
-</span><span class="kw">fn </span>socket_addr_from_addr&lt;<span class="lifetime">&#39;sys</span>&gt;(address: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddrRef&lt;<span class="lifetime">&#39;sys</span>&gt;, SyscallError&gt; {
+</span><span class="kw">fn </span>socket_addr_from_addr&lt;<span class="lifetime">&#39;sys</span>&gt;(address: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddrRef&lt;<span class="lifetime">&#39;sys</span>&gt;&gt; {
     <span class="kw">let </span>family = <span class="kw-2">*</span>address.read_mut::&lt;u32&gt;()<span class="question-mark">?</span>;
     SocketAddrRef::from_family(address, family)
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>shutdown(fd: usize, how: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>shutdown(fd: usize, how: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>file_table = <span class="kw-2">&amp;</span>scheduler::get_scheduler().current_task().file_table;
     <span class="kw">let </span>socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 
@@ -316,7 +369,7 @@
 
 <span class="doccomment">/// Connects the socket to the specified address.
 </span><span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>connect(fd: usize, address: usize, length: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>connect(fd: usize, address: usize, length: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>address = socket_addr_from_addr(VirtAddr::new(address <span class="kw">as </span>u64))<span class="question-mark">?</span>;
     <span class="kw">let </span>file = scheduler::get_scheduler()
         .current_task()
@@ -330,7 +383,7 @@
 
 <span class="doccomment">/// Accept a connection on a socket.
 </span><span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>accept(fd: usize, address: usize, length: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>accept(fd: usize, address: usize, length: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>file_table = scheduler::get_scheduler().current_task().file_table.clone();
     <span class="kw">let </span>socket = file_table.get_handle(fd).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 
@@ -353,11 +406,9 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>sock_send(
-    fd: usize,
-    header: <span class="kw-2">&amp;mut </span>MessageHeader,
-    flags: usize,
-) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>sock_send(fd: usize, header: <span class="kw-2">&amp;mut </span>MessageHeader, flags: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+    <span class="macro">dbg!</span>(header.control());
+
     <span class="kw">let </span>flags = MessageFlags::from_bits(flags).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
@@ -370,11 +421,7 @@
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>sock_recv(
-    sockfd: usize,
-    header: <span class="kw-2">&amp;mut </span>MessageHeader,
-    flags: usize,
-) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>sock_recv(sockfd: usize, header: <span class="kw-2">&amp;mut </span>MessageHeader, flags: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>flags = MessageFlags::from_bits(flags).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
@@ -386,25 +433,36 @@
     <span class="prelude-val">Ok</span>(socket.inode().recv(header, flags)<span class="question-mark">?</span>)
 }
 
-<span class="doccomment">/// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
-/// connection requests).
-</span><span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>listen(fd: usize, backlog: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
-    <span class="kw">let </span>file = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .get_handle(fd)
-        .ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
+<span class="attr">#[syscall]
+</span><span class="kw">pub fn </span>setopt(fd: FileDescriptor, layer: usize, number: usize, buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+    <span class="kw">let </span>layer = SocketOptionLevel::from_usize(layer).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 
-    file.inode().listen(backlog)<span class="question-mark">?</span>;
+    <span class="kw">match </span>layer {
+        SocketOptionLevel::Socket =&gt; {
+            <span class="macro">unimplemented!</span>(
+                <span class="string">&quot;setsockopt(fd={:?}, layer={:?}, number={:?}, buf={:?})&quot;</span>,
+                fd,
+                layer,
+                number,
+                buf
+            )
+        }
+
+        <span class="kw">_ </span>=&gt; <span class="macro">todo!</span>(),
+    }
+
     <span class="prelude-val">Ok</span>(<span class="number">0</span>)
 }
 
-<span class="kw">fn </span>create_socket(
-    domain: usize,
-    socket_type: usize,
-    protocol: usize,
-) -&gt; <span class="prelude-ty">Result</span>&lt;DirCacheItem, SyscallError&gt; {
+<span class="doccomment">/// Marks the socket as a passive socket (i.e. as a socket that will be used to accept incoming
+/// connection requests).
+</span><span class="attr">#[syscall]
+</span><span class="kw">pub fn </span>listen(fd: FileDescriptor, backlog: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+    fd.handle()<span class="question-mark">?</span>.inode().listen(backlog)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="number">0</span>)
+}
+
+<span class="kw">fn </span>create_socket(domain: usize, socket_type: usize, protocol: usize) -&gt; <span class="prelude-ty">Result</span>&lt;DirCacheItem&gt; {
     <span class="kw">let </span>typ = SocketType::from_usize(socket_type &amp; <span class="number">0b1111</span>).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
     <span class="kw">let </span>protocol = IpProtocol::from_usize(protocol).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 
@@ -432,6 +490,8 @@
             }
         },
 
+        AF_NETLINK =&gt; (<span class="string">&quot;netlink&quot;</span>, NetLinkSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;),
+
         <span class="kw">_ </span>=&gt; {
             <span class="macro">log::warn!</span>(
                 <span class="string">&quot;unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol:?}&quot;
@@ -440,25 +500,32 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(SyscallError::EINVAL);
         }
     };
+    <span class="macro">log::warn!</span>(<span class="string">&quot;&lt;{name}_socket&gt; -EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE&quot;</span>);
 
     <span class="kw">let </span>entry = DirEntry::from_inode(socket, <span class="macro">alloc::format!</span>(<span class="string">&quot;&lt;{name}_socket&gt;&quot;</span>));
     <span class="prelude-val">Ok</span>(entry)
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>socket(domain: usize, socket_type: usize, protocol: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>socket(domain: usize, socket_type: usize, protocol: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>entry = create_socket(domain, socket_type, protocol)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
 
     <span class="kw">let </span>sockfd_flags = SocketFlags::from_bits_truncate(socket_type).into();
-    <span class="kw">let </span>fd = current_task.file_table.open_file(entry, sockfd_flags)<span class="question-mark">?</span>;
+    <span class="kw">let </span>fd = <span class="macro">dbg!</span>(current_task.file_table.debug_open_file(entry, sockfd_flags))<span class="question-mark">?</span>;
+    <span class="comment">// if fd == 17 {
+    //     scheduler::get_scheduler()
+    //         .find_task(TaskId::new(40))
+    //         .unwrap()
+    //         .enable_systrace();
+    // }
 
-    <span class="prelude-val">Ok</span>(fd)
+    </span><span class="prelude-val">Ok</span>(fd)
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>bind(fd: usize, address: usize, length: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>bind(fd: usize, address: usize, length: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>address = socket_addr_from_addr(VirtAddr::new(address <span class="kw">as </span>u64))<span class="question-mark">?</span>;
 
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
@@ -480,7 +547,7 @@
 
 <span class="comment">// TODO(andypython): bindgen the abi-bits from mlibc and use those types instead.
 </span><span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>get_peername(fd: usize, addr: usize, len: <span class="kw-2">&amp;mut </span>u32) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>get_peername(fd: usize, addr: usize, len: <span class="kw-2">&amp;mut </span>u32) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>thread = scheduler::current_thread();
     <span class="kw">let </span>file = thread
         .file_table
@@ -503,13 +570,23 @@
             <span class="kw-2">*</span>target = peer;
             <span class="kw-2">*</span>len = size;
         }
+
+        SocketAddr::Netlink(peer) =&gt; <span class="macro">unimplemented!</span>(<span class="string">&quot;{:?}&quot;</span>, peer),
+        SocketAddr::Unix(peer) =&gt; {
+            <span class="kw">let </span>size = core::mem::size_of::&lt;SocketAddrUnix&gt;() <span class="kw">as </span>u32;
+            <span class="macro">assert!</span>(<span class="kw-2">*</span>len &gt;= size);
+
+            <span class="kw">let </span><span class="kw-2">mut </span>target = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(addr <span class="kw">as </span><span class="kw-2">*mut </span>SocketAddrUnix) };
+            <span class="kw-2">*</span>len = peer.path_len() <span class="kw">as </span>u32 + <span class="macro">core::mem::offset_of!</span>(SocketAddrUnix, path) <span class="kw">as </span>u32;
+            <span class="kw-2">*</span>target = peer;
+        }
     }
 
     <span class="prelude-val">Ok</span>(<span class="number">0</span>)
 }
 
 <span class="attr">#[syscall]
-</span><span class="kw">pub fn </span>get_sockname(fd: usize, addr: usize, len: <span class="kw-2">&amp;mut </span>u32) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+</span><span class="kw">pub fn </span>get_sockname(fd: usize, addr: usize, len: <span class="kw-2">&amp;mut </span>u32) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>thread = scheduler::current_thread();
     <span class="kw">let </span>file = thread
         .file_table
@@ -523,7 +600,8 @@
 
     <span class="kw">let </span>name = inode.get_sockname()<span class="question-mark">?</span>;
 
-    <span class="kw">match </span>name {
+    <span class="comment">// CLEANME: TODO: FIXME:
+    </span><span class="kw">match </span>name {
         SocketAddr::Inet(name) =&gt; {
             <span class="kw">let </span>size = core::mem::size_of::&lt;SocketAddrInet&gt;() <span class="kw">as </span>u32;
             <span class="macro">assert!</span>(<span class="kw-2">*</span>len &gt;= size);
@@ -531,6 +609,24 @@
             <span class="kw">let </span><span class="kw-2">mut </span>target = <span class="kw">unsafe </span>{ UserRef::&lt;SocketAddrInet&gt;::new(VirtAddr::new(addr <span class="kw">as </span>u64)) };
             <span class="kw-2">*</span>target = name;
             <span class="kw-2">*</span>len = size;
+        }
+
+        SocketAddr::Netlink(name) =&gt; {
+            <span class="kw">let </span>size = core::mem::size_of::&lt;sockaddr_nl&gt;() <span class="kw">as </span>u32;
+            <span class="macro">assert!</span>(<span class="kw-2">*</span>len &gt;= size);
+
+            <span class="kw">let </span><span class="kw-2">mut </span>target = <span class="kw">unsafe </span>{ UserRef::&lt;sockaddr_nl&gt;::new(VirtAddr::new(addr <span class="kw">as </span>u64)) };
+            <span class="kw-2">*</span>target = name;
+            <span class="kw-2">*</span>len = size;
+        }
+
+        SocketAddr::Unix(name) =&gt; {
+            <span class="kw">let </span>size = core::mem::size_of::&lt;SocketAddrUnix&gt;() <span class="kw">as </span>u32;
+            <span class="macro">assert!</span>(<span class="kw-2">*</span>len &gt;= size);
+
+            <span class="kw">let </span><span class="kw-2">mut </span>target = <span class="kw">unsafe </span>{ UserRef::&lt;SocketAddrUnix&gt;::new(VirtAddr::new(addr <span class="kw">as </span>u64)) };
+            <span class="kw-2">*</span>len = name.path_len() <span class="kw">as </span>u32 + <span class="macro">core::mem::offset_of!</span>(SocketAddrUnix, path) <span class="kw">as </span>u32;
+            <span class="kw-2">*</span>target = name;
         }
     }
 
@@ -547,7 +643,7 @@
     type_and_flags: usize,
     protocol: usize,
     fds: <span class="kw-2">&amp;mut </span>[i32; <span class="number">2</span>],
-) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
     <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
     <span class="kw">let </span>sockfd_flags = SocketFlags::from_bits_truncate(type_and_flags).into();
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/task.rs`."><title>task.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (960754090 2023-10-06)" data-channel="nightly" data-search-js="search-5f5ec5419eadd0c9.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../aero_kernel/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/task.rs`."><title>task.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -569,6 +569,80 @@
 <a href="#569" id="569">569</a>
 <a href="#570" id="570">570</a>
 <a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (C) 2021-2023 The Aero Project Developers.
 //
 // This file is part of The Aero Project.
@@ -648,6 +722,7 @@
     PhEnt = <span class="number">4</span>,
     PhNum = <span class="number">5</span>,
     Entry = <span class="number">9</span>,
+    Secure = <span class="number">23</span>,
 }
 
 <span class="doccomment">/// Returns the first address outside the user range.
@@ -696,7 +771,7 @@
     fs_base: VirtAddr,
     gs_base: VirtAddr,
 
-    fpu_storage: <span class="prelude-ty">Option</span>&lt;Box&lt;[u8]&gt;&gt;,
+    <span class="kw">pub </span>fpu_storage: <span class="prelude-ty">Option</span>&lt;FpuState&gt;,
 }
 
 <span class="kw">impl </span>ArchTask {
@@ -782,16 +857,17 @@
         <span class="kw">let </span>old_registers_frame = <span class="kw">unsafe </span>{ old_stack.offset::&lt;InterruptErrorStack&gt;() };
 
         <span class="kw">let </span>registers_frame = <span class="kw">unsafe </span>{ new_stack.offset::&lt;InterruptErrorStack&gt;() };
-        <span class="kw-2">*</span>registers_frame = InterruptErrorStack::default();
+        <span class="kw-2">*</span>registers_frame = <span class="kw-2">*</span>old_registers_frame;
 
-        registers_frame.stack.iret.cs = old_registers_frame.stack.iret.cs;
-        registers_frame.stack.iret.ss = old_registers_frame.stack.iret.ss;
+        <span class="comment">// registers_frame.stack.iret.cs = old_registers_frame.stack.iret.cs;
+        // registers_frame.stack.iret.ss = old_registers_frame.stack.iret.ss;
+        // registers_frame.stack.iret.rflags = old_registers_frame.stack.iret.rflags;
 
-        registers_frame.stack.iret.rip = entry <span class="kw">as _</span>;
+        </span>registers_frame.stack.iret.rip = entry <span class="kw">as _</span>;
         registers_frame.stack.iret.rsp = usr_stack <span class="kw">as _</span>;
-        registers_frame.stack.iret.rflags = <span class="number">0x200</span>;
+        <span class="comment">// registers_frame.stack.iret.rflags = 0x200;
 
-        <span class="kw">let </span>context = <span class="kw">unsafe </span>{ new_stack.offset::&lt;Context&gt;() };
+        </span><span class="kw">let </span>context = <span class="kw">unsafe </span>{ new_stack.offset::&lt;Context&gt;() };
 
         <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
             <span class="kw">fn </span>fork_init();
@@ -801,8 +877,7 @@
         context.rip = fork_init <span class="kw">as _</span>;
         context.cr3 = address_space.cr3().start_address().as_u64();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>fpu_storage = alloc_boxed_buffer::&lt;u8&gt;(xsave_size() <span class="kw">as </span>usize);
-        fpu_storage.copy_from_slice(<span class="self">self</span>.fpu_storage.as_ref().unwrap());
+        <span class="kw">let </span><span class="kw-2">mut </span>fpu_storage = <span class="self">self</span>.fpu_storage.unwrap().clone();
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             context: <span class="kw">unsafe </span>{ Unique::new_unchecked(context) },
@@ -811,7 +886,7 @@
             user: <span class="bool-val">true</span>,
 
             <span class="comment">// The FS and GS bases are inherited from the parent process.
-            </span>fs_base: <span class="self">self</span>.fs_base,
+            </span>fs_base: VirtAddr::new(<span class="number">1</span>),
             gs_base: <span class="self">self</span>.gs_base,
 
             fpu_storage: <span class="prelude-val">Some</span>(fpu_storage),
@@ -857,8 +932,7 @@
         context.rip = fork_init <span class="kw">as </span>u64;
         context.cr3 = new_address_space.cr3().start_address().as_u64();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>fpu_storage = alloc_boxed_buffer::&lt;u8&gt;(xsave_size() <span class="kw">as </span>usize);
-        fpu_storage.copy_from_slice(<span class="self">self</span>.fpu_storage.as_ref().unwrap());
+        <span class="kw">let </span>fpu_storage = <span class="self">self</span>.fpu_storage.unwrap().clone();
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             context: <span class="kw">unsafe </span>{ Unique::new_unchecked(context) },
@@ -914,32 +988,32 @@
         </span><span class="self">self</span>.fs_base = VirtAddr::zero();
         <span class="self">self</span>.gs_base = VirtAddr::zero();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>fpu_storage = alloc_boxed_buffer::&lt;u8&gt;(xsave_size() <span class="kw">as </span>usize);
+        <span class="kw">let </span><span class="kw-2">mut </span>fpu_storage = FpuState::default();
 
-        <span class="kw">unsafe </span>{
-            xrstor(<span class="kw-2">&amp;</span>fpu_storage);
+        <span class="comment">// unsafe {
+        //     xrstor(&amp;fpu_storage);
 
-            <span class="comment">// The x87 FPU control word is set to 0x37f (default), which masks all
-            // floating-point exceptions, sets rounding to nearest, and sets the x87
-            // FPU precision to 64 bits (as documented in Intel SDM volume 1 section
-            // 8.1.5).
-            </span><span class="kw">const </span>DEFAULT_FPU_CWORD: u16 = <span class="number">0x37f</span>;
-            <span class="macro">asm!</span>(<span class="string">&quot;fldcw [{}]&quot;</span>, <span class="kw">in</span>(reg) <span class="kw-2">&amp;</span>DEFAULT_FPU_CWORD, options(nomem));
+        //     // The x87 FPU control word is set to 0x37f (default), which masks all
+        //     // floating-point exceptions, sets rounding to nearest, and sets the x87
+        //     // FPU precision to 64 bits (as documented in Intel SDM volume 1 section
+        //     // 8.1.5).
+        //     const DEFAULT_FPU_CWORD: u16 = 0x37f;
+        //     asm!(&quot;fldcw [{}]&quot;, in(reg) &amp;DEFAULT_FPU_CWORD, options(nomem));
 
-            <span class="comment">// Set the default MXCSR value at reset as documented in Intel SDM volume 2A.
-            </span>controlregs::write_mxcsr(
-                MxCsr::INVALID_OPERATION_MASK
-                    | MxCsr::DENORMAL_MASK
-                    | MxCsr::DIVIDE_BY_ZERO_MASK
-                    | MxCsr::OVERFLOW_MASK
-                    | MxCsr::UNDERFLOW_MASK
-                    | MxCsr::PRECISION_MASK,
-            );
+        //     // Set the default MXCSR value at reset as documented in Intel SDM volume 2A.
+        //     controlregs::write_mxcsr(
+        //         MxCsr::INVALID_OPERATION_MASK
+        //             | MxCsr::DENORMAL_MASK
+        //             | MxCsr::DIVIDE_BY_ZERO_MASK
+        //             | MxCsr::OVERFLOW_MASK
+        //             | MxCsr::UNDERFLOW_MASK
+        //             | MxCsr::PRECISION_MASK,
+        //     );
 
-            xsave(<span class="kw-2">&amp;mut </span>fpu_storage);
-        }
+        //     xsave(&amp;mut fpu_storage);
+        // }
 
-        <span class="self">self</span>.fpu_storage = <span class="prelude-val">Some</span>(fpu_storage);
+        </span><span class="self">self</span>.fpu_storage = <span class="prelude-val">Some</span>(fpu_storage);
 
         <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
             <span class="kw">fn </span>jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
@@ -972,7 +1046,7 @@
         <span class="kw">let </span>p2_header = loaded_binary.elf.header.pt2;
 
         <span class="kw">unsafe </span>{
-            <span class="kw">let </span>hdr: [(AuxvType, usize); <span class="number">4</span>] = [
+            <span class="kw">let </span>hdr: [(AuxvType, usize); <span class="number">5</span>] = [
                 (
                     AuxvType::Phdr,
                     (p2_header.ph_offset() + loaded_binary.base_addr.as_u64()) <span class="kw">as </span>usize,
@@ -980,6 +1054,7 @@
                 (AuxvType::PhEnt, p2_header.ph_entry_size() <span class="kw">as </span>usize),
                 (AuxvType::PhNum, p2_header.ph_count() <span class="kw">as </span>usize),
                 (AuxvType::Entry, p2_header.entry_point() <span class="kw">as </span>usize),
+                (AuxvType::Secure, <span class="number">0</span>),
             ];
 
             stack.write(<span class="number">0usize</span>); <span class="comment">// Make it 16 bytes aligned
@@ -1015,11 +1090,9 @@
     <span class="doccomment">/// Allocates a new context switch stack for the process and returns the stack
     /// top address. See the module level documentation for more information.
     </span><span class="kw">fn </span>alloc_switch_stack() -&gt; <span class="prelude-ty">Result</span>&lt;VirtAddr, MapToError&lt;Size4KiB&gt;&gt; {
-        <span class="kw">let </span>frame: PhysFrame&lt;Size4KiB&gt; = FRAME_ALLOCATOR
-            .allocate_frame()
-            .ok_or(MapToError::FrameAllocationFailed)<span class="question-mark">?</span>;
+        <span class="kw">let </span>frame = FRAME_ALLOCATOR.alloc_zeroed(<span class="number">4096 </span>* <span class="number">4</span>).unwrap();
 
-        <span class="prelude-val">Ok</span>(frame.start_address().as_hhdm_virt() + Size4KiB::SIZE)
+        <span class="prelude-val">Ok</span>(frame.as_hhdm_virt() + (<span class="number">4096u64 </span>* <span class="number">4</span>))
     }
 
     <span class="kw">fn </span>unref_pt(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
@@ -1069,6 +1142,7 @@
     /// belongs to. This is required since we also update the GS base register with the
     /// `base` immediately (not waiting for a switch).
     </span><span class="kw">pub unsafe fn </span>set_gs_base(<span class="kw-2">&amp;mut </span><span class="self">self</span>, base: VirtAddr) {
+        <span class="self">self</span>.gs_base = base;
         io::set_inactive_gsbase(base);
     }
 
@@ -1084,13 +1158,14 @@
     /// belongs to. This is required since we also update the FS base register with the
     /// `base` immediately (not waiting for a switch).
     </span><span class="kw">pub unsafe fn </span>set_fs_base(<span class="kw-2">&amp;mut </span><span class="self">self</span>, base: VirtAddr) {
+        <span class="self">self</span>.fs_base = base;
         io::set_fsbase(base);
     }
 }
 
 <span class="kw">fn </span>xsave_size() -&gt; u32 {
-    <span class="kw">static </span>XSAVE_SIZE: <span class="prelude-ty">Option</span>&lt;u32&gt; = <span class="prelude-val">None</span>;
-    XSAVE_SIZE.unwrap_or_else(|| {
+    <span class="kw">static </span>XSAVE_SIZE: spin::Once&lt;u32&gt; = spin::Once::new();
+    <span class="kw-2">*</span>XSAVE_SIZE.call_once(|| {
         CpuId::new()
             .get_extended_state_info()
             .expect(<span class="string">&quot;xsave: cpuid extended state info unavailable&quot;</span>)
@@ -1098,16 +1173,89 @@
     })
 }
 
-<span class="kw">fn </span>xsave(fpu: <span class="kw-2">&amp;mut </span>Box&lt;[u8]&gt;) {
-    <span class="kw">unsafe </span>{
-        <span class="macro">asm!</span>(<span class="string">&quot;xsave [{}]&quot;</span>, <span class="kw">in</span>(reg) fpu.as_ptr(), <span class="kw">in</span>(<span class="string">&quot;eax&quot;</span>) <span class="number">0xffffffffu32</span>, <span class="kw">in</span>(<span class="string">&quot;edx&quot;</span>) <span class="number">0xffffffffu32</span>)
+<span class="attr">#[derive(Debug, Copy, Clone)]
+#[repr(C, align(<span class="number">16</span>))]
+</span><span class="kw">pub struct </span>FpuState {
+    <span class="doccomment">/// x87 FPU Control Word (16 bits). See Figure 8-6 in the Intel® 64 and IA-32 Architectures
+    /// Software Developer’s Manual Volume 1, for the layout of the x87 FPU control word.
+    </span><span class="kw">pub </span>fcw: u16,
+    <span class="doccomment">/// x87 FPU Status Word (16 bits).
+    </span><span class="kw">pub </span>fsw: u16,
+    <span class="doccomment">/// x87 FPU Tag Word (8 bits) + reserved (8 bits).
+    </span><span class="kw">pub </span>ftw: u16,
+    <span class="doccomment">/// x87 FPU Opcode (16 bits).
+    </span><span class="kw">pub </span>fop: u16,
+    <span class="doccomment">/// x87 FPU Instruction Pointer Offset ([31:0]). The contents of this field differ depending on
+    /// the current addressing mode (32-bit, 16-bit, or 64-bit) of the processor when the
+    /// FXSAVE instruction was executed: 32-bit mode — 32-bit IP offset. 16-bit mode — low 16
+    /// bits are IP offset; high 16 bits are reserved. 64-bit mode with REX.W — 64-bit IP
+    /// offset. 64-bit mode without REX.W — 32-bit IP offset.
+    </span><span class="kw">pub </span>fip: u32,
+    <span class="doccomment">/// x87 FPU Instruction Pointer Selector (16 bits) + reserved (16 bits).
+    </span><span class="kw">pub </span>fcs: u32,
+    <span class="doccomment">/// x87 FPU Instruction Operand (Data) Pointer Offset ([31:0]). The contents of this field
+    /// differ depending on the current addressing mode (32-bit, 16-bit, or 64-bit) of the
+    /// processor when the FXSAVE instruction was executed: 32-bit mode — 32-bit DP offset.
+    /// 16-bit mode — low 16 bits are DP offset; high 16 bits are reserved. 64-bit mode
+    /// with REX.W — 64-bit DP offset. 64-bit mode without REX.W — 32-bit DP offset.
+    </span><span class="kw">pub </span>fdp: u32,
+    <span class="doccomment">/// x87 FPU Instruction Operand (Data) Pointer Selector (16 bits) + reserved.
+    </span><span class="kw">pub </span>fds: u32,
+    <span class="doccomment">/// MXCSR Register State (32 bits).
+    </span><span class="kw">pub </span>mxcsr: u32,
+    <span class="doccomment">/// This mask can be used to adjust values written to the MXCSR register, ensuring that
+    /// reserved bits are set to 0. Set the mask bits and flags in MXCSR to the mode of
+    /// operation desired for SSE and SSE2 SIMD floating-point instructions.
+    </span><span class="kw">pub </span>mxcsr_mask: u32,
+    <span class="doccomment">/// x87 FPU or MMX technology registers. Layout: [12 .. 9 | 9 ... 0] LHS = reserved; RHS = mm.
+    </span><span class="kw">pub </span>mm: [u128; <span class="number">8</span>],
+    <span class="doccomment">/// XMM registers (128 bits per field).
+    </span><span class="kw">pub </span>xmm: [u128; <span class="number">16</span>],
+    <span class="doccomment">/// reserved.
+    </span><span class="kw">pub </span>_pad: [u64; <span class="number">12</span>],
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>FpuState {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            mxcsr: <span class="number">0x1f80</span>,
+            mxcsr_mask: <span class="number">0x037f</span>,
+            <span class="comment">// rest are zeroed
+            </span>fcw: <span class="number">0</span>,
+            fsw: <span class="number">0</span>,
+            ftw: <span class="number">0</span>,
+            fop: <span class="number">0</span>,
+            fip: <span class="number">0</span>,
+            fcs: <span class="number">0</span>,
+            fdp: <span class="number">0</span>,
+            fds: <span class="number">0</span>,
+            mm: [<span class="number">0</span>; <span class="number">8</span>],
+            xmm: [u128::MAX; <span class="number">16</span>],
+            _pad: [<span class="number">0</span>; <span class="number">12</span>],
+        }
     }
 }
 
-<span class="kw">fn </span>xrstor(fpu: <span class="kw-2">&amp;</span>Box&lt;[u8]&gt;) {
-    <span class="kw">unsafe </span>{
-        <span class="macro">asm!</span>(<span class="string">&quot;xrstor [{}]&quot;</span>, <span class="kw">in</span>(reg) fpu.as_ptr(), <span class="kw">in</span>(<span class="string">&quot;eax&quot;</span>) <span class="number">0xffffffffu32</span>, <span class="kw">in</span>(<span class="string">&quot;edx&quot;</span>) <span class="number">0xffffffffu32</span>);
-    }
+<span class="kw">fn </span>xsave(fpu: <span class="kw-2">&amp;mut </span>FpuState) {
+    <span class="comment">// The implicit EDX:EAX register pair specifies a 64-bit instruction mask. The specific state
+    // components saved correspond to the bits set in the requested-feature bitmap (RFBM), which is
+    // the logical-AND of EDX:EAX and XCR0.
+    // unsafe {
+    //     asm!(&quot;xsave64 [{}]&quot;, in(reg) fpu.as_ptr(), in(&quot;eax&quot;) u32::MAX, in(&quot;edx&quot;) u32::MAX,
+    // options(nomem, nostack)) }
+
+    </span><span class="kw">use </span>core::arch::x86_64::_fxsave64;
+
+    <span class="kw">unsafe </span>{ _fxsave64(fpu <span class="kw">as </span><span class="kw-2">*mut </span>FpuState <span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_</span>) }
+}
+
+<span class="kw">fn </span>xrstor(fpu: <span class="kw-2">&amp;</span>FpuState) {
+    <span class="comment">// unsafe {
+    //     asm!(&quot;xrstor [{}]&quot;, in(reg) fpu.as_ptr(), in(&quot;eax&quot;) u32::MAX, in(&quot;edx&quot;) u32::MAX,
+    // options(nomem, nostack)); }
+    </span><span class="kw">use </span>core::arch::x86_64::_fxrstor64;
+
+    <span class="kw">unsafe </span>{ _fxrstor64(fpu <span class="kw">as </span><span class="kw-2">*const </span>FpuState <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>) }
 }
 
 <span class="doccomment">/// Check out the module level documentation for more information.
@@ -1117,6 +1265,14 @@
     }
 
     <span class="kw">unsafe </span>{
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(fpu) = from.fpu_storage.as_mut() {
+            xsave(fpu);
+        }
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(fpu) = to.fpu_storage.as_ref() {
+            xrstor(fpu);
+        }
+
         <span class="comment">// Load the new thread&#39;s kernel stack pointer everywhere it&#39;s needed.
         </span><span class="kw">let </span>kstackp = to.context_switch_rsp.as_u64();
         <span class="kw">super</span>::gdt::TSS.rsp[<span class="number">0</span>] = kstackp;
@@ -1128,14 +1284,6 @@
 
         io::set_fsbase(to.fs_base);
         io::set_inactive_gsbase(to.gs_base);
-
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(fpu) = from.fpu_storage.as_mut() {
-            xsave(fpu);
-        }
-
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(fpu) = to.fpu_storage.as_ref() {
-            xrstor(fpu);
-        }
 
         task_spinup(<span class="kw-2">&amp;mut </span>from.context, to.context.as_ref());
     }

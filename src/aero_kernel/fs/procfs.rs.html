@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/fs/procfs.rs`."><title>procfs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (960754090 2023-10-06)" data-channel="nightly" data-search-js="search-5f5ec5419eadd0c9.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../aero_kernel/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/fs/procfs.rs`."><title>procfs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -311,8 +311,35 @@
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::sync::atomic::{AtomicUsize, Ordering};
 
+<span class="kw">use </span>alloc::borrow::ToOwned;
 <span class="kw">use </span>alloc::collections::BTreeMap;
 <span class="kw">use </span>alloc::string::{String, ToString};
 <span class="kw">use </span>alloc::sync::{Arc, Weak};
@@ -330,6 +357,9 @@
 
 <span class="kw">use </span><span class="kw">super</span>::inode::<span class="kw-2">*</span>;
 <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+<span class="comment">// TODO: put this mf in prelude
+</span><span class="kw">use </span>alloc::vec;
 
 <span class="kw">fn </span>push_string_if_some(map: <span class="kw-2">&amp;mut </span>serde_json::Value, key: <span class="kw-2">&amp;</span>str, value: <span class="prelude-ty">Option</span>&lt;String&gt;) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = value {
@@ -354,7 +384,6 @@
     <span class="kw">static </span>CACHED: Once&lt;String&gt; = Once::new();
 
     CACHED.call_once(|| {
-        <span class="kw">use </span>alloc::vec;
         <span class="kw">use </span>serde_json::<span class="kw-2">*</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="macro">json!</span>({ <span class="string">&quot;processors&quot;</span>: [] });
@@ -406,6 +435,7 @@
 <span class="kw">enum </span>FileContents {
     CpuInfo,
     CmdLine,
+    SelfMaps,
 
     <span class="prelude-val">None</span>,
 }
@@ -479,8 +509,25 @@
         <span class="kw">let </span>this = <span class="self">self</span>.<span class="number">0</span>.read();
 
         <span class="kw">let </span>data = <span class="kw">match </span><span class="kw-2">&amp;</span>this.contents {
-            FileContents::CpuInfo =&gt; <span class="prelude-val">Ok</span>(get_cpuinfo_cached()),
-            FileContents::CmdLine =&gt; <span class="prelude-val">Ok</span>(get_cmdline_cached()),
+            FileContents::CpuInfo =&gt; <span class="prelude-val">Ok</span>(get_cpuinfo_cached().to_owned()),
+            FileContents::CmdLine =&gt; <span class="prelude-val">Ok</span>(get_cmdline_cached().to_owned()),
+
+            FileContents::SelfMaps =&gt; {
+                <span class="kw">let </span>current_thread = scheduler::current_thread();
+                <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="macro">serde_json::json!</span>({ <span class="string">&quot;maps&quot;</span>: [] });
+                <span class="kw">let </span>maps = result.get_mut(<span class="string">&quot;maps&quot;</span>).unwrap().as_array_mut().unwrap();
+
+                current_thread.vm().for_each_mapping(|map| {
+                    maps.push(<span class="macro">serde_json::json!</span>({
+                        <span class="string">&quot;start&quot;</span>: map.start_addr.as_u64(),
+                        <span class="string">&quot;end&quot;</span>: map.end_addr.as_u64(),
+                        <span class="string">&quot;flags&quot;</span>: map.flags.bits(),
+                        <span class="string">&quot;protection&quot;</span>: map.protection.bits(),
+                    }));
+                });
+
+                <span class="prelude-val">Ok</span>(result.to_string())
+            }
 
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(FileSystemError::NotSupported),
         }<span class="question-mark">?</span>;
@@ -589,6 +636,11 @@
 
         inode.make_inode(<span class="string">&quot;cpuinfo&quot;</span>, FileType::File, FileContents::CpuInfo)<span class="question-mark">?</span>;
         inode.make_inode(<span class="string">&quot;cmdline&quot;</span>, FileType::File, FileContents::CmdLine)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>proc_self = inode.make_inode(<span class="string">&quot;self&quot;</span>, FileType::Directory, FileContents::None)<span class="question-mark">?</span>;
+        <span class="kw">let </span>proc_self = proc_self.downcast_arc::&lt;LockedProcINode&gt;().unwrap();
+
+        proc_self.make_inode(<span class="string">&quot;maps&quot;</span>, FileType::File, FileContents::SelfMaps)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(ramfs)
     }

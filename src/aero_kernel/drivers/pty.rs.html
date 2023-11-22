@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/drivers/pty.rs`."><title>pty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (960754090 2023-10-06)" data-channel="nightly" data-search-js="search-5f5ec5419eadd0c9.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../aero_kernel/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/drivers/pty.rs`."><title>pty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -460,6 +460,14 @@
 <a href="#460" id="460">460</a>
 <a href="#461" id="461">461</a>
 <a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (C) 2021-2023 The Aero Project Developers.
 //
 // This file is part of The Aero Project.
@@ -479,7 +487,9 @@
 
 </span><span class="kw">use </span>core::sync::atomic::{AtomicU32, Ordering};
 
+<span class="kw">use </span>aero_syscall <span class="kw">as </span>libc;
 <span class="kw">use </span>aero_syscall::{Termios, WinSize};
+
 <span class="kw">use </span>alloc::collections::BTreeMap;
 <span class="kw">use </span>alloc::string::ToString;
 <span class="kw">use </span>alloc::sync::{Arc, Weak};
@@ -488,6 +498,7 @@
 
 <span class="kw">use </span>uapi::pty::<span class="kw-2">*</span>;
 
+<span class="kw">use </span><span class="kw">crate</span>::arch::user_copy::UserRef;
 <span class="kw">use </span><span class="kw">crate</span>::fs::cache::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::fs::devfs::DEV_FILESYSTEM;
 <span class="kw">use </span><span class="kw">crate</span>::fs::inode::{DirEntry, FileType, INodeInterface, PollFlags};
@@ -497,7 +508,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::userland::scheduler;
 <span class="kw">use </span><span class="kw">crate</span>::userland::scheduler::ExitStatus;
 <span class="kw">use </span><span class="kw">crate</span>::userland::task::Task;
-<span class="kw">use </span><span class="kw">crate</span>::userland::terminal::{LineDiscipline, TerminalDevice};
+<span class="kw">use </span><span class="kw">crate</span>::userland::terminal::{LineControl, LineDiscipline, TerminalDevice};
 <span class="kw">use </span><span class="kw">crate</span>::utils::sync::{Mutex, WaitQueue};
 
 <span class="macro">lazy_static::lazy_static! </span>{
@@ -507,13 +518,60 @@
 <span class="kw">static </span>PTS_FS: Once&lt;Arc&lt;PtsFs&gt;&gt; = Once::new();
 <span class="kw">static </span>PTY_ID: AtomicU32 = AtomicU32::new(<span class="number">0</span>);
 
+<span class="attr">#[derive(Debug, Ioctl)]
+</span><span class="kw">pub enum </span>TermiosCmd {
+    <span class="doccomment">/// Get window size.
+    </span><span class="attr">#[command(libc::TIOCGWINSZ)]
+    </span>GetWinSize(UserRef&lt;WinSize&gt;),
+
+    <span class="doccomment">/// Set window size.
+    </span><span class="attr">#[command(libc::TIOCSWINSZ)]
+    </span>SetWinSize(UserRef&lt;WinSize&gt;),
+
+    <span class="doccomment">/// Get the current serial port settings.
+    ///
+    /// Equivalent to `tcgetattr(fd, argp)`.
+    </span><span class="attr">#[command(libc::TCGETS)]
+    </span>TcGets(UserRef&lt;Termios&gt;),
+
+    <span class="doccomment">/// Allow the output buffer to drain, discard pending input, and set the current serial
+    /// port settings.
+    ///
+    /// Equivalent to `tcsetattr(fd, TCSAFLUSH, argp)`.
+    </span><span class="attr">#[command(libc::TCSETSF)]
+    </span>TcSetsf(UserRef&lt;Termios&gt;),
+
+    <span class="doccomment">/// Allow the output buffer to drain, and set the current serial port settings.
+    ///
+    /// Equivalent to `tcsetattr(fd, TCSADRAIN, argp)`.
+    </span><span class="attr">#[command(libc::TCSETSW)]
+    </span>TcSetsw(UserRef&lt;Termios&gt;),
+
+    <span class="doccomment">/// Make the given terminal the controlling terminal of the calling process. The calling
+    /// process must be a session leader and not have a controlling terminal already. For this
+    /// case, arg should be specified as zero.
+    ///
+    /// If this terminal is already the controlling terminal of a different session group, then the
+    /// ioctl fails with EPERM, unless the caller has the CAP_SYS_ADMIN capability and arg equals
+    /// 1, in which case the terminal is stolen, and all processes that had it as controlling
+    /// terminal lose it.
+    </span><span class="comment">// FIXME: argument usize
+    </span><span class="attr">#[command(libc::TIOCSCTTY)]
+    </span>SetCtrlTerm,
+
+    <span class="doccomment">/// Get the process group ID of the foreground process group on this terminal.
+    ///
+    /// When successful, equivalent to `*argp = tcgetpgrp(fd)`.
+    </span><span class="comment">// FIXME: argument usize
+    </span><span class="attr">#[command(libc::TIOCGPGRP)]
+    </span>GetProcGroupId,
+}
+
 <span class="kw">struct </span>Master {
     id: u32,
     wq: WaitQueue,
     window_size: Mutex&lt;WinSize&gt;,
     buffer: Mutex&lt;Vec&lt;u8&gt;&gt;,
-    termios: Mutex&lt;Termios&gt;,
-
     discipline: LineDiscipline,
 }
 
@@ -521,50 +579,23 @@
     <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="kw">use </span>aero_syscall::<span class="kw-2">*</span>;
 
-        <span class="comment">// converts `^X` into `X`
-        </span><span class="kw">let </span>ctrl = |c| (c <span class="kw">as </span>u8 - <span class="number">0x40</span>);
-
-        <span class="kw">let </span><span class="kw-2">mut </span>termios = Termios {
-            c_iflag: aero_syscall::TermiosIFlag::empty(),
-            c_oflag: aero_syscall::TermiosOFlag::ONLCR,
-            c_cflag: aero_syscall::TermiosCFlag::empty(),
-            c_lflag: TermiosLFlag::ECHOKE
-                | TermiosLFlag::ECHOE
-                | TermiosLFlag::ECHOK
-                | TermiosLFlag::ECHO
-                | TermiosLFlag::ECHOCTL
-                | TermiosLFlag::ISIG
-                | TermiosLFlag::ICANON
-                | TermiosLFlag::IEXTEN,
-            c_line: <span class="number">0</span>,
-            c_cc: [<span class="number">0</span>; <span class="number">32</span>],
-            c_ispeed: <span class="number">0</span>,
-            c_ospeed: <span class="number">0</span>,
-        };
-
-        termios.c_cc[VINTR] = ctrl(<span class="string">&#39;C&#39;</span>);
-        termios.c_cc[VQUIT] = ctrl(<span class="string">&#39;\\&#39;</span>);
-        termios.c_cc[VERASE] = <span class="number">127</span>; <span class="comment">// DEL character
-        </span>termios.c_cc[VKILL] = ctrl(<span class="string">&#39;U&#39;</span>);
-        termios.c_cc[VEOF] = ctrl(<span class="string">&#39;D&#39;</span>);
-        termios.c_cc[VMIN] = <span class="number">1</span>;
-        termios.c_cc[VSTART] = ctrl(<span class="string">&#39;Q&#39;</span>);
-        termios.c_cc[VSTOP] = ctrl(<span class="string">&#39;S&#39;</span>);
-        termios.c_cc[VSUSP] = ctrl(<span class="string">&#39;Z&#39;</span>);
-
         <span class="self">Self </span>{
             id: PTY_ID.fetch_add(<span class="number">1</span>, Ordering::SeqCst),
             wq: WaitQueue::new(),
             window_size: Mutex::new(WinSize::default()),
             buffer: Mutex::new(Vec::new()),
-            termios: Mutex::new(termios),
-
             discipline: LineDiscipline::new(),
         }
     }
 
-    <span class="kw">pub fn </span>is_cooked(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.termios.lock_irq().is_cooked()
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>set_window_size(<span class="kw-2">&amp;</span><span class="self">self</span>, size: WinSize) {
+        <span class="kw-2">*</span><span class="self">self</span>.window_size.lock_irq() = size;
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>get_window_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; WinSize {
+        <span class="kw-2">*</span><span class="self">self</span>.window_size.lock_irq()
     }
 }
 
@@ -582,7 +613,10 @@
     }
 
     <span class="kw">fn </span>write_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _offset: usize, buffer: <span class="kw-2">&amp;</span>[u8]) -&gt; fs::Result&lt;usize&gt; {
-        <span class="self">self</span>.discipline.write(buffer);
+        <span class="self">self</span>.discipline.write(buffer, |ctrl| <span class="kw">match </span>ctrl {
+            LineControl::Echo(c) =&gt; <span class="self">self</span>.buffer.lock_irq().push(c),
+        });
+        <span class="self">self</span>.wq.notify_all();
         <span class="prelude-val">Ok</span>(buffer.len())
     }
 
@@ -612,7 +646,7 @@
             }
 
             <span class="kw">_ </span>=&gt; {
-                <span class="macro">log::warn!</span>(<span class="string">&quot;ptmx: unknown ioctl (command={command:#x})&quot;</span>)
+                <span class="macro">panic!</span>(<span class="string">&quot;ptmx: unknown ioctl (command={command:#x})&quot;</span>)
             }
         }
 
@@ -630,13 +664,13 @@
         <span class="kw">use </span>aero_syscall::signal::<span class="kw-2">*</span>;
         <span class="kw">use </span>aero_syscall::<span class="kw-2">*</span>;
 
-        <span class="kw">if </span>!<span class="self">self</span>.master.is_cooked() {
+        <span class="kw">if </span>!<span class="self">self</span>.master.discipline.termios.lock().is_cooked() {
             <span class="kw">return</span>;
         }
 
         <span class="kw">if let </span>ExitStatus::Signal(signo) = task.exit_status() {
             <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="self">self</span>.master.buffer.lock_irq();
-            <span class="kw">let </span>termios = <span class="self">self</span>.master.termios.lock_irq();
+            <span class="kw">let </span>termios = <span class="self">self</span>.master.discipline.termios.lock();
 
             <span class="comment">// converts `X` into `^X` and pushes the result into the master PTY buffer.
             </span><span class="kw">let </span><span class="kw-2">mut </span>ctrl = |c| {
@@ -670,12 +704,7 @@
 
 <span class="kw">impl </span>INodeInterface <span class="kw">for </span>Slave {
     <span class="kw">fn </span>metadata(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; fs::Result&lt;fs::inode::Metadata&gt; {
-        <span class="prelude-val">Ok</span>(fs::inode::Metadata {
-            id: <span class="number">0</span>,
-            file_type: FileType::Device,
-            children_len: <span class="number">0</span>,
-            size: <span class="number">0</span>,
-        })
+        <span class="prelude-val">Ok</span>(fs::inode::Metadata::with_file_type(FileType::Device))
     }
 
     <span class="kw">fn </span>stat(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; fs::Result&lt;aero_syscall::Stat&gt; {
@@ -683,38 +712,29 @@
     }
 
     <span class="kw">fn </span>ioctl(<span class="kw-2">&amp;</span><span class="self">self</span>, command: usize, arg: usize) -&gt; fs::Result&lt;usize&gt; {
-        <span class="kw">match </span>command {
-            aero_syscall::TIOCGWINSZ =&gt; {
-                <span class="kw">let </span>winsize = VirtAddr::new(arg <span class="kw">as </span>u64).read_mut::&lt;WinSize&gt;()<span class="question-mark">?</span>;
-                <span class="kw-2">*</span>winsize = <span class="kw-2">*</span><span class="self">self</span>.master.window_size.lock_irq();
-
-                <span class="prelude-val">Ok</span>(<span class="number">0</span>)
+        <span class="kw">match </span>TermiosCmd::from_command_arg(command, arg) {
+            TermiosCmd::GetWinSize(<span class="kw-2">mut </span>size) =&gt; <span class="kw-2">*</span>size = <span class="self">self</span>.master.get_window_size(),
+            TermiosCmd::SetWinSize(size) =&gt; <span class="self">self</span>.master.set_window_size(<span class="kw-2">*</span>size),
+            TermiosCmd::TcGets(<span class="kw-2">mut </span>termios) =&gt; <span class="kw-2">*</span>termios = <span class="self">self</span>.master.discipline.termios(),
+            TermiosCmd::TcSetsf(termios) =&gt; <span class="self">self</span>.master.discipline.set_termios(<span class="kw-2">*</span>termios),
+            TermiosCmd::TcSetsw(termios) =&gt; {
+                <span class="comment">// TODO: Allow the output buffer to drain and then set the current serial port
+                // settings.
+                </span><span class="self">self</span>.master.discipline.set_termios(<span class="kw-2">*</span>termios)
             }
 
-            aero_syscall::TCGETS =&gt; {
-                <span class="kw">let </span>termios = VirtAddr::new(arg <span class="kw">as </span>u64).read_mut::&lt;Termios&gt;()<span class="question-mark">?</span>;
-                <span class="kw-2">*</span>termios = <span class="kw-2">*</span><span class="self">self</span>.master.termios.lock_irq();
-
-                <span class="prelude-val">Ok</span>(<span class="number">0</span>)
-            }
-
-            aero_syscall::TCSETSF =&gt; {
-                <span class="kw">let </span>termios = VirtAddr::new(arg <span class="kw">as </span>u64).read_mut::&lt;Termios&gt;()<span class="question-mark">?</span>;
-                <span class="kw-2">*</span><span class="self">self</span>.master.termios.lock_irq() = <span class="kw-2">*</span>termios;
-
-                <span class="prelude-val">Ok</span>(<span class="number">0</span>)
-            }
-
-            aero_syscall::TIOCSCTTY =&gt; {
+            TermiosCmd::SetCtrlTerm =&gt; {
                 <span class="kw">let </span>current_task = scheduler::get_scheduler().current_task();
                 <span class="macro">assert!</span>(current_task.is_session_leader());
 
                 current_task.attach(<span class="self">self</span>.sref());
-                <span class="prelude-val">Ok</span>(<span class="number">0</span>)
             }
 
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(FileSystemError::NotSupported),
+            <span class="comment">// FIXME: the following ioctls are not implemented.
+            </span>TermiosCmd::GetProcGroupId =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotSupported),
         }
+
+        <span class="prelude-val">Ok</span>(<span class="number">0</span>)
     }
 
     <span class="kw">fn </span>poll(<span class="kw-2">&amp;</span><span class="self">self</span>, table: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>fs::inode::PollTable&gt;) -&gt; fs::Result&lt;PollFlags&gt; {
@@ -739,8 +759,8 @@
     <span class="kw">fn </span>write_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _offset: usize, buffer: <span class="kw-2">&amp;</span>[u8]) -&gt; fs::Result&lt;usize&gt; {
         <span class="kw">if </span><span class="self">self
             </span>.master
-            .termios
-            .lock_irq()
+            .discipline
+            .termios()
             .c_oflag
             .contains(aero_syscall::TermiosOFlag::ONLCR)
         {
@@ -792,11 +812,7 @@
 }
 
 <span class="kw">impl </span>INodeInterface <span class="kw">for </span>Ptmx {
-    <span class="kw">fn </span>open(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _flags: aero_syscall::OpenFlags,
-        _handle: Arc&lt;fs::file_table::FileHandle&gt;,
-    ) -&gt; fs::Result&lt;<span class="prelude-ty">Option</span>&lt;DirCacheItem&gt;&gt; {
+    <span class="kw">fn </span>open(<span class="kw-2">&amp;</span><span class="self">self</span>, _handle: Arc&lt;fs::file_table::FileHandle&gt;) -&gt; fs::Result&lt;<span class="prelude-ty">Option</span>&lt;DirCacheItem&gt;&gt; {
         <span class="kw">let </span>master = Arc::new(Master::new());
         <span class="kw">let </span>slave = Slave::new(master.clone());
         <span class="kw">let </span>inode = DirEntry::from_inode(master, String::from(<span class="string">&quot;&lt;pty&gt;&quot;</span>));

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/fs/ext2/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (960754090 2023-10-06)" data-channel="nightly" data-search-js="search-5f5ec5419eadd0c9.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../aero_kernel/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/fs/ext2/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -707,6 +707,20 @@
 <a href="#707" id="707">707</a>
 <a href="#708" id="708">708</a>
 <a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (C) 2021-2023 The Aero Project Developers.
 //
 // This file is part of The Aero Project.
@@ -920,12 +934,17 @@
 
             <span class="kw">if </span>block_ptrs == <span class="number">0 </span>{
                 block_ptrs = fs.bgdt.alloc_block_ptr()<span class="question-mark">?</span>;
+                <span class="self">self</span>.inode.write().data_ptr[<span class="number">12</span>] = block_ptrs <span class="kw">as </span>u32;
             }
 
             <span class="kw">let </span>block_ptrs = block_ptrs * block_size;
-            <span class="kw">let </span>offset = block_ptrs + (new_block * core::mem::size_of::&lt;u32&gt;());
+            <span class="kw">let </span>offset = block_ptrs + (next_block_num * core::mem::size_of::&lt;u32&gt;());
 
             fs.block.write(offset, <span class="kw-2">&amp;</span>new_block.to_le_bytes());
+
+            <span class="kw">let </span><span class="kw-2">mut </span>inode = <span class="self">self</span>.inode.write();
+            <span class="kw">let </span>inode_size = inode.size() + block_size;
+            inode.set_size(inode_size);
         }
 
         <span class="prelude-val">Some</span>(new_block)
@@ -1012,7 +1031,7 @@
         proxy: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;&gt;,
     ) -&gt; <span class="kw">super</span>::Result&lt;INodeCacheItem&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.metadata()<span class="question-mark">?</span>.is_directory() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotSupported);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotDirectory);
         }
 
         <span class="kw">if </span>DirEntryIter::new(<span class="self">self</span>.sref()).any(|(e, <span class="kw">_</span>)| e == name) {
@@ -1181,14 +1200,23 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>truncate(<span class="kw-2">&amp;</span><span class="self">self</span>, _size: usize) -&gt; <span class="kw">super</span>::Result&lt;()&gt; {
-        <span class="macro">log::warn!</span>(<span class="string">&quot;ext2::truncate is a stub!&quot;</span>);
+    <span class="kw">fn </span>truncate(<span class="kw-2">&amp;</span><span class="self">self</span>, size: usize) -&gt; <span class="kw">super</span>::Result&lt;()&gt; {
+        <span class="kw">let </span>inode = <span class="self">self</span>.inode.read();
+
+        <span class="kw">if </span>inode.size() &gt; size {
+            <span class="comment">// grow inode
+            </span><span class="macro">log::warn!</span>(<span class="string">&quot;ext2::truncate(at=grow) is a stub!&quot;</span>);
+        } <span class="kw">else if </span>inode.size() &lt; size {
+            <span class="macro">log::warn!</span>(<span class="string">&quot;ext2::truncate(at=shrink) is a stub!&quot;</span>);
+            <span class="comment">// shrink inode
+        </span>}
+
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>touch(<span class="kw-2">&amp;</span><span class="self">self</span>, parent: DirCacheItem, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw">super</span>::Result&lt;DirCacheItem&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.metadata()<span class="question-mark">?</span>.is_directory() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotSupported);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotDirectory);
         }
 
         <span class="kw">let </span>inode = <span class="self">self</span>.make_inode(name, FileType::File, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
@@ -1197,7 +1225,7 @@
 
     <span class="kw">fn </span>mkdir(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw">super</span>::Result&lt;INodeCacheItem&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.metadata()<span class="question-mark">?</span>.is_directory() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotSupported);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotDirectory);
         }
 
         <span class="self">self</span>.make_inode(name, FileType::Directory, <span class="prelude-val">None</span>)
@@ -1241,9 +1269,9 @@
         <span class="macro">assert!</span>(<span class="self">self</span>.proxy.is_none());
 
         <span class="comment">// TODO: support shared file mappings.
-        </span><span class="macro">assert!</span>(!flags.contains(MMapFlags::MAP_SHARED));
+        // assert!(!flags.contains(MMapFlags::MAP_SHARED));
 
-        <span class="kw">let </span>private_cp: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
+        </span><span class="kw">let </span>private_cp: PhysFrame = FRAME_ALLOCATOR.allocate_frame().unwrap();
         private_cp.as_slice_mut().fill(<span class="number">0</span>);
 
         <span class="kw">let </span>buffer = <span class="kw-2">&amp;mut </span>private_cp.as_slice_mut()[..size];
