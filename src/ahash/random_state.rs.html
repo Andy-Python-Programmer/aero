@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ahash-0.8.3/src/random_state.rs`."><title>random_state.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ahash" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ahash-0.8.3/src/random_state.rs`."><title>random_state.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ahash" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -530,8 +531,8 @@
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::hash::Hash;
 <span class="macro">cfg_if::cfg_if! </span>{
     <span class="kw">if </span><span class="attr">#[cfg(any(
-        all(any(target_arch = <span class="string">&quot;x86&quot;</span>, target_arch = <span class="string">&quot;x86_64&quot;</span>), target_feature = <span class="string">&quot;aes&quot;</span>, not(miri)),
-         all(any(target_arch = <span class="string">&quot;arm&quot;</span>, target_arch = <span class="string">&quot;aarch64&quot;</span>), any(target_feature = <span class="string">&quot;aes&quot;</span>, target_feature = <span class="string">&quot;crypto&quot;</span>), not(miri), feature = <span class="string">&quot;stdsimd&quot;</span>)
+        all(any(target_arch = <span class="string">"x86"</span>, target_arch = <span class="string">"x86_64"</span>), target_feature = <span class="string">"aes"</span>, not(miri)),
+         all(any(target_arch = <span class="string">"arm"</span>, target_arch = <span class="string">"aarch64"</span>), any(target_feature = <span class="string">"aes"</span>, target_feature = <span class="string">"crypto"</span>), not(miri), feature = <span class="string">"stdsimd"</span>)
     ))] </span>{
         <span class="kw">use </span><span class="kw">crate</span>::aes_hash::<span class="kw-2">*</span>;
     } <span class="kw">else </span>{
@@ -539,21 +540,21 @@
     }
 }
 <span class="macro">cfg_if::cfg_if! </span>{
-    <span class="kw">if </span><span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]</span>{
+    <span class="kw">if </span><span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]</span>{
         <span class="kw">use </span><span class="kw">crate</span>::BuildHasherExt;
     }
 }
 <span class="macro">cfg_if::cfg_if! </span>{
-    <span class="kw">if </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)] </span>{
+    <span class="kw">if </span><span class="attr">#[cfg(feature = <span class="string">"std"</span>)] </span>{
         <span class="kw">extern crate </span>std <span class="kw">as </span>alloc;
     } <span class="kw">else </span>{
         <span class="kw">extern crate </span>alloc;
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;atomic-polyfill&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"atomic-polyfill"</span>)]
 </span><span class="kw">use </span>atomic_polyfill <span class="kw">as </span>atomic;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;atomic-polyfill&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"atomic-polyfill"</span>))]
 </span><span class="kw">use </span>core::sync::atomic;
 
 <span class="kw">use </span>alloc::boxed::Box;
@@ -578,9 +579,9 @@
 ];
 
 <span class="macro">cfg_if::cfg_if! </span>{
-    <span class="kw">if </span><span class="attr">#[cfg(all(feature = <span class="string">&quot;compile-time-rng&quot;</span>, any(test, fuzzing)))] </span>{
+    <span class="kw">if </span><span class="attr">#[cfg(all(feature = <span class="string">"compile-time-rng"</span>, any(test, fuzzing)))] </span>{
         <span class="attr">#[inline]
-        </span><span class="kw">fn </span>get_fixed_seeds() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[[u64; <span class="number">4</span>]; <span class="number">2</span>] {
+        </span><span class="kw">fn </span>get_fixed_seeds() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[[u64; <span class="number">4</span>]; <span class="number">2</span>] {
             <span class="kw">use </span>const_random::const_random;
 
             <span class="kw">const </span>RAND: [[u64; <span class="number">4</span>]; <span class="number">2</span>] = [
@@ -598,22 +599,22 @@
             ];
             <span class="kw-2">&amp;</span>RAND
         }
-    } <span class="kw">else if </span><span class="attr">#[cfg(all(feature = <span class="string">&quot;runtime-rng&quot;</span>, not(fuzzing)))] </span>{
+    } <span class="kw">else if </span><span class="attr">#[cfg(all(feature = <span class="string">"runtime-rng"</span>, not(fuzzing)))] </span>{
         <span class="attr">#[inline]
-        </span><span class="kw">fn </span>get_fixed_seeds() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[[u64; <span class="number">4</span>]; <span class="number">2</span>] {
+        </span><span class="kw">fn </span>get_fixed_seeds() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[[u64; <span class="number">4</span>]; <span class="number">2</span>] {
             <span class="kw">use </span><span class="kw">crate</span>::convert::Convert;
 
             <span class="kw">static </span>SEEDS: OnceBox&lt;[[u64; <span class="number">4</span>]; <span class="number">2</span>]&gt; = OnceBox::new();
 
             SEEDS.get_or_init(|| {
                 <span class="kw">let </span><span class="kw-2">mut </span>result: [u8; <span class="number">64</span>] = [<span class="number">0</span>; <span class="number">64</span>];
-                getrandom::getrandom(<span class="kw-2">&amp;mut </span>result).expect(<span class="string">&quot;getrandom::getrandom() failed.&quot;</span>);
+                getrandom::getrandom(<span class="kw-2">&amp;mut </span>result).expect(<span class="string">"getrandom::getrandom() failed."</span>);
                 Box::new(result.convert())
             })
         }
-    } <span class="kw">else if </span><span class="attr">#[cfg(feature = <span class="string">&quot;compile-time-rng&quot;</span>)] </span>{
+    } <span class="kw">else if </span><span class="attr">#[cfg(feature = <span class="string">"compile-time-rng"</span>)] </span>{
         <span class="attr">#[inline]
-        </span><span class="kw">fn </span>get_fixed_seeds() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[[u64; <span class="number">4</span>]; <span class="number">2</span>] {
+        </span><span class="kw">fn </span>get_fixed_seeds() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[[u64; <span class="number">4</span>]; <span class="number">2</span>] {
             <span class="kw">use </span>const_random::const_random;
 
             <span class="kw">const </span>RAND: [[u64; <span class="number">4</span>]; <span class="number">2</span>] = [
@@ -633,14 +634,14 @@
         }
     } <span class="kw">else </span>{
         <span class="attr">#[inline]
-        </span><span class="kw">fn </span>get_fixed_seeds() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[[u64; <span class="number">4</span>]; <span class="number">2</span>] {
+        </span><span class="kw">fn </span>get_fixed_seeds() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[[u64; <span class="number">4</span>]; <span class="number">2</span>] {
             <span class="kw-2">&amp;</span>[PI, PI2]
         }
     }
 }
 
 <span class="macro">cfg_if::cfg_if! </span>{
-    <span class="kw">if </span><span class="attr">#[cfg(not(all(target_arch = <span class="string">&quot;arm&quot;</span>, target_os = <span class="string">&quot;none&quot;</span>)))] </span>{
+    <span class="kw">if </span><span class="attr">#[cfg(not(all(target_arch = <span class="string">"arm"</span>, target_os = <span class="string">"none"</span>)))] </span>{
         <span class="kw">use </span>once_cell::race::OnceBox;
 
         <span class="kw">static </span>RAND_SOURCE: OnceBox&lt;Box&lt;<span class="kw">dyn </span>RandomSource + Send + Sync&gt;&gt; = OnceBox::new();
@@ -652,7 +653,7 @@
 /// If [set_random_source] aHash will default to the best available source of randomness.
 /// In order this is:
 /// 1. OS provided random number generator (available if the `runtime-rng` flag is enabled which it is by default) - This should be very strong.
-/// 2. Strong compile time random numbers used to permute a static &quot;counter&quot;. (available if `compile-time-rng` is enabled.
+/// 2. Strong compile time random numbers used to permute a static "counter". (available if `compile-time-rng` is enabled.
 /// __Enabling this is recommended if `runtime-rng` is not possible__)
 /// 3. A static counter that adds the memory address of each [RandomState] created permuted with fixed constants.
 /// (Similar to above but with fixed keys) - This is the weakest option. The strength of this heavily depends on whether or not ASLR is enabled.
@@ -672,7 +673,7 @@
         }
     }
 
-    <span class="attr">#[cfg(all(target_arch = <span class="string">&quot;arm&quot;</span>, target_os = <span class="string">&quot;none&quot;</span>))]
+    <span class="attr">#[cfg(all(target_arch = <span class="string">"arm"</span>, target_os = <span class="string">"none"</span>))]
     </span><span class="kw">const fn </span>default() -&gt; DefaultRandomSource {
         DefaultRandomSource {
             counter: AtomicUsize::new(PI[<span class="number">3</span>] <span class="kw">as </span>usize),
@@ -682,7 +683,7 @@
 
 <span class="kw">impl </span>RandomSource <span class="kw">for </span>DefaultRandomSource {
     <span class="macro">cfg_if::cfg_if! </span>{
-        <span class="kw">if </span><span class="attr">#[cfg(all(target_arch = <span class="string">&quot;arm&quot;</span>, target_os = <span class="string">&quot;none&quot;</span>))] </span>{
+        <span class="kw">if </span><span class="attr">#[cfg(all(target_arch = <span class="string">"arm"</span>, target_os = <span class="string">"none"</span>))] </span>{
             <span class="kw">fn </span>gen_hasher_seed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
                 <span class="kw">let </span>stack = <span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize;
                 <span class="kw">let </span>previous = <span class="self">self</span>.counter.load(Ordering::Relaxed);
@@ -700,9 +701,9 @@
 }
 
 <span class="macro">cfg_if::cfg_if! </span>{
-        <span class="kw">if </span><span class="attr">#[cfg(all(target_arch = <span class="string">&quot;arm&quot;</span>, target_os = <span class="string">&quot;none&quot;</span>))] </span>{
+        <span class="kw">if </span><span class="attr">#[cfg(all(target_arch = <span class="string">"arm"</span>, target_os = <span class="string">"none"</span>))] </span>{
             <span class="attr">#[inline]
-            </span><span class="kw">fn </span>get_src() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw">dyn </span>RandomSource {
+            </span><span class="kw">fn </span>get_src() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw">dyn </span>RandomSource {
                 <span class="kw">static </span>RAND_SOURCE: DefaultRandomSource = DefaultRandomSource::default();
                 <span class="kw-2">&amp;</span>RAND_SOURCE
             }
@@ -715,13 +716,13 @@
             /// The source of randomness can only be set once, and must be set before the first RandomState is created.
             /// If the source has already been specified `Err` is returned with a `bool` indicating if the set failed because
             /// method was previously invoked (true) or if the default source is already being used (false).
-            </span><span class="attr">#[cfg(not(all(target_arch = <span class="string">&quot;arm&quot;</span>, target_os = <span class="string">&quot;none&quot;</span>)))]
-            </span><span class="kw">pub fn </span>set_random_source(source: <span class="kw">impl </span>RandomSource + Send + Sync + <span class="lifetime">&#39;static</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), bool&gt; {
+            </span><span class="attr">#[cfg(not(all(target_arch = <span class="string">"arm"</span>, target_os = <span class="string">"none"</span>)))]
+            </span><span class="kw">pub fn </span>set_random_source(source: <span class="kw">impl </span>RandomSource + Send + Sync + <span class="lifetime">'static</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), bool&gt; {
                 RAND_SOURCE.set(Box::new(Box::new(source))).map_err(|s| s.as_ref().type_id() != TypeId::of::&lt;<span class="kw-2">&amp;</span>DefaultRandomSource&gt;())
             }
 
             <span class="attr">#[inline]
-            </span><span class="kw">fn </span>get_src() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw">dyn </span>RandomSource {
+            </span><span class="kw">fn </span>get_src() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw">dyn </span>RandomSource {
                 RAND_SOURCE.get_or_init(|| Box::new(Box::new(DefaultRandomSource::new()))).as_ref()
             }
         }
@@ -753,8 +754,8 @@
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>RandomState {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        f.pad(<span class="string">&quot;RandomState { .. }&quot;</span>)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        f.pad(<span class="string">"RandomState { .. }"</span>)
     }
 }
 
@@ -846,31 +847,31 @@
     <span class="doccomment">/// Calculates the hash of a single value. This provides a more convenient (and faster) way to obtain a hash:
     /// For example:
     </span><span class="attr">#[cfg_attr(
-    feature = <span class="string">&quot;std&quot;</span>,
-    doc = <span class="string">r##&quot; # Examples
+    feature = <span class="string">"std"</span>,
+    doc = <span class="string">r##" # Examples
 ```
     use std::hash::BuildHasher;
     use ahash::RandomState;
 
     let hash_builder = RandomState::new();
-    let hash = hash_builder.hash_one(&quot;Some Data&quot;);
+    let hash = hash_builder.hash_one("Some Data");
 ```
-    &quot;##
+    "##
     </span>)]
     </span><span class="doccomment">/// This is similar to:
     </span><span class="attr">#[cfg_attr(
-    feature = <span class="string">&quot;std&quot;</span>,
-    doc = <span class="string">r##&quot; # Examples
+    feature = <span class="string">"std"</span>,
+    doc = <span class="string">r##" # Examples
 ```
     use std::hash::{BuildHasher, Hash, Hasher};
     use ahash::RandomState;
 
     let hash_builder = RandomState::new();
     let mut hasher = hash_builder.build_hasher();
-    &quot;Some Data&quot;.hash(&amp;mut hasher);
+    "Some Data".hash(&amp;mut hasher);
     let hash = hasher.finish();
 ```
-    &quot;##
+    "##
     </span>)]
     </span><span class="doccomment">/// (Note that these two ways to get a hash may not produce the same value for the same data)
     ///
@@ -901,7 +902,7 @@
 /// NOTE: For safety this trait impl is only available available if either of the flags `runtime-rng` (on by default) or
 /// `compile-time-rng` are enabled. This is to prevent weakly keyed maps from being accidentally created. Instead one of
 /// constructors for [RandomState] must be used.
-</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;compile-time-rng&quot;</span>, feature = <span class="string">&quot;runtime-rng&quot;</span>, feature = <span class="string">&quot;no-rng&quot;</span>))]
+</span><span class="attr">#[cfg(any(feature = <span class="string">"compile-time-rng"</span>, feature = <span class="string">"runtime-rng"</span>, feature = <span class="string">"no-rng"</span>))]
 </span><span class="kw">impl </span>Default <span class="kw">for </span>RandomState {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
@@ -918,8 +919,8 @@
     /// will generate the same hashes for the same input data.
     ///
     </span><span class="attr">#[cfg_attr(
-        feature = <span class="string">&quot;std&quot;</span>,
-        doc = <span class="string">r##&quot; # Examples
+        feature = <span class="string">"std"</span>,
+        doc = <span class="string">r##" # Examples
 ```
         use ahash::{AHasher, RandomState};
         use std::hash::{Hasher, BuildHasher};
@@ -938,7 +939,7 @@
         different_hasher.write_u32(1234);
         assert_ne!(different_hasher.finish(), hasher_1.finish());
 ```
-    &quot;##
+    "##
     </span>)]
     </span><span class="doccomment">/// [Hasher]: std::hash::Hasher
     /// [BuildHasher]: std::hash::BuildHasher
@@ -952,31 +953,31 @@
     <span class="doccomment">/// Calculates the hash of a single value. This provides a more convenient (and faster) way to obtain a hash:
     /// For example:
     </span><span class="attr">#[cfg_attr(
-    feature = <span class="string">&quot;std&quot;</span>,
-    doc = <span class="string">r##&quot; # Examples
+    feature = <span class="string">"std"</span>,
+    doc = <span class="string">r##" # Examples
 ```
     use std::hash::BuildHasher;
     use ahash::RandomState;
 
     let hash_builder = RandomState::new();
-    let hash = hash_builder.hash_one(&quot;Some Data&quot;);
+    let hash = hash_builder.hash_one("Some Data");
 ```
-    &quot;##
+    "##
     </span>)]
     </span><span class="doccomment">/// This is similar to:
     </span><span class="attr">#[cfg_attr(
-    feature = <span class="string">&quot;std&quot;</span>,
-    doc = <span class="string">r##&quot; # Examples
+    feature = <span class="string">"std"</span>,
+    doc = <span class="string">r##" # Examples
 ```
     use std::hash::{BuildHasher, Hash, Hasher};
     use ahash::RandomState;
 
     let hash_builder = RandomState::new();
     let mut hasher = hash_builder.build_hasher();
-    &quot;Some Data&quot;.hash(&amp;mut hasher);
+    "Some Data".hash(&amp;mut hasher);
     let hash = hasher.finish();
 ```
-    &quot;##
+    "##
     </span>)]
     </span><span class="doccomment">/// (Note that these two ways to get a hash may not produce the same value for the same data)
     ///
@@ -988,14 +989,14 @@
     /// implementation of [`Hash`].  The way to create a combined hash of
     /// multiple values is to call [`Hash::hash`] multiple times using the same
     /// [`Hasher`], not to call this method repeatedly and combine the results.
-    </span><span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+    </span><span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]
     #[inline]
     </span><span class="kw">fn </span>hash_one&lt;T: Hash&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, x: T) -&gt; u64 {
         RandomState::hash_one(<span class="self">self</span>, x)
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]
 </span><span class="kw">impl </span>BuildHasherExt <span class="kw">for </span>RandomState {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>hash_as_u64&lt;T: Hash + <span class="question-mark">?</span>Sized&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span>T) -&gt; u64 {
@@ -1033,19 +1034,19 @@
         <span class="macro">assert_ne!</span>(a.build_hasher().finish(), b.build_hasher().finish());
     }
 
-    <span class="attr">#[cfg(all(feature = <span class="string">&quot;runtime-rng&quot;</span>, not(all(feature = <span class="string">&quot;compile-time-rng&quot;</span>, test))))]
+    <span class="attr">#[cfg(all(feature = <span class="string">"runtime-rng"</span>, not(all(feature = <span class="string">"compile-time-rng"</span>, test))))]
     #[test]
     </span><span class="kw">fn </span>test_not_pi() {
         <span class="macro">assert_ne!</span>(PI, get_fixed_seeds()[<span class="number">0</span>]);
     }
 
-    <span class="attr">#[cfg(all(feature = <span class="string">&quot;compile-time-rng&quot;</span>, any(not(feature = <span class="string">&quot;runtime-rng&quot;</span>), test)))]
+    <span class="attr">#[cfg(all(feature = <span class="string">"compile-time-rng"</span>, any(not(feature = <span class="string">"runtime-rng"</span>), test)))]
     #[test]
     </span><span class="kw">fn </span>test_not_pi_const() {
         <span class="macro">assert_ne!</span>(PI, get_fixed_seeds()[<span class="number">0</span>]);
     }
 
-    <span class="attr">#[cfg(all(not(feature = <span class="string">&quot;runtime-rng&quot;</span>), not(feature = <span class="string">&quot;compile-time-rng&quot;</span>)))]
+    <span class="attr">#[cfg(all(not(feature = <span class="string">"runtime-rng"</span>), not(feature = <span class="string">"compile-time-rng"</span>)))]
     #[test]
     </span><span class="kw">fn </span>test_pi() {
         <span class="macro">assert_eq!</span>(PI, get_fixed_seeds()[<span class="number">0</span>]);

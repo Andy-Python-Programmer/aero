@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/limine-rs-b6d755f12037e8bb/4394419/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="limine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/limine-rs-b6d755f12037e8bb/4394419/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="limine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -761,7 +762,7 @@
 #![feature(const_nonnull_new)]
 #![allow(deprecated)]
 
-#[cfg(feature = <span class="string">&quot;requests-section&quot;</span>)]
+#[cfg(feature = <span class="string">"requests-section"</span>)]
 </span><span class="kw">pub use </span>limine_proc::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>core::cell::UnsafeCell;
@@ -809,11 +810,11 @@
 }
 
 <span class="kw">impl</span>&lt;T: Debug&gt; Debug <span class="kw">for </span>NonNullPtr&lt;T&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
         <span class="kw">let </span>value: <span class="kw-2">&amp;</span>T = <span class="kw-2">&amp;*</span><span class="self">self</span>;
 
-        f.debug_tuple(<span class="string">&quot;NonNullPtr&quot;</span>)
-            .field(<span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;{:#x?}&quot;</span>, value))
+        f.debug_tuple(<span class="string">"NonNullPtr"</span>)
+            .field(<span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">"{:#x?}"</span>, value))
             .finish()
     }
 }
@@ -845,11 +846,11 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>get&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T&gt; {
+    </span><span class="kw">pub fn </span>get&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T&gt; {
         <span class="comment">// SAFETY: According to the specication the bootloader provides a aligned
         //         pointer and there is no public API to construct a [`Ptr`]
         //         so, its safe to assume that the [`NonNull::as_ref`] are applied.
-        //         If not, its the bootloader&#39;s fault that they have violated the
+        //         If not, its the bootloader's fault that they have violated the
         //         specification!.
         //
         // Also, we have a shared reference to the data and there is no
@@ -860,7 +861,7 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>get_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>T&gt; {
+    </span><span class="kw">pub fn </span>get_mut&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T&gt; {
         <span class="comment">// SAFETY: Check the safety for [`Ptr::get`] and we have
         // exclusive access to the data.
         </span><span class="self">self</span>.ptr.as_mut().map(|e| <span class="kw">unsafe </span>{ e.as_mut() })
@@ -890,9 +891,9 @@
 }
 
 <span class="kw">impl</span>&lt;T: Debug&gt; Debug <span class="kw">for </span>Ptr&lt;T&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_tuple(<span class="string">&quot;Ptr&quot;</span>)
-            .field(<span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;{:#x?}&quot;</span>, <span class="self">self</span>.get()))
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_tuple(<span class="string">"Ptr"</span>)
+            .field(<span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">"{:#x?}"</span>, <span class="self">self</span>.get()))
             .finish()
     }
 }
@@ -905,12 +906,12 @@
 <span class="kw">type </span>ArrayPtr&lt;T&gt; = NonNullPtr&lt;NonNullPtr&lt;T&gt;&gt;;
 
 <span class="kw">impl</span>&lt;T&gt; ArrayPtr&lt;T&gt; {
-    <span class="kw">fn </span>into_slice&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, len: usize) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[NonNullPtr&lt;T&gt;] {
+    <span class="kw">fn </span>into_slice&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, len: usize) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[NonNullPtr&lt;T&gt;] {
         <span class="comment">// SAFETY: We have shared reference to the array.
         </span><span class="kw">unsafe </span>{ core::slice::from_raw_parts(<span class="self">self</span>.as_ptr(), len) }
     }
 
-    <span class="kw">fn </span>into_slice_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, len: usize) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>[NonNullPtr&lt;T&gt;] {
+    <span class="kw">fn </span>into_slice_mut&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, len: usize) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[NonNullPtr&lt;T&gt;] {
         <span class="comment">// SAFETY: We have exculusive access to the array.
         </span><span class="kw">unsafe </span>{ core::slice::from_raw_parts_mut(<span class="self">self</span>.as_ptr(), len) }
     }
@@ -985,14 +986,14 @@
     <span class="kw">pub </span>d: [u8; <span class="number">8</span>],
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;into-uuid&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"into-uuid"</span>)]
 </span><span class="kw">impl </span>From&lt;Uuid&gt; <span class="kw">for </span>uuid::Uuid {
     <span class="kw">fn </span>from(lim: Uuid) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::from_fields(lim.a, lim.b, lim.c, <span class="kw-2">&amp;</span>lim.d)
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;into-uuid&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"into-uuid"</span>)]
 </span><span class="kw">impl </span>From&lt;uuid::Uuid&gt; <span class="kw">for </span>Uuid {
     <span class="kw">fn </span>from(uuid: uuid::Uuid) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(a, b, c, d) = uuid.as_fields();
@@ -1119,7 +1120,7 @@
 }
 
 <span class="kw">impl </span>FramebufferResponse {
-    <span class="kw">pub fn </span>framebuffers&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[NonNullPtr&lt;Framebuffer&gt;] {
+    <span class="kw">pub fn </span>framebuffers&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[NonNullPtr&lt;Framebuffer&gt;] {
         <span class="self">self</span>.framebuffers
             .into_slice(<span class="self">self</span>.framebuffer_count <span class="kw">as </span>usize)
     }
@@ -1132,7 +1133,7 @@
 <span class="comment">// terminal request tag:
 </span><span class="attr">#[repr(C)]
 #[derive(Debug)]
-#[deprecated(note = <span class="string">&quot;This feature is deprecated, do not use if possible.&quot;</span>)]
+#[deprecated(note = <span class="string">"This feature is deprecated, do not use if possible."</span>)]
 </span><span class="kw">pub struct </span>Terminal {
     <span class="doccomment">/// Number of columns provided by the terminal.
     </span><span class="kw">pub </span>cols: u64,
@@ -1142,13 +1143,13 @@
     </span><span class="kw">pub </span>framebuffer: Ptr&lt;Framebuffer&gt;,
 }
 
-<span class="attr">#[deprecated(note = <span class="string">&quot;This feature is deprecated, do not use if possible.&quot;</span>)]
+<span class="attr">#[deprecated(note = <span class="string">"This feature is deprecated, do not use if possible."</span>)]
 </span><span class="kw">type </span>TerminalWrite =
-    <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(terminal: <span class="kw-2">*const </span>Terminal, string: <span class="kw-2">*const </span>u8, length: u64)&gt;;
+    <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>(terminal: <span class="kw-2">*const </span>Terminal, string: <span class="kw-2">*const </span>u8, length: u64)&gt;;
 
 <span class="attr">#[repr(C)]
 #[derive(Debug)]
-#[deprecated(note = <span class="string">&quot;This feature is deprecated, do not use if possible.&quot;</span>)]
+#[deprecated(note = <span class="string">"This feature is deprecated, do not use if possible."</span>)]
 </span><span class="kw">pub struct </span>TerminalResponse {
     <span class="kw">pub </span>revision: u64,
 
@@ -1164,9 +1165,9 @@
     </span>write_fn: TerminalWrite,
 }
 
-<span class="attr">#[deprecated(note = <span class="string">&quot;This feature is deprecated, do not use if possible.&quot;</span>)]
+<span class="attr">#[deprecated(note = <span class="string">"This feature is deprecated, do not use if possible."</span>)]
 </span><span class="kw">impl </span>TerminalResponse {
-    <span class="kw">pub fn </span>terminals&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[NonNullPtr&lt;Terminal&gt;] {
+    <span class="kw">pub fn </span>terminals&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[NonNullPtr&lt;Terminal&gt;] {
         <span class="self">self</span>.terminals.into_slice(<span class="self">self</span>.terminal_count <span class="kw">as </span>usize)
     }
 
@@ -1181,7 +1182,7 @@
 
 <span class="macro">make_struct!</span>(
     <span class="doccomment">/// Omitting this request will cause the bootloader to not initialise the terminal service.
-    </span><span class="attr">#[deprecated(note = <span class="string">&quot;This feature is deprecated, do not use if possible.&quot;</span>)]
+    </span><span class="attr">#[deprecated(note = <span class="string">"This feature is deprecated, do not use if possible."</span>)]
     </span><span class="kw">struct </span>TerminalRequest: [<span class="number">0xc8ac59310c2b0844</span>, <span class="number">0xa68d0c7265d38878</span>] =&gt; TerminalResponse {
         callback: Ptr&lt;()&gt; = Ptr::DEFAULT
     };
@@ -1190,7 +1191,7 @@
 <span class="comment">// 5-level paging request tag:
 </span><span class="attr">#[repr(C)]
 #[derive(Debug)]
-#[deprecated(note = <span class="string">&quot;This feature is deprecated, do not use if possible.&quot;</span>)]
+#[deprecated(note = <span class="string">"This feature is deprecated, do not use if possible."</span>)]
 </span><span class="kw">pub struct </span>Level5PagingResponse {
     <span class="kw">pub </span>revision: u64,
 }
@@ -1198,43 +1199,43 @@
 <span class="macro">make_struct!</span>(
     <span class="doccomment">/// The presence of this request will prompt the bootloader to turn on x86_64 5-level paging. It will not be
     /// turned on if this request is not present. If the response pointer is unchanged, 5-level paging is engaged.
-    </span><span class="attr">#[deprecated(note = <span class="string">&quot;This feature is deprecated, do not use if possible.&quot;</span>)]
+    </span><span class="attr">#[deprecated(note = <span class="string">"This feature is deprecated, do not use if possible."</span>)]
     </span><span class="kw">struct </span>Level5PagingRequest: [<span class="number">0x94469551da9b3192</span>, <span class="number">0xebe5e86db7382888</span>] =&gt; Level5PagingResponse {};
 );
 
 <span class="attr">#[repr(u64)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 </span><span class="kw">pub enum </span>PagingMode {
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
     </span>Lvl4 = <span class="number">0</span>,
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
     </span>Lvl5 = <span class="number">1</span>,
 
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;aarch64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"aarch64"</span>)]
     </span>Lvl4 = <span class="number">0</span>,
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;aarch64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"aarch64"</span>)]
     </span>Lvl5 = <span class="number">1</span>,
 
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;riscv64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"riscv64"</span>)]
     </span>Sv39 = <span class="number">0</span>,
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;riscv64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"riscv64"</span>)]
     </span>Sv48 = <span class="number">1</span>,
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;riscv64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"riscv64"</span>)]
     </span>Sv57 = <span class="number">2</span>,
 }
 
 <span class="kw">impl </span>PagingMode {
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
     </span><span class="kw">pub const fn </span>default() -&gt; <span class="self">Self </span>{
         PagingMode::Lvl4
     }
 
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;aarch64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"aarch64"</span>)]
     </span><span class="kw">pub const fn </span>default() -&gt; <span class="self">Self </span>{
         PagingMode::Lvl4
     }
 
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;riscv64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"riscv64"</span>)]
     </span><span class="kw">pub const fn </span>default() -&gt; <span class="self">Self </span>{
         PagingMode::Sv48
     }
@@ -1271,7 +1272,7 @@
     /// than that, the CPU state will be the same as described for the bootstrap
     /// processor. This field is unused for the structure describing the bootstrap
     /// processor.
-    </span><span class="kw">pub </span>goto_address: <span class="kw">extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(info: <span class="kw-2">*const </span>SmpInfo) -&gt; !,
+    </span><span class="kw">pub </span>goto_address: <span class="kw">extern </span><span class="string">"C" </span><span class="kw">fn</span>(info: <span class="kw-2">*const </span>SmpInfo) -&gt; !,
     <span class="doccomment">/// A free for use field.
     </span><span class="kw">pub </span>extra_argument: u64,
 }
@@ -1292,7 +1293,7 @@
 }
 
 <span class="kw">impl </span>SmpResponse {
-    <span class="doccomment">/// Return&#39;s the SMP info array pointer as a mutable rust slice.
+    <span class="doccomment">/// Return's the SMP info array pointer as a mutable rust slice.
     ///
     /// ## Safety
     ///
@@ -1302,9 +1303,9 @@
     /// - Writing to [`SmpInfo::goto_address`] will cause it to start executing at the
     /// provided address.
     /// - The address pointed by [`SmpInfo::goto_address`] must be that of a
-    /// `extern &quot;C&quot; fn(&amp;&#39;static SmpInfo) -&gt; !`, this also means that once written this
+    /// `extern "C" fn(&amp;'static SmpInfo) -&gt; !`, this also means that once written this
     /// struct must not be mutated any further.
-    </span><span class="kw">pub fn </span>cpus&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>[NonNullPtr&lt;SmpInfo&gt;] {
+    </span><span class="kw">pub fn </span>cpus&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[NonNullPtr&lt;SmpInfo&gt;] {
         <span class="self">self</span>.cpus.into_slice_mut(<span class="self">self</span>.cpu_count <span class="kw">as </span>usize)
     }
 }
@@ -1359,11 +1360,11 @@
 }
 
 <span class="kw">impl </span>MemmapResponse {
-    <span class="kw">pub fn </span>memmap&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[NonNullPtr&lt;MemmapEntry&gt;] {
+    <span class="kw">pub fn </span>memmap&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[NonNullPtr&lt;MemmapEntry&gt;] {
         <span class="self">self</span>.entries.into_slice(<span class="self">self</span>.entry_count <span class="kw">as </span>usize)
     }
 
-    <span class="kw">pub fn </span>memmap_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>[NonNullPtr&lt;MemmapEntry&gt;] {
+    <span class="kw">pub fn </span>memmap_mut&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[NonNullPtr&lt;MemmapEntry&gt;] {
         <span class="self">self</span>.entries.into_slice_mut(<span class="self">self</span>.entry_count <span class="kw">as </span>usize)
     }
 }
@@ -1411,7 +1412,7 @@
 }
 
 <span class="kw">impl </span>ModuleResponse {
-    <span class="kw">pub fn </span>modules&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[NonNullPtr&lt;File&gt;] {
+    <span class="kw">pub fn </span>modules&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[NonNullPtr&lt;File&gt;] {
         <span class="self">self</span>.modules.into_slice(<span class="self">self</span>.module_count <span class="kw">as </span>usize)
     }
 }

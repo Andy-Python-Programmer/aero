@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/logger.rs`."><title>logger.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/logger.rs`."><title>logger.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -174,8 +175,8 @@
         <span class="kw">if </span><span class="self">self</span>.enabled(record.metadata()) {
             <span class="kw">use </span><span class="kw">crate</span>::drivers::uart::<span class="kw-2">*</span>;
 
-            <span class="kw">let </span>file = record.file().unwrap_or(<span class="string">&quot;unknown&quot;</span>);
-            <span class="kw">let </span>file = file.strip_prefix(<span class="string">&quot;aero_kernel/src/&quot;</span>).unwrap_or(file);
+            <span class="kw">let </span>file = record.file().unwrap_or(<span class="string">"unknown"</span>);
+            <span class="kw">let </span>file = file.strip_prefix(<span class="string">"aero_kernel/src/"</span>).unwrap_or(file);
 
             <span class="kw">let </span>line = record.line().unwrap_or(<span class="number">0</span>);
 
@@ -184,25 +185,25 @@
 
             <span class="kw">macro </span>generic_log($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) {
                 {
-                    <span class="macro">serial_print!</span>(<span class="string">&quot;{}&quot;</span>, <span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
+                    <span class="macro">serial_print!</span>(<span class="string">"{}"</span>, <span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
                     <span class="kw">if </span>rendy_dbg {
-                        <span class="macro-nonterminal">$</span><span class="macro">crate::rendy::print!</span>(<span class="string">&quot;{}&quot;</span>, <span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
+                        <span class="macro-nonterminal">$</span><span class="macro">crate::rendy::print!</span>(<span class="string">"{}"</span>, <span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
                     }
                 }
             }
 
             <span class="comment">// Append the log message to the log ring buffer.
             </span><span class="kw">let </span><span class="kw-2">mut </span>log_ring = LOG_RING_BUFFER.get().unwrap().lock_irq();
-            <span class="kw">let _ </span>= <span class="macro">writeln!</span>(log_ring, <span class="string">&quot;[{}] {}&quot;</span>, level, record.args());
+            <span class="kw">let _ </span>= <span class="macro">writeln!</span>(log_ring, <span class="string">"[{}] {}"</span>, level, record.args());
 
             <span class="kw">let </span>ticks = <span class="kw">crate</span>::arch::time::get_uptime_ticks();
-            <span class="macro">serial_print!</span>(<span class="string">&quot;\x1b[37;1m[{}] {file}:{line} &quot;</span>, ticks);
+            <span class="macro">serial_print!</span>(<span class="string">"\x1b[37;1m[{}] {file}:{line} "</span>, ticks);
 
             <span class="kw">if </span>scheduler::is_initialized() {
                 <span class="comment">// fetch the current task, grab the TID and PID.
                 </span><span class="kw">if let </span><span class="prelude-val">Some</span>(task) = scheduler::get_scheduler().inner.current_task_optional() {
                     <span class="macro">serial_print!</span>(
-                        <span class="string">&quot;(tid={}, pid={}) &quot;</span>,
+                        <span class="string">"(tid={}, pid={}) "</span>,
                         task.tid().as_usize(),
                         task.pid().as_usize()
                     );
@@ -210,15 +211,15 @@
             }
 
             <span class="kw">match </span>record.level() {
-                Level::Info =&gt; <span class="macro">generic_log!</span>(<span class="string">&quot;\x1b[32;1minfo &quot;</span>), <span class="comment">// green info
-                </span>Level::Warn =&gt; <span class="macro">generic_log!</span>(<span class="string">&quot;\x1b[33;1mwarn &quot;</span>), <span class="comment">// yellow warn
-                </span>Level::Error =&gt; <span class="macro">generic_log!</span>(<span class="string">&quot;\x1b[32;1merror &quot;</span>), <span class="comment">// red error
-                </span>Level::Debug =&gt; <span class="macro">generic_log!</span>(<span class="string">&quot;\x1b[35;1mdebug &quot;</span>), <span class="comment">// gray debug
-                </span>Level::Trace =&gt; <span class="macro">generic_log!</span>(<span class="string">&quot;\x1b[34;1mtrace &quot;</span>), <span class="comment">// blue trace
+                Level::Info =&gt; <span class="macro">generic_log!</span>(<span class="string">"\x1b[32;1minfo "</span>), <span class="comment">// green info
+                </span>Level::Warn =&gt; <span class="macro">generic_log!</span>(<span class="string">"\x1b[33;1mwarn "</span>), <span class="comment">// yellow warn
+                </span>Level::Error =&gt; <span class="macro">generic_log!</span>(<span class="string">"\x1b[32;1merror "</span>), <span class="comment">// red error
+                </span>Level::Debug =&gt; <span class="macro">generic_log!</span>(<span class="string">"\x1b[35;1mdebug "</span>), <span class="comment">// gray debug
+                </span>Level::Trace =&gt; <span class="macro">generic_log!</span>(<span class="string">"\x1b[34;1mtrace "</span>), <span class="comment">// blue trace
             </span>}
 
-            <span class="macro">generic_log!</span>(<span class="string">&quot;\x1b[0m&quot;</span>);
-            <span class="macro">generic_log!</span>(<span class="string">&quot;{}\n&quot;</span>, record.args());
+            <span class="macro">generic_log!</span>(<span class="string">"\x1b[0m"</span>);
+            <span class="macro">generic_log!</span>(<span class="string">"{}\n"</span>, record.args());
         }
     }
 
@@ -240,7 +241,7 @@
     LOG_RING_BUFFER
         .get()
         .map(|l| String::from(l.lock_irq().extract()))
-        .expect(<span class="string">&quot;log: attempted to get the log ring buffer before it was initialized&quot;</span>)
+        .expect(<span class="string">"log: attempted to get the log ring buffer before it was initialized"</span>)
 }
 
 <span class="attr">#[inline]

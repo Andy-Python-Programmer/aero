@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/unwind.rs`."><title>unwind.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/unwind.rs`."><title>unwind.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -309,11 +310,11 @@
 }
 
 <span class="kw">pub struct </span>UnwindInfo {
-    <span class="kw">pub </span>kernel_elf: ElfFile&lt;<span class="lifetime">&#39;static</span>&gt;,
+    <span class="kw">pub </span>kernel_elf: ElfFile&lt;<span class="lifetime">'static</span>&gt;,
 }
 
 <span class="kw">impl </span>UnwindInfo {
-    <span class="kw">pub fn </span>new(elf: ElfFile&lt;<span class="lifetime">&#39;static</span>&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(elf: ElfFile&lt;<span class="lifetime">'static</span>&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ kernel_elf: elf }
     }
 }
@@ -331,7 +332,7 @@
         <span class="kw">if </span>section.get_type() == <span class="prelude-val">Ok</span>(ShType::SymTab) {
             <span class="kw">let </span>section_data = section
                 .get_data(kernel_elf)
-                .expect(<span class="string">&quot;Failed to get kernel section data information&quot;</span>);
+                .expect(<span class="string">"Failed to get kernel section data information"</span>);
 
             <span class="kw">if let </span>SectionData::SymbolTable64(symtab) = section_data {
                 symbol_table = <span class="prelude-val">Some</span>(symtab);
@@ -343,20 +344,20 @@
     <span class="kw">let </span><span class="kw-2">mut </span>rbp: usize;
 
     <span class="kw">unsafe </span>{
-        <span class="macro">asm!</span>(<span class="string">&quot;mov {}, rbp&quot;</span>, out(reg) rbp);
+        <span class="macro">asm!</span>(<span class="string">"mov {}, rbp"</span>, out(reg) rbp);
     }
 
     <span class="comment">// Make sure the RBP is not NULL. If it is then we cannot do the stack unwinding/tracing
     // as no frame pointers were emitted in this build. This should only occur if you
     // set the field `eliminate-frame-pointer` in the target file to true or manually resetting
     // the RBP to prevent backtrace to avoid address leaks (for example when jumping to userland).
-    // If that&#39;s the case we return (resumes the parent function).
+    // If that's the case we return (resumes the parent function).
     </span><span class="kw">if </span>rbp == <span class="number">0x00 </span>{
-        <span class="macro">log::trace!</span>(<span class="string">&quot;&lt;empty backtrace&gt;&quot;</span>);
+        <span class="macro">log::trace!</span>(<span class="string">"&lt;empty backtrace&gt;"</span>);
         <span class="kw">return</span>;
     }
 
-    <span class="macro">log::trace!</span>(<span class="string">&quot;{:-^80}&quot;</span>, <span class="string">&quot; BACKTRACE &quot;</span>);
+    <span class="macro">log::trace!</span>(<span class="string">"{:-^80}"</span>, <span class="string">" BACKTRACE "</span>);
 
     <span class="kw">for </span>depth <span class="kw">in </span><span class="number">0</span>..<span class="comment">/*64*/</span><span class="number">16 </span>{
         <span class="kw">if let </span><span class="prelude-val">Some</span>(rip_rbp) = rbp.checked_add(core::mem::size_of::&lt;usize&gt;()) {
@@ -364,7 +365,7 @@
                 .translate_addr(VirtAddr::new(rip_rbp <span class="kw">as </span>u64))
                 .is_none()
             {
-                <span class="macro">log::trace!</span>(<span class="string">&quot;{:&gt;2}: &lt;guard page&gt;&quot;</span>, depth);
+                <span class="macro">log::trace!</span>(<span class="string">"{:&gt;2}: &lt;guard page&gt;"</span>, depth);
                 <span class="kw">break</span>;
             }
 
@@ -385,7 +386,7 @@
                 <span class="kw">let </span>st_size = data.size() <span class="kw">as </span>usize;
 
                 <span class="kw">if </span>rip &gt;= st_value &amp;&amp; rip &lt; (st_value + st_size) {
-                    <span class="kw">let </span>mangled_name = data.get_name(kernel_elf).unwrap_or(<span class="string">&quot;&lt;unknown&gt;&quot;</span>);
+                    <span class="kw">let </span>mangled_name = data.get_name(kernel_elf).unwrap_or(<span class="string">"&lt;unknown&gt;"</span>);
                     <span class="kw">let </span>demangled_name = rustc_demangle::demangle(mangled_name);
 
                     name = <span class="prelude-val">Some</span>(demangled_name);
@@ -393,7 +394,7 @@
             }
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = name {
-                <span class="macro">log::trace!</span>(<span class="string">&quot;{:&gt;2}: 0x{:016x} - {}&quot;</span>, depth, rip, name);
+                <span class="macro">log::trace!</span>(<span class="string">"{:&gt;2}: 0x{:016x} - {}"</span>, depth, rip, name);
             } <span class="kw">else if </span>scheduler::is_initialized() {
                 <span class="kw">if let </span><span class="prelude-val">Some</span>((region, tag)) = scheduler::current_thread()
                     .mem_tags
@@ -403,13 +404,13 @@
                 {
                     <span class="kw">let </span>resolved_addr = rip - region.start;
                     <span class="macro">log::trace!</span>(
-                        <span class="string">&quot;{depth:&gt;2}: 0x{rip:016x} - &lt;userland, in={tag}, resolved_addr={resolved_addr:#x}&gt;&quot;
+                        <span class="string">"{depth:&gt;2}: 0x{rip:016x} - &lt;userland, in={tag}, resolved_addr={resolved_addr:#x}&gt;"
                     </span>);
                 } <span class="kw">else </span>{
-                    <span class="macro">log::trace!</span>(<span class="string">&quot;{depth:&gt;2}: 0x{rip:016x} - &lt;unknown&gt;&quot;</span>);
+                    <span class="macro">log::trace!</span>(<span class="string">"{depth:&gt;2}: 0x{rip:016x} - &lt;unknown&gt;"</span>);
                 }
             } <span class="kw">else </span>{
-                <span class="macro">log::trace!</span>(<span class="string">&quot;{:&gt;2}: 0x{:016x} - &lt;unknown&gt;&quot;</span>, depth, rip);
+                <span class="macro">log::trace!</span>(<span class="string">"{:&gt;2}: 0x{:016x} - &lt;unknown&gt;"</span>, depth, rip);
             }
         } <span class="kw">else </span>{
             <span class="comment">// RBP has been overflowed...
@@ -422,11 +423,11 @@
     // let mut tags = tags.iter().collect::&lt;alloc::vec::Vec&lt;_&gt;&gt;();
     // tags.sort_by(|x, y| x.0.start.cmp(&amp;y.0.start));
     // for (x, s) in tags.iter() {
-    //     log::trace!(&quot;{:#x}..{:#x} {s}&quot;, x.start, x.end);
+    //     log::trace!("{:#x}..{:#x} {s}", x.start, x.end);
     // }
 </span>}
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;ci&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"ci"</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::emu;
 <span class="kw">use </span><span class="kw">crate</span>::utils::sync::IrqGuard;
 
@@ -445,16 +446,16 @@
         <span class="number">0x00
     </span>};
 
-    <span class="macro">log::error!</span>(<span class="string">&quot;cpu &#39;{cpu_id}&#39; panicked at {location}:&quot;</span>);
-    <span class="macro">log::error!</span>(<span class="string">&quot;{message}&quot;</span>);
-    <span class="macro">log::error!</span>(<span class="string">&quot;&quot;</span>);
+    <span class="macro">log::error!</span>(<span class="string">"cpu '{cpu_id}' panicked at {location}:"</span>);
+    <span class="macro">log::error!</span>(<span class="string">"{message}"</span>);
+    <span class="macro">log::error!</span>(<span class="string">""</span>);
 
     unwind_stack_trace();
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;ci&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"ci"</span>)]
     </span>emu::exit_qemu(emu::ExitStatus::Success);
 
-    <span class="attr">#[cfg(not(feature = <span class="string">&quot;ci&quot;</span>))]
+    <span class="attr">#[cfg(not(feature = <span class="string">"ci"</span>))]
     </span><span class="kw">unsafe </span>{
         <span class="comment">// Go into a halt loop to to save power.
         </span><span class="kw">loop </span>{
@@ -468,8 +469,8 @@
 /// we just came from and picking up where we left off.
 </span><span class="attr">#[allow(non_snake_case)]
 #[no_mangle]
-</span><span class="kw">extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>_Unwind_Resume(unwind_context_ptr: usize) -&gt; ! {
-    <span class="macro">log::debug!</span>(<span class="string">&quot;{}&quot;</span>, unwind_context_ptr);
+</span><span class="kw">extern </span><span class="string">"C" </span><span class="kw">fn </span>_Unwind_Resume(unwind_context_ptr: usize) -&gt; ! {
+    <span class="macro">log::debug!</span>(<span class="string">"{}"</span>, unwind_context_ptr);
 
     <span class="kw">unsafe </span>{
         interrupts::disable_interrupts();
@@ -481,10 +482,10 @@
 }
 
 <span class="doccomment">/// This function is the entry point for the unwinding process.
-</span><span class="attr">#[lang = <span class="string">&quot;eh_personality&quot;</span>]
+</span><span class="attr">#[lang = <span class="string">"eh_personality"</span>]
 #[no_mangle]
-</span><span class="kw">extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>rust_eh_personality() -&gt; ! {
-    <span class="macro">log::error!</span>(<span class="string">&quot;Poisoned function `rust_eh_personaity` was invoked.&quot;</span>);
+</span><span class="kw">extern </span><span class="string">"C" </span><span class="kw">fn </span>rust_eh_personality() -&gt; ! {
+    <span class="macro">log::error!</span>(<span class="string">"Poisoned function `rust_eh_personaity` was invoked."</span>);
 
     <span class="kw">unsafe </span>{
         interrupts::disable_interrupts();

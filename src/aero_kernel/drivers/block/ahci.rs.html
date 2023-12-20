@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/drivers/block/ahci.rs`."><title>ahci.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/drivers/block/ahci.rs`."><title>ahci.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1367,7 +1368,7 @@
 
 <span class="kw">impl </span>FisRegH2D {
     <span class="kw">fn </span>set_lba(<span class="kw-2">&amp;mut </span><span class="self">self</span>, lba: usize) {
-        <span class="macro">debug_assert!</span>(lba &lt; <span class="number">1 </span>&lt;&lt; <span class="number">48</span>, <span class="string">&quot;LBA is limited to 48 bits&quot;</span>);
+        <span class="macro">debug_assert!</span>(lba &lt; <span class="number">1 </span>&lt;&lt; <span class="number">48</span>, <span class="string">"LBA is limited to 48 bits"</span>);
 
         <span class="self">self</span>.lba0.set(lba <span class="kw">as _</span>);
         <span class="self">self</span>.lba1.set((lba &gt;&gt; <span class="number">8</span>) <span class="kw">as _</span>);
@@ -1466,7 +1467,7 @@
             <span class="number">1 </span>=&gt; HbaPortDd::PresentNotE,
             <span class="number">3 </span>=&gt; HbaPortDd::PresentAndE,
             <span class="number">4 </span>=&gt; HbaPortDd::Offline,
-            v =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Invalid HbaPortSstsRegDet {}&quot;</span>, v),
+            v =&gt; <span class="macro">panic!</span>(<span class="string">"Invalid HbaPortSstsRegDet {}"</span>, v),
         }
     }
 
@@ -1477,7 +1478,7 @@
             <span class="number">2 </span>=&gt; HbaPortIpm::Partial,
             <span class="number">6 </span>=&gt; HbaPortIpm::Slumber,
             <span class="number">8 </span>=&gt; HbaPortIpm::DevSleep,
-            v =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Invalid HbaPortSstsRegIpm {}&quot;</span>, v),
+            v =&gt; <span class="macro">panic!</span>(<span class="string">"Invalid HbaPortSstsRegIpm {}"</span>, v),
         }
     }
 }
@@ -1598,15 +1599,15 @@
         <span class="kw">let </span>ipm = status.interface_power_management();
         <span class="kw">let </span>dd = status.device_detection();
 
-        <span class="comment">// Check if the port is active and is present. If that&#39;s the case
+        <span class="comment">// Check if the port is active and is present. If that's the case
         // we can start the AHCI port.
         </span><span class="kw">if let </span>(HbaPortDd::PresentAndE, HbaPortIpm::Active) = (dd, ipm) {
-            <span class="macro">log::trace!</span>(<span class="string">&quot;ahci: enabling port {}&quot;</span>, port);
+            <span class="macro">log::trace!</span>(<span class="string">"ahci: enabling port {}"</span>, port);
 
             <span class="self">self</span>.start(offset_table)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
         } <span class="kw">else </span>{
-            <span class="comment">// Else we can&#39;t enable the port.
+            <span class="comment">// Else we can't enable the port.
             </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
         }
     }
@@ -1675,14 +1676,14 @@
         }
 
         <span class="kw">if </span>spin == <span class="number">0 </span>{
-            <span class="macro">log::warn!</span>(<span class="string">&quot;ahci: port hung&quot;</span>);
+            <span class="macro">log::warn!</span>(<span class="string">"ahci: port hung"</span>);
             <span class="kw">return</span>;
         }
 
         <span class="comment">// Wait for the command to complete.
         </span><span class="kw">while </span><span class="self">self</span>.ci.get() &amp; (<span class="number">1 </span>&lt;&lt; slot) == <span class="number">1 </span>{
             <span class="kw">if </span><span class="self">self</span>.is.get().contains(HbaPortIS::TFES) {
-                <span class="macro">log::warn!</span>(<span class="string">&quot;ahci: disk error (serr={:#x})&quot;</span>, <span class="self">self</span>.serr.get());
+                <span class="macro">log::warn!</span>(<span class="string">"ahci: disk error (serr={:#x})"</span>, <span class="self">self</span>.serr.get());
                 <span class="kw">break</span>;
             }
         }
@@ -1821,7 +1822,7 @@
         <span class="kw">let </span>minor_version = version &amp; <span class="number">0xffff</span>;
 
         <span class="macro">log::info!</span>(
-            <span class="string">&quot;ahci: controller version {}.{}&quot;</span>,
+            <span class="string">"ahci: controller version {}.{}"</span>,
             major_version,
             minor_version
         );
@@ -1862,12 +1863,12 @@
         <span class="kw">let </span><span class="kw-2">mut </span>address_space = AddressSpace::this();
         <span class="kw">let </span><span class="kw-2">mut </span>offset_table = address_space.offset_page_table();
 
-        <span class="kw">let </span>abar = header.get_bar(<span class="number">5</span>).expect(<span class="string">&quot;Failed to get ABAR&quot;</span>);
+        <span class="kw">let </span>abar = header.get_bar(<span class="number">5</span>).expect(<span class="string">"Failed to get ABAR"</span>);
 
         <span class="kw">let </span>(abar_address, <span class="kw">_</span>) = <span class="kw">match </span>abar {
             Bar::Memory32 { address, size, .. } =&gt; (address <span class="kw">as </span>u64, size <span class="kw">as </span>u64),
             Bar::Memory64 { address, size, .. } =&gt; (address, size),
-            Bar::IO { .. } =&gt; <span class="macro">panic!</span>(<span class="string">&quot;ABAR is in port space o_O&quot;</span>),
+            Bar::IO { .. } =&gt; <span class="macro">panic!</span>(<span class="string">"ABAR is in port space o_O"</span>),
         };
 
         <span class="self">self</span>.hba = <span class="kw">crate</span>::IO_VIRTUAL_BASE + abar_address; <span class="comment">// Update the HBA address.
@@ -1905,7 +1906,7 @@
     }
 
     <span class="kw">fn </span>start(<span class="kw-2">&amp;</span><span class="self">self</span>, header: <span class="kw-2">&amp;</span>PciHeader, _offset_table: <span class="kw-2">&amp;mut </span>OffsetPageTable) {
-        <span class="macro">log::info!</span>(<span class="string">&quot;ahci: starting driver...&quot;</span>);
+        <span class="macro">log::info!</span>(<span class="string">"ahci: starting driver..."</span>);
 
         get_ahci().inner.lock_irq().start_driver(header).unwrap(); <span class="comment">// Start and initialize the AHCI controller.
 
@@ -1913,16 +1914,16 @@
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(port) = get_ahci().inner.lock().ports[<span class="number">0</span>].clone() {
             <span class="kw">let </span>buffer = <span class="kw-2">&amp;mut </span>[<span class="number">0u8</span>; <span class="number">512</span>];
             port.read(<span class="number">0</span>, buffer);
-            <span class="macro">log::info!</span>(<span class="string">&quot;Read sector 0: {:?}&quot;</span>, buffer);
+            <span class="macro">log::info!</span>(<span class="string">"Read sector 0: {:?}"</span>, buffer);
         }
     }
 }
 
 <span class="doccomment">/// Returns a reference-counting pointer to the AHCI driver.
-</span><span class="kw">fn </span>get_ahci() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Arc&lt;AhciDriver&gt; {
+</span><span class="kw">fn </span>get_ahci() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Arc&lt;AhciDriver&gt; {
     DRIVER
         .get()
-        .expect(<span class="string">&quot;Attempted to get the AHCI driver before it was initialized&quot;</span>)
+        .expect(<span class="string">"Attempted to get the AHCI driver before it was initialized"</span>)
 }
 
 <span class="doccomment">/// This function is responsible for initializing and running the AHCI driver.

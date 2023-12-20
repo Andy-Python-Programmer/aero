@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/crabnet-f1041e97df122607/14fd222/crabnet_tcp/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="crabnet_tcp" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/crabnet-f1041e97df122607/14fd222/crabnet_tcp/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="crabnet_tcp" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -686,7 +687,7 @@
 <a href="#686" id="686">686</a>
 <a href="#687" id="687">687</a>
 <a href="#688" id="688">688</a>
-</pre></div><pre class="rust"><code><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
+</pre></div><pre class="rust"><code><span class="attr">#![cfg_attr(not(feature = <span class="string">"std"</span>), no_std)]
 
 </span><span class="kw">extern crate </span>alloc;
 
@@ -856,7 +857,7 @@
 
         <span class="comment">// TODO: Actually set to something what we can handle.
         </span>socket.recv.wnd = u16::MAX;
-        <span class="macro">log::debug!</span>(<span class="string">&quot;sending syn&quot;</span>);
+        <span class="macro">log::debug!</span>(<span class="string">"sending syn"</span>);
         socket.send_syn();
         socket
     }
@@ -921,7 +922,7 @@
     </span><span class="kw">fn </span>do_timewait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="macro">assert_eq!</span>(<span class="self">self</span>.state, State::TimeWait);
 
-        <span class="macro">log::info!</span>(<span class="string">&quot;[ TCP ] Closing connection&quot;</span>);
+        <span class="macro">log::info!</span>(<span class="string">"[ TCP ] Closing connection"</span>);
         <span class="comment">// TODO: Wait for 2MSL. Which is (2 * maximum segment lifetime).
         </span><span class="self">self</span>.state = State::Closed;
     }
@@ -1075,7 +1076,7 @@
 
                 <span class="kw">if </span>flags.contains(TcpFlags::RST) {
                     <span class="kw">if </span>acceptable {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;[ TCP ] Connection Reset&quot;</span>);
+                        <span class="macro">log::error!</span>(<span class="string">"[ TCP ] Connection Reset"</span>);
                         <span class="self">self</span>.state = State::Closed;
                     }
 
@@ -1164,7 +1165,7 @@
                     //      the LISTEN state), then return this connection to LISTEN state and
                     //      return. The user need not be informed. If this connection was initiated
                     //      with an active OPEN (i.e., came from SYN-SENT state), then the
-                    //      connection was refused; signal the user &quot;connection refused&quot;. In either
+                    //      connection was refused; signal the user "connection refused". In either
                     //      case, the retransmission queue should be flushed. And in the active OPEN
                     //      case, enter the CLOSED state and delete the TCB, and return.
                     </span><span class="self">self</span>.state = State::Closed;
@@ -1174,10 +1175,10 @@
                 State::Established | State::FinWait1 | State::FinWait2 | State::CloseWait =&gt; {
                     <span class="comment">// TODO(andypython):
                     //      If the RST bit is set, then any outstanding RECEIVEs and SEND should
-                    //      receive &quot;reset&quot; responses. All segment queues should be flushed. Users
-                    //      should also receive an unsolicited general &quot;connection reset&quot; signal.
+                    //      receive "reset" responses. All segment queues should be flushed. Users
+                    //      should also receive an unsolicited general "connection reset" signal.
                     //      Enter the CLOSED state, delete the TCB, and return.
-                    </span><span class="macro">log::error!</span>(<span class="string">&quot;[ TCP ] Connection Reset&quot;</span>);
+                    </span><span class="macro">log::error!</span>(<span class="string">"[ TCP ] Connection Reset"</span>);
                     <span class="self">self</span>.state = State::Closed;
                     <span class="kw">return</span>;
                 }
@@ -1228,7 +1229,7 @@
                     //     Any segments on the retransmission queue that are thereby entirely
                     //     acknowledged are removed. Users should receive positive acknowledgments
                     //     for buffers that have been SENT and fully acknowledged (i.e., SEND buffer
-                    //     should be returned with &quot;ok&quot; response).
+                    //     should be returned with "ok" response).
 
                     </span><span class="kw">if </span>(<span class="self">self</span>.send.wl1 &lt; tcp.sequence_number())
                         || (<span class="self">self</span>.send.wl1 == tcp.sequence_number()
@@ -1264,7 +1265,7 @@
                 }
             }
 
-            state =&gt; <span class="macro">todo!</span>(<span class="string">&quot;{state:?}&quot;</span>),
+            state =&gt; <span class="macro">todo!</span>(<span class="string">"{state:?}"</span>),
         }
 
         <span class="kw">if </span>flags.contains(TcpFlags::URG) {
@@ -1282,7 +1283,7 @@
             State::Established | State::FinWait1 | State::FinWait2 <span class="kw">if </span>!payload.is_empty() =&gt; {
                 <span class="kw">let </span>seq_number = tcp.sequence_number();
                 <span class="kw">if </span>seq_number != <span class="self">self</span>.recv.nxt {
-                    <span class="macro">log::warn!</span>(<span class="string">&quot;[ TCP ] Recieved out of order packet&quot;</span>);
+                    <span class="macro">log::warn!</span>(<span class="string">"[ TCP ] Recieved out of order packet"</span>);
                     <span class="kw">return</span>;
                 }
 
@@ -1322,10 +1323,10 @@
                     <span class="self">self</span>.do_timewait();
                 }
 
-                State::TimeWait =&gt; <span class="macro">todo!</span>(<span class="string">&quot;restart the 2 MSL time-wait timeout&quot;</span>),
+                State::TimeWait =&gt; <span class="macro">todo!</span>(<span class="string">"restart the 2 MSL time-wait timeout"</span>),
 
                 State::CloseWait | State::Closing | State::LastAck =&gt; {}
-                state =&gt; <span class="macro">unimplemented!</span>(<span class="string">&quot;&lt;FIN&gt; {state:?}&quot;</span>),
+                state =&gt; <span class="macro">unimplemented!</span>(<span class="string">"&lt;FIN&gt; {state:?}"</span>),
             }
 
             <span class="self">self</span>.recv.nxt = tcp.sequence_number() + <span class="number">1</span>;
@@ -1360,11 +1361,11 @@
     }
 }
 
-<span class="kw">pub struct </span>Packet&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">pub struct </span>Packet&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub </span>ip: Ipv4,
     <span class="kw">pub </span>tcp: Tcp,
     <span class="kw">pub </span>options: TcpOptions,
-    <span class="kw">pub </span>payload: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
+    <span class="kw">pub </span>payload: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
 }
 
 <span class="kw">pub trait </span>NetworkDevice: Send + Sync {

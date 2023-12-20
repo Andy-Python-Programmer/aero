@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/drivers/drm/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/drivers/drm/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1130,7 +1131,7 @@
 /// CRTCs, encoders, frambuffers and planes.
 </span><span class="attr">#[downcastable]
 </span><span class="kw">trait </span>ModeObject: Send + Sync {
-    <span class="doccomment">/// Returns the mode object&#39;s ID.
+    <span class="doccomment">/// Returns the mode object's ID.
     </span><span class="kw">fn </span>id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32;
     <span class="kw">fn </span>object(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>ModeObject&gt;;
 
@@ -1173,7 +1174,7 @@
     <span class="doccomment">/// Returns a tuple containing the driver major, minor and patch level respectively.
     </span><span class="kw">fn </span>driver_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, usize, usize);
     <span class="doccomment">/// Returns a tuple containing the driver name, desc and date respectively.
-    </span><span class="kw">fn </span>driver_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str);
+    </span><span class="kw">fn </span>driver_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str);
 }
 
 <span class="attr">#[derive(Debug, Clone)]
@@ -1287,7 +1288,7 @@
 }
 
 <span class="doccomment">/// Represents a display connector; transmits the signal to the display, detects
-/// display connection, removal and exposes the display&#39;s supported modes.
+/// display connection, removal and exposes the display's supported modes.
 </span><span class="kw">struct </span>Connector {
     sref: Weak&lt;<span class="self">Self</span>&gt;,
 
@@ -1526,7 +1527,7 @@
                     }
 
                     cap =&gt; {
-                        <span class="macro">log::warn!</span>(<span class="string">&quot;drm: unknown capability (`{cap}`)&quot;</span>);
+                        <span class="macro">log::warn!</span>(<span class="string">"drm: unknown capability (`{cap}`)"</span>);
                         <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotSupported);
                     }
                 }
@@ -1584,7 +1585,7 @@
                 <span class="kw">let </span>struc = <span class="kw">unsafe </span>{ UserRef::&lt;DrmModeCrtc&gt;::new(VirtAddr::new(arg <span class="kw">as </span>u64)) };
                 <span class="kw">let </span>_object = <span class="self">self</span>.find_object(struc.crtc_id).unwrap().as_crtc().unwrap();
 
-                <span class="macro">log::warn!</span>(<span class="string">&quot;drm::get_crtc: is a stub!&quot;</span>);
+                <span class="macro">log::warn!</span>(<span class="string">"drm::get_crtc: is a stub!"</span>);
                 <span class="prelude-val">Ok</span>(<span class="number">0</span>)
             }
 
@@ -1599,7 +1600,7 @@
                     .unwrap();
 
                 <span class="self">self</span>.device.commit(<span class="kw-2">&amp;</span>object.buffer_obj);
-                <span class="macro">log::warn!</span>(<span class="string">&quot;drm::set_crtc: is a stub!&quot;</span>);
+                <span class="macro">log::warn!</span>(<span class="string">"drm::set_crtc: is a stub!"</span>);
 
                 <span class="prelude-val">Ok</span>(<span class="number">0</span>)
             }
@@ -1728,10 +1729,10 @@
                 </span><span class="kw">if </span>command.get_bits(<span class="number">8</span>..<span class="number">16</span>) == DRM_IOCTL_BASE {
                     <span class="comment">// command[0..8] is the function number.
                     </span><span class="kw">let </span>function = command.get_bits(<span class="number">0</span>..<span class="number">8</span>);
-                    <span class="macro">unimplemented!</span>(<span class="string">&quot;drm: function (`{function:#x}`) not supported&quot;</span>)
+                    <span class="macro">unimplemented!</span>(<span class="string">"drm: function (`{function:#x}`) not supported"</span>)
                 }
 
-                <span class="macro">log::warn!</span>(<span class="string">&quot;drm: unknown ioctl command (`{command}`)&quot;</span>);
+                <span class="macro">log::warn!</span>(<span class="string">"drm: unknown ioctl command (`{command}`)"</span>);
                 <span class="prelude-val">Err</span>(FileSystemError::NotSupported)
             }
         }
@@ -1760,7 +1761,7 @@
     }
 
     <span class="kw">fn </span>device_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="macro">alloc::format!</span>(<span class="string">&quot;card{}&quot;</span>, <span class="self">self</span>.card_id) <span class="comment">// `/dev/dri/cardX`
+        <span class="macro">alloc::format!</span>(<span class="string">"card{}"</span>, <span class="self">self</span>.card_id) <span class="comment">// `/dev/dri/cardX`
     </span>}
 
     <span class="kw">fn </span>inode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>INodeInterface&gt; {
@@ -1813,356 +1814,356 @@
     <span class="attr">#[rustfmt::skip] </span><span class="comment">// with formatting this gets way too long.
     </span><span class="kw">let </span>modes = <span class="kw-2">&amp;</span>[
         <span class="comment">/* 0x01 - 640x350@85Hz */
-        </span>make_mode_info(<span class="string">&quot;640x350&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">31500</span>, <span class="number">640</span>, <span class="number">672</span>,
+        </span>make_mode_info(<span class="string">"640x350"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">31500</span>, <span class="number">640</span>, <span class="number">672</span>,
         <span class="number">736</span>, <span class="number">832</span>, <span class="number">0</span>, <span class="number">350</span>, <span class="number">382</span>, <span class="number">385</span>, <span class="number">445</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x02 - 640x400@85Hz */
-        </span>make_mode_info(<span class="string">&quot;640x400&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">31500</span>, <span class="number">640</span>, <span class="number">672</span>,
+        </span>make_mode_info(<span class="string">"640x400"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">31500</span>, <span class="number">640</span>, <span class="number">672</span>,
         <span class="number">736</span>, <span class="number">832</span>, <span class="number">0</span>, <span class="number">400</span>, <span class="number">401</span>, <span class="number">404</span>, <span class="number">445</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x03 - 720x400@85Hz */
-        </span>make_mode_info(<span class="string">&quot;720x400&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">35500</span>, <span class="number">720</span>, <span class="number">756</span>,
+        </span>make_mode_info(<span class="string">"720x400"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">35500</span>, <span class="number">720</span>, <span class="number">756</span>,
         <span class="number">828</span>, <span class="number">936</span>, <span class="number">0</span>, <span class="number">400</span>, <span class="number">401</span>, <span class="number">404</span>, <span class="number">446</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x04 - 640x480@60Hz */
-        </span>make_mode_info(<span class="string">&quot;640x480&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">25175</span>, <span class="number">640</span>, <span class="number">656</span>,
+        </span>make_mode_info(<span class="string">"640x480"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">25175</span>, <span class="number">640</span>, <span class="number">656</span>,
         <span class="number">752</span>, <span class="number">800</span>, <span class="number">0</span>, <span class="number">480</span>, <span class="number">490</span>, <span class="number">492</span>, <span class="number">525</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x05 - 640x480@72Hz */
-        </span>make_mode_info(<span class="string">&quot;640x480&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">31500</span>, <span class="number">640</span>, <span class="number">664</span>,
+        </span>make_mode_info(<span class="string">"640x480"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">31500</span>, <span class="number">640</span>, <span class="number">664</span>,
         <span class="number">704</span>, <span class="number">832</span>, <span class="number">0</span>, <span class="number">480</span>, <span class="number">489</span>, <span class="number">492</span>, <span class="number">520</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x06 - 640x480@75Hz */
-        </span>make_mode_info(<span class="string">&quot;640x480&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">31500</span>, <span class="number">640</span>, <span class="number">656</span>,
+        </span>make_mode_info(<span class="string">"640x480"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">31500</span>, <span class="number">640</span>, <span class="number">656</span>,
         <span class="number">720</span>, <span class="number">840</span>, <span class="number">0</span>, <span class="number">480</span>, <span class="number">481</span>, <span class="number">484</span>, <span class="number">500</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x07 - 640x480@85Hz */
-        </span>make_mode_info(<span class="string">&quot;640x480&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">36000</span>, <span class="number">640</span>, <span class="number">696</span>,
+        </span>make_mode_info(<span class="string">"640x480"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">36000</span>, <span class="number">640</span>, <span class="number">696</span>,
         <span class="number">752</span>, <span class="number">832</span>, <span class="number">0</span>, <span class="number">480</span>, <span class="number">481</span>, <span class="number">484</span>, <span class="number">509</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x08 - 800x600@56Hz */
-        </span>make_mode_info(<span class="string">&quot;800x600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">36000</span>, <span class="number">800</span>, <span class="number">824</span>,
+        </span>make_mode_info(<span class="string">"800x600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">36000</span>, <span class="number">800</span>, <span class="number">824</span>,
         <span class="number">896</span>, <span class="number">1024</span>, <span class="number">0</span>, <span class="number">600</span>, <span class="number">601</span>, <span class="number">603</span>, <span class="number">625</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x09 - 800x600@60Hz */
-        </span>make_mode_info(<span class="string">&quot;800x600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">40000</span>, <span class="number">800</span>, <span class="number">840</span>,
+        </span>make_mode_info(<span class="string">"800x600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">40000</span>, <span class="number">800</span>, <span class="number">840</span>,
         <span class="number">968</span>, <span class="number">1056</span>, <span class="number">0</span>, <span class="number">600</span>, <span class="number">601</span>, <span class="number">605</span>, <span class="number">628</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x0a - 800x600@72Hz */
-        </span>make_mode_info(<span class="string">&quot;800x600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">50000</span>, <span class="number">800</span>, <span class="number">856</span>,
+        </span>make_mode_info(<span class="string">"800x600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">50000</span>, <span class="number">800</span>, <span class="number">856</span>,
         <span class="number">976</span>, <span class="number">1040</span>, <span class="number">0</span>, <span class="number">600</span>, <span class="number">637</span>, <span class="number">643</span>, <span class="number">666</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x0b - 800x600@75Hz */
-        </span>make_mode_info(<span class="string">&quot;800x600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">49500</span>, <span class="number">800</span>, <span class="number">816</span>,
+        </span>make_mode_info(<span class="string">"800x600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">49500</span>, <span class="number">800</span>, <span class="number">816</span>,
         <span class="number">896</span>, <span class="number">1056</span>, <span class="number">0</span>, <span class="number">600</span>, <span class="number">601</span>, <span class="number">604</span>, <span class="number">625</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x0c - 800x600@85Hz */
-        </span>make_mode_info(<span class="string">&quot;800x600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">56250</span>, <span class="number">800</span>, <span class="number">832</span>,
+        </span>make_mode_info(<span class="string">"800x600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">56250</span>, <span class="number">800</span>, <span class="number">832</span>,
         <span class="number">896</span>, <span class="number">1048</span>, <span class="number">0</span>, <span class="number">600</span>, <span class="number">601</span>, <span class="number">604</span>, <span class="number">631</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x0d - 800x600@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;800x600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">73250</span>, <span class="number">800</span>, <span class="number">848</span>,
+        </span>make_mode_info(<span class="string">"800x600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">73250</span>, <span class="number">800</span>, <span class="number">848</span>,
         <span class="number">880</span>, <span class="number">960</span>, <span class="number">0</span>, <span class="number">600</span>, <span class="number">603</span>, <span class="number">607</span>, <span class="number">636</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x0e - 848x480@60Hz */
-        </span>make_mode_info(<span class="string">&quot;848x480&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">33750</span>, <span class="number">848</span>, <span class="number">864</span>,
+        </span>make_mode_info(<span class="string">"848x480"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">33750</span>, <span class="number">848</span>, <span class="number">864</span>,
         <span class="number">976</span>, <span class="number">1088</span>, <span class="number">0</span>, <span class="number">480</span>, <span class="number">486</span>, <span class="number">494</span>, <span class="number">517</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x0f - 1024x768@43Hz, interlace */
-        </span>make_mode_info(<span class="string">&quot;1024x768i&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">44900</span>, <span class="number">1024</span>, <span class="number">1032</span>,
+        </span>make_mode_info(<span class="string">"1024x768i"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">44900</span>, <span class="number">1024</span>, <span class="number">1032</span>,
         <span class="number">1208</span>, <span class="number">1264</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">768</span>, <span class="number">776</span>, <span class="number">817</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC |
         DRM_MODE_FLAG_INTERLACE),
         <span class="comment">/* 0x10 - 1024x768@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1024x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">65000</span>, <span class="number">1024</span>, <span class="number">1048</span>,
+        </span>make_mode_info(<span class="string">"1024x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">65000</span>, <span class="number">1024</span>, <span class="number">1048</span>,
         <span class="number">1184</span>, <span class="number">1344</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">777</span>, <span class="number">806</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x11 - 1024x768@70Hz */
-        </span>make_mode_info(<span class="string">&quot;1024x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">75000</span>, <span class="number">1024</span>, <span class="number">1048</span>,
+        </span>make_mode_info(<span class="string">"1024x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">75000</span>, <span class="number">1024</span>, <span class="number">1048</span>,
         <span class="number">1184</span>, <span class="number">1328</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">777</span>, <span class="number">806</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x12 - 1024x768@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1024x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">78750</span>, <span class="number">1024</span>, <span class="number">1040</span>,
+        </span>make_mode_info(<span class="string">"1024x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">78750</span>, <span class="number">1024</span>, <span class="number">1040</span>,
         <span class="number">1136</span>, <span class="number">1312</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">769</span>, <span class="number">772</span>, <span class="number">800</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x13 - 1024x768@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1024x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">94500</span>, <span class="number">1024</span>, <span class="number">1072</span>,
+        </span>make_mode_info(<span class="string">"1024x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">94500</span>, <span class="number">1024</span>, <span class="number">1072</span>,
         <span class="number">1168</span>, <span class="number">1376</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">769</span>, <span class="number">772</span>, <span class="number">808</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x14 - 1024x768@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1024x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">115500</span>, <span class="number">1024</span>, <span class="number">1072</span>,
+        </span>make_mode_info(<span class="string">"1024x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">115500</span>, <span class="number">1024</span>, <span class="number">1072</span>,
         <span class="number">1104</span>, <span class="number">1184</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">775</span>, <span class="number">813</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x15 - 1152x864@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1152x864&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">108000</span>, <span class="number">1152</span>, <span class="number">1216</span>,
+        </span>make_mode_info(<span class="string">"1152x864"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">108000</span>, <span class="number">1152</span>, <span class="number">1216</span>,
         <span class="number">1344</span>, <span class="number">1600</span>, <span class="number">0</span>, <span class="number">864</span>, <span class="number">865</span>, <span class="number">868</span>, <span class="number">900</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x55 - 1280x720@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x720&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">74250</span>, <span class="number">1280</span>, <span class="number">1390</span>,
+        </span>make_mode_info(<span class="string">"1280x720"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">74250</span>, <span class="number">1280</span>, <span class="number">1390</span>,
         <span class="number">1430</span>, <span class="number">1650</span>, <span class="number">0</span>, <span class="number">720</span>, <span class="number">725</span>, <span class="number">730</span>, <span class="number">750</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x16 - 1280x768@60Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1280x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">68250</span>, <span class="number">1280</span>, <span class="number">1328</span>,
+        </span>make_mode_info(<span class="string">"1280x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">68250</span>, <span class="number">1280</span>, <span class="number">1328</span>,
         <span class="number">1360</span>, <span class="number">1440</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">778</span>, <span class="number">790</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x17 - 1280x768@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">79500</span>, <span class="number">1280</span>, <span class="number">1344</span>,
+        </span>make_mode_info(<span class="string">"1280x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">79500</span>, <span class="number">1280</span>, <span class="number">1344</span>,
         <span class="number">1472</span>, <span class="number">1664</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">778</span>, <span class="number">798</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x18 - 1280x768@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">102250</span>, <span class="number">1280</span>, <span class="number">1360</span>,
+        </span>make_mode_info(<span class="string">"1280x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">102250</span>, <span class="number">1280</span>, <span class="number">1360</span>,
         <span class="number">1488</span>, <span class="number">1696</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">778</span>, <span class="number">805</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x19 - 1280x768@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">117500</span>, <span class="number">1280</span>, <span class="number">1360</span>,
+        </span>make_mode_info(<span class="string">"1280x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">117500</span>, <span class="number">1280</span>, <span class="number">1360</span>,
         <span class="number">1496</span>, <span class="number">1712</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">778</span>, <span class="number">809</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x1a - 1280x768@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1280x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">140250</span>, <span class="number">1280</span>, <span class="number">1328</span>,
+        </span>make_mode_info(<span class="string">"1280x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">140250</span>, <span class="number">1280</span>, <span class="number">1328</span>,
         <span class="number">1360</span>, <span class="number">1440</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">778</span>, <span class="number">813</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x1b - 1280x800@60Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1280x800&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">71000</span>, <span class="number">1280</span>, <span class="number">1328</span>,
+        </span>make_mode_info(<span class="string">"1280x800"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">71000</span>, <span class="number">1280</span>, <span class="number">1328</span>,
         <span class="number">1360</span>, <span class="number">1440</span>, <span class="number">0</span>, <span class="number">800</span>, <span class="number">803</span>, <span class="number">809</span>, <span class="number">823</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x1c - 1280x800@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x800&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">83500</span>, <span class="number">1280</span>, <span class="number">1352</span>,
+        </span>make_mode_info(<span class="string">"1280x800"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">83500</span>, <span class="number">1280</span>, <span class="number">1352</span>,
         <span class="number">1480</span>, <span class="number">1680</span>, <span class="number">0</span>, <span class="number">800</span>, <span class="number">803</span>, <span class="number">809</span>, <span class="number">831</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x1d - 1280x800@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x800&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">106500</span>, <span class="number">1280</span>, <span class="number">1360</span>,
+        </span>make_mode_info(<span class="string">"1280x800"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">106500</span>, <span class="number">1280</span>, <span class="number">1360</span>,
         <span class="number">1488</span>, <span class="number">1696</span>, <span class="number">0</span>, <span class="number">800</span>, <span class="number">803</span>, <span class="number">809</span>, <span class="number">838</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x1e - 1280x800@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x800&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">122500</span>, <span class="number">1280</span>, <span class="number">1360</span>,
+        </span>make_mode_info(<span class="string">"1280x800"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">122500</span>, <span class="number">1280</span>, <span class="number">1360</span>,
         <span class="number">1496</span>, <span class="number">1712</span>, <span class="number">0</span>, <span class="number">800</span>, <span class="number">803</span>, <span class="number">809</span>, <span class="number">843</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x1f - 1280x800@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1280x800&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">146250</span>, <span class="number">1280</span>, <span class="number">1328</span>,
+        </span>make_mode_info(<span class="string">"1280x800"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">146250</span>, <span class="number">1280</span>, <span class="number">1328</span>,
         <span class="number">1360</span>, <span class="number">1440</span>, <span class="number">0</span>, <span class="number">800</span>, <span class="number">803</span>, <span class="number">809</span>, <span class="number">847</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x20 - 1280x960@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x960&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">108000</span>, <span class="number">1280</span>, <span class="number">1376</span>,
+        </span>make_mode_info(<span class="string">"1280x960"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">108000</span>, <span class="number">1280</span>, <span class="number">1376</span>,
         <span class="number">1488</span>, <span class="number">1800</span>, <span class="number">0</span>, <span class="number">960</span>, <span class="number">961</span>, <span class="number">964</span>, <span class="number">1000</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x21 - 1280x960@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x960&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">148500</span>, <span class="number">1280</span>, <span class="number">1344</span>,
+        </span>make_mode_info(<span class="string">"1280x960"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">148500</span>, <span class="number">1280</span>, <span class="number">1344</span>,
         <span class="number">1504</span>, <span class="number">1728</span>, <span class="number">0</span>, <span class="number">960</span>, <span class="number">961</span>, <span class="number">964</span>, <span class="number">1011</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x22 - 1280x960@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1280x960&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">175500</span>, <span class="number">1280</span>, <span class="number">1328</span>,
+        </span>make_mode_info(<span class="string">"1280x960"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">175500</span>, <span class="number">1280</span>, <span class="number">1328</span>,
         <span class="number">1360</span>, <span class="number">1440</span>, <span class="number">0</span>, <span class="number">960</span>, <span class="number">963</span>, <span class="number">967</span>, <span class="number">1017</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x23 - 1280x1024@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x1024&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">108000</span>, <span class="number">1280</span>, <span class="number">1328</span>,
+        </span>make_mode_info(<span class="string">"1280x1024"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">108000</span>, <span class="number">1280</span>, <span class="number">1328</span>,
         <span class="number">1440</span>, <span class="number">1688</span>, <span class="number">0</span>, <span class="number">1024</span>, <span class="number">1025</span>, <span class="number">1028</span>, <span class="number">1066</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x24 - 1280x1024@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x1024&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">135000</span>, <span class="number">1280</span>, <span class="number">1296</span>,
+        </span>make_mode_info(<span class="string">"1280x1024"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">135000</span>, <span class="number">1280</span>, <span class="number">1296</span>,
         <span class="number">1440</span>, <span class="number">1688</span>, <span class="number">0</span>, <span class="number">1024</span>, <span class="number">1025</span>, <span class="number">1028</span>, <span class="number">1066</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x25 - 1280x1024@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1280x1024&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">157500</span>, <span class="number">1280</span>, <span class="number">1344</span>,
+        </span>make_mode_info(<span class="string">"1280x1024"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">157500</span>, <span class="number">1280</span>, <span class="number">1344</span>,
         <span class="number">1504</span>, <span class="number">1728</span>, <span class="number">0</span>, <span class="number">1024</span>, <span class="number">1025</span>, <span class="number">1028</span>, <span class="number">1072</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x26 - 1280x1024@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1280x1024&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">187250</span>, <span class="number">1280</span>, <span class="number">1328</span>,
+        </span>make_mode_info(<span class="string">"1280x1024"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">187250</span>, <span class="number">1280</span>, <span class="number">1328</span>,
         <span class="number">1360</span>, <span class="number">1440</span>, <span class="number">0</span>, <span class="number">1024</span>, <span class="number">1027</span>, <span class="number">1034</span>, <span class="number">1084</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x27 - 1360x768@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1360x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">85500</span>, <span class="number">1360</span>, <span class="number">1424</span>,
+        </span>make_mode_info(<span class="string">"1360x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">85500</span>, <span class="number">1360</span>, <span class="number">1424</span>,
         <span class="number">1536</span>, <span class="number">1792</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">777</span>, <span class="number">795</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x28 - 1360x768@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1360x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">148250</span>, <span class="number">1360</span>, <span class="number">1408</span>,
+        </span>make_mode_info(<span class="string">"1360x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">148250</span>, <span class="number">1360</span>, <span class="number">1408</span>,
         <span class="number">1440</span>, <span class="number">1520</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">776</span>, <span class="number">813</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x51 - 1366x768@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1366x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">85500</span>, <span class="number">1366</span>, <span class="number">1436</span>,
+        </span>make_mode_info(<span class="string">"1366x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">85500</span>, <span class="number">1366</span>, <span class="number">1436</span>,
         <span class="number">1579</span>, <span class="number">1792</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">771</span>, <span class="number">774</span>, <span class="number">798</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x56 - 1366x768@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1366x768&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">72000</span>, <span class="number">1366</span>, <span class="number">1380</span>,
+        </span>make_mode_info(<span class="string">"1366x768"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">72000</span>, <span class="number">1366</span>, <span class="number">1380</span>,
         <span class="number">1436</span>, <span class="number">1500</span>, <span class="number">0</span>, <span class="number">768</span>, <span class="number">769</span>, <span class="number">772</span>, <span class="number">800</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x29 - 1400x1050@60Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1400x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">101000</span>, <span class="number">1400</span>, <span class="number">1448</span>,
+        </span>make_mode_info(<span class="string">"1400x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">101000</span>, <span class="number">1400</span>, <span class="number">1448</span>,
         <span class="number">1480</span>, <span class="number">1560</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1057</span>, <span class="number">1080</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x2a - 1400x1050@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1400x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">121750</span>, <span class="number">1400</span>, <span class="number">1488</span>,
+        </span>make_mode_info(<span class="string">"1400x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">121750</span>, <span class="number">1400</span>, <span class="number">1488</span>,
         <span class="number">1632</span>, <span class="number">1864</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1057</span>, <span class="number">1089</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x2b - 1400x1050@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1400x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">156000</span>, <span class="number">1400</span>, <span class="number">1504</span>,
+        </span>make_mode_info(<span class="string">"1400x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">156000</span>, <span class="number">1400</span>, <span class="number">1504</span>,
         <span class="number">1648</span>, <span class="number">1896</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1057</span>, <span class="number">1099</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x2c - 1400x1050@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1400x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">179500</span>, <span class="number">1400</span>, <span class="number">1504</span>,
+        </span>make_mode_info(<span class="string">"1400x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">179500</span>, <span class="number">1400</span>, <span class="number">1504</span>,
         <span class="number">1656</span>, <span class="number">1912</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1057</span>, <span class="number">1105</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x2d - 1400x1050@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1400x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">208000</span>, <span class="number">1400</span>, <span class="number">1448</span>,
+        </span>make_mode_info(<span class="string">"1400x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">208000</span>, <span class="number">1400</span>, <span class="number">1448</span>,
         <span class="number">1480</span>, <span class="number">1560</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1057</span>, <span class="number">1112</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x2e - 1440x900@60Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1440x900&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">88750</span>, <span class="number">1440</span>, <span class="number">1488</span>,
+        </span>make_mode_info(<span class="string">"1440x900"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">88750</span>, <span class="number">1440</span>, <span class="number">1488</span>,
         <span class="number">1520</span>, <span class="number">1600</span>, <span class="number">0</span>, <span class="number">900</span>, <span class="number">903</span>, <span class="number">909</span>, <span class="number">926</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x2f - 1440x900@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1440x900&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">106500</span>, <span class="number">1440</span>, <span class="number">1520</span>,
+        </span>make_mode_info(<span class="string">"1440x900"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">106500</span>, <span class="number">1440</span>, <span class="number">1520</span>,
         <span class="number">1672</span>, <span class="number">1904</span>, <span class="number">0</span>, <span class="number">900</span>, <span class="number">903</span>, <span class="number">909</span>, <span class="number">934</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x30 - 1440x900@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1440x900&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">136750</span>, <span class="number">1440</span>, <span class="number">1536</span>,
+        </span>make_mode_info(<span class="string">"1440x900"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">136750</span>, <span class="number">1440</span>, <span class="number">1536</span>,
         <span class="number">1688</span>, <span class="number">1936</span>, <span class="number">0</span>, <span class="number">900</span>, <span class="number">903</span>, <span class="number">909</span>, <span class="number">942</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x31 - 1440x900@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1440x900&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">157000</span>, <span class="number">1440</span>, <span class="number">1544</span>,
+        </span>make_mode_info(<span class="string">"1440x900"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">157000</span>, <span class="number">1440</span>, <span class="number">1544</span>,
         <span class="number">1696</span>, <span class="number">1952</span>, <span class="number">0</span>, <span class="number">900</span>, <span class="number">903</span>, <span class="number">909</span>, <span class="number">948</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x32 - 1440x900@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1440x900&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">182750</span>, <span class="number">1440</span>, <span class="number">1488</span>,
+        </span>make_mode_info(<span class="string">"1440x900"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">182750</span>, <span class="number">1440</span>, <span class="number">1488</span>,
         <span class="number">1520</span>, <span class="number">1600</span>, <span class="number">0</span>, <span class="number">900</span>, <span class="number">903</span>, <span class="number">909</span>, <span class="number">953</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x53 - 1600x900@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1600x900&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">108000</span>, <span class="number">1600</span>, <span class="number">1624</span>,
+        </span>make_mode_info(<span class="string">"1600x900"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">108000</span>, <span class="number">1600</span>, <span class="number">1624</span>,
         <span class="number">1704</span>, <span class="number">1800</span>, <span class="number">0</span>, <span class="number">900</span>, <span class="number">901</span>, <span class="number">904</span>, <span class="number">1000</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x33 - 1600x1200@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1600x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">162000</span>, <span class="number">1600</span>, <span class="number">1664</span>,
+        </span>make_mode_info(<span class="string">"1600x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">162000</span>, <span class="number">1600</span>, <span class="number">1664</span>,
         <span class="number">1856</span>, <span class="number">2160</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1201</span>, <span class="number">1204</span>, <span class="number">1250</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x34 - 1600x1200@65Hz */
-        </span>make_mode_info(<span class="string">&quot;1600x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">175500</span>, <span class="number">1600</span>, <span class="number">1664</span>,
+        </span>make_mode_info(<span class="string">"1600x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">175500</span>, <span class="number">1600</span>, <span class="number">1664</span>,
         <span class="number">1856</span>, <span class="number">2160</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1201</span>, <span class="number">1204</span>, <span class="number">1250</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x35 - 1600x1200@70Hz */
-        </span>make_mode_info(<span class="string">&quot;1600x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">189000</span>, <span class="number">1600</span>, <span class="number">1664</span>,
+        </span>make_mode_info(<span class="string">"1600x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">189000</span>, <span class="number">1600</span>, <span class="number">1664</span>,
         <span class="number">1856</span>, <span class="number">2160</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1201</span>, <span class="number">1204</span>, <span class="number">1250</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x36 - 1600x1200@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1600x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">202500</span>, <span class="number">1600</span>, <span class="number">1664</span>,
+        </span>make_mode_info(<span class="string">"1600x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">202500</span>, <span class="number">1600</span>, <span class="number">1664</span>,
         <span class="number">1856</span>, <span class="number">2160</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1201</span>, <span class="number">1204</span>, <span class="number">1250</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x37 - 1600x1200@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1600x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">229500</span>, <span class="number">1600</span>, <span class="number">1664</span>,
+        </span>make_mode_info(<span class="string">"1600x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">229500</span>, <span class="number">1600</span>, <span class="number">1664</span>,
         <span class="number">1856</span>, <span class="number">2160</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1201</span>, <span class="number">1204</span>, <span class="number">1250</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x38 - 1600x1200@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1600x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">268250</span>, <span class="number">1600</span>, <span class="number">1648</span>,
+        </span>make_mode_info(<span class="string">"1600x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">268250</span>, <span class="number">1600</span>, <span class="number">1648</span>,
         <span class="number">1680</span>, <span class="number">1760</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1203</span>, <span class="number">1207</span>, <span class="number">1271</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x39 - 1680x1050@60Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1680x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">119000</span>, <span class="number">1680</span>, <span class="number">1728</span>,
+        </span>make_mode_info(<span class="string">"1680x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">119000</span>, <span class="number">1680</span>, <span class="number">1728</span>,
         <span class="number">1760</span>, <span class="number">1840</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1059</span>, <span class="number">1080</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x3a - 1680x1050@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1680x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">146250</span>, <span class="number">1680</span>, <span class="number">1784</span>,
+        </span>make_mode_info(<span class="string">"1680x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">146250</span>, <span class="number">1680</span>, <span class="number">1784</span>,
         <span class="number">1960</span>, <span class="number">2240</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1059</span>, <span class="number">1089</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x3b - 1680x1050@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1680x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">187000</span>, <span class="number">1680</span>, <span class="number">1800</span>,
+        </span>make_mode_info(<span class="string">"1680x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">187000</span>, <span class="number">1680</span>, <span class="number">1800</span>,
         <span class="number">1976</span>, <span class="number">2272</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1059</span>, <span class="number">1099</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x3c - 1680x1050@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1680x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">214750</span>, <span class="number">1680</span>, <span class="number">1808</span>,
+        </span>make_mode_info(<span class="string">"1680x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">214750</span>, <span class="number">1680</span>, <span class="number">1808</span>,
         <span class="number">1984</span>, <span class="number">2288</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1059</span>, <span class="number">1105</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x3d - 1680x1050@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1680x1050&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">245500</span>, <span class="number">1680</span>, <span class="number">1728</span>,
+        </span>make_mode_info(<span class="string">"1680x1050"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">245500</span>, <span class="number">1680</span>, <span class="number">1728</span>,
         <span class="number">1760</span>, <span class="number">1840</span>, <span class="number">0</span>, <span class="number">1050</span>, <span class="number">1053</span>, <span class="number">1059</span>, <span class="number">1112</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x3e - 1792x1344@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1792x1344&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">204750</span>, <span class="number">1792</span>, <span class="number">1920</span>,
+        </span>make_mode_info(<span class="string">"1792x1344"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">204750</span>, <span class="number">1792</span>, <span class="number">1920</span>,
         <span class="number">2120</span>, <span class="number">2448</span>, <span class="number">0</span>, <span class="number">1344</span>, <span class="number">1345</span>, <span class="number">1348</span>, <span class="number">1394</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x3f - 1792x1344@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1792x1344&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">261000</span>, <span class="number">1792</span>, <span class="number">1888</span>,
+        </span>make_mode_info(<span class="string">"1792x1344"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">261000</span>, <span class="number">1792</span>, <span class="number">1888</span>,
         <span class="number">2104</span>, <span class="number">2456</span>, <span class="number">0</span>, <span class="number">1344</span>, <span class="number">1345</span>, <span class="number">1348</span>, <span class="number">1417</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x40 - 1792x1344@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1792x1344&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">333250</span>, <span class="number">1792</span>, <span class="number">1840</span>,
+        </span>make_mode_info(<span class="string">"1792x1344"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">333250</span>, <span class="number">1792</span>, <span class="number">1840</span>,
         <span class="number">1872</span>, <span class="number">1952</span>, <span class="number">0</span>, <span class="number">1344</span>, <span class="number">1347</span>, <span class="number">1351</span>, <span class="number">1423</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x41 - 1856x1392@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1856x1392&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">218250</span>, <span class="number">1856</span>, <span class="number">1952</span>,
+        </span>make_mode_info(<span class="string">"1856x1392"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">218250</span>, <span class="number">1856</span>, <span class="number">1952</span>,
         <span class="number">2176</span>, <span class="number">2528</span>, <span class="number">0</span>, <span class="number">1392</span>, <span class="number">1393</span>, <span class="number">1396</span>, <span class="number">1439</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x42 - 1856x1392@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1856x1392&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">288000</span>, <span class="number">1856</span>, <span class="number">1984</span>,
+        </span>make_mode_info(<span class="string">"1856x1392"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">288000</span>, <span class="number">1856</span>, <span class="number">1984</span>,
         <span class="number">2208</span>, <span class="number">2560</span>, <span class="number">0</span>, <span class="number">1392</span>, <span class="number">1393</span>, <span class="number">1396</span>, <span class="number">1500</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x43 - 1856x1392@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1856x1392&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">356500</span>, <span class="number">1856</span>, <span class="number">1904</span>,
+        </span>make_mode_info(<span class="string">"1856x1392"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">356500</span>, <span class="number">1856</span>, <span class="number">1904</span>,
         <span class="number">1936</span>, <span class="number">2016</span>, <span class="number">0</span>, <span class="number">1392</span>, <span class="number">1395</span>, <span class="number">1399</span>, <span class="number">1474</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x52 - 1920x1080@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1920x1080&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">148500</span>, <span class="number">1920</span>, <span class="number">2008</span>,
+        </span>make_mode_info(<span class="string">"1920x1080"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">148500</span>, <span class="number">1920</span>, <span class="number">2008</span>,
         <span class="number">2052</span>, <span class="number">2200</span>, <span class="number">0</span>, <span class="number">1080</span>, <span class="number">1084</span>, <span class="number">1089</span>, <span class="number">1125</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x44 - 1920x1200@60Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1920x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">154000</span>, <span class="number">1920</span>, <span class="number">1968</span>,
+        </span>make_mode_info(<span class="string">"1920x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">154000</span>, <span class="number">1920</span>, <span class="number">1968</span>,
         <span class="number">2000</span>, <span class="number">2080</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1203</span>, <span class="number">1209</span>, <span class="number">1235</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x45 - 1920x1200@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1920x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">193250</span>, <span class="number">1920</span>, <span class="number">2056</span>,
+        </span>make_mode_info(<span class="string">"1920x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">193250</span>, <span class="number">1920</span>, <span class="number">2056</span>,
         <span class="number">2256</span>, <span class="number">2592</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1203</span>, <span class="number">1209</span>, <span class="number">1245</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x46 - 1920x1200@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1920x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">245250</span>, <span class="number">1920</span>, <span class="number">2056</span>,
+        </span>make_mode_info(<span class="string">"1920x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">245250</span>, <span class="number">1920</span>, <span class="number">2056</span>,
         <span class="number">2264</span>, <span class="number">2608</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1203</span>, <span class="number">1209</span>, <span class="number">1255</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x47 - 1920x1200@85Hz */
-        </span>make_mode_info(<span class="string">&quot;1920x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">281250</span>, <span class="number">1920</span>, <span class="number">2064</span>,
+        </span>make_mode_info(<span class="string">"1920x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">281250</span>, <span class="number">1920</span>, <span class="number">2064</span>,
         <span class="number">2272</span>, <span class="number">2624</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1203</span>, <span class="number">1209</span>, <span class="number">1262</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x48 - 1920x1200@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1920x1200&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">317000</span>, <span class="number">1920</span>, <span class="number">1968</span>,
+        </span>make_mode_info(<span class="string">"1920x1200"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">317000</span>, <span class="number">1920</span>, <span class="number">1968</span>,
         <span class="number">2000</span>, <span class="number">2080</span>, <span class="number">0</span>, <span class="number">1200</span>, <span class="number">1203</span>, <span class="number">1209</span>, <span class="number">1271</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x49 - 1920x1440@60Hz */
-        </span>make_mode_info(<span class="string">&quot;1920x1440&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">234000</span>, <span class="number">1920</span>, <span class="number">2048</span>,
+        </span>make_mode_info(<span class="string">"1920x1440"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">234000</span>, <span class="number">1920</span>, <span class="number">2048</span>,
         <span class="number">2256</span>, <span class="number">2600</span>, <span class="number">0</span>, <span class="number">1440</span>, <span class="number">1441</span>, <span class="number">1444</span>, <span class="number">1500</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x4a - 1920x1440@75Hz */
-        </span>make_mode_info(<span class="string">&quot;1920x1440&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">297000</span>, <span class="number">1920</span>, <span class="number">2064</span>,
+        </span>make_mode_info(<span class="string">"1920x1440"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">297000</span>, <span class="number">1920</span>, <span class="number">2064</span>,
         <span class="number">2288</span>, <span class="number">2640</span>, <span class="number">0</span>, <span class="number">1440</span>, <span class="number">1441</span>, <span class="number">1444</span>, <span class="number">1500</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x4b - 1920x1440@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;1920x1440&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">380500</span>, <span class="number">1920</span>, <span class="number">1968</span>,
+        </span>make_mode_info(<span class="string">"1920x1440"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">380500</span>, <span class="number">1920</span>, <span class="number">1968</span>,
         <span class="number">2000</span>, <span class="number">2080</span>, <span class="number">0</span>, <span class="number">1440</span>, <span class="number">1443</span>, <span class="number">1447</span>, <span class="number">1525</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x54 - 2048x1152@60Hz */
-        </span>make_mode_info(<span class="string">&quot;2048x1152&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">162000</span>, <span class="number">2048</span>, <span class="number">2074</span>,
+        </span>make_mode_info(<span class="string">"2048x1152"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">162000</span>, <span class="number">2048</span>, <span class="number">2074</span>,
         <span class="number">2154</span>, <span class="number">2250</span>, <span class="number">0</span>, <span class="number">1152</span>, <span class="number">1153</span>, <span class="number">1156</span>, <span class="number">1200</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x4c - 2560x1600@60Hz RB */
-        </span>make_mode_info(<span class="string">&quot;2560x1600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">268500</span>, <span class="number">2560</span>, <span class="number">2608</span>,
+        </span>make_mode_info(<span class="string">"2560x1600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">268500</span>, <span class="number">2560</span>, <span class="number">2608</span>,
         <span class="number">2640</span>, <span class="number">2720</span>, <span class="number">0</span>, <span class="number">1600</span>, <span class="number">1603</span>, <span class="number">1609</span>, <span class="number">1646</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x4d - 2560x1600@60Hz */
-        </span>make_mode_info(<span class="string">&quot;2560x1600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">348500</span>, <span class="number">2560</span>, <span class="number">2752</span>,
+        </span>make_mode_info(<span class="string">"2560x1600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">348500</span>, <span class="number">2560</span>, <span class="number">2752</span>,
         <span class="number">3032</span>, <span class="number">3504</span>, <span class="number">0</span>, <span class="number">1600</span>, <span class="number">1603</span>, <span class="number">1609</span>, <span class="number">1658</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x4e - 2560x1600@75Hz */
-        </span>make_mode_info(<span class="string">&quot;2560x1600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">443250</span>, <span class="number">2560</span>, <span class="number">2768</span>,
+        </span>make_mode_info(<span class="string">"2560x1600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">443250</span>, <span class="number">2560</span>, <span class="number">2768</span>,
         <span class="number">3048</span>, <span class="number">3536</span>, <span class="number">0</span>, <span class="number">1600</span>, <span class="number">1603</span>, <span class="number">1609</span>, <span class="number">1672</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x4f - 2560x1600@85Hz */
-        </span>make_mode_info(<span class="string">&quot;2560x1600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">505250</span>, <span class="number">2560</span>, <span class="number">2768</span>,
+        </span>make_mode_info(<span class="string">"2560x1600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">505250</span>, <span class="number">2560</span>, <span class="number">2768</span>,
         <span class="number">3048</span>, <span class="number">3536</span>, <span class="number">0</span>, <span class="number">1600</span>, <span class="number">1603</span>, <span class="number">1609</span>, <span class="number">1682</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC),
         <span class="comment">/* 0x50 - 2560x1600@120Hz RB */
-        </span>make_mode_info(<span class="string">&quot;2560x1600&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">552750</span>, <span class="number">2560</span>, <span class="number">2608</span>,
+        </span>make_mode_info(<span class="string">"2560x1600"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">552750</span>, <span class="number">2560</span>, <span class="number">2608</span>,
         <span class="number">2640</span>, <span class="number">2720</span>, <span class="number">0</span>, <span class="number">1600</span>, <span class="number">1603</span>, <span class="number">1609</span>, <span class="number">1694</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x57 - 4096x2160@60Hz RB */
-        </span>make_mode_info(<span class="string">&quot;4096x2160&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">556744</span>, <span class="number">4096</span>, <span class="number">4104</span>,
+        </span>make_mode_info(<span class="string">"4096x2160"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">556744</span>, <span class="number">4096</span>, <span class="number">4104</span>,
         <span class="number">4136</span>, <span class="number">4176</span>, <span class="number">0</span>, <span class="number">2160</span>, <span class="number">2208</span>, <span class="number">2216</span>, <span class="number">2222</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC),
         <span class="comment">/* 0x58 - 4096x2160@59.94Hz RB */
-        </span>make_mode_info(<span class="string">&quot;4096x2160&quot;</span>, DRM_MODE_TYPE_DRIVER, <span class="number">556188</span>, <span class="number">4096</span>, <span class="number">4104</span>,
+        </span>make_mode_info(<span class="string">"4096x2160"</span>, DRM_MODE_TYPE_DRIVER, <span class="number">556188</span>, <span class="number">4096</span>, <span class="number">4104</span>,
         <span class="number">4136</span>, <span class="number">4176</span>, <span class="number">0</span>, <span class="number">2160</span>, <span class="number">2208</span>, <span class="number">2216</span>, <span class="number">2222</span>, <span class="number">0</span>,
         DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC)
     ];

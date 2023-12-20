@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cursor-icon-1.0.0/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="cursor_icon" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cursor-icon-1.0.0/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="cursor_icon" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -398,7 +399,7 @@
 <a href="#398" id="398">398</a>
 </pre></div><pre class="rust"><code><span class="comment">// SPDX-License-Identifier: MIT OR Apache-2.0 OR Zlib
 
-</span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
+</span><span class="attr">#![cfg_attr(not(feature = <span class="string">"std"</span>), no_std)]
 #![deny(rust_2018_idioms)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(unsafe_op_in_unsafe_fn)]
@@ -407,7 +408,7 @@
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![forbid(unsafe_code)]
-#![cfg_attr(feature = <span class="string">&quot;cargo-clippy&quot;</span>, deny(warnings))]
+#![cfg_attr(feature = <span class="string">"cargo-clippy"</span>, deny(warnings))]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 </span><span class="doccomment">//! The cross platform cursor icon type.
@@ -422,9 +423,9 @@
 //!
 //! # fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
 //! // Parse a cursor icon from the string that describes it.
-//! let cursor_name = &quot;pointer&quot;;
+//! let cursor_name = "pointer";
 //! let cursor_icon: CursorIcon = cursor_name.parse()?;
-//! println!(&quot;The cursor icon is {:?}&quot;, cursor_icon);
+//! println!("The cursor icon is {:?}", cursor_icon);
 //! # Ok(())
 //! # }
 //! ```
@@ -437,7 +438,7 @@
 // Copyright © 2018 W3C® (MIT, ERCIM, Keio, Beihang)
 //
 // These documents were used under the terms of the following license. This W3C
-// license as well as the W3C short notice apply to the `CursorIcon` enum&#39;s
+// license as well as the W3C short notice apply to the `CursorIcon` enum's
 // variants and documentation attached to them.
 
 // --------- BEGGINING OF W3C LICENSE
@@ -459,13 +460,13 @@
 //   conditions. If none exist, the W3C Software and Document Short Notice
 //   should be included.
 // - Notice of any changes or modifications, through a copyright statement on
-//   the new code or document such as &quot;This software or document includes
+//   the new code or document such as "This software or document includes
 //   material copied from or derived from [title and URI of the W3C document].
-//   Copyright © [YEAR] W3C® (MIT, ERCIM, Keio, Beihang).&quot;
+//   Copyright © [YEAR] W3C® (MIT, ERCIM, Keio, Beihang)."
 //
 // Disclaimers
 //
-// THIS WORK IS PROVIDED &quot;AS IS,&quot; AND COPYRIGHT HOLDERS MAKE NO REPRESENTATIONS
+// THIS WORK IS PROVIDED "AS IS," AND COPYRIGHT HOLDERS MAKE NO REPRESENTATIONS
 // OR WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO, WARRANTIES
 // OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF
 // THE SOFTWARE OR DOCUMENT WILL NOT INFRINGE ANY THIRD PARTY PATENTS,
@@ -499,12 +500,12 @@
 // --------- END OF W3C SHORT NOTICE
 // --------------------------------------------------------------
 
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">"serde"</span>)]
 #[macro_use]
 </span><span class="kw">extern crate </span>serde;
 
 <span class="comment">// XXX for forwards compatibility.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;alloc&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">"alloc"</span>)]
 </span><span class="kw">extern crate </span>alloc <span class="kw">as _</span>;
 
 <span class="doccomment">/// Describes the appearance of the (usually mouse) cursor icon.
@@ -522,7 +523,7 @@
 /// ```
 </span><span class="attr">#[non_exhaustive]
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serde"</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>CursorIcon {
     <span class="doccomment">/// The platform-dependent default cursor. Often rendered as arrow.
     </span><span class="attr">#[default]
@@ -553,7 +554,7 @@
     /// a thick plus-sign with a dot in the middle.
     </span>Cell,
 
-    <span class="doccomment">/// A simple crosshair (e.g., short line segments resembling a &quot;+&quot; sign).
+    <span class="doccomment">/// A simple crosshair (e.g., short line segments resembling a "+" sign).
     /// Often used to indicate a two dimensional bitmap selection mode.
     </span>Crosshair,
 
@@ -644,11 +645,11 @@
     </span>AllScroll,
 
     <span class="doccomment">/// Indicates that something can be zoomed in. Often rendered as a
-    /// magnifying glass with a &quot;+&quot; in the center of the glass.
+    /// magnifying glass with a "+" in the center of the glass.
     </span>ZoomIn,
 
     <span class="doccomment">/// Indicates that something can be zoomed in. Often rendered as a
-    /// magnifying glass with a &quot;-&quot; in the center of the glass.
+    /// magnifying glass with a "-" in the center of the glass.
     </span>ZoomOut,
 }
 
@@ -676,53 +677,53 @@
     /// // Load the cursor.
     /// let cursor = cursor_theme.get_cursor(cursor.name());
     /// if let Some(cursor) = cursor {
-    ///     println!(&quot;Total number of images: {}&quot;, cursor.image_count());
+    ///     println!("Total number of images: {}", cursor.image_count());
     /// }
     /// # Ok(())
     /// # }
     /// ```
-    </span><span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            CursorIcon::Default =&gt; <span class="string">&quot;default&quot;</span>,
-            CursorIcon::ContextMenu =&gt; <span class="string">&quot;context-menu&quot;</span>,
-            CursorIcon::Help =&gt; <span class="string">&quot;help&quot;</span>,
-            CursorIcon::Pointer =&gt; <span class="string">&quot;pointer&quot;</span>,
-            CursorIcon::Progress =&gt; <span class="string">&quot;progress&quot;</span>,
-            CursorIcon::Wait =&gt; <span class="string">&quot;wait&quot;</span>,
-            CursorIcon::Cell =&gt; <span class="string">&quot;cell&quot;</span>,
-            CursorIcon::Crosshair =&gt; <span class="string">&quot;crosshair&quot;</span>,
-            CursorIcon::Text =&gt; <span class="string">&quot;text&quot;</span>,
-            CursorIcon::VerticalText =&gt; <span class="string">&quot;vertical-text&quot;</span>,
-            CursorIcon::Alias =&gt; <span class="string">&quot;alias&quot;</span>,
-            CursorIcon::Copy =&gt; <span class="string">&quot;copy&quot;</span>,
-            CursorIcon::Move =&gt; <span class="string">&quot;move&quot;</span>,
-            CursorIcon::NoDrop =&gt; <span class="string">&quot;no-drop&quot;</span>,
-            CursorIcon::NotAllowed =&gt; <span class="string">&quot;not-allowed&quot;</span>,
-            CursorIcon::Grab =&gt; <span class="string">&quot;grab&quot;</span>,
-            CursorIcon::Grabbing =&gt; <span class="string">&quot;grabbing&quot;</span>,
-            CursorIcon::EResize =&gt; <span class="string">&quot;e-resize&quot;</span>,
-            CursorIcon::NResize =&gt; <span class="string">&quot;n-resize&quot;</span>,
-            CursorIcon::NeResize =&gt; <span class="string">&quot;ne-resize&quot;</span>,
-            CursorIcon::NwResize =&gt; <span class="string">&quot;nw-resize&quot;</span>,
-            CursorIcon::SResize =&gt; <span class="string">&quot;s-resize&quot;</span>,
-            CursorIcon::SeResize =&gt; <span class="string">&quot;se-resize&quot;</span>,
-            CursorIcon::SwResize =&gt; <span class="string">&quot;sw-resize&quot;</span>,
-            CursorIcon::WResize =&gt; <span class="string">&quot;w-resize&quot;</span>,
-            CursorIcon::EwResize =&gt; <span class="string">&quot;ew-resize&quot;</span>,
-            CursorIcon::NsResize =&gt; <span class="string">&quot;ns-resize&quot;</span>,
-            CursorIcon::NeswResize =&gt; <span class="string">&quot;nesw-resize&quot;</span>,
-            CursorIcon::NwseResize =&gt; <span class="string">&quot;nwse-resize&quot;</span>,
-            CursorIcon::ColResize =&gt; <span class="string">&quot;col-resize&quot;</span>,
-            CursorIcon::RowResize =&gt; <span class="string">&quot;row-resize&quot;</span>,
-            CursorIcon::AllScroll =&gt; <span class="string">&quot;all-scroll&quot;</span>,
-            CursorIcon::ZoomIn =&gt; <span class="string">&quot;zoom-in&quot;</span>,
-            CursorIcon::ZoomOut =&gt; <span class="string">&quot;zoom-out&quot;</span>,
+            CursorIcon::Default =&gt; <span class="string">"default"</span>,
+            CursorIcon::ContextMenu =&gt; <span class="string">"context-menu"</span>,
+            CursorIcon::Help =&gt; <span class="string">"help"</span>,
+            CursorIcon::Pointer =&gt; <span class="string">"pointer"</span>,
+            CursorIcon::Progress =&gt; <span class="string">"progress"</span>,
+            CursorIcon::Wait =&gt; <span class="string">"wait"</span>,
+            CursorIcon::Cell =&gt; <span class="string">"cell"</span>,
+            CursorIcon::Crosshair =&gt; <span class="string">"crosshair"</span>,
+            CursorIcon::Text =&gt; <span class="string">"text"</span>,
+            CursorIcon::VerticalText =&gt; <span class="string">"vertical-text"</span>,
+            CursorIcon::Alias =&gt; <span class="string">"alias"</span>,
+            CursorIcon::Copy =&gt; <span class="string">"copy"</span>,
+            CursorIcon::Move =&gt; <span class="string">"move"</span>,
+            CursorIcon::NoDrop =&gt; <span class="string">"no-drop"</span>,
+            CursorIcon::NotAllowed =&gt; <span class="string">"not-allowed"</span>,
+            CursorIcon::Grab =&gt; <span class="string">"grab"</span>,
+            CursorIcon::Grabbing =&gt; <span class="string">"grabbing"</span>,
+            CursorIcon::EResize =&gt; <span class="string">"e-resize"</span>,
+            CursorIcon::NResize =&gt; <span class="string">"n-resize"</span>,
+            CursorIcon::NeResize =&gt; <span class="string">"ne-resize"</span>,
+            CursorIcon::NwResize =&gt; <span class="string">"nw-resize"</span>,
+            CursorIcon::SResize =&gt; <span class="string">"s-resize"</span>,
+            CursorIcon::SeResize =&gt; <span class="string">"se-resize"</span>,
+            CursorIcon::SwResize =&gt; <span class="string">"sw-resize"</span>,
+            CursorIcon::WResize =&gt; <span class="string">"w-resize"</span>,
+            CursorIcon::EwResize =&gt; <span class="string">"ew-resize"</span>,
+            CursorIcon::NsResize =&gt; <span class="string">"ns-resize"</span>,
+            CursorIcon::NeswResize =&gt; <span class="string">"nesw-resize"</span>,
+            CursorIcon::NwseResize =&gt; <span class="string">"nwse-resize"</span>,
+            CursorIcon::ColResize =&gt; <span class="string">"col-resize"</span>,
+            CursorIcon::RowResize =&gt; <span class="string">"row-resize"</span>,
+            CursorIcon::AllScroll =&gt; <span class="string">"all-scroll"</span>,
+            CursorIcon::ZoomIn =&gt; <span class="string">"zoom-in"</span>,
+            CursorIcon::ZoomOut =&gt; <span class="string">"zoom-out"</span>,
         }
     }
 }
 
 <span class="kw">impl </span>core::fmt::Display <span class="kw">for </span>CursorIcon {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
         f.write_str(<span class="self">self</span>.name())
     }
 }
@@ -737,40 +738,40 @@
     /// the set of [`CursorIcon::name`] outputs.
     </span><span class="kw">fn </span>from_str(name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
         <span class="kw">match </span>name {
-            <span class="string">&quot;default&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Default),
-            <span class="string">&quot;context-menu&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::ContextMenu),
-            <span class="string">&quot;help&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Help),
-            <span class="string">&quot;pointer&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Pointer),
-            <span class="string">&quot;progress&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Progress),
-            <span class="string">&quot;wait&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Wait),
-            <span class="string">&quot;cell&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Cell),
-            <span class="string">&quot;crosshair&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Crosshair),
-            <span class="string">&quot;text&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Text),
-            <span class="string">&quot;vertical-text&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::VerticalText),
-            <span class="string">&quot;alias&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Alias),
-            <span class="string">&quot;copy&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Copy),
-            <span class="string">&quot;move&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Move),
-            <span class="string">&quot;no-drop&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NoDrop),
-            <span class="string">&quot;not-allowed&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NotAllowed),
-            <span class="string">&quot;grab&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Grab),
-            <span class="string">&quot;grabbing&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Grabbing),
-            <span class="string">&quot;e-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::EResize),
-            <span class="string">&quot;n-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NResize),
-            <span class="string">&quot;ne-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NeResize),
-            <span class="string">&quot;nw-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NwResize),
-            <span class="string">&quot;s-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::SResize),
-            <span class="string">&quot;se-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::SeResize),
-            <span class="string">&quot;sw-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::SwResize),
-            <span class="string">&quot;w-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::WResize),
-            <span class="string">&quot;ew-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::EwResize),
-            <span class="string">&quot;ns-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NsResize),
-            <span class="string">&quot;nesw-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NeswResize),
-            <span class="string">&quot;nwse-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NwseResize),
-            <span class="string">&quot;col-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::ColResize),
-            <span class="string">&quot;row-resize&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::RowResize),
-            <span class="string">&quot;all-scroll&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::AllScroll),
-            <span class="string">&quot;zoom-in&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::ZoomIn),
-            <span class="string">&quot;zoom-out&quot; </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::ZoomOut),
+            <span class="string">"default" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Default),
+            <span class="string">"context-menu" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::ContextMenu),
+            <span class="string">"help" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Help),
+            <span class="string">"pointer" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Pointer),
+            <span class="string">"progress" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Progress),
+            <span class="string">"wait" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Wait),
+            <span class="string">"cell" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Cell),
+            <span class="string">"crosshair" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Crosshair),
+            <span class="string">"text" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Text),
+            <span class="string">"vertical-text" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::VerticalText),
+            <span class="string">"alias" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Alias),
+            <span class="string">"copy" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Copy),
+            <span class="string">"move" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Move),
+            <span class="string">"no-drop" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NoDrop),
+            <span class="string">"not-allowed" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NotAllowed),
+            <span class="string">"grab" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Grab),
+            <span class="string">"grabbing" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::Grabbing),
+            <span class="string">"e-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::EResize),
+            <span class="string">"n-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NResize),
+            <span class="string">"ne-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NeResize),
+            <span class="string">"nw-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NwResize),
+            <span class="string">"s-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::SResize),
+            <span class="string">"se-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::SeResize),
+            <span class="string">"sw-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::SwResize),
+            <span class="string">"w-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::WResize),
+            <span class="string">"ew-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::EwResize),
+            <span class="string">"ns-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NsResize),
+            <span class="string">"nesw-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NeswResize),
+            <span class="string">"nwse-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::NwseResize),
+            <span class="string">"col-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::ColResize),
+            <span class="string">"row-resize" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::RowResize),
+            <span class="string">"all-scroll" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::AllScroll),
+            <span class="string">"zoom-in" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::ZoomIn),
+            <span class="string">"zoom-out" </span>=&gt; <span class="prelude-val">Ok</span>(CursorIcon::ZoomOut),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(ParseError { _private: () }),
         }
     }
@@ -787,11 +788,11 @@
 }
 
 <span class="kw">impl </span>core::fmt::Display <span class="kw">for </span>ParseError {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.write_str(<span class="string">&quot;failed to parse cursor icon&quot;</span>)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.write_str(<span class="string">"failed to parse cursor icon"</span>)
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">impl </span>std::error::Error <span class="kw">for </span>ParseError {}
 </code></pre></div></section></main></body></html>

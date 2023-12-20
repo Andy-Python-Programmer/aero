@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/allocator-api2-0.2.16/src/stable/boxed.rs`."><title>boxed.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="allocator_api2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/allocator-api2-0.2.16/src/stable/boxed.rs`."><title>boxed.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="allocator_api2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -2155,7 +2156,7 @@
 <a href="#2155" id="2155">2155</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The `Box&lt;T&gt;` type for heap allocation.
 //!
-//! [`Box&lt;T&gt;`], casually referred to as a &#39;box&#39;, provides the simplest form of
+//! [`Box&lt;T&gt;`], casually referred to as a 'box', provides the simplest form of
 //! heap allocation in Rust. Boxes provide ownership for this allocation, and
 //! drop their contents when they go out of scope. Boxes also ensure that they
 //! never allocate more than `isize::MAX` bytes.
@@ -2186,7 +2187,7 @@
 //! }
 //!
 //! let list: List&lt;i32&gt; = List::Cons(1, Box::new(List::Cons(2, Box::new(List::Nil))));
-//! println!(&quot;{list:?}&quot;);
+//! println!("{list:?}");
 //! ```
 //!
 //! This will print `Cons(1, Cons(2, Nil))`.
@@ -2200,8 +2201,8 @@
 //! # }
 //! ```
 //!
-//! It wouldn&#39;t work. This is because the size of a `List` depends on how many
-//! elements are in the list, and so we don&#39;t know how much memory to allocate
+//! It wouldn't work. This is because the size of a `List` depends on how many
+//! elements are in the list, and so we don't know how much memory to allocate
 //! for a `Cons`. By introducing a [`Box&lt;T&gt;`], which has a defined size, we know how
 //! big `Cons` needs to be.
 //!
@@ -2226,7 +2227,7 @@
 //!
 //! So long as `T: Sized`, a `Box&lt;T&gt;` is guaranteed to be represented
 //! as a single pointer and is also ABI-compatible with C pointers
-//! (i.e. the C type `T*`). This means that if you have extern &quot;C&quot;
+//! (i.e. the C type `T*`). This means that if you have extern "C"
 //! Rust functions that will be called from C, you can define those
 //! Rust functions using `Box&lt;T&gt;` types, and use `T*` as corresponding
 //! type on the C side. As an example, consider this C header which
@@ -2254,12 +2255,12 @@
 //! pub struct Foo;
 //!
 //! #[no_mangle]
-//! pub extern &quot;C&quot; fn foo_new() -&gt; Box&lt;Foo&gt; {
+//! pub extern "C" fn foo_new() -&gt; Box&lt;Foo&gt; {
 //!     Box::new(Foo)
 //! }
 //!
 //! #[no_mangle]
-//! pub extern &quot;C&quot; fn foo_delete(_: Option&lt;Box&lt;Foo&gt;&gt;) {}
+//! pub extern "C" fn foo_delete(_: Option&lt;Box&lt;Foo&gt;&gt;) {}
 //! ```
 //!
 //! Even though `Box&lt;T&gt;` has the same representation and C ABI as a C pointer,
@@ -2351,7 +2352,7 @@
 <span class="kw">impl</span>&lt;T&gt; Box&lt;T&gt; {
     <span class="doccomment">/// Allocates memory on the heap and then places `x` into it.
     ///
-    /// This doesn&#39;t actually allocate if `T` is zero-sized.
+    /// This doesn't actually allocate if `T` is zero-sized.
     ///
     /// # Examples
     ///
@@ -2432,7 +2433,7 @@
     <span class="doccomment">/// Allocates memory on the heap then places `x` into it,
     /// returning an error if the allocation fails
     ///
-    /// This doesn&#39;t actually allocate if `T` is zero-sized.
+    /// This doesn't actually allocate if `T` is zero-sized.
     ///
     /// # Examples
     ///
@@ -2500,7 +2501,7 @@
 <span class="kw">impl</span>&lt;T, A: Allocator&gt; Box&lt;T, A&gt; {
     <span class="doccomment">/// Allocates memory in the given allocator then places `x` into it.
     ///
-    /// This doesn&#39;t actually allocate if `T` is zero-sized.
+    /// This doesn't actually allocate if `T` is zero-sized.
     ///
     /// # Examples
     ///
@@ -2528,7 +2529,7 @@
     <span class="doccomment">/// Allocates memory in the given allocator then places `x` into it,
     /// returning an error if the allocation fails
     ///
-    /// This doesn&#39;t actually allocate if `T` is zero-sized.
+    /// This doesn't actually allocate if `T` is zero-sized.
     ///
     /// # Examples
     ///
@@ -2574,7 +2575,7 @@
     /// ```
     </span><span class="attr">#[cfg(not(no_global_oom_handling))]
     #[must_use]
-    </span><span class="comment">// #[unstable(feature = &quot;new_uninit&quot;, issue = &quot;63291&quot;)]
+    </span><span class="comment">// #[unstable(feature = "new_uninit", issue = "63291")]
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>new_uninit_in(alloc: A) -&gt; Box&lt;mem::MaybeUninit&lt;T&gt;, A&gt;
     <span class="kw">where
@@ -2642,7 +2643,7 @@
     ///
     /// [zeroed]: mem::MaybeUninit::zeroed
     </span><span class="attr">#[cfg(not(no_global_oom_handling))]
-    </span><span class="comment">// #[unstable(feature = &quot;new_uninit&quot;, issue = &quot;63291&quot;)]
+    </span><span class="comment">// #[unstable(feature = "new_uninit", issue = "63291")]
     </span><span class="attr">#[must_use]
     #[inline(always)]
     </span><span class="kw">pub fn </span>new_zeroed_in(alloc: A) -&gt; Box&lt;mem::MaybeUninit&lt;T&gt;, A&gt;
@@ -2702,7 +2703,7 @@
     #[inline(always)]
     </span><span class="kw">pub fn </span>pin_in(x: T, alloc: A) -&gt; Pin&lt;<span class="self">Self</span>&gt;
     <span class="kw">where
-        </span>A: <span class="lifetime">&#39;static </span>+ Allocator,
+        </span>A: <span class="lifetime">'static </span>+ Allocator,
     {
         <span class="self">Self</span>::into_pin(<span class="self">Self</span>::new_in(x, alloc))
     }
@@ -3073,7 +3074,7 @@
     ///
     /// [memory layout]: self#memory-layout
     /// [`Layout`]: crate::Layout
-    </span><span class="attr">#[must_use = <span class="string">&quot;call `drop(from_raw(ptr))` if you intend to drop the `Box`&quot;</span>]
+    </span><span class="attr">#[must_use = <span class="string">"call `drop(from_raw(ptr))` if you intend to drop the `Box`"</span>]
     #[inline(always)]
     </span><span class="kw">pub unsafe fn </span>from_raw(raw: <span class="kw-2">*mut </span>T) -&gt; <span class="self">Self </span>{
         <span class="kw">unsafe </span>{ <span class="self">Self</span>::from_raw_in(raw, Global) }
@@ -3151,7 +3152,7 @@
     /// Converting the raw pointer back into a `Box` with [`Box::from_raw`]
     /// for automatic cleanup:
     /// ```
-    /// let x = Box::new(String::from(&quot;Hello&quot;));
+    /// let x = Box::new(String::from("Hello"));
     /// let ptr = Box::into_raw(x);
     /// let x = unsafe { Box::from_raw(ptr) };
     /// ```
@@ -3161,7 +3162,7 @@
     /// use std::alloc::{dealloc, Layout};
     /// use std::ptr;
     ///
-    /// let x = Box::new(String::from(&quot;Hello&quot;));
+    /// let x = Box::new(String::from("Hello"));
     /// let p = Box::into_raw(x);
     /// unsafe {
     ///     ptr::drop_in_place(p);
@@ -3199,7 +3200,7 @@
     ///
     /// use std::alloc::System;
     ///
-    /// let x = Box::new_in(String::from(&quot;Hello&quot;), System);
+    /// let x = Box::new_in(String::from("Hello"), System);
     /// let (ptr, alloc) = Box::into_raw_with_allocator(x);
     /// let x = unsafe { Box::from_raw_in(ptr, alloc) };
     /// ```
@@ -3211,7 +3212,7 @@
     /// use std::alloc::{Allocator, Layout, System};
     /// use std::ptr::{self, NonNull};
     ///
-    /// let x = Box::new_in(String::from(&quot;Hello&quot;), System);
+    /// let x = Box::new_in(String::from("Hello"), System);
     /// let (ptr, alloc) = Box::into_raw_with_allocator(x);
     /// unsafe {
     ///     ptr::drop_in_place(ptr);
@@ -3229,9 +3230,9 @@
 
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>into_non_null(b: <span class="self">Self</span>) -&gt; (NonNull&lt;T&gt;, A) {
-        <span class="comment">// Box is recognized as a &quot;unique pointer&quot; by Stacked Borrows, but internally it is a
+        <span class="comment">// Box is recognized as a "unique pointer" by Stacked Borrows, but internally it is a
         // raw pointer for the type system. Turning it directly into a raw pointer would not be
-        // recognized as &quot;releasing&quot; the unique pointer to permit aliased raw accesses,
+        // recognized as "releasing" the unique pointer to permit aliased raw accesses,
         // so all raw pointer methods have to go through `Box::leak`. Turning *that* to a raw pointer
         // behaves correctly.
         </span><span class="kw">let </span>alloc = <span class="kw">unsafe </span>{ ptr::read(<span class="kw-2">&amp;</span>b.<span class="number">1</span>) };
@@ -3249,12 +3250,12 @@
     </span>}
 
     <span class="doccomment">/// Consumes and leaks the `Box`, returning a mutable reference,
-    /// `&amp;&#39;a mut T`. Note that the type `T` must outlive the chosen lifetime
-    /// `&#39;a`. If the type has only static references, or none at all, then this
-    /// may be chosen to be `&#39;static`.
+    /// `&amp;'a mut T`. Note that the type `T` must outlive the chosen lifetime
+    /// `'a`. If the type has only static references, or none at all, then this
+    /// may be chosen to be `'static`.
     ///
     /// This function is mainly useful for data that lives for the remainder of
-    /// the program&#39;s life. Dropping the returned reference will cause a memory
+    /// the program's life. Dropping the returned reference will cause a memory
     /// leak. If this is not acceptable, the reference should first be wrapped
     /// with the [`Box::from_raw`] function producing a `Box`. This `Box` can
     /// then be dropped which will properly destroy `T` and release the
@@ -3270,7 +3271,7 @@
     ///
     /// ```
     /// let x = Box::new(41);
-    /// let static_ref: &amp;&#39;static mut usize = Box::leak(x);
+    /// let static_ref: &amp;'static mut usize = Box::leak(x);
     /// *static_ref += 1;
     /// assert_eq!(*static_ref, 42);
     /// ```
@@ -3284,9 +3285,9 @@
     /// assert_eq!(*static_ref, [4, 2, 3]);
     /// ```
     </span><span class="attr">#[inline(always)]
-    </span><span class="kw">fn </span>leak&lt;<span class="lifetime">&#39;a</span>&gt;(b: <span class="self">Self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>T
+    </span><span class="kw">fn </span>leak&lt;<span class="lifetime">'a</span>&gt;(b: <span class="self">Self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T
     <span class="kw">where
-        </span>A: <span class="lifetime">&#39;a</span>,
+        </span>A: <span class="lifetime">'a</span>,
     {
         <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>mem::ManuallyDrop::new(b).<span class="number">0</span>.as_ptr() }
     }
@@ -3305,8 +3306,8 @@
     ///
     /// # Notes
     ///
-    /// It&#39;s not recommended that crates add an impl like `From&lt;Box&lt;T&gt;&gt; for Pin&lt;T&gt;`,
-    /// as it&#39;ll introduce an ambiguity when calling `Pin::from`.
+    /// It's not recommended that crates add an impl like `From&lt;Box&lt;T&gt;&gt; for Pin&lt;T&gt;`,
+    /// as it'll introduce an ambiguity when calling `Pin::from`.
     /// A demonstration of such a poor impl is shown below.
     ///
     /// ```compile_fail
@@ -3324,10 +3325,10 @@
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>into_pin(boxed: <span class="self">Self</span>) -&gt; Pin&lt;<span class="self">Self</span>&gt;
     <span class="kw">where
-        </span>A: <span class="lifetime">&#39;static</span>,
+        </span>A: <span class="lifetime">'static</span>,
     {
-        <span class="comment">// It&#39;s not possible to move or replace the insides of a `Pin&lt;Box&lt;T&gt;&gt;`
-        // when `T: !Unpin`, so it&#39;s safe to pin it directly without any
+        <span class="comment">// It's not possible to move or replace the insides of a `Pin&lt;Box&lt;T&gt;&gt;`
+        // when `T: !Unpin`, so it's safe to pin it directly without any
         // additional requirements.
         </span><span class="kw">unsafe </span>{ Pin::new_unchecked(boxed) }
     }
@@ -3375,7 +3376,7 @@
 
 <span class="attr">#[cfg(not(no_global_oom_handling))]
 </span><span class="kw">impl</span>&lt;T: Clone, A: Allocator + Clone&gt; Clone <span class="kw">for </span>Box&lt;T, A&gt; {
-    <span class="doccomment">/// Returns a new box with a `clone()` of this box&#39;s contents.
+    <span class="doccomment">/// Returns a new box with a `clone()` of this box's contents.
     ///
     /// # Examples
     ///
@@ -3399,7 +3400,7 @@
         }
     }
 
-    <span class="doccomment">/// Copies `source`&#39;s contents into `self` without creating a new allocation.
+    <span class="doccomment">/// Copies `source`'s contents into `self` without creating a new allocation.
     ///
     /// # Examples
     ///
@@ -3564,7 +3565,7 @@
 
 <span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized, A: Allocator&gt; From&lt;Box&lt;T, A&gt;&gt; <span class="kw">for </span>Pin&lt;Box&lt;T, A&gt;&gt;
 <span class="kw">where
-    </span>A: <span class="lifetime">&#39;static</span>,
+    </span>A: <span class="lifetime">'static</span>,
 {
     <span class="doccomment">/// Converts a `Box&lt;T&gt;` into a `Pin&lt;Box&lt;T&gt;&gt;`. If `T` does not implement [`Unpin`], then
     /// `*boxed` will be pinned in memory and unable to be moved.
@@ -3596,7 +3597,7 @@
     /// let slice: &amp;[u8] = &amp;[104, 101, 108, 108, 111];
     /// let boxed_slice: Box&lt;[u8]&gt; = Box::from(slice);
     ///
-    /// println!(&quot;{boxed_slice:?}&quot;);
+    /// println!("{boxed_slice:?}");
     /// ```
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>from(slice: <span class="kw-2">&amp;</span>[T]) -&gt; Box&lt;[T], A&gt; {
@@ -3619,8 +3620,8 @@
     /// # Examples
     ///
     /// ```rust
-    /// let boxed: Box&lt;str&gt; = Box::from(&quot;hello&quot;);
-    /// println!(&quot;{boxed}&quot;);
+    /// let boxed: Box&lt;str&gt; = Box::from("hello");
+    /// println!("{boxed}");
     /// ```
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>from(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;str, A&gt; {
@@ -3637,7 +3638,7 @@
     /// # Examples
     /// ```rust
     /// // create a Box&lt;str&gt; which will be used to create a Box&lt;[u8]&gt;
-    /// let boxed: Box&lt;str&gt; = Box::from(&quot;hello&quot;);
+    /// let boxed: Box&lt;str&gt; = Box::from("hello");
     /// let boxed_str: Box&lt;[u8]&gt; = Box::from(boxed);
     ///
     /// // create a &amp;[u8] which will be used to create a Box&lt;[u8]&gt;
@@ -3681,7 +3682,7 @@
     ///
     /// ```rust
     /// let boxed: Box&lt;[u8]&gt; = Box::from([4, 2]);
-    /// println!(&quot;{boxed:?}&quot;);
+    /// println!("{boxed:?}");
     /// ```
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>from(array: [T; N]) -&gt; Box&lt;[T]&gt; {
@@ -3722,11 +3723,11 @@
     ///
     /// fn print_if_string(value: Box&lt;dyn Any&gt;) {
     ///     if let Ok(string) = value.downcast::&lt;String&gt;() {
-    ///         println!(&quot;String ({}): {}&quot;, string.len(), string);
+    ///         println!("String ({}): {}", string.len(), string);
     ///     }
     /// }
     ///
-    /// let my_string = &quot;Hello World&quot;.to_string();
+    /// let my_string = "Hello World".to_string();
     /// print_if_string(Box::new(my_string));
     /// print_if_string(Box::new(0i8));
     /// ```
@@ -3783,11 +3784,11 @@
     ///
     /// fn print_if_string(value: Box&lt;dyn Any + Send&gt;) {
     ///     if let Ok(string) = value.downcast::&lt;String&gt;() {
-    ///         println!(&quot;String ({}): {}&quot;, string.len(), string);
+    ///         println!("String ({}): {}", string.len(), string);
     ///     }
     /// }
     ///
-    /// let my_string = &quot;Hello World&quot;.to_string();
+    /// let my_string = "Hello World".to_string();
     /// print_if_string(Box::new(my_string));
     /// print_if_string(Box::new(0i8));
     /// ```
@@ -3844,11 +3845,11 @@
     ///
     /// fn print_if_string(value: Box&lt;dyn Any + Send + Sync&gt;) {
     ///     if let Ok(string) = value.downcast::&lt;String&gt;() {
-    ///         println!(&quot;String ({}): {}&quot;, string.len(), string);
+    ///         println!("String ({}): {}", string.len(), string);
     ///     }
     /// }
     ///
-    /// let my_string = &quot;Hello World&quot;.to_string();
+    /// let my_string = "Hello World".to_string();
     /// print_if_string(Box::new(my_string));
     /// print_if_string(Box::new(0i8));
     /// ```
@@ -3898,22 +3899,22 @@
 
 <span class="kw">impl</span>&lt;T: fmt::Display + <span class="question-mark">?</span>Sized, A: Allocator&gt; fmt::Display <span class="kw">for </span>Box&lt;T, A&gt; {
     <span class="attr">#[inline(always)]
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         fmt::Display::fmt(<span class="kw-2">&amp;**</span><span class="self">self</span>, f)
     }
 }
 
 <span class="kw">impl</span>&lt;T: fmt::Debug + <span class="question-mark">?</span>Sized, A: Allocator&gt; fmt::Debug <span class="kw">for </span>Box&lt;T, A&gt; {
     <span class="attr">#[inline(always)]
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         fmt::Debug::fmt(<span class="kw-2">&amp;**</span><span class="self">self</span>, f)
     }
 }
 
 <span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized, A: Allocator&gt; fmt::Pointer <span class="kw">for </span>Box&lt;T, A&gt; {
     <span class="attr">#[inline(always)]
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="comment">// It&#39;s not possible to extract the inner Uniq directly from the Box,
+    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="comment">// It's not possible to extract the inner Uniq directly from the Box,
         // instead we cast it to a *const which aliases the Unique
         </span><span class="kw">let </span>ptr: <span class="kw-2">*const </span>T = <span class="kw-2">&amp;**</span><span class="self">self</span>;
         fmt::Pointer::fmt(<span class="kw-2">&amp;</span>ptr, f)
@@ -4077,28 +4078,28 @@
  *  implementation of `Unpin` (where `T: Unpin`) would be valid/safe, and
  *  could have a method to project a Pin&lt;T&gt; from it.
  */
-</span><span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized, A: Allocator&gt; Unpin <span class="kw">for </span>Box&lt;T, A&gt; <span class="kw">where </span>A: <span class="lifetime">&#39;static </span>{}
+</span><span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized, A: Allocator&gt; Unpin <span class="kw">for </span>Box&lt;T, A&gt; <span class="kw">where </span>A: <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;F: <span class="question-mark">?</span>Sized + Future + Unpin, A: Allocator&gt; Future <span class="kw">for </span>Box&lt;F, A&gt;
 <span class="kw">where
-    </span>A: <span class="lifetime">&#39;static</span>,
+    </span>A: <span class="lifetime">'static</span>,
 {
     <span class="kw">type </span>Output = F::Output;
 
     <span class="attr">#[inline(always)]
-    </span><span class="kw">fn </span>poll(<span class="kw-2">mut </span><span class="self">self</span>: Pin&lt;<span class="kw-2">&amp;mut </span><span class="self">Self</span>&gt;, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; Poll&lt;<span class="self">Self</span>::Output&gt; {
+    </span><span class="kw">fn </span>poll(<span class="kw-2">mut </span><span class="self">self</span>: Pin&lt;<span class="kw-2">&amp;mut </span><span class="self">Self</span>&gt;, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="self">Self</span>::Output&gt; {
         F::poll(Pin::new(<span class="kw-2">&amp;mut *</span><span class="self">self</span>), cx)
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">mod </span>error {
     <span class="kw">use </span>std::error::Error;
 
     <span class="kw">use </span><span class="kw">super</span>::Box;
 
     <span class="attr">#[cfg(not(no_global_oom_handling))]
-    </span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E: Error + <span class="lifetime">&#39;a</span>&gt; From&lt;E&gt; <span class="kw">for </span>Box&lt;<span class="kw">dyn </span>Error + <span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E: Error + <span class="lifetime">'a</span>&gt; From&lt;E&gt; <span class="kw">for </span>Box&lt;<span class="kw">dyn </span>Error + <span class="lifetime">'a</span>&gt; {
         <span class="doccomment">/// Converts a type of [`Error`] into a box of dyn [`Error`].
         ///
         /// # Examples
@@ -4112,8 +4113,8 @@
         /// struct AnError;
         ///
         /// impl fmt::Display for AnError {
-        ///     fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;&#39;_&gt;) -&gt; fmt::Result {
-        ///         write!(f, &quot;An error&quot;)
+        ///     fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result {
+        ///         write!(f, "An error")
         ///     }
         /// }
         ///
@@ -4125,13 +4126,13 @@
         /// assert!(mem::size_of::&lt;Box&lt;dyn Error&gt;&gt;() == mem::size_of_val(&amp;a_boxed_error))
         /// ```
         </span><span class="attr">#[inline(always)]
-        </span><span class="kw">fn </span>from(err: E) -&gt; Box&lt;<span class="kw">dyn </span>Error + <span class="lifetime">&#39;a</span>&gt; {
+        </span><span class="kw">fn </span>from(err: E) -&gt; Box&lt;<span class="kw">dyn </span>Error + <span class="lifetime">'a</span>&gt; {
             <span class="kw">unsafe </span>{ Box::from_raw(Box::leak(Box::new(err))) }
         }
     }
 
     <span class="attr">#[cfg(not(no_global_oom_handling))]
-    </span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E: Error + Send + Sync + <span class="lifetime">&#39;a</span>&gt; From&lt;E&gt; <span class="kw">for </span>Box&lt;<span class="kw">dyn </span>Error + Send + Sync + <span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E: Error + Send + Sync + <span class="lifetime">'a</span>&gt; From&lt;E&gt; <span class="kw">for </span>Box&lt;<span class="kw">dyn </span>Error + Send + Sync + <span class="lifetime">'a</span>&gt; {
         <span class="doccomment">/// Converts a type of [`Error`] + [`Send`] + [`Sync`] into a box of
         /// dyn [`Error`] + [`Send`] + [`Sync`].
         ///
@@ -4146,8 +4147,8 @@
         /// struct AnError;
         ///
         /// impl fmt::Display for AnError {
-        ///     fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;&#39;_&gt;) -&gt; fmt::Result {
-        ///         write!(f, &quot;An error&quot;)
+        ///     fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result {
+        ///         write!(f, "An error")
         ///     }
         /// }
         ///
@@ -4164,20 +4165,20 @@
         ///     mem::size_of::&lt;Box&lt;dyn Error + Send + Sync&gt;&gt;() == mem::size_of_val(&amp;a_boxed_error))
         /// ```
         </span><span class="attr">#[inline(always)]
-        </span><span class="kw">fn </span>from(err: E) -&gt; Box&lt;<span class="kw">dyn </span>Error + Send + Sync + <span class="lifetime">&#39;a</span>&gt; {
+        </span><span class="kw">fn </span>from(err: E) -&gt; Box&lt;<span class="kw">dyn </span>Error + Send + Sync + <span class="lifetime">'a</span>&gt; {
             <span class="kw">unsafe </span>{ Box::from_raw(Box::leak(Box::new(err))) }
         }
     }
 
     <span class="kw">impl</span>&lt;T: Error&gt; Error <span class="kw">for </span>Box&lt;T&gt; {
         <span class="attr">#[inline(always)]
-        </span><span class="kw">fn </span>source(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>(<span class="kw">dyn </span>Error + <span class="lifetime">&#39;static</span>)&gt; {
+        </span><span class="kw">fn </span>source(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>(<span class="kw">dyn </span>Error + <span class="lifetime">'static</span>)&gt; {
             Error::source(<span class="kw-2">&amp;**</span><span class="self">self</span>)
         }
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">impl</span>&lt;R: std::io::Read + <span class="question-mark">?</span>Sized, A: Allocator&gt; std::io::Read <span class="kw">for </span>Box&lt;R, A&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; std::io::Result&lt;usize&gt; {
@@ -4200,7 +4201,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">impl</span>&lt;W: std::io::Write + <span class="question-mark">?</span>Sized, A: Allocator&gt; std::io::Write <span class="kw">for </span>Box&lt;W, A&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;</span>[u8]) -&gt; std::io::Result&lt;usize&gt; {
@@ -4218,12 +4219,12 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>write_fmt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fmt: fmt::Arguments&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::io::Result&lt;()&gt; {
+    </span><span class="kw">fn </span>write_fmt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fmt: fmt::Arguments&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::io::Result&lt;()&gt; {
         (<span class="kw-2">**</span><span class="self">self</span>).write_fmt(fmt)
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">impl</span>&lt;S: std::io::Seek + <span class="question-mark">?</span>Sized, A: Allocator&gt; std::io::Seek <span class="kw">for </span>Box&lt;S, A&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>seek(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pos: std::io::SeekFrom) -&gt; std::io::Result&lt;u64&gt; {
@@ -4236,7 +4237,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">impl</span>&lt;B: std::io::BufRead + <span class="question-mark">?</span>Sized, A: Allocator&gt; std::io::BufRead <span class="kw">for </span>Box&lt;B, A&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>fill_buf(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; std::io::Result&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
@@ -4259,7 +4260,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;alloc&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"alloc"</span>)]
 </span><span class="kw">impl</span>&lt;A: Allocator&gt; Extend&lt;Box&lt;str, A&gt;&gt; <span class="kw">for </span>alloc_crate::string::String {
     <span class="kw">fn </span>extend&lt;I: IntoIterator&lt;Item = Box&lt;str, A&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: I) {
         iter.into_iter().for_each(<span class="kw">move </span>|s| <span class="self">self</span>.push_str(<span class="kw-2">&amp;</span>s));
@@ -4284,7 +4285,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"serde"</span>)]
 </span><span class="kw">impl</span>&lt;T, A&gt; serde::Serialize <span class="kw">for </span>Box&lt;T, A&gt;
 <span class="kw">where
     </span>T: serde::Serialize,
@@ -4296,14 +4297,14 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>, T, A&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>Box&lt;T, A&gt;
+<span class="attr">#[cfg(feature = <span class="string">"serde"</span>)]
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'de</span>, T, A&gt; serde::Deserialize&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>Box&lt;T, A&gt;
 <span class="kw">where
-    </span>T: serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt;,
+    </span>T: serde::Deserialize&lt;<span class="lifetime">'de</span>&gt;,
     A: Allocator + Default,
 {
     <span class="attr">#[inline(always)]
-    </span><span class="kw">fn </span>deserialize&lt;D: serde::de::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
+    </span><span class="kw">fn </span>deserialize&lt;D: serde::de::Deserializer&lt;<span class="lifetime">'de</span>&gt;&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
         <span class="kw">let </span>value = T::deserialize(deserializer)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(Box::new_in(value, A::default()))
     }

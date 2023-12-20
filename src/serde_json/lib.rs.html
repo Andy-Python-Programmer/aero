@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_json-1.0.107/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="serde_json" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_json-1.0.107/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="serde_json" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -422,15 +423,15 @@
 //!
 //! ```json
 //! {
-//!     &quot;name&quot;: &quot;John Doe&quot;,
-//!     &quot;age&quot;: 43,
-//!     &quot;address&quot;: {
-//!         &quot;street&quot;: &quot;10 Downing Street&quot;,
-//!         &quot;city&quot;: &quot;London&quot;
+//!     "name": "John Doe",
+//!     "age": 43,
+//!     "address": {
+//!         "street": "10 Downing Street",
+//!         "city": "London"
 //!     },
-//!     &quot;phones&quot;: [
-//!         &quot;+44 1234567&quot;,
-//!         &quot;+44 2345678&quot;
+//!     "phones": [
+//!         "+44 1234567",
+//!         "+44 2345678"
 //!     ]
 //! }
 //! ```
@@ -447,7 +448,7 @@
 //!    manipulations like insert a key in a particular spot.
 //!  - **As a strongly typed Rust data structure.** When you expect all or most
 //!    of your data to conform to a particular structure and want to get real
-//!    work done without JSON&#39;s loosey-goosey nature tripping you up.
+//!    work done without JSON's loosey-goosey nature tripping you up.
 //!
 //! Serde JSON provides efficient, flexible, safe ways of converting data
 //! between each of these representations.
@@ -481,21 +482,21 @@
 //!
 //! fn untyped_example() -&gt; Result&lt;()&gt; {
 //!     // Some JSON input data as a &amp;str. Maybe this comes from the user.
-//!     let data = r#&quot;
+//!     let data = r#"
 //!         {
-//!             &quot;name&quot;: &quot;John Doe&quot;,
-//!             &quot;age&quot;: 43,
-//!             &quot;phones&quot;: [
-//!                 &quot;+44 1234567&quot;,
-//!                 &quot;+44 2345678&quot;
+//!             "name": "John Doe",
+//!             "age": 43,
+//!             "phones": [
+//!                 "+44 1234567",
+//!                 "+44 2345678"
 //!             ]
-//!         }&quot;#;
+//!         }"#;
 //!
 //!     // Parse the string of data into serde_json::Value.
 //!     let v: Value = serde_json::from_str(data)?;
 //!
 //!     // Access parts of the data by indexing with square brackets.
-//!     println!(&quot;Please call {} at the number {}&quot;, v[&quot;name&quot;], v[&quot;phones&quot;][0]);
+//!     println!("Please call {} at the number {}", v["name"], v["phones"][0]);
 //!
 //!     Ok(())
 //! }
@@ -505,7 +506,7 @@
 //! # }
 //! ```
 //!
-//! The result of square bracket indexing like `v[&quot;name&quot;]` is a borrow of the
+//! The result of square bracket indexing like `v["name"]` is a borrow of the
 //! data at that index, so the type is `&amp;Value`. A JSON map can be indexed with
 //! string keys, while a JSON array can be indexed with integer keys. If the
 //! type of the data is not right for the type with which it is being indexed,
@@ -513,9 +514,9 @@
 //! vector is out of bounds, the returned element is `Value::Null`.
 //!
 //! When a `Value` is printed, it is printed as a JSON string. So in the code
-//! above, the output looks like `Please call &quot;John Doe&quot; at the number &quot;+44
-//! 1234567&quot;`. The quotation marks appear because `v[&quot;name&quot;]` is a `&amp;Value`
-//! containing a JSON string and its JSON representation is `&quot;John Doe&quot;`.
+//! above, the output looks like `Please call "John Doe" at the number "+44
+//! 1234567"`. The quotation marks appear because `v["name"]` is a `&amp;Value`
+//! containing a JSON string and its JSON representation is `"John Doe"`.
 //! Printing as a plain string without quotation marks involves converting from
 //! a JSON string to a Rust string with [`as_str()`] or avoiding the use of
 //! `Value` as described in the following section.
@@ -526,8 +527,8 @@
 //! tedious to work with for anything more significant. Error handling is
 //! verbose to implement correctly, for example imagine trying to detect the
 //! presence of unrecognized fields in the input data. The compiler is powerless
-//! to help you when you make a mistake, for example imagine typoing `v[&quot;name&quot;]`
-//! as `v[&quot;nmae&quot;]` in one of the dozens of places it is used in your code.
+//! to help you when you make a mistake, for example imagine typoing `v["name"]`
+//! as `v["nmae"]` in one of the dozens of places it is used in your code.
 //!
 //! # Parsing JSON as strongly typed data structures
 //!
@@ -547,15 +548,15 @@
 //!
 //! fn typed_example() -&gt; Result&lt;()&gt; {
 //!     // Some JSON input data as a &amp;str. Maybe this comes from the user.
-//!     let data = r#&quot;
+//!     let data = r#"
 //!         {
-//!             &quot;name&quot;: &quot;John Doe&quot;,
-//!             &quot;age&quot;: 43,
-//!             &quot;phones&quot;: [
-//!                 &quot;+44 1234567&quot;,
-//!                 &quot;+44 2345678&quot;
+//!             "name": "John Doe",
+//!             "age": 43,
+//!             "phones": [
+//!                 "+44 1234567",
+//!                 "+44 2345678"
 //!             ]
-//!         }&quot;#;
+//!         }"#;
 //!
 //!     // Parse the string of data into a Person object. This is exactly the
 //!     // same function as the one that produced serde_json::Value above, but
@@ -563,7 +564,7 @@
 //!     let p: Person = serde_json::from_str(data)?;
 //!
 //!     // Do things just like with any other Rust data structure.
-//!     println!(&quot;Please call {} at the number {}&quot;, p.name, p.phones[0]);
+//!     println!("Please call {} at the number {}", p.name, p.phones[0]);
 //!
 //!     Ok(())
 //! }
@@ -579,7 +580,7 @@
 //! error messages if the layout does not conform to what a `Person` is expected
 //! to look like.
 //!
-//! Any type that implements Serde&#39;s `Deserialize` trait can be deserialized
+//! Any type that implements Serde's `Deserialize` trait can be deserialized
 //! this way. This includes built-in Rust standard library types like `Vec&lt;T&gt;`
 //! and `HashMap&lt;K, V&gt;`, as well as any structs or enums annotated with
 //! `#[derive(Deserialize)]`.
@@ -602,18 +603,18 @@
 //! fn main() {
 //!     // The type of `john` is `serde_json::Value`
 //!     let john = json!({
-//!         &quot;name&quot;: &quot;John Doe&quot;,
-//!         &quot;age&quot;: 43,
-//!         &quot;phones&quot;: [
-//!             &quot;+44 1234567&quot;,
-//!             &quot;+44 2345678&quot;
+//!         "name": "John Doe",
+//!         "age": 43,
+//!         "phones": [
+//!             "+44 1234567",
+//!             "+44 2345678"
 //!         ]
 //!     });
 //!
-//!     println!(&quot;first phone number: {}&quot;, john[&quot;phones&quot;][0]);
+//!     println!("first phone number: {}", john["phones"][0]);
 //!
 //!     // Convert to a string of JSON and print it out
-//!     println!(&quot;{}&quot;, john.to_string());
+//!     println!("{}", john.to_string());
 //! }
 //! ```
 //!
@@ -630,15 +631,15 @@
 //! #
 //! # fn random_phone() -&gt; u16 { 0 }
 //! #
-//! let full_name = &quot;John Doe&quot;;
+//! let full_name = "John Doe";
 //! let age_last_year = 42;
 //!
 //! // The type of `john` is `serde_json::Value`
 //! let john = json!({
-//!     &quot;name&quot;: full_name,
-//!     &quot;age&quot;: age_last_year + 1,
-//!     &quot;phones&quot;: [
-//!         format!(&quot;+44 {}&quot;, random_phone())
+//!     "name": full_name,
+//!     "age": age_last_year + 1,
+//!     "phones": [
+//!         format!("+44 {}", random_phone())
 //!     ]
 //! });
 //! ```
@@ -669,15 +670,15 @@
 //! fn print_an_address() -&gt; Result&lt;()&gt; {
 //!     // Some data structure.
 //!     let address = Address {
-//!         street: &quot;10 Downing Street&quot;.to_owned(),
-//!         city: &quot;London&quot;.to_owned(),
+//!         street: "10 Downing Street".to_owned(),
+//!         city: "London".to_owned(),
 //!     };
 //!
 //!     // Serialize it to a JSON string.
 //!     let j = serde_json::to_string(&amp;address)?;
 //!
 //!     // Print, write to a file, or send to an HTTP server.
-//!     println!(&quot;{}&quot;, j);
+//!     println!("{}", j);
 //!
 //!     Ok(())
 //! }
@@ -687,7 +688,7 @@
 //! # }
 //! ```
 //!
-//! Any type that implements Serde&#39;s `Serialize` trait can be serialized this
+//! Any type that implements Serde's `Serialize` trait can be serialized this
 //! way. This includes built-in Rust standard library types like `Vec&lt;T&gt;` and
 //! `HashMap&lt;K, V&gt;`, as well as any structs or enums annotated with
 //! `#[derive(Serialize)]`.
@@ -695,12 +696,12 @@
 //! # No-std support
 //!
 //! As long as there is a memory allocator, it is possible to use serde_json
-//! without the rest of the Rust standard library. Disable the default &quot;std&quot;
-//! feature and enable the &quot;alloc&quot; feature:
+//! without the rest of the Rust standard library. Disable the default "std"
+//! feature and enable the "alloc" feature:
 //!
 //! ```toml
 //! [dependencies]
-//! serde_json = { version = &quot;1.0&quot;, default-features = false, features = [&quot;alloc&quot;] }
+//! serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 //! ```
 //!
 //! For JSON support in Serde without a memory allocator, please see the
@@ -716,7 +717,7 @@
 //! [macro]: crate::json
 //! [`serde-json-core`]: https://github.com/rust-embedded-community/serde-json-core
 
-</span><span class="attr">#![doc(html_root_url = <span class="string">&quot;https://docs.rs/serde_json/1.0.107&quot;</span>)]
+</span><span class="attr">#![doc(html_root_url = <span class="string">"https://docs.rs/serde_json/1.0.107"</span>)]
 </span><span class="comment">// Ignored clippy lints
 </span><span class="attr">#![allow(
     clippy::collapsible_else_if,
@@ -776,12 +777,12 @@
 </span><span class="attr">#![deny(clippy::question_mark_used)]
 #![allow(non_upper_case_globals)]
 #![deny(missing_docs)]
-#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
+#![cfg_attr(not(feature = <span class="string">"std"</span>), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 #[doc(inline)]
 </span><span class="kw">pub use </span><span class="kw">crate</span>::de::from_reader;
 <span class="attr">#[doc(inline)]
@@ -790,14 +791,14 @@
 </span><span class="kw">pub use </span><span class="kw">crate</span>::error::{Error, <span class="prelude-ty">Result</span>};
 <span class="attr">#[doc(inline)]
 </span><span class="kw">pub use </span><span class="kw">crate</span>::ser::{to_string, to_string_pretty, to_vec, to_vec_pretty};
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 #[doc(inline)]
 </span><span class="kw">pub use </span><span class="kw">crate</span>::ser::{to_writer, to_writer_pretty, Serializer};
 <span class="attr">#[doc(inline)]
 </span><span class="kw">pub use </span><span class="kw">crate</span>::value::{from_value, to_value, Map, Number, Value};
 
 <span class="comment">// We only use our own error type; no need for From conversions provided by the
-// standard library&#39;s try! macro. This reduces lines of LLVM IR by 4%.
+// standard library's try! macro. This reduces lines of LLVM IR by 4%.
 </span><span class="macro">macro_rules! </span>tri {
     (<span class="macro-nonterminal">$e</span>:expr $(,)<span class="question-mark">?</span>) =&gt; {
         <span class="kw">match </span><span class="macro-nonterminal">$e </span>{
@@ -813,23 +814,23 @@
 <span class="kw">pub mod </span>de;
 <span class="kw">pub mod </span>error;
 <span class="kw">pub mod </span>map;
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;std&quot;</span>)))]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">"std"</span>)))]
 </span><span class="kw">pub mod </span>ser;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"std"</span>))]
 </span><span class="kw">mod </span>ser;
 <span class="kw">pub mod </span>value;
 
 <span class="kw">mod </span>features_check;
 
 <span class="kw">mod </span>io;
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">mod </span>iter;
-<span class="attr">#[cfg(feature = <span class="string">&quot;float_roundtrip&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"float_roundtrip"</span>)]
 </span><span class="kw">mod </span>lexical;
 <span class="kw">mod </span>number;
 <span class="kw">mod </span>read;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;raw_value&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"raw_value"</span>)]
 </span><span class="kw">mod </span>raw;
 </code></pre></div></section></main></body></html>

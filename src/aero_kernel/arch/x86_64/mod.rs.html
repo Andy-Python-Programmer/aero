@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -359,16 +360,16 @@
 </span><span class="kw">static </span>HHDM: HhdmRequest = HhdmRequest::new(<span class="number">0</span>);
 
 <span class="attr">#[no_mangle]
-</span><span class="kw">extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>arch_aero_main() -&gt; ! {
+</span><span class="kw">extern </span><span class="string">"C" </span><span class="kw">fn </span>arch_aero_main() -&gt; ! {
     <span class="kw">let </span>kernel_file_resp = KERNEL_FILE
         .get_response()
         .get()
-        .expect(<span class="string">&quot;limine: invalid kernel file response&quot;</span>);
+        .expect(<span class="string">"limine: invalid kernel file response"</span>);
 
     <span class="kw">let </span>kernel_file = kernel_file_resp
         .kernel_file
         .get()
-        .expect(<span class="string">&quot;limine: invalid kernel file pointer&quot;</span>);
+        .expect(<span class="string">"limine: invalid kernel file pointer"</span>);
 
     <span class="comment">// Before we start the initialization process, we need to make sure
     // the unwind info is available; just in case if there is a kernel
@@ -380,11 +381,11 @@
         <span class="kw">let </span>start = kernel_file
             .base
             .as_ptr()
-            .expect(<span class="string">&quot;limine: invalid kernel file base&quot;</span>);
+            .expect(<span class="string">"limine: invalid kernel file base"</span>);
 
         <span class="comment">// SAFETY: The bootloader will provide a valid pointer to the kernel file.
         </span><span class="kw">let </span>elf_slice = <span class="kw">unsafe </span>{ core::slice::from_raw_parts(start, kernel_file.length <span class="kw">as </span>usize) };
-        <span class="kw">let </span>elf = ElfFile::new(elf_slice).expect(<span class="string">&quot;limine: invalid kernel file&quot;</span>);
+        <span class="kw">let </span>elf = ElfFile::new(elf_slice).expect(<span class="string">"limine: invalid kernel file"</span>);
 
         UnwindInfo::new(elf)
     });
@@ -399,7 +400,7 @@
     </span><span class="kw">let </span>memmap = MEMMAP
         .get_response()
         .get_mut()
-        .expect(<span class="string">&quot;limine: invalid memmap response&quot;</span>)
+        .expect(<span class="string">"limine: invalid memmap response"</span>)
         .memmap_mut();
 
     <span class="kw">unsafe </span>{
@@ -422,7 +423,7 @@
     <span class="kw">let </span>modules = MODULES
         .get_response()
         .get()
-        .expect(<span class="string">&quot;limine: invalid modules response&quot;</span>)
+        .expect(<span class="string">"limine: invalid modules response"</span>)
         .modules();
 
     <span class="comment">// Now, we need to parse the kernel command line so we can
@@ -432,18 +433,18 @@
     </span><span class="kw">let </span>command_line = kernel_file
         .cmdline
         .to_str()
-        .expect(<span class="string">&quot;limine: bad command line&quot;</span>);
+        .expect(<span class="string">"limine: bad command line"</span>);
 
     <span class="kw">let </span>command_line = cmdline::parse(
-        command_line.to_str().expect(<span class="string">&quot;cmdline: invalid utf8&quot;</span>),
+        command_line.to_str().expect(<span class="string">"cmdline: invalid utf8"</span>),
         modules,
     );
 
     paging::init(memmap).unwrap();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded paging&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded paging"</span>);
 
     <span class="kw">crate</span>::mem::alloc::init_heap();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded heap&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded heap"</span>);
 
     <span class="comment">// SMP initialization.
     </span><span class="kw">let </span>smp_response = SMP.get_response().get_mut().unwrap();
@@ -460,40 +461,40 @@
     }
 
     gdt::init_boot();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded bootstrap GDT&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded bootstrap GDT"</span>);
 
     paging::init_vm_frames();
 
     <span class="kw">let </span>framebuffer = FRAMEBUFFER
         .get_response()
         .get()
-        .expect(<span class="string">&quot;limine: invalid framebuffer response&quot;</span>)
+        .expect(<span class="string">"limine: invalid framebuffer response"</span>)
         .framebuffers()
         .first()
-        .expect(<span class="string">&quot;limine: no framebuffer found!&quot;</span>);
+        .expect(<span class="string">"limine: no framebuffer found!"</span>);
 
     rendy::init(framebuffer, <span class="kw-2">&amp;</span>command_line);
     logger::set_rendy_debug(<span class="bool-val">true</span>);
 
     interrupts::init();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded IDT&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded IDT"</span>);
 
     apic::init();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded APIC&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded APIC"</span>);
 
     <span class="kw">let </span>rsdp = VirtAddr::new(RSDP.get_response().get().unwrap().address.as_ptr().unwrap() <span class="kw">as </span>u64);
 
     acpi::init(rsdp);
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded ACPI&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded ACPI"</span>);
 
     tls::init();
     cpu_local::init(<span class="number">0</span>);
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded TLS&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded TLS"</span>);
 
     <span class="kw">crate</span>::unwind::set_panic_hook_ready(<span class="bool-val">true</span>);
 
     gdt::init();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded GDT&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded GDT"</span>);
 
     syscall::init();
 
@@ -506,21 +507,21 @@
 }
 
 <span class="attr">#[no_mangle]
-</span><span class="kw">extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>x86_64_aero_ap_main(boot_info: <span class="kw-2">*const </span>SmpInfo) -&gt; ! {
+</span><span class="kw">extern </span><span class="string">"C" </span><span class="kw">fn </span>x86_64_aero_ap_main(boot_info: <span class="kw-2">*const </span>SmpInfo) -&gt; ! {
     <span class="kw">let </span>boot_info = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>boot_info };
     <span class="kw">let </span>ap_id = boot_info.processor_id <span class="kw">as </span>usize;
 
-    <span class="macro">log::debug!</span>(<span class="string">&quot;booting CPU {}&quot;</span>, ap_id);
+    <span class="macro">log::debug!</span>(<span class="string">"booting CPU {}"</span>, ap_id);
 
     gdt::init_boot();
-    <span class="macro">log::info!</span>(<span class="string">&quot;AP{}: loaded boot GDT&quot;</span>, ap_id);
+    <span class="macro">log::info!</span>(<span class="string">"AP{}: loaded boot GDT"</span>, ap_id);
 
     tls::init();
     cpu_local::init(ap_id);
-    <span class="macro">log::info!</span>(<span class="string">&quot;AP{}: loaded TLS&quot;</span>, ap_id);
+    <span class="macro">log::info!</span>(<span class="string">"AP{}: loaded TLS"</span>, ap_id);
 
     gdt::init();
-    <span class="macro">log::info!</span>(<span class="string">&quot;AP{}: loaded GDT&quot;</span>, ap_id);
+    <span class="macro">log::info!</span>(<span class="string">"AP{}: loaded GDT"</span>, ap_id);
 
     syscall::init();
 
@@ -596,7 +597,7 @@
             controlregs::write_cr4(cr4);
         }
 
-        <span class="macro">assert!</span>(features.has_xsave(), <span class="string">&quot;init: xsave not supported!&quot;</span>);
+        <span class="macro">assert!</span>(features.has_xsave(), <span class="string">"init: xsave not supported!"</span>);
         enable_xsave();
     }
 }

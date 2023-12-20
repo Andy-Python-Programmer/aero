@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmas-elf-0.9.0/src/header.rs`."><title>header.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xmas_elf" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmas-elf-0.9.0/src/header.rs`."><title>header.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xmas_elf" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -458,34 +459,34 @@
 <span class="kw">use </span>zero::{read, Pod};
 
 
-<span class="kw">pub fn </span>parse_header&lt;<span class="lifetime">&#39;a</span>&gt;(input: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Header&lt;<span class="lifetime">&#39;a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">pub fn </span>parse_header&lt;<span class="lifetime">'a</span>&gt;(input: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Header&lt;<span class="lifetime">'a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>size_pt1 = mem::size_of::&lt;HeaderPt1&gt;();
     <span class="kw">if </span>input.len() &lt; size_pt1 {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;File is shorter than the first ELF header part&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"File is shorter than the first ELF header part"</span>);
     }
 
-    <span class="kw">let </span>header_1: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HeaderPt1 = read(<span class="kw-2">&amp;</span>input[..size_pt1]);
+    <span class="kw">let </span>header_1: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HeaderPt1 = read(<span class="kw-2">&amp;</span>input[..size_pt1]);
     <span class="kw">if </span>header_1.magic != MAGIC {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Did not find ELF magic number&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Did not find ELF magic number"</span>);
     }
 
     <span class="kw">let </span>header_2 = <span class="kw">match </span>header_1.class() {
-        Class::None | Class::Other(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid ELF class&quot;</span>),
+        Class::None | Class::Other(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid ELF class"</span>),
         Class::ThirtyTwo =&gt; {
             <span class="kw">let </span>size_pt2 = mem::size_of::&lt;HeaderPt2_&lt;P32&gt;&gt;();
             <span class="kw">if </span>input.len() &lt; size_pt1 + size_pt2 {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;File is shorter than ELF headers&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"File is shorter than ELF headers"</span>);
             }
-            <span class="kw">let </span>header_2: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HeaderPt2_&lt;P32&gt; =
+            <span class="kw">let </span>header_2: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HeaderPt2_&lt;P32&gt; =
                 read(<span class="kw-2">&amp;</span>input[size_pt1..size_pt1 + mem::size_of::&lt;HeaderPt2_&lt;P32&gt;&gt;()]);
             HeaderPt2::Header32(header_2)
         }
         Class::SixtyFour =&gt; {
             <span class="kw">let </span>size_pt2 = mem::size_of::&lt;HeaderPt2_&lt;P64&gt;&gt;();
             <span class="kw">if </span>input.len() &lt; size_pt1 + size_pt2 {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;File is shorter than ELF headers&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"File is shorter than ELF headers"</span>);
             }
-            <span class="kw">let </span>header_2: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HeaderPt2_&lt;P64&gt; =
+            <span class="kw">let </span>header_2: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HeaderPt2_&lt;P64&gt; =
                 read(<span class="kw-2">&amp;</span>input[size_pt1..size_pt1 + mem::size_of::&lt;HeaderPt2_&lt;P64&gt;&gt;()]);
             HeaderPt2::Header64(header_2)
         }
@@ -496,27 +497,27 @@
     })
 }
 
-<span class="kw">pub const </span>MAGIC: [u8; <span class="number">4</span>] = [<span class="number">0x7f</span>, <span class="string">b&#39;E&#39;</span>, <span class="string">b&#39;L&#39;</span>, <span class="string">b&#39;F&#39;</span>];
+<span class="kw">pub const </span>MAGIC: [u8; <span class="number">4</span>] = [<span class="number">0x7f</span>, <span class="string">b'E'</span>, <span class="string">b'L'</span>, <span class="string">b'F'</span>];
 
 <span class="attr">#[derive(Clone, Copy, Debug)]
-</span><span class="kw">pub struct </span>Header&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub </span>pt1: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HeaderPt1,
-    <span class="kw">pub </span>pt2: HeaderPt2&lt;<span class="lifetime">&#39;a</span>&gt;,
+</span><span class="kw">pub struct </span>Header&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub </span>pt1: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HeaderPt1,
+    <span class="kw">pub </span>pt2: HeaderPt2&lt;<span class="lifetime">'a</span>&gt;,
 }
 
 <span class="comment">// TODO add Header::section_count, because if sh_count = 0, then the real count is in the first section.
 
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; fmt::Display <span class="kw">for </span>Header&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; fmt::Display <span class="kw">for </span>Header&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;ELF header:&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    magic:            {:?}&quot;</span>, <span class="self">self</span>.pt1.magic)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    class:            {:?}&quot;</span>, <span class="self">self</span>.pt1.class)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    data:             {:?}&quot;</span>, <span class="self">self</span>.pt1.data)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    version:          {:?}&quot;</span>, <span class="self">self</span>.pt1.version)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    os abi:           {:?}&quot;</span>, <span class="self">self</span>.pt1.os_abi)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    abi version:      {:?}&quot;</span>, <span class="self">self</span>.pt1.abi_version)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    padding:          {:?}&quot;</span>, <span class="self">self</span>.pt1.padding)<span class="question-mark">?</span>;
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.pt2)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"ELF header:"</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    magic:            {:?}"</span>, <span class="self">self</span>.pt1.magic)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    class:            {:?}"</span>, <span class="self">self</span>.pt1.class)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    data:             {:?}"</span>, <span class="self">self</span>.pt1.data)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    version:          {:?}"</span>, <span class="self">self</span>.pt1.version)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    os abi:           {:?}"</span>, <span class="self">self</span>.pt1.os_abi)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    abi version:      {:?}"</span>, <span class="self">self</span>.pt1.abi_version)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    padding:          {:?}"</span>, <span class="self">self</span>.pt1.padding)<span class="question-mark">?</span>;
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.pt2)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -555,9 +556,9 @@
 }
 
 <span class="attr">#[derive(Clone, Copy, Debug)]
-</span><span class="kw">pub enum </span>HeaderPt2&lt;<span class="lifetime">&#39;a</span>&gt; {
-    Header32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HeaderPt2_&lt;P32&gt;),
-    Header64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HeaderPt2_&lt;P64&gt;),
+</span><span class="kw">pub enum </span>HeaderPt2&lt;<span class="lifetime">'a</span>&gt; {
+    Header32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>HeaderPt2_&lt;P32&gt;),
+    Header64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>HeaderPt2_&lt;P64&gt;),
 }
 
 <span class="macro">macro_rules! </span>getter {
@@ -571,7 +572,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; HeaderPt2&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; HeaderPt2&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
             HeaderPt2::Header32(<span class="kw">_</span>) =&gt; mem::size_of::&lt;HeaderPt2_&lt;P32&gt;&gt;(),
@@ -594,11 +595,11 @@
     <span class="macro">getter!</span>(sh_str_index, u16);
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; fmt::Display <span class="kw">for </span>HeaderPt2&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; fmt::Display <span class="kw">for </span>HeaderPt2&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
-            HeaderPt2::Header32(h) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, h),
-            HeaderPt2::Header64(h) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, h),
+            HeaderPt2::Header32(h) =&gt; <span class="macro">write!</span>(f, <span class="string">"{}"</span>, h),
+            HeaderPt2::Header64(h) =&gt; <span class="macro">write!</span>(f, <span class="string">"{}"</span>, h),
         }
     }
 }
@@ -625,19 +626,19 @@
 
 <span class="kw">impl</span>&lt;P: fmt::Display&gt; fmt::Display <span class="kw">for </span>HeaderPt2_&lt;P&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    type:             {:?}&quot;</span>, <span class="self">self</span>.type_)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    machine:          {:?}&quot;</span>, <span class="self">self</span>.machine)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    version:          {}&quot;</span>, <span class="self">self</span>.version)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    entry_point:      {}&quot;</span>, <span class="self">self</span>.entry_point)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    ph_offset:        {}&quot;</span>, <span class="self">self</span>.ph_offset)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    sh_offset:        {}&quot;</span>, <span class="self">self</span>.sh_offset)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    flags:            {}&quot;</span>, <span class="self">self</span>.flags)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    header_size:      {}&quot;</span>, <span class="self">self</span>.header_size)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    ph_entry_size:    {}&quot;</span>, <span class="self">self</span>.ph_entry_size)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    ph_count:         {}&quot;</span>, <span class="self">self</span>.ph_count)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    sh_entry_size:    {}&quot;</span>, <span class="self">self</span>.sh_entry_size)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    sh_count:         {}&quot;</span>, <span class="self">self</span>.sh_count)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;    sh_str_index:     {}&quot;</span>, <span class="self">self</span>.sh_str_index)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    type:             {:?}"</span>, <span class="self">self</span>.type_)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    machine:          {:?}"</span>, <span class="self">self</span>.machine)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    version:          {}"</span>, <span class="self">self</span>.version)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    entry_point:      {}"</span>, <span class="self">self</span>.entry_point)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    ph_offset:        {}"</span>, <span class="self">self</span>.ph_offset)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    sh_offset:        {}"</span>, <span class="self">self</span>.sh_offset)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    flags:            {}"</span>, <span class="self">self</span>.flags)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    header_size:      {}"</span>, <span class="self">self</span>.header_size)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    ph_entry_size:    {}"</span>, <span class="self">self</span>.ph_entry_size)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    ph_count:         {}"</span>, <span class="self">self</span>.ph_count)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    sh_entry_size:    {}"</span>, <span class="self">self</span>.sh_entry_size)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    sh_count:         {}"</span>, <span class="self">self</span>.sh_count)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"    sh_str_index:     {}"</span>, <span class="self">self</span>.sh_str_index)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -878,27 +879,27 @@
 
 <span class="comment">// TODO any more constants that need to go in here?
 
-</span><span class="kw">pub fn </span>sanity_check(file: <span class="kw-2">&amp;</span>ElfFile) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>sanity_check(file: <span class="kw-2">&amp;</span>ElfFile) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="macro">check!</span>(mem::size_of::&lt;HeaderPt1&gt;() == <span class="number">16</span>);
-    <span class="macro">check!</span>(file.header.pt1.magic == MAGIC, <span class="string">&quot;bad magic number&quot;</span>);
+    <span class="macro">check!</span>(file.header.pt1.magic == MAGIC, <span class="string">"bad magic number"</span>);
     <span class="kw">let </span>pt2 = <span class="kw-2">&amp;</span>file.header.pt2;
     <span class="macro">check!</span>(mem::size_of::&lt;HeaderPt1&gt;() + pt2.size() == pt2.header_size() <span class="kw">as </span>usize,
-           <span class="string">&quot;header_size does not match size of header&quot;</span>);
+           <span class="string">"header_size does not match size of header"</span>);
     <span class="kw">match </span>(<span class="kw-2">&amp;</span>file.header.pt1.class(), <span class="kw-2">&amp;</span>file.header.pt2) {
-        (<span class="kw-2">&amp;</span>Class::None, <span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;No class&quot;</span>),
+        (<span class="kw-2">&amp;</span>Class::None, <span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"No class"</span>),
         (<span class="kw-2">&amp;</span>Class::ThirtyTwo, <span class="kw-2">&amp;</span>HeaderPt2::Header32(<span class="kw">_</span>)) |
         (<span class="kw-2">&amp;</span>Class::SixtyFour, <span class="kw-2">&amp;</span>HeaderPt2::Header64(<span class="kw">_</span>)) =&gt; {}
-        <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Mismatch between specified and actual class&quot;</span>),
+        <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Mismatch between specified and actual class"</span>),
     }
-    <span class="macro">check!</span>(!file.header.pt1.version.is_none(), <span class="string">&quot;no version&quot;</span>);
-    <span class="macro">check!</span>(!file.header.pt1.data.is_none(), <span class="string">&quot;no data format&quot;</span>);
+    <span class="macro">check!</span>(!file.header.pt1.version.is_none(), <span class="string">"no version"</span>);
+    <span class="macro">check!</span>(!file.header.pt1.data.is_none(), <span class="string">"no data format"</span>);
 
     <span class="macro">check!</span>(pt2.ph_offset() + (pt2.ph_entry_size() <span class="kw">as </span>u64) * (pt2.ph_count() <span class="kw">as </span>u64) &lt;=
            file.input.len() <span class="kw">as </span>u64,
-           <span class="string">&quot;program header table out of range&quot;</span>);
+           <span class="string">"program header table out of range"</span>);
     <span class="macro">check!</span>(pt2.sh_offset() + (pt2.sh_entry_size() <span class="kw">as </span>u64) * (pt2.sh_count() <span class="kw">as </span>u64) &lt;=
            file.input.len() <span class="kw">as </span>u64,
-           <span class="string">&quot;section header table out of range&quot;</span>);
+           <span class="string">"section header table out of range"</span>);
 
     <span class="comment">// TODO check that SectionHeader_ is the same size as sh_entry_size, depending on class
 

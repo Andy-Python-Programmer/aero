@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/tls.rs`."><title>tls.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/tls.rs`."><title>tls.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -164,8 +165,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="doccomment">//! Thread Local Storage (TLS) are per-thread global variables. On 64-bit each CPU core&#39;s
-//! `fs` GDT segment points to the thread local memory area where the thread local static&#39;s
+</span><span class="doccomment">//! Thread Local Storage (TLS) are per-thread global variables. On 64-bit each CPU core's
+//! `fs` GDT segment points to the thread local memory area where the thread local static's
 //! live. TLS statics are simply accessed through an offset from `fs`.
 //!
 //! ## Notes
@@ -178,67 +179,67 @@
 
 <span class="kw">use </span>raw_cpuid::FeatureInfo;
 
-<span class="kw">type </span>ProcFsCpuFeature = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw">fn</span>(<span class="kw-2">&amp;</span>FeatureInfo) -&gt; bool);
+<span class="kw">type </span>ProcFsCpuFeature = (<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw">fn</span>(<span class="kw-2">&amp;</span>FeatureInfo) -&gt; bool);
 
 <span class="kw">const </span>CPU_FEATURES: <span class="kw-2">&amp;</span>[ProcFsCpuFeature] = <span class="kw-2">&amp;</span>[
-    (<span class="string">&quot;sse3&quot;</span>, FeatureInfo::has_sse3),
-    (<span class="string">&quot;pclmulqdq&quot;</span>, FeatureInfo::has_pclmulqdq),
-    (<span class="string">&quot;ds_area&quot;</span>, FeatureInfo::has_ds_area),
-    (<span class="string">&quot;monitor_mwait&quot;</span>, FeatureInfo::has_monitor_mwait),
-    (<span class="string">&quot;cpl&quot;</span>, FeatureInfo::has_cpl),
-    (<span class="string">&quot;vmx&quot;</span>, FeatureInfo::has_vmx),
-    (<span class="string">&quot;smx&quot;</span>, FeatureInfo::has_smx),
-    (<span class="string">&quot;eist&quot;</span>, FeatureInfo::has_eist),
-    (<span class="string">&quot;tm2&quot;</span>, FeatureInfo::has_tm2),
-    (<span class="string">&quot;ssse3&quot;</span>, FeatureInfo::has_ssse3),
-    (<span class="string">&quot;cnxtid&quot;</span>, FeatureInfo::has_cnxtid),
-    (<span class="string">&quot;fma&quot;</span>, FeatureInfo::has_fma),
-    (<span class="string">&quot;cmpxchg16b&quot;</span>, FeatureInfo::has_cmpxchg16b),
-    (<span class="string">&quot;pdcm&quot;</span>, FeatureInfo::has_pdcm),
-    (<span class="string">&quot;pcid&quot;</span>, FeatureInfo::has_pcid),
-    (<span class="string">&quot;dca&quot;</span>, FeatureInfo::has_dca),
-    (<span class="string">&quot;sse41&quot;</span>, FeatureInfo::has_sse41),
-    (<span class="string">&quot;sse42&quot;</span>, FeatureInfo::has_sse42),
-    (<span class="string">&quot;x2apic&quot;</span>, FeatureInfo::has_x2apic),
-    (<span class="string">&quot;movbe&quot;</span>, FeatureInfo::has_movbe),
-    (<span class="string">&quot;popcnt&quot;</span>, FeatureInfo::has_popcnt),
-    (<span class="string">&quot;tsc_deadline&quot;</span>, FeatureInfo::has_tsc_deadline),
-    (<span class="string">&quot;aesni&quot;</span>, FeatureInfo::has_aesni),
-    (<span class="string">&quot;xsave&quot;</span>, FeatureInfo::has_xsave),
-    (<span class="string">&quot;oxsave&quot;</span>, FeatureInfo::has_oxsave),
-    (<span class="string">&quot;avx&quot;</span>, FeatureInfo::has_avx),
-    (<span class="string">&quot;f16c&quot;</span>, FeatureInfo::has_f16c),
-    (<span class="string">&quot;rdrand&quot;</span>, FeatureInfo::has_rdrand),
-    (<span class="string">&quot;hypervisor&quot;</span>, FeatureInfo::has_hypervisor),
-    (<span class="string">&quot;fpu&quot;</span>, FeatureInfo::has_fpu),
-    (<span class="string">&quot;vme&quot;</span>, FeatureInfo::has_vme),
-    (<span class="string">&quot;de&quot;</span>, FeatureInfo::has_de),
-    (<span class="string">&quot;pse&quot;</span>, FeatureInfo::has_pse),
-    (<span class="string">&quot;tsc&quot;</span>, FeatureInfo::has_tsc),
-    (<span class="string">&quot;msr&quot;</span>, FeatureInfo::has_msr),
-    (<span class="string">&quot;pae&quot;</span>, FeatureInfo::has_pae),
-    (<span class="string">&quot;mce&quot;</span>, FeatureInfo::has_mce),
-    (<span class="string">&quot;cmpxchg8b&quot;</span>, FeatureInfo::has_cmpxchg8b),
-    (<span class="string">&quot;apic&quot;</span>, FeatureInfo::has_apic),
-    (<span class="string">&quot;sysenter_sysexit&quot;</span>, FeatureInfo::has_sysenter_sysexit),
-    (<span class="string">&quot;mtrr&quot;</span>, FeatureInfo::has_mtrr),
-    (<span class="string">&quot;pge&quot;</span>, FeatureInfo::has_pge),
-    (<span class="string">&quot;mca&quot;</span>, FeatureInfo::has_mca),
-    (<span class="string">&quot;cmov&quot;</span>, FeatureInfo::has_cmov),
-    (<span class="string">&quot;pat&quot;</span>, FeatureInfo::has_pat),
-    (<span class="string">&quot;pse36&quot;</span>, FeatureInfo::has_pse36),
-    (<span class="string">&quot;psn&quot;</span>, FeatureInfo::has_psn),
-    (<span class="string">&quot;clflush&quot;</span>, FeatureInfo::has_clflush),
-    (<span class="string">&quot;ds&quot;</span>, FeatureInfo::has_ds),
-    (<span class="string">&quot;acpi&quot;</span>, FeatureInfo::has_acpi),
-    (<span class="string">&quot;mmx&quot;</span>, FeatureInfo::has_mmx),
-    (<span class="string">&quot;fxsave_fxstor&quot;</span>, FeatureInfo::has_fxsave_fxstor),
-    (<span class="string">&quot;sse&quot;</span>, FeatureInfo::has_sse),
-    (<span class="string">&quot;sse2&quot;</span>, FeatureInfo::has_sse2),
-    (<span class="string">&quot;ss&quot;</span>, FeatureInfo::has_ss),
-    (<span class="string">&quot;htt&quot;</span>, FeatureInfo::has_htt),
-    (<span class="string">&quot;tm&quot;</span>, FeatureInfo::has_tm),
-    (<span class="string">&quot;pbe&quot;</span>, FeatureInfo::has_pbe),
+    (<span class="string">"sse3"</span>, FeatureInfo::has_sse3),
+    (<span class="string">"pclmulqdq"</span>, FeatureInfo::has_pclmulqdq),
+    (<span class="string">"ds_area"</span>, FeatureInfo::has_ds_area),
+    (<span class="string">"monitor_mwait"</span>, FeatureInfo::has_monitor_mwait),
+    (<span class="string">"cpl"</span>, FeatureInfo::has_cpl),
+    (<span class="string">"vmx"</span>, FeatureInfo::has_vmx),
+    (<span class="string">"smx"</span>, FeatureInfo::has_smx),
+    (<span class="string">"eist"</span>, FeatureInfo::has_eist),
+    (<span class="string">"tm2"</span>, FeatureInfo::has_tm2),
+    (<span class="string">"ssse3"</span>, FeatureInfo::has_ssse3),
+    (<span class="string">"cnxtid"</span>, FeatureInfo::has_cnxtid),
+    (<span class="string">"fma"</span>, FeatureInfo::has_fma),
+    (<span class="string">"cmpxchg16b"</span>, FeatureInfo::has_cmpxchg16b),
+    (<span class="string">"pdcm"</span>, FeatureInfo::has_pdcm),
+    (<span class="string">"pcid"</span>, FeatureInfo::has_pcid),
+    (<span class="string">"dca"</span>, FeatureInfo::has_dca),
+    (<span class="string">"sse41"</span>, FeatureInfo::has_sse41),
+    (<span class="string">"sse42"</span>, FeatureInfo::has_sse42),
+    (<span class="string">"x2apic"</span>, FeatureInfo::has_x2apic),
+    (<span class="string">"movbe"</span>, FeatureInfo::has_movbe),
+    (<span class="string">"popcnt"</span>, FeatureInfo::has_popcnt),
+    (<span class="string">"tsc_deadline"</span>, FeatureInfo::has_tsc_deadline),
+    (<span class="string">"aesni"</span>, FeatureInfo::has_aesni),
+    (<span class="string">"xsave"</span>, FeatureInfo::has_xsave),
+    (<span class="string">"oxsave"</span>, FeatureInfo::has_oxsave),
+    (<span class="string">"avx"</span>, FeatureInfo::has_avx),
+    (<span class="string">"f16c"</span>, FeatureInfo::has_f16c),
+    (<span class="string">"rdrand"</span>, FeatureInfo::has_rdrand),
+    (<span class="string">"hypervisor"</span>, FeatureInfo::has_hypervisor),
+    (<span class="string">"fpu"</span>, FeatureInfo::has_fpu),
+    (<span class="string">"vme"</span>, FeatureInfo::has_vme),
+    (<span class="string">"de"</span>, FeatureInfo::has_de),
+    (<span class="string">"pse"</span>, FeatureInfo::has_pse),
+    (<span class="string">"tsc"</span>, FeatureInfo::has_tsc),
+    (<span class="string">"msr"</span>, FeatureInfo::has_msr),
+    (<span class="string">"pae"</span>, FeatureInfo::has_pae),
+    (<span class="string">"mce"</span>, FeatureInfo::has_mce),
+    (<span class="string">"cmpxchg8b"</span>, FeatureInfo::has_cmpxchg8b),
+    (<span class="string">"apic"</span>, FeatureInfo::has_apic),
+    (<span class="string">"sysenter_sysexit"</span>, FeatureInfo::has_sysenter_sysexit),
+    (<span class="string">"mtrr"</span>, FeatureInfo::has_mtrr),
+    (<span class="string">"pge"</span>, FeatureInfo::has_pge),
+    (<span class="string">"mca"</span>, FeatureInfo::has_mca),
+    (<span class="string">"cmov"</span>, FeatureInfo::has_cmov),
+    (<span class="string">"pat"</span>, FeatureInfo::has_pat),
+    (<span class="string">"pse36"</span>, FeatureInfo::has_pse36),
+    (<span class="string">"psn"</span>, FeatureInfo::has_psn),
+    (<span class="string">"clflush"</span>, FeatureInfo::has_clflush),
+    (<span class="string">"ds"</span>, FeatureInfo::has_ds),
+    (<span class="string">"acpi"</span>, FeatureInfo::has_acpi),
+    (<span class="string">"mmx"</span>, FeatureInfo::has_mmx),
+    (<span class="string">"fxsave_fxstor"</span>, FeatureInfo::has_fxsave_fxstor),
+    (<span class="string">"sse"</span>, FeatureInfo::has_sse),
+    (<span class="string">"sse2"</span>, FeatureInfo::has_sse2),
+    (<span class="string">"ss"</span>, FeatureInfo::has_ss),
+    (<span class="string">"htt"</span>, FeatureInfo::has_htt),
+    (<span class="string">"tm"</span>, FeatureInfo::has_tm),
+    (<span class="string">"pbe"</span>, FeatureInfo::has_pbe),
 ];
 
 <span class="kw">static </span>CPU_INFO: Mutex&lt;Vec&lt;CpuInfo&gt;&gt; = Mutex::new(Vec::new());
@@ -249,7 +250,7 @@
     <span class="kw">pub </span>fpu: bool,
     <span class="kw">pub </span>vendor: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="kw">pub </span>brand: <span class="prelude-ty">Option</span>&lt;String&gt;,
-    <span class="kw">pub </span>features: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
+    <span class="kw">pub </span>features: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
 }
 
 <span class="kw">pub fn </span>get_cpuid() -&gt; usize {

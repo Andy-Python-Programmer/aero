@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/mem/paging/page.rs`."><title>page.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/mem/paging/page.rs`."><title>page.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -428,7 +429,7 @@
     </span><span class="kw">const </span>SIZE: u64;
 
     <span class="doccomment">/// A string representation of the page size for debug output.
-    </span><span class="kw">const </span>SIZE_AS_DEBUG_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
+    </span><span class="kw">const </span>SIZE_AS_DEBUG_STR: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
 }
 
 <span class="doccomment">/// This trait is implemented for 4KiB and 2MiB pages, but not for 1GiB pages.
@@ -450,21 +451,21 @@
 
 <span class="kw">impl </span>PageSize <span class="kw">for </span>Size4KiB {
     <span class="kw">const </span>SIZE: u64 = <span class="number">4096</span>;
-    <span class="kw">const </span>SIZE_AS_DEBUG_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;4KiB&quot;</span>;
+    <span class="kw">const </span>SIZE_AS_DEBUG_STR: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"4KiB"</span>;
 }
 
 <span class="kw">impl </span>NotGiantPageSize <span class="kw">for </span>Size4KiB {}
 
 <span class="kw">impl </span>PageSize <span class="kw">for </span>Size2MiB {
     <span class="kw">const </span>SIZE: u64 = Size4KiB::SIZE * <span class="number">512</span>;
-    <span class="kw">const </span>SIZE_AS_DEBUG_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;2MiB&quot;</span>;
+    <span class="kw">const </span>SIZE_AS_DEBUG_STR: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"2MiB"</span>;
 }
 
 <span class="kw">impl </span>NotGiantPageSize <span class="kw">for </span>Size2MiB {}
 
 <span class="kw">impl </span>PageSize <span class="kw">for </span>Size1GiB {
     <span class="kw">const </span>SIZE: u64 = Size2MiB::SIZE * <span class="number">512</span>;
-    <span class="kw">const </span>SIZE_AS_DEBUG_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;1GiB&quot;</span>;
+    <span class="kw">const </span>SIZE_AS_DEBUG_STR: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"1GiB"</span>;
 }
 
 <span class="doccomment">/// A virtual memory page.
@@ -535,7 +536,7 @@
 <span class="kw">impl</span>&lt;S: PageSize&gt; fmt::Debug <span class="kw">for </span>Page&lt;S&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;Page[{}]({:#x})&quot;</span>,
+            <span class="string">"Page[{}]({:#x})"</span>,
             S::SIZE_AS_DEBUG_STR,
             <span class="self">self</span>.start_address().as_u64()
         ))
@@ -610,9 +611,9 @@
 
 <span class="kw">impl</span>&lt;S: PageSize&gt; fmt::Debug <span class="kw">for </span>PageRange&lt;S&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;PageRange&quot;</span>)
-            .field(<span class="string">&quot;start&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.start)
-            .field(<span class="string">&quot;end&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.end)
+        f.debug_struct(<span class="string">"PageRange"</span>)
+            .field(<span class="string">"start"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.start)
+            .field(<span class="string">"end"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.end)
             .finish()
     }
 }
@@ -622,8 +623,8 @@
 </span><span class="kw">pub struct </span>AddressNotAligned;
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>AddressNotAligned {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;the given address was not sufficiently aligned&quot;</span>)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"the given address was not sufficiently aligned"</span>)
     }
 }
 
@@ -679,7 +680,7 @@
 <span class="kw">impl</span>&lt;S: PageSize&gt; fmt::Debug <span class="kw">for </span>PhysFrame&lt;S&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;PhysFrame[{}]({:#x})&quot;</span>,
+            <span class="string">"PhysFrame[{}]({:#x})"</span>,
             S::SIZE_AS_DEBUG_STR,
             <span class="self">self</span>.start_address().as_u64()
         ))
@@ -754,9 +755,9 @@
 
 <span class="kw">impl</span>&lt;S: PageSize&gt; fmt::Debug <span class="kw">for </span>PhysFrameRange&lt;S&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;PhysFrameRange&quot;</span>)
-            .field(<span class="string">&quot;start&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.start)
-            .field(<span class="string">&quot;end&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.end)
+        f.debug_struct(<span class="string">"PhysFrameRange"</span>)
+            .field(<span class="string">"start"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.start)
+            .field(<span class="string">"end"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.end)
             .finish()
     }
 }
@@ -788,9 +789,9 @@
 
 <span class="kw">impl</span>&lt;S: PageSize&gt; fmt::Debug <span class="kw">for </span>PhysFrameRangeInclusive&lt;S&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;PhysFrameRangeInclusive&quot;</span>)
-            .field(<span class="string">&quot;start&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.start)
-            .field(<span class="string">&quot;end&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.end)
+        f.debug_struct(<span class="string">"PhysFrameRangeInclusive"</span>)
+            .field(<span class="string">"start"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.start)
+            .field(<span class="string">"end"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.end)
             .finish()
     }
 }

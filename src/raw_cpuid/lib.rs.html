@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/raw-cpuid-11.0.1/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="raw_cpuid" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/raw-cpuid-11.0.1/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="raw_cpuid" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -5647,21 +5648,21 @@
 //! let cpuid = CpuId::new();
 //!
 //! if let Some(vf) = cpuid.get_vendor_info() {
-//!     assert!(vf.as_str() == &quot;GenuineIntel&quot; || vf.as_str() == &quot;AuthenticAMD&quot;);
+//!     assert!(vf.as_str() == "GenuineIntel" || vf.as_str() == "AuthenticAMD");
 //! }
 //!
 //! let has_sse = cpuid.get_feature_info().map_or(false, |finfo| finfo.has_sse());
 //! if has_sse {
-//!     println!(&quot;CPU supports SSE!&quot;);
+//!     println!("CPU supports SSE!");
 //! }
 //!
 //! if let Some(cparams) = cpuid.get_cache_parameters() {
 //!     for cache in cparams {
 //!         let size = cache.associativity() * cache.physical_line_partitions() * cache.coherency_line_size() * cache.sets();
-//!         println!(&quot;L{}-Cache size is {}&quot;, cache.level(), size);
+//!         println!("L{}-Cache size is {}", cache.level(), size);
 //!     }
 //! } else {
-//!     println!(&quot;No cache parameter information available&quot;)
+//!     println!("No cache parameter information available")
 //! }
 //! ```
 //!
@@ -5683,15 +5684,15 @@
 //! will exist for your CPU -- just that it is potentially supported by the
 //! vendor on some of its chips. You will still have to query it at runtime.
 
-</span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
-#![crate_name = <span class="string">&quot;raw_cpuid&quot;</span>]
-#![crate_type = <span class="string">&quot;lib&quot;</span>]
+</span><span class="attr">#![cfg_attr(not(feature = <span class="string">"std"</span>), no_std)]
+#![crate_name = <span class="string">"raw_cpuid"</span>]
+#![crate_type = <span class="string">"lib"</span>]
 
 #[cfg(test)]
 #[macro_use]
 </span><span class="kw">extern crate </span>std;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;display&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"display"</span>)]
 </span><span class="kw">pub mod </span>display;
 <span class="kw">mod </span>extended;
 <span class="attr">#[cfg(test)]
@@ -5703,22 +5704,22 @@
 <span class="kw">use </span>core::slice;
 <span class="kw">use </span>core::str;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;serialize&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"serialize"</span>)]
 </span><span class="kw">use </span>serde_derive::{Deserialize, Serialize};
 
 <span class="kw">pub use </span>extended::<span class="kw-2">*</span>;
 
-<span class="doccomment">/// Uses Rust&#39;s `cpuid` function from the `arch` module.
+<span class="doccomment">/// Uses Rust's `cpuid` function from the `arch` module.
 </span><span class="attr">#[cfg(any(
-    all(target_arch = <span class="string">&quot;x86&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>), target_feature = <span class="string">&quot;sse&quot;</span>),
-    all(target_arch = <span class="string">&quot;x86_64&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>))
+    all(target_arch = <span class="string">"x86"</span>, not(target_env = <span class="string">"sgx"</span>), target_feature = <span class="string">"sse"</span>),
+    all(target_arch = <span class="string">"x86_64"</span>, not(target_env = <span class="string">"sgx"</span>))
 ))]
 </span><span class="kw">pub mod </span>native_cpuid {
     <span class="kw">use </span><span class="kw">crate</span>::CpuIdResult;
 
-    <span class="attr">#[cfg(all(target_arch = <span class="string">&quot;x86&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>), target_feature = <span class="string">&quot;sse&quot;</span>))]
+    <span class="attr">#[cfg(all(target_arch = <span class="string">"x86"</span>, not(target_env = <span class="string">"sgx"</span>), target_feature = <span class="string">"sse"</span>))]
     </span><span class="kw">use </span>core::arch::x86 <span class="kw">as </span>arch;
-    <span class="attr">#[cfg(all(target_arch = <span class="string">&quot;x86_64&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>)))]
+    <span class="attr">#[cfg(all(target_arch = <span class="string">"x86_64"</span>, not(target_env = <span class="string">"sgx"</span>)))]
     </span><span class="kw">use </span>core::arch::x86_64 <span class="kw">as </span>arch;
 
     <span class="kw">pub fn </span>cpuid_count(a: u32, c: u32) -&gt; CpuIdResult {
@@ -5734,7 +5735,7 @@
         }
     }
     <span class="doccomment">/// The native reader uses the cpuid instruction to read the cpuid data from the
-    /// CPU we&#39;re currently running on directly.
+    /// CPU we're currently running on directly.
     </span><span class="attr">#[derive(Clone, Copy)]
     </span><span class="kw">pub struct </span>CpuIdReaderNative;
 
@@ -5746,8 +5747,8 @@
 }
 
 <span class="attr">#[cfg(any(
-    all(target_arch = <span class="string">&quot;x86&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>), target_feature = <span class="string">&quot;sse&quot;</span>),
-    all(target_arch = <span class="string">&quot;x86_64&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>))
+    all(target_arch = <span class="string">"x86"</span>, not(target_env = <span class="string">"sgx"</span>), target_feature = <span class="string">"sse"</span>),
+    all(target_arch = <span class="string">"x86_64"</span>, not(target_env = <span class="string">"sgx"</span>))
 ))]
 </span><span class="kw">pub use </span>native_cpuid::CpuIdReaderNative;
 
@@ -5762,8 +5763,8 @@
 /// First parameter is cpuid leaf (EAX register value),
 /// second optional parameter is the subleaf (ECX register value).
 </span><span class="attr">#[cfg(any(
-    all(target_arch = <span class="string">&quot;x86&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>), target_feature = <span class="string">&quot;sse&quot;</span>),
-    all(target_arch = <span class="string">&quot;x86_64&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>))
+    all(target_arch = <span class="string">"x86"</span>, not(target_env = <span class="string">"sgx"</span>), target_feature = <span class="string">"sse"</span>),
+    all(target_arch = <span class="string">"x86_64"</span>, not(target_env = <span class="string">"sgx"</span>))
 ))]
 #[macro_export]
 </span><span class="macro">macro_rules! </span>cpuid {
@@ -5848,14 +5849,14 @@
         };
 
         <span class="kw">match </span>vi.as_str() {
-            <span class="string">&quot;GenuineIntel&quot; </span>=&gt; Vendor::Intel,
-            <span class="string">&quot;AuthenticAMD&quot; </span>=&gt; Vendor::Amd,
+            <span class="string">"GenuineIntel" </span>=&gt; Vendor::Intel,
+            <span class="string">"AuthenticAMD" </span>=&gt; Vendor::Amd,
             <span class="kw">_ </span>=&gt; Vendor::Unknown(res.ebx, res.ecx, res.edx),
         }
     }
 }
 
-<span class="doccomment">/// The main type used to query information about the CPU we&#39;re running on.
+<span class="doccomment">/// The main type used to query information about the CPU we're running on.
 ///
 /// Other structs can be accessed by going through this type.
 </span><span class="attr">#[derive(Clone, Copy)]
@@ -5871,8 +5872,8 @@
 }
 
 <span class="attr">#[cfg(any(
-    all(target_arch = <span class="string">&quot;x86&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>), target_feature = <span class="string">&quot;sse&quot;</span>),
-    all(target_arch = <span class="string">&quot;x86_64&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>))
+    all(target_arch = <span class="string">"x86"</span>, not(target_env = <span class="string">"sgx"</span>), target_feature = <span class="string">"sse"</span>),
+    all(target_arch = <span class="string">"x86_64"</span>, not(target_env = <span class="string">"sgx"</span>))
 ))]
 </span><span class="kw">impl </span>Default <span class="kw">for </span>CpuId&lt;CpuIdReaderNative&gt; {
     <span class="doccomment">/// Create a new `CpuId` instance.
@@ -5882,8 +5883,8 @@
 }
 
 <span class="attr">#[cfg(any(
-    all(target_arch = <span class="string">&quot;x86&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>), target_feature = <span class="string">&quot;sse&quot;</span>),
-    all(target_arch = <span class="string">&quot;x86_64&quot;</span>, not(target_env = <span class="string">&quot;sgx&quot;</span>))
+    all(target_arch = <span class="string">"x86"</span>, not(target_env = <span class="string">"sgx"</span>), target_feature = <span class="string">"sse"</span>),
+    all(target_arch = <span class="string">"x86_64"</span>, not(target_env = <span class="string">"sgx"</span>))
 ))]
 </span><span class="kw">impl </span>CpuId&lt;CpuIdReaderNative&gt; {
     <span class="doccomment">/// Create a new `CpuId` instance.
@@ -5894,7 +5895,7 @@
 
 <span class="doccomment">/// Low-level data-structure to store result of cpuid instruction.
 </span><span class="attr">#[derive(Copy, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serialize"</span>, derive(Serialize, Deserialize))]
 #[repr(C)]
 </span><span class="kw">pub struct </span>CpuIdResult {
     <span class="doccomment">/// Return value EAX register
@@ -5914,12 +5915,12 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>CpuIdResult {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;CpuIdResult&quot;</span>)
-            .field(<span class="string">&quot;eax&quot;</span>, <span class="kw-2">&amp;</span>(<span class="self">self</span>.eax <span class="kw">as </span><span class="kw-2">*const </span>u32))
-            .field(<span class="string">&quot;ebx&quot;</span>, <span class="kw-2">&amp;</span>(<span class="self">self</span>.ebx <span class="kw">as </span><span class="kw-2">*const </span>u32))
-            .field(<span class="string">&quot;ecx&quot;</span>, <span class="kw-2">&amp;</span>(<span class="self">self</span>.ecx <span class="kw">as </span><span class="kw-2">*const </span>u32))
-            .field(<span class="string">&quot;edx&quot;</span>, <span class="kw-2">&amp;</span>(<span class="self">self</span>.edx <span class="kw">as </span><span class="kw-2">*const </span>u32))
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"CpuIdResult"</span>)
+            .field(<span class="string">"eax"</span>, <span class="kw-2">&amp;</span>(<span class="self">self</span>.eax <span class="kw">as </span><span class="kw-2">*const </span>u32))
+            .field(<span class="string">"ebx"</span>, <span class="kw-2">&amp;</span>(<span class="self">self</span>.ebx <span class="kw">as </span><span class="kw-2">*const </span>u32))
+            .field(<span class="string">"ecx"</span>, <span class="kw-2">&amp;</span>(<span class="self">self</span>.ecx <span class="kw">as </span><span class="kw-2">*const </span>u32))
+            .field(<span class="string">"edx"</span>, <span class="kw-2">&amp;</span>(<span class="self">self</span>.edx <span class="kw">as </span><span class="kw-2">*const </span>u32))
             .finish()
     }
 }
@@ -6011,8 +6012,8 @@
 
     <span class="doccomment">/// Return information about the vendor (LEAF=0x00).
     ///
-    /// This leaf will contain a ASCII readable string such as &quot;GenuineIntel&quot;
-    /// for Intel CPUs or &quot;AuthenticAMD&quot; for AMD CPUs.
+    /// This leaf will contain a ASCII readable string such as "GenuineIntel"
+    /// for Intel CPUs or "AuthenticAMD" for AMD CPUs.
     ///
     /// # Platforms
     /// ✅ AMD ✅ Intel
@@ -6604,80 +6605,80 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>CpuId&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;CpuId&quot;</span>)
-            .field(<span class="string">&quot;vendor&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.vendor)
-            <span class="comment">// .field(&quot;supported_leafs&quot;, &amp;(self.supported_leafs as *const u32))
-            // .field(&quot;supported_extended_leafs&quot;, &amp;(self.supported_extended_leafs as *const u32))
-            </span>.field(<span class="string">&quot;vendor_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_vendor_info())
-            .field(<span class="string">&quot;feature_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_feature_info())
-            .field(<span class="string">&quot;cache_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_cache_info())
-            .field(<span class="string">&quot;processor_serial&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_serial())
-            .field(<span class="string">&quot;cache_parameters&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_cache_parameters())
-            .field(<span class="string">&quot;monitor_mwait_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_monitor_mwait_info())
-            .field(<span class="string">&quot;thermal_power_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_thermal_power_info())
-            .field(<span class="string">&quot;extended_feature_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_extended_feature_info())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"CpuId"</span>)
+            .field(<span class="string">"vendor"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.vendor)
+            <span class="comment">// .field("supported_leafs", &amp;(self.supported_leafs as *const u32))
+            // .field("supported_extended_leafs", &amp;(self.supported_extended_leafs as *const u32))
+            </span>.field(<span class="string">"vendor_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_vendor_info())
+            .field(<span class="string">"feature_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_feature_info())
+            .field(<span class="string">"cache_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_cache_info())
+            .field(<span class="string">"processor_serial"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_serial())
+            .field(<span class="string">"cache_parameters"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_cache_parameters())
+            .field(<span class="string">"monitor_mwait_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_monitor_mwait_info())
+            .field(<span class="string">"thermal_power_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_thermal_power_info())
+            .field(<span class="string">"extended_feature_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_extended_feature_info())
             .field(
-                <span class="string">&quot;direct_cache_access_info&quot;</span>,
+                <span class="string">"direct_cache_access_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_direct_cache_access_info(),
             )
             .field(
-                <span class="string">&quot;performance_monitoring_info&quot;</span>,
+                <span class="string">"performance_monitoring_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_performance_monitoring_info(),
             )
-            .field(<span class="string">&quot;extended_topology_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_extended_topology_info())
-            .field(<span class="string">&quot;extended_state_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_extended_state_info())
-            .field(<span class="string">&quot;rdt_monitoring_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_rdt_monitoring_info())
-            .field(<span class="string">&quot;rdt_allocation_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_rdt_allocation_info())
-            .field(<span class="string">&quot;sgx_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_sgx_info())
-            .field(<span class="string">&quot;processor_trace_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_trace_info())
-            .field(<span class="string">&quot;tsc_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_tsc_info())
+            .field(<span class="string">"extended_topology_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_extended_topology_info())
+            .field(<span class="string">"extended_state_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_extended_state_info())
+            .field(<span class="string">"rdt_monitoring_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_rdt_monitoring_info())
+            .field(<span class="string">"rdt_allocation_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_rdt_allocation_info())
+            .field(<span class="string">"sgx_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_sgx_info())
+            .field(<span class="string">"processor_trace_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_trace_info())
+            .field(<span class="string">"tsc_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_tsc_info())
             .field(
-                <span class="string">&quot;processor_frequency_info&quot;</span>,
+                <span class="string">"processor_frequency_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_frequency_info(),
             )
             .field(
-                <span class="string">&quot;deterministic_address_translation_info&quot;</span>,
+                <span class="string">"deterministic_address_translation_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_deterministic_address_translation_info(),
             )
-            .field(<span class="string">&quot;soc_vendor_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_soc_vendor_info())
-            .field(<span class="string">&quot;hypervisor_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_hypervisor_info())
+            .field(<span class="string">"soc_vendor_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_soc_vendor_info())
+            .field(<span class="string">"hypervisor_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_hypervisor_info())
             .field(
-                <span class="string">&quot;extended_processor_and_feature_identifiers&quot;</span>,
+                <span class="string">"extended_processor_and_feature_identifiers"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_extended_processor_and_feature_identifiers(),
             )
-            .field(<span class="string">&quot;processor_brand_string&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_brand_string())
-            .field(<span class="string">&quot;l1_cache_and_tlb_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_l1_cache_and_tlb_info())
+            .field(<span class="string">"processor_brand_string"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_brand_string())
+            .field(<span class="string">"l1_cache_and_tlb_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_l1_cache_and_tlb_info())
             .field(
-                <span class="string">&quot;l2_l3_cache_and_tlb_info&quot;</span>,
+                <span class="string">"l2_l3_cache_and_tlb_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_l2_l3_cache_and_tlb_info(),
             )
             .field(
-                <span class="string">&quot;advanced_power_mgmt_info&quot;</span>,
+                <span class="string">"advanced_power_mgmt_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_advanced_power_mgmt_info(),
             )
             .field(
-                <span class="string">&quot;processor_capacity_feature_info&quot;</span>,
+                <span class="string">"processor_capacity_feature_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_capacity_feature_info(),
             )
-            .field(<span class="string">&quot;svm_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_svm_info())
-            .field(<span class="string">&quot;tlb_1gb_page_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_tlb_1gb_page_info())
+            .field(<span class="string">"svm_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_svm_info())
+            .field(<span class="string">"tlb_1gb_page_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_tlb_1gb_page_info())
             .field(
-                <span class="string">&quot;performance_optimization_info&quot;</span>,
+                <span class="string">"performance_optimization_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_performance_optimization_info(),
             )
             .field(
-                <span class="string">&quot;processor_topology_info&quot;</span>,
+                <span class="string">"processor_topology_info"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.get_processor_topology_info(),
             )
-            .field(<span class="string">&quot;memory_encryption_info&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_memory_encryption_info())
+            .field(<span class="string">"memory_encryption_info"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_memory_encryption_info())
             .finish()
     }
 }
 
 <span class="doccomment">/// Vendor Info String (LEAF=0x0)
 ///
-/// A string that can be for example &quot;AuthenticAMD&quot; or &quot;GenuineIntel&quot;.
+/// A string that can be for example "AuthenticAMD" or "GenuineIntel".
 ///
 /// # Technical Background
 ///
@@ -6704,12 +6705,12 @@
             </span>slice::from_raw_parts(brand_string_start, size_of::&lt;VendorInfo&gt;())
         };
 
-        str::from_utf8(slice).unwrap_or(<span class="string">&quot;InvalidVendorString&quot;</span>)
+        str::from_utf8(slice).unwrap_or(<span class="string">"InvalidVendorString"</span>)
     }
 
     <span class="attr">#[deprecated(
-        since = <span class="string">&quot;10.0.0&quot;</span>,
-        note = <span class="string">&quot;Use idiomatic function name `as_str` instead&quot;
+        since = <span class="string">"10.0.0"</span>,
+        note = <span class="string">"Use idiomatic function name `as_str` instead"
     </span>)]
     </span><span class="kw">pub fn </span>as_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="self">self</span>.as_str()
@@ -6717,16 +6718,16 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>VendorInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;VendorInfo&quot;</span>)
-            .field(<span class="string">&quot;brand_string&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.as_str())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"VendorInfo"</span>)
+            .field(<span class="string">"brand_string"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.as_str())
             .finish()
     }
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>VendorInfo {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.as_str())
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.as_str())
     }
 }
 
@@ -6793,7 +6794,7 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>CacheInfoIter {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
         <span class="kw">let </span><span class="kw-2">mut </span>debug = f.debug_list();
         <span class="self">self</span>.clone().for_each(|<span class="kw-2">ref </span>item| {
             debug.entry(item);
@@ -6824,131 +6825,131 @@
 
 <span class="kw">impl </span>CacheInfo {
     <span class="doccomment">/// Description of the cache (from Intel Manual)
-    </span><span class="kw">pub fn </span>desc(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>desc(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self</span>.num {
-            <span class="number">0x00 </span>=&gt; <span class="string">&quot;Null descriptor, this byte contains no information&quot;</span>,
-            <span class="number">0x01 </span>=&gt; <span class="string">&quot;Instruction TLB: 4 KByte pages, 4-way set associative, 32 entries&quot;</span>,
-            <span class="number">0x02 </span>=&gt; <span class="string">&quot;Instruction TLB: 4 MByte pages, fully associative, 2 entries&quot;</span>,
-            <span class="number">0x03 </span>=&gt; <span class="string">&quot;Data TLB: 4 KByte pages, 4-way set associative, 64 entries&quot;</span>,
-            <span class="number">0x04 </span>=&gt; <span class="string">&quot;Data TLB: 4 MByte pages, 4-way set associative, 8 entries&quot;</span>,
-            <span class="number">0x05 </span>=&gt; <span class="string">&quot;Data TLB1: 4 MByte pages, 4-way set associative, 32 entries&quot;</span>,
-            <span class="number">0x06 </span>=&gt; <span class="string">&quot;1st-level instruction cache: 8 KBytes, 4-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x08 </span>=&gt; <span class="string">&quot;1st-level instruction cache: 16 KBytes, 4-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x09 </span>=&gt; <span class="string">&quot;1st-level instruction cache: 32KBytes, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x0A </span>=&gt; <span class="string">&quot;1st-level data cache: 8 KBytes, 2-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x0B </span>=&gt; <span class="string">&quot;Instruction TLB: 4 MByte pages, 4-way set associative, 4 entries&quot;</span>,
-            <span class="number">0x0C </span>=&gt; <span class="string">&quot;1st-level data cache: 16 KBytes, 4-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x0D </span>=&gt; <span class="string">&quot;1st-level data cache: 16 KBytes, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x0E </span>=&gt; <span class="string">&quot;1st-level data cache: 24 KBytes, 6-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x1D </span>=&gt; <span class="string">&quot;2nd-level cache: 128 KBytes, 2-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x21 </span>=&gt; <span class="string">&quot;2nd-level cache: 256 KBytes, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x22 </span>=&gt; <span class="string">&quot;3rd-level cache: 512 KBytes, 4-way set associative, 64 byte line size, 2 lines per sector&quot;</span>,
-            <span class="number">0x23 </span>=&gt; <span class="string">&quot;3rd-level cache: 1 MBytes, 8-way set associative, 64 byte line size, 2 lines per sector&quot;</span>,
-            <span class="number">0x24 </span>=&gt; <span class="string">&quot;2nd-level cache: 1 MBytes, 16-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x25 </span>=&gt; <span class="string">&quot;3rd-level cache: 2 MBytes, 8-way set associative, 64 byte line size, 2 lines per sector&quot;</span>,
-            <span class="number">0x29 </span>=&gt; <span class="string">&quot;3rd-level cache: 4 MBytes, 8-way set associative, 64 byte line size, 2 lines per sector&quot;</span>,
-            <span class="number">0x2C </span>=&gt; <span class="string">&quot;1st-level data cache: 32 KBytes, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x30 </span>=&gt; <span class="string">&quot;1st-level instruction cache: 32 KBytes, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x40 </span>=&gt; <span class="string">&quot;No 2nd-level cache or, if processor contains a valid 2nd-level cache, no 3rd-level cache&quot;</span>,
-            <span class="number">0x41 </span>=&gt; <span class="string">&quot;2nd-level cache: 128 KBytes, 4-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x42 </span>=&gt; <span class="string">&quot;2nd-level cache: 256 KBytes, 4-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x43 </span>=&gt; <span class="string">&quot;2nd-level cache: 512 KBytes, 4-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x44 </span>=&gt; <span class="string">&quot;2nd-level cache: 1 MByte, 4-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x45 </span>=&gt; <span class="string">&quot;2nd-level cache: 2 MByte, 4-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x46 </span>=&gt; <span class="string">&quot;3rd-level cache: 4 MByte, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x47 </span>=&gt; <span class="string">&quot;3rd-level cache: 8 MByte, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x48 </span>=&gt; <span class="string">&quot;2nd-level cache: 3MByte, 12-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x49 </span>=&gt; <span class="string">&quot;3rd-level cache: 4MB, 16-way set associative, 64-byte line size (Intel Xeon processor MP, Family 0FH, Model 06H); 2nd-level cache: 4 MByte, 16-way set ssociative, 64 byte line size&quot;</span>,
-            <span class="number">0x4A </span>=&gt; <span class="string">&quot;3rd-level cache: 6MByte, 12-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x4B </span>=&gt; <span class="string">&quot;3rd-level cache: 8MByte, 16-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x4C </span>=&gt; <span class="string">&quot;3rd-level cache: 12MByte, 12-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x4D </span>=&gt; <span class="string">&quot;3rd-level cache: 16MByte, 16-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x4E </span>=&gt; <span class="string">&quot;2nd-level cache: 6MByte, 24-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x4F </span>=&gt; <span class="string">&quot;Instruction TLB: 4 KByte pages, 32 entries&quot;</span>,
-            <span class="number">0x50 </span>=&gt; <span class="string">&quot;Instruction TLB: 4 KByte and 2-MByte or 4-MByte pages, 64 entries&quot;</span>,
-            <span class="number">0x51 </span>=&gt; <span class="string">&quot;Instruction TLB: 4 KByte and 2-MByte or 4-MByte pages, 128 entries&quot;</span>,
-            <span class="number">0x52 </span>=&gt; <span class="string">&quot;Instruction TLB: 4 KByte and 2-MByte or 4-MByte pages, 256 entries&quot;</span>,
-            <span class="number">0x55 </span>=&gt; <span class="string">&quot;Instruction TLB: 2-MByte or 4-MByte pages, fully associative, 7 entries&quot;</span>,
-            <span class="number">0x56 </span>=&gt; <span class="string">&quot;Data TLB0: 4 MByte pages, 4-way set associative, 16 entries&quot;</span>,
-            <span class="number">0x57 </span>=&gt; <span class="string">&quot;Data TLB0: 4 KByte pages, 4-way associative, 16 entries&quot;</span>,
-            <span class="number">0x59 </span>=&gt; <span class="string">&quot;Data TLB0: 4 KByte pages, fully associative, 16 entries&quot;</span>,
-            <span class="number">0x5A </span>=&gt; <span class="string">&quot;Data TLB0: 2-MByte or 4 MByte pages, 4-way set associative, 32 entries&quot;</span>,
-            <span class="number">0x5B </span>=&gt; <span class="string">&quot;Data TLB: 4 KByte and 4 MByte pages, 64 entries&quot;</span>,
-            <span class="number">0x5C </span>=&gt; <span class="string">&quot;Data TLB: 4 KByte and 4 MByte pages,128 entries&quot;</span>,
-            <span class="number">0x5D </span>=&gt; <span class="string">&quot;Data TLB: 4 KByte and 4 MByte pages,256 entries&quot;</span>,
-            <span class="number">0x60 </span>=&gt; <span class="string">&quot;1st-level data cache: 16 KByte, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x61 </span>=&gt; <span class="string">&quot;Instruction TLB: 4 KByte pages, fully associative, 48 entries&quot;</span>,
-            <span class="number">0x63 </span>=&gt; <span class="string">&quot;Data TLB: 2 MByte or 4 MByte pages, 4-way set associative, 32 entries and a separate array with 1 GByte pages, 4-way set associative, 4 entries&quot;</span>,
-            <span class="number">0x64 </span>=&gt; <span class="string">&quot;Data TLB: 4 KByte pages, 4-way set associative, 512 entries&quot;</span>,
-            <span class="number">0x66 </span>=&gt; <span class="string">&quot;1st-level data cache: 8 KByte, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x67 </span>=&gt; <span class="string">&quot;1st-level data cache: 16 KByte, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x68 </span>=&gt; <span class="string">&quot;1st-level data cache: 32 KByte, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x6A </span>=&gt; <span class="string">&quot;uTLB: 4 KByte pages, 8-way set associative, 64 entries&quot;</span>,
-            <span class="number">0x6B </span>=&gt; <span class="string">&quot;DTLB: 4 KByte pages, 8-way set associative, 256 entries&quot;</span>,
-            <span class="number">0x6C </span>=&gt; <span class="string">&quot;DTLB: 2M/4M pages, 8-way set associative, 128 entries&quot;</span>,
-            <span class="number">0x6D </span>=&gt; <span class="string">&quot;DTLB: 1 GByte pages, fully associative, 16 entries&quot;</span>,
-            <span class="number">0x70 </span>=&gt; <span class="string">&quot;Trace cache: 12 K-μop, 8-way set associative&quot;</span>,
-            <span class="number">0x71 </span>=&gt; <span class="string">&quot;Trace cache: 16 K-μop, 8-way set associative&quot;</span>,
-            <span class="number">0x72 </span>=&gt; <span class="string">&quot;Trace cache: 32 K-μop, 8-way set associative&quot;</span>,
-            <span class="number">0x76 </span>=&gt; <span class="string">&quot;Instruction TLB: 2M/4M pages, fully associative, 8 entries&quot;</span>,
-            <span class="number">0x78 </span>=&gt; <span class="string">&quot;2nd-level cache: 1 MByte, 4-way set associative, 64byte line size&quot;</span>,
-            <span class="number">0x79 </span>=&gt; <span class="string">&quot;2nd-level cache: 128 KByte, 8-way set associative, 64 byte line size, 2 lines per sector&quot;</span>,
-            <span class="number">0x7A </span>=&gt; <span class="string">&quot;2nd-level cache: 256 KByte, 8-way set associative, 64 byte line size, 2 lines per sector&quot;</span>,
-            <span class="number">0x7B </span>=&gt; <span class="string">&quot;2nd-level cache: 512 KByte, 8-way set associative, 64 byte line size, 2 lines per sector&quot;</span>,
-            <span class="number">0x7C </span>=&gt; <span class="string">&quot;2nd-level cache: 1 MByte, 8-way set associative, 64 byte line size, 2 lines per sector&quot;</span>,
-            <span class="number">0x7D </span>=&gt; <span class="string">&quot;2nd-level cache: 2 MByte, 8-way set associative, 64byte line size&quot;</span>,
-            <span class="number">0x7F </span>=&gt; <span class="string">&quot;2nd-level cache: 512 KByte, 2-way set associative, 64-byte line size&quot;</span>,
-            <span class="number">0x80 </span>=&gt; <span class="string">&quot;2nd-level cache: 512 KByte, 8-way set associative, 64-byte line size&quot;</span>,
-            <span class="number">0x82 </span>=&gt; <span class="string">&quot;2nd-level cache: 256 KByte, 8-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x83 </span>=&gt; <span class="string">&quot;2nd-level cache: 512 KByte, 8-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x84 </span>=&gt; <span class="string">&quot;2nd-level cache: 1 MByte, 8-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x85 </span>=&gt; <span class="string">&quot;2nd-level cache: 2 MByte, 8-way set associative, 32 byte line size&quot;</span>,
-            <span class="number">0x86 </span>=&gt; <span class="string">&quot;2nd-level cache: 512 KByte, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0x87 </span>=&gt; <span class="string">&quot;2nd-level cache: 1 MByte, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xA0 </span>=&gt; <span class="string">&quot;DTLB: 4k pages, fully associative, 32 entries&quot;</span>,
-            <span class="number">0xB0 </span>=&gt; <span class="string">&quot;Instruction TLB: 4 KByte pages, 4-way set associative, 128 entries&quot;</span>,
-            <span class="number">0xB1 </span>=&gt; <span class="string">&quot;Instruction TLB: 2M pages, 4-way, 8 entries or 4M pages, 4-way, 4 entries&quot;</span>,
-            <span class="number">0xB2 </span>=&gt; <span class="string">&quot;Instruction TLB: 4KByte pages, 4-way set associative, 64 entries&quot;</span>,
-            <span class="number">0xB3 </span>=&gt; <span class="string">&quot;Data TLB: 4 KByte pages, 4-way set associative, 128 entries&quot;</span>,
-            <span class="number">0xB4 </span>=&gt; <span class="string">&quot;Data TLB1: 4 KByte pages, 4-way associative, 256 entries&quot;</span>,
-            <span class="number">0xB5 </span>=&gt; <span class="string">&quot;Instruction TLB: 4KByte pages, 8-way set associative, 64 entries&quot;</span>,
-            <span class="number">0xB6 </span>=&gt; <span class="string">&quot;Instruction TLB: 4KByte pages, 8-way set associative, 128 entries&quot;</span>,
-            <span class="number">0xBA </span>=&gt; <span class="string">&quot;Data TLB1: 4 KByte pages, 4-way associative, 64 entries&quot;</span>,
-            <span class="number">0xC0 </span>=&gt; <span class="string">&quot;Data TLB: 4 KByte and 4 MByte pages, 4-way associative, 8 entries&quot;</span>,
-            <span class="number">0xC1 </span>=&gt; <span class="string">&quot;Shared 2nd-Level TLB: 4 KByte/2MByte pages, 8-way associative, 1024 entries&quot;</span>,
-            <span class="number">0xC2 </span>=&gt; <span class="string">&quot;DTLB: 2 MByte/$MByte pages, 4-way associative, 16 entries&quot;</span>,
-            <span class="number">0xC3 </span>=&gt; <span class="string">&quot;Shared 2nd-Level TLB: 4 KByte /2 MByte pages, 6-way associative, 1536 entries. Also 1GBbyte pages, 4-way, 16 entries.&quot;</span>,
-            <span class="number">0xC4 </span>=&gt; <span class="string">&quot;DTLB: 2M/4M Byte pages, 4-way associative, 32 entries&quot;</span>,
-            <span class="number">0xCA </span>=&gt; <span class="string">&quot;Shared 2nd-Level TLB: 4 KByte pages, 4-way associative, 512 entries&quot;</span>,
-            <span class="number">0xD0 </span>=&gt; <span class="string">&quot;3rd-level cache: 512 KByte, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xD1 </span>=&gt; <span class="string">&quot;3rd-level cache: 1 MByte, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xD2 </span>=&gt; <span class="string">&quot;3rd-level cache: 2 MByte, 4-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xD6 </span>=&gt; <span class="string">&quot;3rd-level cache: 1 MByte, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xD7 </span>=&gt; <span class="string">&quot;3rd-level cache: 2 MByte, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xD8 </span>=&gt; <span class="string">&quot;3rd-level cache: 4 MByte, 8-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xDC </span>=&gt; <span class="string">&quot;3rd-level cache: 1.5 MByte, 12-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xDD </span>=&gt; <span class="string">&quot;3rd-level cache: 3 MByte, 12-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xDE </span>=&gt; <span class="string">&quot;3rd-level cache: 6 MByte, 12-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xE2 </span>=&gt; <span class="string">&quot;3rd-level cache: 2 MByte, 16-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xE3 </span>=&gt; <span class="string">&quot;3rd-level cache: 4 MByte, 16-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xE4 </span>=&gt; <span class="string">&quot;3rd-level cache: 8 MByte, 16-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xEA </span>=&gt; <span class="string">&quot;3rd-level cache: 12MByte, 24-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xEB </span>=&gt; <span class="string">&quot;3rd-level cache: 18MByte, 24-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xEC </span>=&gt; <span class="string">&quot;3rd-level cache: 24MByte, 24-way set associative, 64 byte line size&quot;</span>,
-            <span class="number">0xF0 </span>=&gt; <span class="string">&quot;64-Byte prefetching&quot;</span>,
-            <span class="number">0xF1 </span>=&gt; <span class="string">&quot;128-Byte prefetching&quot;</span>,
-            <span class="number">0xFE </span>=&gt; <span class="string">&quot;CPUID leaf 2 does not report TLB descriptor information; use CPUID leaf 18H to query TLB and other address translation parameters.&quot;</span>,
-            <span class="number">0xFF </span>=&gt; <span class="string">&quot;CPUID leaf 2 does not report cache descriptor information, use CPUID leaf 4 to query cache parameters&quot;</span>,
-            <span class="kw">_ </span>=&gt; <span class="string">&quot;Unknown cache type!&quot;
+            <span class="number">0x00 </span>=&gt; <span class="string">"Null descriptor, this byte contains no information"</span>,
+            <span class="number">0x01 </span>=&gt; <span class="string">"Instruction TLB: 4 KByte pages, 4-way set associative, 32 entries"</span>,
+            <span class="number">0x02 </span>=&gt; <span class="string">"Instruction TLB: 4 MByte pages, fully associative, 2 entries"</span>,
+            <span class="number">0x03 </span>=&gt; <span class="string">"Data TLB: 4 KByte pages, 4-way set associative, 64 entries"</span>,
+            <span class="number">0x04 </span>=&gt; <span class="string">"Data TLB: 4 MByte pages, 4-way set associative, 8 entries"</span>,
+            <span class="number">0x05 </span>=&gt; <span class="string">"Data TLB1: 4 MByte pages, 4-way set associative, 32 entries"</span>,
+            <span class="number">0x06 </span>=&gt; <span class="string">"1st-level instruction cache: 8 KBytes, 4-way set associative, 32 byte line size"</span>,
+            <span class="number">0x08 </span>=&gt; <span class="string">"1st-level instruction cache: 16 KBytes, 4-way set associative, 32 byte line size"</span>,
+            <span class="number">0x09 </span>=&gt; <span class="string">"1st-level instruction cache: 32KBytes, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0x0A </span>=&gt; <span class="string">"1st-level data cache: 8 KBytes, 2-way set associative, 32 byte line size"</span>,
+            <span class="number">0x0B </span>=&gt; <span class="string">"Instruction TLB: 4 MByte pages, 4-way set associative, 4 entries"</span>,
+            <span class="number">0x0C </span>=&gt; <span class="string">"1st-level data cache: 16 KBytes, 4-way set associative, 32 byte line size"</span>,
+            <span class="number">0x0D </span>=&gt; <span class="string">"1st-level data cache: 16 KBytes, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0x0E </span>=&gt; <span class="string">"1st-level data cache: 24 KBytes, 6-way set associative, 64 byte line size"</span>,
+            <span class="number">0x1D </span>=&gt; <span class="string">"2nd-level cache: 128 KBytes, 2-way set associative, 64 byte line size"</span>,
+            <span class="number">0x21 </span>=&gt; <span class="string">"2nd-level cache: 256 KBytes, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0x22 </span>=&gt; <span class="string">"3rd-level cache: 512 KBytes, 4-way set associative, 64 byte line size, 2 lines per sector"</span>,
+            <span class="number">0x23 </span>=&gt; <span class="string">"3rd-level cache: 1 MBytes, 8-way set associative, 64 byte line size, 2 lines per sector"</span>,
+            <span class="number">0x24 </span>=&gt; <span class="string">"2nd-level cache: 1 MBytes, 16-way set associative, 64 byte line size"</span>,
+            <span class="number">0x25 </span>=&gt; <span class="string">"3rd-level cache: 2 MBytes, 8-way set associative, 64 byte line size, 2 lines per sector"</span>,
+            <span class="number">0x29 </span>=&gt; <span class="string">"3rd-level cache: 4 MBytes, 8-way set associative, 64 byte line size, 2 lines per sector"</span>,
+            <span class="number">0x2C </span>=&gt; <span class="string">"1st-level data cache: 32 KBytes, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0x30 </span>=&gt; <span class="string">"1st-level instruction cache: 32 KBytes, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0x40 </span>=&gt; <span class="string">"No 2nd-level cache or, if processor contains a valid 2nd-level cache, no 3rd-level cache"</span>,
+            <span class="number">0x41 </span>=&gt; <span class="string">"2nd-level cache: 128 KBytes, 4-way set associative, 32 byte line size"</span>,
+            <span class="number">0x42 </span>=&gt; <span class="string">"2nd-level cache: 256 KBytes, 4-way set associative, 32 byte line size"</span>,
+            <span class="number">0x43 </span>=&gt; <span class="string">"2nd-level cache: 512 KBytes, 4-way set associative, 32 byte line size"</span>,
+            <span class="number">0x44 </span>=&gt; <span class="string">"2nd-level cache: 1 MByte, 4-way set associative, 32 byte line size"</span>,
+            <span class="number">0x45 </span>=&gt; <span class="string">"2nd-level cache: 2 MByte, 4-way set associative, 32 byte line size"</span>,
+            <span class="number">0x46 </span>=&gt; <span class="string">"3rd-level cache: 4 MByte, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0x47 </span>=&gt; <span class="string">"3rd-level cache: 8 MByte, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0x48 </span>=&gt; <span class="string">"2nd-level cache: 3MByte, 12-way set associative, 64 byte line size"</span>,
+            <span class="number">0x49 </span>=&gt; <span class="string">"3rd-level cache: 4MB, 16-way set associative, 64-byte line size (Intel Xeon processor MP, Family 0FH, Model 06H); 2nd-level cache: 4 MByte, 16-way set ssociative, 64 byte line size"</span>,
+            <span class="number">0x4A </span>=&gt; <span class="string">"3rd-level cache: 6MByte, 12-way set associative, 64 byte line size"</span>,
+            <span class="number">0x4B </span>=&gt; <span class="string">"3rd-level cache: 8MByte, 16-way set associative, 64 byte line size"</span>,
+            <span class="number">0x4C </span>=&gt; <span class="string">"3rd-level cache: 12MByte, 12-way set associative, 64 byte line size"</span>,
+            <span class="number">0x4D </span>=&gt; <span class="string">"3rd-level cache: 16MByte, 16-way set associative, 64 byte line size"</span>,
+            <span class="number">0x4E </span>=&gt; <span class="string">"2nd-level cache: 6MByte, 24-way set associative, 64 byte line size"</span>,
+            <span class="number">0x4F </span>=&gt; <span class="string">"Instruction TLB: 4 KByte pages, 32 entries"</span>,
+            <span class="number">0x50 </span>=&gt; <span class="string">"Instruction TLB: 4 KByte and 2-MByte or 4-MByte pages, 64 entries"</span>,
+            <span class="number">0x51 </span>=&gt; <span class="string">"Instruction TLB: 4 KByte and 2-MByte or 4-MByte pages, 128 entries"</span>,
+            <span class="number">0x52 </span>=&gt; <span class="string">"Instruction TLB: 4 KByte and 2-MByte or 4-MByte pages, 256 entries"</span>,
+            <span class="number">0x55 </span>=&gt; <span class="string">"Instruction TLB: 2-MByte or 4-MByte pages, fully associative, 7 entries"</span>,
+            <span class="number">0x56 </span>=&gt; <span class="string">"Data TLB0: 4 MByte pages, 4-way set associative, 16 entries"</span>,
+            <span class="number">0x57 </span>=&gt; <span class="string">"Data TLB0: 4 KByte pages, 4-way associative, 16 entries"</span>,
+            <span class="number">0x59 </span>=&gt; <span class="string">"Data TLB0: 4 KByte pages, fully associative, 16 entries"</span>,
+            <span class="number">0x5A </span>=&gt; <span class="string">"Data TLB0: 2-MByte or 4 MByte pages, 4-way set associative, 32 entries"</span>,
+            <span class="number">0x5B </span>=&gt; <span class="string">"Data TLB: 4 KByte and 4 MByte pages, 64 entries"</span>,
+            <span class="number">0x5C </span>=&gt; <span class="string">"Data TLB: 4 KByte and 4 MByte pages,128 entries"</span>,
+            <span class="number">0x5D </span>=&gt; <span class="string">"Data TLB: 4 KByte and 4 MByte pages,256 entries"</span>,
+            <span class="number">0x60 </span>=&gt; <span class="string">"1st-level data cache: 16 KByte, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0x61 </span>=&gt; <span class="string">"Instruction TLB: 4 KByte pages, fully associative, 48 entries"</span>,
+            <span class="number">0x63 </span>=&gt; <span class="string">"Data TLB: 2 MByte or 4 MByte pages, 4-way set associative, 32 entries and a separate array with 1 GByte pages, 4-way set associative, 4 entries"</span>,
+            <span class="number">0x64 </span>=&gt; <span class="string">"Data TLB: 4 KByte pages, 4-way set associative, 512 entries"</span>,
+            <span class="number">0x66 </span>=&gt; <span class="string">"1st-level data cache: 8 KByte, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0x67 </span>=&gt; <span class="string">"1st-level data cache: 16 KByte, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0x68 </span>=&gt; <span class="string">"1st-level data cache: 32 KByte, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0x6A </span>=&gt; <span class="string">"uTLB: 4 KByte pages, 8-way set associative, 64 entries"</span>,
+            <span class="number">0x6B </span>=&gt; <span class="string">"DTLB: 4 KByte pages, 8-way set associative, 256 entries"</span>,
+            <span class="number">0x6C </span>=&gt; <span class="string">"DTLB: 2M/4M pages, 8-way set associative, 128 entries"</span>,
+            <span class="number">0x6D </span>=&gt; <span class="string">"DTLB: 1 GByte pages, fully associative, 16 entries"</span>,
+            <span class="number">0x70 </span>=&gt; <span class="string">"Trace cache: 12 K-μop, 8-way set associative"</span>,
+            <span class="number">0x71 </span>=&gt; <span class="string">"Trace cache: 16 K-μop, 8-way set associative"</span>,
+            <span class="number">0x72 </span>=&gt; <span class="string">"Trace cache: 32 K-μop, 8-way set associative"</span>,
+            <span class="number">0x76 </span>=&gt; <span class="string">"Instruction TLB: 2M/4M pages, fully associative, 8 entries"</span>,
+            <span class="number">0x78 </span>=&gt; <span class="string">"2nd-level cache: 1 MByte, 4-way set associative, 64byte line size"</span>,
+            <span class="number">0x79 </span>=&gt; <span class="string">"2nd-level cache: 128 KByte, 8-way set associative, 64 byte line size, 2 lines per sector"</span>,
+            <span class="number">0x7A </span>=&gt; <span class="string">"2nd-level cache: 256 KByte, 8-way set associative, 64 byte line size, 2 lines per sector"</span>,
+            <span class="number">0x7B </span>=&gt; <span class="string">"2nd-level cache: 512 KByte, 8-way set associative, 64 byte line size, 2 lines per sector"</span>,
+            <span class="number">0x7C </span>=&gt; <span class="string">"2nd-level cache: 1 MByte, 8-way set associative, 64 byte line size, 2 lines per sector"</span>,
+            <span class="number">0x7D </span>=&gt; <span class="string">"2nd-level cache: 2 MByte, 8-way set associative, 64byte line size"</span>,
+            <span class="number">0x7F </span>=&gt; <span class="string">"2nd-level cache: 512 KByte, 2-way set associative, 64-byte line size"</span>,
+            <span class="number">0x80 </span>=&gt; <span class="string">"2nd-level cache: 512 KByte, 8-way set associative, 64-byte line size"</span>,
+            <span class="number">0x82 </span>=&gt; <span class="string">"2nd-level cache: 256 KByte, 8-way set associative, 32 byte line size"</span>,
+            <span class="number">0x83 </span>=&gt; <span class="string">"2nd-level cache: 512 KByte, 8-way set associative, 32 byte line size"</span>,
+            <span class="number">0x84 </span>=&gt; <span class="string">"2nd-level cache: 1 MByte, 8-way set associative, 32 byte line size"</span>,
+            <span class="number">0x85 </span>=&gt; <span class="string">"2nd-level cache: 2 MByte, 8-way set associative, 32 byte line size"</span>,
+            <span class="number">0x86 </span>=&gt; <span class="string">"2nd-level cache: 512 KByte, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0x87 </span>=&gt; <span class="string">"2nd-level cache: 1 MByte, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0xA0 </span>=&gt; <span class="string">"DTLB: 4k pages, fully associative, 32 entries"</span>,
+            <span class="number">0xB0 </span>=&gt; <span class="string">"Instruction TLB: 4 KByte pages, 4-way set associative, 128 entries"</span>,
+            <span class="number">0xB1 </span>=&gt; <span class="string">"Instruction TLB: 2M pages, 4-way, 8 entries or 4M pages, 4-way, 4 entries"</span>,
+            <span class="number">0xB2 </span>=&gt; <span class="string">"Instruction TLB: 4KByte pages, 4-way set associative, 64 entries"</span>,
+            <span class="number">0xB3 </span>=&gt; <span class="string">"Data TLB: 4 KByte pages, 4-way set associative, 128 entries"</span>,
+            <span class="number">0xB4 </span>=&gt; <span class="string">"Data TLB1: 4 KByte pages, 4-way associative, 256 entries"</span>,
+            <span class="number">0xB5 </span>=&gt; <span class="string">"Instruction TLB: 4KByte pages, 8-way set associative, 64 entries"</span>,
+            <span class="number">0xB6 </span>=&gt; <span class="string">"Instruction TLB: 4KByte pages, 8-way set associative, 128 entries"</span>,
+            <span class="number">0xBA </span>=&gt; <span class="string">"Data TLB1: 4 KByte pages, 4-way associative, 64 entries"</span>,
+            <span class="number">0xC0 </span>=&gt; <span class="string">"Data TLB: 4 KByte and 4 MByte pages, 4-way associative, 8 entries"</span>,
+            <span class="number">0xC1 </span>=&gt; <span class="string">"Shared 2nd-Level TLB: 4 KByte/2MByte pages, 8-way associative, 1024 entries"</span>,
+            <span class="number">0xC2 </span>=&gt; <span class="string">"DTLB: 2 MByte/$MByte pages, 4-way associative, 16 entries"</span>,
+            <span class="number">0xC3 </span>=&gt; <span class="string">"Shared 2nd-Level TLB: 4 KByte /2 MByte pages, 6-way associative, 1536 entries. Also 1GBbyte pages, 4-way, 16 entries."</span>,
+            <span class="number">0xC4 </span>=&gt; <span class="string">"DTLB: 2M/4M Byte pages, 4-way associative, 32 entries"</span>,
+            <span class="number">0xCA </span>=&gt; <span class="string">"Shared 2nd-Level TLB: 4 KByte pages, 4-way associative, 512 entries"</span>,
+            <span class="number">0xD0 </span>=&gt; <span class="string">"3rd-level cache: 512 KByte, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0xD1 </span>=&gt; <span class="string">"3rd-level cache: 1 MByte, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0xD2 </span>=&gt; <span class="string">"3rd-level cache: 2 MByte, 4-way set associative, 64 byte line size"</span>,
+            <span class="number">0xD6 </span>=&gt; <span class="string">"3rd-level cache: 1 MByte, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0xD7 </span>=&gt; <span class="string">"3rd-level cache: 2 MByte, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0xD8 </span>=&gt; <span class="string">"3rd-level cache: 4 MByte, 8-way set associative, 64 byte line size"</span>,
+            <span class="number">0xDC </span>=&gt; <span class="string">"3rd-level cache: 1.5 MByte, 12-way set associative, 64 byte line size"</span>,
+            <span class="number">0xDD </span>=&gt; <span class="string">"3rd-level cache: 3 MByte, 12-way set associative, 64 byte line size"</span>,
+            <span class="number">0xDE </span>=&gt; <span class="string">"3rd-level cache: 6 MByte, 12-way set associative, 64 byte line size"</span>,
+            <span class="number">0xE2 </span>=&gt; <span class="string">"3rd-level cache: 2 MByte, 16-way set associative, 64 byte line size"</span>,
+            <span class="number">0xE3 </span>=&gt; <span class="string">"3rd-level cache: 4 MByte, 16-way set associative, 64 byte line size"</span>,
+            <span class="number">0xE4 </span>=&gt; <span class="string">"3rd-level cache: 8 MByte, 16-way set associative, 64 byte line size"</span>,
+            <span class="number">0xEA </span>=&gt; <span class="string">"3rd-level cache: 12MByte, 24-way set associative, 64 byte line size"</span>,
+            <span class="number">0xEB </span>=&gt; <span class="string">"3rd-level cache: 18MByte, 24-way set associative, 64 byte line size"</span>,
+            <span class="number">0xEC </span>=&gt; <span class="string">"3rd-level cache: 24MByte, 24-way set associative, 64 byte line size"</span>,
+            <span class="number">0xF0 </span>=&gt; <span class="string">"64-Byte prefetching"</span>,
+            <span class="number">0xF1 </span>=&gt; <span class="string">"128-Byte prefetching"</span>,
+            <span class="number">0xFE </span>=&gt; <span class="string">"CPUID leaf 2 does not report TLB descriptor information; use CPUID leaf 18H to query TLB and other address translation parameters."</span>,
+            <span class="number">0xFF </span>=&gt; <span class="string">"CPUID leaf 2 does not report cache descriptor information, use CPUID leaf 4 to query cache parameters"</span>,
+            <span class="kw">_ </span>=&gt; <span class="string">"Unknown cache type!"
         </span>}
     }
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>CacheInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;CacheInfo&quot;</span>)
-            .field(<span class="string">&quot;typ&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.typ)
-            .field(<span class="string">&quot;desc&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.desc())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        f.debug_struct(<span class="string">"CacheInfo"</span>)
+            .field(<span class="string">"typ"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.typ)
+            .field(<span class="string">"desc"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.desc())
             .finish()
     }
 }
@@ -6956,15 +6957,15 @@
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>CacheInfo {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">let </span>typ = <span class="kw">match </span><span class="self">self</span>.typ {
-            CacheInfoType::General =&gt; <span class="string">&quot;N/A&quot;</span>,
-            CacheInfoType::Cache =&gt; <span class="string">&quot;Cache&quot;</span>,
-            CacheInfoType::TLB =&gt; <span class="string">&quot;TLB&quot;</span>,
-            CacheInfoType::STLB =&gt; <span class="string">&quot;STLB&quot;</span>,
-            CacheInfoType::DTLB =&gt; <span class="string">&quot;DTLB&quot;</span>,
-            CacheInfoType::Prefetch =&gt; <span class="string">&quot;Prefetcher&quot;</span>,
+            CacheInfoType::General =&gt; <span class="string">"N/A"</span>,
+            CacheInfoType::Cache =&gt; <span class="string">"Cache"</span>,
+            CacheInfoType::TLB =&gt; <span class="string">"TLB"</span>,
+            CacheInfoType::STLB =&gt; <span class="string">"STLB"</span>,
+            CacheInfoType::DTLB =&gt; <span class="string">"DTLB"</span>,
+            CacheInfoType::Prefetch =&gt; <span class="string">"Prefetcher"</span>,
         };
 
-        <span class="macro">write!</span>(f, <span class="string">&quot;{:x}:\t {}: {}&quot;</span>, <span class="self">self</span>.num, typ, <span class="self">self</span>.desc())
+        <span class="macro">write!</span>(f, <span class="string">"{:x}:\t {}: {}"</span>, <span class="self">self</span>.num, typ, <span class="self">self</span>.desc())
     }
 }
 
@@ -7458,10 +7459,10 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>ProcessorSerial {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;ProcessorSerial&quot;</span>)
-            .field(<span class="string">&quot;serial_lower&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.serial_lower())
-            .field(<span class="string">&quot;serial_middle&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.serial_middle())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"ProcessorSerial"</span>)
+            .field(<span class="string">"serial_lower"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.serial_lower())
+            .field(<span class="string">"serial_middle"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.serial_middle())
             .finish()
     }
 }
@@ -7551,498 +7552,498 @@
     }
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Streaming SIMD Extensions 3 (SSE3). A value of 1 indicates the processor \
-               supports this technology.&quot;</span>,
+        doc = <span class="string">"Streaming SIMD Extensions 3 (SSE3). A value of 1 indicates the processor \
+               supports this technology."</span>,
         has_sse3,
         edx_ecx,
         FeatureInfoFlags::SSE3
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;PCLMULQDQ. A value of 1 indicates the processor supports the PCLMULQDQ \
-               instruction&quot;</span>,
+        doc = <span class="string">"PCLMULQDQ. A value of 1 indicates the processor supports the PCLMULQDQ \
+               instruction"</span>,
         has_pclmulqdq,
         edx_ecx,
         FeatureInfoFlags::PCLMULQDQ
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;64-bit DS Area. A value of 1 indicates the processor supports DS area \
-               using 64-bit layout&quot;</span>,
+        doc = <span class="string">"64-bit DS Area. A value of 1 indicates the processor supports DS area \
+               using 64-bit layout"</span>,
         has_ds_area,
         edx_ecx,
         FeatureInfoFlags::DTES64
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;MONITOR/MWAIT. A value of 1 indicates the processor supports this feature.&quot;</span>,
+        doc = <span class="string">"MONITOR/MWAIT. A value of 1 indicates the processor supports this feature."</span>,
         has_monitor_mwait,
         edx_ecx,
         FeatureInfoFlags::MONITOR
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;CPL Qualified Debug Store. A value of 1 indicates the processor supports \
+        doc = <span class="string">"CPL Qualified Debug Store. A value of 1 indicates the processor supports \
                the extensions to the  Debug Store feature to allow for branch message \
-               storage qualified by CPL.&quot;</span>,
+               storage qualified by CPL."</span>,
         has_cpl,
         edx_ecx,
         FeatureInfoFlags::DSCPL
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Virtual Machine Extensions. A value of 1 indicates that the processor \
-               supports this technology.&quot;</span>,
+        doc = <span class="string">"Virtual Machine Extensions. A value of 1 indicates that the processor \
+               supports this technology."</span>,
         has_vmx,
         edx_ecx,
         FeatureInfoFlags::VMX
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Safer Mode Extensions. A value of 1 indicates that the processor supports \
-               this technology. See Chapter 5, Safer Mode Extensions Reference.&quot;</span>,
+        doc = <span class="string">"Safer Mode Extensions. A value of 1 indicates that the processor supports \
+               this technology. See Chapter 5, Safer Mode Extensions Reference."</span>,
         has_smx,
         edx_ecx,
         FeatureInfoFlags::SMX
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Enhanced Intel SpeedStep® technology. A value of 1 indicates that the \
-               processor supports this technology.&quot;</span>,
+        doc = <span class="string">"Enhanced Intel SpeedStep® technology. A value of 1 indicates that the \
+               processor supports this technology."</span>,
         has_eist,
         edx_ecx,
         FeatureInfoFlags::EIST
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Thermal Monitor 2. A value of 1 indicates whether the processor supports \
-               this technology.&quot;</span>,
+        doc = <span class="string">"Thermal Monitor 2. A value of 1 indicates whether the processor supports \
+               this technology."</span>,
         has_tm2,
         edx_ecx,
         FeatureInfoFlags::TM2
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates the presence of the Supplemental Streaming SIMD \
+        doc = <span class="string">"A value of 1 indicates the presence of the Supplemental Streaming SIMD \
                Extensions 3 (SSSE3). A value of 0 indicates the instruction extensions \
-               are not present in the processor&quot;</span>,
+               are not present in the processor"</span>,
         has_ssse3,
         edx_ecx,
         FeatureInfoFlags::SSSE3
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;L1 Context ID. A value of 1 indicates the L1 data cache mode can be set \
+        doc = <span class="string">"L1 Context ID. A value of 1 indicates the L1 data cache mode can be set \
                to either adaptive mode or shared mode. A value of 0 indicates this \
                feature is not supported. See definition of the IA32_MISC_ENABLE MSR Bit \
-               24 (L1 Data Cache Context Mode) for details.&quot;</span>,
+               24 (L1 Data Cache Context Mode) for details."</span>,
         has_cnxtid,
         edx_ecx,
         FeatureInfoFlags::CNXTID
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates the processor supports FMA extensions using YMM \
-               state.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates the processor supports FMA extensions using YMM \
+               state."</span>,
         has_fma,
         edx_ecx,
         FeatureInfoFlags::FMA
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;CMPXCHG16B Available. A value of 1 indicates that the feature is \
+        doc = <span class="string">"CMPXCHG16B Available. A value of 1 indicates that the feature is \
                available. See the CMPXCHG8B/CMPXCHG16B Compare and Exchange Bytes \
-               section. 14&quot;</span>,
+               section. 14"</span>,
         has_cmpxchg16b,
         edx_ecx,
         FeatureInfoFlags::CMPXCHG16B
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Perfmon and Debug Capability: A value of 1 indicates the processor \
+        doc = <span class="string">"Perfmon and Debug Capability: A value of 1 indicates the processor \
                supports the performance   and debug feature indication MSR \
-               IA32_PERF_CAPABILITIES.&quot;</span>,
+               IA32_PERF_CAPABILITIES."</span>,
         has_pdcm,
         edx_ecx,
         FeatureInfoFlags::PDCM
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Process-context identifiers. A value of 1 indicates that the processor \
-               supports PCIDs and the software may set CR4.PCIDE to 1.&quot;</span>,
+        doc = <span class="string">"Process-context identifiers. A value of 1 indicates that the processor \
+               supports PCIDs and the software may set CR4.PCIDE to 1."</span>,
         has_pcid,
         edx_ecx,
         FeatureInfoFlags::PCID
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates the processor supports the ability to prefetch \
-               data from a memory mapped device.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates the processor supports the ability to prefetch \
+               data from a memory mapped device."</span>,
         has_dca,
         edx_ecx,
         FeatureInfoFlags::DCA
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the processor supports SSE4.1.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that the processor supports SSE4.1."</span>,
         has_sse41,
         edx_ecx,
         FeatureInfoFlags::SSE41
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the processor supports SSE4.2.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that the processor supports SSE4.2."</span>,
         has_sse42,
         edx_ecx,
         FeatureInfoFlags::SSE42
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the processor supports x2APIC feature.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that the processor supports x2APIC feature."</span>,
         has_x2apic,
         edx_ecx,
         FeatureInfoFlags::X2APIC
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the processor supports MOVBE instruction.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that the processor supports MOVBE instruction."</span>,
         has_movbe,
         edx_ecx,
         FeatureInfoFlags::MOVBE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the processor supports the POPCNT instruction.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that the processor supports the POPCNT instruction."</span>,
         has_popcnt,
         edx_ecx,
         FeatureInfoFlags::POPCNT
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the processors local APIC timer supports \
-               one-shot operation using a TSC deadline value.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that the processors local APIC timer supports \
+               one-shot operation using a TSC deadline value."</span>,
         has_tsc_deadline,
         edx_ecx,
         FeatureInfoFlags::TSC_DEADLINE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the processor supports the AESNI instruction \
-               extensions.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that the processor supports the AESNI instruction \
+               extensions."</span>,
         has_aesni,
         edx_ecx,
         FeatureInfoFlags::AESNI
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the processor supports the XSAVE/XRSTOR \
+        doc = <span class="string">"A value of 1 indicates that the processor supports the XSAVE/XRSTOR \
                processor extended states feature, the XSETBV/XGETBV instructions, and \
-               XCR0.&quot;</span>,
+               XCR0."</span>,
         has_xsave,
         edx_ecx,
         FeatureInfoFlags::XSAVE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that the OS has enabled XSETBV/XGETBV instructions \
+        doc = <span class="string">"A value of 1 indicates that the OS has enabled XSETBV/XGETBV instructions \
                to access XCR0, and support for processor extended state management using \
-               XSAVE/XRSTOR.&quot;</span>,
+               XSAVE/XRSTOR."</span>,
         has_oxsave,
         edx_ecx,
         FeatureInfoFlags::OSXSAVE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates the processor supports the AVX instruction \
-               extensions.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates the processor supports the AVX instruction \
+               extensions."</span>,
         has_avx,
         edx_ecx,
         FeatureInfoFlags::AVX
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that processor supports 16-bit floating-point \
-               conversion instructions.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that processor supports 16-bit floating-point \
+               conversion instructions."</span>,
         has_f16c,
         edx_ecx,
         FeatureInfoFlags::F16C
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates that processor supports RDRAND instruction.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates that processor supports RDRAND instruction."</span>,
         has_rdrand,
         edx_ecx,
         FeatureInfoFlags::RDRAND
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;A value of 1 indicates the indicates the presence of a hypervisor.&quot;</span>,
+        doc = <span class="string">"A value of 1 indicates the indicates the presence of a hypervisor."</span>,
         has_hypervisor,
         edx_ecx,
         FeatureInfoFlags::HYPERVISOR
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Floating Point Unit On-Chip. The processor contains an x87 FPU.&quot;</span>,
+        doc = <span class="string">"Floating Point Unit On-Chip. The processor contains an x87 FPU."</span>,
         has_fpu,
         edx_ecx,
         FeatureInfoFlags::FPU
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Virtual 8086 Mode Enhancements. Virtual 8086 mode enhancements, including \
+        doc = <span class="string">"Virtual 8086 Mode Enhancements. Virtual 8086 mode enhancements, including \
                CR4.VME for controlling the feature, CR4.PVI for protected mode virtual \
                interrupts, software interrupt indirection, expansion of the TSS with the \
-               software indirection bitmap, and EFLAGS.VIF and EFLAGS.VIP flags.&quot;</span>,
+               software indirection bitmap, and EFLAGS.VIF and EFLAGS.VIP flags."</span>,
         has_vme,
         edx_ecx,
         FeatureInfoFlags::VME
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Debugging Extensions. Support for I/O breakpoints, including CR4.DE for \
-               controlling the feature, and optional trapping of accesses to DR4 and DR5.&quot;</span>,
+        doc = <span class="string">"Debugging Extensions. Support for I/O breakpoints, including CR4.DE for \
+               controlling the feature, and optional trapping of accesses to DR4 and DR5."</span>,
         has_de,
         edx_ecx,
         FeatureInfoFlags::DE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Page Size Extension. Large pages of size 4 MByte are supported, including \
+        doc = <span class="string">"Page Size Extension. Large pages of size 4 MByte are supported, including \
                CR4.PSE for controlling the feature, the defined dirty bit in PDE (Page \
-               Directory Entries), optional reserved bit trapping in CR3, PDEs, and PTEs.&quot;</span>,
+               Directory Entries), optional reserved bit trapping in CR3, PDEs, and PTEs."</span>,
         has_pse,
         edx_ecx,
         FeatureInfoFlags::PSE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Time Stamp Counter. The RDTSC instruction is supported, including CR4.TSD \
-               for controlling privilege.&quot;</span>,
+        doc = <span class="string">"Time Stamp Counter. The RDTSC instruction is supported, including CR4.TSD \
+               for controlling privilege."</span>,
         has_tsc,
         edx_ecx,
         FeatureInfoFlags::TSC
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Model Specific Registers RDMSR and WRMSR Instructions. The RDMSR and \
+        doc = <span class="string">"Model Specific Registers RDMSR and WRMSR Instructions. The RDMSR and \
                WRMSR instructions are supported. Some of the MSRs are implementation \
-               dependent.&quot;</span>,
+               dependent."</span>,
         has_msr,
         edx_ecx,
         FeatureInfoFlags::MSR
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Physical Address Extension. Physical addresses greater than 32 bits are \
+        doc = <span class="string">"Physical Address Extension. Physical addresses greater than 32 bits are \
                supported: extended page table entry formats, an extra level in the page \
                translation tables is defined, 2-MByte pages are supported instead of 4 \
-               Mbyte pages if PAE bit is 1.&quot;</span>,
+               Mbyte pages if PAE bit is 1."</span>,
         has_pae,
         edx_ecx,
         FeatureInfoFlags::PAE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Machine Check Exception. Exception 18 is defined for Machine Checks, \
+        doc = <span class="string">"Machine Check Exception. Exception 18 is defined for Machine Checks, \
                including CR4.MCE for controlling the feature. This feature does not \
                define the model-specific implementations of machine-check error logging, \
                reporting, and processor shutdowns. Machine Check exception handlers may \
                have to depend on processor version to do model specific processing of \
-               the exception, or test for the presence of the Machine Check feature.&quot;</span>,
+               the exception, or test for the presence of the Machine Check feature."</span>,
         has_mce,
         edx_ecx,
         FeatureInfoFlags::MCE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;CMPXCHG8B Instruction. The compare-and-exchange 8 bytes (64 bits) \
-               instruction is supported (implicitly locked and atomic).&quot;</span>,
+        doc = <span class="string">"CMPXCHG8B Instruction. The compare-and-exchange 8 bytes (64 bits) \
+               instruction is supported (implicitly locked and atomic)."</span>,
         has_cmpxchg8b,
         edx_ecx,
         FeatureInfoFlags::CX8
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;APIC On-Chip. The processor contains an Advanced Programmable Interrupt \
+        doc = <span class="string">"APIC On-Chip. The processor contains an Advanced Programmable Interrupt \
                Controller (APIC), responding to memory mapped commands in the physical \
                address range FFFE0000H to FFFE0FFFH (by default - some processors permit \
-               the APIC to be relocated).&quot;</span>,
+               the APIC to be relocated)."</span>,
         has_apic,
         edx_ecx,
         FeatureInfoFlags::APIC
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;SYSENTER and SYSEXIT Instructions. The SYSENTER and SYSEXIT and \
-               associated MSRs are supported.&quot;</span>,
+        doc = <span class="string">"SYSENTER and SYSEXIT Instructions. The SYSENTER and SYSEXIT and \
+               associated MSRs are supported."</span>,
         has_sysenter_sysexit,
         edx_ecx,
         FeatureInfoFlags::SEP
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Memory Type Range Registers. MTRRs are supported. The MTRRcap MSR \
+        doc = <span class="string">"Memory Type Range Registers. MTRRs are supported. The MTRRcap MSR \
                contains feature bits that describe what memory types are supported, how \
-               many variable MTRRs are supported, and whether fixed MTRRs are supported.&quot;</span>,
+               many variable MTRRs are supported, and whether fixed MTRRs are supported."</span>,
         has_mtrr,
         edx_ecx,
         FeatureInfoFlags::MTRR
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Page Global Bit. The global bit is supported in paging-structure entries \
+        doc = <span class="string">"Page Global Bit. The global bit is supported in paging-structure entries \
                that map a page, indicating TLB entries that are common to different \
-               processes and need not be flushed. The CR4.PGE bit controls this feature.&quot;</span>,
+               processes and need not be flushed. The CR4.PGE bit controls this feature."</span>,
         has_pge,
         edx_ecx,
         FeatureInfoFlags::PGE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Machine Check Architecture. A value of 1 indicates the Machine Check \
+        doc = <span class="string">"Machine Check Architecture. A value of 1 indicates the Machine Check \
                Architecture of reporting machine errors is supported. The MCG_CAP MSR \
                contains feature bits describing how many banks of error reporting MSRs \
-               are supported.&quot;</span>,
+               are supported."</span>,
         has_mca,
         edx_ecx,
         FeatureInfoFlags::MCA
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Conditional Move Instructions. The conditional move instruction CMOV is \
+        doc = <span class="string">"Conditional Move Instructions. The conditional move instruction CMOV is \
                supported. In addition, if x87 FPU is present as indicated by the \
-               CPUID.FPU feature bit, then the FCOMI and FCMOV instructions are supported&quot;</span>,
+               CPUID.FPU feature bit, then the FCOMI and FCMOV instructions are supported"</span>,
         has_cmov,
         edx_ecx,
         FeatureInfoFlags::CMOV
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Page Attribute Table. Page Attribute Table is supported. This feature \
+        doc = <span class="string">"Page Attribute Table. Page Attribute Table is supported. This feature \
                augments the Memory Type Range Registers (MTRRs), allowing an operating \
                system to specify attributes of memory accessed through a linear address \
-               on a 4KB granularity.&quot;</span>,
+               on a 4KB granularity."</span>,
         has_pat,
         edx_ecx,
         FeatureInfoFlags::PAT
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;36-Bit Page Size Extension. 4-MByte pages addressing physical memory \
+        doc = <span class="string">"36-Bit Page Size Extension. 4-MByte pages addressing physical memory \
                beyond 4 GBytes are supported with 32-bit paging. This feature indicates \
                that upper bits of the physical address of a 4-MByte page are encoded in \
                bits 20:13 of the page-directory entry. Such physical addresses are \
-               limited by MAXPHYADDR and may be up to 40 bits in size.&quot;</span>,
+               limited by MAXPHYADDR and may be up to 40 bits in size."</span>,
         has_pse36,
         edx_ecx,
         FeatureInfoFlags::PSE36
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Processor Serial Number. The processor supports the 96-bit processor \
-               identification number feature and the feature is enabled.&quot;</span>,
+        doc = <span class="string">"Processor Serial Number. The processor supports the 96-bit processor \
+               identification number feature and the feature is enabled."</span>,
         has_psn,
         edx_ecx,
         FeatureInfoFlags::PSN
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;CLFLUSH Instruction. CLFLUSH Instruction is supported.&quot;</span>,
+        doc = <span class="string">"CLFLUSH Instruction. CLFLUSH Instruction is supported."</span>,
         has_clflush,
         edx_ecx,
         FeatureInfoFlags::CLFSH
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Debug Store. The processor supports the ability to write debug \
+        doc = <span class="string">"Debug Store. The processor supports the ability to write debug \
                information into a memory resident buffer. This feature is used by the \
                branch trace store (BTS) and processor event-based sampling (PEBS) \
                facilities (see Chapter 23, Introduction to Virtual-Machine Extensions, \
                in the Intel® 64 and IA-32 Architectures Software Developers Manual, \
-               Volume 3C).&quot;</span>,
+               Volume 3C)."</span>,
         has_ds,
         edx_ecx,
         FeatureInfoFlags::DS
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Thermal Monitor and Software Controlled Clock Facilities. The processor \
+        doc = <span class="string">"Thermal Monitor and Software Controlled Clock Facilities. The processor \
                implements internal MSRs that allow processor temperature to be monitored \
                and processor performance to be modulated in predefined duty cycles under \
-               software control.&quot;</span>,
+               software control."</span>,
         has_acpi,
         edx_ecx,
         FeatureInfoFlags::ACPI
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Intel MMX Technology. The processor supports the Intel MMX technology.&quot;</span>,
+        doc = <span class="string">"Intel MMX Technology. The processor supports the Intel MMX technology."</span>,
         has_mmx,
         edx_ecx,
         FeatureInfoFlags::MMX
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;FXSAVE and FXRSTOR Instructions. The FXSAVE and FXRSTOR instructions are \
+        doc = <span class="string">"FXSAVE and FXRSTOR Instructions. The FXSAVE and FXRSTOR instructions are \
                supported for fast save and restore of the floating point context. \
                Presence of this bit also indicates that CR4.OSFXSR is available for an \
                operating system to indicate that it supports the FXSAVE and FXRSTOR \
-               instructions.&quot;</span>,
+               instructions."</span>,
         has_fxsave_fxstor,
         edx_ecx,
         FeatureInfoFlags::FXSR
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;SSE. The processor supports the SSE extensions.&quot;</span>,
+        doc = <span class="string">"SSE. The processor supports the SSE extensions."</span>,
         has_sse,
         edx_ecx,
         FeatureInfoFlags::SSE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;SSE2. The processor supports the SSE2 extensions.&quot;</span>,
+        doc = <span class="string">"SSE2. The processor supports the SSE2 extensions."</span>,
         has_sse2,
         edx_ecx,
         FeatureInfoFlags::SSE2
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Self Snoop. The processor supports the management of conflicting memory \
+        doc = <span class="string">"Self Snoop. The processor supports the management of conflicting memory \
                types by performing a snoop of its own cache structure for transactions \
-               issued to the bus.&quot;</span>,
+               issued to the bus."</span>,
         has_ss,
         edx_ecx,
         FeatureInfoFlags::SS
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Max APIC IDs reserved field is Valid. A value of 0 for HTT indicates \
+        doc = <span class="string">"Max APIC IDs reserved field is Valid. A value of 0 for HTT indicates \
                there is only a single logical processor in the package and software \
                should assume only a single APIC ID is reserved.  A value of 1 for HTT \
                indicates the value in CPUID.1.EBX\\[23:16\\] (the Maximum number of \
                addressable IDs for logical processors in this package) is valid for the \
-               package.&quot;</span>,
+               package."</span>,
         has_htt,
         edx_ecx,
         FeatureInfoFlags::HTT
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Thermal Monitor. The processor implements the thermal monitor automatic \
-               thermal control circuitry (TCC).&quot;</span>,
+        doc = <span class="string">"Thermal Monitor. The processor implements the thermal monitor automatic \
+               thermal control circuitry (TCC)."</span>,
         has_tm,
         edx_ecx,
         FeatureInfoFlags::TM
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Pending Break Enable. The processor supports the use of the FERR#/PBE# \
+        doc = <span class="string">"Pending Break Enable. The processor supports the use of the FERR#/PBE# \
                pin when the processor is in the stop-clock state (STPCLK# is asserted) \
                to signal the processor that an interrupt is pending and that the \
                processor should return to normal operation to handle the interrupt. Bit \
-               10 (PBE enable) in the IA32_MISC_ENABLE MSR enables this capability.&quot;</span>,
+               10 (PBE enable) in the IA32_MISC_ENABLE MSR enables this capability."</span>,
         has_pbe,
         edx_ecx,
         FeatureInfoFlags::PBE
@@ -8050,21 +8051,21 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>FeatureInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;FeatureInfo&quot;</span>)
-            .field(<span class="string">&quot;extended_family_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.extended_family_id())
-            .field(<span class="string">&quot;extended_model_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.extended_model_id())
-            .field(<span class="string">&quot;family_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.family_id())
-            .field(<span class="string">&quot;model_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.model_id())
-            .field(<span class="string">&quot;stepping_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.stepping_id())
-            .field(<span class="string">&quot;brand_index&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.brand_index())
-            .field(<span class="string">&quot;cflush_cache_line_size&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.cflush_cache_line_size())
-            .field(<span class="string">&quot;initial_local_apic_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.initial_local_apic_id())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"FeatureInfo"</span>)
+            .field(<span class="string">"extended_family_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.extended_family_id())
+            .field(<span class="string">"extended_model_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.extended_model_id())
+            .field(<span class="string">"family_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.family_id())
+            .field(<span class="string">"model_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.model_id())
+            .field(<span class="string">"stepping_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.stepping_id())
+            .field(<span class="string">"brand_index"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.brand_index())
+            .field(<span class="string">"cflush_cache_line_size"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.cflush_cache_line_size())
+            .field(<span class="string">"initial_local_apic_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.initial_local_apic_id())
             .field(
-                <span class="string">&quot;max_logical_processor_ids&quot;</span>,
+                <span class="string">"max_logical_processor_ids"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.max_logical_processor_ids(),
             )
-            .field(<span class="string">&quot;edx_ecx&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.edx_ecx)
+            .field(<span class="string">"edx_ecx"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.edx_ecx)
             .finish()
     }
 }
@@ -8240,7 +8241,7 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>CacheParametersIter&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
         <span class="kw">let </span><span class="kw-2">mut </span>debug = f.debug_list();
         <span class="self">self</span>.clone().for_each(|<span class="kw-2">ref </span>item| {
             debug.entry(item);
@@ -8279,11 +8280,11 @@
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>CacheType {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">let </span>typ = <span class="kw">match </span><span class="self">self </span>{
-            CacheType::Null =&gt; <span class="string">&quot;Null&quot;</span>,
-            CacheType::Data =&gt; <span class="string">&quot;Data&quot;</span>,
-            CacheType::Instruction =&gt; <span class="string">&quot;Instruction&quot;</span>,
-            CacheType::Unified =&gt; <span class="string">&quot;Unified&quot;</span>,
-            CacheType::Reserved =&gt; <span class="string">&quot;Reserved&quot;</span>,
+            CacheType::Null =&gt; <span class="string">"Null"</span>,
+            CacheType::Data =&gt; <span class="string">"Data"</span>,
+            CacheType::Instruction =&gt; <span class="string">"Instruction"</span>,
+            CacheType::Unified =&gt; <span class="string">"Unified"</span>,
+            CacheType::Reserved =&gt; <span class="string">"Reserved"</span>,
         };
 
         f.write_str(typ)
@@ -8410,21 +8411,21 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>CacheParameter {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;CacheParameter&quot;</span>)
-            .field(<span class="string">&quot;cache_type&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.cache_type())
-            .field(<span class="string">&quot;level&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.level())
-            .field(<span class="string">&quot;is_self_initializing&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_self_initializing())
-            .field(<span class="string">&quot;is_fully_associative&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_fully_associative())
-            .field(<span class="string">&quot;max_cores_for_cache&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.max_cores_for_cache())
-            .field(<span class="string">&quot;max_cores_for_package&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.max_cores_for_package())
-            .field(<span class="string">&quot;coherency_line_size&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.coherency_line_size())
-            .field(<span class="string">&quot;physical_line_partitions&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.physical_line_partitions())
-            .field(<span class="string">&quot;associativity&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.associativity())
-            .field(<span class="string">&quot;sets&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.sets())
-            .field(<span class="string">&quot;is_write_back_invalidate&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_write_back_invalidate())
-            .field(<span class="string">&quot;is_inclusive&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_inclusive())
-            .field(<span class="string">&quot;has_complex_indexing&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_complex_indexing())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"CacheParameter"</span>)
+            .field(<span class="string">"cache_type"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.cache_type())
+            .field(<span class="string">"level"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.level())
+            .field(<span class="string">"is_self_initializing"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_self_initializing())
+            .field(<span class="string">"is_fully_associative"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_fully_associative())
+            .field(<span class="string">"max_cores_for_cache"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.max_cores_for_cache())
+            .field(<span class="string">"max_cores_for_package"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.max_cores_for_package())
+            .field(<span class="string">"coherency_line_size"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.coherency_line_size())
+            .field(<span class="string">"physical_line_partitions"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.physical_line_partitions())
+            .field(<span class="string">"associativity"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.associativity())
+            .field(<span class="string">"sets"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.sets())
+            .field(<span class="string">"is_write_back_invalidate"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_write_back_invalidate())
+            .field(<span class="string">"is_inclusive"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_inclusive())
+            .field(<span class="string">"has_complex_indexing"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_complex_indexing())
             .finish()
     }
 }
@@ -8442,7 +8443,7 @@
 }
 
 <span class="kw">impl </span>MonitorMwaitInfo {
-    <span class="doccomment">/// Smallest monitor-line size in bytes (default is processor&#39;s monitor granularity)
+    <span class="doccomment">/// Smallest monitor-line size in bytes (default is processor's monitor granularity)
     ///
     /// # Platforms
     /// ✅ AMD ✅ Intel
@@ -8450,7 +8451,7 @@
         get_bits(<span class="self">self</span>.eax, <span class="number">0</span>, <span class="number">15</span>) <span class="kw">as </span>u16
     }
 
-    <span class="doccomment">/// Largest monitor-line size in bytes (default is processor&#39;s monitor granularity
+    <span class="doccomment">/// Largest monitor-line size in bytes (default is processor's monitor granularity
     ///
     /// # Platforms
     /// ✅ AMD ✅ Intel
@@ -8540,23 +8541,23 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>MonitorMwaitInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;MonitorMwaitInfo&quot;</span>)
-            .field(<span class="string">&quot;smallest_monitor_line&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.smallest_monitor_line())
-            .field(<span class="string">&quot;largest_monitor_line&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.largest_monitor_line())
-            .field(<span class="string">&quot;extensions_supported&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.extensions_supported())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"MonitorMwaitInfo"</span>)
+            .field(<span class="string">"smallest_monitor_line"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.smallest_monitor_line())
+            .field(<span class="string">"largest_monitor_line"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.largest_monitor_line())
+            .field(<span class="string">"extensions_supported"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.extensions_supported())
             .field(
-                <span class="string">&quot;interrupts_as_break_event&quot;</span>,
+                <span class="string">"interrupts_as_break_event"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.interrupts_as_break_event(),
             )
-            .field(<span class="string">&quot;supported_c0_states&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c0_states())
-            .field(<span class="string">&quot;supported_c1_states&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c1_states())
-            .field(<span class="string">&quot;supported_c2_states&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c2_states())
-            .field(<span class="string">&quot;supported_c3_states&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c3_states())
-            .field(<span class="string">&quot;supported_c4_states&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c4_states())
-            .field(<span class="string">&quot;supported_c5_states&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c5_states())
-            .field(<span class="string">&quot;supported_c6_states&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c6_states())
-            .field(<span class="string">&quot;supported_c7_states&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c7_states())
+            .field(<span class="string">"supported_c0_states"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c0_states())
+            .field(<span class="string">"supported_c1_states"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c1_states())
+            .field(<span class="string">"supported_c2_states"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c2_states())
+            .field(<span class="string">"supported_c3_states"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c3_states())
+            .field(<span class="string">"supported_c4_states"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c4_states())
+            .field(<span class="string">"supported_c5_states"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c5_states())
+            .field(<span class="string">"supported_c6_states"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c6_states())
+            .field(<span class="string">"supported_c7_states"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.supported_c7_states())
             .finish()
     }
 }
@@ -8763,37 +8764,37 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>ThermalPowerInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;ThermalPowerInfo&quot;</span>)
-            .field(<span class="string">&quot;dts_irq_threshold&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dts_irq_threshold())
-            .field(<span class="string">&quot;has_dts&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_dts())
-            .field(<span class="string">&quot;has_arat&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_arat())
-            .field(<span class="string">&quot;has_pln&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_pln())
-            .field(<span class="string">&quot;has_ecmd&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_ecmd())
-            .field(<span class="string">&quot;has_ptm&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_ptm())
-            .field(<span class="string">&quot;has_hwp&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp())
-            .field(<span class="string">&quot;has_hwp_notification&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_notification())
-            .field(<span class="string">&quot;has_hwp_activity_window&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_activity_window())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"ThermalPowerInfo"</span>)
+            .field(<span class="string">"dts_irq_threshold"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dts_irq_threshold())
+            .field(<span class="string">"has_dts"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_dts())
+            .field(<span class="string">"has_arat"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_arat())
+            .field(<span class="string">"has_pln"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_pln())
+            .field(<span class="string">"has_ecmd"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_ecmd())
+            .field(<span class="string">"has_ptm"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_ptm())
+            .field(<span class="string">"has_hwp"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp())
+            .field(<span class="string">"has_hwp_notification"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_notification())
+            .field(<span class="string">"has_hwp_activity_window"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_activity_window())
             .field(
-                <span class="string">&quot;has_hwp_energy_performance_preference&quot;</span>,
+                <span class="string">"has_hwp_energy_performance_preference"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_energy_performance_preference(),
             )
             .field(
-                <span class="string">&quot;has_hwp_package_level_request&quot;</span>,
+                <span class="string">"has_hwp_package_level_request"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_package_level_request(),
             )
-            .field(<span class="string">&quot;has_hdc&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hdc())
-            .field(<span class="string">&quot;has_turbo_boost3&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_turbo_boost3())
-            .field(<span class="string">&quot;has_hwp_capabilities&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_capabilities())
-            .field(<span class="string">&quot;has_hwp_peci_override&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_peci_override())
-            .field(<span class="string">&quot;has_flexible_hwp&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_flexible_hwp())
-            .field(<span class="string">&quot;has_hwp_fast_access_mode&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_fast_access_mode())
+            .field(<span class="string">"has_hdc"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hdc())
+            .field(<span class="string">"has_turbo_boost3"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_turbo_boost3())
+            .field(<span class="string">"has_hwp_capabilities"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_capabilities())
+            .field(<span class="string">"has_hwp_peci_override"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_peci_override())
+            .field(<span class="string">"has_flexible_hwp"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_flexible_hwp())
+            .field(<span class="string">"has_hwp_fast_access_mode"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hwp_fast_access_mode())
             .field(
-                <span class="string">&quot;has_ignore_idle_processor_hwp_request&quot;</span>,
+                <span class="string">"has_ignore_idle_processor_hwp_request"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.has_ignore_idle_processor_hwp_request(),
             )
-            .field(<span class="string">&quot;has_hw_coord_feedback&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hw_coord_feedback())
-            .field(<span class="string">&quot;has_energy_bias_pref&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_energy_bias_pref())
+            .field(<span class="string">"has_hw_coord_feedback"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_hw_coord_feedback())
+            .field(<span class="string">"has_energy_bias_pref"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_energy_bias_pref())
             .finish()
     }
 }
@@ -9284,7 +9285,7 @@
     /// # Bug
     /// The Intel manual lists RDPID as bit 22 in the ECX register, but AMD
     /// lists it as bit 22 in the ebx register. We assumed that the AMD manual
-    /// was wrong and query ecx, let&#39;s see what happens.
+    /// was wrong and query ecx, let's see what happens.
     ///
     /// # Platforms
     /// ✅ AMD ✅ Intel
@@ -9313,11 +9314,11 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>ExtendedFeatures {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;ExtendedFeatures&quot;</span>)
-            .field(<span class="string">&quot;ebx&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ebx)
-            .field(<span class="string">&quot;ecx&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ecx)
-            .field(<span class="string">&quot;mawau_value&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.mawau_value())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"ExtendedFeatures"</span>)
+            .field(<span class="string">"ebx"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ebx)
+            .field(<span class="string">"ecx"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ecx)
+            .field(<span class="string">"mawau_value"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.mawau_value())
             .finish()
     }
 }
@@ -9463,9 +9464,9 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>DirectCacheAccessInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;DirectCacheAccessInfo&quot;</span>)
-            .field(<span class="string">&quot;dca_cap_value&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_dca_cap_value())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"DirectCacheAccessInfo"</span>)
+            .field(<span class="string">"dca_cap_value"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_dca_cap_value())
             .finish()
     }
 }
@@ -9513,56 +9514,56 @@
     }
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;AnyThread deprecation&quot;</span>,
+        doc = <span class="string">"AnyThread deprecation"</span>,
         has_any_thread_deprecation,
         edx,
         <span class="number">15
     </span>);
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Core cycle event not available if 1.&quot;</span>,
+        doc = <span class="string">"Core cycle event not available if 1."</span>,
         is_core_cyc_ev_unavailable,
         ebx,
         PerformanceMonitoringFeaturesEbx::CORE_CYC_EV_UNAVAILABLE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Instruction retired event not available if 1.&quot;</span>,
+        doc = <span class="string">"Instruction retired event not available if 1."</span>,
         is_inst_ret_ev_unavailable,
         ebx,
         PerformanceMonitoringFeaturesEbx::INST_RET_EV_UNAVAILABLE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Reference cycles event not available if 1.&quot;</span>,
+        doc = <span class="string">"Reference cycles event not available if 1."</span>,
         is_ref_cycle_ev_unavailable,
         ebx,
         PerformanceMonitoringFeaturesEbx::REF_CYC_EV_UNAVAILABLE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Last-level cache reference event not available if 1.&quot;</span>,
+        doc = <span class="string">"Last-level cache reference event not available if 1."</span>,
         is_cache_ref_ev_unavailable,
         ebx,
         PerformanceMonitoringFeaturesEbx::CACHE_REF_EV_UNAVAILABLE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Last-level cache misses event not available if 1.&quot;</span>,
+        doc = <span class="string">"Last-level cache misses event not available if 1."</span>,
         is_ll_cache_miss_ev_unavailable,
         ebx,
         PerformanceMonitoringFeaturesEbx::LL_CACHE_MISS_EV_UNAVAILABLE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Branch instruction retired event not available if 1.&quot;</span>,
+        doc = <span class="string">"Branch instruction retired event not available if 1."</span>,
         is_branch_inst_ret_ev_unavailable,
         ebx,
         PerformanceMonitoringFeaturesEbx::BRANCH_INST_RET_EV_UNAVAILABLE
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Branch mispredict retired event not available if 1.&quot;</span>,
+        doc = <span class="string">"Branch mispredict retired event not available if 1."</span>,
         is_branch_midpred_ev_unavailable,
         ebx,
         PerformanceMonitoringFeaturesEbx::BRANCH_MISPRED_EV_UNAVAILABLE
@@ -9570,15 +9571,15 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>PerformanceMonitoringInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;PerformanceMonitoringInfo&quot;</span>)
-            .field(<span class="string">&quot;version_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.version_id())
-            .field(<span class="string">&quot;number_of_counters&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.number_of_counters())
-            .field(<span class="string">&quot;counter_bit_width&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.counter_bit_width())
-            .field(<span class="string">&quot;ebx_length&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ebx_length())
-            .field(<span class="string">&quot;fixed_function_counters&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.fixed_function_counters())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"PerformanceMonitoringInfo"</span>)
+            .field(<span class="string">"version_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.version_id())
+            .field(<span class="string">"number_of_counters"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.number_of_counters())
+            .field(<span class="string">"counter_bit_width"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.counter_bit_width())
+            .field(<span class="string">"ebx_length"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ebx_length())
+            .field(<span class="string">"fixed_function_counters"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.fixed_function_counters())
             .field(
-                <span class="string">&quot;fixed_function_counters_bit_width&quot;</span>,
+                <span class="string">"fixed_function_counters_bit_width"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.fixed_function_counters_bit_width(),
             )
             .finish()
@@ -9634,12 +9635,12 @@
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>ExtendedTopologyLevel {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;ExtendedTopologyLevel&quot;</span>)
-            .field(<span class="string">&quot;processors&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.processors())
-            .field(<span class="string">&quot;number&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.level_number())
-            .field(<span class="string">&quot;type&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.level_type())
-            .field(<span class="string">&quot;x2apic_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.x2apic_id())
-            .field(<span class="string">&quot;next_apic_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.shift_right_for_next_apic_id())
+        f.debug_struct(<span class="string">"ExtendedTopologyLevel"</span>)
+            .field(<span class="string">"processors"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.processors())
+            .field(<span class="string">"number"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.level_number())
+            .field(<span class="string">"type"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.level_type())
+            .field(<span class="string">"x2apic_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.x2apic_id())
+            .field(<span class="string">"next_apic_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.shift_right_for_next_apic_id())
             .finish()
     }
 }
@@ -9696,12 +9697,12 @@
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>TopologyType {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">let </span>data = <span class="kw">match </span><span class="self">self </span>{
-            TopologyType::Invalid =&gt; <span class="string">&quot;Invalid&quot;</span>,
-            TopologyType::SMT =&gt; <span class="string">&quot;SMT&quot;</span>,
-            TopologyType::Core =&gt; <span class="string">&quot;Core&quot;</span>,
-            TopologyType::Module =&gt; <span class="string">&quot;Module&quot;</span>,
-            TopologyType::Tile =&gt; <span class="string">&quot;Tile&quot;</span>,
-            TopologyType::Die =&gt; <span class="string">&quot;Die&quot;</span>,
+            TopologyType::Invalid =&gt; <span class="string">"Invalid"</span>,
+            TopologyType::SMT =&gt; <span class="string">"SMT"</span>,
+            TopologyType::Core =&gt; <span class="string">"Core"</span>,
+            TopologyType::Module =&gt; <span class="string">"Module"</span>,
+            TopologyType::Tile =&gt; <span class="string">"Tile"</span>,
+            TopologyType::Die =&gt; <span class="string">"Die"</span>,
         };
 
         f.write_str(data)
@@ -9734,7 +9735,7 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>ExtendedTopologyIter&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
         <span class="kw">let </span><span class="kw-2">mut </span>debug = f.debug_list();
         <span class="self">self</span>.clone().for_each(|<span class="kw-2">ref </span>item| {
             debug.entry(item);
@@ -9833,77 +9834,77 @@
 
 <span class="kw">impl</span>&lt;F: CpuIdReader&gt; ExtendedStateInfo&lt;F&gt; {
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for legacy x87 in XCR0.&quot;</span>,
+        doc = <span class="string">"Support for legacy x87 in XCR0."</span>,
         xcr0_supports_legacy_x87,
         eax,
         ExtendedStateInfoXCR0Flags::LEGACY_X87
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for SSE 128-bit in XCR0.&quot;</span>,
+        doc = <span class="string">"Support for SSE 128-bit in XCR0."</span>,
         xcr0_supports_sse_128,
         eax,
         ExtendedStateInfoXCR0Flags::SSE128
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for AVX 256-bit in XCR0.&quot;</span>,
+        doc = <span class="string">"Support for AVX 256-bit in XCR0."</span>,
         xcr0_supports_avx_256,
         eax,
         ExtendedStateInfoXCR0Flags::AVX256
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for MPX BNDREGS in XCR0.&quot;</span>,
+        doc = <span class="string">"Support for MPX BNDREGS in XCR0."</span>,
         xcr0_supports_mpx_bndregs,
         eax,
         ExtendedStateInfoXCR0Flags::MPX_BNDREGS
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for MPX BNDCSR in XCR0.&quot;</span>,
+        doc = <span class="string">"Support for MPX BNDCSR in XCR0."</span>,
         xcr0_supports_mpx_bndcsr,
         eax,
         ExtendedStateInfoXCR0Flags::MPX_BNDCSR
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for AVX512 OPMASK in XCR0.&quot;</span>,
+        doc = <span class="string">"Support for AVX512 OPMASK in XCR0."</span>,
         xcr0_supports_avx512_opmask,
         eax,
         ExtendedStateInfoXCR0Flags::AVX512_OPMASK
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for AVX512 ZMM Hi256 XCR0.&quot;</span>,
+        doc = <span class="string">"Support for AVX512 ZMM Hi256 XCR0."</span>,
         xcr0_supports_avx512_zmm_hi256,
         eax,
         ExtendedStateInfoXCR0Flags::AVX512_ZMM_HI256
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for AVX512 ZMM Hi16 in XCR0.&quot;</span>,
+        doc = <span class="string">"Support for AVX512 ZMM Hi16 in XCR0."</span>,
         xcr0_supports_avx512_zmm_hi16,
         eax,
         ExtendedStateInfoXCR0Flags::AVX512_ZMM_HI16
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for PKRU in XCR0.&quot;</span>,
+        doc = <span class="string">"Support for PKRU in XCR0."</span>,
         xcr0_supports_pkru,
         eax,
         ExtendedStateInfoXCR0Flags::PKRU
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for PT in IA32_XSS.&quot;</span>,
+        doc = <span class="string">"Support for PT in IA32_XSS."</span>,
         ia32_xss_supports_pt,
         ecx1,
         ExtendedStateInfoXSSFlags::PT
     );
 
     <span class="macro">check_flag!</span>(
-        doc = <span class="string">&quot;Support for HDC in IA32_XSS.&quot;</span>,
+        doc = <span class="string">"Support for HDC in IA32_XSS."</span>,
         ia32_xss_supports_hdc,
         ecx1,
         ExtendedStateInfoXSSFlags::HDC
@@ -9960,24 +9961,24 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>ExtendedStateInfo&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;ExtendedStateInfo&quot;</span>)
-            .field(<span class="string">&quot;eax&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.eax)
-            .field(<span class="string">&quot;ecx1&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ecx1)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"ExtendedStateInfo"</span>)
+            .field(<span class="string">"eax"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.eax)
+            .field(<span class="string">"ecx1"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ecx1)
             .field(
-                <span class="string">&quot;xsave_area_size_enabled_features&quot;</span>,
+                <span class="string">"xsave_area_size_enabled_features"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.xsave_area_size_enabled_features(),
             )
             .field(
-                <span class="string">&quot;xsave_area_size_supported_features&quot;</span>,
+                <span class="string">"xsave_area_size_supported_features"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.xsave_area_size_supported_features(),
             )
-            .field(<span class="string">&quot;has_xsaveopt&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_xsaveopt())
-            .field(<span class="string">&quot;has_xsavec&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_xsavec())
-            .field(<span class="string">&quot;has_xgetbv&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_xgetbv())
-            .field(<span class="string">&quot;has_xsaves_xrstors&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_xsaves_xrstors())
-            .field(<span class="string">&quot;xsave_size&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.xsave_size())
-            .field(<span class="string">&quot;extended_state_iter&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.iter())
+            .field(<span class="string">"has_xsaveopt"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_xsaveopt())
+            .field(<span class="string">"has_xsavec"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_xsavec())
+            .field(<span class="string">"has_xgetbv"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_xgetbv())
+            .field(<span class="string">"has_xsaves_xrstors"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_xsaves_xrstors())
+            .field(<span class="string">"xsave_size"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.xsave_size())
+            .field(<span class="string">"extended_state_iter"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.iter())
             .finish()
     }
 }
@@ -10022,7 +10023,7 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>ExtendedStateIter&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">let </span><span class="kw-2">mut </span>debug = f.debug_list();
         <span class="self">self</span>.clone().for_each(|<span class="kw-2">ref </span>item| {
             debug.entry(item);
@@ -10067,17 +10068,17 @@
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>ExtendedRegisterType {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">let </span>data = <span class="kw">match </span><span class="self">self </span>{
-            ExtendedRegisterType::Avx =&gt; <span class="string">&quot;AVX/YMM&quot;</span>,
-            ExtendedRegisterType::MpxBndregs =&gt; <span class="string">&quot;MPX BNDREGS&quot;</span>,
-            ExtendedRegisterType::MpxBndcsr =&gt; <span class="string">&quot;MPX BNDCSR&quot;</span>,
-            ExtendedRegisterType::Avx512Opmask =&gt; <span class="string">&quot;AVX-512 opmask&quot;</span>,
-            ExtendedRegisterType::Avx512ZmmHi256 =&gt; <span class="string">&quot;AVX-512 ZMM_Hi256&quot;</span>,
-            ExtendedRegisterType::Avx512ZmmHi16 =&gt; <span class="string">&quot;AVX-512 Hi16_ZMM&quot;</span>,
-            ExtendedRegisterType::Pkru =&gt; <span class="string">&quot;PKRU&quot;</span>,
-            ExtendedRegisterType::Pt =&gt; <span class="string">&quot;PT&quot;</span>,
-            ExtendedRegisterType::Hdc =&gt; <span class="string">&quot;HDC&quot;</span>,
+            ExtendedRegisterType::Avx =&gt; <span class="string">"AVX/YMM"</span>,
+            ExtendedRegisterType::MpxBndregs =&gt; <span class="string">"MPX BNDREGS"</span>,
+            ExtendedRegisterType::MpxBndcsr =&gt; <span class="string">"MPX BNDCSR"</span>,
+            ExtendedRegisterType::Avx512Opmask =&gt; <span class="string">"AVX-512 opmask"</span>,
+            ExtendedRegisterType::Avx512ZmmHi256 =&gt; <span class="string">"AVX-512 ZMM_Hi256"</span>,
+            ExtendedRegisterType::Avx512ZmmHi16 =&gt; <span class="string">"AVX-512 Hi16_ZMM"</span>,
+            ExtendedRegisterType::Pkru =&gt; <span class="string">"PKRU"</span>,
+            ExtendedRegisterType::Pt =&gt; <span class="string">"PT"</span>,
+            ExtendedRegisterType::Hdc =&gt; <span class="string">"HDC"</span>,
             ExtendedRegisterType::Unknown(t) =&gt; {
-                <span class="kw">return </span><span class="macro">write!</span>(f, <span class="string">&quot;Unknown({})&quot;</span>, t);
+                <span class="kw">return </span><span class="macro">write!</span>(f, <span class="string">"Unknown({})"</span>, t);
             }
         };
 
@@ -10095,8 +10096,8 @@
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>ExtendedRegisterStateLocation {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">let </span>data = <span class="kw">match </span><span class="self">self </span>{
-            ExtendedRegisterStateLocation::Xcr0 =&gt; <span class="string">&quot;XCR0 (user state)&quot;</span>,
-            ExtendedRegisterStateLocation::Ia32Xss =&gt; <span class="string">&quot;IA32_XSS (supervisor state)&quot;</span>,
+            ExtendedRegisterStateLocation::Xcr0 =&gt; <span class="string">"XCR0 (user state)"</span>,
+            ExtendedRegisterStateLocation::Ia32Xss =&gt; <span class="string">"IA32_XSS (supervisor state)"</span>,
         };
 
         f.write_str(data)
@@ -10165,13 +10166,13 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>ExtendedState {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;ExtendedState&quot;</span>)
-            .field(<span class="string">&quot;size&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size())
-            .field(<span class="string">&quot;offset&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.offset())
-            .field(<span class="string">&quot;is_in_ia32_xss&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_in_ia32_xss())
-            .field(<span class="string">&quot;is_in_xcr0&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_in_xcr0())
-            .field(<span class="string">&quot;is_compacted_format&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_compacted_format())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        f.debug_struct(<span class="string">"ExtendedState"</span>)
+            .field(<span class="string">"size"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size())
+            .field(<span class="string">"offset"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.offset())
+            .field(<span class="string">"is_in_ia32_xss"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_in_ia32_xss())
+            .field(<span class="string">"is_in_xcr0"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_in_xcr0())
+            .field(<span class="string">"is_compacted_format"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_compacted_format())
             .finish()
     }
 }
@@ -10194,7 +10195,7 @@
     }
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Supports L3 Cache Intel RDT Monitoring.&quot;</span>,
+        doc = <span class="string">"Supports L3 Cache Intel RDT Monitoring."</span>,
         has_l3_monitoring,
         edx,
         <span class="number">1
@@ -10216,10 +10217,10 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>RdtMonitoringInfo&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;RdtMonitoringInfo&quot;</span>)
-            .field(<span class="string">&quot;rmid_range&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.rmid_range())
-            .field(<span class="string">&quot;l3_monitoring&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.l3_monitoring())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"RdtMonitoringInfo"</span>)
+            .field(<span class="string">"rmid_range"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.rmid_range())
+            .field(<span class="string">"l3_monitoring"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.l3_monitoring())
             .finish()
     }
 }
@@ -10243,21 +10244,21 @@
     }
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Supports occupancy monitoring.&quot;</span>,
+        doc = <span class="string">"Supports occupancy monitoring."</span>,
         has_occupancy_monitoring,
         edx,
         <span class="number">0
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Supports total bandwidth monitoring.&quot;</span>,
+        doc = <span class="string">"Supports total bandwidth monitoring."</span>,
         has_total_bandwidth_monitoring,
         edx,
         <span class="number">1
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Supports local bandwidth monitoring.&quot;</span>,
+        doc = <span class="string">"Supports local bandwidth monitoring."</span>,
         has_local_bandwidth_monitoring,
         edx,
         <span class="number">2
@@ -10265,10 +10266,10 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>L3MonitoringInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;L3MonitoringInfo&quot;</span>)
-            .field(<span class="string">&quot;conversion_factor&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.conversion_factor())
-            .field(<span class="string">&quot;maximum_rmid_range&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.maximum_rmid_range())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"L3MonitoringInfo"</span>)
+            .field(<span class="string">"conversion_factor"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.conversion_factor())
+            .field(<span class="string">"maximum_rmid_range"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.maximum_rmid_range())
             .finish()
     }
 }
@@ -10283,12 +10284,12 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; RdtAllocationInfo&lt;R&gt; {
-    <span class="macro">check_bit_fn!</span>(doc = <span class="string">&quot;Supports L3 Cache Allocation.&quot;</span>, has_l3_cat, ebx, <span class="number">1</span>);
+    <span class="macro">check_bit_fn!</span>(doc = <span class="string">"Supports L3 Cache Allocation."</span>, has_l3_cat, ebx, <span class="number">1</span>);
 
-    <span class="macro">check_bit_fn!</span>(doc = <span class="string">&quot;Supports L2 Cache Allocation.&quot;</span>, has_l2_cat, ebx, <span class="number">2</span>);
+    <span class="macro">check_bit_fn!</span>(doc = <span class="string">"Supports L2 Cache Allocation."</span>, has_l2_cat, ebx, <span class="number">2</span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Supports Memory Bandwidth Allocation.&quot;</span>,
+        doc = <span class="string">"Supports Memory Bandwidth Allocation."</span>,
         has_memory_bandwidth_allocation,
         ebx,
         <span class="number">3
@@ -10339,12 +10340,12 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>RdtAllocationInfo&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;RdtAllocationInfo&quot;</span>)
-            .field(<span class="string">&quot;l3_cat&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.l3_cat())
-            .field(<span class="string">&quot;l2_cat&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.l2_cat())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"RdtAllocationInfo"</span>)
+            .field(<span class="string">"l3_cat"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.l3_cat())
+            .field(<span class="string">"l2_cat"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.l2_cat())
             .field(
-                <span class="string">&quot;memory_bandwidth_allocation&quot;</span>,
+                <span class="string">"memory_bandwidth_allocation"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.memory_bandwidth_allocation(),
             )
             .finish()
@@ -10376,7 +10377,7 @@
     }
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Is Code and Data Prioritization Technology supported?&quot;</span>,
+        doc = <span class="string">"Is Code and Data Prioritization Technology supported?"</span>,
         has_code_data_prioritization,
         ecx,
         <span class="number">2
@@ -10384,11 +10385,11 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>L3CatInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;L3CatInfo&quot;</span>)
-            .field(<span class="string">&quot;capacity_mask_length&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.capacity_mask_length())
-            .field(<span class="string">&quot;isolation_bitmap&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.isolation_bitmap())
-            .field(<span class="string">&quot;highest_cos&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.highest_cos())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"L3CatInfo"</span>)
+            .field(<span class="string">"capacity_mask_length"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.capacity_mask_length())
+            .field(<span class="string">"isolation_bitmap"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.isolation_bitmap())
+            .field(<span class="string">"highest_cos"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.highest_cos())
             .finish()
     }
 }
@@ -10419,11 +10420,11 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>L2CatInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;L2CatInfo&quot;</span>)
-            .field(<span class="string">&quot;capacity_mask_length&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.capacity_mask_length())
-            .field(<span class="string">&quot;isolation_bitmap&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.isolation_bitmap())
-            .field(<span class="string">&quot;highest_cos&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.highest_cos())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"L2CatInfo"</span>)
+            .field(<span class="string">"capacity_mask_length"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.capacity_mask_length())
+            .field(<span class="string">"isolation_bitmap"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.isolation_bitmap())
+            .field(<span class="string">"highest_cos"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.highest_cos())
             .finish()
     }
 }
@@ -10448,7 +10449,7 @@
     }
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Reports whether the response of the delay values is linear.&quot;</span>,
+        doc = <span class="string">"Reports whether the response of the delay values is linear."</span>,
         has_linear_response_delay,
         ecx,
         <span class="number">2
@@ -10456,12 +10457,12 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>MemBwAllocationInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;MemBwAllocationInfo&quot;</span>)
-            .field(<span class="string">&quot;max_hba_throttling&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.max_hba_throttling())
-            .field(<span class="string">&quot;highest_cos&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.highest_cos())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"MemBwAllocationInfo"</span>)
+            .field(<span class="string">"max_hba_throttling"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.max_hba_throttling())
+            .field(<span class="string">"highest_cos"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.highest_cos())
             .field(
-                <span class="string">&quot;has_linear_response_delay&quot;</span>,
+                <span class="string">"has_linear_response_delay"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.has_linear_response_delay(),
             )
             .finish()
@@ -10487,18 +10488,18 @@
 }
 
 <span class="kw">impl</span>&lt;F: CpuIdReader&gt; SgxInfo&lt;F&gt; {
-    <span class="macro">check_bit_fn!</span>(doc = <span class="string">&quot;Has SGX1 support.&quot;</span>, has_sgx1, eax, <span class="number">0</span>);
-    <span class="macro">check_bit_fn!</span>(doc = <span class="string">&quot;Has SGX2 support.&quot;</span>, has_sgx2, eax, <span class="number">1</span>);
+    <span class="macro">check_bit_fn!</span>(doc = <span class="string">"Has SGX1 support."</span>, has_sgx1, eax, <span class="number">0</span>);
+    <span class="macro">check_bit_fn!</span>(doc = <span class="string">"Has SGX2 support."</span>, has_sgx2, eax, <span class="number">1</span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Supports ENCLV instruction leaves EINCVIRTCHILD, EDECVIRTCHILD, and ESETCONTEXT.&quot;</span>,
+        doc = <span class="string">"Supports ENCLV instruction leaves EINCVIRTCHILD, EDECVIRTCHILD, and ESETCONTEXT."</span>,
         has_enclv_leaves_einvirtchild_edecvirtchild_esetcontext,
         eax,
         <span class="number">5
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Supports ENCLS instruction leaves ETRACKC, ERDINFO, ELDBC, and ELDUC.&quot;</span>,
+        doc = <span class="string">"Supports ENCLS instruction leaves ETRACKC, ERDINFO, ELDBC, and ELDUC."</span>,
         has_encls_leaves_etrackc_erdinfo_eldbc_elduc,
         eax,
         <span class="number">6
@@ -10535,25 +10536,25 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>SgxInfo&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;SgxInfo&quot;</span>)
-            .field(<span class="string">&quot;has_sgx1&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_sgx1())
-            .field(<span class="string">&quot;has_sgx2&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_sgx2())
-            .field(<span class="string">&quot;miscselect&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.miscselect())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"SgxInfo"</span>)
+            .field(<span class="string">"has_sgx1"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_sgx1())
+            .field(<span class="string">"has_sgx2"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_sgx2())
+            .field(<span class="string">"miscselect"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.miscselect())
             .field(
-                <span class="string">&quot;max_enclave_size_non_64bit&quot;</span>,
+                <span class="string">"max_enclave_size_non_64bit"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.max_enclave_size_non_64bit(),
             )
-            .field(<span class="string">&quot;max_enclave_size_64bit&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.max_enclave_size_64bit())
+            .field(<span class="string">"max_enclave_size_64bit"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.max_enclave_size_64bit())
             .field(
-                <span class="string">&quot;has_encls_leaves_etrackc_erdinfo_eldbc_elduc&quot;</span>,
+                <span class="string">"has_encls_leaves_etrackc_erdinfo_eldbc_elduc"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.has_encls_leaves_etrackc_erdinfo_eldbc_elduc(),
             )
             .field(
-                <span class="string">&quot;has_enclv_leaves_einvirtchild_edecvirtchild_esetcontext&quot;</span>,
+                <span class="string">"has_enclv_leaves_einvirtchild_edecvirtchild_esetcontext"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.has_enclv_leaves_einvirtchild_edecvirtchild_esetcontext(),
             )
-            .field(<span class="string">&quot;sgx_section_iter&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.iter())
+            .field(<span class="string">"sgx_section_iter"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.iter())
             .finish()
     }
 }
@@ -10584,7 +10585,7 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>SgxSectionIter&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
         <span class="kw">let </span><span class="kw-2">mut </span>debug = f.debug_list();
         <span class="self">self</span>.clone().for_each(|<span class="kw-2">ref </span>item| {
             debug.entry(item);
@@ -10642,44 +10643,44 @@
 <span class="kw">impl </span>ProcessorTraceInfo {
     <span class="comment">// EBX features
     </span><span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, Indicates that IA32_RTIT_CTL.CR3Filter can be set to 1, and \
-               that IA32_RTIT_CR3_MATCH MSR can be accessed.&quot;</span>,
+        doc = <span class="string">"If true, Indicates that IA32_RTIT_CTL.CR3Filter can be set to 1, and \
+               that IA32_RTIT_CR3_MATCH MSR can be accessed."</span>,
         has_rtit_cr3_match,
         ebx,
         <span class="number">0
     </span>);
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, Indicates support of Configurable PSB and Cycle-Accurate Mode.&quot;</span>,
+        doc = <span class="string">"If true, Indicates support of Configurable PSB and Cycle-Accurate Mode."</span>,
         has_configurable_psb_and_cycle_accurate_mode,
         ebx,
         <span class="number">1
     </span>);
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, Indicates support of IP Filtering, TraceStop filtering, and \
-               preservation of Intel PT MSRs across warm reset.&quot;</span>,
+        doc = <span class="string">"If true, Indicates support of IP Filtering, TraceStop filtering, and \
+               preservation of Intel PT MSRs across warm reset."</span>,
         has_ip_tracestop_filtering,
         ebx,
         <span class="number">2
     </span>);
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, Indicates support of MTC timing packet and suppression of \
-               COFI-based packets.&quot;</span>,
+        doc = <span class="string">"If true, Indicates support of MTC timing packet and suppression of \
+               COFI-based packets."</span>,
         has_mtc_timing_packet_coefi_suppression,
         ebx,
         <span class="number">3
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Indicates support of PTWRITE. Writes can set IA32_RTIT_CTL\\[12\\] (PTWEn \
-               and IA32_RTIT_CTL\\[5\\] (FUPonPTW), and PTWRITE can generate packets&quot;</span>,
+        doc = <span class="string">"Indicates support of PTWRITE. Writes can set IA32_RTIT_CTL\\[12\\] (PTWEn \
+               and IA32_RTIT_CTL\\[5\\] (FUPonPTW), and PTWRITE can generate packets"</span>,
         has_ptwrite,
         ebx,
         <span class="number">4
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Support of Power Event Trace. Writes can set IA32_RTIT_CTL\\[4\\] (PwrEvtEn) \
-               enabling Power Event Trace packet generation.&quot;</span>,
+        doc = <span class="string">"Support of Power Event Trace. Writes can set IA32_RTIT_CTL\\[4\\] (PwrEvtEn) \
+               enabling Power Event Trace packet generation."</span>,
         has_power_event_trace,
         ebx,
         <span class="number">5
@@ -10687,36 +10688,36 @@
 
     <span class="comment">// ECX features
     </span><span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, Tracing can be enabled with IA32_RTIT_CTL.ToPA = 1, hence \
+        doc = <span class="string">"If true, Tracing can be enabled with IA32_RTIT_CTL.ToPA = 1, hence \
                utilizing the ToPA output scheme; IA32_RTIT_OUTPUT_BASE and \
-               IA32_RTIT_OUTPUT_MASK_PTRS MSRs can be accessed.&quot;</span>,
+               IA32_RTIT_OUTPUT_MASK_PTRS MSRs can be accessed."</span>,
         has_topa,
         ecx,
         <span class="number">0
     </span>);
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, ToPA tables can hold any number of output entries, up to the \
+        doc = <span class="string">"If true, ToPA tables can hold any number of output entries, up to the \
                maximum allowed by the MaskOrTableOffset field of \
-               IA32_RTIT_OUTPUT_MASK_PTRS.&quot;</span>,
+               IA32_RTIT_OUTPUT_MASK_PTRS."</span>,
         has_topa_maximum_entries,
         ecx,
         <span class="number">1
     </span>);
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, Indicates support of Single-Range Output scheme.&quot;</span>,
+        doc = <span class="string">"If true, Indicates support of Single-Range Output scheme."</span>,
         has_single_range_output_scheme,
         ecx,
         <span class="number">2
     </span>);
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, Indicates support of output to Trace Transport subsystem.&quot;</span>,
+        doc = <span class="string">"If true, Indicates support of output to Trace Transport subsystem."</span>,
         has_trace_transport_subsystem,
         ecx,
         <span class="number">3
     </span>);
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;If true, Generated packets which contain IP payloads have LIP values, \
-               which include the CS base component.&quot;</span>,
+        doc = <span class="string">"If true, Generated packets which contain IP payloads have LIP values, \
+               which include the CS base component."</span>,
         has_lip_with_cs_base,
         ecx,
         <span class="number">31
@@ -10744,22 +10745,22 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>ProcessorTraceInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;ProcessorTraceInfo&quot;</span>)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"ProcessorTraceInfo"</span>)
             .field(
-                <span class="string">&quot;configurable_address_ranges&quot;</span>,
+                <span class="string">"configurable_address_ranges"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.configurable_address_ranges(),
             )
             .field(
-                <span class="string">&quot;supported_mtc_period_encodings&quot;</span>,
+                <span class="string">"supported_mtc_period_encodings"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.supported_mtc_period_encodings(),
             )
             .field(
-                <span class="string">&quot;supported_cycle_threshold_value_encodings&quot;</span>,
+                <span class="string">"supported_cycle_threshold_value_encodings"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.supported_cycle_threshold_value_encodings(),
             )
             .field(
-                <span class="string">&quot;supported_psb_frequency_encodings&quot;</span>,
+                <span class="string">"supported_psb_frequency_encodings"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.supported_psb_frequency_encodings(),
             )
             .finish()
@@ -10778,11 +10779,11 @@
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>TscInfo {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;TscInfo&quot;</span>)
-            .field(<span class="string">&quot;denominator&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.denominator())
-            .field(<span class="string">&quot;numerator&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.numerator())
-            .field(<span class="string">&quot;nominal_frequency&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.nominal_frequency())
-            .field(<span class="string">&quot;tsc_frequency&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.tsc_frequency())
+        f.debug_struct(<span class="string">"TscInfo"</span>)
+            .field(<span class="string">"denominator"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.denominator())
+            .field(<span class="string">"numerator"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.numerator())
+            .field(<span class="string">"nominal_frequency"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.nominal_frequency())
+            .field(<span class="string">"tsc_frequency"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.tsc_frequency())
             .finish()
     }
 }
@@ -10848,10 +10849,10 @@
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>ProcessorFrequencyInfo {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;ProcessorFrequencyInfo&quot;</span>)
-            .field(<span class="string">&quot;processor_base_frequency&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.processor_base_frequency())
-            .field(<span class="string">&quot;processor_max_frequency&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.processor_max_frequency())
-            .field(<span class="string">&quot;bus_frequency&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.bus_frequency())
+        f.debug_struct(<span class="string">"ProcessorFrequencyInfo"</span>)
+            .field(<span class="string">"processor_base_frequency"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.processor_base_frequency())
+            .field(<span class="string">"processor_max_frequency"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.processor_max_frequency())
+            .field(<span class="string">"bus_frequency"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.bus_frequency())
             .finish()
     }
 }
@@ -10902,7 +10903,7 @@
 }
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; Debug <span class="kw">for </span>DatIter&lt;R&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">let </span><span class="kw-2">mut </span>debug = f.debug_list();
         <span class="self">self</span>.clone().for_each(|<span class="kw-2">ref </span>item| {
             debug.entry(item);
@@ -10921,35 +10922,35 @@
 
 <span class="kw">impl </span>DatInfo {
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;4K page size entries supported by this structure&quot;</span>,
+        doc = <span class="string">"4K page size entries supported by this structure"</span>,
         has_4k_entries,
         ebx,
         <span class="number">0
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;2MB page size entries supported by this structure&quot;</span>,
+        doc = <span class="string">"2MB page size entries supported by this structure"</span>,
         has_2mb_entries,
         ebx,
         <span class="number">1
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;4MB page size entries supported by this structure&quot;</span>,
+        doc = <span class="string">"4MB page size entries supported by this structure"</span>,
         has_4mb_entries,
         ebx,
         <span class="number">2
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;1GB page size entries supported by this structure&quot;</span>,
+        doc = <span class="string">"1GB page size entries supported by this structure"</span>,
         has_1gb_entries,
         ebx,
         <span class="number">3
     </span>);
 
     <span class="macro">check_bit_fn!</span>(
-        doc = <span class="string">&quot;Fully associative structure&quot;</span>,
+        doc = <span class="string">"Fully associative structure"</span>,
         is_fully_associative,
         edx,
         <span class="number">8
@@ -10996,13 +10997,13 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>DatInfo {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;DatInfo&quot;</span>)
-            .field(<span class="string">&quot;has_4k_entries&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_4k_entries())
-            .field(<span class="string">&quot;has_2mb_entries&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_2mb_entries())
-            .field(<span class="string">&quot;has_4mb_entries&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_4mb_entries())
-            .field(<span class="string">&quot;has_1gb_entries&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_1gb_entries())
-            .field(<span class="string">&quot;is_fully_associative&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_fully_associative())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        f.debug_struct(<span class="string">"DatInfo"</span>)
+            .field(<span class="string">"has_4k_entries"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_4k_entries())
+            .field(<span class="string">"has_2mb_entries"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_2mb_entries())
+            .field(<span class="string">"has_4mb_entries"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_4mb_entries())
+            .field(<span class="string">"has_1gb_entries"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.has_1gb_entries())
+            .field(<span class="string">"is_fully_associative"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.is_fully_associative())
             .finish()
     }
 }
@@ -11026,15 +11027,15 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>DatType {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">let </span>t = <span class="kw">match </span><span class="self">self </span>{
-            DatType::Null =&gt; <span class="string">&quot;invalid (0)&quot;</span>,
-            DatType::DataTLB =&gt; <span class="string">&quot;Data TLB&quot;</span>,
-            DatType::InstructionTLB =&gt; <span class="string">&quot;Instruction TLB&quot;</span>,
-            DatType::UnifiedTLB =&gt; <span class="string">&quot;Unified TLB&quot;</span>,
-            DatType::LoadOnly =&gt; <span class="string">&quot;Load Only&quot;</span>,
-            DatType::StoreOnly =&gt; <span class="string">&quot;Store Only&quot;</span>,
-            DatType::Unknown =&gt; <span class="string">&quot;Unknown&quot;</span>,
+            DatType::Null =&gt; <span class="string">"invalid (0)"</span>,
+            DatType::DataTLB =&gt; <span class="string">"Data TLB"</span>,
+            DatType::InstructionTLB =&gt; <span class="string">"Instruction TLB"</span>,
+            DatType::UnifiedTLB =&gt; <span class="string">"Unified TLB"</span>,
+            DatType::LoadOnly =&gt; <span class="string">"Load Only"</span>,
+            DatType::StoreOnly =&gt; <span class="string">"Store Only"</span>,
+            DatType::Unknown =&gt; <span class="string">"Unknown"</span>,
         };
         f.write_str(t)
     }
@@ -11093,12 +11094,12 @@
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; fmt::Debug <span class="kw">for </span>SoCVendorInfo&lt;R&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;SoCVendorInfo&quot;</span>)
-            .field(<span class="string">&quot;soc_vendor_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_soc_vendor_id())
-            .field(<span class="string">&quot;project_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_project_id())
-            .field(<span class="string">&quot;stepping_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_stepping_id())
-            .field(<span class="string">&quot;vendor_brand&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_vendor_brand())
-            .field(<span class="string">&quot;vendor_attributes&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_vendor_attributes())
+        f.debug_struct(<span class="string">"SoCVendorInfo"</span>)
+            .field(<span class="string">"soc_vendor_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_soc_vendor_id())
+            .field(<span class="string">"project_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_project_id())
+            .field(<span class="string">"stepping_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_stepping_id())
+            .field(<span class="string">"vendor_brand"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_vendor_brand())
+            .field(<span class="string">"vendor_attributes"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.get_vendor_attributes())
             .finish()
     }
 }
@@ -11112,9 +11113,9 @@
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; fmt::Debug <span class="kw">for </span>SoCVendorAttributesIter&lt;R&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;SocVendorAttributesIter&quot;</span>)
-            .field(<span class="string">&quot;count&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.count)
-            .field(<span class="string">&quot;current&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.current)
+        f.debug_struct(<span class="string">"SocVendorAttributesIter"</span>)
+            .field(<span class="string">"count"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.count)
+            .field(<span class="string">"current"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.current)
             .finish()
     }
 }
@@ -11147,12 +11148,12 @@
             <span class="comment">// Safety: SoCVendorBrand is laid out with repr(C).
             </span>slice::from_raw_parts(brand_string_start, size_of::&lt;SoCVendorBrand&gt;())
         };
-        str::from_utf8(slice).unwrap_or(<span class="string">&quot;InvalidSoCVendorString&quot;</span>)
+        str::from_utf8(slice).unwrap_or(<span class="string">"InvalidSoCVendorString"</span>)
     }
 
     <span class="attr">#[deprecated(
-        since = <span class="string">&quot;10.0.0&quot;</span>,
-        note = <span class="string">&quot;Use idiomatic function name `as_str` instead&quot;
+        since = <span class="string">"10.0.0"</span>,
+        note = <span class="string">"Use idiomatic function name `as_str` instead"
     </span>)]
     </span><span class="kw">pub fn </span>as_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="self">self</span>.as_str()
@@ -11161,7 +11162,7 @@
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>SoCVendorBrand {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.as_str())
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.as_str())
     }
 }
 
@@ -11176,10 +11177,10 @@
 
 <span class="kw">impl</span>&lt;R: CpuIdReader&gt; fmt::Debug <span class="kw">for </span>HypervisorInfo&lt;R&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;HypervisorInfo&quot;</span>)
-            .field(<span class="string">&quot;identify&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.identify())
-            .field(<span class="string">&quot;tsc_frequency&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.tsc_frequency())
-            .field(<span class="string">&quot;apic_frequency&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.apic_frequency())
+        f.debug_struct(<span class="string">"HypervisorInfo"</span>)
+            .field(<span class="string">"identify"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.identify())
+            .field(<span class="string">"tsc_frequency"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.tsc_frequency())
+            .field(<span class="string">"apic_frequency"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.apic_frequency())
             .finish()
     }
 }
@@ -11213,29 +11214,29 @@
     /// relatively easy.
     </span><span class="kw">pub fn </span>identify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Hypervisor {
         <span class="kw">match </span>(<span class="self">self</span>.res.ebx, <span class="self">self</span>.res.ecx, <span class="self">self</span>.res.edx) {
-            <span class="comment">// &quot;VMwareVMware&quot; (0x56 =&gt; V, 0x4d =&gt; M, ...)
+            <span class="comment">// "VMwareVMware" (0x56 =&gt; V, 0x4d =&gt; M, ...)
             </span>(<span class="number">0x61774d56</span>, <span class="number">0x4d566572</span>, <span class="number">0x65726177</span>) =&gt; Hypervisor::VMware,
-            <span class="comment">// &quot;XenVMMXenVMM&quot;
+            <span class="comment">// "XenVMMXenVMM"
             </span>(<span class="number">0x566e6558</span>, <span class="number">0x65584d4d</span>, <span class="number">0x4d4d566e</span>) =&gt; Hypervisor::Xen,
-            <span class="comment">// &quot;Microsoft Hv&quot;
+            <span class="comment">// "Microsoft Hv"
             </span>(<span class="number">0x7263694d</span>, <span class="number">0x666f736f</span>, <span class="number">0x76482074</span>) =&gt; Hypervisor::HyperV,
-            <span class="comment">// &quot;KVMKVMKVM\0\0\0&quot;
+            <span class="comment">// "KVMKVMKVM\0\0\0"
             </span>(<span class="number">0x4b4d564b</span>, <span class="number">0x564b4d56</span>, <span class="number">0x0000004d</span>) =&gt; Hypervisor::KVM,
-            <span class="comment">// &quot;TCGTCGTCGTCG&quot;
+            <span class="comment">// "TCGTCGTCGTCG"
             // see https://github.com/qemu/qemu/blob/6512fa497c2fa9751b9d774ab32d87a9764d1958/target/i386/cpu.c
             </span>(<span class="number">0x54474354</span>, <span class="number">0x43544743</span>, <span class="number">0x47435447</span>) =&gt; Hypervisor::QEMU,
-            <span class="comment">// &quot;bhyve bhyve &quot;
-            // found this in another library (&quot;heim-virt&quot;)
+            <span class="comment">// "bhyve bhyve "
+            // found this in another library ("heim-virt")
             </span>(<span class="number">0x76796862</span>, <span class="number">0x68622065</span>, <span class="number">0x20657679</span>) =&gt; Hypervisor::Bhyve,
-            <span class="comment">// &quot;BHyVE BHyVE &quot;
+            <span class="comment">// "BHyVE BHyVE "
             // But this value is in the original source code. To be safe, we keep both.
             // See https://github.com/lattera/bhyve/blob/5946a9115d2771a1d27f14a835c7fbc05b30f7f9/sys/amd64/vmm/x86.c#L165
             </span>(<span class="number">0x56794842</span>, <span class="number">0x48422045</span>, <span class="number">0x20455679</span>) =&gt; Hypervisor::Bhyve,
-            <span class="comment">// &quot;QNXQVMBSQG&quot;
+            <span class="comment">// "QNXQVMBSQG"
             // This can be verified in multiple Git repos (e.g. by Intel)
             // https://github.com/search?q=QNXQVMBSQG&amp;type=code
             </span>(<span class="number">0x51584e51</span>, <span class="number">0x53424d56</span>, <span class="number">0x00004751</span>) =&gt; Hypervisor::QNX,
-            <span class="comment">// &quot;ACRNACRNACRN&quot;
+            <span class="comment">// "ACRNACRNACRN"
             </span>(<span class="number">0x4e524341</span>, <span class="number">0x4e524341</span>, <span class="number">0x4e524341</span>) =&gt; Hypervisor::ACRN,
             (ebx, ecx, edx) =&gt; Hypervisor::Unknown(ebx, ecx, edx),
         }
@@ -11270,10 +11271,10 @@
     <span class="macro">macro_rules! </span>external_doc_test {
         (<span class="macro-nonterminal">$x</span>:expr) =&gt; {
             <span class="attr">#[doc = <span class="macro-nonterminal">$x</span>]
-            </span><span class="kw">extern </span><span class="string">&quot;C&quot; </span>{}
+            </span><span class="kw">extern </span><span class="string">"C" </span>{}
         };
     }
 
-    <span class="macro">external_doc_test!</span>(<span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>));
+    <span class="macro">external_doc_test!</span>(<span class="macro">include_str!</span>(<span class="string">"../README.md"</span>));
 }
 </code></pre></div></section></main></body></html>

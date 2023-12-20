@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/drivers/pci.rs`."><title>pci.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/drivers/pci.rs`."><title>pci.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -912,7 +913,7 @@
     }
 
     <span class="kw">fn </span>set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, vector: u8, delivery_mode: DeliveryMode) {
-        <span class="macro">assert!</span>(<span class="self">self</span>.is_masked(), <span class="string">&quot;msix: message is unmasked&quot;</span>);
+        <span class="macro">assert!</span>(<span class="self">self</span>.is_masked(), <span class="string">"msix: message is unmasked"</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="number">0</span>;
         data.set_bits(<span class="number">0</span>..<span class="number">8</span>, vector <span class="kw">as </span>u32);
@@ -931,13 +932,13 @@
     }
 }
 
-<span class="kw">pub struct </span>Msix&lt;<span class="lifetime">&#39;a</span>&gt; {
-    messages: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>[Message],
+<span class="kw">pub struct </span>Msix&lt;<span class="lifetime">'a</span>&gt; {
+    messages: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[Message],
     table: Bitmap&lt;Global&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Msix&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>new(header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PciHeader, offset: u32) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Msix&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub fn </span>new(header: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PciHeader, offset: u32) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>message_control = <span class="kw">unsafe </span>{ header.read::&lt;u16&gt;(offset + <span class="number">2</span>) } <span class="kw">as </span>u16;
 
         <span class="comment">// 31             16 15           8 7             0
@@ -955,7 +956,7 @@
 
         <span class="kw">let </span>bar = header
             .get_bar(bar_index)
-            .expect(<span class="string">&quot;msix: table bar not present&quot;</span>);
+            .expect(<span class="string">"msix: table bar not present"</span>);
 
         <span class="kw">let </span>bar_address = <span class="kw">match </span>bar {
             Bar::Memory64 { address, .. } =&gt; address,
@@ -989,7 +990,7 @@
         <span class="kw">let </span>msix_vector = <span class="self">self
             </span>.table
             .find_first_unset()
-            .expect(<span class="string">&quot;msix: no free vectors&quot;</span>);
+            .expect(<span class="string">"msix: no free vectors"</span>);
 
         <span class="self">self</span>.table.set(msix_vector, <span class="bool-val">true</span>);
 
@@ -1009,13 +1010,13 @@
     Unknown,
 }
 
-<span class="kw">pub struct </span>CapabilityIter&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">pub struct </span>CapabilityIter&lt;<span class="lifetime">'a</span>&gt; {
     offset: u32,
-    header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PciHeader,
+    header: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PciHeader,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; CapabilityIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>new(device: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PciHeader, offset: u32) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; CapabilityIter&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>new(device: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PciHeader, offset: u32) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             offset,
             header: device,
@@ -1023,7 +1024,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>CapabilityIter&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>CapabilityIter&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">type </span>Item = (u32, Capability);
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
@@ -1409,7 +1410,7 @@
             <span class="number">1 </span>=&gt; (val &gt;&gt; offset) <span class="kw">as </span>u8 <span class="kw">as </span>u32,  <span class="comment">// u8
             </span><span class="number">2 </span>=&gt; (val &gt;&gt; offset) <span class="kw">as </span>u16 <span class="kw">as </span>u32, <span class="comment">// u16
             </span><span class="number">4 </span>=&gt; val,                           <span class="comment">// u32
-            </span>width =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;unknown PCI read width: `{}`&quot;</span>, width),
+            </span>width =&gt; <span class="macro">unreachable!</span>(<span class="string">"unknown PCI read width: `{}`"</span>, width),
         }
     }
 
@@ -1438,7 +1439,7 @@
             } <span class="comment">// u16
 
             </span><span class="number">4 </span>=&gt; io::outl(PCI_CONFIG_DATA_PORT, value), <span class="comment">// u32
-            </span>width =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;unknown PCI write width: `{}`&quot;</span>, width),
+            </span>width =&gt; <span class="macro">unreachable!</span>(<span class="string">"unknown PCI write width: `{}`"</span>, width),
         }
     }
 
@@ -1446,7 +1447,7 @@
     /// that resides behind the bridge in both the memory mapped I/O and prefetchable memory
     /// ranges or targets a location within the bridge itself.
     </span><span class="kw">pub fn </span>enable_mmio(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="comment">// Read the Command Register from the device&#39;s PCI Configuration Space, set bit 1
+        <span class="comment">// Read the Command Register from the device's PCI Configuration Space, set bit 1
         // (MMIO bit) and write the modified Command Register.
         </span><span class="kw">let </span>command = <span class="kw">unsafe </span>{ <span class="self">self</span>.read::&lt;u16&gt;(<span class="number">0x04</span>) };
 
@@ -1457,7 +1458,7 @@
     /// transactions forwarded from the secondary interface. This allows the PCI device to perform
     /// DMA.
     </span><span class="kw">pub fn </span>enable_bus_mastering(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="comment">// Read the Command Register from the device&#39;s PCI Configuration Space, set bit 2
+        <span class="comment">// Read the Command Register from the device's PCI Configuration Space, set bit 2
         // (bus mastering bit) and write the modified Command Register. Note that some BISOs do
         // enable bus mastering by default.
         </span><span class="kw">let </span>command = <span class="kw">unsafe </span>{ <span class="self">self</span>.read::&lt;u16&gt;(<span class="number">0x04</span>) };
@@ -1662,7 +1663,7 @@
                     }
 
                     <span class="macro">log::debug!</span>(
-                        <span class="string">&quot;PCI device (device={:?}, vendor={:?})&quot;</span>,
+                        <span class="string">"PCI device (device={:?}, vendor={:?})"</span>,
                         device.get_device(),
                         device.get_vendor()
                     );

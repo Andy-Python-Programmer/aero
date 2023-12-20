@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/cmdline.rs`."><title>cmdline.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/cmdline.rs`."><title>cmdline.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -140,7 +141,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::rendy;
 
-<span class="kw">static </span>RAW_CMDLINE_STR: Once&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = Once::new();
+<span class="kw">static </span>RAW_CMDLINE_STR: Once&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = Once::new();
 
 <span class="kw">pub struct </span>CommandLine {
     <span class="doccomment">/// If set, then the kernel logs will be redirected onto the framebuffer until
@@ -148,7 +149,7 @@
     ///
     /// By default, the kernel logs are not redirected.
     </span><span class="kw">pub </span>rendy_debug: bool,
-    <span class="kw">pub </span>term_background: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8]&gt;,
+    <span class="kw">pub </span>term_background: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8]&gt;,
     <span class="kw">pub </span>theme_background: u32,
 }
 
@@ -162,7 +163,7 @@
     }
 }
 
-<span class="kw">fn </span>resolve_module(modules: <span class="kw-2">&amp;</span>[NonNullPtr&lt;limine::File&gt;], name: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8] {
+<span class="kw">fn </span>resolve_module(modules: <span class="kw-2">&amp;</span>[NonNullPtr&lt;limine::File&gt;], name: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8] {
     modules
         .iter()
         .find(|m| {
@@ -172,53 +173,53 @@
         .map(|m| <span class="kw">unsafe </span>{
             core::slice::from_raw_parts(m.base.as_ptr().unwrap(), m.length <span class="kw">as </span>usize)
         })
-        .expect(<span class="string">&quot;resolve_module: invalid operand&quot;</span>)
+        .expect(<span class="string">"resolve_module: invalid operand"</span>)
 }
 
 <span class="kw">fn </span>parse_number(<span class="kw-2">mut </span>string: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;usize, ParseIntError&gt; {
-    <span class="kw">let </span>is_hex = string.starts_with(<span class="string">&quot;0x&quot;</span>);
-    <span class="kw">let </span>is_octal = string.starts_with(<span class="string">&quot;0o&quot;</span>);
+    <span class="kw">let </span>is_hex = string.starts_with(<span class="string">"0x"</span>);
+    <span class="kw">let </span>is_octal = string.starts_with(<span class="string">"0o"</span>);
 
     <span class="kw">if </span>is_hex {
-        string = string.trim_start_matches(<span class="string">&quot;0x&quot;</span>);
+        string = string.trim_start_matches(<span class="string">"0x"</span>);
         usize::from_str_radix(string, <span class="number">16</span>)
     } <span class="kw">else if </span>is_octal {
-        string = string.trim_start_matches(<span class="string">&quot;0o&quot;</span>);
+        string = string.trim_start_matches(<span class="string">"0o"</span>);
         usize::from_str_radix(string, <span class="number">8</span>)
     } <span class="kw">else </span>{
         string.parse::&lt;usize&gt;()
     }
 }
 
-<span class="kw">pub fn </span>parse(cmdline: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, modules: <span class="kw-2">&amp;</span>[NonNullPtr&lt;limine::File&gt;]) -&gt; CommandLine {
+<span class="kw">pub fn </span>parse(cmdline: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, modules: <span class="kw-2">&amp;</span>[NonNullPtr&lt;limine::File&gt;]) -&gt; CommandLine {
     RAW_CMDLINE_STR.call_once(|| cmdline);
 
     <span class="comment">// Chew up the leading spaces.
     </span><span class="kw">let </span>cmdline = cmdline.trim();
     <span class="kw">let </span><span class="kw-2">mut </span>result = CommandLine::new();
 
-    <span class="kw">let </span>bail = |argument| <span class="macro">log::warn!</span>(<span class="string">&quot;unknown kernel command line option: &#39;{}&#39;&quot;</span>, argument);
+    <span class="kw">let </span>bail = |argument| <span class="macro">log::warn!</span>(<span class="string">"unknown kernel command line option: '{}'"</span>, argument);
 
     <span class="kw">for </span>argument <span class="kw">in </span>cmdline.split_whitespace() {
         <span class="kw">match </span>argument {
-            <span class="string">&quot;rendy-dbg&quot; </span>=&gt; result.rendy_debug = <span class="bool-val">true</span>,
+            <span class="string">"rendy-dbg" </span>=&gt; result.rendy_debug = <span class="bool-val">true</span>,
 
             <span class="kw">_ </span>=&gt; {
-                <span class="kw">let </span><span class="kw-2">mut </span>pair = argument.splitn(<span class="number">2</span>, <span class="string">&#39;=&#39;</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>pair = argument.splitn(<span class="number">2</span>, <span class="string">'='</span>);
 
                 <span class="kw">match </span>pair.next() {
                     <span class="prelude-val">Some</span>(name) =&gt; {
-                        <span class="kw">let </span>value = pair.next().expect(<span class="string">&quot;missing operand&quot;</span>);
+                        <span class="kw">let </span>value = pair.next().expect(<span class="string">"missing operand"</span>);
 
                         <span class="kw">match </span>name {
-                            <span class="string">&quot;term-background&quot; </span>=&gt; {
+                            <span class="string">"term-background" </span>=&gt; {
                                 result.term_background = <span class="prelude-val">Some</span>(resolve_module(modules, value))
                             }
 
-                            <span class="string">&quot;theme-background&quot; </span>=&gt; {
+                            <span class="string">"theme-background" </span>=&gt; {
                                 <span class="kw">let </span>theme_bg = parse_number(value).unwrap_or_else(|e| {
                                     <span class="macro">log::warn!</span>(
-                                        <span class="string">&quot;parse_number: invalid operand {}, defaulting to {}&quot;</span>,
+                                        <span class="string">"parse_number: invalid operand {}, defaulting to {}"</span>,
                                         e,
                                         rendy::DEFAULT_THEME_BACKGROUND
                                     );
@@ -247,10 +248,10 @@
 /// ## Panics
 /// * If this function was invoked before the kernel command line was
 /// parsed using [`self::parse`].
-</span><span class="kw">pub fn </span>get_raw_cmdline() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+</span><span class="kw">pub fn </span>get_raw_cmdline() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
     RAW_CMDLINE_STR
         .get()
-        .expect(<span class="string">&quot;get_raw_cmdline: called before cmdline was parsed&quot;</span>)
+        .expect(<span class="string">"get_raw_cmdline: called before cmdline was parsed"</span>)
 }
 
 <span class="attr">#[cfg(test)]
@@ -259,13 +260,13 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>number_parser_test() {
-        <span class="macro">assert_eq!</span>(parse_number(<span class="string">&quot;0xdeadbeef&quot;</span>).unwrap(), <span class="number">0xdeadbeef</span>);
-        <span class="macro">assert_eq!</span>(parse_number(<span class="string">&quot;0o546&quot;</span>).unwrap(), <span class="number">0o546</span>);
-        <span class="macro">assert_eq!</span>(parse_number(<span class="string">&quot;123&quot;</span>).unwrap(), <span class="number">123</span>);
+        <span class="macro">assert_eq!</span>(parse_number(<span class="string">"0xdeadbeef"</span>).unwrap(), <span class="number">0xdeadbeef</span>);
+        <span class="macro">assert_eq!</span>(parse_number(<span class="string">"0o546"</span>).unwrap(), <span class="number">0o546</span>);
+        <span class="macro">assert_eq!</span>(parse_number(<span class="string">"123"</span>).unwrap(), <span class="number">123</span>);
 
-        <span class="macro">assert!</span>(parse_number(<span class="string">&quot;invalid&quot;</span>).is_err());
-        <span class="macro">assert!</span>(parse_number(<span class="string">&quot;0xinvalid&quot;</span>).is_err());
-        <span class="macro">assert!</span>(parse_number(<span class="string">&quot;0oinvalid&quot;</span>).is_err());
+        <span class="macro">assert!</span>(parse_number(<span class="string">"invalid"</span>).is_err());
+        <span class="macro">assert!</span>(parse_number(<span class="string">"0xinvalid"</span>).is_err());
+        <span class="macro">assert!</span>(parse_number(<span class="string">"0oinvalid"</span>).is_err());
     }
 }
 </code></pre></div></section></main></body></html>

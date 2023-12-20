@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/main.rs`."><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/main.rs`."><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -216,7 +217,6 @@
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
 <a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (C) 2021-2023 The Aero Project Developers.
 //
 // This file is part of The Aero Project.
@@ -264,14 +264,13 @@
     </span>const_trait_impl, <span class="comment">// https://github.com/rust-lang/rust/issues/67792
     </span>int_roundings, <span class="comment">// https://github.com/rust-lang/rust/issues/88581
     </span>const_ptr_is_null, <span class="comment">// https://github.com/rust-lang/rust/issues/74939
-    </span>trait_upcasting, <span class="comment">// https://github.com/rust-lang/rust/issues/65991
     </span>naked_functions, <span class="comment">// https://github.com/rust-lang/rust/issues/32408
     </span>cfg_match, <span class="comment">// https://github.com/rust-lang/rust/issues/115585
     </span>strict_provenance,
     offset_of,
     associated_type_defaults
 )]
-</span><span class="comment">// TODO(andypython): can we remove the dependency of &quot;prelude_import&quot; and &quot;lang_items&quot;?
+</span><span class="comment">// TODO(andypython): can we remove the dependency of "prelude_import" and "lang_items"?
 //     `lang_items`     =&gt; is currently used for the personality function (`rust_eh_personality`).
 //     `prelude_import` =&gt; is currently just used to re-export alloc prelude. This just makes the
 //                         files overall more readable.
@@ -280,7 +279,7 @@
 #![test_runner(<span class="kw">crate</span>::tests::test_runner)]
 #![no_std]
 #![no_main]
-#![reexport_test_harness_main = <span class="string">&quot;test_main&quot;</span>]
+#![reexport_test_harness_main = <span class="string">"test_main"</span>]
 </span><span class="comment">// #![warn(clippy::pedantic)]
 
 </span><span class="attr">#[macro_use]
@@ -310,7 +309,7 @@
 <span class="kw">mod </span>arch;
 <span class="kw">mod </span>cmdline;
 <span class="kw">mod </span>drivers;
-<span class="attr">#[cfg(feature = <span class="string">&quot;ci&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"ci"</span>)]
 </span><span class="kw">mod </span>emu;
 <span class="kw">mod </span>fs;
 <span class="kw">mod </span>logger;
@@ -372,18 +371,18 @@
     // the task scheduler. Rest of the initializing (including kernel modules) should go
     // into the kernel main thread function instead.
     </span>fs::init().unwrap();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded filesystem&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded filesystem"</span>);
 
     <span class="kw">crate</span>::arch::time::init();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded timer&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded timer"</span>);
 
     userland::scheduler::init();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded scheduler&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded scheduler"</span>);
 
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
     </span><span class="kw">crate</span>::arch::apic::mark_bsp_ready(<span class="bool-val">true</span>);
 
-    <span class="macro">log::info!</span>(<span class="string">&quot;initialized kernel&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"initialized kernel"</span>);
 
     <span class="comment">// Now that all of the essential initialization is done we are going to schedule
     // the kernel main thread.
@@ -403,12 +402,12 @@
 
 <span class="kw">fn </span>kernel_main_thread() {
     modules::init();
-    <span class="macro">log::info!</span>(<span class="string">&quot;loaded kernel modules&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"loaded kernel modules"</span>);
 
     net::init();
-    <span class="macro">log::info!</span>(<span class="string">&quot;initialized networking stack&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"initialized networking stack"</span>);
 
-    <span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+    <span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
     </span>arch::enable_acpi();
 
     <span class="attr">#[cfg(test)]
@@ -429,8 +428,8 @@
     <span class="macro">unreachable!</span>()
 }
 
-<span class="kw">extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>aero_ap_main(ap_id: usize) -&gt; ! {
-    <span class="macro">log::info!</span>(<span class="string">&quot;AP{}: Loaded userland&quot;</span>, ap_id);
+<span class="kw">extern </span><span class="string">"C" </span><span class="kw">fn </span>aero_ap_main(ap_id: usize) -&gt; ! {
+    <span class="macro">log::info!</span>(<span class="string">"AP{}: Loaded userland"</span>, ap_id);
 
     <span class="kw">loop </span>{
         <span class="kw">unsafe </span>{ interrupts::halt() }

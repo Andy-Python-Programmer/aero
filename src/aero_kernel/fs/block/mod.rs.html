@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/fs/block/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/fs/block/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -499,7 +500,7 @@
             offset,
             page: FRAME_ALLOCATOR
                 .allocate_frame()
-                .expect(<span class="string">&quot;page_cache: out of memory&quot;</span>),
+                .expect(<span class="string">"page_cache: out of memory"</span>),
             dirty: AtomicBool::new(<span class="bool-val">false</span>),
         }
     }
@@ -586,14 +587,14 @@
         }
 
         <span class="kw">let </span>page = CachedPage::new(device.clone(), cache_offset);
-        <span class="kw">let </span>device = device.upgrade().expect(<span class="string">&quot;page_cache: device dropped&quot;</span>);
+        <span class="kw">let </span>device = device.upgrade().expect(<span class="string">"page_cache: device dropped"</span>);
 
         <span class="kw">let </span>aligned_offset = align_down(offset <span class="kw">as </span>u64, Size4KiB::SIZE) <span class="kw">as </span>usize;
         <span class="kw">let </span>sector = aligned_offset / device.block_size();
 
         device
             .read_dma(sector, page.data_addr(), Size4KiB::SIZE <span class="kw">as </span>usize)
-            .expect(<span class="string">&quot;page_cache: failed to read block&quot;</span>);
+            .expect(<span class="string">"page_cache: failed to read block"</span>);
 
         PAGE_CACHE.make_item_cached(page)
     }
@@ -708,7 +709,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>devs = BLOCK_DEVS.lock();
     install_device(dev.clone())<span class="question-mark">?</span>;
 
-    <span class="macro">log::debug!</span>(<span class="string">&quot;block: installed block device {}&quot;</span>, dev.name());
+    <span class="macro">log::debug!</span>(<span class="string">"block: installed block device {}"</span>, dev.name());
     devs.insert(dev.id, dev);
 
     <span class="prelude-val">Ok</span>(())
@@ -843,7 +844,7 @@
 
     <span class="kw">for </span>block <span class="kw">in </span>blocks_copy {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(gpt) = Gpt::new(block.clone()) {
-            <span class="macro">log::info!</span>(<span class="string">&quot;block: found GPT on {}!&quot;</span>, block.name());
+            <span class="macro">log::info!</span>(<span class="string">"block: found GPT on {}!"</span>, block.name());
 
             <span class="kw">for </span>(i, entry) <span class="kw">in </span>gpt
                 .entries()
@@ -855,13 +856,13 @@
                 <span class="kw">let </span>size = entry.size() <span class="kw">as </span>usize;
 
                 <span class="macro">log::info!</span>(
-                    <span class="string">&quot;gpt: found partition (name=`{}`, start={:#x}, size{:#x})!&quot;</span>,
+                    <span class="string">"gpt: found partition (name=`{}`, start={:#x}, size{:#x})!"</span>,
                     entry.partition_name(),
                     start,
                     size
                 );
 
-                <span class="kw">let </span>name = <span class="macro">alloc::format!</span>(<span class="string">&quot;{}p{}&quot;</span>, block.name(), i);
+                <span class="kw">let </span>name = <span class="macro">alloc::format!</span>(<span class="string">"{}p{}"</span>, block.name(), i);
                 <span class="kw">let </span>partition_device = PartitionBlockDevice::new(start, size, block.clone());
                 <span class="kw">let </span>device = BlockDevice::new(name, partition_device);
 
@@ -869,7 +870,7 @@
 
                 <span class="comment">// Check what filesystem is on this partition and mount it.
                 </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ext2) = Ext2::new(device.clone()) {
-                    <span class="macro">log::info!</span>(<span class="string">&quot;gpt: found ext2 filesystem on {}!&quot;</span>, device.name());
+                    <span class="macro">log::info!</span>(<span class="string">"gpt: found ext2 filesystem on {}!"</span>, device.name());
 
                     <span class="kw">super</span>::ROOT_FS.call_once(|| ext2.clone());
                     <span class="kw">super</span>::ROOT_DIR.call_once(|| ext2.root_dir());
@@ -879,10 +880,10 @@
     }
 
     <span class="kw">super</span>::devfs::init()<span class="question-mark">?</span>;
-    <span class="macro">log::info!</span>(<span class="string">&quot;installed devfs&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"installed devfs"</span>);
 
     <span class="kw">super</span>::procfs::init()<span class="question-mark">?</span>;
-    <span class="macro">log::info!</span>(<span class="string">&quot;installed procfs&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"installed procfs"</span>);
 
     <span class="prelude-val">Ok</span>(())
 }

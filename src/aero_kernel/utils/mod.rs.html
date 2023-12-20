@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/utils/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/utils/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -252,10 +253,10 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::mem::paging::{align_down, ReadErr, VirtAddr};
 
-<span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+<span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::arch::apic::get_cpu_count;
 
-<span class="attr">#[cfg(target_arch = <span class="string">&quot;aarch64&quot;</span>)]
+<span class="attr">#[cfg(target_arch = <span class="string">"aarch64"</span>)]
 </span><span class="kw">fn </span>get_cpu_count() -&gt; usize {
     <span class="number">1
 </span>}
@@ -265,17 +266,17 @@
 <span class="kw">pub mod </span>dma;
 <span class="kw">pub mod </span>sync;
 
-<span class="kw">pub fn </span>validate_mut_ptr&lt;T&gt;(ptr: <span class="kw-2">*mut </span>T) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>T, ReadErr&gt; {
+<span class="kw">pub fn </span>validate_mut_ptr&lt;T&gt;(ptr: <span class="kw-2">*mut </span>T) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">mut </span>T, ReadErr&gt; {
     VirtAddr::new(ptr <span class="kw">as _</span>).read_mut::&lt;T&gt;()
 }
 
-<span class="kw">pub fn </span>validate_ptr&lt;T&gt;(ptr: <span class="kw-2">*const </span>T) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>T, ReadErr&gt; {
+<span class="kw">pub fn </span>validate_ptr&lt;T&gt;(ptr: <span class="kw-2">*const </span>T) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>T, ReadErr&gt; {
     <span class="comment">// SAFETY: Safe to cast const pointer to mutable since the pointer is not
     //         mutated and the returned reference is immutable.
     </span>validate_mut_ptr(ptr <span class="kw">as </span><span class="kw-2">*mut </span>T).map(|e| <span class="kw-2">&amp;*</span>e)
 }
 
-<span class="kw">pub fn </span>validate_slice_mut&lt;T&gt;(ptr: <span class="kw-2">*mut </span>T, len: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>[T], ReadErr&gt; {
+<span class="kw">pub fn </span>validate_slice_mut&lt;T&gt;(ptr: <span class="kw-2">*mut </span>T, len: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">mut </span>[T], ReadErr&gt; {
     <span class="kw">if </span>len == <span class="number">0 </span>{
         <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut </span>[])
     } <span class="kw">else </span>{
@@ -287,20 +288,20 @@
     }
 }
 
-<span class="kw">pub fn </span>validate_slice&lt;T&gt;(ptr: <span class="kw-2">*const </span>T, len: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[T], ReadErr&gt; {
+<span class="kw">pub fn </span>validate_slice&lt;T&gt;(ptr: <span class="kw-2">*const </span>T, len: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[T], ReadErr&gt; {
     <span class="comment">// SAFETY: Safe to cast const pointer to mutable since the pointer is not
     //         mutated and the returned reference is immutable.
     </span>validate_slice_mut(ptr <span class="kw">as </span><span class="kw-2">*mut </span>T, len).map(|e| <span class="kw-2">&amp;*</span>e)
 }
 
-<span class="kw">pub fn </span>validate_str(ptr: <span class="kw-2">*const </span>u8, len: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, ReadErr&gt; {
+<span class="kw">pub fn </span>validate_str(ptr: <span class="kw-2">*const </span>u8, len: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, ReadErr&gt; {
     <span class="kw">let </span>slice = validate_slice(ptr, len)<span class="question-mark">?</span>;
     core::str::from_utf8(slice).map_err(|<span class="kw">_</span>| ReadErr::Null)
 }
 
 <span class="kw">pub fn </span>validate_array_mut&lt;T, <span class="kw">const </span>COUNT: usize&gt;(
     ptr: <span class="kw-2">*mut </span>T,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>[T; COUNT], ReadErr&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">mut </span>[T; COUNT], ReadErr&gt; {
     <span class="kw">let </span>slice = validate_slice_mut::&lt;T&gt;(ptr, COUNT);
     <span class="comment">// Convert the validated slice to an array.
     //
@@ -395,13 +396,13 @@
     <span class="kw">unsafe </span>{ core::slice::from_raw_parts(data, size) }
 }
 
-<span class="kw">pub struct </span>StackHelper&lt;<span class="lifetime">&#39;a</span>&gt; {
-    ptr: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>u64,
+<span class="kw">pub struct </span>StackHelper&lt;<span class="lifetime">'a</span>&gt; {
+    ptr: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>u64,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; StackHelper&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>new(ptr: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>u64) -&gt; StackHelper&lt;<span class="lifetime">&#39;a</span>&gt; {
-        StackHelper::&lt;<span class="lifetime">&#39;a</span>&gt; { ptr }
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; StackHelper&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub fn </span>new(ptr: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>u64) -&gt; StackHelper&lt;<span class="lifetime">'a</span>&gt; {
+        StackHelper::&lt;<span class="lifetime">'a</span>&gt; { ptr }
     }
 
     <span class="kw">pub fn </span>skip_by(<span class="kw-2">&amp;mut </span><span class="self">self</span>, by: u64) {
@@ -442,7 +443,7 @@
         <span class="kw-2">*</span><span class="self">self</span>.ptr += by;
     }
 
-    <span class="kw">pub unsafe fn </span>get&lt;<span class="lifetime">&#39;b</span>, T: Sized&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>T {
+    <span class="kw">pub unsafe fn </span>get&lt;<span class="lifetime">'b</span>, T: Sized&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>T {
         <span class="kw">let </span>x = <span class="kw-2">&amp;mut *</span>(<span class="kw-2">*</span><span class="self">self</span>.ptr <span class="kw">as </span><span class="kw-2">*mut </span>T);
 
         <span class="self">self</span>.get_by(core::mem::size_of::&lt;T&gt;() <span class="kw">as </span>u64);

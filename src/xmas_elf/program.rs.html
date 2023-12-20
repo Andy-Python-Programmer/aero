@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmas-elf-0.9.0/src/program.rs`."><title>program.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xmas_elf" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmas-elf-0.9.0/src/program.rs`."><title>program.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xmas_elf" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -348,13 +349,13 @@
 <span class="kw">use </span>core::fmt;
 
 
-<span class="kw">pub fn </span>parse_program_header&lt;<span class="lifetime">&#39;a</span>&gt;(input: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
-                                header: Header&lt;<span class="lifetime">&#39;a</span>&gt;,
+<span class="kw">pub fn </span>parse_program_header&lt;<span class="lifetime">'a</span>&gt;(input: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
+                                header: Header&lt;<span class="lifetime">'a</span>&gt;,
                                 index: u16)
-                                -&gt; <span class="prelude-ty">Result</span>&lt;ProgramHeader&lt;<span class="lifetime">&#39;a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+                                -&gt; <span class="prelude-ty">Result</span>&lt;ProgramHeader&lt;<span class="lifetime">'a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>pt2 = <span class="kw-2">&amp;</span>header.pt2;
     <span class="kw">if </span>!(index &lt; pt2.ph_count() &amp;&amp; pt2.ph_offset() &gt; <span class="number">0 </span>&amp;&amp; pt2.ph_entry_size() &gt; <span class="number">0</span>) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;There are no program headers in this file&quot;</span>)
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"There are no program headers in this file"</span>)
     }
 
     <span class="kw">let </span>start = pt2.ph_offset() <span class="kw">as </span>usize + index <span class="kw">as </span>usize * pt2.ph_entry_size() <span class="kw">as </span>usize;
@@ -372,13 +373,13 @@
 }
 
 <span class="attr">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>ProgramIter&lt;<span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>&gt; {
-    <span class="kw">pub </span>file: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;,
+</span><span class="kw">pub struct </span>ProgramIter&lt;<span class="lifetime">'b</span>, <span class="lifetime">'a</span>: <span class="lifetime">'b</span>&gt; {
+    <span class="kw">pub </span>file: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>ElfFile&lt;<span class="lifetime">'a</span>&gt;,
     <span class="kw">pub </span>next_index: u16,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>ProgramIter&lt;<span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = ProgramHeader&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'b</span>, <span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>ProgramIter&lt;<span class="lifetime">'b</span>, <span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = ProgramHeader&lt;<span class="lifetime">'a</span>&gt;;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>count = <span class="self">self</span>.file.header.pt2.ph_count();
@@ -393,9 +394,9 @@
 }
 
 <span class="attr">#[derive(Copy, Clone, Debug)]
-</span><span class="kw">pub enum </span>ProgramHeader&lt;<span class="lifetime">&#39;a</span>&gt; {
-    Ph32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ProgramHeader32),
-    Ph64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ProgramHeader64),
+</span><span class="kw">pub enum </span>ProgramHeader&lt;<span class="lifetime">'a</span>&gt; {
+    Ph32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProgramHeader32),
+    Ph64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProgramHeader64),
 }
 
 <span class="attr">#[derive(Copy, Clone, Debug, Default)]
@@ -439,15 +440,15 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; ProgramHeader&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>get_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Type, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProgramHeader&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub fn </span>get_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Type, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
             ProgramHeader::Ph32(ph) =&gt; ph.get_type(),
             ProgramHeader::Ph64(ph) =&gt; ph.get_type(),
         }
     }
 
-    <span class="kw">pub fn </span>get_data(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;SegmentData&lt;<span class="lifetime">&#39;a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>get_data(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;SegmentData&lt;<span class="lifetime">'a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
             ProgramHeader::Ph32(ph) =&gt; ph.get_data(elf_file),
             ProgramHeader::Ph64(ph) =&gt; ph.get_data(elf_file),
@@ -463,7 +464,7 @@
     <span class="macro">getter!</span>(flags, Flags);
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; fmt::Display <span class="kw">for </span>ProgramHeader&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; fmt::Display <span class="kw">for </span>ProgramHeader&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
             ProgramHeader::Ph32(ph) =&gt; ph.fmt(f),
@@ -474,11 +475,11 @@
 <span class="macro">macro_rules! </span>ph_impl {
     (<span class="macro-nonterminal">$ph</span>: ident) =&gt; {
         <span class="kw">impl </span><span class="macro-nonterminal">$ph </span>{
-            <span class="kw">pub fn </span>get_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Type, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+            <span class="kw">pub fn </span>get_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Type, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
                 <span class="self">self</span>.type_.as_type()
             }
 
-            <span class="kw">pub fn </span>get_data&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;SegmentData&lt;<span class="lifetime">&#39;a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+            <span class="kw">pub fn </span>get_data&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;SegmentData&lt;<span class="lifetime">'a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
                 <span class="self">self</span>.get_type().map(|typ| <span class="kw">match </span>typ {
                     Type::Null =&gt; SegmentData::Empty,
                     Type::Load | Type::Interp | Type::ShLib | Type::Phdr | Type::Tls |
@@ -498,7 +499,7 @@
                         <span class="kw">match </span>elf_file.header.pt1.class() {
                             Class::ThirtyTwo =&gt; <span class="macro">unimplemented!</span>(),
                             Class::SixtyFour =&gt; {
-                                <span class="kw">let </span>header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>NoteHeader = read(<span class="kw-2">&amp;</span>data[<span class="number">0</span>..<span class="number">12</span>]);
+                                <span class="kw">let </span>header: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>NoteHeader = read(<span class="kw-2">&amp;</span>data[<span class="number">0</span>..<span class="number">12</span>]);
                                 <span class="kw">let </span>index = <span class="kw-2">&amp;</span>data[<span class="number">12</span>..];
                                 SegmentData::Note64(header, index)
                             }
@@ -508,10 +509,10 @@
                 })
             }
 
-            <span class="kw">pub fn </span>raw_data&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8] {
+            <span class="kw">pub fn </span>raw_data&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8] {
                 <span class="macro">assert!</span>(<span class="self">self</span>.get_type().map(|typ| typ != Type::Null).unwrap_or(<span class="bool-val">false</span>));
                 <span class="kw">if </span><span class="self">self</span>.file_size == <span class="number">0 </span>{
-                    <span class="comment">// When size is 0 it&#39;s not guaranteed that offset is not
+                    <span class="comment">// When size is 0 it's not guaranteed that offset is not
                     // outside of elf_file.input range.
                     </span><span class="kw-2">&amp;</span>[]
                 } <span class="kw">else </span>{
@@ -522,15 +523,15 @@
 
         <span class="kw">impl </span>fmt::Display <span class="kw">for </span><span class="macro-nonterminal">$ph </span>{
             <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;Program header:&quot;</span>)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    type:             {:?}&quot;</span>, <span class="self">self</span>.get_type())<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    flags:            {}&quot;</span>, <span class="self">self</span>.flags)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    offset:           {:#x}&quot;</span>, <span class="self">self</span>.offset)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    virtual address:  {:#x}&quot;</span>, <span class="self">self</span>.virtual_addr)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    physical address: {:#x}&quot;</span>, <span class="self">self</span>.physical_addr)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    file size:        {:#x}&quot;</span>, <span class="self">self</span>.file_size)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    memory size:      {:#x}&quot;</span>, <span class="self">self</span>.mem_size)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    align:            {:#x}&quot;</span>, <span class="self">self</span>.align)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"Program header:"</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    type:             {:?}"</span>, <span class="self">self</span>.get_type())<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    flags:            {}"</span>, <span class="self">self</span>.flags)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    offset:           {:#x}"</span>, <span class="self">self</span>.offset)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    virtual address:  {:#x}"</span>, <span class="self">self</span>.virtual_addr)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    physical address: {:#x}"</span>, <span class="self">self</span>.physical_addr)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    file size:        {:#x}"</span>, <span class="self">self</span>.file_size)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    memory size:      {:#x}"</span>, <span class="self">self</span>.mem_size)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    align:            {:#x}"</span>, <span class="self">self</span>.align)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(())
             }
         }
@@ -559,10 +560,10 @@
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Flags {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}{}{}&quot;</span>,
-               <span class="kw">if </span><span class="self">self</span>.<span class="number">0 </span>&amp; FLAG_X == FLAG_X { <span class="string">&#39;X&#39; </span>} <span class="kw">else </span>{ <span class="string">&#39; &#39; </span>},
-               <span class="kw">if </span><span class="self">self</span>.<span class="number">0 </span>&amp; FLAG_W == FLAG_W { <span class="string">&#39;W&#39; </span>} <span class="kw">else </span>{ <span class="string">&#39; &#39; </span>},
-               <span class="kw">if </span><span class="self">self</span>.<span class="number">0 </span>&amp; FLAG_R == FLAG_R { <span class="string">&#39;R&#39; </span>} <span class="kw">else </span>{ <span class="string">&#39; &#39; </span>})
+        <span class="macro">write!</span>(f, <span class="string">"{}{}{}"</span>,
+               <span class="kw">if </span><span class="self">self</span>.<span class="number">0 </span>&amp; FLAG_X == FLAG_X { <span class="string">'X' </span>} <span class="kw">else </span>{ <span class="string">' ' </span>},
+               <span class="kw">if </span><span class="self">self</span>.<span class="number">0 </span>&amp; FLAG_W == FLAG_W { <span class="string">'W' </span>} <span class="kw">else </span>{ <span class="string">' ' </span>},
+               <span class="kw">if </span><span class="self">self</span>.<span class="number">0 </span>&amp; FLAG_R == FLAG_R { <span class="string">'R' </span>} <span class="kw">else </span>{ <span class="string">' ' </span>})
     }
 }
 
@@ -570,7 +571,7 @@
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">let </span>val = <span class="self">self</span>.<span class="number">0</span>;
 
-        <span class="macro">write!</span>(f, <span class="string">&quot;{:#x}&quot;</span>, val) <span class="comment">// delegate to i32&#39;s implementation
+        <span class="macro">write!</span>(f, <span class="string">"{:#x}"</span>, val) <span class="comment">// delegate to i32's implementation
     </span>}
 }
 
@@ -578,7 +579,7 @@
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="kw">let </span>val = <span class="self">self</span>.<span class="number">0</span>;
 
-        <span class="macro">write!</span>(f, <span class="string">&quot;{:#X}&quot;</span>, val)
+        <span class="macro">write!</span>(f, <span class="string">"{:#X}"</span>, val)
     }
 }
 
@@ -601,7 +602,7 @@
 }
 
 <span class="kw">impl </span>Type_ {
-    <span class="kw">fn </span>as_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Type, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>as_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Type, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="self">self</span>.<span class="number">0 </span>{
             <span class="number">0 </span>=&gt; <span class="prelude-val">Ok</span>(Type::Null),
             <span class="number">1 </span>=&gt; <span class="prelude-val">Ok</span>(Type::Load),
@@ -614,7 +615,7 @@
             TYPE_GNU_RELRO =&gt; <span class="prelude-val">Ok</span>(Type::GnuRelro),
             t <span class="kw">if </span>(TYPE_LOOS..=TYPE_HIOS).contains(<span class="kw-2">&amp;</span>t) =&gt; <span class="prelude-val">Ok</span>(Type::OsSpecific(t)),
             t <span class="kw">if </span>(TYPE_LOPROC..=TYPE_HIPROC).contains(<span class="kw-2">&amp;</span>t) =&gt; <span class="prelude-val">Ok</span>(Type::ProcessorSpecific(t)),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Invalid type&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">"Invalid type"</span>),
         }
     }
 }
@@ -626,14 +627,14 @@
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">pub enum </span>SegmentData&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub enum </span>SegmentData&lt;<span class="lifetime">'a</span>&gt; {
     Empty,
-    Undefined(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]),
-    Dynamic32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Dynamic&lt;P32&gt;]),
-    Dynamic64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Dynamic&lt;P64&gt;]),
-    <span class="comment">// Note32 uses 4-byte words, which I&#39;m not sure how to manage.
+    Undefined(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]),
+    Dynamic32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Dynamic&lt;P32&gt;]),
+    Dynamic64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Dynamic&lt;P64&gt;]),
+    <span class="comment">// Note32 uses 4-byte words, which I'm not sure how to manage.
     // The pointer is to the start of the name field in the note.
-    </span>Note64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>NoteHeader, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]), <span class="comment">/* TODO Interp and Phdr should probably be defined some how, but I can&#39;t find the details. */
+    </span>Note64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>NoteHeader, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]), <span class="comment">/* TODO Interp and Phdr should probably be defined some how, but I can't find the details. */
 </span>}
 
 <span class="kw">pub const </span>TYPE_LOOS: u32 = <span class="number">0x60000000</span>;
@@ -648,30 +649,30 @@
 <span class="kw">pub const </span>FLAG_MASKOS: u32 = <span class="number">0x0ff00000</span>;
 <span class="kw">pub const </span>FLAG_MASKPROC: u32 = <span class="number">0xf0000000</span>;
 
-<span class="kw">pub fn </span>sanity_check&lt;<span class="lifetime">&#39;a</span>&gt;(ph: ProgramHeader&lt;<span class="lifetime">&#39;a</span>&gt;, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">pub fn </span>sanity_check&lt;<span class="lifetime">'a</span>&gt;(ph: ProgramHeader&lt;<span class="lifetime">'a</span>&gt;, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>header = elf_file.header;
     <span class="kw">match </span>ph {
         ProgramHeader::Ph32(ph) =&gt; {
             <span class="macro">check!</span>(mem::size_of_val(ph) == header.pt2.ph_entry_size() <span class="kw">as </span>usize,
-                   <span class="string">&quot;program header size mismatch&quot;</span>);
+                   <span class="string">"program header size mismatch"</span>);
             <span class="macro">check!</span>(((ph.offset + ph.file_size) <span class="kw">as </span>usize) &lt; elf_file.input.len(),
-                   <span class="string">&quot;entry point out of range&quot;</span>);
-            <span class="macro">check!</span>(ph.get_type()<span class="question-mark">? </span>!= Type::ShLib, <span class="string">&quot;Shouldn&#39;t use ShLib&quot;</span>);
+                   <span class="string">"entry point out of range"</span>);
+            <span class="macro">check!</span>(ph.get_type()<span class="question-mark">? </span>!= Type::ShLib, <span class="string">"Shouldn't use ShLib"</span>);
             <span class="kw">if </span>ph.align &gt; <span class="number">1 </span>{
                 <span class="macro">check!</span>(ph.virtual_addr % ph.align == ph.offset % ph.align,
-                       <span class="string">&quot;Invalid combination of virtual_addr, offset, and align&quot;</span>);
+                       <span class="string">"Invalid combination of virtual_addr, offset, and align"</span>);
             }
         }
         ProgramHeader::Ph64(ph) =&gt; {
             <span class="macro">check!</span>(mem::size_of_val(ph) == header.pt2.ph_entry_size() <span class="kw">as </span>usize,
-                   <span class="string">&quot;program header size mismatch&quot;</span>);
+                   <span class="string">"program header size mismatch"</span>);
             <span class="macro">check!</span>(((ph.offset + ph.file_size) <span class="kw">as </span>usize) &lt; elf_file.input.len(),
-                   <span class="string">&quot;entry point out of range&quot;</span>);
-            <span class="macro">check!</span>(ph.get_type()<span class="question-mark">? </span>!= Type::ShLib, <span class="string">&quot;Shouldn&#39;t use ShLib&quot;</span>);
+                   <span class="string">"entry point out of range"</span>);
+            <span class="macro">check!</span>(ph.get_type()<span class="question-mark">? </span>!= Type::ShLib, <span class="string">"Shouldn't use ShLib"</span>);
             <span class="kw">if </span>ph.align &gt; <span class="number">1 </span>{
-                <span class="comment">// println!(&quot;{} {} {}&quot;, ph.virtual_addr, ph.offset, ph.align);
+                <span class="comment">// println!("{} {} {}", ph.virtual_addr, ph.offset, ph.align);
                 </span><span class="macro">check!</span>(ph.virtual_addr % ph.align == ph.offset % ph.align,
-                       <span class="string">&quot;Invalid combination of virtual_addr, offset, and align&quot;</span>);
+                       <span class="string">"Invalid combination of virtual_addr, offset, and align"</span>);
             }
         }
     }

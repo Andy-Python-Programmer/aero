@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Compares packed strings with implicit lengths in `a` and `b` using the control in `IMM8` and return the generated index. Similar to `_mm_cmpestri` with the exception that `_mm_cmpestri` requires the lengths of `a` and `b` to be explicitly specified."><title>_mm_cmpistri in aero_kernel::prelude::rust_2021::_core::arch::x86_64 - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../../aero_kernel/index.html">aero_kernel</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><h2><a href="index.html">In aero_kernel::prelude::rust_2021::_core::arch::x86_64</a></h2></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Function <a href="../../../../../index.html">aero_kernel</a>::<wbr><a href="../../../../index.html">prelude</a>::<wbr><a href="../../../index.html">rust_2021</a>::<wbr><a href="../../index.html">_core</a>::<wbr><a href="../index.html">arch</a>::<wbr><a href="index.html">x86_64</a>::<wbr><a class="fn" href="#">_mm_cmpistri</a><button id="copy-path" title="Copy item path to clipboard"><img src="../../../../../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><span class="since" title="Stable since Rust version 1.27.0">1.27.0</span> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub unsafe fn _mm_cmpistri&lt;const IMM8: i32&gt;(a: <a class="struct" href="struct.__m128i.html" title="struct aero_kernel::prelude::rust_2021::_core::arch::x86_64::__m128i">__m128i</a>, b: <a class="struct" href="struct.__m128i.html" title="struct aero_kernel::prelude::rust_2021::_core::arch::x86_64::__m128i">__m128i</a>) -&gt; i32</code></pre><span class="item-info"><div class="stab portability">Available on <strong>x86-64</strong> only.</div></span><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Compares packed strings with implicit lengths in <code>a</code> and <code>b</code> using the
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Compares packed strings with implicit lengths in `a` and `b` using the control in `IMM8` and return the generated index. Similar to `_mm_cmpestri` with the exception that `_mm_cmpestri` requires the lengths of `a` and `b` to be explicitly specified."><title>_mm_cmpistri in aero_kernel::prelude::rust_2021::_core::arch::x86_64 - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../../aero_kernel/index.html">aero_kernel</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><h2><a href="index.html">In aero_kernel::prelude::rust_2021::_core::arch::x86_64</a></h2></div></nav><div class="sidebar-resizer"></div>
+    <main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../../aero_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Function <a href="../../../../../index.html">aero_kernel</a>::<wbr><a href="../../../../index.html">prelude</a>::<wbr><a href="../../../index.html">rust_2021</a>::<wbr><a href="../../index.html">_core</a>::<wbr><a href="../index.html">arch</a>::<wbr><a href="index.html">x86_64</a>::<wbr><a class="fn" href="#">_mm_cmpistri</a><button id="copy-path" title="Copy item path to clipboard"><img src="../../../../../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><span class="since" title="Stable since Rust version 1.27.0">1.27.0</span> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub unsafe fn _mm_cmpistri&lt;const IMM8: i32&gt;(a: <a class="struct" href="struct.__m128i.html" title="struct aero_kernel::prelude::rust_2021::_core::arch::x86_64::__m128i">__m128i</a>, b: <a class="struct" href="struct.__m128i.html" title="struct aero_kernel::prelude::rust_2021::_core::arch::x86_64::__m128i">__m128i</a>) -&gt; i32</code></pre><span class="item-info"><div class="stab portability">Available on <strong>x86-64</strong> only.</div></span><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Compares packed strings with implicit lengths in <code>a</code> and <code>b</code> using the
 control in <code>IMM8</code> and return the generated index. Similar to
 <a href="fn._mm_cmpestri.html" title="fn aero_kernel::prelude::rust_2021::_core::arch::x86_64::_mm_cmpestri"><code>_mm_cmpestri</code></a> with the exception that <a href="fn._mm_cmpestri.html" title="fn aero_kernel::prelude::rust_2021::_core::arch::x86_64::_mm_cmpestri"><code>_mm_cmpestri</code></a> requires the
 lengths of <code>a</code> and <code>b</code> to be explicitly specified.</p>
@@ -31,21 +32,21 @@ lengths of <code>a</code> and <code>b</code> to be explicitly specified.</p>
 <h2 id="examples"><a href="#examples">Examples</a></h2>
 <p>Finds a substring using <a href="constant._SIDD_CMP_EQUAL_ORDERED.html" title="constant aero_kernel::prelude::rust_2021::_core::arch::x86_64::_SIDD_CMP_EQUAL_ORDERED"><code>_SIDD_CMP_EQUAL_ORDERED</code></a></p>
 
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_arch = <span class="string">&quot;x86&quot;</span>)]
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_arch = <span class="string">"x86"</span>)]
 </span><span class="kw">use </span>std::arch::x86::<span class="kw-2">*</span>;
-<span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+<span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
 </span><span class="kw">use </span>std::arch::x86_64::<span class="kw-2">*</span>;
 
-<span class="kw">let </span>haystack = <span class="string">b&quot;This is a long string of text data\r\n\tthat extends
-multiple lines&quot;</span>;
-<span class="kw">let </span>needle = <span class="string">b&quot;\r\n\t\0\0\0\0\0\0\0\0\0\0\0\0\0&quot;</span>;
+<span class="kw">let </span>haystack = <span class="string">b"This is a long string of text data\r\n\tthat extends
+multiple lines"</span>;
+<span class="kw">let </span>needle = <span class="string">b"\r\n\t\0\0\0\0\0\0\0\0\0\0\0\0\0"</span>;
 
 <span class="kw">let </span>a = _mm_loadu_si128(needle.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
 <span class="kw">let </span>hop = <span class="number">16</span>;
 <span class="kw">let </span><span class="kw-2">mut </span>indexes = Vec::new();
 
 <span class="comment">// Chunk the haystack into 16 byte chunks and find
-// the first &quot;\r\n\t&quot; in the chunk.
+// the first "\r\n\t" in the chunk.
 </span><span class="kw">for </span>(i, chunk) <span class="kw">in </span>haystack.chunks(hop).enumerate() {
     <span class="kw">let </span>b = _mm_loadu_si128(chunk.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
     <span class="kw">let </span>idx = _mm_cmpistri(a, b, _SIDD_CMP_EQUAL_ORDERED);
@@ -57,14 +58,14 @@ multiple lines&quot;</span>;
 <p>The <code>_mm_cmpistri</code> intrinsic may also be used to find the existence of
 one or more of a given set of characters in the haystack.</p>
 
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_arch = <span class="string">&quot;x86&quot;</span>)]
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_arch = <span class="string">"x86"</span>)]
 </span><span class="kw">use </span>std::arch::x86::<span class="kw-2">*</span>;
-<span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+<span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
 </span><span class="kw">use </span>std::arch::x86_64::<span class="kw-2">*</span>;
 
 <span class="comment">// Ensure your input is 16 byte aligned
-</span><span class="kw">let </span>password = <span class="string">b&quot;hunter2\0\0\0\0\0\0\0\0\0&quot;</span>;
-<span class="kw">let </span>special_chars = <span class="string">b&quot;!@#$%^&amp;*()[]:;&lt;&gt;&quot;</span>;
+</span><span class="kw">let </span>password = <span class="string">b"hunter2\0\0\0\0\0\0\0\0\0"</span>;
+<span class="kw">let </span>special_chars = <span class="string">b"!@#$%^&amp;*()[]:;&lt;&gt;"</span>;
 
 <span class="comment">// Load the input
 </span><span class="kw">let </span>a = _mm_loadu_si128(special_chars.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
@@ -74,21 +75,21 @@ one or more of a given set of characters in the haystack.</p>
 </span><span class="kw">let </span>idx = _mm_cmpistri(a.into(), b.into(), _SIDD_CMP_EQUAL_ANY);
 
 <span class="kw">if </span>idx &lt; <span class="number">16 </span>{
-    <span class="macro">println!</span>(<span class="string">&quot;Congrats! Your password contains a special character&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">"Congrats! Your password contains a special character"</span>);
 } <span class="kw">else </span>{
-    <span class="macro">println!</span>(<span class="string">&quot;Your password should contain a special character&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">"Your password should contain a special character"</span>);
 }</code></pre></div>
 <p>Finds the index of the first character in the haystack that is within a
 range of characters.</p>
 
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_arch = <span class="string">&quot;x86&quot;</span>)]
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_arch = <span class="string">"x86"</span>)]
 </span><span class="kw">use </span>std::arch::x86::<span class="kw-2">*</span>;
-<span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+<span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
 </span><span class="kw">use </span>std::arch::x86_64::<span class="kw-2">*</span>;
 
 
 <span class="comment">// Specify the ranges of values to be searched for [A-Za-z0-9].
-</span><span class="kw">let </span>a = <span class="string">b&quot;AZaz09\0\0\0\0\0\0\0\0\0\0&quot;</span>;
+</span><span class="kw">let </span>a = <span class="string">b"AZaz09\0\0\0\0\0\0\0\0\0\0"</span>;
 <span class="kw">let </span>a = _mm_loadu_si128(a.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
 
 <span class="comment">// Use _SIDD_CMP_RANGES to find the index of first byte in ranges.
@@ -97,15 +98,15 @@ range of characters.</p>
 </span><span class="kw">let </span>idx = _mm_cmpistri(a, b, _SIDD_CMP_RANGES);
 
 <span class="kw">if </span>idx &lt; <span class="number">16 </span>{
-    <span class="macro">println!</span>(<span class="string">&quot;Found an alpha numeric character&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">"Found an alpha numeric character"</span>);
 } <span class="kw">else </span>{
-    <span class="macro">println!</span>(<span class="string">&quot;Did not find an alpha numeric character&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">"Did not find an alpha numeric character"</span>);
 }</code></pre></div>
 <p>Working with 16-bit characters.</p>
 
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_arch = <span class="string">&quot;x86&quot;</span>)]
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_arch = <span class="string">"x86"</span>)]
 </span><span class="kw">use </span>std::arch::x86::<span class="kw-2">*</span>;
-<span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+<span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
 </span><span class="kw">use </span>std::arch::x86_64::<span class="kw-2">*</span>;
 
 <span class="comment">// Load the input
@@ -117,9 +118,9 @@ range of characters.</p>
 </span><span class="kw">let </span>idx = _mm_cmpistri(a, b, _SIDD_UWORD_OPS | _SIDD_CMP_EQUAL_EACH);
 
 <span class="kw">if </span>idx == <span class="number">0 </span>{
-    <span class="macro">println!</span>(<span class="string">&quot;16-bit unicode strings were equal!&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">"16-bit unicode strings were equal!"</span>);
 } <span class="kw">else </span>{
-    <span class="macro">println!</span>(<span class="string">&quot;16-bit unicode strings were not equal!&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">"16-bit unicode strings were not equal!"</span>);
 }</code></pre></div>
 <p><a href="https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_cmpistri">Intel’s documentation</a></p>
 </div></details></section></div></main></body></html>

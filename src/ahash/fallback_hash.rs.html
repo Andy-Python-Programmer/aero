@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ahash-0.8.3/src/fallback_hash.rs`."><title>fallback_hash.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ahash" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ahash-0.8.3/src/fallback_hash.rs`."><title>fallback_hash.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ahash" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -464,7 +465,7 @@
         <span class="self">self</span>.buffer = folded_multiply(new_data ^ <span class="self">self</span>.buffer, MULTIPLE);
     }
 
-    <span class="doccomment">/// Similar to the above this function performs an update using a &quot;folded multiply&quot;.
+    <span class="doccomment">/// Similar to the above this function performs an update using a "folded multiply".
     /// However it takes in 128 bits of data instead of 64. Both halves must be masked.
     ///
     /// This makes it impossible for an attacker to place a single bit difference between
@@ -473,7 +474,7 @@
     /// However this is not sufficient. to prevent (a,b) from hashing the same as (b,a) the buffer itself must
     /// be updated between calls in a way that does not commute. To achieve this XOR and Rotate are used.
     /// Add followed by xor is not the same as xor followed by add, and rotate ensures that the same out bits
-    /// can&#39;t be changed by the same set of input bits. To cancel this sequence with subsequent input would require
+    /// can't be changed by the same set of input bits. To cancel this sequence with subsequent input would require
     /// knowing the keys.
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>large_update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: u128) {
@@ -483,7 +484,7 @@
     }
 
     <span class="attr">#[inline]
-    #[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+    #[cfg(feature = <span class="string">"specialize"</span>)]
     </span><span class="kw">fn </span>short_finish(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.buffer.wrapping_add(<span class="self">self</span>.pad)
     }
@@ -520,16 +521,16 @@
 
     <span class="attr">#[inline]
     #[cfg(any(
-        target_pointer_width = <span class="string">&quot;64&quot;</span>,
-        target_pointer_width = <span class="string">&quot;32&quot;</span>,
-        target_pointer_width = <span class="string">&quot;16&quot;
+        target_pointer_width = <span class="string">"64"</span>,
+        target_pointer_width = <span class="string">"32"</span>,
+        target_pointer_width = <span class="string">"16"
     </span>))]
     </span><span class="kw">fn </span>write_usize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, i: usize) {
         <span class="self">self</span>.write_u64(i <span class="kw">as </span>u64);
     }
 
     <span class="attr">#[inline]
-    #[cfg(target_pointer_width = <span class="string">&quot;128&quot;</span>)]
+    #[cfg(target_pointer_width = <span class="string">"128"</span>)]
     </span><span class="kw">fn </span>write_usize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, i: usize) {
         <span class="self">self</span>.write_u128(i <span class="kw">as </span>u128);
     }
@@ -541,7 +542,7 @@
         <span class="kw">let </span>length = data.len() <span class="kw">as </span>u64;
         <span class="comment">//Needs to be an add rather than an xor because otherwise it could be canceled with carefully formed input.
         </span><span class="self">self</span>.buffer = <span class="self">self</span>.buffer.wrapping_add(length).wrapping_mul(MULTIPLE);
-        <span class="comment">//A &#39;binary search&#39; on sizes reduces the number of comparisons.
+        <span class="comment">//A 'binary search' on sizes reduces the number of comparisons.
         </span><span class="kw">if </span>data.len() &gt; <span class="number">8 </span>{
             <span class="kw">if </span>data.len() &gt; <span class="number">16 </span>{
                 <span class="kw">let </span>tail = data.read_last_u128();
@@ -567,14 +568,14 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AHasherU64 {
     <span class="kw">pub</span>(<span class="kw">crate</span>) buffer: u64,
     <span class="kw">pub</span>(<span class="kw">crate</span>) pad: u64,
 }
 
 <span class="doccomment">/// A specialized hasher for only primitives under 64 bits.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]
 </span><span class="kw">impl </span>Hasher <span class="kw">for </span>AHasherU64 {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>finish(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
@@ -584,7 +585,7 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _bytes: <span class="kw-2">&amp;</span>[u8]) {
-        <span class="macro">unreachable!</span>(<span class="string">&quot;Specialized hasher was called with a different type of object&quot;</span>)
+        <span class="macro">unreachable!</span>(<span class="string">"Specialized hasher was called with a different type of object"</span>)
     }
 
     <span class="attr">#[inline]
@@ -609,20 +610,20 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>write_u128(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _i: u128) {
-        <span class="macro">unreachable!</span>(<span class="string">&quot;Specialized hasher was called with a different type of object&quot;</span>)
+        <span class="macro">unreachable!</span>(<span class="string">"Specialized hasher was called with a different type of object"</span>)
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>write_usize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _i: usize) {
-        <span class="macro">unreachable!</span>(<span class="string">&quot;Specialized hasher was called with a different type of object&quot;</span>)
+        <span class="macro">unreachable!</span>(<span class="string">"Specialized hasher was called with a different type of object"</span>)
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AHasherFixed(<span class="kw">pub </span>AHasher);
 
 <span class="doccomment">/// A specialized hasher for fixed size primitives larger than 64 bits.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]
 </span><span class="kw">impl </span>Hasher <span class="kw">for </span>AHasherFixed {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>finish(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
@@ -665,12 +666,12 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AHasherStr(<span class="kw">pub </span>AHasher);
 
 <span class="doccomment">/// A specialized hasher for a single string
-/// Note that the other types don&#39;t panic because the hash impl for String tacks on an unneeded call. (As does vec)
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;specialize&quot;</span>)]
+/// Note that the other types don't panic because the hash impl for String tacks on an unneeded call. (As does vec)
+</span><span class="attr">#[cfg(feature = <span class="string">"specialize"</span>)]
 </span><span class="kw">impl </span>Hasher <span class="kw">for </span>AHasherStr {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>finish(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
@@ -729,7 +730,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_conversion() {
-        <span class="kw">let </span>input: <span class="kw-2">&amp;</span>[u8] = <span class="string">&quot;dddddddd&quot;</span>.as_bytes();
+        <span class="kw">let </span>input: <span class="kw-2">&amp;</span>[u8] = <span class="string">"dddddddd"</span>.as_bytes();
         <span class="kw">let </span>bytes: u64 = <span class="macro">as_array!</span>(input, <span class="number">8</span>).convert();
         <span class="macro">assert_eq!</span>(bytes, <span class="number">0x6464646464646464</span>);
     }

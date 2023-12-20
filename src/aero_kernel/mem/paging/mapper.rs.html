@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/mem/paging/mapper.rs`."><title>mapper.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/mem/paging/mapper.rs`."><title>mapper.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1426,9 +1427,9 @@
 </span><span class="kw">pub enum </span>MappedFrame {
     <span class="doccomment">/// The virtual address is mapped to a 4KiB frame.
     </span>Size4KiB(PhysFrame&lt;Size4KiB&gt;),
-    <span class="doccomment">/// The virtual address is mapped to a &quot;large&quot; 2MiB frame.
+    <span class="doccomment">/// The virtual address is mapped to a "large" 2MiB frame.
     </span>Size2MiB(PhysFrame&lt;Size2MiB&gt;),
-    <span class="doccomment">/// The virtual address is mapped to a &quot;huge&quot; 1GiB frame.
+    <span class="doccomment">/// The virtual address is mapped to a "huge" 1GiB frame.
     </span>Size1GiB(PhysFrame&lt;Size1GiB&gt;),
 }
 
@@ -1494,7 +1495,7 @@
     /// Special care must be taken when sharing pages with other address spaces,
     /// e.g. by setting the `GLOBAL` flag. For example, a global mapping must be
     /// the same in all address spaces, otherwise undefined behavior can occur
-    /// because of TLB races. It&#39;s worth noting that all the above requirements
+    /// because of TLB races. It's worth noting that all the above requirements
     /// also apply to shared mappings, including the aliasing requirements.
     </span><span class="attr">#[inline]
     </span><span class="kw">unsafe fn </span>map_to(
@@ -1548,7 +1549,7 @@
     /// Special care must be taken when sharing pages with other address spaces,
     /// e.g. by setting the `GLOBAL` flag. For example, a global mapping must be
     /// the same in all address spaces, otherwise undefined behavior can occur
-    /// because of TLB races. It&#39;s worth noting that all the above requirements
+    /// because of TLB races. It's worth noting that all the above requirements
     /// also apply to shared mappings, including the aliasing requirements.
     </span><span class="kw">unsafe fn </span>map_to_with_table_flags(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -1611,10 +1612,10 @@
 <span class="doccomment">/// This type represents a page whose mapping has changed in the page table.
 ///
 /// The old mapping might be still cached in the translation lookaside buffer (TLB), so it needs
-/// to be flushed from the TLB before it&#39;s accessed. This type is returned from function that
+/// to be flushed from the TLB before it's accessed. This type is returned from function that
 /// change the mapping of a page to ensure that the TLB flush is not forgotten.
 </span><span class="attr">#[derive(Debug)]
-#[must_use = <span class="string">&quot;Page Table changes must be flushed or ignored.&quot;</span>]
+#[must_use = <span class="string">"Page Table changes must be flushed or ignored."</span>]
 </span><span class="kw">pub struct </span>MapperFlush&lt;S: PageSize&gt;(Page&lt;S&gt;);
 
 <span class="kw">impl</span>&lt;S: PageSize&gt; MapperFlush&lt;S&gt; {
@@ -1632,7 +1633,7 @@
         <span class="kw">let </span>raw = <span class="self">self</span>.<span class="number">0</span>.start_address().as_u64();
 
         <span class="kw">unsafe </span>{
-            <span class="macro">asm!</span>(<span class="string">&quot;invlpg [{}]&quot;</span>, <span class="kw">in</span>(reg) raw, options(nostack));
+            <span class="macro">asm!</span>(<span class="string">"invlpg [{}]"</span>, <span class="kw">in</span>(reg) raw, options(nostack));
         }
     }
 }
@@ -1654,7 +1655,7 @@
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub enum </span>UnmapError {
     <span class="doccomment">/// An upper level page table entry has the `HUGE_PAGE` flag set, which means that the
-    /// given page is part of a huge page and can&#39;t be freed individually.
+    /// given page is part of a huge page and can't be freed individually.
     </span>ParentEntryHugePage,
     <span class="doccomment">/// The given page is not mapped to a physical frame.
     </span>PageNotMapped,
@@ -1668,7 +1669,7 @@
     <span class="doccomment">/// The given page is not mapped to a physical frame.
     </span>PageNotMapped,
     <span class="doccomment">/// An upper level page table entry has the `HUGE_PAGE` flag set, which means that the
-    /// given page is part of a huge page and can&#39;t be freed individually.
+    /// given page is part of a huge page and can't be freed individually.
     </span>ParentEntryHugePage,
 }
 
@@ -1678,7 +1679,7 @@
     <span class="doccomment">/// The given page is not mapped to a physical frame.
     </span>PageNotMapped,
     <span class="doccomment">/// An upper level page table entry has the `HUGE_PAGE` flag set, which means that the
-    /// given page is part of a huge page and can&#39;t be freed individually.
+    /// given page is part of a huge page and can't be freed individually.
     </span>ParentEntryHugePage,
     <span class="doccomment">/// The page table entry for the given page points to an invalid physical address.
     </span>InvalidFrameAddress(PhysAddr),
@@ -1702,13 +1703,13 @@
 /// memory are possible too, as long as they can be calculated as an `PhysAddr` to
 /// `VirtAddr` closure.
 </span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>MappedPageTable&lt;<span class="lifetime">&#39;a</span>, P: PageTableFrameMapping&gt; {
+</span><span class="kw">pub struct </span>MappedPageTable&lt;<span class="lifetime">'a</span>, P: PageTableFrameMapping&gt; {
     page_table_walker: PageTableWalker&lt;P&gt;,
     level_5_paging_enabled: bool,
-    page_table: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>PageTable,
+    page_table: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>PageTable,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, P: PageTableFrameMapping&gt; MappedPageTable&lt;<span class="lifetime">&#39;a</span>, P&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, P: PageTableFrameMapping&gt; MappedPageTable&lt;<span class="lifetime">'a</span>, P&gt; {
     <span class="doccomment">/// Creates a new `MappedPageTable` that uses the passed closure for converting virtual
     /// to physical addresses.
     ///
@@ -1719,7 +1720,7 @@
     /// to the level 4 page table of a valid page table hierarchy. Otherwise this function might
     /// break memory safety, e.g. by writing to an illegal memory location.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub unsafe fn </span>new(page_table: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>PageTable, page_table_frame_mapping: P) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub unsafe fn </span>new(page_table: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>PageTable, page_table_frame_mapping: P) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             page_table,
             level_5_paging_enabled: <span class="kw">super</span>::level_5_paging_enabled(),
@@ -1842,7 +1843,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, P: PageTableFrameMapping&gt; Mapper&lt;Size2MiB&gt; <span class="kw">for </span>MappedPageTable&lt;<span class="lifetime">&#39;a</span>, P&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, P: PageTableFrameMapping&gt; Mapper&lt;Size2MiB&gt; <span class="kw">for </span>MappedPageTable&lt;<span class="lifetime">'a</span>, P&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">unsafe fn </span>map_to_with_table_flags(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -1948,7 +1949,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, P: PageTableFrameMapping&gt; Mapper&lt;Size4KiB&gt; <span class="kw">for </span>MappedPageTable&lt;<span class="lifetime">&#39;a</span>, P&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, P: PageTableFrameMapping&gt; Mapper&lt;Size4KiB&gt; <span class="kw">for </span>MappedPageTable&lt;<span class="lifetime">'a</span>, P&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">unsafe fn </span>map_to_with_table_flags(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -2061,7 +2062,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, P: PageTableFrameMapping&gt; Translate <span class="kw">for </span>MappedPageTable&lt;<span class="lifetime">&#39;a</span>, P&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, P: PageTableFrameMapping&gt; Translate <span class="kw">for </span>MappedPageTable&lt;<span class="lifetime">'a</span>, P&gt; {
     <span class="attr">#[allow(clippy::inconsistent_digit_grouping)]
     </span><span class="kw">fn </span>translate(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: VirtAddr) -&gt; TranslateResult {
         <span class="kw">let </span>p4;
@@ -2073,7 +2074,7 @@
                 <span class="prelude-val">Ok</span>(page_table) =&gt; page_table,
                 <span class="prelude-val">Err</span>(PageTableWalkError::NotMapped) =&gt; <span class="kw">return </span>TranslateResult::NotMapped,
                 <span class="prelude-val">Err</span>(PageTableWalkError::MappedToHugePage) =&gt; {
-                    <span class="macro">panic!</span>(<span class="string">&quot;level 4 entry has huge page bit set&quot;</span>)
+                    <span class="macro">panic!</span>(<span class="string">"level 4 entry has huge page bit set"</span>)
                 }
             };
         } <span class="kw">else </span>{
@@ -2084,7 +2085,7 @@
             <span class="prelude-val">Ok</span>(page_table) =&gt; page_table,
             <span class="prelude-val">Err</span>(PageTableWalkError::NotMapped) =&gt; <span class="kw">return </span>TranslateResult::NotMapped,
             <span class="prelude-val">Err</span>(PageTableWalkError::MappedToHugePage) =&gt; {
-                <span class="macro">panic!</span>(<span class="string">&quot;level 4 entry has huge page bit set&quot;</span>)
+                <span class="macro">panic!</span>(<span class="string">"level 4 entry has huge page bit set"</span>)
             }
         };
         <span class="kw">let </span>p2 = <span class="kw">match </span><span class="self">self</span>.page_table_walker.next_table(<span class="kw-2">&amp;</span>p3[addr.p3_index()]) {
@@ -2157,10 +2158,10 @@
     /// `PageTableWalkError::MappedToHugePage` if the `HUGE_PAGE` flag is set
     /// in the passed entry.
     </span><span class="attr">#[inline]
-    </span><span class="kw">fn </span>next_table&lt;<span class="lifetime">&#39;b</span>&gt;(
+    </span><span class="kw">fn </span>next_table&lt;<span class="lifetime">'b</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>PageTableEntry,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>PageTable, PageTableWalkError&gt; {
+        entry: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>PageTableEntry,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'b </span>PageTable, PageTableWalkError&gt; {
         <span class="kw">let </span>page_table_ptr = <span class="self">self
             </span>.page_table_frame_mapping
             .frame_to_pointer(entry.frame()<span class="question-mark">?</span>);
@@ -2175,10 +2176,10 @@
     /// `PageTableWalkError::MappedToHugePage` if the `HUGE_PAGE` flag is set
     /// in the passed entry.
     </span><span class="attr">#[inline]
-    </span><span class="kw">fn </span>next_table_mut&lt;<span class="lifetime">&#39;b</span>&gt;(
+    </span><span class="kw">fn </span>next_table_mut&lt;<span class="lifetime">'b</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>PageTableEntry,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>PageTable, PageTableWalkError&gt; {
+        entry: <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>PageTableEntry,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>PageTable, PageTableWalkError&gt; {
         <span class="kw">let </span>page_table_ptr = <span class="self">self
             </span>.page_table_frame_mapping
             .frame_to_pointer(entry.frame()<span class="question-mark">?</span>);
@@ -2196,11 +2197,11 @@
     /// Returns `MapToError::FrameAllocationFailed` if the entry is unused and the allocator
     /// returned `None`. Returns `MapToError::ParentEntryHugePage` if the `HUGE_PAGE` flag is set
     /// in the passed entry.
-    </span><span class="kw">fn </span>create_next_table&lt;<span class="lifetime">&#39;b</span>&gt;(
+    </span><span class="kw">fn </span>create_next_table&lt;<span class="lifetime">'b</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>PageTableEntry,
+        entry: <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>PageTableEntry,
         insert_flags: PageTableFlags,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(bool, <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>PageTable), PageTableCreateError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(bool, <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>PageTable), PageTableCreateError&gt; {
         <span class="kw">let </span>created;
 
         <span class="kw">if </span>entry.is_unused() {
@@ -2222,7 +2223,7 @@
                 <span class="kw">return </span><span class="prelude-val">Err</span>(PageTableCreateError::MappedToHugePage);
             }
             <span class="prelude-val">Err</span>(PageTableWalkError::NotMapped) =&gt; {
-                <span class="macro">unreachable!</span>(<span class="string">&quot;entry should be mapped at this point&quot;</span>)
+                <span class="macro">unreachable!</span>(<span class="string">"entry should be mapped at this point"</span>)
             }
             <span class="prelude-val">Ok</span>(page_table) =&gt; page_table,
         };
@@ -2334,11 +2335,11 @@
 <span class="doccomment">/// A Mapper implementation that requires that the complete physically memory is mapped at some
 /// offset in the virtual address space.
 </span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>OffsetPageTable&lt;<span class="lifetime">&#39;a</span>&gt; {
-    inner: MappedPageTable&lt;<span class="lifetime">&#39;a</span>, PhysOffset&gt;,
+</span><span class="kw">pub struct </span>OffsetPageTable&lt;<span class="lifetime">'a</span>&gt; {
+    inner: MappedPageTable&lt;<span class="lifetime">'a</span>, PhysOffset&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; OffsetPageTable&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; OffsetPageTable&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Creates a new `OffsetPageTable` that uses the given offset for converting virtual
     /// to physical addresses.
     ///
@@ -2355,7 +2356,7 @@
     /// of a valid page table hierarchy. Otherwise this function might break memory safety, e.g.
     /// by writing to an illegal memory location.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub unsafe fn </span>new(page_table: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>PageTable, phys_offset: VirtAddr) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub unsafe fn </span>new(page_table: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>PageTable, phys_offset: VirtAddr) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>phys_offset = PhysOffset {
             offset: phys_offset,
         };
@@ -2381,7 +2382,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Mapper&lt;Size2MiB&gt; <span class="kw">for </span>OffsetPageTable&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Mapper&lt;Size2MiB&gt; <span class="kw">for </span>OffsetPageTable&lt;<span class="lifetime">'a</span>&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">unsafe fn </span>map_to_with_table_flags(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -2417,7 +2418,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Mapper&lt;Size4KiB&gt; <span class="kw">for </span>OffsetPageTable&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Mapper&lt;Size4KiB&gt; <span class="kw">for </span>OffsetPageTable&lt;<span class="lifetime">'a</span>&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">unsafe fn </span>map_to_with_table_flags(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -2453,14 +2454,14 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Translate <span class="kw">for </span>OffsetPageTable&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Translate <span class="kw">for </span>OffsetPageTable&lt;<span class="lifetime">'a</span>&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>translate(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: VirtAddr) -&gt; TranslateResult {
         <span class="self">self</span>.inner.translate(addr)
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; OffsetPageTable&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; OffsetPageTable&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub fn </span>unmap_range(<span class="kw-2">&amp;mut </span><span class="self">self</span>, range: Range&lt;VirtAddr&gt;, step: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), UnmapError&gt; {
         <span class="kw">for </span>addr <span class="kw">in </span>range.step_by(step <span class="kw">as </span>usize) {
             <span class="kw">let </span>page: Page = Page::containing_address(addr);

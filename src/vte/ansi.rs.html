@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/vte-0.12.0/src/ansi.rs`."><title>ansi.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="vte" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/vte-0.12.0/src/ansi.rs`."><title>ansi.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="vte" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -2222,15 +2223,15 @@
 <span class="kw">use </span>core::time::Duration;
 <span class="kw">use </span>core::{iter, str};
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
 </span><span class="kw">use </span>core::ops::Mul;
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
 </span><span class="kw">use </span>std::time::Instant;
 
 <span class="kw">use </span>cursor_icon::CursorIcon;
 <span class="kw">use </span>log::{debug, trace};
-<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"serde"</span>)]
 </span><span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use crate</span>::{Params, ParamsIter};
@@ -2245,10 +2246,10 @@
 </span><span class="kw">const </span>SYNC_ESCAPE_LEN: usize = <span class="number">8</span>;
 
 <span class="doccomment">/// BSU CSI sequence for beginning or extending synchronized updates.
-</span><span class="kw">const </span>BSU_CSI: [u8; SYNC_ESCAPE_LEN] = <span class="kw-2">*</span><span class="string">b&quot;\x1b[?2026h&quot;</span>;
+</span><span class="kw">const </span>BSU_CSI: [u8; SYNC_ESCAPE_LEN] = <span class="kw-2">*</span><span class="string">b"\x1b[?2026h"</span>;
 
 <span class="doccomment">/// ESU CSI sequence for terminating synchronized updates.
-</span><span class="kw">const </span>ESU_CSI: [u8; SYNC_ESCAPE_LEN] = <span class="kw-2">*</span><span class="string">b&quot;\x1b[?2026l&quot;</span>;
+</span><span class="kw">const </span>ESU_CSI: [u8; SYNC_ESCAPE_LEN] = <span class="kw-2">*</span><span class="string">b"\x1b[?2026l"</span>;
 
 <span class="attr">#[derive(Debug, PartialEq, Eq, Hash)]
 </span><span class="kw">pub struct </span>Hyperlink {
@@ -2259,7 +2260,7 @@
 }
 
 <span class="attr">#[derive(Debug, Eq, PartialEq, Copy, Clone, Default)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serde"</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub struct </span>Rgb {
     <span class="kw">pub </span>r: u8,
     <span class="kw">pub </span>g: u8,
@@ -2267,10 +2268,10 @@
 }
 
 <span class="kw">impl </span>Rgb {
-    <span class="doccomment">/// Implementation of [W3C&#39;s luminance algorithm].
+    <span class="doccomment">/// Implementation of [W3C's luminance algorithm].
     ///
-    /// [W3C&#39;s luminance algorithm]: https://www.w3.org/TR/WCAG20/#relativeluminancedef
-    </span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+    /// [W3C's luminance algorithm]: https://www.w3.org/TR/WCAG20/#relativeluminancedef
+    </span><span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
     </span><span class="kw">pub fn </span>luminance(<span class="self">self</span>) -&gt; f64 {
         <span class="kw">let </span>channel_luminance = |channel| {
             <span class="kw">let </span>channel = channel <span class="kw">as </span>f64 / <span class="number">255.</span>;
@@ -2288,10 +2289,10 @@
         <span class="number">0.2126 </span>* r_luminance + <span class="number">0.7152 </span>* g_luminance + <span class="number">0.0722 </span>* b_luminance
     }
 
-    <span class="doccomment">/// Implementation of [W3C&#39;s contrast algorithm].
+    <span class="doccomment">/// Implementation of [W3C's contrast algorithm].
     ///
-    /// [W3C&#39;s contrast algorithm]: https://www.w3.org/TR/WCAG20/#contrast-ratiodef
-    </span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+    /// [W3C's contrast algorithm]: https://www.w3.org/TR/WCAG20/#contrast-ratiodef
+    </span><span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
     </span><span class="kw">pub fn </span>contrast(<span class="self">self</span>, other: Rgb) -&gt; f64 {
         <span class="kw">let </span>self_luminance = <span class="self">self</span>.luminance();
         <span class="kw">let </span>other_luminance = other.luminance();
@@ -2307,7 +2308,7 @@
 }
 
 <span class="comment">// A multiply function for Rgb, as the default dim is just *2/3.
-</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+</span><span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
 </span><span class="kw">impl </span>Mul&lt;f32&gt; <span class="kw">for </span>Rgb {
     <span class="kw">type </span>Output = Rgb;
 
@@ -2318,7 +2319,7 @@
             b: (f32::from(<span class="self">self</span>.b) * rhs).clamp(<span class="number">0.0</span>, <span class="number">255.0</span>) <span class="kw">as </span>u8,
         };
 
-        <span class="macro">trace!</span>(<span class="string">&quot;Scaling RGB by {} from {:?} to {:?}&quot;</span>, rhs, <span class="self">self</span>, result);
+        <span class="macro">trace!</span>(<span class="string">"Scaling RGB by {} from {:?} to {:?}"</span>, rhs, <span class="self">self</span>, result);
         result
     }
 }
@@ -2348,8 +2349,8 @@
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>Rgb {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;#{:02x}{:02x}{:02x}&quot;</span>, <span class="self">self</span>.r, <span class="self">self</span>.g, <span class="self">self</span>.b)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"#{:02x}{:02x}{:02x}"</span>, <span class="self">self</span>.r, <span class="self">self</span>.g, <span class="self">self</span>.b)
     }
 }
 
@@ -2357,9 +2358,9 @@
     <span class="kw">type </span><span class="prelude-val">Err </span>= ();
 
     <span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Rgb, ()&gt; {
-        <span class="kw">let </span>chars = <span class="kw">if </span>s.starts_with(<span class="string">&quot;0x&quot;</span>) &amp;&amp; s.len() == <span class="number">8 </span>{
+        <span class="kw">let </span>chars = <span class="kw">if </span>s.starts_with(<span class="string">"0x"</span>) &amp;&amp; s.len() == <span class="number">8 </span>{
             <span class="kw-2">&amp;</span>s[<span class="number">2</span>..]
-        } <span class="kw">else if </span>s.starts_with(<span class="string">&#39;#&#39;</span>) &amp;&amp; s.len() == <span class="number">7 </span>{
+        } <span class="kw">else if </span>s.starts_with(<span class="string">'#'</span>) &amp;&amp; s.len() == <span class="number">7 </span>{
             <span class="kw-2">&amp;</span>s[<span class="number">1</span>..]
         } <span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(());
@@ -2381,9 +2382,9 @@
 
 <span class="doccomment">/// Parse colors in XParseColor format.
 </span><span class="kw">fn </span>xparse_color(color: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Rgb&gt; {
-    <span class="kw">if </span>!color.is_empty() &amp;&amp; color[<span class="number">0</span>] == <span class="string">b&#39;#&#39; </span>{
+    <span class="kw">if </span>!color.is_empty() &amp;&amp; color[<span class="number">0</span>] == <span class="string">b'#' </span>{
         parse_legacy_color(<span class="kw-2">&amp;</span>color[<span class="number">1</span>..])
-    } <span class="kw">else if </span>color.len() &gt;= <span class="number">4 </span>&amp;&amp; <span class="kw-2">&amp;</span>color[..<span class="number">4</span>] == <span class="string">b&quot;rgb:&quot; </span>{
+    } <span class="kw">else if </span>color.len() &gt;= <span class="number">4 </span>&amp;&amp; <span class="kw-2">&amp;</span>color[..<span class="number">4</span>] == <span class="string">b"rgb:" </span>{
         parse_rgb_color(<span class="kw-2">&amp;</span>color[<span class="number">4</span>..])
     } <span class="kw">else </span>{
         <span class="prelude-val">None
@@ -2392,7 +2393,7 @@
 
 <span class="doccomment">/// Parse colors in `rgb:r(rrr)/g(ggg)/b(bbb)` format.
 </span><span class="kw">fn </span>parse_rgb_color(color: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Rgb&gt; {
-    <span class="kw">let </span>colors = str::from_utf8(color).ok()<span class="question-mark">?</span>.split(<span class="string">&#39;/&#39;</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+    <span class="kw">let </span>colors = str::from_utf8(color).ok()<span class="question-mark">?</span>.split(<span class="string">'/'</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
     <span class="kw">if </span>colors.len() != <span class="number">3 </span>{
         <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -2474,7 +2475,7 @@
 }
 
 <span class="doccomment">/// The processor wraps a `crate::Parser` to ultimately call methods on a Handler.
-</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+</span><span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
 #[derive(Default)]
 </span><span class="kw">pub struct </span>Processor&lt;T: Timeout = StdSyncHandler&gt; {
     state: ProcessorState&lt;T&gt;,
@@ -2482,7 +2483,7 @@
 }
 
 <span class="doccomment">/// The processor wraps a `crate::Parser` to ultimately call methods on a Handler.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
 #[derive(Default)]
 </span><span class="kw">pub struct </span>Processor&lt;T: Timeout&gt; {
     state: ProcessorState&lt;T&gt;,
@@ -2526,7 +2527,7 @@
             <span class="self">self</span>.parser.advance(<span class="kw-2">&amp;mut </span>performer, byte);
         }
 
-        <span class="comment">// Resetting state after processing makes sure we don&#39;t interpret buffered sync escapes.
+        <span class="comment">// Resetting state after processing makes sure we don't interpret buffered sync escapes.
         </span><span class="self">self</span>.state.sync_state.buffer.clear();
         <span class="self">self</span>.state.sync_state.timeout.clear_timeout();
     }
@@ -2576,26 +2577,26 @@
 ///
 /// Processor creates a Performer when running advance and passes the Performer
 /// to `crate::Parser`.
-</span><span class="kw">struct </span>Performer&lt;<span class="lifetime">&#39;a</span>, H: Handler, T: Timeout&gt; {
-    state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>ProcessorState&lt;T&gt;,
-    handler: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>H,
+</span><span class="kw">struct </span>Performer&lt;<span class="lifetime">'a</span>, H: Handler, T: Timeout&gt; {
+    state: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>ProcessorState&lt;T&gt;,
+    handler: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>H,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, H: Handler + <span class="lifetime">&#39;a</span>, T: Timeout&gt; Performer&lt;<span class="lifetime">&#39;a</span>, H, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, H: Handler + <span class="lifetime">'a</span>, T: Timeout&gt; Performer&lt;<span class="lifetime">'a</span>, H, T&gt; {
     <span class="doccomment">/// Create a performer.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>new&lt;<span class="lifetime">&#39;b</span>&gt;(state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>ProcessorState&lt;T&gt;, handler: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>H) -&gt; Performer&lt;<span class="lifetime">&#39;b</span>, H, T&gt; {
+    </span><span class="kw">pub fn </span>new&lt;<span class="lifetime">'b</span>&gt;(state: <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>ProcessorState&lt;T&gt;, handler: <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>H) -&gt; Performer&lt;<span class="lifetime">'b</span>, H, T&gt; {
         Performer { state, handler }
     }
 }
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
 #[derive(Default)]
 </span><span class="kw">pub struct </span>StdSyncHandler {
     timeout: <span class="prelude-ty">Option</span>&lt;Instant&gt;,
 }
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
 </span><span class="kw">impl </span>StdSyncHandler {
     <span class="doccomment">/// Synchronized update expiration time.
     </span><span class="attr">#[inline]
@@ -2604,7 +2605,7 @@
     }
 }
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
 </span><span class="kw">impl </span>Timeout <span class="kw">for </span>StdSyncHandler {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>set_timeout(<span class="kw-2">&amp;mut </span><span class="self">self</span>, duration: Duration) {
@@ -2793,14 +2794,14 @@
 
     <span class="doccomment">/// Set one of the graphic character sets, G0 to G3, as the active charset.
     ///
-    /// &#39;Invoke&#39; one of G0 to G3 in the GL area. Also referred to as shift in,
+    /// 'Invoke' one of G0 to G3 in the GL area. Also referred to as shift in,
     /// shift out and locking shift depending on the set being activated.
     </span><span class="kw">fn </span>set_active_charset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: CharsetIndex) {}
 
     <span class="doccomment">/// Assign a graphic character set to G0, G1, G2 or G3.
     ///
-    /// &#39;Designate&#39; a graphic character set as one of G0 to G3, so that it can
-    /// later be &#39;invoked&#39; by `set_active_charset`.
+    /// 'Designate' a graphic character set as one of G0 to G3, so that it can
+    /// later be 'invoked' by `set_active_charset`.
     </span><span class="kw">fn </span>configure_charset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: CharsetIndex, <span class="kw">_</span>: StandardCharset) {}
 
     <span class="doccomment">/// Set an indexed color value.
@@ -2855,19 +2856,19 @@
     /// [`behavior`]: crate::ansi::KeyboardModesApplyBehavior
     </span><span class="kw">fn </span>set_keyboard_mode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _mode: KeyboardModes, _behavior: KeyboardModesApplyBehavior) {}
 
-    <span class="doccomment">/// Set XTerm&#39;s [`ModifyOtherKeys`] option.
+    <span class="doccomment">/// Set XTerm's [`ModifyOtherKeys`] option.
     </span><span class="kw">fn </span>set_modify_other_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _mode: ModifyOtherKeys) {}
 
-    <span class="doccomment">/// Report XTerm&#39;s [`ModifyOtherKeys`] state.
+    <span class="doccomment">/// Report XTerm's [`ModifyOtherKeys`] state.
     ///
     /// The output is of form `CSI &gt; 4 ; mode m`.
     </span><span class="kw">fn </span>report_modify_other_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {}
 }
 
 <span class="macro">bitflags! </span>{
-    <span class="doccomment">/// A set of [`kitty keyboard protocol&#39;] modes.
+    <span class="doccomment">/// A set of [`kitty keyboard protocol'] modes.
     ///
-    /// [`kitty keyboard protocol&#39;]: https://sw.kovidgoyal.net/kitty/keyboard-protocol
+    /// [`kitty keyboard protocol']: https://sw.kovidgoyal.net/kitty/keyboard-protocol
     </span><span class="attr">#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
     </span><span class="kw">pub struct </span>KeyboardModes : u8 {
         <span class="doccomment">/// No keyboard protocol mode is set.
@@ -2892,15 +2893,15 @@
 ///
 /// This only applies to keys corresponding to ascii characters.
 ///
-/// For the details on how to implement the mode handling correctly, consult [`XTerm&#39;s
-/// implementation`] and the [`output`] of XTerm&#39;s provided [`perl script`]. Some libraries and
+/// For the details on how to implement the mode handling correctly, consult [`XTerm's
+/// implementation`] and the [`output`] of XTerm's provided [`perl script`]. Some libraries and
 /// implementations also use the [`fixterms`] definition of the `CSI u`.
 ///
 /// The end escape sequence has a `CSI char; modifiers u` form while the original
 /// `CSI 27 ; modifier ; char ~`. The clients should prefer the `CSI u`, since it has
 /// more adoption.
 ///
-/// [`XTerm&#39;s implementation`]: https://invisible-island.net/xterm/modified-keys.html
+/// [`XTerm's implementation`]: https://invisible-island.net/xterm/modified-keys.html
 /// [`perl script`]: https://github.com/ThomasDickey/xterm-snapshots/blob/master/vttests/modify-keys.pl
 /// [`output`]: https://github.com/alacritty/vte/blob/master/doc/modifyOtherKeys-example.txt
 /// [`fixterms`]: http://www.leonerd.org.uk/hacks/fixterms/
@@ -2913,7 +2914,7 @@
     /// some special control character cases which are built into the X11 library (e.g.,
     /// Control-Space to make a NUL, or Control-3 to make an Escape character).
     ///
-    /// Escape sequences shouldn&#39;t be emitted under the following circumstances:
+    /// Escape sequences shouldn't be emitted under the following circumstances:
     /// - When the key is in range of `[64;127]` and the modifier is either Control or Shift
     /// - When the key combination is a known control combination alias
     ///
@@ -3035,7 +3036,7 @@
     <span class="doccomment">/// Create mode from a primitive.
     </span><span class="kw">pub fn </span>from_primitive(intermediate: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>u8&gt;, num: u16) -&gt; <span class="prelude-ty">Option</span>&lt;Mode&gt; {
         <span class="kw">let </span>private = <span class="kw">match </span>intermediate {
-            <span class="prelude-val">Some</span>(<span class="string">b&#39;?&#39;</span>) =&gt; <span class="bool-val">true</span>,
+            <span class="prelude-val">Some</span>(<span class="string">b'?'</span>) =&gt; <span class="bool-val">true</span>,
             <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
             <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
         };
@@ -3059,7 +3060,7 @@
                 <span class="number">1049 </span>=&gt; Mode::SwapScreenAndSetRestoreCursor,
                 <span class="number">2004 </span>=&gt; Mode::BracketedPaste,
                 <span class="kw">_ </span>=&gt; {
-                    <span class="macro">trace!</span>(<span class="string">&quot;[unimplemented] primitive mode: {}&quot;</span>, num);
+                    <span class="macro">trace!</span>(<span class="string">"[unimplemented] primitive mode: {}"</span>, num);
                     <span class="kw">return </span><span class="prelude-val">None</span>;
                 },
             })
@@ -3097,7 +3098,7 @@
     </span>Above,
     <span class="doccomment">/// Clear entire terminal.
     </span>All,
-    <span class="doccomment">/// Clear &#39;saved&#39; lines (scrollback).
+    <span class="doccomment">/// Clear 'saved' lines (scrollback).
     </span>Saved,
 }
 
@@ -3115,7 +3116,7 @@
 /// The order here matters since the enum should be castable to a `usize` for
 /// indexing a color list.
 </span><span class="attr">#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serde"</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>NamedColor {
     <span class="doccomment">/// Black.
     </span>Black = <span class="number">0</span>,
@@ -3230,7 +3231,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serde"</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>Color {
     Named(NamedColor),
     Spec(Rgb),
@@ -3319,47 +3320,47 @@
         <span class="kw">match </span><span class="self">self </span>{
             StandardCharset::Ascii =&gt; c,
             StandardCharset::SpecialCharacterAndLineDrawing =&gt; <span class="kw">match </span>c {
-                <span class="string">&#39;_&#39; </span>=&gt; <span class="string">&#39; &#39;</span>,
-                <span class="string">&#39;`&#39; </span>=&gt; <span class="string">&#39;◆&#39;</span>,
-                <span class="string">&#39;a&#39; </span>=&gt; <span class="string">&#39;▒&#39;</span>,
-                <span class="string">&#39;b&#39; </span>=&gt; <span class="string">&#39;\u{2409}&#39;</span>, <span class="comment">// Symbol for horizontal tabulation
-                </span><span class="string">&#39;c&#39; </span>=&gt; <span class="string">&#39;\u{240c}&#39;</span>, <span class="comment">// Symbol for form feed
-                </span><span class="string">&#39;d&#39; </span>=&gt; <span class="string">&#39;\u{240d}&#39;</span>, <span class="comment">// Symbol for carriage return
-                </span><span class="string">&#39;e&#39; </span>=&gt; <span class="string">&#39;\u{240a}&#39;</span>, <span class="comment">// Symbol for line feed
-                </span><span class="string">&#39;f&#39; </span>=&gt; <span class="string">&#39;°&#39;</span>,
-                <span class="string">&#39;g&#39; </span>=&gt; <span class="string">&#39;±&#39;</span>,
-                <span class="string">&#39;h&#39; </span>=&gt; <span class="string">&#39;\u{2424}&#39;</span>, <span class="comment">// Symbol for newline
-                </span><span class="string">&#39;i&#39; </span>=&gt; <span class="string">&#39;\u{240b}&#39;</span>, <span class="comment">// Symbol for vertical tabulation
-                </span><span class="string">&#39;j&#39; </span>=&gt; <span class="string">&#39;┘&#39;</span>,
-                <span class="string">&#39;k&#39; </span>=&gt; <span class="string">&#39;┐&#39;</span>,
-                <span class="string">&#39;l&#39; </span>=&gt; <span class="string">&#39;┌&#39;</span>,
-                <span class="string">&#39;m&#39; </span>=&gt; <span class="string">&#39;└&#39;</span>,
-                <span class="string">&#39;n&#39; </span>=&gt; <span class="string">&#39;┼&#39;</span>,
-                <span class="string">&#39;o&#39; </span>=&gt; <span class="string">&#39;⎺&#39;</span>,
-                <span class="string">&#39;p&#39; </span>=&gt; <span class="string">&#39;⎻&#39;</span>,
-                <span class="string">&#39;q&#39; </span>=&gt; <span class="string">&#39;─&#39;</span>,
-                <span class="string">&#39;r&#39; </span>=&gt; <span class="string">&#39;⎼&#39;</span>,
-                <span class="string">&#39;s&#39; </span>=&gt; <span class="string">&#39;⎽&#39;</span>,
-                <span class="string">&#39;t&#39; </span>=&gt; <span class="string">&#39;├&#39;</span>,
-                <span class="string">&#39;u&#39; </span>=&gt; <span class="string">&#39;┤&#39;</span>,
-                <span class="string">&#39;v&#39; </span>=&gt; <span class="string">&#39;┴&#39;</span>,
-                <span class="string">&#39;w&#39; </span>=&gt; <span class="string">&#39;┬&#39;</span>,
-                <span class="string">&#39;x&#39; </span>=&gt; <span class="string">&#39;│&#39;</span>,
-                <span class="string">&#39;y&#39; </span>=&gt; <span class="string">&#39;≤&#39;</span>,
-                <span class="string">&#39;z&#39; </span>=&gt; <span class="string">&#39;≥&#39;</span>,
-                <span class="string">&#39;{&#39; </span>=&gt; <span class="string">&#39;π&#39;</span>,
-                <span class="string">&#39;|&#39; </span>=&gt; <span class="string">&#39;≠&#39;</span>,
-                <span class="string">&#39;}&#39; </span>=&gt; <span class="string">&#39;£&#39;</span>,
-                <span class="string">&#39;~&#39; </span>=&gt; <span class="string">&#39;·&#39;</span>,
+                <span class="string">'_' </span>=&gt; <span class="string">' '</span>,
+                <span class="string">'`' </span>=&gt; <span class="string">'◆'</span>,
+                <span class="string">'a' </span>=&gt; <span class="string">'▒'</span>,
+                <span class="string">'b' </span>=&gt; <span class="string">'\u{2409}'</span>, <span class="comment">// Symbol for horizontal tabulation
+                </span><span class="string">'c' </span>=&gt; <span class="string">'\u{240c}'</span>, <span class="comment">// Symbol for form feed
+                </span><span class="string">'d' </span>=&gt; <span class="string">'\u{240d}'</span>, <span class="comment">// Symbol for carriage return
+                </span><span class="string">'e' </span>=&gt; <span class="string">'\u{240a}'</span>, <span class="comment">// Symbol for line feed
+                </span><span class="string">'f' </span>=&gt; <span class="string">'°'</span>,
+                <span class="string">'g' </span>=&gt; <span class="string">'±'</span>,
+                <span class="string">'h' </span>=&gt; <span class="string">'\u{2424}'</span>, <span class="comment">// Symbol for newline
+                </span><span class="string">'i' </span>=&gt; <span class="string">'\u{240b}'</span>, <span class="comment">// Symbol for vertical tabulation
+                </span><span class="string">'j' </span>=&gt; <span class="string">'┘'</span>,
+                <span class="string">'k' </span>=&gt; <span class="string">'┐'</span>,
+                <span class="string">'l' </span>=&gt; <span class="string">'┌'</span>,
+                <span class="string">'m' </span>=&gt; <span class="string">'└'</span>,
+                <span class="string">'n' </span>=&gt; <span class="string">'┼'</span>,
+                <span class="string">'o' </span>=&gt; <span class="string">'⎺'</span>,
+                <span class="string">'p' </span>=&gt; <span class="string">'⎻'</span>,
+                <span class="string">'q' </span>=&gt; <span class="string">'─'</span>,
+                <span class="string">'r' </span>=&gt; <span class="string">'⎼'</span>,
+                <span class="string">'s' </span>=&gt; <span class="string">'⎽'</span>,
+                <span class="string">'t' </span>=&gt; <span class="string">'├'</span>,
+                <span class="string">'u' </span>=&gt; <span class="string">'┤'</span>,
+                <span class="string">'v' </span>=&gt; <span class="string">'┴'</span>,
+                <span class="string">'w' </span>=&gt; <span class="string">'┬'</span>,
+                <span class="string">'x' </span>=&gt; <span class="string">'│'</span>,
+                <span class="string">'y' </span>=&gt; <span class="string">'≤'</span>,
+                <span class="string">'z' </span>=&gt; <span class="string">'≥'</span>,
+                <span class="string">'{' </span>=&gt; <span class="string">'π'</span>,
+                <span class="string">'|' </span>=&gt; <span class="string">'≠'</span>,
+                <span class="string">'}' </span>=&gt; <span class="string">'£'</span>,
+                <span class="string">'~' </span>=&gt; <span class="string">'·'</span>,
                 <span class="kw">_ </span>=&gt; c,
             },
         }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, H, T&gt; <span class="kw">crate</span>::Perform <span class="kw">for </span>Performer&lt;<span class="lifetime">&#39;a</span>, H, T&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, H, T&gt; <span class="kw">crate</span>::Perform <span class="kw">for </span>Performer&lt;<span class="lifetime">'a</span>, H, T&gt;
 <span class="kw">where
-    </span>H: Handler + <span class="lifetime">&#39;a</span>,
+    </span>H: Handler + <span class="lifetime">'a</span>,
     T: Timeout,
 {
     <span class="attr">#[inline]
@@ -3379,42 +3380,42 @@
             C0::SUB =&gt; <span class="self">self</span>.handler.substitute(),
             C0::SI =&gt; <span class="self">self</span>.handler.set_active_charset(CharsetIndex::G0),
             C0::SO =&gt; <span class="self">self</span>.handler.set_active_charset(CharsetIndex::G1),
-            <span class="kw">_ </span>=&gt; <span class="macro">debug!</span>(<span class="string">&quot;[unhandled] execute byte={:02x}&quot;</span>, byte),
+            <span class="kw">_ </span>=&gt; <span class="macro">debug!</span>(<span class="string">"[unhandled] execute byte={:02x}"</span>, byte),
         }
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>hook(<span class="kw-2">&amp;mut </span><span class="self">self</span>, params: <span class="kw-2">&amp;</span>Params, intermediates: <span class="kw-2">&amp;</span>[u8], ignore: bool, action: char) {
         <span class="macro">debug!</span>(
-            <span class="string">&quot;[unhandled hook] params={:?}, ints: {:?}, ignore: {:?}, action: {:?}&quot;</span>,
+            <span class="string">"[unhandled hook] params={:?}, ints: {:?}, ignore: {:?}, action: {:?}"</span>,
             params, intermediates, ignore, action
         );
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>put(<span class="kw-2">&amp;mut </span><span class="self">self</span>, byte: u8) {
-        <span class="macro">debug!</span>(<span class="string">&quot;[unhandled put] byte={:?}&quot;</span>, byte);
+        <span class="macro">debug!</span>(<span class="string">"[unhandled put] byte={:?}"</span>, byte);
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>unhook(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="macro">debug!</span>(<span class="string">&quot;[unhandled unhook]&quot;</span>);
+        <span class="macro">debug!</span>(<span class="string">"[unhandled unhook]"</span>);
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>osc_dispatch(<span class="kw-2">&amp;mut </span><span class="self">self</span>, params: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[u8]], bell_terminated: bool) {
-        <span class="kw">let </span>terminator = <span class="kw">if </span>bell_terminated { <span class="string">&quot;\x07&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;\x1b\\&quot; </span>};
+        <span class="kw">let </span>terminator = <span class="kw">if </span>bell_terminated { <span class="string">"\x07" </span>} <span class="kw">else </span>{ <span class="string">"\x1b\\" </span>};
 
         <span class="kw">fn </span>unhandled(params: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[u8]]) {
             <span class="kw">let </span><span class="kw-2">mut </span>buf = String::new();
             <span class="kw">for </span>items <span class="kw">in </span>params {
-                buf.push(<span class="string">&#39;[&#39;</span>);
+                buf.push(<span class="string">'['</span>);
                 <span class="kw">for </span>item <span class="kw">in </span><span class="kw-2">*</span>items {
-                    <span class="kw">let _ </span>= <span class="macro">write!</span>(buf, <span class="string">&quot;{:?}&quot;</span>, <span class="kw-2">*</span>item <span class="kw">as </span>char);
+                    <span class="kw">let _ </span>= <span class="macro">write!</span>(buf, <span class="string">"{:?}"</span>, <span class="kw-2">*</span>item <span class="kw">as </span>char);
                 }
-                buf.push_str(<span class="string">&quot;],&quot;</span>);
+                buf.push_str(<span class="string">"],"</span>);
             }
-            <span class="macro">debug!</span>(<span class="string">&quot;[unhandled osc_dispatch]: [{}] at line {}&quot;</span>, <span class="kw-2">&amp;</span>buf, <span class="macro">line!</span>());
+            <span class="macro">debug!</span>(<span class="string">"[unhandled osc_dispatch]: [{}] at line {}"</span>, <span class="kw-2">&amp;</span>buf, <span class="macro">line!</span>());
         }
 
         <span class="kw">if </span>params.is_empty() || params[<span class="number">0</span>].is_empty() {
@@ -3423,13 +3424,13 @@
 
         <span class="kw">match </span>params[<span class="number">0</span>] {
             <span class="comment">// Set window title.
-            </span><span class="string">b&quot;0&quot; </span>| <span class="string">b&quot;2&quot; </span>=&gt; {
+            </span><span class="string">b"0" </span>| <span class="string">b"2" </span>=&gt; {
                 <span class="kw">if </span>params.len() &gt;= <span class="number">2 </span>{
                     <span class="kw">let </span>title = params[<span class="number">1</span>..]
                         .iter()
                         .flat_map(|x| str::from_utf8(x))
                         .collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;()
-                        .join(<span class="string">&quot;;&quot;</span>)
+                        .join(<span class="string">";"</span>)
                         .trim()
                         .to_owned();
                     <span class="self">self</span>.handler.set_title(<span class="prelude-val">Some</span>(title));
@@ -3439,7 +3440,7 @@
             },
 
             <span class="comment">// Set color index.
-            </span><span class="string">b&quot;4&quot; </span>=&gt; {
+            </span><span class="string">b"4" </span>=&gt; {
                 <span class="kw">if </span>params.len() &lt;= <span class="number">1 </span>|| params.len() % <span class="number">2 </span>== <span class="number">0 </span>{
                     unhandled(params);
                     <span class="kw">return</span>;
@@ -3456,8 +3457,8 @@
 
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = xparse_color(chunk[<span class="number">1</span>]) {
                         <span class="self">self</span>.handler.set_color(index <span class="kw">as </span>usize, c);
-                    } <span class="kw">else if </span>chunk[<span class="number">1</span>] == <span class="string">b&quot;?&quot; </span>{
-                        <span class="kw">let </span>prefix = <span class="macro">alloc::format!</span>(<span class="string">&quot;4;{index}&quot;</span>);
+                    } <span class="kw">else if </span>chunk[<span class="number">1</span>] == <span class="string">b"?" </span>{
+                        <span class="kw">let </span>prefix = <span class="macro">alloc::format!</span>(<span class="string">"4;{index}"</span>);
                         <span class="self">self</span>.handler.dynamic_color_sequence(prefix, index <span class="kw">as </span>usize, terminator);
                     } <span class="kw">else </span>{
                         unhandled(params);
@@ -3466,15 +3467,15 @@
             },
 
             <span class="comment">// Hyperlink.
-            </span><span class="string">b&quot;8&quot; </span><span class="kw">if </span>params.len() &gt; <span class="number">2 </span>=&gt; {
+            </span><span class="string">b"8" </span><span class="kw">if </span>params.len() &gt; <span class="number">2 </span>=&gt; {
                 <span class="kw">let </span>link_params = params[<span class="number">1</span>];
 
-                <span class="comment">// NOTE: The escape sequence is of form &#39;OSC 8 ; params ; URI ST&#39;, where
+                <span class="comment">// NOTE: The escape sequence is of form 'OSC 8 ; params ; URI ST', where
                 // URI is URL-encoded. However `;` is a special character and might be
                 // passed as is, thus we need to rebuild the URI.
                 </span><span class="kw">let </span><span class="kw-2">mut </span>uri = str::from_utf8(params[<span class="number">2</span>]).unwrap_or_default().to_string();
                 <span class="kw">for </span>param <span class="kw">in </span>params[<span class="number">3</span>..].iter() {
-                    uri.push(<span class="string">&#39;;&#39;</span>);
+                    uri.push(<span class="string">';'</span>);
                     uri.push_str(str::from_utf8(param).unwrap_or_default());
                 }
 
@@ -3487,15 +3488,15 @@
                 <span class="comment">// Link parameters are in format of `key1=value1:key2=value2`. Currently only key
                 // `id` is defined.
                 </span><span class="kw">let </span>id = link_params
-                    .split(|<span class="kw-2">&amp;</span>b| b == <span class="string">b&#39;:&#39;</span>)
-                    .find_map(|kv| kv.strip_prefix(<span class="string">b&quot;id=&quot;</span>))
+                    .split(|<span class="kw-2">&amp;</span>b| b == <span class="string">b':'</span>)
+                    .find_map(|kv| kv.strip_prefix(<span class="string">b"id="</span>))
                     .and_then(|kv| str::from_utf8(kv).ok().map(|e| e.to_owned()));
 
                 <span class="self">self</span>.handler.set_hyperlink(<span class="prelude-val">Some</span>(Hyperlink { id, uri }));
             },
 
             <span class="comment">// Get/set Foreground, Background, Cursor colors.
-            </span><span class="string">b&quot;10&quot; </span>| <span class="string">b&quot;11&quot; </span>| <span class="string">b&quot;12&quot; </span>=&gt; {
+            </span><span class="string">b"10" </span>| <span class="string">b"11" </span>| <span class="string">b"12" </span>=&gt; {
                 <span class="kw">if </span>params.len() &gt;= <span class="number">2 </span>{
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>dynamic_code) = parse_number(params[<span class="number">0</span>]) {
                         <span class="kw">for </span>param <span class="kw">in </span><span class="kw-2">&amp;</span>params[<span class="number">1</span>..] {
@@ -3511,7 +3512,7 @@
 
                             <span class="kw">if let </span><span class="prelude-val">Some</span>(color) = xparse_color(param) {
                                 <span class="self">self</span>.handler.set_color(index, color);
-                            } <span class="kw">else if </span>param == <span class="string">b&quot;?&quot; </span>{
+                            } <span class="kw">else if </span>param == <span class="string">b"?" </span>{
                                 <span class="self">self</span>.handler.dynamic_color_sequence(
                                     dynamic_code.to_string(),
                                     index,
@@ -3529,24 +3530,24 @@
             },
 
             <span class="comment">// Set mouse cursor shape.
-            </span><span class="string">b&quot;22&quot; </span><span class="kw">if </span>params.len() == <span class="number">2 </span>=&gt; {
+            </span><span class="string">b"22" </span><span class="kw">if </span>params.len() == <span class="number">2 </span>=&gt; {
                 <span class="kw">let </span>shape = String::from_utf8_lossy(params[<span class="number">1</span>]);
                 <span class="kw">match </span>CursorIcon::from_str(<span class="kw-2">&amp;</span>shape) {
                     <span class="prelude-val">Ok</span>(cursor_icon) =&gt; <span class="self">self</span>.handler.set_mouse_cursor_icon(cursor_icon),
-                    <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="macro">debug!</span>(<span class="string">&quot;[osc 22] unrecognized cursor icon shape: {shape:?}&quot;</span>),
+                    <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="macro">debug!</span>(<span class="string">"[osc 22] unrecognized cursor icon shape: {shape:?}"</span>),
                 }
             },
 
             <span class="comment">// Set cursor style.
-            </span><span class="string">b&quot;50&quot; </span>=&gt; {
+            </span><span class="string">b"50" </span>=&gt; {
                 <span class="kw">if </span>params.len() &gt;= <span class="number">2
                     </span>&amp;&amp; params[<span class="number">1</span>].len() &gt;= <span class="number">13
-                    </span>&amp;&amp; params[<span class="number">1</span>][<span class="number">0</span>..<span class="number">12</span>] == <span class="kw-2">*</span><span class="string">b&quot;CursorShape=&quot;
+                    </span>&amp;&amp; params[<span class="number">1</span>][<span class="number">0</span>..<span class="number">12</span>] == <span class="kw-2">*</span><span class="string">b"CursorShape="
                 </span>{
                     <span class="kw">let </span>shape = <span class="kw">match </span>params[<span class="number">1</span>][<span class="number">12</span>] <span class="kw">as </span>char {
-                        <span class="string">&#39;0&#39; </span>=&gt; CursorShape::Block,
-                        <span class="string">&#39;1&#39; </span>=&gt; CursorShape::Beam,
-                        <span class="string">&#39;2&#39; </span>=&gt; CursorShape::Underline,
+                        <span class="string">'0' </span>=&gt; CursorShape::Block,
+                        <span class="string">'1' </span>=&gt; CursorShape::Beam,
+                        <span class="string">'2' </span>=&gt; CursorShape::Underline,
                         <span class="kw">_ </span>=&gt; <span class="kw">return </span>unhandled(params),
                     };
                     <span class="self">self</span>.handler.set_cursor_shape(shape);
@@ -3556,20 +3557,20 @@
             },
 
             <span class="comment">// Set clipboard.
-            </span><span class="string">b&quot;52&quot; </span>=&gt; {
+            </span><span class="string">b"52" </span>=&gt; {
                 <span class="kw">if </span>params.len() &lt; <span class="number">3 </span>{
                     <span class="kw">return </span>unhandled(params);
                 }
 
-                <span class="kw">let </span>clipboard = params[<span class="number">1</span>].first().unwrap_or(<span class="kw-2">&amp;</span><span class="string">b&#39;c&#39;</span>);
+                <span class="kw">let </span>clipboard = params[<span class="number">1</span>].first().unwrap_or(<span class="kw-2">&amp;</span><span class="string">b'c'</span>);
                 <span class="kw">match </span>params[<span class="number">2</span>] {
-                    <span class="string">b&quot;?&quot; </span>=&gt; <span class="self">self</span>.handler.clipboard_load(<span class="kw-2">*</span>clipboard, terminator),
+                    <span class="string">b"?" </span>=&gt; <span class="self">self</span>.handler.clipboard_load(<span class="kw-2">*</span>clipboard, terminator),
                     base64 =&gt; <span class="self">self</span>.handler.clipboard_store(<span class="kw-2">*</span>clipboard, base64),
                 }
             },
 
             <span class="comment">// Reset color index.
-            </span><span class="string">b&quot;104&quot; </span>=&gt; {
+            </span><span class="string">b"104" </span>=&gt; {
                 <span class="comment">// Reset all color indexes when no parameters are given.
                 </span><span class="kw">if </span>params.len() == <span class="number">1 </span>|| params[<span class="number">1</span>].is_empty() {
                     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">256 </span>{
@@ -3588,13 +3589,13 @@
             },
 
             <span class="comment">// Reset foreground color.
-            </span><span class="string">b&quot;110&quot; </span>=&gt; <span class="self">self</span>.handler.reset_color(NamedColor::Foreground <span class="kw">as </span>usize),
+            </span><span class="string">b"110" </span>=&gt; <span class="self">self</span>.handler.reset_color(NamedColor::Foreground <span class="kw">as </span>usize),
 
             <span class="comment">// Reset background color.
-            </span><span class="string">b&quot;111&quot; </span>=&gt; <span class="self">self</span>.handler.reset_color(NamedColor::Background <span class="kw">as </span>usize),
+            </span><span class="string">b"111" </span>=&gt; <span class="self">self</span>.handler.reset_color(NamedColor::Background <span class="kw">as </span>usize),
 
             <span class="comment">// Reset text cursor color.
-            </span><span class="string">b&quot;112&quot; </span>=&gt; <span class="self">self</span>.handler.reset_color(NamedColor::Cursor <span class="kw">as </span>usize),
+            </span><span class="string">b"112" </span>=&gt; <span class="self">self</span>.handler.reset_color(NamedColor::Cursor <span class="kw">as </span>usize),
 
             <span class="kw">_ </span>=&gt; unhandled(params),
         }
@@ -3612,7 +3613,7 @@
         <span class="macro">macro_rules! </span>unhandled {
             () =&gt; {{
                 <span class="macro">debug!</span>(
-                    <span class="string">&quot;[Unhandled CSI] action={:?}, params={:?}, intermediates={:?}&quot;</span>,
+                    <span class="string">"[Unhandled CSI] action={:?}, params={:?}, intermediates={:?}"</span>,
                     action, params, intermediates
                 );
             }};
@@ -3632,28 +3633,28 @@
         };
 
         <span class="kw">match </span>(action, intermediates) {
-            (<span class="string">&#39;@&#39;</span>, []) =&gt; handler.insert_blank(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;A&#39;</span>, []) =&gt; handler.move_up(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;B&#39;</span>, []) | (<span class="string">&#39;e&#39;</span>, []) =&gt; handler.move_down(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;b&#39;</span>, []) =&gt; {
+            (<span class="string">'@'</span>, []) =&gt; handler.insert_blank(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'A'</span>, []) =&gt; handler.move_up(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'B'</span>, []) | (<span class="string">'e'</span>, []) =&gt; handler.move_down(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'b'</span>, []) =&gt; {
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = <span class="self">self</span>.state.preceding_char {
                     <span class="kw">for _ in </span><span class="number">0</span>..next_param_or(<span class="number">1</span>) {
                         handler.input(c);
                     }
                 } <span class="kw">else </span>{
-                    <span class="macro">debug!</span>(<span class="string">&quot;tried to repeat with no preceding char&quot;</span>);
+                    <span class="macro">debug!</span>(<span class="string">"tried to repeat with no preceding char"</span>);
                 }
             },
-            (<span class="string">&#39;C&#39;</span>, []) | (<span class="string">&#39;a&#39;</span>, []) =&gt; handler.move_forward(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;c&#39;</span>, intermediates) <span class="kw">if </span>next_param_or(<span class="number">0</span>) == <span class="number">0 </span>=&gt; {
+            (<span class="string">'C'</span>, []) | (<span class="string">'a'</span>, []) =&gt; handler.move_forward(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'c'</span>, intermediates) <span class="kw">if </span>next_param_or(<span class="number">0</span>) == <span class="number">0 </span>=&gt; {
                 handler.identify_terminal(intermediates.first().map(|<span class="kw-2">&amp;</span>i| i <span class="kw">as </span>char))
             },
-            (<span class="string">&#39;D&#39;</span>, []) =&gt; handler.move_backward(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;d&#39;</span>, []) =&gt; handler.goto_line(next_param_or(<span class="number">1</span>) <span class="kw">as </span>i32 - <span class="number">1</span>),
-            (<span class="string">&#39;E&#39;</span>, []) =&gt; handler.move_down_and_cr(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;F&#39;</span>, []) =&gt; handler.move_up_and_cr(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;G&#39;</span>, []) | (<span class="string">&#39;`&#39;</span>, []) =&gt; handler.goto_col(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize - <span class="number">1</span>),
-            (<span class="string">&#39;g&#39;</span>, []) =&gt; {
+            (<span class="string">'D'</span>, []) =&gt; handler.move_backward(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'d'</span>, []) =&gt; handler.goto_line(next_param_or(<span class="number">1</span>) <span class="kw">as </span>i32 - <span class="number">1</span>),
+            (<span class="string">'E'</span>, []) =&gt; handler.move_down_and_cr(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'F'</span>, []) =&gt; handler.move_up_and_cr(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'G'</span>, []) | (<span class="string">'`'</span>, []) =&gt; handler.goto_col(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize - <span class="number">1</span>),
+            (<span class="string">'g'</span>, []) =&gt; {
                 <span class="kw">let </span>mode = <span class="kw">match </span>next_param_or(<span class="number">0</span>) {
                     <span class="number">0 </span>=&gt; TabulationClearMode::Current,
                     <span class="number">3 </span>=&gt; TabulationClearMode::All,
@@ -3665,17 +3666,17 @@
 
                 handler.clear_tabs(mode);
             },
-            (<span class="string">&#39;H&#39;</span>, []) | (<span class="string">&#39;f&#39;</span>, []) =&gt; {
+            (<span class="string">'H'</span>, []) | (<span class="string">'f'</span>, []) =&gt; {
                 <span class="kw">let </span>y = next_param_or(<span class="number">1</span>) <span class="kw">as </span>i32;
                 <span class="kw">let </span>x = next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize;
                 handler.goto(y - <span class="number">1</span>, x - <span class="number">1</span>);
             },
-            (<span class="string">&#39;h&#39;</span>, intermediates) =&gt; {
+            (<span class="string">'h'</span>, intermediates) =&gt; {
                 <span class="kw">for </span>param <span class="kw">in </span>params_iter.map(|param| param[<span class="number">0</span>]) {
                     <span class="kw">let </span>intermediate = intermediates.first();
 
                     <span class="comment">// Handle sync updates opaquely.
-                    </span><span class="kw">if </span>intermediate == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">b&#39;?&#39;</span>) &amp;&amp; param == <span class="number">2026 </span>{
+                    </span><span class="kw">if </span>intermediate == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">b'?'</span>) &amp;&amp; param == <span class="number">2026 </span>{
                         <span class="self">self</span>.state.sync_state.timeout.set_timeout(SYNC_UPDATE_TIMEOUT);
                     }
 
@@ -3685,8 +3686,8 @@
                     }
                 }
             },
-            (<span class="string">&#39;I&#39;</span>, []) =&gt; handler.move_forward_tabs(next_param_or(<span class="number">1</span>)),
-            (<span class="string">&#39;J&#39;</span>, []) =&gt; {
+            (<span class="string">'I'</span>, []) =&gt; handler.move_forward_tabs(next_param_or(<span class="number">1</span>)),
+            (<span class="string">'J'</span>, []) =&gt; {
                 <span class="kw">let </span>mode = <span class="kw">match </span>next_param_or(<span class="number">0</span>) {
                     <span class="number">0 </span>=&gt; ClearMode::Below,
                     <span class="number">1 </span>=&gt; ClearMode::Above,
@@ -3700,7 +3701,7 @@
 
                 handler.clear_screen(mode);
             },
-            (<span class="string">&#39;K&#39;</span>, []) =&gt; {
+            (<span class="string">'K'</span>, []) =&gt; {
                 <span class="kw">let </span>mode = <span class="kw">match </span>next_param_or(<span class="number">0</span>) {
                     <span class="number">0 </span>=&gt; LineClearMode::Right,
                     <span class="number">1 </span>=&gt; LineClearMode::Left,
@@ -3713,8 +3714,8 @@
 
                 handler.clear_line(mode);
             },
-            (<span class="string">&#39;L&#39;</span>, []) =&gt; handler.insert_blank_lines(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;l&#39;</span>, intermediates) =&gt; {
+            (<span class="string">'L'</span>, []) =&gt; handler.insert_blank_lines(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'l'</span>, intermediates) =&gt; {
                 <span class="kw">for </span>param <span class="kw">in </span>params_iter.map(|param| param[<span class="number">0</span>]) {
                     <span class="kw">match </span>Mode::from_primitive(intermediates.first(), param) {
                         <span class="prelude-val">Some</span>(mode) =&gt; handler.unset_mode(mode),
@@ -3722,8 +3723,8 @@
                     }
                 }
             },
-            (<span class="string">&#39;M&#39;</span>, []) =&gt; handler.delete_lines(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;m&#39;</span>, []) =&gt; {
+            (<span class="string">'M'</span>, []) =&gt; handler.delete_lines(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'m'</span>, []) =&gt; {
                 <span class="kw">if </span>params.is_empty() {
                     handler.terminal_attribute(Attr::Reset);
                 } <span class="kw">else </span>{
@@ -3735,7 +3736,7 @@
                     }
                 }
             },
-            (<span class="string">&#39;m&#39;</span>, [<span class="string">b&#39;&gt;&#39;</span>]) =&gt; {
+            (<span class="string">'m'</span>, [<span class="string">b'&gt;'</span>]) =&gt; {
                 <span class="kw">let </span>mode = <span class="kw">match </span>(next_param_or(<span class="number">1</span>) == <span class="number">4</span>).then(|| next_param_or(<span class="number">0</span>)) {
                     <span class="prelude-val">Some</span>(<span class="number">0</span>) =&gt; ModifyOtherKeys::Reset,
                     <span class="prelude-val">Some</span>(<span class="number">1</span>) =&gt; ModifyOtherKeys::EnableExceptWellDefined,
@@ -3744,16 +3745,16 @@
                 };
                 handler.set_modify_other_keys(mode);
             },
-            (<span class="string">&#39;m&#39;</span>, [<span class="string">b&#39;?&#39;</span>]) =&gt; {
+            (<span class="string">'m'</span>, [<span class="string">b'?'</span>]) =&gt; {
                 <span class="kw">if </span>params_iter.next() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="number">4</span>]) {
                     handler.report_modify_other_keys();
                 } <span class="kw">else </span>{
                     <span class="macro">unhandled!</span>()
                 }
             },
-            (<span class="string">&#39;n&#39;</span>, []) =&gt; handler.device_status(next_param_or(<span class="number">0</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;P&#39;</span>, []) =&gt; handler.delete_chars(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;q&#39;</span>, [<span class="string">b&#39; &#39;</span>]) =&gt; {
+            (<span class="string">'n'</span>, []) =&gt; handler.device_status(next_param_or(<span class="number">0</span>) <span class="kw">as </span>usize),
+            (<span class="string">'P'</span>, []) =&gt; handler.delete_chars(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'q'</span>, [<span class="string">b' '</span>]) =&gt; {
                 <span class="comment">// DECSCUSR (CSI Ps SP q) -- Set Cursor Style.
                 </span><span class="kw">let </span>cursor_style_id = next_param_or(<span class="number">0</span>);
                 <span class="kw">let </span>shape = <span class="kw">match </span>cursor_style_id {
@@ -3771,25 +3772,25 @@
 
                 handler.set_cursor_style(cursor_style);
             },
-            (<span class="string">&#39;r&#39;</span>, []) =&gt; {
+            (<span class="string">'r'</span>, []) =&gt; {
                 <span class="kw">let </span>top = next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize;
                 <span class="kw">let </span>bottom =
                     params_iter.next().map(|param| param[<span class="number">0</span>] <span class="kw">as </span>usize).filter(|<span class="kw-2">&amp;</span>param| param != <span class="number">0</span>);
 
                 handler.set_scrolling_region(top, bottom);
             },
-            (<span class="string">&#39;S&#39;</span>, []) =&gt; handler.scroll_up(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;s&#39;</span>, []) =&gt; handler.save_cursor_position(),
-            (<span class="string">&#39;T&#39;</span>, []) =&gt; handler.scroll_down(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;t&#39;</span>, []) =&gt; <span class="kw">match </span>next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize {
+            (<span class="string">'S'</span>, []) =&gt; handler.scroll_up(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'s'</span>, []) =&gt; handler.save_cursor_position(),
+            (<span class="string">'T'</span>, []) =&gt; handler.scroll_down(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'t'</span>, []) =&gt; <span class="kw">match </span>next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize {
                 <span class="number">14 </span>=&gt; handler.text_area_size_pixels(),
                 <span class="number">18 </span>=&gt; handler.text_area_size_chars(),
                 <span class="number">22 </span>=&gt; handler.push_title(),
                 <span class="number">23 </span>=&gt; handler.pop_title(),
                 <span class="kw">_ </span>=&gt; <span class="macro">unhandled!</span>(),
             },
-            (<span class="string">&#39;u&#39;</span>, [<span class="string">b&#39;?&#39;</span>]) =&gt; handler.report_keyboard_mode(),
-            (<span class="string">&#39;u&#39;</span>, [<span class="string">b&#39;=&#39;</span>]) =&gt; {
+            (<span class="string">'u'</span>, [<span class="string">b'?'</span>]) =&gt; handler.report_keyboard_mode(),
+            (<span class="string">'u'</span>, [<span class="string">b'='</span>]) =&gt; {
                 <span class="kw">let </span>mode = KeyboardModes::from_bits_truncate(next_param_or(<span class="number">0</span>) <span class="kw">as </span>u8);
                 <span class="kw">let </span>behavior = <span class="kw">match </span>next_param_or(<span class="number">1</span>) {
                     <span class="number">3 </span>=&gt; KeyboardModesApplyBehavior::Difference,
@@ -3799,17 +3800,17 @@
                 };
                 handler.set_keyboard_mode(mode, behavior);
             },
-            (<span class="string">&#39;u&#39;</span>, [<span class="string">b&#39;&gt;&#39;</span>]) =&gt; {
+            (<span class="string">'u'</span>, [<span class="string">b'&gt;'</span>]) =&gt; {
                 <span class="kw">let </span>mode = KeyboardModes::from_bits_truncate(next_param_or(<span class="number">0</span>) <span class="kw">as </span>u8);
                 handler.push_keyboard_mode(mode);
             },
-            (<span class="string">&#39;u&#39;</span>, [<span class="string">b&#39;&lt;&#39;</span>]) =&gt; {
+            (<span class="string">'u'</span>, [<span class="string">b'&lt;'</span>]) =&gt; {
                 <span class="comment">// The default is 1.
                 </span>handler.pop_keyboard_modes(next_param_or(<span class="number">1</span>));
             },
-            (<span class="string">&#39;u&#39;</span>, []) =&gt; handler.restore_cursor_position(),
-            (<span class="string">&#39;X&#39;</span>, []) =&gt; handler.erase_chars(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
-            (<span class="string">&#39;Z&#39;</span>, []) =&gt; handler.move_backward_tabs(next_param_or(<span class="number">1</span>)),
+            (<span class="string">'u'</span>, []) =&gt; handler.restore_cursor_position(),
+            (<span class="string">'X'</span>, []) =&gt; handler.erase_chars(next_param_or(<span class="number">1</span>) <span class="kw">as </span>usize),
+            (<span class="string">'Z'</span>, []) =&gt; handler.move_backward_tabs(next_param_or(<span class="number">1</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">unhandled!</span>(),
         }
     }
@@ -3819,7 +3820,7 @@
         <span class="macro">macro_rules! </span>unhandled {
             () =&gt; {{
                 <span class="macro">debug!</span>(
-                    <span class="string">&quot;[unhandled] esc_dispatch ints={:?}, byte={:?} ({:02x})&quot;</span>,
+                    <span class="string">"[unhandled] esc_dispatch ints={:?}, byte={:?} ({:02x})"</span>,
                     intermediates, byte <span class="kw">as </span>char, byte
                 );
             }};
@@ -3828,10 +3829,10 @@
         <span class="macro">macro_rules! </span>configure_charset {
             (<span class="macro-nonterminal">$charset</span>:path, <span class="macro-nonterminal">$intermediates</span>:expr) =&gt; {{
                 <span class="kw">let </span>index: CharsetIndex = <span class="kw">match </span><span class="macro-nonterminal">$intermediates </span>{
-                    [<span class="string">b&#39;(&#39;</span>] =&gt; CharsetIndex::G0,
-                    [<span class="string">b&#39;)&#39;</span>] =&gt; CharsetIndex::G1,
-                    [<span class="string">b&#39;*&#39;</span>] =&gt; CharsetIndex::G2,
-                    [<span class="string">b&#39;+&#39;</span>] =&gt; CharsetIndex::G3,
+                    [<span class="string">b'('</span>] =&gt; CharsetIndex::G0,
+                    [<span class="string">b')'</span>] =&gt; CharsetIndex::G1,
+                    [<span class="string">b'*'</span>] =&gt; CharsetIndex::G2,
+                    [<span class="string">b'+'</span>] =&gt; CharsetIndex::G3,
                     <span class="kw">_ </span>=&gt; {
                         <span class="macro">unhandled!</span>();
                         <span class="kw">return</span>;
@@ -3842,33 +3843,33 @@
         }
 
         <span class="kw">match </span>(byte, intermediates) {
-            (<span class="string">b&#39;B&#39;</span>, intermediates) =&gt; <span class="macro">configure_charset!</span>(StandardCharset::Ascii, intermediates),
-            (<span class="string">b&#39;D&#39;</span>, []) =&gt; <span class="self">self</span>.handler.linefeed(),
-            (<span class="string">b&#39;E&#39;</span>, []) =&gt; {
+            (<span class="string">b'B'</span>, intermediates) =&gt; <span class="macro">configure_charset!</span>(StandardCharset::Ascii, intermediates),
+            (<span class="string">b'D'</span>, []) =&gt; <span class="self">self</span>.handler.linefeed(),
+            (<span class="string">b'E'</span>, []) =&gt; {
                 <span class="self">self</span>.handler.linefeed();
                 <span class="self">self</span>.handler.carriage_return();
             },
-            (<span class="string">b&#39;H&#39;</span>, []) =&gt; <span class="self">self</span>.handler.set_horizontal_tabstop(),
-            (<span class="string">b&#39;M&#39;</span>, []) =&gt; <span class="self">self</span>.handler.reverse_index(),
-            (<span class="string">b&#39;Z&#39;</span>, []) =&gt; <span class="self">self</span>.handler.identify_terminal(<span class="prelude-val">None</span>),
-            (<span class="string">b&#39;c&#39;</span>, []) =&gt; <span class="self">self</span>.handler.reset_state(),
-            (<span class="string">b&#39;0&#39;</span>, intermediates) =&gt; {
+            (<span class="string">b'H'</span>, []) =&gt; <span class="self">self</span>.handler.set_horizontal_tabstop(),
+            (<span class="string">b'M'</span>, []) =&gt; <span class="self">self</span>.handler.reverse_index(),
+            (<span class="string">b'Z'</span>, []) =&gt; <span class="self">self</span>.handler.identify_terminal(<span class="prelude-val">None</span>),
+            (<span class="string">b'c'</span>, []) =&gt; <span class="self">self</span>.handler.reset_state(),
+            (<span class="string">b'0'</span>, intermediates) =&gt; {
                 <span class="macro">configure_charset!</span>(StandardCharset::SpecialCharacterAndLineDrawing, intermediates)
             },
-            (<span class="string">b&#39;7&#39;</span>, []) =&gt; <span class="self">self</span>.handler.save_cursor_position(),
-            (<span class="string">b&#39;8&#39;</span>, [<span class="string">b&#39;#&#39;</span>]) =&gt; <span class="self">self</span>.handler.decaln(),
-            (<span class="string">b&#39;8&#39;</span>, []) =&gt; <span class="self">self</span>.handler.restore_cursor_position(),
-            (<span class="string">b&#39;=&#39;</span>, []) =&gt; <span class="self">self</span>.handler.set_keypad_application_mode(),
-            (<span class="string">b&#39;&gt;&#39;</span>, []) =&gt; <span class="self">self</span>.handler.unset_keypad_application_mode(),
+            (<span class="string">b'7'</span>, []) =&gt; <span class="self">self</span>.handler.save_cursor_position(),
+            (<span class="string">b'8'</span>, [<span class="string">b'#'</span>]) =&gt; <span class="self">self</span>.handler.decaln(),
+            (<span class="string">b'8'</span>, []) =&gt; <span class="self">self</span>.handler.restore_cursor_position(),
+            (<span class="string">b'='</span>, []) =&gt; <span class="self">self</span>.handler.set_keypad_application_mode(),
+            (<span class="string">b'&gt;'</span>, []) =&gt; <span class="self">self</span>.handler.unset_keypad_application_mode(),
             <span class="comment">// String terminator, do nothing (parser handles as string terminator).
-            </span>(<span class="string">b&#39;\\&#39;</span>, []) =&gt; (),
+            </span>(<span class="string">b'\\'</span>, []) =&gt; (),
             <span class="kw">_ </span>=&gt; <span class="macro">unhandled!</span>(),
         }
     }
 }
 
 <span class="attr">#[inline]
-</span><span class="kw">fn </span>attrs_from_sgr_parameters(params: <span class="kw-2">&amp;mut </span>ParamsIter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; Vec&lt;<span class="prelude-ty">Option</span>&lt;Attr&gt;&gt; {
+</span><span class="kw">fn </span>attrs_from_sgr_parameters(params: <span class="kw-2">&amp;mut </span>ParamsIter&lt;<span class="lifetime">'_</span>&gt;) -&gt; Vec&lt;<span class="prelude-ty">Option</span>&lt;Attr&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>attrs = Vec::with_capacity(params.size_hint().<span class="number">0</span>);
 
     <span class="kw">while let </span><span class="prelude-val">Some</span>(param) = params.next() {
@@ -4132,7 +4133,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_control_attribute() {
-        <span class="kw">static </span>BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;1&#39;</span>, <span class="string">b&#39;m&#39;</span>];
+        <span class="kw">static </span>BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'1'</span>, <span class="string">b'm'</span>];
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4146,7 +4147,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_terminal_identity_csi() {
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;1&#39;</span>, <span class="string">b&#39;c&#39;</span>];
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'1'</span>, <span class="string">b'c'</span>];
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4158,7 +4159,7 @@
         <span class="macro">assert!</span>(!handler.identity_reported);
         handler.reset_state();
 
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;c&#39;</span>];
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'c'</span>];
 
         <span class="kw">for </span>byte <span class="kw">in </span>bytes {
             parser.advance(<span class="kw-2">&amp;mut </span>handler, <span class="kw-2">*</span>byte);
@@ -4167,7 +4168,7 @@
         <span class="macro">assert!</span>(handler.identity_reported);
         handler.reset_state();
 
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;0&#39;</span>, <span class="string">b&#39;c&#39;</span>];
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'0'</span>, <span class="string">b'c'</span>];
 
         <span class="kw">for </span>byte <span class="kw">in </span>bytes {
             parser.advance(<span class="kw-2">&amp;mut </span>handler, <span class="kw-2">*</span>byte);
@@ -4178,7 +4179,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_terminal_identity_esc() {
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;Z&#39;</span>];
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b'Z'</span>];
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4190,7 +4191,7 @@
         <span class="macro">assert!</span>(handler.identity_reported);
         handler.reset_state();
 
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;#&#39;</span>, <span class="string">b&#39;Z&#39;</span>];
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b'#'</span>, <span class="string">b'Z'</span>];
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4206,8 +4207,8 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_truecolor_attr() {
         <span class="kw">static </span>BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[
-            <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;3&#39;</span>, <span class="string">b&#39;8&#39;</span>, <span class="string">b&#39;;&#39;</span>, <span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;;&#39;</span>, <span class="string">b&#39;1&#39;</span>, <span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;8&#39;</span>, <span class="string">b&#39;;&#39;</span>, <span class="string">b&#39;6&#39;</span>, <span class="string">b&#39;6&#39;</span>, <span class="string">b&#39;;&#39;</span>,
-            <span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;5&#39;</span>, <span class="string">b&#39;5&#39;</span>, <span class="string">b&#39;m&#39;</span>,
+            <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'3'</span>, <span class="string">b'8'</span>, <span class="string">b';'</span>, <span class="string">b'2'</span>, <span class="string">b';'</span>, <span class="string">b'1'</span>, <span class="string">b'2'</span>, <span class="string">b'8'</span>, <span class="string">b';'</span>, <span class="string">b'6'</span>, <span class="string">b'6'</span>, <span class="string">b';'</span>,
+            <span class="string">b'2'</span>, <span class="string">b'5'</span>, <span class="string">b'5'</span>, <span class="string">b'm'</span>,
         ];
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
@@ -4226,19 +4227,19 @@
     </span><span class="attr">#[test]
     </span><span class="kw">fn </span>parse_zsh_startup() {
         <span class="kw">static </span>BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[
-            <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;1&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;7&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="string">b&#39;%&#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;7&#39;</span>, <span class="string">b&#39;m&#39;</span>,
-            <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;1&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;0&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>,
-            <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>,
-            <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>,
-            <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>,
-            <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>,
-            <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>,
-            <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39;\r&#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39;\r&#39;</span>, <span class="string">b&#39;\r&#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;0&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;2&#39;</span>,
-            <span class="string">b&#39;7&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;4&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;J&#39;</span>, <span class="string">b&#39;j&#39;</span>, <span class="string">b&#39;w&#39;</span>, <span class="string">b&#39;i&#39;</span>, <span class="string">b&#39;l&#39;</span>,
-            <span class="string">b&#39;m&#39;</span>, <span class="string">b&#39;@&#39;</span>, <span class="string">b&#39;j&#39;</span>, <span class="string">b&#39;w&#39;</span>, <span class="string">b&#39;i&#39;</span>, <span class="string">b&#39;l&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="string">b&#39;-&#39;</span>, <span class="string">b&#39;d&#39;</span>, <span class="string">b&#39;e&#39;</span>, <span class="string">b&#39;s&#39;</span>, <span class="string">b&#39;k&#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="number">0x1b</span>,
-            <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;0&#39;</span>, <span class="string">b&#39;1&#39;</span>, <span class="string">b&#39;;&#39;</span>, <span class="string">b&#39;3&#39;</span>, <span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="number">0xe2</span>, <span class="number">0x9e</span>, <span class="number">0x9c</span>, <span class="string">b&#39; &#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;0&#39;</span>,
-            <span class="string">b&#39;1&#39;</span>, <span class="string">b&#39;;&#39;</span>, <span class="string">b&#39;3&#39;</span>, <span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="number">0x1b</span>, <span class="string">b&#39;[&#39;</span>, <span class="string">b&#39;3&#39;</span>, <span class="string">b&#39;6&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="string">b&#39;~&#39;</span>, <span class="string">b&#39;/&#39;</span>, <span class="string">b&#39;c&#39;</span>,
-            <span class="string">b&#39;o&#39;</span>, <span class="string">b&#39;d&#39;</span>, <span class="string">b&#39;e&#39;</span>,
+            <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'1'</span>, <span class="string">b'm'</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'7'</span>, <span class="string">b'm'</span>, <span class="string">b'%'</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'2'</span>, <span class="string">b'7'</span>, <span class="string">b'm'</span>,
+            <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'1'</span>, <span class="string">b'm'</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'0'</span>, <span class="string">b'm'</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>,
+            <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>,
+            <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>,
+            <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>,
+            <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>,
+            <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>,
+            <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b' '</span>, <span class="string">b'\r'</span>, <span class="string">b' '</span>, <span class="string">b'\r'</span>, <span class="string">b'\r'</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'0'</span>, <span class="string">b'm'</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'2'</span>,
+            <span class="string">b'7'</span>, <span class="string">b'm'</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'2'</span>, <span class="string">b'4'</span>, <span class="string">b'm'</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'J'</span>, <span class="string">b'j'</span>, <span class="string">b'w'</span>, <span class="string">b'i'</span>, <span class="string">b'l'</span>,
+            <span class="string">b'm'</span>, <span class="string">b'@'</span>, <span class="string">b'j'</span>, <span class="string">b'w'</span>, <span class="string">b'i'</span>, <span class="string">b'l'</span>, <span class="string">b'm'</span>, <span class="string">b'-'</span>, <span class="string">b'd'</span>, <span class="string">b'e'</span>, <span class="string">b's'</span>, <span class="string">b'k'</span>, <span class="string">b' '</span>, <span class="number">0x1b</span>,
+            <span class="string">b'['</span>, <span class="string">b'0'</span>, <span class="string">b'1'</span>, <span class="string">b';'</span>, <span class="string">b'3'</span>, <span class="string">b'2'</span>, <span class="string">b'm'</span>, <span class="number">0xe2</span>, <span class="number">0x9e</span>, <span class="number">0x9c</span>, <span class="string">b' '</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'0'</span>,
+            <span class="string">b'1'</span>, <span class="string">b';'</span>, <span class="string">b'3'</span>, <span class="string">b'2'</span>, <span class="string">b'm'</span>, <span class="string">b' '</span>, <span class="number">0x1b</span>, <span class="string">b'['</span>, <span class="string">b'3'</span>, <span class="string">b'6'</span>, <span class="string">b'm'</span>, <span class="string">b'~'</span>, <span class="string">b'/'</span>, <span class="string">b'c'</span>,
+            <span class="string">b'o'</span>, <span class="string">b'd'</span>, <span class="string">b'e'</span>,
         ];
 
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4251,7 +4252,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_designate_g0_as_line_drawing() {
-        <span class="kw">static </span>BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;(&#39;</span>, <span class="string">b&#39;0&#39;</span>];
+        <span class="kw">static </span>BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b'('</span>, <span class="string">b'0'</span>];
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
 
@@ -4265,7 +4266,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_designate_g1_as_line_drawing_and_invoke() {
-        <span class="kw">static </span>BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;)&#39;</span>, <span class="string">b&#39;0&#39;</span>, <span class="number">0x0e</span>];
+        <span class="kw">static </span>BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b')'</span>, <span class="string">b'0'</span>, <span class="number">0x0e</span>];
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
 
@@ -4284,50 +4285,50 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_valid_rgb_colors() {
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;rgb:f/e/d&quot;</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0xff</span>, g: <span class="number">0xee</span>, b: <span class="number">0xdd </span>}));
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;rgb:11/aa/ff&quot;</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x11</span>, g: <span class="number">0xaa</span>, b: <span class="number">0xff </span>}));
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;rgb:f/ed1/cb23&quot;</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0xff</span>, g: <span class="number">0xec</span>, b: <span class="number">0xca </span>}));
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;rgb:ffff/0/0&quot;</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0xff</span>, g: <span class="number">0x0</span>, b: <span class="number">0x0 </span>}));
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"rgb:f/e/d"</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0xff</span>, g: <span class="number">0xee</span>, b: <span class="number">0xdd </span>}));
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"rgb:11/aa/ff"</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x11</span>, g: <span class="number">0xaa</span>, b: <span class="number">0xff </span>}));
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"rgb:f/ed1/cb23"</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0xff</span>, g: <span class="number">0xec</span>, b: <span class="number">0xca </span>}));
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"rgb:ffff/0/0"</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0xff</span>, g: <span class="number">0x0</span>, b: <span class="number">0x0 </span>}));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_valid_legacy_rgb_colors() {
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;#1af&quot;</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x10</span>, g: <span class="number">0xa0</span>, b: <span class="number">0xf0 </span>}));
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;#11aaff&quot;</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x11</span>, g: <span class="number">0xaa</span>, b: <span class="number">0xff </span>}));
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;#110aa0ff0&quot;</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x11</span>, g: <span class="number">0xaa</span>, b: <span class="number">0xff </span>}));
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;#1100aa00ff00&quot;</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x11</span>, g: <span class="number">0xaa</span>, b: <span class="number">0xff </span>}));
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"#1af"</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x10</span>, g: <span class="number">0xa0</span>, b: <span class="number">0xf0 </span>}));
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"#11aaff"</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x11</span>, g: <span class="number">0xaa</span>, b: <span class="number">0xff </span>}));
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"#110aa0ff0"</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x11</span>, g: <span class="number">0xaa</span>, b: <span class="number">0xff </span>}));
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"#1100aa00ff00"</span>), <span class="prelude-val">Some</span>(Rgb { r: <span class="number">0x11</span>, g: <span class="number">0xaa</span>, b: <span class="number">0xff </span>}));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_invalid_rgb_colors() {
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;rgb:0//&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;rgb://///&quot;</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"rgb:0//"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"rgb://///"</span>), <span class="prelude-val">None</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_invalid_legacy_rgb_colors() {
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;#&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b&quot;#f&quot;</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"#"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(xparse_color(<span class="string">b"#f"</span>), <span class="prelude-val">None</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_invalid_number() {
-        <span class="macro">assert_eq!</span>(parse_number(<span class="string">b&quot;1abc&quot;</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(parse_number(<span class="string">b"1abc"</span>), <span class="prelude-val">None</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_valid_number() {
-        <span class="macro">assert_eq!</span>(parse_number(<span class="string">b&quot;123&quot;</span>), <span class="prelude-val">Some</span>(<span class="number">123</span>));
+        <span class="macro">assert_eq!</span>(parse_number(<span class="string">b"123"</span>), <span class="prelude-val">Some</span>(<span class="number">123</span>));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_number_too_large() {
-        <span class="macro">assert_eq!</span>(parse_number(<span class="string">b&quot;321&quot;</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(parse_number(<span class="string">b"321"</span>), <span class="prelude-val">None</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_osc4_set_color() {
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]4;0;#fff\x1b\\&quot;</span>;
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]4;0;#fff\x1b\\"</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4341,7 +4342,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_osc104_reset_color() {
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]104;1;\x1b\\&quot;</span>;
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]104;1;\x1b\\"</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4355,7 +4356,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_osc104_reset_all_colors() {
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]104;\x1b\\&quot;</span>;
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]104;\x1b\\"</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4370,7 +4371,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_osc104_reset_all_colors_no_semicolon() {
-        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]104\x1b\\&quot;</span>;
+        <span class="kw">let </span>bytes: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]104\x1b\\"</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Processor::&lt;TestSyncHandler&gt;::new();
         <span class="kw">let </span><span class="kw-2">mut </span>handler = MockHandler::default();
@@ -4384,7 +4385,7 @@
     }
 
     <span class="attr">#[test]
-    #[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+    #[cfg(not(feature = <span class="string">"no_std"</span>))]
     </span><span class="kw">fn </span>contrast() {
         <span class="kw">let </span>rgb1 = Rgb { r: <span class="number">0xff</span>, g: <span class="number">0xff</span>, b: <span class="number">0xff </span>};
         <span class="kw">let </span>rgb2 = Rgb { r: <span class="number">0x00</span>, g: <span class="number">0x00</span>, b: <span class="number">0x00 </span>};

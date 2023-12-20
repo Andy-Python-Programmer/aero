@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmas-elf-0.9.0/src/sections.rs`."><title>sections.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xmas_elf" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmas-elf-0.9.0/src/sections.rs`."><title>sections.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xmas_elf" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -572,16 +573,16 @@
 <a href="#572" id="572">572</a>
 <a href="#573" id="573">573</a>
 <a href="#574" id="574">574</a>
-</pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">&quot;compression&quot;</span>)]
+</pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"compression"</span>)]
 </span><span class="kw">use </span>std::borrow::Cow;
-<span class="attr">#[cfg(feature = <span class="string">&quot;compression&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"compression"</span>)]
 </span><span class="kw">use </span>std::vec::Vec;
 
 <span class="kw">use </span>core::fmt;
 <span class="kw">use </span>core::mem;
 <span class="kw">use </span>core::slice;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;compression&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"compression"</span>)]
 </span><span class="kw">use </span>flate2::{Decompress, FlushDecompress};
 
 <span class="kw">use </span>{P32, P64, ElfFile};
@@ -591,13 +592,13 @@
 <span class="kw">use </span>dynamic::Dynamic;
 <span class="kw">use </span>hash::HashTable;
 
-<span class="kw">pub fn </span>parse_section_header&lt;<span class="lifetime">&#39;a</span>&gt;(input: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
-                                header: Header&lt;<span class="lifetime">&#39;a</span>&gt;,
+<span class="kw">pub fn </span>parse_section_header&lt;<span class="lifetime">'a</span>&gt;(input: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
+                                header: Header&lt;<span class="lifetime">'a</span>&gt;,
                                 index: u16)
-                                -&gt; <span class="prelude-ty">Result</span>&lt;SectionHeader&lt;<span class="lifetime">&#39;a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+                                -&gt; <span class="prelude-ty">Result</span>&lt;SectionHeader&lt;<span class="lifetime">'a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// Trying to get index 0 (SHN_UNDEF) is also probably an error, but it is a legitimate section.
     </span><span class="macro">assert!</span>(index &lt; SHN_LORESERVE,
-            <span class="string">&quot;Attempt to get section for a reserved index&quot;</span>);
+            <span class="string">"Attempt to get section for a reserved index"</span>);
 
     <span class="kw">let </span>start = (index <span class="kw">as </span>u64 * header.pt2.sh_entry_size() <span class="kw">as </span>u64 +
                  header.pt2.sh_offset() <span class="kw">as </span>u64) <span class="kw">as </span>usize;
@@ -605,11 +606,11 @@
 
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>header.pt1.class() {
         Class::ThirtyTwo =&gt; {
-            <span class="kw">let </span>header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SectionHeader_&lt;P32&gt; = read(<span class="kw-2">&amp;</span>input[start..end]);
+            <span class="kw">let </span>header: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SectionHeader_&lt;P32&gt; = read(<span class="kw-2">&amp;</span>input[start..end]);
             SectionHeader::Sh32(header)
         }
         Class::SixtyFour =&gt; {
-            <span class="kw">let </span>header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SectionHeader_&lt;P64&gt; = read(<span class="kw-2">&amp;</span>input[start..end]);
+            <span class="kw">let </span>header: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SectionHeader_&lt;P64&gt; = read(<span class="kw-2">&amp;</span>input[start..end]);
             SectionHeader::Sh64(header)
         }
         Class::None | Class::Other(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
@@ -617,13 +618,13 @@
 }
 
 <span class="attr">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>SectionIter&lt;<span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>&gt; {
-    <span class="kw">pub </span>file: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;,
+</span><span class="kw">pub struct </span>SectionIter&lt;<span class="lifetime">'b</span>, <span class="lifetime">'a</span>: <span class="lifetime">'b</span>&gt; {
+    <span class="kw">pub </span>file: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>ElfFile&lt;<span class="lifetime">'a</span>&gt;,
     <span class="kw">pub </span>next_index: u16,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>SectionIter&lt;<span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = SectionHeader&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'b</span>, <span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>SectionIter&lt;<span class="lifetime">'b</span>, <span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = SectionHeader&lt;<span class="lifetime">'a</span>&gt;;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>count = <span class="self">self</span>.file.header.pt2.sh_count();
@@ -650,9 +651,9 @@
 <span class="kw">pub const </span>SHN_HIRESERVE: u16 = <span class="number">0xffff</span>;
 
 <span class="attr">#[derive(Clone, Copy, Debug)]
-</span><span class="kw">pub enum </span>SectionHeader&lt;<span class="lifetime">&#39;a</span>&gt; {
-    Sh32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SectionHeader_&lt;P32&gt;),
-    Sh64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SectionHeader_&lt;P64&gt;),
+</span><span class="kw">pub enum </span>SectionHeader&lt;<span class="lifetime">'a</span>&gt; {
+    Sh32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SectionHeader_&lt;P32&gt;),
+    Sh64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SectionHeader_&lt;P64&gt;),
 }
 
 <span class="macro">macro_rules! </span>getter {
@@ -666,20 +667,20 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; SectionHeader&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SectionHeader&lt;<span class="lifetime">'a</span>&gt; {
     <span class="comment">// Note that this function is O(n) in the length of the name.
-    </span><span class="kw">pub fn </span>get_name(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>get_name(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.get_type().and_then(|typ| <span class="kw">match </span>typ {
-            ShType::Null =&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Attempt to get name of null section&quot;</span>),
+            ShType::Null =&gt; <span class="prelude-val">Err</span>(<span class="string">"Attempt to get name of null section"</span>),
             <span class="kw">_ </span>=&gt; elf_file.get_shstr(<span class="self">self</span>.name()),
         })
     }
 
-    <span class="kw">pub fn </span>get_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ShType, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>get_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ShType, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.type_().as_sh_type()
     }
 
-    <span class="kw">pub fn </span>get_data(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;SectionData&lt;<span class="lifetime">&#39;a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>get_data(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;SectionData&lt;<span class="lifetime">'a</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="macro">macro_rules! </span>array_data {
             (<span class="macro-nonterminal">$data32</span>: ident, <span class="macro-nonterminal">$data64</span>: ident) =&gt; {{
                 <span class="kw">let </span>data = <span class="self">self</span>.raw_data(elf_file);
@@ -710,8 +711,8 @@
             ShType::Group =&gt; {
                 <span class="kw">let </span>data = <span class="self">self</span>.raw_data(elf_file);
                 <span class="kw">unsafe </span>{
-                    <span class="kw">let </span>flags: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32 = mem::transmute(<span class="kw-2">&amp;</span>data[<span class="number">0</span>]);
-                    <span class="kw">let </span>indicies: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u32] = read_array(<span class="kw-2">&amp;</span>data[<span class="number">4</span>..]);
+                    <span class="kw">let </span>flags: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>u32 = mem::transmute(<span class="kw-2">&amp;</span>data[<span class="number">0</span>]);
+                    <span class="kw">let </span>indicies: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u32] = read_array(<span class="kw-2">&amp;</span>data[<span class="number">4</span>..]);
                     SectionData::Group {
                         flags,
                         indicies,
@@ -724,13 +725,13 @@
             ShType::Note =&gt; {
                 <span class="kw">let </span>data = <span class="self">self</span>.raw_data(elf_file);
                 <span class="kw">match </span>elf_file.header.pt1.class() {
-                    Class::ThirtyTwo =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;32-bit binaries not implemented&quot;</span>),
+                    Class::ThirtyTwo =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"32-bit binaries not implemented"</span>),
                     Class::SixtyFour =&gt; {
-                        <span class="kw">let </span>header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>NoteHeader = read(<span class="kw-2">&amp;</span>data[<span class="number">0</span>..<span class="number">12</span>]);
+                        <span class="kw">let </span>header: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>NoteHeader = read(<span class="kw-2">&amp;</span>data[<span class="number">0</span>..<span class="number">12</span>]);
                         <span class="kw">let </span>index = <span class="kw-2">&amp;</span>data[<span class="number">12</span>..];
                         SectionData::Note64(header, index)
                     }
-                    Class::None | Class::Other(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Unknown ELF class&quot;</span>),
+                    Class::None | Class::Other(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Unknown ELF class"</span>),
                 }
             }
             ShType::Hash =&gt; {
@@ -740,20 +741,20 @@
         }))
     }
 
-    <span class="kw">pub fn </span>raw_data(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8] {
+    <span class="kw">pub fn </span>raw_data(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8] {
         <span class="macro">assert_ne!</span>(<span class="self">self</span>.get_type().unwrap(), ShType::Null);
         <span class="kw-2">&amp;</span>elf_file.input[<span class="self">self</span>.offset() <span class="kw">as </span>usize..(<span class="self">self</span>.offset() + <span class="self">self</span>.size()) <span class="kw">as </span>usize]
     }
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;compression&quot;</span>)]
-    </span><span class="kw">pub fn </span>decompressed_data(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">&#39;a</span>, [u8]&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="attr">#[cfg(feature = <span class="string">"compression"</span>)]
+    </span><span class="kw">pub fn </span>decompressed_data(<span class="kw-2">&amp;</span><span class="self">self</span>, elf_file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">'a</span>, [u8]&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>raw = <span class="self">self</span>.raw_data(elf_file);
         <span class="prelude-val">Ok</span>(<span class="kw">if </span>(<span class="self">self</span>.flags() &amp; SHF_COMPRESSED) == <span class="number">0 </span>{
             Cow::Borrowed(raw)
         } <span class="kw">else </span>{
-            <span class="kw">fn </span>read_compression_header&lt;<span class="lifetime">&#39;a</span>, T: Pod + Clone&gt;(raw: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(T, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+            <span class="kw">fn </span>read_compression_header&lt;<span class="lifetime">'a</span>, T: Pod + Clone&gt;(raw: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(T, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
                 <span class="kw">if </span>raw.len() &lt; mem::size_of::&lt;T&gt;() {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Unexpected EOF in compressed section&quot;</span>);
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Unexpected EOF in compressed section"</span>);
                 }
 
                 <span class="kw">let </span>(header, rest) = raw.split_at(mem::size_of::&lt;T&gt;());
@@ -777,14 +778,14 @@
             };
 
             <span class="kw">if </span>compression_type != <span class="prelude-val">Ok</span>(CompressionType::Zlib) {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Unknown compression type&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Unknown compression type"</span>);
             }
 
             <span class="kw">let </span><span class="kw-2">mut </span>decompressed = Vec::with_capacity(size);
             <span class="kw">let </span><span class="kw-2">mut </span>decompress = Decompress::new(<span class="bool-val">true</span>);
             <span class="kw">if let </span><span class="prelude-val">Err</span>(<span class="kw">_</span>) = decompress.decompress_vec(
                 compressed_data, <span class="kw-2">&amp;mut </span>decompressed, FlushDecompress::Finish) {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Decompression error&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Decompression error"</span>);
             }
             Cow::Owned(decompressed)
         })
@@ -802,20 +803,20 @@
     <span class="macro">getter!</span>(align, u64);
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; fmt::Display <span class="kw">for </span>SectionHeader&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; fmt::Display <span class="kw">for </span>SectionHeader&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         <span class="macro">macro_rules! </span>sh_display {
             (<span class="macro-nonterminal">$sh</span>: ident) =&gt; {{
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;Section header:&quot;</span>)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    name:             {:?}&quot;</span>, <span class="macro-nonterminal">$sh</span>.name)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    type:             {:?}&quot;</span>, <span class="self">self</span>.get_type())<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    flags:            {:?}&quot;</span>, <span class="macro-nonterminal">$sh</span>.flags)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    address:          {:?}&quot;</span>, <span class="macro-nonterminal">$sh</span>.address)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    offset:           {:?}&quot;</span>, <span class="macro-nonterminal">$sh</span>.offset)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    size:             {:?}&quot;</span>, <span class="macro-nonterminal">$sh</span>.size)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    link:             {:?}&quot;</span>, <span class="macro-nonterminal">$sh</span>.link)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    align:            {:?}&quot;</span>, <span class="macro-nonterminal">$sh</span>.align)<span class="question-mark">?</span>;
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;    entry size:       {:?}&quot;</span>, <span class="macro-nonterminal">$sh</span>.entry_size)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"Section header:"</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    name:             {:?}"</span>, <span class="macro-nonterminal">$sh</span>.name)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    type:             {:?}"</span>, <span class="self">self</span>.get_type())<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    flags:            {:?}"</span>, <span class="macro-nonterminal">$sh</span>.flags)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    address:          {:?}"</span>, <span class="macro-nonterminal">$sh</span>.address)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    offset:           {:?}"</span>, <span class="macro-nonterminal">$sh</span>.offset)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    size:             {:?}"</span>, <span class="macro-nonterminal">$sh</span>.size)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    link:             {:?}"</span>, <span class="macro-nonterminal">$sh</span>.link)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    align:            {:?}"</span>, <span class="macro-nonterminal">$sh</span>.align)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"    entry size:       {:?}"</span>, <span class="macro-nonterminal">$sh</span>.entry_size)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(())
             }}
         }
@@ -872,7 +873,7 @@
 }
 
 <span class="kw">impl </span>ShType_ {
-    <span class="kw">fn </span>as_sh_type(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ShType, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>as_sh_type(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ShType, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="self">self</span>.<span class="number">0 </span>{
             <span class="number">0 </span>=&gt; <span class="prelude-val">Ok</span>(ShType::Null),
             <span class="number">1 </span>=&gt; <span class="prelude-val">Ok</span>(ShType::ProgBits),
@@ -895,7 +896,7 @@
             st <span class="kw">if </span>(SHT_LOOS..=SHT_HIOS).contains(<span class="kw-2">&amp;</span>st) =&gt; <span class="prelude-val">Ok</span>(ShType::OsSpecific(st)),
             st <span class="kw">if </span>(SHT_LOPROC..=SHT_HIPROC).contains(<span class="kw-2">&amp;</span>st) =&gt; <span class="prelude-val">Ok</span>(ShType::ProcessorSpecific(st)),
             st <span class="kw">if </span>(SHT_LOUSER..=SHT_HIUSER).contains(<span class="kw-2">&amp;</span>st) =&gt; <span class="prelude-val">Ok</span>(ShType::User(st)),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Invalid sh type&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">"Invalid sh type"</span>),
         }
     }
 }
@@ -907,46 +908,46 @@
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">pub enum </span>SectionData&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub enum </span>SectionData&lt;<span class="lifetime">'a</span>&gt; {
     Empty,
-    Undefined(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]),
-    Group { flags: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32, indicies: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u32] },
-    StrArray(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]),
-    FnArray32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u32]),
-    FnArray64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u64]),
-    SymbolTable32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[symbol_table::Entry32]),
-    SymbolTable64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[symbol_table::Entry64]),
-    DynSymbolTable32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[symbol_table::DynEntry32]),
-    DynSymbolTable64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[symbol_table::DynEntry64]),
-    SymTabShIndex(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u32]),
-    <span class="comment">// Note32 uses 4-byte words, which I&#39;m not sure how to manage.
+    Undefined(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]),
+    Group { flags: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>u32, indicies: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u32] },
+    StrArray(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]),
+    FnArray32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u32]),
+    FnArray64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u64]),
+    SymbolTable32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[symbol_table::Entry32]),
+    SymbolTable64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[symbol_table::Entry64]),
+    DynSymbolTable32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[symbol_table::DynEntry32]),
+    DynSymbolTable64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[symbol_table::DynEntry64]),
+    SymTabShIndex(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u32]),
+    <span class="comment">// Note32 uses 4-byte words, which I'm not sure how to manage.
     // The pointer is to the start of the name field in the note.
-    </span>Note64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>NoteHeader, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]),
-    Rela32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Rela&lt;P32&gt;]),
-    Rela64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Rela&lt;P64&gt;]),
-    Rel32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Rel&lt;P32&gt;]),
-    Rel64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Rel&lt;P64&gt;]),
-    Dynamic32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Dynamic&lt;P32&gt;]),
-    Dynamic64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Dynamic&lt;P64&gt;]),
-    HashTable(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HashTable),
+    </span>Note64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>NoteHeader, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]),
+    Rela32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Rela&lt;P32&gt;]),
+    Rela64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Rela&lt;P64&gt;]),
+    Rel32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Rel&lt;P32&gt;]),
+    Rel64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Rel&lt;P64&gt;]),
+    Dynamic32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Dynamic&lt;P32&gt;]),
+    Dynamic64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Dynamic&lt;P64&gt;]),
+    HashTable(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>HashTable),
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>SectionStrings&lt;<span class="lifetime">&#39;a</span>&gt; {
-    inner: StrReaderIterator&lt;<span class="lifetime">&#39;a</span>&gt;,
+</span><span class="kw">pub struct </span>SectionStrings&lt;<span class="lifetime">'a</span>&gt; {
+    inner: StrReaderIterator&lt;<span class="lifetime">'a</span>&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>SectionStrings&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>SectionStrings&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str;
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt; {
+    </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt; {
         <span class="self">self</span>.inner.next()
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; SectionData&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>strings(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SectionStrings&lt;<span class="lifetime">&#39;a</span>&gt;, ()&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SectionData&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub fn </span>strings(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SectionStrings&lt;<span class="lifetime">'a</span>&gt;, ()&gt; {
         <span class="kw">if let </span>SectionData::StrArray(data) = <span class="kw-2">*</span><span class="self">self </span>{
             <span class="prelude-val">Ok</span>(SectionStrings { inner: read_strs_to_null(data) })
         } <span class="kw">else </span>{
@@ -1009,14 +1010,14 @@
 }
 
 <span class="kw">impl </span>CompressionType_ {
-    <span class="kw">fn </span>as_compression_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;CompressionType, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>as_compression_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;CompressionType, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="self">self</span>.<span class="number">0 </span>{
             <span class="number">1 </span>=&gt; <span class="prelude-val">Ok</span>(CompressionType::Zlib),
             ct <span class="kw">if </span>(COMPRESS_LOOS..=COMPRESS_HIOS).contains(<span class="kw-2">&amp;</span>ct) =&gt; <span class="prelude-val">Ok</span>(CompressionType::OsSpecific(ct)),
             ct <span class="kw">if </span>(COMPRESS_LOPROC..=COMPRESS_HIPROC).contains(<span class="kw-2">&amp;</span>ct) =&gt; {
                 <span class="prelude-val">Ok</span>(CompressionType::ProcessorSpecific(ct))
             }
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Invalid compression type&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">"Invalid compression type"</span>),
         }
     }
 }
@@ -1122,14 +1123,14 @@
         <span class="self">self</span>.type_
     }
 
-    <span class="kw">pub fn </span>name&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, input: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str {
+    <span class="kw">pub fn </span>name&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, input: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str {
         <span class="kw">let </span>result = read_str(input);
         <span class="comment">// - 1 is due to null terminator
         </span><span class="macro">assert_eq!</span>(result.len(), (<span class="self">self</span>.name_size - <span class="number">1</span>) <span class="kw">as </span>usize);
         result
     }
 
-    <span class="kw">pub fn </span>desc&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, input: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8] {
+    <span class="kw">pub fn </span>desc&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, input: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8] {
         <span class="comment">// Account for padding to the next u32.
         </span><span class="kw">unsafe </span>{
             <span class="kw">let </span>offset = (<span class="self">self</span>.name_size + <span class="number">3</span>) &amp; !<span class="number">0x3</span>;
@@ -1139,7 +1140,7 @@
     }
 }
 
-<span class="kw">pub fn </span>sanity_check&lt;<span class="lifetime">&#39;a</span>&gt;(header: SectionHeader&lt;<span class="lifetime">&#39;a</span>&gt;, _file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">pub fn </span>sanity_check&lt;<span class="lifetime">'a</span>&gt;(header: SectionHeader&lt;<span class="lifetime">'a</span>&gt;, _file: <span class="kw-2">&amp;</span>ElfFile&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">if </span>header.get_type()<span class="question-mark">? </span>== ShType::Null {
         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }

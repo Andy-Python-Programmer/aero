@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/fs/procfs.rs`."><title>procfs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/fs/procfs.rs`."><title>procfs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -367,44 +368,44 @@
     }
 }
 
-<span class="kw">fn </span>get_cmdline_cached() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+<span class="kw">fn </span>get_cmdline_cached() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
     <span class="kw">static </span>CACHED: Once&lt;String&gt; = Once::new();
 
     CACHED.call_once(|| {
         <span class="kw">use </span>serde_json::<span class="kw-2">*</span>;
 
         <span class="macro">json!</span>({
-            <span class="string">&quot;cmdline&quot;</span>: <span class="kw">crate</span>::cmdline::get_raw_cmdline(),
+            <span class="string">"cmdline"</span>: <span class="kw">crate</span>::cmdline::get_raw_cmdline(),
         })
         .to_string()
     })
 }
 
-<span class="kw">fn </span>get_cpuinfo_cached() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+<span class="kw">fn </span>get_cpuinfo_cached() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
     <span class="kw">static </span>CACHED: Once&lt;String&gt; = Once::new();
 
     CACHED.call_once(|| {
         <span class="kw">use </span>serde_json::<span class="kw-2">*</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="macro">json!</span>({ <span class="string">&quot;processors&quot;</span>: [] });
+        <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="macro">json!</span>({ <span class="string">"processors"</span>: [] });
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(processors) = data
-            .get_mut(<span class="string">&quot;processors&quot;</span>)
+            .get_mut(<span class="string">"processors"</span>)
             .and_then(|processors| processors.as_array_mut())
         {
             <span class="kw">let </span><span class="kw-2">mut </span>cpu_info = <span class="macro">vec!</span>[];
 
-            <span class="attr">#[cfg(target_arch = <span class="string">&quot;x86_64&quot;</span>)]
+            <span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
             </span>tls::for_cpu_info_cached(|info| {
                 <span class="kw">let </span><span class="kw-2">mut </span>processor = <span class="macro">json!</span>({});
 
-                processor[<span class="string">&quot;id&quot;</span>] = Value::Number(Number::from(info.cpuid));
-                processor[<span class="string">&quot;fpu&quot;</span>] = Value::Bool(info.fpu);
+                processor[<span class="string">"id"</span>] = Value::Number(Number::from(info.cpuid));
+                processor[<span class="string">"fpu"</span>] = Value::Bool(info.fpu);
 
-                push_string_if_some(<span class="kw-2">&amp;mut </span>processor, <span class="string">&quot;brand&quot;</span>, info.brand.clone());
-                push_string_if_some(<span class="kw-2">&amp;mut </span>processor, <span class="string">&quot;vendor&quot;</span>, info.vendor.clone());
+                push_string_if_some(<span class="kw-2">&amp;mut </span>processor, <span class="string">"brand"</span>, info.brand.clone());
+                push_string_if_some(<span class="kw-2">&amp;mut </span>processor, <span class="string">"vendor"</span>, info.vendor.clone());
 
-                processor[<span class="string">&quot;features&quot;</span>] = Value::Array(
+                processor[<span class="string">"features"</span>] = Value::Array(
                     info.features
                         .iter()
                         .map(|feature| Value::String(feature.to_string()))
@@ -477,7 +478,7 @@
         <span class="kw">let </span>icache = cache::icache();
         <span class="kw">let </span><span class="kw-2">mut </span>this = <span class="self">self</span>.<span class="number">0</span>.write();
 
-        <span class="kw">if </span>this.children.contains_key(name) || [<span class="string">&quot;&quot;</span>, <span class="string">&quot;.&quot;</span>, <span class="string">&quot;..&quot;</span>].contains(<span class="kw-2">&amp;</span>name) {
+        <span class="kw">if </span>this.children.contains_key(name) || [<span class="string">""</span>, <span class="string">"."</span>, <span class="string">".."</span>].contains(<span class="kw-2">&amp;</span>name) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::EntryExists);
         }
 
@@ -514,15 +515,15 @@
 
             FileContents::SelfMaps =&gt; {
                 <span class="kw">let </span>current_thread = scheduler::current_thread();
-                <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="macro">serde_json::json!</span>({ <span class="string">&quot;maps&quot;</span>: [] });
-                <span class="kw">let </span>maps = result.get_mut(<span class="string">&quot;maps&quot;</span>).unwrap().as_array_mut().unwrap();
+                <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="macro">serde_json::json!</span>({ <span class="string">"maps"</span>: [] });
+                <span class="kw">let </span>maps = result.get_mut(<span class="string">"maps"</span>).unwrap().as_array_mut().unwrap();
 
                 current_thread.vm().for_each_mapping(|map| {
                     maps.push(<span class="macro">serde_json::json!</span>({
-                        <span class="string">&quot;start&quot;</span>: map.start_addr.as_u64(),
-                        <span class="string">&quot;end&quot;</span>: map.end_addr.as_u64(),
-                        <span class="string">&quot;flags&quot;</span>: map.flags.bits(),
-                        <span class="string">&quot;protection&quot;</span>: map.protection.bits(),
+                        <span class="string">"start"</span>: map.start_addr.as_u64(),
+                        <span class="string">"end"</span>: map.end_addr.as_u64(),
+                        <span class="string">"flags"</span>: map.flags.bits(),
+                        <span class="string">"protection"</span>: map.protection.bits(),
                     }));
                 });
 
@@ -571,7 +572,7 @@
                 parent,
                 <span class="comment">// UNWRAP: The inner node value should not be dropped.
                 </span>this.node.upgrade().unwrap(),
-                String::from(<span class="string">&quot;.&quot;</span>),
+                String::from(<span class="string">"."</span>),
             )),
 
             <span class="number">0x01 </span>=&gt; {
@@ -579,11 +580,11 @@
                     parent,
                     <span class="comment">// UNWRAP: The inner node value should not be dropped.
                     </span>this.node.upgrade().unwrap(),
-                    String::from(<span class="string">&quot;..&quot;</span>),
+                    String::from(<span class="string">".."</span>),
                 ))
             }
 
-            <span class="comment">// Subtract two because of the &quot;.&quot; and &quot;..&quot; entries.
+            <span class="comment">// Subtract two because of the "." and ".." entries.
             </span><span class="kw">_ </span>=&gt; this
                 .children
                 .iter()
@@ -610,7 +611,7 @@
         <span class="kw">let </span>root_node = Arc::new(LockedProcINode::new(ProcINode::default()));
         <span class="kw">let </span>root_cached = icache.make_item_no_cache(CachedINode::new(root_node));
 
-        <span class="kw">let </span>root_dir = DirEntry::new_root(root_cached.clone(), String::from(<span class="string">&quot;/&quot;</span>));
+        <span class="kw">let </span>root_dir = DirEntry::new_root(root_cached.clone(), String::from(<span class="string">"/"</span>));
 
         <span class="kw">let </span>ramfs = Arc::new(<span class="self">Self </span>{
             root_inode: root_cached.clone(),
@@ -634,13 +635,13 @@
             FileType::Directory,
         );
 
-        inode.make_inode(<span class="string">&quot;cpuinfo&quot;</span>, FileType::File, FileContents::CpuInfo)<span class="question-mark">?</span>;
-        inode.make_inode(<span class="string">&quot;cmdline&quot;</span>, FileType::File, FileContents::CmdLine)<span class="question-mark">?</span>;
+        inode.make_inode(<span class="string">"cpuinfo"</span>, FileType::File, FileContents::CpuInfo)<span class="question-mark">?</span>;
+        inode.make_inode(<span class="string">"cmdline"</span>, FileType::File, FileContents::CmdLine)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>proc_self = inode.make_inode(<span class="string">&quot;self&quot;</span>, FileType::Directory, FileContents::None)<span class="question-mark">?</span>;
+        <span class="kw">let </span>proc_self = inode.make_inode(<span class="string">"self"</span>, FileType::Directory, FileContents::None)<span class="question-mark">?</span>;
         <span class="kw">let </span>proc_self = proc_self.downcast_arc::&lt;LockedProcINode&gt;().unwrap();
 
-        proc_self.make_inode(<span class="string">&quot;maps&quot;</span>, FileType::File, FileContents::SelfMaps)<span class="question-mark">?</span>;
+        proc_self.make_inode(<span class="string">"maps"</span>, FileType::File, FileContents::SelfMaps)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(ramfs)
     }
@@ -671,7 +672,7 @@
     <span class="kw">let </span>fs = ProcFs::new()<span class="question-mark">?</span>;
     <span class="kw">let </span>fs = PROC_FS.call_once(|| fs);
 
-    <span class="kw">let </span>inode = <span class="kw">super</span>::lookup_path(Path::new(<span class="string">&quot;/proc&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let </span>inode = <span class="kw">super</span>::lookup_path(Path::new(<span class="string">"/proc"</span>))<span class="question-mark">?</span>;
     MOUNT_MANAGER.mount(inode, fs.clone())<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())

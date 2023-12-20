@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/intrusive-collections-0.9.6/src/rbtree.rs`."><title>rbtree.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="intrusive_collections" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/intrusive-collections-0.9.6/src/rbtree.rs`."><title>rbtree.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="intrusive_collections" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -3356,7 +3357,7 @@
 <a href="#3356" id="3356">3356</a>
 <a href="#3357" id="3357">3357</a>
 <a href="#3358" id="3358">3358</a>
-</pre></div><pre class="rust"><code><span class="comment">// Copyright 2016 Amanieu d&#39;Antras
+</pre></div><pre class="rust"><code><span class="comment">// Copyright 2016 Amanieu d'Antras
 // Copyright 2020 Amari Robinson
 //
 // Licensed under the Apache License, Version 2.0, &lt;LICENSE-APACHE or
@@ -3528,13 +3529,13 @@
 // still derive Debug.
 </span><span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Link {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="comment">// There isn&#39;t anything sensible to print here except whether the link
+    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="comment">// There isn't anything sensible to print here except whether the link
         // is currently in a tree.
         </span><span class="kw">if </span><span class="self">self</span>.is_linked() {
-            <span class="macro">write!</span>(f, <span class="string">&quot;linked&quot;</span>)
+            <span class="macro">write!</span>(f, <span class="string">"linked"</span>)
         } <span class="kw">else </span>{
-            <span class="macro">write!</span>(f, <span class="string">&quot;unlinked&quot;</span>)
+            <span class="macro">write!</span>(f, <span class="string">"unlinked"</span>)
         }
     }
 }
@@ -3806,13 +3807,13 @@
 // still derive Debug.
 </span><span class="kw">impl </span>fmt::Debug <span class="kw">for </span>AtomicLink {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="comment">// There isn&#39;t anything sensible to print here except whether the link
+    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="comment">// There isn't anything sensible to print here except whether the link
         // is currently in a list.
         </span><span class="kw">if </span><span class="self">self</span>.is_linked() {
-            <span class="macro">write!</span>(f, <span class="string">&quot;linked&quot;</span>)
+            <span class="macro">write!</span>(f, <span class="string">"linked"</span>)
         } <span class="kw">else </span>{
-            <span class="macro">write!</span>(f, <span class="string">&quot;unlinked&quot;</span>)
+            <span class="macro">write!</span>(f, <span class="string">"unlinked"</span>)
         }
     }
 }
@@ -4401,20 +4402,20 @@
 // =============================================================================
 
 </span><span class="doccomment">/// A cursor which provides read-only access to a `RBTree`.
-</span><span class="kw">pub struct </span>Cursor&lt;<span class="lifetime">&#39;a</span>, A: Adapter&gt;
+</span><span class="kw">pub struct </span>Cursor&lt;<span class="lifetime">'a</span>, A: Adapter&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
     current: <span class="prelude-ty">Option</span>&lt;&lt;A::LinkOps <span class="kw">as </span>link_ops::LinkOps&gt;::LinkPtr&gt;,
-    tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RBTree&lt;A&gt;,
+    tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>RBTree&lt;A&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter&gt; Clone <span class="kw">for </span>Cursor&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter&gt; Clone <span class="kw">for </span>Cursor&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;a</span>, A&gt; {
+    </span><span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'a</span>, A&gt; {
         Cursor {
             current: <span class="self">self</span>.current,
             tree: <span class="self">self</span>.tree,
@@ -4422,7 +4423,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter&gt; Cursor&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter&gt; Cursor&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
@@ -4438,7 +4439,7 @@
     /// This returns `None` if the cursor is currently pointing to the null
     /// object.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value&gt; {
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value&gt; {
         <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.tree.adapter.get_value(<span class="self">self</span>.current<span class="question-mark">?</span>) })
     }
 
@@ -4496,7 +4497,7 @@
     /// first element of the `RBTree`. If it is pointing to the last
     /// element of the `RBTree` then this will return a null cursor.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>peek_next(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>peek_next(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>next = <span class="self">self</span>.clone();
         next.move_next();
         next
@@ -4508,7 +4509,7 @@
     /// last element of the `RBTree`. If it is pointing to the first
     /// element of the `RBTree` then this will return a null cursor.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>peek_prev(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>peek_prev(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>prev = <span class="self">self</span>.clone();
         prev.move_prev();
         prev
@@ -4516,15 +4517,15 @@
 }
 
 <span class="doccomment">/// A cursor which provides mutable access to a `RBTree`.
-</span><span class="kw">pub struct </span>CursorMut&lt;<span class="lifetime">&#39;a</span>, A: Adapter&gt;
+</span><span class="kw">pub struct </span>CursorMut&lt;<span class="lifetime">'a</span>, A: Adapter&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
     current: <span class="prelude-ty">Option</span>&lt;&lt;A::LinkOps <span class="kw">as </span>link_ops::LinkOps&gt;::LinkPtr&gt;,
-    tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>RBTree&lt;A&gt;,
+    tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>RBTree&lt;A&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter&gt; CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter&gt; CursorMut&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
@@ -4550,7 +4551,7 @@
     /// `CursorMut`, which means it cannot outlive the `CursorMut` and that the
     /// `CursorMut` is frozen for the lifetime of the `Cursor`.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>as_cursor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>as_cursor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         Cursor {
             current: <span class="self">self</span>.current,
             tree: <span class="self">self</span>.tree,
@@ -4595,7 +4596,7 @@
     /// first element of the `RBTree`. If it is pointing to the last
     /// element of the `RBTree` then this will return a null cursor.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>peek_next(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>peek_next(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>next = <span class="self">self</span>.as_cursor();
         next.move_next();
         next
@@ -4607,7 +4608,7 @@
     /// last element of the `RBTree`. If it is pointing to the first
     /// element of the `RBTree` then this will return a null cursor.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>peek_prev(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>peek_prev(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>prev = <span class="self">self</span>.as_cursor();
         prev.move_prev();
         prev
@@ -4776,16 +4777,16 @@
 
     <span class="doccomment">/// Consumes `CursorMut` and returns a reference to the object that
     /// the cursor is currently pointing to. Unlike [get](Self::get),
-    /// the returned reference&#39;s lifetime is tied to `RBTree`&#39;s lifetime.
+    /// the returned reference's lifetime is tied to `RBTree`'s lifetime.
     ///
     /// This returns None if the cursor is currently pointing to the null object.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>into_ref(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value&gt; {
+    </span><span class="kw">pub fn </span>into_ref(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value&gt; {
         <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.tree.adapter.get_value(<span class="self">self</span>.current<span class="question-mark">?</span>) })
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; KeyAdapter&lt;<span class="lifetime">&#39;b</span>&gt;&gt; CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; KeyAdapter&lt;<span class="lifetime">'b</span>&gt;&gt; CursorMut&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>&lt;A <span class="kw">as </span>Adapter&gt;::LinkOps: RBTreeOps,
 {
@@ -4799,9 +4800,9 @@
     /// Panics if the new element is already linked to a different intrusive
     /// collection.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>insert&lt;<span class="lifetime">&#39;c</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>, val: &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer)
+    </span><span class="kw">pub fn </span>insert&lt;<span class="lifetime">'c</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>, val: &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer)
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;c</span>&gt;&gt;::Key: Ord,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'c</span>&gt;&gt;::Key: Ord,
     {
         <span class="comment">// We explicitly drop the returned CursorMut here, otherwise we would
         // end up with multiple CursorMut in the same collection.
@@ -4836,7 +4837,7 @@
     ///
     /// Mutations of the returned cursor are _not_ reflected in the original.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>as_cursor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>as_cursor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         Cursor {
             current: <span class="self">self</span>.current,
             tree: <span class="kw-2">&amp;</span><span class="self">self</span>.tree,
@@ -4847,7 +4848,7 @@
     ///
     /// All mutations of the cursor are reflected in the original.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>with_cursor_mut&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, f: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>CursorMut&lt;<span class="lifetime">&#39;_</span>, A&gt;) -&gt; T) -&gt; T {
+    </span><span class="kw">pub fn </span>with_cursor_mut&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, f: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>CursorMut&lt;<span class="lifetime">'_</span>, A&gt;) -&gt; T) -&gt; T {
         <span class="kw">let </span><span class="kw-2">mut </span>cursor = CursorMut {
             current: <span class="self">self</span>.current,
             tree: <span class="kw-2">&amp;mut </span><span class="self">self</span>.tree,
@@ -4906,7 +4907,7 @@
                 <span class="comment">// convert the node back into a pointer
                 </span><span class="self">self</span>.adapter.pointer_ops().from_raw(raw);
 
-                <span class="macro">panic!</span>(<span class="string">&quot;attempted to insert an object that is already linked&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"attempted to insert an object that is already linked"</span>);
             }
 
             link
@@ -4914,7 +4915,7 @@
     }
 
     <span class="doccomment">/// Creates an empty `RBTree`.
-    </span><span class="attr">#[cfg(not(feature = <span class="string">&quot;nightly&quot;</span>))]
+    </span><span class="attr">#[cfg(not(feature = <span class="string">"nightly"</span>))]
     #[inline]
     </span><span class="kw">pub fn </span>new(adapter: A) -&gt; RBTree&lt;A&gt; {
         RBTree {
@@ -4924,7 +4925,7 @@
     }
 
     <span class="doccomment">/// Creates an empty `RBTree`.
-    </span><span class="attr">#[cfg(feature = <span class="string">&quot;nightly&quot;</span>)]
+    </span><span class="attr">#[cfg(feature = <span class="string">"nightly"</span>)]
     #[inline]
     </span><span class="kw">pub const fn </span>new(adapter: A) -&gt; RBTree&lt;A&gt; {
         RBTree {
@@ -4941,7 +4942,7 @@
 
     <span class="doccomment">/// Returns a null `Cursor` for this tree.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>cursor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>cursor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         Cursor {
             current: <span class="prelude-val">None</span>,
             tree: <span class="self">self</span>,
@@ -4950,7 +4951,7 @@
 
     <span class="doccomment">/// Returns a null `CursorMut` for this tree.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>cursor_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; CursorMut&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>cursor_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; CursorMut&lt;<span class="lifetime">'_</span>, A&gt; {
         CursorMut {
             current: <span class="prelude-val">None</span>,
             tree: <span class="self">self</span>,
@@ -4975,7 +4976,7 @@
     </span><span class="kw">pub unsafe fn </span>cursor_from_ptr(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         ptr: <span class="kw-2">*const </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value,
-    ) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    ) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         Cursor {
             current: <span class="prelude-val">Some</span>(<span class="self">self</span>.adapter.get_link(ptr)),
             tree: <span class="self">self</span>,
@@ -4991,7 +4992,7 @@
     </span><span class="kw">pub unsafe fn </span>cursor_mut_from_ptr(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         ptr: <span class="kw-2">*const </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value,
-    ) -&gt; CursorMut&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    ) -&gt; CursorMut&lt;<span class="lifetime">'_</span>, A&gt; {
         CursorMut {
             current: <span class="prelude-val">Some</span>(<span class="self">self</span>.adapter.get_link(ptr)),
             tree: <span class="self">self</span>,
@@ -5017,7 +5018,7 @@
     <span class="doccomment">/// Returns a `Cursor` pointing to the first element of the tree. If the
     /// tree is empty then a null cursor is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>front(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>front(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>cursor = <span class="self">self</span>.cursor();
         cursor.move_next();
         cursor
@@ -5026,7 +5027,7 @@
     <span class="doccomment">/// Returns a `CursorMut` pointing to the first element of the tree. If the
     /// the tree is empty then a null cursor is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>front_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; CursorMut&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>front_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; CursorMut&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>cursor = <span class="self">self</span>.cursor_mut();
         cursor.move_next();
         cursor
@@ -5044,7 +5045,7 @@
     <span class="doccomment">/// Returns a `Cursor` pointing to the last element of the tree. If the tree
     /// is empty then a null cursor is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>back(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>back(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cursor&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>cursor = <span class="self">self</span>.cursor();
         cursor.move_prev();
         cursor
@@ -5053,7 +5054,7 @@
     <span class="doccomment">/// Returns a `CursorMut` pointing to the last element of the tree. If the
     /// tree is empty then a null cursor is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>back_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; CursorMut&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>back_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; CursorMut&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>cursor = <span class="self">self</span>.cursor_mut();
         cursor.move_prev();
         cursor
@@ -5079,7 +5080,7 @@
 
     <span class="doccomment">/// Gets an iterator over the objects in the `RBTree`.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">&#39;_</span>, A&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'_</span>, A&gt; {
         <span class="kw">let </span>link_ops = <span class="self">self</span>.adapter.link_ops();
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = <span class="self">self</span>.root {
@@ -5155,18 +5156,18 @@
     }
 }
 
-<span class="kw">impl</span>&lt;A: <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt; RBTree&lt;A&gt;
+<span class="kw">impl</span>&lt;A: <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt; RBTree&lt;A&gt;
 <span class="kw">where
     </span>&lt;A <span class="kw">as </span>Adapter&gt;::LinkOps: RBTreeOps,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>find_internal&lt;<span class="lifetime">&#39;a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
+    </span><span class="kw">fn </span>find_internal&lt;<span class="lifetime">'a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         key: <span class="kw-2">&amp;</span>Q,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;&lt;A::LinkOps <span class="kw">as </span>link_ops::LinkOps&gt;::LinkPtr&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value: <span class="lifetime">&#39;a</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value: <span class="lifetime">'a</span>,
     {
         <span class="kw">let </span>link_ops = <span class="self">self</span>.adapter.link_ops();
 
@@ -5188,10 +5189,10 @@
     /// If multiple elements with an identical key are found then an arbitrary
     /// one is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>find&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Q) -&gt; Cursor&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    </span><span class="kw">pub fn </span>find&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Q) -&gt; Cursor&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="lifetime">'a</span>: <span class="lifetime">'b</span>,
     {
         Cursor {
             current: <span class="self">self</span>.find_internal(key),
@@ -5205,10 +5206,10 @@
     /// If multiple elements with an identical key are found then an arbitrary
     /// one is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>find_mut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Q) -&gt; CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    </span><span class="kw">pub fn </span>find_mut&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Q) -&gt; CursorMut&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="lifetime">'a</span>: <span class="lifetime">'b</span>,
     {
         CursorMut {
             current: <span class="self">self</span>.find_internal(key),
@@ -5222,10 +5223,10 @@
     /// If multiple elements with an identical key are found then an arbitrary
     /// one is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>find_owning&lt;<span class="lifetime">&#39;a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="self">self</span>, key: <span class="kw-2">&amp;</span>Q) -&gt; CursorOwning&lt;A&gt;
+    </span><span class="kw">pub fn </span>find_owning&lt;<span class="lifetime">'a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="self">self</span>, key: <span class="kw-2">&amp;</span>Q) -&gt; CursorOwning&lt;A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="self">Self</span>: <span class="lifetime">&#39;a</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="self">Self</span>: <span class="lifetime">'a</span>,
     {
         CursorOwning {
             current: <span class="self">self</span>.find_internal(key),
@@ -5234,13 +5235,13 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>lower_bound_internal&lt;<span class="lifetime">&#39;a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
+    </span><span class="kw">fn </span>lower_bound_internal&lt;<span class="lifetime">'a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;&lt;A::LinkOps <span class="kw">as </span>link_ops::LinkOps&gt;::LinkPtr&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value: <span class="lifetime">&#39;a</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value: <span class="lifetime">'a</span>,
     {
         <span class="kw">let </span>link_ops = <span class="self">self</span>.adapter.link_ops();
 
@@ -5267,10 +5268,10 @@
     /// the given bound. If no such element is found then a null cursor is
     /// returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>lower_bound&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;) -&gt; Cursor&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    </span><span class="kw">pub fn </span>lower_bound&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;) -&gt; Cursor&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="lifetime">'a</span>: <span class="lifetime">'b</span>,
     {
         Cursor {
             current: <span class="self">self</span>.lower_bound_internal(bound),
@@ -5282,13 +5283,13 @@
     /// above the given bound. If no such element is found then a null
     /// cursor is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>lower_bound_mut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>,
+    </span><span class="kw">pub fn </span>lower_bound_mut&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>,
         bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;,
-    ) -&gt; CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    ) -&gt; CursorMut&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="lifetime">'a</span>: <span class="lifetime">'b</span>,
     {
         CursorMut {
             current: <span class="self">self</span>.lower_bound_internal(bound),
@@ -5300,10 +5301,10 @@
     /// above the given bound. If no such element is found then a null
     /// cursor is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>lower_bound_owning&lt;<span class="lifetime">&#39;a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="self">self</span>, bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;) -&gt; CursorOwning&lt;A&gt;
+    </span><span class="kw">pub fn </span>lower_bound_owning&lt;<span class="lifetime">'a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="self">self</span>, bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;) -&gt; CursorOwning&lt;A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="self">Self</span>: <span class="lifetime">&#39;a</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="self">Self</span>: <span class="lifetime">'a</span>,
     {
         CursorOwning {
             current: <span class="self">self</span>.lower_bound_internal(bound),
@@ -5312,13 +5313,13 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>upper_bound_internal&lt;<span class="lifetime">&#39;a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
+    </span><span class="kw">fn </span>upper_bound_internal&lt;<span class="lifetime">'a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;&lt;A::LinkOps <span class="kw">as </span>link_ops::LinkOps&gt;::LinkPtr&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value: <span class="lifetime">&#39;a</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value: <span class="lifetime">'a</span>,
     {
         <span class="kw">let </span>link_ops = <span class="self">self</span>.adapter.link_ops();
 
@@ -5345,10 +5346,10 @@
     /// the given bound. If no such element is found then a null cursor is
     /// returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>upper_bound&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;) -&gt; Cursor&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    </span><span class="kw">pub fn </span>upper_bound&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;) -&gt; Cursor&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="lifetime">'a</span>: <span class="lifetime">'b</span>,
     {
         Cursor {
             current: <span class="self">self</span>.upper_bound_internal(bound),
@@ -5360,13 +5361,13 @@
     /// below the given bound. If no such element is found then a null
     /// cursor is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>upper_bound_mut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>,
+    </span><span class="kw">pub fn </span>upper_bound_mut&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>,
         bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;,
-    ) -&gt; CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    ) -&gt; CursorMut&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'b</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="lifetime">'a</span>: <span class="lifetime">'b</span>,
     {
         CursorMut {
             current: <span class="self">self</span>.upper_bound_internal(bound),
@@ -5378,10 +5379,10 @@
     /// below the given bound. If no such element is found then a null
     /// cursor is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>upper_bound_owning&lt;<span class="lifetime">&#39;a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="self">self</span>, bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;) -&gt; CursorOwning&lt;A&gt;
+    </span><span class="kw">pub fn </span>upper_bound_owning&lt;<span class="lifetime">'a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="self">self</span>, bound: Bound&lt;<span class="kw-2">&amp;</span>Q&gt;) -&gt; CursorOwning&lt;A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
-        <span class="self">Self</span>: <span class="lifetime">&#39;a</span>,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        <span class="self">Self</span>: <span class="lifetime">'a</span>,
     {
         CursorOwning {
             current: <span class="self">self</span>.upper_bound_internal(bound),
@@ -5401,9 +5402,9 @@
     /// Panics if the new element is already linked to a different intrusive
     /// collection.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>insert&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, val: &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer) -&gt; CursorMut&lt;<span class="lifetime">&#39;_</span>, A&gt;
+    </span><span class="kw">pub fn </span>insert&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, val: &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer) -&gt; CursorMut&lt;<span class="lifetime">'_</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Ord,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Ord,
     {
         <span class="kw">unsafe </span>{
             <span class="kw">let </span>new = <span class="self">self</span>.node_from_value(val);
@@ -5451,9 +5452,9 @@
     /// If multiple elements with an identical key are found then an arbitrary
     /// one is returned.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>entry&lt;<span class="lifetime">&#39;a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Q) -&gt; Entry&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    </span><span class="kw">pub fn </span>entry&lt;<span class="lifetime">'a</span>, Q: <span class="question-mark">?</span>Sized + Ord&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Q) -&gt; Entry&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Borrow&lt;Q&gt;,
     {
         <span class="kw">unsafe </span>{
             <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = <span class="self">self</span>.root {
@@ -5503,18 +5504,18 @@
 
     <span class="doccomment">/// Constructs a double-ended iterator over a sub-range of elements in the
     /// tree, starting at min, and ending at max. If min is `Unbounded`, then it
-    /// will be treated as &quot;negative infinity&quot;, and if max is `Unbounded`, then
-    /// it will be treated as &quot;positive infinity&quot;. Thus
+    /// will be treated as "negative infinity", and if max is `Unbounded`, then
+    /// it will be treated as "positive infinity". Thus
     /// `range(Unbounded, Unbounded)` will yield the whole collection.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>range&lt;<span class="lifetime">&#39;a</span>, Min: <span class="question-mark">?</span>Sized + Ord, Max: <span class="question-mark">?</span>Sized + Ord&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
+    </span><span class="kw">pub fn </span>range&lt;<span class="lifetime">'a</span>, Min: <span class="question-mark">?</span>Sized + Ord, Max: <span class="question-mark">?</span>Sized + Ord&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>,
         min: Bound&lt;<span class="kw-2">&amp;</span>Min&gt;,
         max: Bound&lt;<span class="kw-2">&amp;</span>Max&gt;,
-    ) -&gt; Iter&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    ) -&gt; Iter&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
-        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Borrow&lt;Min&gt; + Borrow&lt;Max&gt;,
-        &lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;::Key: Ord,
+        </span>&lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Borrow&lt;Min&gt; + Borrow&lt;Max&gt;,
+        &lt;A <span class="kw">as </span>KeyAdapter&lt;<span class="lifetime">'a</span>&gt;&gt;::Key: Ord,
     {
         <span class="kw">let </span>lower = <span class="self">self</span>.lower_bound_internal(min);
         <span class="kw">let </span>upper = <span class="self">self</span>.upper_bound_internal(max);
@@ -5593,15 +5594,15 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter + <span class="lifetime">&#39;a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RBTree&lt;A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter + <span class="lifetime">'a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>RBTree&lt;A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
-    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value;
-    <span class="kw">type </span>IntoIter = Iter&lt;<span class="lifetime">&#39;a</span>, A&gt;;
+    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value;
+    <span class="kw">type </span>IntoIter = Iter&lt;<span class="lifetime">'a</span>, A&gt;;
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">&#39;a</span>, A&gt; {
+    </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'a</span>, A&gt; {
         <span class="self">self</span>.iter()
     }
 }
@@ -5620,7 +5621,7 @@
     </span>A::LinkOps: RBTreeOps,
     &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value: fmt::Debug,
 {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         f.debug_set().entries(<span class="self">self</span>.iter()).finish()
     }
 }
@@ -5631,16 +5632,16 @@
 
 </span><span class="doccomment">/// A cursor pointing to a slot in which an element can be inserted into a
 /// `RBTree`.
-</span><span class="kw">pub struct </span>InsertCursor&lt;<span class="lifetime">&#39;a</span>, A: Adapter&gt;
+</span><span class="kw">pub struct </span>InsertCursor&lt;<span class="lifetime">'a</span>, A: Adapter&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
     parent: <span class="prelude-ty">Option</span>&lt;&lt;A::LinkOps <span class="kw">as </span>link_ops::LinkOps&gt;::LinkPtr&gt;,
     insert_left: bool,
-    tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>RBTree&lt;A&gt;,
+    tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>RBTree&lt;A&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter + <span class="lifetime">&#39;a</span>&gt; InsertCursor&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter + <span class="lifetime">'a</span>&gt; InsertCursor&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
@@ -5651,7 +5652,7 @@
     ///
     /// Panics if the new element is already linked to a different intrusive
     /// collection.
-    </span><span class="kw">pub fn </span>insert(<span class="self">self</span>, val: &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer) -&gt; CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt; {
+    </span><span class="kw">pub fn </span>insert(<span class="self">self</span>, val: &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer) -&gt; CursorMut&lt;<span class="lifetime">'a</span>, A&gt; {
         <span class="kw">unsafe </span>{
             <span class="kw">let </span>new = <span class="self">self</span>.tree.node_from_value(val);
             <span class="kw">let </span>link_ops = <span class="self">self</span>.tree.adapter.link_ops_mut();
@@ -5675,18 +5676,18 @@
 <span class="doccomment">/// An entry in a `RBTree`.
 ///
 /// See the documentation for `RBTree::entry`.
-</span><span class="kw">pub enum </span>Entry&lt;<span class="lifetime">&#39;a</span>, A: Adapter&gt;
+</span><span class="kw">pub enum </span>Entry&lt;<span class="lifetime">'a</span>, A: Adapter&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
     <span class="doccomment">/// An occupied entry.
-    </span>Occupied(CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt;),
+    </span>Occupied(CursorMut&lt;<span class="lifetime">'a</span>, A&gt;),
 
     <span class="doccomment">/// A vacant entry.
-    </span>Vacant(InsertCursor&lt;<span class="lifetime">&#39;a</span>, A&gt;),
+    </span>Vacant(InsertCursor&lt;<span class="lifetime">'a</span>, A&gt;),
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter + <span class="lifetime">&#39;a</span>&gt; Entry&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter + <span class="lifetime">'a</span>&gt; Entry&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
@@ -5698,7 +5699,7 @@
     ///
     /// Panics if the `Entry` is vacant and the new element is already linked to
     /// a different intrusive collection.
-    </span><span class="kw">pub fn </span>or_insert(<span class="self">self</span>, val: &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer) -&gt; CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt; {
+    </span><span class="kw">pub fn </span>or_insert(<span class="self">self</span>, val: &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer) -&gt; CursorMut&lt;<span class="lifetime">'a</span>, A&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             Entry::Occupied(entry) =&gt; entry,
             Entry::Vacant(entry) =&gt; entry.insert(val),
@@ -5714,7 +5715,7 @@
     ///
     /// Panics if the `Entry` is vacant and the new element is already linked to
     /// a different intrusive collection.
-    </span><span class="kw">pub fn </span>or_insert_with&lt;F&gt;(<span class="self">self</span>, default: F) -&gt; CursorMut&lt;<span class="lifetime">&#39;a</span>, A&gt;
+    </span><span class="kw">pub fn </span>or_insert_with&lt;F&gt;(<span class="self">self</span>, default: F) -&gt; CursorMut&lt;<span class="lifetime">'a</span>, A&gt;
     <span class="kw">where
         </span>F: FnOnce() -&gt; &lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Pointer,
     {
@@ -5730,22 +5731,22 @@
 // =============================================================================
 
 </span><span class="doccomment">/// An iterator over references to the items of a `RBTree`.
-</span><span class="kw">pub struct </span>Iter&lt;<span class="lifetime">&#39;a</span>, A: Adapter&gt;
+</span><span class="kw">pub struct </span>Iter&lt;<span class="lifetime">'a</span>, A: Adapter&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
     head: <span class="prelude-ty">Option</span>&lt;&lt;A::LinkOps <span class="kw">as </span>link_ops::LinkOps&gt;::LinkPtr&gt;,
     tail: <span class="prelude-ty">Option</span>&lt;&lt;A::LinkOps <span class="kw">as </span>link_ops::LinkOps&gt;::LinkPtr&gt;,
-    tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RBTree&lt;A&gt;,
+    tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>RBTree&lt;A&gt;,
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter + <span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter + <span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
-    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value;
+    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value;
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value&gt; {
+    </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value&gt; {
         <span class="kw">let </span>head = <span class="self">self</span>.head<span class="question-mark">?</span>;
 
         <span class="kw">if </span><span class="prelude-val">Some</span>(head) == <span class="self">self</span>.tail {
@@ -5757,12 +5758,12 @@
         <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.tree.adapter.get_value(head) })
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter + <span class="lifetime">&#39;a</span>&gt; DoubleEndedIterator <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter + <span class="lifetime">'a</span>&gt; DoubleEndedIterator <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>next_back(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value&gt; {
+    </span><span class="kw">fn </span>next_back(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;A::PointerOps <span class="kw">as </span>PointerOps&gt;::Value&gt; {
         <span class="kw">let </span>tail = <span class="self">self</span>.tail<span class="question-mark">?</span>;
 
         <span class="kw">if </span><span class="prelude-val">Some</span>(tail) == <span class="self">self</span>.head {
@@ -5774,12 +5775,12 @@
         <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.tree.adapter.get_value(tail) })
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Adapter + <span class="lifetime">&#39;a</span>&gt; Clone <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Adapter + <span class="lifetime">'a</span>&gt; Clone <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, A&gt;
 <span class="kw">where
     </span>A::LinkOps: RBTreeOps,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">&#39;a</span>, A&gt; {
+    </span><span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'a</span>, A&gt; {
         Iter {
             head: <span class="self">self</span>.head,
             tail: <span class="self">self</span>.tail,
@@ -5904,24 +5905,24 @@
         value: i32,
     }
     <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Obj {
-        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-            <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.value)
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+            <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.value)
         }
     }
     <span class="macro">intrusive_adapter!</span>(RcObjAdapter = Rc&lt;Obj&gt;: Obj { link: Link });
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>RcObjAdapter {
+    <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; KeyAdapter&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>RcObjAdapter {
         <span class="kw">type </span>Key = i32;
-        <span class="kw">fn </span>get_key(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;<span class="self">Self</span>::PointerOps <span class="kw">as </span>PointerOps&gt;::Value) -&gt; i32 {
+        <span class="kw">fn </span>get_key(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;<span class="self">Self</span>::PointerOps <span class="kw">as </span>PointerOps&gt;::Value) -&gt; i32 {
             value.value
         }
     }
 
     <span class="macro">intrusive_adapter!</span>(UnsafeRefObjAdapter = UnsafeRef&lt;Obj&gt;: Obj { link: Link });
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>UnsafeRefObjAdapter {
+    <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; KeyAdapter&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>UnsafeRefObjAdapter {
         <span class="kw">type </span>Key = i32;
-        <span class="kw">fn </span>get_key(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;<span class="self">Self</span>::PointerOps <span class="kw">as </span>PointerOps&gt;::Value) -&gt; i32 {
+        <span class="kw">fn </span>get_key(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;<span class="self">Self</span>::PointerOps <span class="kw">as </span>PointerOps&gt;::Value) -&gt; i32 {
             value.value
         }
     }
@@ -5941,7 +5942,7 @@
     </span><span class="kw">fn </span>test_link() {
         <span class="kw">let </span>a = make_rc_obj(<span class="number">1</span>);
         <span class="macro">assert!</span>(!a.link.is_linked());
-        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, a.link), <span class="string">&quot;unlinked&quot;</span>);
+        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{:?}"</span>, a.link), <span class="string">"unlinked"</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>b = RBTree::&lt;RcObjAdapter&gt;::default();
         <span class="macro">assert!</span>(b.is_empty());
@@ -5949,7 +5950,7 @@
         <span class="macro">assert_eq!</span>(b.insert(a.clone()).get().unwrap().value, <span class="number">1</span>);
         <span class="macro">assert!</span>(!b.is_empty());
         <span class="macro">assert!</span>(a.link.is_linked());
-        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, a.link), <span class="string">&quot;linked&quot;</span>);
+        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{:?}"</span>, a.link), <span class="string">"linked"</span>);
 
         <span class="kw">let </span>c = a.as_ref().clone();
         <span class="macro">assert!</span>(!c.link.is_linked());
@@ -6195,8 +6196,8 @@
         }
 
         <span class="macro">assert_eq!</span>(
-            <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, t),
-            <span class="string">&quot;{0, 10, 20, 30, 40, 50, 60, 70, 80, 90}&quot;
+            <span class="macro">format!</span>(<span class="string">"{:?}"</span>, t),
+            <span class="string">"{0, 10, 20, 30, 40, 50, 60, 70, 80, 90}"
         </span>);
 
         <span class="macro">assert_eq!</span>(
@@ -6645,14 +6646,14 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_non_static() {
         <span class="attr">#[derive(Clone)]
-        </span><span class="kw">struct </span>Obj&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+        </span><span class="kw">struct </span>Obj&lt;<span class="lifetime">'a</span>, T&gt; {
             link: Link,
-            value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T,
+            value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T,
         }
-        <span class="macro">intrusive_adapter!</span>(RcObjAdapter&lt;<span class="lifetime">&#39;a</span>, T&gt; = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Obj&lt;<span class="lifetime">&#39;a</span>, T&gt;: Obj&lt;<span class="lifetime">&#39;a</span>, T&gt; {link: Link} <span class="kw">where </span>T: <span class="lifetime">&#39;a</span>);
-        <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, T: <span class="lifetime">&#39;a </span>+ <span class="lifetime">&#39;b</span>&gt; KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>RcObjAdapter&lt;<span class="lifetime">&#39;b</span>, T&gt; {
-            <span class="kw">type </span>Key = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T;
-            <span class="kw">fn </span>get_key(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Obj&lt;<span class="lifetime">&#39;b</span>, T&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T {
+        <span class="macro">intrusive_adapter!</span>(RcObjAdapter&lt;<span class="lifetime">'a</span>, T&gt; = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Obj&lt;<span class="lifetime">'a</span>, T&gt;: Obj&lt;<span class="lifetime">'a</span>, T&gt; {link: Link} <span class="kw">where </span>T: <span class="lifetime">'a</span>);
+        <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, T: <span class="lifetime">'a </span>+ <span class="lifetime">'b</span>&gt; KeyAdapter&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>RcObjAdapter&lt;<span class="lifetime">'b</span>, T&gt; {
+            <span class="kw">type </span>Key = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T;
+            <span class="kw">fn </span>get_key(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Obj&lt;<span class="lifetime">'b</span>, T&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T {
                 value.value
             }
         }
@@ -6680,9 +6681,9 @@
                 value: usize,
             }
             <span class="macro">intrusive_adapter!</span>(RcObjAdapter = <span class="macro-nonterminal">$ptr</span>&lt;Obj&gt;: Obj { link: Link });
-            <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; KeyAdapter&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>RcObjAdapter {
+            <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; KeyAdapter&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>RcObjAdapter {
                 <span class="kw">type </span>Key = usize;
-                <span class="kw">fn </span>get_key(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Obj) -&gt; usize {
+                <span class="kw">fn </span>get_key(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Obj) -&gt; usize {
                     value.value
                 }
             }

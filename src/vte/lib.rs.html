@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/vte-0.12.0/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="vte" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/vte-0.12.0/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="vte" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1104,8 +1105,8 @@
 <a href="#1104" id="1104">1104</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Parser for implementing virtual terminal emulators
 //!
-//! [`Parser`] is implemented according to [Paul Williams&#39; ANSI parser
-//! state machine]. The state machine doesn&#39;t assign meaning to the parsed data
+//! [`Parser`] is implemented according to [Paul Williams' ANSI parser
+//! state machine]. The state machine doesn't assign meaning to the parsed data
 //! and is thus not itself sufficient for writing a terminal emulator. Instead,
 //! it is expected that an implementation of [`Perform`] is provided which does
 //! something useful with the parsed data. The [`Parser`] handles the book
@@ -1133,14 +1134,14 @@
 //!
 //! [`Parser`]: struct.Parser.html
 //! [`Perform`]: trait.Perform.html
-//! [Paul Williams&#39; ANSI parser state machine]: https://vt100.net/emu/dec_ansi_parser
+//! [Paul Williams' ANSI parser state machine]: https://vt100.net/emu/dec_ansi_parser
 </span><span class="attr">#![deny(clippy::all, clippy::if_not_else, clippy::enum_glob_use)]
-#![cfg_attr(all(feature = <span class="string">&quot;nightly&quot;</span>, test), feature(test))]
-#![cfg_attr(feature = <span class="string">&quot;no_std&quot;</span>, no_std)]
+#![cfg_attr(all(feature = <span class="string">"nightly"</span>, test), feature(test))]
+#![cfg_attr(feature = <span class="string">"no_std"</span>, no_std)]
 
 </span><span class="kw">use </span>core::mem::MaybeUninit;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
 </span><span class="kw">use </span>arrayvec::ArrayVec;
 <span class="kw">use </span>utf8parse <span class="kw">as </span>utf8;
 
@@ -1148,7 +1149,7 @@
 <span class="kw">mod </span>params;
 <span class="kw">mod </span>table;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;ansi&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"ansi"</span>)]
 </span><span class="kw">pub mod </span>ansi;
 <span class="kw">pub use </span>params::{Params, ParamsIter};
 
@@ -1158,16 +1159,16 @@
 <span class="kw">const </span>MAX_OSC_PARAMS: usize = <span class="number">16</span>;
 <span class="kw">const </span>MAX_OSC_RAW: usize = <span class="number">1024</span>;
 
-<span class="kw">struct </span>VtUtf8Receiver&lt;<span class="lifetime">&#39;a</span>, P: Perform&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>P, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>State);
+<span class="kw">struct </span>VtUtf8Receiver&lt;<span class="lifetime">'a</span>, P: Perform&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>P, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>State);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, P: Perform&gt; utf8::Receiver <span class="kw">for </span>VtUtf8Receiver&lt;<span class="lifetime">&#39;a</span>, P&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, P: Perform&gt; utf8::Receiver <span class="kw">for </span>VtUtf8Receiver&lt;<span class="lifetime">'a</span>, P&gt; {
     <span class="kw">fn </span>codepoint(<span class="kw-2">&amp;mut </span><span class="self">self</span>, c: char) {
         <span class="self">self</span>.<span class="number">0</span>.print(c);
         <span class="kw-2">*</span><span class="self">self</span>.<span class="number">1 </span>= State::Ground;
     }
 
     <span class="kw">fn </span>invalid_sequence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="self">self</span>.<span class="number">0</span>.print(<span class="string">&#39;�&#39;</span>);
+        <span class="self">self</span>.<span class="number">0</span>.print(<span class="string">'�'</span>);
         <span class="kw-2">*</span><span class="self">self</span>.<span class="number">1 </span>= State::Ground;
     }
 }
@@ -1185,9 +1186,9 @@
     intermediate_idx: usize,
     params: Params,
     param: u16,
-    <span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
     </span>osc_raw: ArrayVec&lt;u8, OSC_RAW_BUF_SIZE&gt;,
-    <span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+    <span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
     </span>osc_raw: Vec&lt;u8&gt;,
     osc_params: [(usize, usize); MAX_OSC_PARAMS],
     osc_num_params: usize,
@@ -1210,7 +1211,7 @@
     /// ```rust
     /// let mut p = vte::Parser::&lt;64&gt;::new_with_size();
     /// ```
-    </span><span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+    </span><span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
     </span><span class="kw">pub fn </span>new_with_size() -&gt; Parser&lt;OSC_RAW_BUF_SIZE&gt; {
         Default::default()
     }
@@ -1355,7 +1356,7 @@
                 <span class="self">self</span>.osc_num_params = <span class="number">0</span>;
             },
             Action::OscPut =&gt; {
-                <span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+                <span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
                 </span>{
                     <span class="kw">if </span><span class="self">self</span>.osc_raw.is_full() {
                         <span class="kw">return</span>;
@@ -1365,7 +1366,7 @@
                 <span class="kw">let </span>idx = <span class="self">self</span>.osc_raw.len();
 
                 <span class="comment">// Param separator
-                </span><span class="kw">if </span>byte == <span class="string">b&#39;;&#39; </span>{
+                </span><span class="kw">if </span>byte == <span class="string">b';' </span>{
                     <span class="kw">let </span>param_idx = <span class="self">self</span>.osc_num_params;
                     <span class="kw">match </span>param_idx {
                         <span class="comment">// Only process up to MAX_OSC_PARAMS
@@ -1445,16 +1446,16 @@
                     <span class="kw">return</span>;
                 }
 
-                <span class="kw">if </span>byte == <span class="string">b&#39;;&#39; </span>{
+                <span class="kw">if </span>byte == <span class="string">b';' </span>{
                     <span class="self">self</span>.params.push(<span class="self">self</span>.param);
                     <span class="self">self</span>.param = <span class="number">0</span>;
-                } <span class="kw">else if </span>byte == <span class="string">b&#39;:&#39; </span>{
+                } <span class="kw">else if </span>byte == <span class="string">b':' </span>{
                     <span class="self">self</span>.params.extend(<span class="self">self</span>.param);
                     <span class="self">self</span>.param = <span class="number">0</span>;
                 } <span class="kw">else </span>{
                     <span class="comment">// Continue collecting bytes into param
                     </span><span class="self">self</span>.param = <span class="self">self</span>.param.saturating_mul(<span class="number">10</span>);
-                    <span class="self">self</span>.param = <span class="self">self</span>.param.saturating_add((byte - <span class="string">b&#39;0&#39;</span>) <span class="kw">as </span>u16);
+                    <span class="self">self</span>.param = <span class="self">self</span>.param.saturating_add((byte - <span class="string">b'0'</span>) <span class="kw">as </span>u16);
                 }
             },
             Action::Clear =&gt; {
@@ -1478,9 +1479,9 @@
 /// movement, or simply printing characters to the screen.
 ///
 /// The methods on this type correspond to actions described in
-/// &lt;http://vt100.net/emu/dec_ansi_parser&gt;. I&#39;ve done my best to describe them in
+/// &lt;http://vt100.net/emu/dec_ansi_parser&gt;. I've done my best to describe them in
 /// a useful way in my own words for completeness, but the site should be
-/// referenced if something isn&#39;t clear. If the site disappears at some point in
+/// referenced if something isn't clear. If the site disappears at some point in
 /// the future, consider checking archive.org.
 </span><span class="kw">pub trait </span>Perform {
     <span class="doccomment">/// Draw a character to the screen and update states.
@@ -1534,7 +1535,7 @@
     </span><span class="kw">fn </span>esc_dispatch(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _intermediates: <span class="kw-2">&amp;</span>[u8], _ignore: bool, _byte: u8) {}
 }
 
-<span class="attr">#[cfg(all(test, feature = <span class="string">&quot;no_std&quot;</span>))]
+<span class="attr">#[cfg(all(test, feature = <span class="string">"no_std"</span>))]
 #[macro_use]
 </span><span class="kw">extern crate </span>std;
 
@@ -1546,9 +1547,9 @@
 
     <span class="kw">static </span>OSC_BYTES: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[
         <span class="number">0x1b</span>, <span class="number">0x5d</span>, <span class="comment">// Begin OSC
-        </span><span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;;&#39;</span>, <span class="string">b&#39;j&#39;</span>, <span class="string">b&#39;w&#39;</span>, <span class="string">b&#39;i&#39;</span>, <span class="string">b&#39;l&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="string">b&#39;@&#39;</span>, <span class="string">b&#39;j&#39;</span>, <span class="string">b&#39;w&#39;</span>, <span class="string">b&#39;i&#39;</span>, <span class="string">b&#39;l&#39;</span>, <span class="string">b&#39;m&#39;</span>, <span class="string">b&#39;-&#39;</span>, <span class="string">b&#39;d&#39;</span>,
-        <span class="string">b&#39;e&#39;</span>, <span class="string">b&#39;s&#39;</span>, <span class="string">b&#39;k&#39;</span>, <span class="string">b&#39;:&#39;</span>, <span class="string">b&#39; &#39;</span>, <span class="string">b&#39;~&#39;</span>, <span class="string">b&#39;/&#39;</span>, <span class="string">b&#39;c&#39;</span>, <span class="string">b&#39;o&#39;</span>, <span class="string">b&#39;d&#39;</span>, <span class="string">b&#39;e&#39;</span>, <span class="string">b&#39;/&#39;</span>, <span class="string">b&#39;a&#39;</span>, <span class="string">b&#39;l&#39;</span>, <span class="string">b&#39;a&#39;</span>,
-        <span class="string">b&#39;c&#39;</span>, <span class="string">b&#39;r&#39;</span>, <span class="string">b&#39;i&#39;</span>, <span class="string">b&#39;t&#39;</span>, <span class="string">b&#39;t&#39;</span>, <span class="string">b&#39;y&#39;</span>, <span class="number">0x07</span>, <span class="comment">// End OSC
+        </span><span class="string">b'2'</span>, <span class="string">b';'</span>, <span class="string">b'j'</span>, <span class="string">b'w'</span>, <span class="string">b'i'</span>, <span class="string">b'l'</span>, <span class="string">b'm'</span>, <span class="string">b'@'</span>, <span class="string">b'j'</span>, <span class="string">b'w'</span>, <span class="string">b'i'</span>, <span class="string">b'l'</span>, <span class="string">b'm'</span>, <span class="string">b'-'</span>, <span class="string">b'd'</span>,
+        <span class="string">b'e'</span>, <span class="string">b's'</span>, <span class="string">b'k'</span>, <span class="string">b':'</span>, <span class="string">b' '</span>, <span class="string">b'~'</span>, <span class="string">b'/'</span>, <span class="string">b'c'</span>, <span class="string">b'o'</span>, <span class="string">b'd'</span>, <span class="string">b'e'</span>, <span class="string">b'/'</span>, <span class="string">b'a'</span>, <span class="string">b'l'</span>, <span class="string">b'a'</span>,
+        <span class="string">b'c'</span>, <span class="string">b'r'</span>, <span class="string">b'i'</span>, <span class="string">b't'</span>, <span class="string">b't'</span>, <span class="string">b'y'</span>, <span class="number">0x07</span>, <span class="comment">// End OSC
     </span>];
 
     <span class="attr">#[derive(Default)]
@@ -1614,7 +1615,7 @@
                 <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="kw-2">&amp;</span>OSC_BYTES[<span class="number">2</span>..<span class="number">3</span>]);
                 <span class="macro">assert_eq!</span>(params[<span class="number">1</span>], <span class="kw-2">&amp;</span>OSC_BYTES[<span class="number">4</span>..(OSC_BYTES.len() - <span class="number">1</span>)]);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc sequence"</span>),
         }
     }
 
@@ -1630,14 +1631,14 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Osc(..) =&gt; (),
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_osc_max_params() {
-        <span class="kw">let </span>params = <span class="string">&quot;;&quot;</span>.repeat(params::MAX_PARAMS + <span class="number">1</span>);
-        <span class="kw">let </span>input = <span class="macro">format!</span>(<span class="string">&quot;\x1b]{}\x1b&quot;</span>, <span class="kw-2">&amp;</span>params[..]).into_bytes();
+        <span class="kw">let </span>params = <span class="string">";"</span>.repeat(params::MAX_PARAMS + <span class="number">1</span>);
+        <span class="kw">let </span>input = <span class="macro">format!</span>(<span class="string">"\x1b]{}\x1b"</span>, <span class="kw-2">&amp;</span>params[..]).into_bytes();
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1651,13 +1652,13 @@
                 <span class="macro">assert_eq!</span>(params.len(), MAX_OSC_PARAMS);
                 <span class="macro">assert!</span>(params.iter().all(Vec::is_empty));
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>osc_bell_terminated() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]11;ff/00/ff\x07&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]11;ff/00/ff\x07"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1668,13 +1669,13 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Osc(<span class="kw">_</span>, <span class="bool-val">true</span>) =&gt; (),
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc with bell terminator&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc with bell terminator"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>osc_c0_st_terminated() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]11;ff/00/ff\x1b\\&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]11;ff/00/ff\x1b\\"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1685,7 +1686,7 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">2</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Osc(<span class="kw">_</span>, <span class="bool-val">false</span>) =&gt; (),
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc with ST terminator&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc with ST terminator"</span>),
         }
     }
 
@@ -1706,16 +1707,16 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Osc(params, <span class="kw">_</span>) =&gt; {
-                <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="kw-2">&amp;</span>[<span class="string">b&#39;2&#39;</span>]);
+                <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="kw-2">&amp;</span>[<span class="string">b'2'</span>]);
                 <span class="macro">assert_eq!</span>(params[<span class="number">1</span>], <span class="kw-2">&amp;</span>INPUT[<span class="number">5</span>..(INPUT.len() - <span class="number">1</span>)]);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>osc_containing_string_terminator() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]2;\xe6\x9c\xab\x1b\\&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]2;\xe6\x9c\xab\x1b\\"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1728,15 +1729,15 @@
             Sequence::Osc(params, <span class="kw">_</span>) =&gt; {
                 <span class="macro">assert_eq!</span>(params[<span class="number">1</span>], <span class="kw-2">&amp;</span>INPUT[<span class="number">4</span>..(INPUT.len() - <span class="number">2</span>)]);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>exceed_max_buffer_size() {
         <span class="kw">static </span>NUM_BYTES: usize = MAX_OSC_RAW + <span class="number">100</span>;
-        <span class="kw">static </span>INPUT_START: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b&#39;]&#39;</span>, <span class="string">b&#39;5&#39;</span>, <span class="string">b&#39;2&#39;</span>, <span class="string">b&#39;;&#39;</span>, <span class="string">b&#39;s&#39;</span>];
-        <span class="kw">static </span>INPUT_END: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="string">b&#39;\x07&#39;</span>];
+        <span class="kw">static </span>INPUT_START: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x1b</span>, <span class="string">b']'</span>, <span class="string">b'5'</span>, <span class="string">b'2'</span>, <span class="string">b';'</span>, <span class="string">b's'</span>];
+        <span class="kw">static </span>INPUT_END: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="string">b'\x07'</span>];
 
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
@@ -1748,7 +1749,7 @@
 
         <span class="comment">// Exceed max buffer size
         </span><span class="kw">for _ in </span><span class="number">0</span>..NUM_BYTES {
-            parser.advance(<span class="kw-2">&amp;mut </span>dispatcher, <span class="string">b&#39;a&#39;</span>);
+            parser.advance(<span class="kw-2">&amp;mut </span>dispatcher, <span class="string">b'a'</span>);
         }
 
         <span class="comment">// Terminate escape for dispatch
@@ -1760,25 +1761,25 @@
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Osc(params, <span class="kw">_</span>) =&gt; {
                 <span class="macro">assert_eq!</span>(params.len(), <span class="number">2</span>);
-                <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="string">b&quot;52&quot;</span>);
+                <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="string">b"52"</span>);
 
-                <span class="attr">#[cfg(not(feature = <span class="string">&quot;no_std&quot;</span>))]
+                <span class="attr">#[cfg(not(feature = <span class="string">"no_std"</span>))]
                 </span><span class="macro">assert_eq!</span>(params[<span class="number">1</span>].len(), NUM_BYTES + INPUT_END.len());
 
-                <span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+                <span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
                 </span><span class="macro">assert_eq!</span>(params[<span class="number">1</span>].len(), MAX_OSC_RAW - params[<span class="number">0</span>].len());
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_csi_max_params() {
-        <span class="comment">// This will build a list of repeating &#39;1;&#39;s
+        <span class="comment">// This will build a list of repeating '1;'s
         // The length is MAX_PARAMS - 1 because the last semicolon is interpreted
         // as an implicit zero, making the total number of parameters MAX_PARAMS
-        </span><span class="kw">let </span>params = <span class="string">&quot;1;&quot;</span>.repeat(params::MAX_PARAMS - <span class="number">1</span>);
-        <span class="kw">let </span>input = <span class="macro">format!</span>(<span class="string">&quot;\x1b[{}p&quot;</span>, <span class="kw-2">&amp;</span>params[..]).into_bytes();
+        </span><span class="kw">let </span>params = <span class="string">"1;"</span>.repeat(params::MAX_PARAMS - <span class="number">1</span>);
+        <span class="kw">let </span>input = <span class="macro">format!</span>(<span class="string">"\x1b[{}p"</span>, <span class="kw-2">&amp;</span>params[..]).into_bytes();
 
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
@@ -1793,17 +1794,17 @@
                 <span class="macro">assert_eq!</span>(params.len(), params::MAX_PARAMS);
                 <span class="macro">assert!</span>(!ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_csi_params_ignore_long_params() {
-        <span class="comment">// This will build a list of repeating &#39;1;&#39;s
+        <span class="comment">// This will build a list of repeating '1;'s
         // The length is MAX_PARAMS because the last semicolon is interpreted
         // as an implicit zero, making the total number of parameters MAX_PARAMS + 1
-        </span><span class="kw">let </span>params = <span class="string">&quot;1;&quot;</span>.repeat(params::MAX_PARAMS);
-        <span class="kw">let </span>input = <span class="macro">format!</span>(<span class="string">&quot;\x1b[{}p&quot;</span>, <span class="kw-2">&amp;</span>params[..]).into_bytes();
+        </span><span class="kw">let </span>params = <span class="string">"1;"</span>.repeat(params::MAX_PARAMS);
+        <span class="kw">let </span>input = <span class="macro">format!</span>(<span class="string">"\x1b[{}p"</span>, <span class="kw-2">&amp;</span>params[..]).into_bytes();
 
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
@@ -1818,7 +1819,7 @@
                 <span class="macro">assert_eq!</span>(params.len(), params::MAX_PARAMS);
                 <span class="macro">assert!</span>(ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
@@ -1827,14 +1828,14 @@
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
-        <span class="kw">for </span>byte <span class="kw">in </span><span class="string">b&quot;\x1b[4;m&quot; </span>{
+        <span class="kw">for </span>byte <span class="kw">in </span><span class="string">b"\x1b[4;m" </span>{
             parser.advance(<span class="kw-2">&amp;mut </span>dispatcher, <span class="kw-2">*</span>byte);
         }
 
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Csi(params, ..) =&gt; <span class="macro">assert_eq!</span>(params, <span class="kw-2">&amp;</span>[[<span class="number">4</span>], [<span class="number">0</span>]]),
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
@@ -1844,21 +1845,21 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
-        <span class="kw">for </span>byte <span class="kw">in </span><span class="string">b&quot;\x1b[;4m&quot; </span>{
+        <span class="kw">for </span>byte <span class="kw">in </span><span class="string">b"\x1b[;4m" </span>{
             parser.advance(<span class="kw-2">&amp;mut </span>dispatcher, <span class="kw-2">*</span>byte);
         }
 
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Csi(params, ..) =&gt; <span class="macro">assert_eq!</span>(params, <span class="kw-2">&amp;</span>[[<span class="number">0</span>], [<span class="number">4</span>]]),
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_long_csi_param() {
         <span class="comment">// The important part is the parameter, which is (i64::MAX + 1)
-        </span><span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b[9223372036854775808m&quot;</span>;
+        </span><span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b[9223372036854775808m"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1869,13 +1870,13 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Csi(params, ..) =&gt; <span class="macro">assert_eq!</span>(params, <span class="kw-2">&amp;</span>[[std::u16::MAX <span class="kw">as </span>u16]]),
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>csi_reset() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b[3;1\x1b[?1049h&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b[3;1\x1b[?1049h"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1886,17 +1887,17 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Csi(params, intermediates, ignore, <span class="kw">_</span>) =&gt; {
-                <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b&#39;?&#39;</span>]);
+                <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b'?'</span>]);
                 <span class="macro">assert_eq!</span>(params, <span class="kw-2">&amp;</span>[[<span class="number">1049</span>]]);
                 <span class="macro">assert!</span>(!ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>csi_subparameters() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b[38:2:255:0:255;1m&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b[38:2:255:0:255;1m"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1911,14 +1912,14 @@
                 <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[]);
                 <span class="macro">assert!</span>(!ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_dcs_max_params() {
-        <span class="kw">let </span>params = <span class="string">&quot;1;&quot;</span>.repeat(params::MAX_PARAMS + <span class="number">1</span>);
-        <span class="kw">let </span>input = <span class="macro">format!</span>(<span class="string">&quot;\x1bP{}p&quot;</span>, <span class="kw-2">&amp;</span>params[..]).into_bytes();
+        <span class="kw">let </span>params = <span class="string">"1;"</span>.repeat(params::MAX_PARAMS + <span class="number">1</span>);
+        <span class="kw">let </span>input = <span class="macro">format!</span>(<span class="string">"\x1bP{}p"</span>, <span class="kw-2">&amp;</span>params[..]).into_bytes();
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1933,13 +1934,13 @@
                 <span class="macro">assert!</span>(params.iter().all(|param| param == <span class="kw-2">&amp;</span>[<span class="number">1</span>]));
                 <span class="macro">assert!</span>(ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected dcs sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected dcs sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>dcs_reset() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b[3;1\x1bP1$tx\x9c&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b[3;1\x1bP1$tx\x9c"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1950,19 +1951,19 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">3</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::DcsHook(params, intermediates, ignore, <span class="kw">_</span>) =&gt; {
-                <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b&#39;$&#39;</span>]);
+                <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b'$'</span>]);
                 <span class="macro">assert_eq!</span>(params, <span class="kw-2">&amp;</span>[[<span class="number">1</span>]]);
                 <span class="macro">assert!</span>(!ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected dcs sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected dcs sequence"</span>),
         }
-        <span class="macro">assert_eq!</span>(dispatcher.dispatched[<span class="number">1</span>], Sequence::DcsPut(<span class="string">b&#39;x&#39;</span>));
+        <span class="macro">assert_eq!</span>(dispatcher.dispatched[<span class="number">1</span>], Sequence::DcsPut(<span class="string">b'x'</span>));
         <span class="macro">assert_eq!</span>(dispatcher.dispatched[<span class="number">2</span>], Sequence::DcsUnhook);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_dcs() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1bP0;1|17/ab\x9c&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1bP0;1|17/ab\x9c"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1974,11 +1975,11 @@
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::DcsHook(params, <span class="kw">_</span>, <span class="kw">_</span>, c) =&gt; {
                 <span class="macro">assert_eq!</span>(params, <span class="kw-2">&amp;</span>[[<span class="number">0</span>], [<span class="number">1</span>]]);
-                <span class="macro">assert_eq!</span>(c, <span class="kw-2">&amp;</span><span class="string">&#39;|&#39;</span>);
+                <span class="macro">assert_eq!</span>(c, <span class="kw-2">&amp;</span><span class="string">'|'</span>);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected dcs sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected dcs sequence"</span>),
         }
-        <span class="kw">for </span>(i, byte) <span class="kw">in </span><span class="string">b&quot;17/ab&quot;</span>.iter().enumerate() {
+        <span class="kw">for </span>(i, byte) <span class="kw">in </span><span class="string">b"17/ab"</span>.iter().enumerate() {
             <span class="macro">assert_eq!</span>(dispatcher.dispatched[<span class="number">1 </span>+ i], Sequence::DcsPut(<span class="kw-2">*</span>byte));
         }
         <span class="macro">assert_eq!</span>(dispatcher.dispatched[<span class="number">6</span>], Sequence::DcsUnhook);
@@ -1986,7 +1987,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>intermediate_reset_on_dcs_exit() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1bP=1sZZZ\x1b+\x5c&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1bP=1sZZZ\x1b+\x5c"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -1996,14 +1997,14 @@
 
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">6</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">5</span>] {
-            Sequence::Esc(intermediates, ..) =&gt; <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b&#39;+&#39;</span>]),
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected esc sequence&quot;</span>),
+            Sequence::Esc(intermediates, ..) =&gt; <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b'+'</span>]),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected esc sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>esc_reset() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b[3;1\x1b(A&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b[3;1\x1b(A"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -2014,17 +2015,17 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Esc(intermediates, ignore, byte) =&gt; {
-                <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b&#39;(&#39;</span>]);
-                <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>byte, <span class="string">b&#39;A&#39;</span>);
+                <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b'('</span>]);
+                <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>byte, <span class="string">b'A'</span>);
                 <span class="macro">assert!</span>(!ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected esc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected esc sequence"</span>),
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>params_buffer_filled_with_subparam() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b[::::::::::::::::::::::::::::::::x\x1b&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b[::::::::::::::::::::::::::::::::x\x1b"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();
 
@@ -2037,17 +2038,17 @@
             Sequence::Csi(params, intermediates, ignore, c) =&gt; {
                 <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[]);
                 <span class="macro">assert_eq!</span>(params, <span class="kw-2">&amp;</span>[[<span class="number">0</span>; <span class="number">32</span>]]);
-                <span class="macro">assert_eq!</span>(c, <span class="kw-2">&amp;</span><span class="string">&#39;x&#39;</span>);
+                <span class="macro">assert_eq!</span>(c, <span class="kw-2">&amp;</span><span class="string">'x'</span>);
                 <span class="macro">assert!</span>(ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
     #[test]
     </span><span class="kw">fn </span>build_with_fixed_size() {
-        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b[3;1\x1b[?1049h&quot;</span>;
+        <span class="kw">static </span>INPUT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b[3;1\x1b[?1049h"</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser: Parser&lt;<span class="number">30</span>&gt; = Parser::new_with_size();
 
@@ -2058,21 +2059,21 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">1</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Csi(params, intermediates, ignore, <span class="kw">_</span>) =&gt; {
-                <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b&#39;?&#39;</span>]);
+                <span class="macro">assert_eq!</span>(intermediates, <span class="kw-2">&amp;</span>[<span class="string">b'?'</span>]);
                 <span class="macro">assert_eq!</span>(params, <span class="kw-2">&amp;</span>[[<span class="number">1049</span>]]);
                 <span class="macro">assert!</span>(!ignore);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected csi sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected csi sequence"</span>),
         }
     }
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
     #[test]
     </span><span class="kw">fn </span>exceed_fixed_osc_buffer_size() {
         <span class="kw">const </span>OSC_BUFFER_SIZE: usize = <span class="number">32</span>;
         <span class="kw">static </span>NUM_BYTES: usize = OSC_BUFFER_SIZE + <span class="number">100</span>;
-        <span class="kw">static </span>INPUT_START: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]52;&quot;</span>;
-        <span class="kw">static </span>INPUT_END: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x07&quot;</span>;
+        <span class="kw">static </span>INPUT_START: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]52;"</span>;
+        <span class="kw">static </span>INPUT_END: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x07"</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser: Parser&lt;OSC_BUFFER_SIZE&gt; = Parser::new_with_size();
@@ -2084,7 +2085,7 @@
 
         <span class="comment">// Exceed max buffer size
         </span><span class="kw">for _ in </span><span class="number">0</span>..NUM_BYTES {
-            parser.advance(<span class="kw-2">&amp;mut </span>dispatcher, <span class="string">b&#39;a&#39;</span>);
+            parser.advance(<span class="kw-2">&amp;mut </span>dispatcher, <span class="string">b'a'</span>);
         }
 
         <span class="comment">// Terminate escape for dispatch
@@ -2096,22 +2097,22 @@
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Osc(params, <span class="kw">_</span>) =&gt; {
                 <span class="macro">assert_eq!</span>(params.len(), <span class="number">2</span>);
-                <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="string">b&quot;52&quot;</span>);
+                <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="string">b"52"</span>);
                 <span class="macro">assert_eq!</span>(params[<span class="number">1</span>].len(), OSC_BUFFER_SIZE - params[<span class="number">0</span>].len());
                 <span class="kw">for </span>item <span class="kw">in </span>params[<span class="number">1</span>].iter() {
-                    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>item, <span class="string">b&#39;a&#39;</span>);
+                    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>item, <span class="string">b'a'</span>);
                 }
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc sequence"</span>),
         }
     }
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;no_std&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"no_std"</span>)]
     #[test]
     </span><span class="kw">fn </span>fixed_size_osc_containing_string_terminator() {
-        <span class="kw">static </span>INPUT_START: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b]2;&quot;</span>;
-        <span class="kw">static </span>INPUT_MIDDLE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;s\xe6\x9c\xab&quot;</span>;
-        <span class="kw">static </span>INPUT_END: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;\x1b\\&quot;</span>;
+        <span class="kw">static </span>INPUT_START: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b]2;"</span>;
+        <span class="kw">static </span>INPUT_MIDDLE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"s\xe6\x9c\xab"</span>;
+        <span class="kw">static </span>INPUT_END: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"\x1b\\"</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = Dispatcher::default();
         <span class="kw">let </span><span class="kw-2">mut </span>parser: Parser&lt;<span class="number">5</span>&gt; = Parser::new_with_size();
@@ -2129,15 +2130,15 @@
         <span class="macro">assert_eq!</span>(dispatcher.dispatched.len(), <span class="number">2</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>dispatcher.dispatched[<span class="number">0</span>] {
             Sequence::Osc(params, <span class="bool-val">false</span>) =&gt; {
-                <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="string">b&quot;2&quot;</span>);
+                <span class="macro">assert_eq!</span>(params[<span class="number">0</span>], <span class="string">b"2"</span>);
                 <span class="macro">assert_eq!</span>(params[<span class="number">1</span>], INPUT_MIDDLE);
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;expected osc sequence&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"expected osc sequence"</span>),
         }
     }
 }
 
-<span class="attr">#[cfg(all(feature = <span class="string">&quot;nightly&quot;</span>, test))]
+<span class="attr">#[cfg(all(feature = <span class="string">"nightly"</span>, test))]
 </span><span class="kw">mod </span>bench {
     <span class="kw">extern crate </span>std;
     <span class="kw">extern crate </span>test;
@@ -2146,7 +2147,7 @@
 
     <span class="kw">use </span>test::{black_box, Bencher};
 
-    <span class="kw">static </span>VTE_DEMO: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">&quot;../tests/demo.vte&quot;</span>);
+    <span class="kw">static </span>VTE_DEMO: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">"../tests/demo.vte"</span>);
 
     <span class="kw">struct </span>BenchDispatcher;
     <span class="kw">impl </span>Perform <span class="kw">for </span>BenchDispatcher {
@@ -2193,7 +2194,7 @@
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>state_changes(b: <span class="kw-2">&amp;mut </span>Bencher) {
-        <span class="kw">let </span>input = <span class="string">b&quot;\x1b]2;X\x1b\\ \x1b[0m \x1bP0@\x1b\\&quot;</span>;
+        <span class="kw">let </span>input = <span class="string">b"\x1b]2;X\x1b\\ \x1b[0m \x1bP0@\x1b\\"</span>;
         b.iter(|| {
             <span class="kw">let </span><span class="kw-2">mut </span>dispatcher = BenchDispatcher;
             <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new();

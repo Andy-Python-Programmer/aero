@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Optional values."><title>aero_kernel::prelude::rust_2021::_core::option - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../aero_kernel/index.html">aero_kernel</a><span class="version">0.1.0</span></h2></div><h2 class="location"><a href="#">Module option</a></h2><div class="sidebar-elems"><section><ul class="block"><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></section><h2><a href="../index.html">In aero_kernel::prelude::rust_2021::_core</a></h2></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Module <a href="../../../../index.html">aero_kernel</a>::<wbr><a href="../../../index.html">prelude</a>::<wbr><a href="../../index.html">rust_2021</a>::<wbr><a href="../index.html">_core</a>::<wbr><a class="mod" href="#">option</a><button id="copy-path" title="Copy item path to clipboard"><img src="../../../../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><span class="since" title="Stable since Rust version 1.0.0">1.0.0</span> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Optional values.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Optional values."><title>aero_kernel::prelude::rust_2021::_core::option - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../aero_kernel/index.html">aero_kernel</a><span class="version">0.1.0</span></h2></div><h2 class="location"><a href="#">Module option</a></h2><div class="sidebar-elems"><section><ul class="block"><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></section><h2><a href="../index.html">In aero_kernel::prelude::rust_2021::_core</a></h2></div></nav><div class="sidebar-resizer"></div>
+    <main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../aero_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Module <a href="../../../../index.html">aero_kernel</a>::<wbr><a href="../../../index.html">prelude</a>::<wbr><a href="../../index.html">rust_2021</a>::<wbr><a href="../index.html">_core</a>::<wbr><a class="mod" href="#">option</a><button id="copy-path" title="Copy item path to clipboard"><img src="../../../../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><span class="since" title="Stable since Rust version 1.0.0">1.0.0</span> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Optional values.</p>
 <p>Type <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a> represents an optional value: every <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a>
 is either <a href="enum.Option.html#variant.Some" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::Some"><code>Some</code></a> and contains a value, or <a href="enum.Option.html#variant.None" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::None"><code>None</code></a>, and
 does not. <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a> types are very common in Rust code, as
@@ -32,9 +33,9 @@ of a value and take action, always accounting for the <a href="enum.Option.html#
 <span class="comment">// Pattern match to retrieve the value
 </span><span class="kw">match </span>result {
     <span class="comment">// The division was valid
-    </span><span class="prelude-val">Some</span>(x) =&gt; <span class="macro">println!</span>(<span class="string">&quot;Result: {x}&quot;</span>),
+    </span><span class="prelude-val">Some</span>(x) =&gt; <span class="macro">println!</span>(<span class="string">"Result: {x}"</span>),
     <span class="comment">// The division was invalid
-    </span><span class="prelude-val">None    </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;Cannot divide by 0&quot;</span>),
+    </span><span class="prelude-val">None    </span>=&gt; <span class="macro">println!</span>(<span class="string">"Cannot divide by 0"</span>),
 }</code></pre></div>
 <h2 id="options-and-pointers-nullable-pointers"><a href="#options-and-pointers-nullable-pointers">Options and pointers (“nullable” pointers)</a></h2>
 <p>Rust’s pointer types must always point to a valid location; there are
@@ -54,8 +55,8 @@ check_optional(optional);
 
 <span class="kw">fn </span>check_optional(optional: <span class="prelude-ty">Option</span>&lt;Box&lt;i32&gt;&gt;) {
     <span class="kw">match </span>optional {
-        <span class="prelude-val">Some</span>(p) =&gt; <span class="macro">println!</span>(<span class="string">&quot;has value {p}&quot;</span>),
-        <span class="prelude-val">None </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;has no value&quot;</span>),
+        <span class="prelude-val">Some</span>(p) =&gt; <span class="macro">println!</span>(<span class="string">"has value {p}"</span>),
+        <span class="prelude-val">None </span>=&gt; <span class="macro">println!</span>(<span class="string">"has no value"</span>),
     }
 }</code></pre></div>
 <h2 id="the-question-mark-operator-"><a href="#the-question-mark-operator-">The question mark operator, <code>?</code></a></h2>
@@ -219,8 +220,8 @@ success values (<a href="enum.Option.html#variant.Some" title="variant aero_kern
 message if it receives <a href="enum.Option.html#variant.None" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::None"><code>None</code></a>.</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span><span class="kw-2">mut </span>bt = BTreeMap::new();
-bt.insert(<span class="number">20u8</span>, <span class="string">&quot;foo&quot;</span>);
-bt.insert(<span class="number">42u8</span>, <span class="string">&quot;bar&quot;</span>);
+bt.insert(<span class="number">20u8</span>, <span class="string">"foo"</span>);
+bt.insert(<span class="number">42u8</span>, <span class="string">"bar"</span>);
 <span class="kw">let </span>res = [<span class="number">0u8</span>, <span class="number">1</span>, <span class="number">11</span>, <span class="number">200</span>, <span class="number">22</span>]
     .into_iter()
     .map(|x| {
@@ -231,13 +232,13 @@ bt.insert(<span class="number">42u8</span>, <span class="string">&quot;bar&quot;
             <span class="comment">// `BTreeMap::get` returns `None` on error
             </span>.and_then(|x| bt.get(<span class="kw-2">&amp;</span>x))
             <span class="comment">// Substitute an error message if we have `None` so far
-            </span>.or(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;error!&quot;</span>))
+            </span>.or(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"error!"</span>))
             .copied()
-            <span class="comment">// Won&#39;t panic because we unconditionally used `Some` above
+            <span class="comment">// Won't panic because we unconditionally used `Some` above
             </span>.unwrap()
     })
     .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-<span class="macro">assert_eq!</span>(res, [<span class="string">&quot;error!&quot;</span>, <span class="string">&quot;error!&quot;</span>, <span class="string">&quot;foo&quot;</span>, <span class="string">&quot;error!&quot;</span>, <span class="string">&quot;bar&quot;</span>]);</code></pre></div>
+<span class="macro">assert_eq!</span>(res, [<span class="string">"error!"</span>, <span class="string">"error!"</span>, <span class="string">"foo"</span>, <span class="string">"error!"</span>, <span class="string">"bar"</span>]);</code></pre></div>
 <h3 id="comparison-operators"><a href="#comparison-operators">Comparison operators</a></h3>
 <p>If <code>T</code> implements <a href="../cmp/trait.PartialOrd.html" title="trait aero_kernel::prelude::rust_2021::_core::cmp::PartialOrd"><code>PartialOrd</code></a> then <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option&lt;T&gt;</code></a> will derive its
 <a href="../cmp/trait.PartialOrd.html" title="trait aero_kernel::prelude::rust_2021::_core::cmp::PartialOrd"><code>PartialOrd</code></a> implementation.  With this order, <a href="enum.Option.html#variant.None" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::None"><code>None</code></a> compares as
@@ -271,7 +272,7 @@ accept other iterators will also accept iterable types that implement
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>yep = <span class="prelude-val">Some</span>(<span class="number">42</span>);
 <span class="kw">let </span>nope = <span class="prelude-val">None</span>;
-<span class="comment">// chain() already calls into_iter(), so we don&#39;t have to do so
+<span class="comment">// chain() already calls into_iter(), so we don't have to do so
 </span><span class="kw">let </span>nums: Vec&lt;i32&gt; = (<span class="number">0</span>..<span class="number">4</span>).chain(yep).chain(<span class="number">4</span>..<span class="number">8</span>).collect();
 <span class="macro">assert_eq!</span>(nums, [<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">42</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>]);
 <span class="kw">let </span>nums: Vec&lt;i32&gt; = (<span class="number">0</span>..<span class="number">4</span>).chain(nope).chain(<span class="number">4</span>..<span class="number">8</span>).collect();
@@ -287,13 +288,13 @@ concrete type. Chaining an iterated <a href="enum.Option.html" title="enum aero_
         <span class="bool-val">false </span>=&gt; <span class="kw">return </span>(<span class="number">0</span>..<span class="number">4</span>).chain(<span class="prelude-val">None</span>).chain(<span class="number">4</span>..<span class="number">8</span>),
     }
 }
-<span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, make_iter(<span class="bool-val">true</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
-<span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, make_iter(<span class="bool-val">false</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());</code></pre></div>
+<span class="macro">println!</span>(<span class="string">"{:?}"</span>, make_iter(<span class="bool-val">true</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
+<span class="macro">println!</span>(<span class="string">"{:?}"</span>, make_iter(<span class="bool-val">false</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());</code></pre></div>
 <p>If we try to do the same thing, but using <a href="../iter/fn.once.html" title="fn aero_kernel::prelude::rust_2021::_core::iter::once"><code>once()</code></a> and <a href="../iter/fn.empty.html" title="fn aero_kernel::prelude::rust_2021::_core::iter::empty"><code>empty()</code></a>,
 we can’t return <code>impl Iterator</code> anymore because the concrete types of
 the return values differ.</p>
 
-<div class="example-wrap compile_fail"><a href="#" class="tooltip" title="This example deliberately fails to compile">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="comment">// This won&#39;t compile because all possible returns from the function
+<div class="example-wrap compile_fail"><a href="#" class="tooltip" title="This example deliberately fails to compile">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="comment">// This won't compile because all possible returns from the function
 // must have the same concrete type.
 </span><span class="kw">fn </span>make_iter(do_insert: bool) -&gt; <span class="kw">impl </span>Iterator&lt;Item = i32&gt; {
     <span class="comment">// Explicit returns to illustrate return types not matching
@@ -350,37 +351,37 @@ provided value</li>
 <h2 id="examples"><a href="#examples">Examples</a></h2>
 <p>Basic pattern matching on <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a>:</p>
 
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>msg = <span class="prelude-val">Some</span>(<span class="string">&quot;howdy&quot;</span>);
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>msg = <span class="prelude-val">Some</span>(<span class="string">"howdy"</span>);
 
 <span class="comment">// Take a reference to the contained string
 </span><span class="kw">if let </span><span class="prelude-val">Some</span>(m) = <span class="kw-2">&amp;</span>msg {
-    <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, <span class="kw-2">*</span>m);
+    <span class="macro">println!</span>(<span class="string">"{}"</span>, <span class="kw-2">*</span>m);
 }
 
 <span class="comment">// Remove the contained string, destroying the Option
-</span><span class="kw">let </span>unwrapped_msg = msg.unwrap_or(<span class="string">&quot;default message&quot;</span>);</code></pre></div>
+</span><span class="kw">let </span>unwrapped_msg = msg.unwrap_or(<span class="string">"default message"</span>);</code></pre></div>
 <p>Initialize a result to <a href="enum.Option.html#variant.None" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::None"><code>None</code></a> before a loop:</p>
 
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">enum </span>Kingdom { Plant(u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str), Animal(u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) }
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">enum </span>Kingdom { Plant(u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str), Animal(u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) }
 
 <span class="comment">// A list of data to search through.
 </span><span class="kw">let </span>all_the_big_things = [
-    Kingdom::Plant(<span class="number">250</span>, <span class="string">&quot;redwood&quot;</span>),
-    Kingdom::Plant(<span class="number">230</span>, <span class="string">&quot;noble fir&quot;</span>),
-    Kingdom::Plant(<span class="number">229</span>, <span class="string">&quot;sugar pine&quot;</span>),
-    Kingdom::Animal(<span class="number">25</span>, <span class="string">&quot;blue whale&quot;</span>),
-    Kingdom::Animal(<span class="number">19</span>, <span class="string">&quot;fin whale&quot;</span>),
-    Kingdom::Animal(<span class="number">15</span>, <span class="string">&quot;north pacific right whale&quot;</span>),
+    Kingdom::Plant(<span class="number">250</span>, <span class="string">"redwood"</span>),
+    Kingdom::Plant(<span class="number">230</span>, <span class="string">"noble fir"</span>),
+    Kingdom::Plant(<span class="number">229</span>, <span class="string">"sugar pine"</span>),
+    Kingdom::Animal(<span class="number">25</span>, <span class="string">"blue whale"</span>),
+    Kingdom::Animal(<span class="number">19</span>, <span class="string">"fin whale"</span>),
+    Kingdom::Animal(<span class="number">15</span>, <span class="string">"north pacific right whale"</span>),
 ];
 
-<span class="comment">// We&#39;re going to search for the name of the biggest animal,
-// but to start with we&#39;ve just got `None`.
+<span class="comment">// We're going to search for the name of the biggest animal,
+// but to start with we've just got `None`.
 </span><span class="kw">let </span><span class="kw-2">mut </span>name_of_biggest_animal = <span class="prelude-val">None</span>;
 <span class="kw">let </span><span class="kw-2">mut </span>size_of_biggest_animal = <span class="number">0</span>;
 <span class="kw">for </span>big_thing <span class="kw">in </span><span class="kw-2">&amp;</span>all_the_big_things {
     <span class="kw">match </span><span class="kw-2">*</span>big_thing {
         Kingdom::Animal(size, name) <span class="kw">if </span>size &gt; size_of_biggest_animal =&gt; {
-            <span class="comment">// Now we&#39;ve found the name of some big animal
+            <span class="comment">// Now we've found the name of some big animal
             </span>size_of_biggest_animal = size;
             name_of_biggest_animal = <span class="prelude-val">Some</span>(name);
         }
@@ -389,7 +390,7 @@ provided value</li>
 }
 
 <span class="kw">match </span>name_of_biggest_animal {
-    <span class="prelude-val">Some</span>(name) =&gt; <span class="macro">println!</span>(<span class="string">&quot;the biggest animal is {name}&quot;</span>),
-    <span class="prelude-val">None </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;there are no animals :(&quot;</span>),
+    <span class="prelude-val">Some</span>(name) =&gt; <span class="macro">println!</span>(<span class="string">"the biggest animal is {name}"</span>),
+    <span class="prelude-val">None </span>=&gt; <span class="macro">println!</span>(<span class="string">"there are no animals :("</span>),
 }</code></pre></div>
-<div class="footnotes"><hr><ol><li id="fn1"><p>this remains true for any argument/return types and any other ABI: <code>extern &quot;abi&quot; fn</code> (<em>e.g.</em>, <code>extern &quot;system&quot; fn</code>)&nbsp;<a href="#fnref1">↩</a></p></li></ol></div></div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.IntoIter.html" title="struct aero_kernel::prelude::rust_2021::_core::option::IntoIter">IntoIter</a></div><div class="desc docblock-short">An iterator over the value in <a href="enum.Option.html#variant.Some" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::Some"><code>Some</code></a> variant of an <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a>.</div></li><li><div class="item-name"><a class="struct" href="struct.Iter.html" title="struct aero_kernel::prelude::rust_2021::_core::option::Iter">Iter</a></div><div class="desc docblock-short">An iterator over a reference to the <a href="enum.Option.html#variant.Some" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::Some"><code>Some</code></a> variant of an <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a>.</div></li><li><div class="item-name"><a class="struct" href="struct.IterMut.html" title="struct aero_kernel::prelude::rust_2021::_core::option::IterMut">IterMut</a></div><div class="desc docblock-short">An iterator over a mutable reference to the <a href="enum.Option.html#variant.Some" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::Some"><code>Some</code></a> variant of an <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a>.</div></li></ul><h2 id="enums" class="small-section-header"><a href="#enums">Enums</a></h2><ul class="item-table"><li><div class="item-name"><a class="enum" href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option">Option</a></div><div class="desc docblock-short">The <code>Option</code> type. See <a href="index.html" title="mod aero_kernel::prelude::rust_2021::_core::option">the module level documentation</a> for more.</div></li></ul></section></div></main></body></html>
+<div class="footnotes"><hr><ol><li id="fn1"><p>this remains true for any argument/return types and any other ABI: <code>extern &quot;abi&quot; fn</code> (<em>e.g.</em>, <code>extern &quot;system&quot; fn</code>)&nbsp;<a href="#fnref1">↩</a></p></li></ol></div></div></details><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.IntoIter.html" title="struct aero_kernel::prelude::rust_2021::_core::option::IntoIter">IntoIter</a></div><div class="desc docblock-short">An iterator over the value in <a href="enum.Option.html#variant.Some" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::Some"><code>Some</code></a> variant of an <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a>.</div></li><li><div class="item-name"><a class="struct" href="struct.Iter.html" title="struct aero_kernel::prelude::rust_2021::_core::option::Iter">Iter</a></div><div class="desc docblock-short">An iterator over a reference to the <a href="enum.Option.html#variant.Some" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::Some"><code>Some</code></a> variant of an <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a>.</div></li><li><div class="item-name"><a class="struct" href="struct.IterMut.html" title="struct aero_kernel::prelude::rust_2021::_core::option::IterMut">IterMut</a></div><div class="desc docblock-short">An iterator over a mutable reference to the <a href="enum.Option.html#variant.Some" title="variant aero_kernel::prelude::rust_2021::_core::option::Option::Some"><code>Some</code></a> variant of an <a href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a>.</div></li></ul><h2 id="enums" class="section-header"><a href="#enums">Enums</a></h2><ul class="item-table"><li><div class="item-name"><a class="enum" href="enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option">Option</a></div><div class="desc docblock-short">The <code>Option</code> type. See <a href="index.html" title="mod aero_kernel::prelude::rust_2021::_core::option">the module level documentation</a> for more.</div></li></ul></section></div></main></body></html>

@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/userland/vm.rs`."><title>vm.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/userland/vm.rs`."><title>vm.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1286,7 +1287,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::syscall::ExecArgs;
 <span class="kw">use </span><span class="kw">crate</span>::utils::sync::BMutex;
 
-<span class="kw">const </span>ELF_HEADER_MAGIC: [u8; <span class="number">4</span>] = [<span class="number">0x7f</span>, <span class="string">b&#39;E&#39;</span>, <span class="string">b&#39;L&#39;</span>, <span class="string">b&#39;F&#39;</span>];
+<span class="kw">const </span>ELF_HEADER_MAGIC: [u8; <span class="number">4</span>] = [<span class="number">0x7f</span>, <span class="string">b'E'</span>, <span class="string">b'L'</span>, <span class="string">b'F'</span>];
 
 <span class="kw">const </span>ELF_PT1_SIZE: usize = core::mem::size_of::&lt;HeaderPt1&gt;();
 <span class="kw">const </span>ELF_PT2_64_SIZE: usize = core::mem::size_of::&lt;HeaderPt2_&lt;P64&gt;&gt;();
@@ -1306,7 +1307,7 @@
     </span>MemoryMapError,
 }
 
-<span class="kw">fn </span>parse_elf_header&lt;<span class="lifetime">&#39;header</span>&gt;(file: DirCacheItem) -&gt; <span class="prelude-ty">Result</span>&lt;Header&lt;<span class="lifetime">&#39;header</span>&gt;, ElfLoadError&gt; {
+<span class="kw">fn </span>parse_elf_header&lt;<span class="lifetime">'header</span>&gt;(file: DirCacheItem) -&gt; <span class="prelude-ty">Result</span>&lt;Header&lt;<span class="lifetime">'header</span>&gt;, ElfLoadError&gt; {
     <span class="comment">// 1. Read the ELF PT1 header:
     </span><span class="kw">let </span>pt1_hdr_slice = Box::leak(mem::alloc_boxed_buffer::&lt;u8&gt;(ELF_PT1_SIZE));
 
@@ -1314,7 +1315,7 @@
         .read_at(<span class="number">0</span>, pt1_hdr_slice)
         .map_err(ElfLoadError::IOError)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>pt1_header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;header </span><span class="kw">_ </span>= <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(pt1_hdr_slice.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>HeaderPt1) };
+    <span class="kw">let </span>pt1_header: <span class="kw-2">&amp;</span><span class="lifetime">'header </span><span class="kw">_ </span>= <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(pt1_hdr_slice.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>HeaderPt1) };
 
     <span class="comment">// 2. Ensure that the header has the correct magic number:
     </span><span class="kw">if </span>pt1_header.magic != ELF_HEADER_MAGIC {
@@ -1331,14 +1332,14 @@
                 .map_err(ElfLoadError::IOError)<span class="question-mark">?</span>;
 
             <span class="kw">let </span>pt2_header_ptr = pt2_hdr_slice.as_ptr();
-            <span class="kw">let </span>pt2_header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;header </span><span class="kw">_ </span>= <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(pt2_header_ptr <span class="kw">as </span><span class="kw-2">*const </span>HeaderPt2_&lt;P64&gt;) };
+            <span class="kw">let </span>pt2_header: <span class="kw-2">&amp;</span><span class="lifetime">'header </span><span class="kw">_ </span>= <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(pt2_header_ptr <span class="kw">as </span><span class="kw-2">*const </span>HeaderPt2_&lt;P64&gt;) };
 
             <span class="prelude-val">Ok</span>(HeaderPt2::Header64(pt2_header))
         }
 
         <span class="comment">// 3. Read the 32-bit PT2 header:
         </span>Class::ThirtyTwo =&gt; {
-            <span class="macro">unimplemented!</span>(<span class="string">&quot;parse_elf_header: 32-bit executables are not implemented&quot;</span>)
+            <span class="macro">unimplemented!</span>(<span class="string">"parse_elf_header: 32-bit executables are not implemented"</span>)
         }
 
         <span class="comment">// SAFETY: ensure the PT1 header has a valid class.
@@ -1351,11 +1352,11 @@
     })
 }
 
-<span class="kw">fn </span>parse_program_header&lt;<span class="lifetime">&#39;pheader</span>&gt;(
+<span class="kw">fn </span>parse_program_header&lt;<span class="lifetime">'pheader</span>&gt;(
     file: DirCacheItem,
-    header: Header&lt;<span class="lifetime">&#39;pheader</span>&gt;,
+    header: Header&lt;<span class="lifetime">'pheader</span>&gt;,
     index: u16,
-) -&gt; <span class="prelude-ty">Result</span>&lt;ProgramHeader&lt;<span class="lifetime">&#39;pheader</span>&gt;, ElfLoadError&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;ProgramHeader&lt;<span class="lifetime">'pheader</span>&gt;, ElfLoadError&gt; {
     <span class="kw">let </span>pt2 = <span class="kw-2">&amp;</span>header.pt2;
 
     <span class="comment">// SAFETY: ensure that the provided program header index is valid.
@@ -1379,13 +1380,13 @@
     <span class="kw">match </span>header.pt1.class() {
         <span class="comment">// 3. Cast and return the 64-bit program header:
         </span>Class::SixtyFour =&gt; {
-            <span class="kw">let </span>phdr: <span class="kw-2">&amp;</span><span class="lifetime">&#39;pheader </span><span class="kw">_ </span>= <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(phdr_ptr <span class="kw">as </span><span class="kw-2">*const </span>ProgramHeader64) };
+            <span class="kw">let </span>phdr: <span class="kw-2">&amp;</span><span class="lifetime">'pheader </span><span class="kw">_ </span>= <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(phdr_ptr <span class="kw">as </span><span class="kw-2">*const </span>ProgramHeader64) };
             <span class="prelude-val">Ok</span>(ProgramHeader::Ph64(phdr))
         }
 
         <span class="comment">// 3. Cast and return the 32-bit program header:
         </span>Class::ThirtyTwo =&gt; {
-            <span class="kw">let </span>phdr: <span class="kw-2">&amp;</span><span class="lifetime">&#39;pheader </span><span class="kw">_ </span>= <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(phdr_ptr <span class="kw">as </span><span class="kw-2">*const </span>ProgramHeader32) };
+            <span class="kw">let </span>phdr: <span class="kw-2">&amp;</span><span class="lifetime">'pheader </span><span class="kw">_ </span>= <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(phdr_ptr <span class="kw">as </span><span class="kw-2">*const </span>ProgramHeader32) };
             <span class="prelude-val">Ok</span>(ProgramHeader::Ph32(phdr))
         }
 
@@ -1420,7 +1421,7 @@
         .read_at(<span class="number">0</span>, shebang)
         .map_err(ElfLoadError::IOError)<span class="question-mark">?</span>;
 
-    <span class="prelude-val">Ok</span>(shebang[<span class="number">0</span>] == <span class="string">b&#39;#&#39; </span>&amp;&amp; shebang[<span class="number">1</span>] == <span class="string">b&#39;!&#39;</span>)
+    <span class="prelude-val">Ok</span>(shebang[<span class="number">0</span>] == <span class="string">b'#' </span>&amp;&amp; shebang[<span class="number">1</span>] == <span class="string">b'!'</span>)
 }
 
 <span class="kw">fn </span>parse_shebang(bin: DirCacheItem) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Shebang&gt;, ElfLoadError&gt; {
@@ -1442,7 +1443,7 @@
     };
 
     <span class="comment">// 1. check for the optional whitespace (ignore it):
-    </span><span class="kw">if </span>read_at_index(idx)<span class="question-mark">? </span>== <span class="string">&#39; &#39; </span>{
+    </span><span class="kw">if </span>read_at_index(idx)<span class="question-mark">? </span>== <span class="string">' ' </span>{
         idx += <span class="number">1</span>;
     }
 
@@ -1454,17 +1455,17 @@
     </span><span class="kw">loop </span>{
         <span class="kw">let </span>char = read_at_index(idx)<span class="question-mark">?</span>;
 
-        <span class="kw">if </span>char == <span class="string">&#39; &#39; </span>{
+        <span class="kw">if </span>char == <span class="string">' ' </span>{
             idx += <span class="number">1</span>;
             <span class="kw">break</span>;
-        } <span class="kw">else if </span>char == <span class="string">&#39;\n&#39; </span>{
+        } <span class="kw">else if </span>char == <span class="string">'\n' </span>{
             <span class="comment">// there is no argument, early return:
             </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Shebang::new(path, arg)<span class="question-mark">?</span>));
         }
 
         idx += <span class="number">1</span>;
         path.write_char(char)
-            .expect(<span class="string">&quot;parse_shebang: internal error&quot;</span>);
+            .expect(<span class="string">"parse_shebang: internal error"</span>);
     }
 
     <span class="comment">// 3. parse the argument:
@@ -1472,38 +1473,38 @@
         <span class="kw">let </span>char = read_at_index(idx)<span class="question-mark">?</span>;
         idx += <span class="number">1</span>;
 
-        <span class="kw">if </span>char == <span class="string">&#39;\n&#39; </span>|| char == <span class="string">&#39; &#39; </span>{
+        <span class="kw">if </span>char == <span class="string">'\n' </span>|| char == <span class="string">' ' </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Shebang::new(path, arg)<span class="question-mark">?</span>));
         }
 
-        arg.write_char(char).expect(<span class="string">&quot;parse_shebang: internal error&quot;</span>);
+        arg.write_char(char).expect(<span class="string">"parse_shebang: internal error"</span>);
     }
 }
 
-<span class="kw">pub struct </span>Elf&lt;<span class="lifetime">&#39;this</span>&gt; {
-    <span class="kw">pub </span>header: Header&lt;<span class="lifetime">&#39;this</span>&gt;,
+<span class="kw">pub struct </span>Elf&lt;<span class="lifetime">'this</span>&gt; {
+    <span class="kw">pub </span>header: Header&lt;<span class="lifetime">'this</span>&gt;,
     <span class="kw">pub </span>file: DirCacheItem,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;this</span>&gt; Elf&lt;<span class="lifetime">&#39;this</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'this</span>&gt; Elf&lt;<span class="lifetime">'this</span>&gt; {
     <span class="kw">fn </span>new(file: DirCacheItem) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ElfLoadError&gt; {
         <span class="kw">let </span>header = parse_elf_header(file.clone())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ header, file })
     }
 
-    <span class="kw">fn </span>program_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ProgramHeaderIter&lt;<span class="lifetime">&#39;this</span>&gt; {
+    <span class="kw">fn </span>program_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ProgramHeaderIter&lt;<span class="lifetime">'this</span>&gt; {
         ProgramHeaderIter::new(<span class="self">self</span>.header, <span class="self">self</span>.file.clone())
     }
 }
 
-<span class="kw">struct </span>ProgramHeaderIter&lt;<span class="lifetime">&#39;this</span>&gt; {
+<span class="kw">struct </span>ProgramHeaderIter&lt;<span class="lifetime">'this</span>&gt; {
     file: DirCacheItem,
-    header: Header&lt;<span class="lifetime">&#39;this</span>&gt;,
+    header: Header&lt;<span class="lifetime">'this</span>&gt;,
     next_index: usize,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;this</span>&gt; ProgramHeaderIter&lt;<span class="lifetime">&#39;this</span>&gt; {
-    <span class="kw">fn </span>new(header: Header&lt;<span class="lifetime">&#39;this</span>&gt;, file: DirCacheItem) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'this</span>&gt; ProgramHeaderIter&lt;<span class="lifetime">'this</span>&gt; {
+    <span class="kw">fn </span>new(header: Header&lt;<span class="lifetime">'this</span>&gt;, file: DirCacheItem) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             file,
             header,
@@ -1513,8 +1514,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;this</span>&gt; Iterator <span class="kw">for </span>ProgramHeaderIter&lt;<span class="lifetime">&#39;this</span>&gt; {
-    <span class="kw">type </span>Item = ProgramHeader&lt;<span class="lifetime">&#39;this</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'this</span>&gt; Iterator <span class="kw">for </span>ProgramHeaderIter&lt;<span class="lifetime">'this</span>&gt; {
+    <span class="kw">type </span>Item = ProgramHeader&lt;<span class="lifetime">'this</span>&gt;;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>count = <span class="self">self</span>.header.pt2.ph_count() <span class="kw">as </span>usize;
@@ -1558,8 +1559,8 @@
     End,
 }
 
-<span class="kw">pub struct </span>LoadedBinary&lt;<span class="lifetime">&#39;header</span>&gt; {
-    <span class="kw">pub </span>elf: Elf&lt;<span class="lifetime">&#39;header</span>&gt;,
+<span class="kw">pub struct </span>LoadedBinary&lt;<span class="lifetime">'header</span>&gt; {
+    <span class="kw">pub </span>elf: Elf&lt;<span class="lifetime">'header</span>&gt;,
 
     <span class="kw">pub </span>entry_point: VirtAddr,
     <span class="kw">pub </span>base_addr: VirtAddr,
@@ -1621,7 +1622,7 @@
                         | <span class="self">self</span>.protection.into(),
                 )
             }
-            .expect(<span class="string">&quot;Failed to identity map userspace private mapping&quot;</span>)
+            .expect(<span class="string">"Failed to identity map userspace private mapping"</span>)
             .flush();
 
             <span class="bool-val">true
@@ -1679,7 +1680,7 @@
                     .file
                     .inode()
                     .mmap(offset <span class="kw">as _</span>, size <span class="kw">as _</span>, <span class="self">self</span>.flags)
-                    .expect(<span class="string">&quot;handle_pf_file: file does not support mmap&quot;</span>);
+                    .expect(<span class="string">"handle_pf_file: file does not support mmap"</span>);
 
                 <span class="kw">let </span><span class="kw-2">mut </span>flags = PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE
@@ -1690,14 +1691,14 @@
                 // }
 
                 </span><span class="kw">unsafe </span>{ offset_table.map_to(Page::containing_address(address), frame, flags) }
-                    .expect(<span class="string">&quot;failed to map allocated frame for private file read&quot;</span>)
+                    .expect(<span class="string">"failed to map allocated frame for private file read"</span>)
                     .flush();
 
                 <span class="bool-val">true
             </span>} <span class="kw">else if </span>reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
                 <span class="self">self</span>.handle_cow(offset_table, address, <span class="bool-val">true</span>)
             } <span class="kw">else </span>{
-                <span class="macro">log::error!</span>(<span class="string">&quot;    - present page read failed&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"    - present page read failed"</span>);
                 <span class="bool-val">false
             </span>}
         } <span class="kw">else </span>{
@@ -1715,7 +1716,7 @@
         <span class="comment">// Allocate a new frame to hold the contents.
         </span><span class="kw">let </span>new_frame: PhysFrame&lt;Size4KiB&gt; = FRAME_ALLOCATOR
             .allocate_frame()
-            .expect(<span class="string">&quot;map_copied: failed to allocate frame&quot;</span>);
+            .expect(<span class="string">"map_copied: failed to allocate frame"</span>);
 
         <span class="kw">let </span>old_slice = <span class="kw">unsafe </span>{
             <span class="kw">let </span>ptr = page.start_address().as_ptr::&lt;u8&gt;();
@@ -1944,10 +1945,10 @@
                     map.handle_pf_file(<span class="kw-2">&amp;mut </span>offset_table, reason, accessed_address)
                 }
 
-                (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;shared and anonymous mapping&quot;</span>),
+                (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">unreachable!</span>(<span class="string">"shared and anonymous mapping"</span>),
             }
         } <span class="kw">else </span>{
-            <span class="macro">log::trace!</span>(<span class="string">&quot;mapping not found for address: {:#x}&quot;</span>, accessed_address);
+            <span class="macro">log::trace!</span>(<span class="string">"mapping not found for address: {:#x}"</span>, accessed_address);
 
             <span class="comment">// else the mapping does not exist, so return false.
             </span><span class="bool-val">false
@@ -2034,29 +2035,29 @@
 
         <span class="comment">// Offset is required to be a multiple of page size.
         </span><span class="kw">if </span>(offset <span class="kw">as </span>u64 &amp; (Size4KiB::SIZE - <span class="number">1</span>)) != <span class="number">0 </span>{
-            <span class="macro">log::warn!</span>(<span class="string">&quot;mmap: offset is not a multiple of page size&quot;</span>);
+            <span class="macro">log::warn!</span>(<span class="string">"mmap: offset is not a multiple of page size"</span>);
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
 
         <span class="comment">// The provided size should be non-zero.
         </span><span class="kw">if </span>size == <span class="number">0 </span>{
-            <span class="macro">log::warn!</span>(<span class="string">&quot;mmap: size is zero&quot;</span>);
+            <span class="macro">log::warn!</span>(<span class="string">"mmap: size is zero"</span>);
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
 
         <span class="kw">if </span>file.is_some() {
             <span class="kw">if </span>flags.contains(MMapFlags::MAP_ANONYOMUS) {
-                <span class="macro">log::warn!</span>(<span class="string">&quot;mmap: cannot map a file with the anonymous flag&quot;</span>);
+                <span class="macro">log::warn!</span>(<span class="string">"mmap: cannot map a file with the anonymous flag"</span>);
                 <span class="kw">return </span><span class="prelude-val">None</span>;
             }
         } <span class="kw">else </span>{
             <span class="kw">if </span>!flags.contains(MMapFlags::MAP_ANONYOMUS) {
-                <span class="macro">log::warn!</span>(<span class="string">&quot;mmap: mappings not backed by a file cannot be anonymous&quot;</span>);
+                <span class="macro">log::warn!</span>(<span class="string">"mmap: mappings not backed by a file cannot be anonymous"</span>);
                 <span class="kw">return </span><span class="prelude-val">None</span>;
             }
 
             <span class="kw">if </span>flags.contains(MMapFlags::MAP_SHARED) {
-                <span class="macro">log::warn!</span>(<span class="string">&quot;mmap: anonymous mappings cannot be shared&quot;</span>);
+                <span class="macro">log::warn!</span>(<span class="string">"mmap: anonymous mappings cannot be shared"</span>);
                 <span class="kw">return </span><span class="prelude-val">None</span>;
             }
         }
@@ -2069,12 +2070,12 @@
         } <span class="kw">else if </span>flags.contains(MMapFlags::MAP_FIXED) {
             <span class="comment">// SAFETY: The provided address should be page aligned.
             </span><span class="kw">if </span>!address.is_aligned(Size4KiB::SIZE) {
-                <span class="macro">log::warn!</span>(<span class="string">&quot;mmap: fixed mapping address is not page aligned&quot;</span>);
+                <span class="macro">log::warn!</span>(<span class="string">"mmap: fixed mapping address is not page aligned"</span>);
                 <span class="kw">return </span><span class="prelude-val">None</span>;
             }
 
             <span class="kw">if </span>(address + size_aligned) &gt; userland_last_address() {
-                <span class="macro">log::warn!</span>(<span class="string">&quot;mmap: fixed mapping address is out of range&quot;</span>);
+                <span class="macro">log::warn!</span>(<span class="string">"mmap: fixed mapping address is out of range"</span>);
                 <span class="kw">return </span><span class="prelude-val">None</span>;
             }
 
@@ -2112,7 +2113,7 @@
         });
 
         <span class="kw">if </span>x.is_none() {
-            <span class="macro">log::warn!</span>(<span class="string">&quot;mmap failed&quot;</span>);
+            <span class="macro">log::warn!</span>(<span class="string">"mmap failed"</span>);
             <span class="self">self</span>.log();
 
             <span class="macro">dbg!</span>(
@@ -2134,7 +2135,7 @@
         <span class="kw">for </span>mmap <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.mappings {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(file) = mmap.file.as_ref() {
                 <span class="macro">log::debug!</span>(
-                    <span class="string">&quot;{:?}..{:?} =&gt; {:?}, {:?} (offset={:#x}, size={:#x})&quot;</span>,
+                    <span class="string">"{:?}..{:?} =&gt; {:?}, {:?} (offset={:#x}, size={:#x})"</span>,
                     mmap.start_addr,
                     mmap.end_addr,
                     mmap.protection,
@@ -2144,7 +2145,7 @@
                 );
             } <span class="kw">else </span>{
                 <span class="macro">log::debug!</span>(
-                    <span class="string">&quot;{:?}..{:?} =&gt; {:?}, {:?}&quot;</span>,
+                    <span class="string">"{:?}..{:?} =&gt; {:?}, {:?}"</span>,
                     mmap.start_addr,
                     mmap.end_addr,
                     mmap.protection,
@@ -2154,16 +2155,16 @@
         }
     }
 
-    <span class="kw">fn </span>load_bin&lt;<span class="lifetime">&#39;header</span>&gt;(
+    <span class="kw">fn </span>load_bin&lt;<span class="lifetime">'header</span>&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         bin: DirCacheItem,
         argv: <span class="prelude-ty">Option</span>&lt;ExecArgs&gt;,
         envv: <span class="prelude-ty">Option</span>&lt;ExecArgs&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;LoadedBinary&lt;<span class="lifetime">&#39;header</span>&gt;, ElfLoadError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;LoadedBinary&lt;<span class="lifetime">'header</span>&gt;, ElfLoadError&gt; {
         <span class="comment">// check for a shebang before proceeding.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(shebang) = parse_shebang(bin.clone())<span class="question-mark">? </span>{
             <span class="macro">log::debug!</span>(
-                <span class="string">&quot;shebang: (interpreter={}, argument={})&quot;</span>,
+                <span class="string">"shebang: (interpreter={}, argument={})"</span>,
                 shebang.interpreter.absolute_path_str(),
                 shebang.argument
             );
@@ -2198,15 +2199,15 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>entry_point = load_offset + header.pt2.entry_point();
 
-        <span class="macro">log::debug!</span>(<span class="string">&quot;entry point: {:#x}&quot;</span>, entry_point);
-        <span class="macro">log::debug!</span>(<span class="string">&quot;entry point type: {:?}&quot;</span>, header.pt2.type_().as_type());
+        <span class="macro">log::debug!</span>(<span class="string">"entry point: {:#x}"</span>, entry_point);
+        <span class="macro">log::debug!</span>(<span class="string">"entry point type: {:?}"</span>, header.pt2.type_().as_type());
 
         <span class="kw">let </span><span class="kw-2">mut </span>base_addr = VirtAddr::zero();
 
         <span class="kw">for </span>header <span class="kw">in </span>elf.program_iter() {
             <span class="kw">let </span>header_type = header
                 .get_type()
-                .expect(<span class="string">&quot;load_bin: failed to get program header type&quot;</span>);
+                .expect(<span class="string">"load_bin: failed to get program header type"</span>);
 
             <span class="kw">let </span>header_flags = header.flags();
 
@@ -2248,7 +2249,7 @@
                 </span><span class="comment">// The last non-bss frame of the segment consists partly of data and partly of bss
                 // memory, which must be zeroed. Unfortunately, the file representation might have
                 // reused the part of the frame that should be zeroed to store the next segment. This
-                // means that we can&#39;t simply overwrite that part with zeroes, as we might overwrite
+                // means that we can't simply overwrite that part with zeroes, as we might overwrite
                 // other data this way.
                 //
                 // Example:
@@ -2259,14 +2260,14 @@
                 //  |·············|/·····/‾‾‾   /·········/
                 //  |·············||·····|/·̅·̅·̅·̅·̅·····/‾‾‾‾
                 //  XXXXXXXXXXXXXXXYYYYYYYZZZZZZZZZZZ              file memory (zeros are not saved)
-                //  &#39;       &#39;       &#39;       &#39;        &#39;
+                //  '       '       '       '        '
                 //  The areas filled with dots (`·`) indicate a mapping between virtual and file
                 //  memory. We see that the data regions `X`, `Y`, `Z` have a valid mapping, while
                 //  the regions that are initialized with 0 have not.
                 //
-                //  The ticks (`&#39;`) below the file memory line indicate the start of a new frame. We
+                //  The ticks (`'`) below the file memory line indicate the start of a new frame. We
                 //  see that the last frames of the `X` and `Y` regions in the file are followed
-                //  by the bytes of the next region. So we can&#39;t zero these parts of the frame
+                //  by the bytes of the next region. So we can't zero these parts of the frame
                 //  because they are needed by other memory regions.
                 </span><span class="kw">let </span>address = <span class="self">self
                     </span>.mmap(
@@ -2296,7 +2297,7 @@
                 }
             } <span class="kw">else if </span>header_type == xmas_elf::program::Type::Tls {
             } <span class="kw">else if </span>header_type == xmas_elf::program::Type::Interp {
-                <span class="kw">let </span>ld = fs::lookup_path(fs::Path::new(<span class="string">&quot;/usr/lib/ld.so&quot;</span>)).unwrap();
+                <span class="kw">let </span>ld = fs::lookup_path(fs::Path::new(<span class="string">"/usr/lib/ld.so"</span>)).unwrap();
 
                 <span class="kw">let </span>res = <span class="self">self</span>.load_bin(ld, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
                 entry_point = res.entry_point;

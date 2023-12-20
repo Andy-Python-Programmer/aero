@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/lru-0.11.1/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="lru" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/lru-0.11.1/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="lru" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -2227,7 +2228,7 @@
 // Copyright (c) 2016 Jerome Froelich
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the &quot;Software&quot;), to deal
+// of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -2236,7 +2237,7 @@
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
 
-// THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -2246,7 +2247,7 @@
 
 </span><span class="doccomment">//! An implementation of a LRU cache. The cache supports `get`, `get_mut`, `put`,
 //! and `pop` operations, all of which are O(1). This crate was heavily influenced
-//! by the [LRU Cache implementation in an earlier version of Rust&#39;s std::collections crate](https://doc.rust-lang.org/0.12.0/std/collections/lru_cache/struct.LruCache.html).
+//! by the [LRU Cache implementation in an earlier version of Rust's std::collections crate](https://doc.rust-lang.org/0.12.0/std/collections/lru_cache/struct.LruCache.html).
 //!
 //! ## Example
 //!
@@ -2258,32 +2259,32 @@
 //!
 //! fn main() {
 //!         let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
-//!         cache.put(&quot;apple&quot;, 3);
-//!         cache.put(&quot;banana&quot;, 2);
+//!         cache.put("apple", 3);
+//!         cache.put("banana", 2);
 //!
-//!         assert_eq!(*cache.get(&amp;&quot;apple&quot;).unwrap(), 3);
-//!         assert_eq!(*cache.get(&amp;&quot;banana&quot;).unwrap(), 2);
-//!         assert!(cache.get(&amp;&quot;pear&quot;).is_none());
+//!         assert_eq!(*cache.get(&amp;"apple").unwrap(), 3);
+//!         assert_eq!(*cache.get(&amp;"banana").unwrap(), 2);
+//!         assert!(cache.get(&amp;"pear").is_none());
 //!
-//!         assert_eq!(cache.put(&quot;banana&quot;, 4), Some(2));
-//!         assert_eq!(cache.put(&quot;pear&quot;, 5), None);
+//!         assert_eq!(cache.put("banana", 4), Some(2));
+//!         assert_eq!(cache.put("pear", 5), None);
 //!
-//!         assert_eq!(*cache.get(&amp;&quot;pear&quot;).unwrap(), 5);
-//!         assert_eq!(*cache.get(&amp;&quot;banana&quot;).unwrap(), 4);
-//!         assert!(cache.get(&amp;&quot;apple&quot;).is_none());
+//!         assert_eq!(*cache.get(&amp;"pear").unwrap(), 5);
+//!         assert_eq!(*cache.get(&amp;"banana").unwrap(), 4);
+//!         assert!(cache.get(&amp;"apple").is_none());
 //!
 //!         {
-//!             let v = cache.get_mut(&amp;&quot;banana&quot;).unwrap();
+//!             let v = cache.get_mut(&amp;"banana").unwrap();
 //!             *v = 6;
 //!         }
 //!
-//!         assert_eq!(*cache.get(&amp;&quot;banana&quot;).unwrap(), 6);
+//!         assert_eq!(*cache.get(&amp;"banana").unwrap(), 6);
 //! }
 //! ```
 
 </span><span class="attr">#![no_std]
 
-#[cfg(feature = <span class="string">&quot;hashbrown&quot;</span>)]
+#[cfg(feature = <span class="string">"hashbrown"</span>)]
 </span><span class="kw">extern crate </span>hashbrown;
 
 <span class="attr">#[cfg(test)]
@@ -2300,12 +2301,12 @@
 <span class="kw">use </span>core::ptr::{<span class="self">self</span>, NonNull};
 <span class="kw">use </span>core::usize;
 
-<span class="attr">#[cfg(any(test, not(feature = <span class="string">&quot;hashbrown&quot;</span>)))]
+<span class="attr">#[cfg(any(test, not(feature = <span class="string">"hashbrown"</span>)))]
 </span><span class="kw">extern crate </span>std;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;hashbrown&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"hashbrown"</span>)]
 </span><span class="kw">use </span>hashbrown::HashMap;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;hashbrown&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"hashbrown"</span>))]
 </span><span class="kw">use </span>std::collections::HashMap;
 
 <span class="kw">extern crate </span>alloc;
@@ -2329,7 +2330,7 @@
 
 <span class="kw">impl</span>&lt;K: Eq&gt; Eq <span class="kw">for </span>KeyRef&lt;K&gt; {}
 
-<span class="comment">// This type exists to allow a &quot;blanket&quot; Borrow impl for KeyRef without conflicting with the
+<span class="comment">// This type exists to allow a "blanket" Borrow impl for KeyRef without conflicting with the
 //  stdlib blanket impl
 </span><span class="attr">#[repr(transparent)]
 </span><span class="kw">struct </span>KeyWrapper&lt;K: <span class="question-mark">?</span>Sized&gt;(K);
@@ -2395,9 +2396,9 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;hashbrown&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"hashbrown"</span>)]
 </span><span class="kw">pub type </span>DefaultHasher = hashbrown::hash_map::DefaultHashBuilder;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;hashbrown&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"hashbrown"</span>))]
 </span><span class="kw">pub type </span>DefaultHasher = std::collections::hash_map::RandomState;
 
 <span class="doccomment">/// An LRU Cache
@@ -2499,7 +2500,7 @@
     }
 
     <span class="doccomment">/// Puts a key-value pair into cache. If the key already exists in the cache, then it updates
-    /// the key&#39;s value and returns the old value. Otherwise, `None` is returned.
+    /// the key's value and returns the old value. Otherwise, `None` is returned.
     ///
     /// # Example
     ///
@@ -2508,20 +2509,20 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// assert_eq!(None, cache.put(1, &quot;a&quot;));
-    /// assert_eq!(None, cache.put(2, &quot;b&quot;));
-    /// assert_eq!(Some(&quot;b&quot;), cache.put(2, &quot;beta&quot;));
+    /// assert_eq!(None, cache.put(1, "a"));
+    /// assert_eq!(None, cache.put(2, "b"));
+    /// assert_eq!(Some("b"), cache.put(2, "beta"));
     ///
-    /// assert_eq!(cache.get(&amp;1), Some(&amp;&quot;a&quot;));
-    /// assert_eq!(cache.get(&amp;2), Some(&amp;&quot;beta&quot;));
+    /// assert_eq!(cache.get(&amp;1), Some(&amp;"a"));
+    /// assert_eq!(cache.get(&amp;2), Some(&amp;"beta"));
     /// ```
     </span><span class="kw">pub fn </span>put(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: K, v: V) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
         <span class="self">self</span>.capturing_put(k, v, <span class="bool-val">false</span>).map(|(<span class="kw">_</span>, v)| v)
     }
 
     <span class="doccomment">/// Pushes a key-value pair into the cache. If an entry with key `k` already exists in
-    /// the cache or another cache entry is removed (due to the lru&#39;s capacity),
-    /// then it returns the old entry&#39;s key-value pair. Otherwise, returns `None`.
+    /// the cache or another cache entry is removed (due to the lru's capacity),
+    /// then it returns the old entry's key-value pair. Otherwise, returns `None`.
     ///
     /// # Example
     ///
@@ -2530,25 +2531,25 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// assert_eq!(None, cache.push(1, &quot;a&quot;));
-    /// assert_eq!(None, cache.push(2, &quot;b&quot;));
+    /// assert_eq!(None, cache.push(1, "a"));
+    /// assert_eq!(None, cache.push(2, "b"));
     ///
-    /// // This push call returns (2, &quot;b&quot;) because that was previously 2&#39;s entry in the cache.
-    /// assert_eq!(Some((2, &quot;b&quot;)), cache.push(2, &quot;beta&quot;));
+    /// // This push call returns (2, "b") because that was previously 2's entry in the cache.
+    /// assert_eq!(Some((2, "b")), cache.push(2, "beta"));
     ///
-    /// // This push call returns (1, &quot;a&quot;) because the cache is at capacity and 1&#39;s entry was the lru entry.
-    /// assert_eq!(Some((1, &quot;a&quot;)), cache.push(3, &quot;alpha&quot;));
+    /// // This push call returns (1, "a") because the cache is at capacity and 1's entry was the lru entry.
+    /// assert_eq!(Some((1, "a")), cache.push(3, "alpha"));
     ///
     /// assert_eq!(cache.get(&amp;1), None);
-    /// assert_eq!(cache.get(&amp;2), Some(&amp;&quot;beta&quot;));
-    /// assert_eq!(cache.get(&amp;3), Some(&amp;&quot;alpha&quot;));
+    /// assert_eq!(cache.get(&amp;2), Some(&amp;"beta"));
+    /// assert_eq!(cache.get(&amp;3), Some(&amp;"alpha"));
     /// ```
     </span><span class="kw">pub fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: K, v: V) -&gt; <span class="prelude-ty">Option</span>&lt;(K, V)&gt; {
         <span class="self">self</span>.capturing_put(k, v, <span class="bool-val">true</span>)
     }
 
     <span class="comment">// Used internally by `put` and `push` to add a new entry to the lru.
-    // Takes ownership of and returns entries replaced due to the cache&#39;s capacity
+    // Takes ownership of and returns entries replaced due to the cache's capacity
     // when `capture` is true.
     </span><span class="kw">fn </span>capturing_put(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: K, <span class="kw-2">mut </span>v: V, capture: bool) -&gt; <span class="prelude-ty">Option</span>&lt;(K, V)&gt; {
         <span class="kw">let </span>node_ref = <span class="self">self</span>.map.get_mut(<span class="kw-2">&amp;</span>KeyRef { k: <span class="kw-2">&amp;</span>k });
@@ -2594,7 +2595,7 @@
             <span class="kw">let </span>old_node = <span class="self">self</span>.map.remove(<span class="kw-2">&amp;</span>old_key).unwrap();
             <span class="kw">let </span>node_ptr: <span class="kw-2">*mut </span>LruEntry&lt;K, V&gt; = old_node.as_ptr();
 
-            <span class="comment">// read out the node&#39;s old key and value and then replace it
+            <span class="comment">// read out the node's old key and value and then replace it
             </span><span class="kw">let </span>replaced = <span class="kw">unsafe </span>{
                 (
                     mem::replace(<span class="kw-2">&amp;mut </span>(<span class="kw-2">*</span>node_ptr).key, mem::MaybeUninit::new(k)).assume_init(),
@@ -2624,16 +2625,16 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
-    /// cache.put(2, &quot;c&quot;);
-    /// cache.put(3, &quot;d&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
+    /// cache.put(2, "c");
+    /// cache.put(3, "d");
     ///
     /// assert_eq!(cache.get(&amp;1), None);
-    /// assert_eq!(cache.get(&amp;2), Some(&amp;&quot;c&quot;));
-    /// assert_eq!(cache.get(&amp;3), Some(&amp;&quot;d&quot;));
+    /// assert_eq!(cache.get(&amp;2), Some(&amp;"c"));
+    /// assert_eq!(cache.get(&amp;3), Some(&amp;"d"));
     /// ```
-    </span><span class="kw">pub fn </span>get&lt;<span class="lifetime">&#39;a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V&gt;
+    </span><span class="kw">pub fn </span>get&lt;<span class="lifetime">'a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>V&gt;
     <span class="kw">where
         </span>K: Borrow&lt;Q&gt;,
         Q: Hash + Eq + <span class="question-mark">?</span>Sized,
@@ -2660,16 +2661,16 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(&quot;apple&quot;, 8);
-    /// cache.put(&quot;banana&quot;, 4);
-    /// cache.put(&quot;banana&quot;, 6);
-    /// cache.put(&quot;pear&quot;, 2);
+    /// cache.put("apple", 8);
+    /// cache.put("banana", 4);
+    /// cache.put("banana", 6);
+    /// cache.put("pear", 2);
     ///
-    /// assert_eq!(cache.get_mut(&amp;&quot;apple&quot;), None);
-    /// assert_eq!(cache.get_mut(&amp;&quot;banana&quot;), Some(&amp;mut 6));
-    /// assert_eq!(cache.get_mut(&amp;&quot;pear&quot;), Some(&amp;mut 2));
+    /// assert_eq!(cache.get_mut(&amp;"apple"), None);
+    /// assert_eq!(cache.get_mut(&amp;"banana"), Some(&amp;mut 6));
+    /// assert_eq!(cache.get_mut(&amp;"pear"), Some(&amp;mut 2));
     /// ```
-    </span><span class="kw">pub fn </span>get_mut&lt;<span class="lifetime">&#39;a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V&gt;
+    </span><span class="kw">pub fn </span>get_mut&lt;<span class="lifetime">'a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V&gt;
     <span class="kw">where
         </span>K: Borrow&lt;Q&gt;,
         Q: Hash + Eq + <span class="question-mark">?</span>Sized,
@@ -2698,17 +2699,17 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
-    /// cache.put(2, &quot;c&quot;);
-    /// cache.put(3, &quot;d&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
+    /// cache.put(2, "c");
+    /// cache.put(3, "d");
     ///
-    /// assert_eq!(cache.get_or_insert(2, ||&quot;a&quot;), &amp;&quot;c&quot;);
-    /// assert_eq!(cache.get_or_insert(3, ||&quot;a&quot;), &amp;&quot;d&quot;);
-    /// assert_eq!(cache.get_or_insert(1, ||&quot;a&quot;), &amp;&quot;a&quot;);
-    /// assert_eq!(cache.get_or_insert(1, ||&quot;b&quot;), &amp;&quot;a&quot;);
+    /// assert_eq!(cache.get_or_insert(2, ||"a"), &amp;"c");
+    /// assert_eq!(cache.get_or_insert(3, ||"a"), &amp;"d");
+    /// assert_eq!(cache.get_or_insert(1, ||"a"), &amp;"a");
+    /// assert_eq!(cache.get_or_insert(1, ||"b"), &amp;"a");
     /// ```
-    </span><span class="kw">pub fn </span>get_or_insert&lt;<span class="lifetime">&#39;a</span>, F&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, k: K, f: F) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V
+    </span><span class="kw">pub fn </span>get_or_insert&lt;<span class="lifetime">'a</span>, F&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, k: K, f: F) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V
     <span class="kw">where
         </span>F: FnOnce() -&gt; V,
     {
@@ -2745,19 +2746,19 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
-    /// cache.put(2, &quot;c&quot;);
-    /// cache.put(3, &quot;d&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
+    /// cache.put(2, "c");
+    /// cache.put(3, "d");
     ///
-    /// let f = ||-&gt;Result&lt;&amp;str, String&gt; {Err(&quot;failed&quot;.to_owned())};
-    /// let a = ||-&gt;Result&lt;&amp;str, String&gt; {Ok(&quot;a&quot;)};
-    /// let b = ||-&gt;Result&lt;&amp;str, String&gt; {Ok(&quot;b&quot;)};
-    /// assert_eq!(cache.try_get_or_insert(2, a), Ok(&amp;&quot;c&quot;));
-    /// assert_eq!(cache.try_get_or_insert(3, a), Ok(&amp;&quot;d&quot;));
-    /// assert_eq!(cache.try_get_or_insert(4, f), Err(&quot;failed&quot;.to_owned()));
-    /// assert_eq!(cache.try_get_or_insert(5, b), Ok(&amp;&quot;b&quot;));
-    /// assert_eq!(cache.try_get_or_insert(5, a), Ok(&amp;&quot;b&quot;));
+    /// let f = ||-&gt;Result&lt;&amp;str, String&gt; {Err("failed".to_owned())};
+    /// let a = ||-&gt;Result&lt;&amp;str, String&gt; {Ok("a")};
+    /// let b = ||-&gt;Result&lt;&amp;str, String&gt; {Ok("b")};
+    /// assert_eq!(cache.try_get_or_insert(2, a), Ok(&amp;"c"));
+    /// assert_eq!(cache.try_get_or_insert(3, a), Ok(&amp;"d"));
+    /// assert_eq!(cache.try_get_or_insert(4, f), Err("failed".to_owned()));
+    /// assert_eq!(cache.try_get_or_insert(5, b), Ok(&amp;"b"));
+    /// assert_eq!(cache.try_get_or_insert(5, a), Ok(&amp;"b"));
     /// ```
     </span><span class="kw">pub fn </span>try_get_or_insert&lt;F, E&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: K, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>V, E&gt;
     <span class="kw">where
@@ -2795,17 +2796,17 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
     ///
-    /// let v = cache.get_or_insert_mut(2, ||&quot;c&quot;);
-    /// assert_eq!(v, &amp;&quot;b&quot;);
-    /// *v = &quot;d&quot;;
-    /// assert_eq!(cache.get_or_insert_mut(2, ||&quot;e&quot;), &amp;mut &quot;d&quot;);
-    /// assert_eq!(cache.get_or_insert_mut(3, ||&quot;f&quot;), &amp;mut &quot;f&quot;);
-    /// assert_eq!(cache.get_or_insert_mut(3, ||&quot;e&quot;), &amp;mut &quot;f&quot;);
+    /// let v = cache.get_or_insert_mut(2, ||"c");
+    /// assert_eq!(v, &amp;"b");
+    /// *v = "d";
+    /// assert_eq!(cache.get_or_insert_mut(2, ||"e"), &amp;mut "d");
+    /// assert_eq!(cache.get_or_insert_mut(3, ||"f"), &amp;mut "f");
+    /// assert_eq!(cache.get_or_insert_mut(3, ||"e"), &amp;mut "f");
     /// ```
-    </span><span class="kw">pub fn </span>get_or_insert_mut&lt;<span class="lifetime">&#39;a</span>, F&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, k: K, f: F) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V
+    </span><span class="kw">pub fn </span>get_or_insert_mut&lt;<span class="lifetime">'a</span>, F&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, k: K, f: F) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V
     <span class="kw">where
         </span>F: FnOnce() -&gt; V,
     {
@@ -2842,22 +2843,22 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
-    /// cache.put(2, &quot;c&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
+    /// cache.put(2, "c");
     ///
-    /// let f = ||-&gt;Result&lt;&amp;str, String&gt; {Err(&quot;failed&quot;.to_owned())};
-    /// let a = ||-&gt;Result&lt;&amp;str, String&gt; {Ok(&quot;a&quot;)};
-    /// let b = ||-&gt;Result&lt;&amp;str, String&gt; {Ok(&quot;b&quot;)};
+    /// let f = ||-&gt;Result&lt;&amp;str, String&gt; {Err("failed".to_owned())};
+    /// let a = ||-&gt;Result&lt;&amp;str, String&gt; {Ok("a")};
+    /// let b = ||-&gt;Result&lt;&amp;str, String&gt; {Ok("b")};
     /// if let Ok(v) = cache.try_get_or_insert_mut(2, a) {
-    ///     *v = &quot;d&quot;;
+    ///     *v = "d";
     /// }
-    /// assert_eq!(cache.try_get_or_insert_mut(2, a), Ok(&amp;mut &quot;d&quot;));
-    /// assert_eq!(cache.try_get_or_insert_mut(3, f), Err(&quot;failed&quot;.to_owned()));
-    /// assert_eq!(cache.try_get_or_insert_mut(4, b), Ok(&amp;mut &quot;b&quot;));
-    /// assert_eq!(cache.try_get_or_insert_mut(4, a), Ok(&amp;mut &quot;b&quot;));
+    /// assert_eq!(cache.try_get_or_insert_mut(2, a), Ok(&amp;mut "d"));
+    /// assert_eq!(cache.try_get_or_insert_mut(3, f), Err("failed".to_owned()));
+    /// assert_eq!(cache.try_get_or_insert_mut(4, b), Ok(&amp;mut "b"));
+    /// assert_eq!(cache.try_get_or_insert_mut(4, a), Ok(&amp;mut "b"));
     /// ```
-    </span><span class="kw">pub fn </span>try_get_or_insert_mut&lt;<span class="lifetime">&#39;a</span>, F, E&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: K, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V, E&gt;
+    </span><span class="kw">pub fn </span>try_get_or_insert_mut&lt;<span class="lifetime">'a</span>, F, E&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: K, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V, E&gt;
     <span class="kw">where
         </span>F: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;V, E&gt;,
     {
@@ -2882,7 +2883,7 @@
     }
 
     <span class="doccomment">/// Returns a reference to the value corresponding to the key in the cache or `None` if it is
-    /// not present in the cache. Unlike `get`, `peek` does not update the LRU list so the key&#39;s
+    /// not present in the cache. Unlike `get`, `peek` does not update the LRU list so the key's
     /// position will be unchanged.
     ///
     /// # Example
@@ -2892,13 +2893,13 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
     ///
-    /// assert_eq!(cache.peek(&amp;1), Some(&amp;&quot;a&quot;));
-    /// assert_eq!(cache.peek(&amp;2), Some(&amp;&quot;b&quot;));
+    /// assert_eq!(cache.peek(&amp;1), Some(&amp;"a"));
+    /// assert_eq!(cache.peek(&amp;2), Some(&amp;"b"));
     /// ```
-    </span><span class="kw">pub fn </span>peek&lt;<span class="lifetime">&#39;a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V&gt;
+    </span><span class="kw">pub fn </span>peek&lt;<span class="lifetime">'a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>V&gt;
     <span class="kw">where
         </span>K: Borrow&lt;Q&gt;,
         Q: Hash + Eq + <span class="question-mark">?</span>Sized,
@@ -2910,7 +2911,7 @@
 
     <span class="doccomment">/// Returns a mutable reference to the value corresponding to the key in the cache or `None`
     /// if it is not present in the cache. Unlike `get_mut`, `peek_mut` does not update the LRU
-    /// list so the key&#39;s position will be unchanged.
+    /// list so the key's position will be unchanged.
     ///
     /// # Example
     ///
@@ -2919,13 +2920,13 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
     ///
-    /// assert_eq!(cache.peek_mut(&amp;1), Some(&amp;mut &quot;a&quot;));
-    /// assert_eq!(cache.peek_mut(&amp;2), Some(&amp;mut &quot;b&quot;));
+    /// assert_eq!(cache.peek_mut(&amp;1), Some(&amp;mut "a"));
+    /// assert_eq!(cache.peek_mut(&amp;2), Some(&amp;mut "b"));
     /// ```
-    </span><span class="kw">pub fn </span>peek_mut&lt;<span class="lifetime">&#39;a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V&gt;
+    </span><span class="kw">pub fn </span>peek_mut&lt;<span class="lifetime">'a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V&gt;
     <span class="kw">where
         </span>K: Borrow&lt;Q&gt;,
         Q: Hash + Eq + <span class="question-mark">?</span>Sized,
@@ -2937,7 +2938,7 @@
     }
 
     <span class="doccomment">/// Returns the value corresponding to the least recently used item or `None` if the
-    /// cache is empty. Like `peek`, `peek_lru` does not update the LRU list so the item&#39;s
+    /// cache is empty. Like `peek`, `peek_lru` does not update the LRU list so the item's
     /// position will be unchanged.
     ///
     /// # Example
@@ -2947,12 +2948,12 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
     ///
-    /// assert_eq!(cache.peek_lru(), Some((&amp;1, &amp;&quot;a&quot;)));
+    /// assert_eq!(cache.peek_lru(), Some((&amp;1, &amp;"a")));
     /// ```
-    </span><span class="kw">pub fn </span>peek_lru&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V)&gt; {
+    </span><span class="kw">pub fn </span>peek_lru&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V)&gt; {
         <span class="kw">if </span><span class="self">self</span>.is_empty() {
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
@@ -2977,9 +2978,9 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
-    /// cache.put(3, &quot;c&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
+    /// cache.put(3, "c");
     ///
     /// assert!(!cache.contains(&amp;1));
     /// assert!(cache.contains(&amp;2));
@@ -3003,10 +3004,10 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(2, &quot;a&quot;);
+    /// cache.put(2, "a");
     ///
     /// assert_eq!(cache.pop(&amp;1), None);
-    /// assert_eq!(cache.pop(&amp;2), Some(&quot;a&quot;));
+    /// assert_eq!(cache.pop(&amp;2), Some("a"));
     /// assert_eq!(cache.pop(&amp;2), None);
     /// assert_eq!(cache.len(), 0);
     /// ```
@@ -3043,11 +3044,11 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;a&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "a");
     ///
-    /// assert_eq!(cache.pop(&amp;1), Some(&quot;a&quot;));
-    /// assert_eq!(cache.pop_entry(&amp;2), Some((2, &quot;a&quot;)));
+    /// assert_eq!(cache.pop(&amp;1), Some("a"));
+    /// assert_eq!(cache.pop_entry(&amp;2), Some((2, "a")));
     /// assert_eq!(cache.pop(&amp;1), None);
     /// assert_eq!(cache.pop_entry(&amp;2), None);
     /// assert_eq!(cache.len(), 0);
@@ -3080,19 +3081,19 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(2, &quot;a&quot;);
-    /// cache.put(3, &quot;b&quot;);
-    /// cache.put(4, &quot;c&quot;);
+    /// cache.put(2, "a");
+    /// cache.put(3, "b");
+    /// cache.put(4, "c");
     /// cache.get(&amp;3);
     ///
-    /// assert_eq!(cache.pop_lru(), Some((4, &quot;c&quot;)));
-    /// assert_eq!(cache.pop_lru(), Some((3, &quot;b&quot;)));
+    /// assert_eq!(cache.pop_lru(), Some((4, "c")));
+    /// assert_eq!(cache.pop_lru(), Some((3, "b")));
     /// assert_eq!(cache.pop_lru(), None);
     /// assert_eq!(cache.len(), 0);
     /// ```
     </span><span class="kw">pub fn </span>pop_lru(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(K, V)&gt; {
         <span class="kw">let </span>node = <span class="self">self</span>.remove_last()<span class="question-mark">?</span>;
-        <span class="comment">// N.B.: Can&#39;t destructure directly because of https://github.com/rust-lang/rust/issues/28536
+        <span class="comment">// N.B.: Can't destructure directly because of https://github.com/rust-lang/rust/issues/28536
         </span><span class="kw">let </span>node = <span class="kw-2">*</span>node;
         <span class="kw">let </span>LruEntry { key, val, .. } = node;
         <span class="kw">unsafe </span>{ <span class="prelude-val">Some</span>((key.assume_init(), val.assume_init())) }
@@ -3107,20 +3108,20 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(3).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
-    /// cache.put(3, &quot;c&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
+    /// cache.put(3, "c");
     /// cache.get(&amp;1);
     /// cache.get(&amp;2);
     ///
     /// // If we do `pop_lru` now, we would pop 3.
-    /// // assert_eq!(cache.pop_lru(), Some((3, &quot;c&quot;)));
+    /// // assert_eq!(cache.pop_lru(), Some((3, "c")));
     ///
-    /// // By promoting 3, we make sure it isn&#39;t popped.
+    /// // By promoting 3, we make sure it isn't popped.
     /// cache.promote(&amp;3);
-    /// assert_eq!(cache.pop_lru(), Some((1, &quot;a&quot;)));
+    /// assert_eq!(cache.pop_lru(), Some((1, "a")));
     /// ```
-    </span><span class="kw">pub fn </span>promote&lt;<span class="lifetime">&#39;a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q)
+    </span><span class="kw">pub fn </span>promote&lt;<span class="lifetime">'a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q)
     <span class="kw">where
         </span>K: Borrow&lt;Q&gt;,
         Q: Hash + Eq + <span class="question-mark">?</span>Sized,
@@ -3141,22 +3142,22 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache = LruCache::new(NonZeroUsize::new(3).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
-    /// cache.put(3, &quot;c&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
+    /// cache.put(3, "c");
     /// cache.get(&amp;1);
     /// cache.get(&amp;2);
     ///
     /// // If we do `pop_lru` now, we would pop 3.
-    /// // assert_eq!(cache.pop_lru(), Some((3, &quot;c&quot;)));
+    /// // assert_eq!(cache.pop_lru(), Some((3, "c")));
     ///
     /// // By demoting 1 and 2, we make sure those are popped first.
     /// cache.demote(&amp;2);
     /// cache.demote(&amp;1);
-    /// assert_eq!(cache.pop_lru(), Some((1, &quot;a&quot;)));
-    /// assert_eq!(cache.pop_lru(), Some((2, &quot;b&quot;)));
+    /// assert_eq!(cache.pop_lru(), Some((1, "a")));
+    /// assert_eq!(cache.pop_lru(), Some((2, "b")));
     /// ```
-    </span><span class="kw">pub fn </span>demote&lt;<span class="lifetime">&#39;a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q)
+    </span><span class="kw">pub fn </span>demote&lt;<span class="lifetime">'a</span>, Q&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>Q)
     <span class="kw">where
         </span>K: Borrow&lt;Q&gt;,
         Q: Hash + Eq + <span class="question-mark">?</span>Sized,
@@ -3178,13 +3179,13 @@
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     /// assert_eq!(cache.len(), 0);
     ///
-    /// cache.put(1, &quot;a&quot;);
+    /// cache.put(1, "a");
     /// assert_eq!(cache.len(), 1);
     ///
-    /// cache.put(2, &quot;b&quot;);
+    /// cache.put(2, "b");
     /// assert_eq!(cache.len(), 2);
     ///
-    /// cache.put(3, &quot;c&quot;);
+    /// cache.put(3, "c");
     /// assert_eq!(cache.len(), 2);
     /// ```
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
@@ -3201,7 +3202,7 @@
     /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
     /// assert!(cache.is_empty());
     ///
-    /// cache.put(1, &quot;a&quot;);
+    /// cache.put(1, "a");
     /// assert!(!cache.is_empty());
     /// ```
     </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
@@ -3232,20 +3233,20 @@
     /// use std::num::NonZeroUsize;
     /// let mut cache: LruCache&lt;isize, &amp;str&gt; = LruCache::new(NonZeroUsize::new(2).unwrap());
     ///
-    /// cache.put(1, &quot;a&quot;);
-    /// cache.put(2, &quot;b&quot;);
+    /// cache.put(1, "a");
+    /// cache.put(2, "b");
     /// cache.resize(NonZeroUsize::new(4).unwrap());
-    /// cache.put(3, &quot;c&quot;);
-    /// cache.put(4, &quot;d&quot;);
+    /// cache.put(3, "c");
+    /// cache.put(4, "d");
     ///
     /// assert_eq!(cache.len(), 4);
-    /// assert_eq!(cache.get(&amp;1), Some(&amp;&quot;a&quot;));
-    /// assert_eq!(cache.get(&amp;2), Some(&amp;&quot;b&quot;));
-    /// assert_eq!(cache.get(&amp;3), Some(&amp;&quot;c&quot;));
-    /// assert_eq!(cache.get(&amp;4), Some(&amp;&quot;d&quot;));
+    /// assert_eq!(cache.get(&amp;1), Some(&amp;"a"));
+    /// assert_eq!(cache.get(&amp;2), Some(&amp;"b"));
+    /// assert_eq!(cache.get(&amp;3), Some(&amp;"c"));
+    /// assert_eq!(cache.get(&amp;4), Some(&amp;"d"));
     /// ```
     </span><span class="kw">pub fn </span>resize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cap: NonZeroUsize) {
-        <span class="comment">// return early if capacity doesn&#39;t change
+        <span class="comment">// return early if capacity doesn't change
         </span><span class="kw">if </span>cap == <span class="self">self</span>.cap {
             <span class="kw">return</span>;
         }
@@ -3268,10 +3269,10 @@
     /// let mut cache: LruCache&lt;isize, &amp;str&gt; = LruCache::new(NonZeroUsize::new(2).unwrap());
     /// assert_eq!(cache.len(), 0);
     ///
-    /// cache.put(1, &quot;a&quot;);
+    /// cache.put(1, "a");
     /// assert_eq!(cache.len(), 1);
     ///
-    /// cache.put(2, &quot;b&quot;);
+    /// cache.put(2, "b");
     /// assert_eq!(cache.len(), 2);
     ///
     /// cache.clear();
@@ -3291,15 +3292,15 @@
     /// use std::num::NonZeroUsize;
     ///
     /// let mut cache = LruCache::new(NonZeroUsize::new(3).unwrap());
-    /// cache.put(&quot;a&quot;, 1);
-    /// cache.put(&quot;b&quot;, 2);
-    /// cache.put(&quot;c&quot;, 3);
+    /// cache.put("a", 1);
+    /// cache.put("b", 2);
+    /// cache.put("c", 3);
     ///
     /// for (key, val) in cache.iter() {
-    ///     println!(&quot;key: {} val: {}&quot;, key, val);
+    ///     println!("key: {} val: {}", key, val);
     /// }
     /// ```
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">&#39;_</span>, K, V&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'_</span>, K, V&gt; {
         Iter {
             len: <span class="self">self</span>.len(),
             ptr: <span class="kw">unsafe </span>{ (<span class="kw-2">*</span><span class="self">self</span>.head).next },
@@ -3335,7 +3336,7 @@
     ///     }
     /// }
     /// ```
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; IterMut&lt;<span class="lifetime">&#39;_</span>, K, V&gt; {
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; IterMut&lt;<span class="lifetime">'_</span>, K, V&gt; {
         IterMut {
             len: <span class="self">self</span>.len(),
             ptr: <span class="kw">unsafe </span>{ (<span class="kw-2">*</span><span class="self">self</span>.head).next },
@@ -3403,20 +3404,20 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K: Hash + Eq, V, S: BuildHasher&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>LruCache&lt;K, V, S&gt; {
-    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V);
-    <span class="kw">type </span>IntoIter = Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K: Hash + Eq, V, S: BuildHasher&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>LruCache&lt;K, V, S&gt; {
+    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V);
+    <span class="kw">type </span>IntoIter = Iter&lt;<span class="lifetime">'a</span>, K, V&gt;;
 
-    <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+    <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {
         <span class="self">self</span>.iter()
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K: Hash + Eq, V, S: BuildHasher&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>LruCache&lt;K, V, S&gt; {
-    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V);
-    <span class="kw">type </span>IntoIter = IterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K: Hash + Eq, V, S: BuildHasher&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>LruCache&lt;K, V, S&gt; {
+    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V);
+    <span class="kw">type </span>IntoIter = IterMut&lt;<span class="lifetime">'a</span>, K, V&gt;;
 
-    <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; IterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+    <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; IterMut&lt;<span class="lifetime">'a</span>, K, V&gt; {
         <span class="self">self</span>.iter_mut()
     }
 }
@@ -3429,9 +3430,9 @@
 
 <span class="kw">impl</span>&lt;K: Hash + Eq, V&gt; fmt::Debug <span class="kw">for </span>LruCache&lt;K, V&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;LruCache&quot;</span>)
-            .field(<span class="string">&quot;len&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.len())
-            .field(<span class="string">&quot;cap&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.cap())
+        f.debug_struct(<span class="string">"LruCache"</span>)
+            .field(<span class="string">"len"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.len())
+            .field(<span class="string">"cap"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.cap())
             .finish()
     }
 }
@@ -3443,19 +3444,19 @@
 ///
 /// [`iter`]: struct.LruCache.html#method.iter
 /// [`LruCache`]: struct.LruCache.html
-</span><span class="kw">pub struct </span>Iter&lt;<span class="lifetime">&#39;a</span>, K: <span class="lifetime">&#39;a</span>, V: <span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>Iter&lt;<span class="lifetime">'a</span>, K: <span class="lifetime">'a</span>, V: <span class="lifetime">'a</span>&gt; {
     len: usize,
 
     ptr: <span class="kw-2">*const </span>LruEntry&lt;K, V&gt;,
     end: <span class="kw-2">*const </span>LruEntry&lt;K, V&gt;,
 
-    phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K&gt;,
+    phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; Iterator <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
-    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V);
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; Iterator <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {
+    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V);
 
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V)&gt; {
+    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V)&gt; {
         <span class="kw">if </span><span class="self">self</span>.len == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
@@ -3478,8 +3479,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; DoubleEndedIterator <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
-    <span class="kw">fn </span>next_back(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V)&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; DoubleEndedIterator <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {
+    <span class="kw">fn </span>next_back(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V)&gt; {
         <span class="kw">if </span><span class="self">self</span>.len == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
@@ -3494,11 +3495,11 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; ExactSizeIterator <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {}
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; FusedIterator <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {}
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; ExactSizeIterator <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {}
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; FusedIterator <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {}
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; Clone <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
-    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; Clone <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {
+    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {
         Iter {
             len: <span class="self">self</span>.len,
             ptr: <span class="self">self</span>.ptr,
@@ -3510,8 +3511,8 @@
 
 <span class="comment">// The compiler does not automatically derive Send and Sync for Iter because it contains
 // raw pointers.
-</span><span class="kw">unsafe impl</span>&lt;<span class="lifetime">&#39;a</span>, K: Send, V: Send&gt; Send <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {}
-<span class="kw">unsafe impl</span>&lt;<span class="lifetime">&#39;a</span>, K: Sync, V: Sync&gt; Sync <span class="kw">for </span>Iter&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {}
+</span><span class="kw">unsafe impl</span>&lt;<span class="lifetime">'a</span>, K: Send, V: Send&gt; Send <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {}
+<span class="kw">unsafe impl</span>&lt;<span class="lifetime">'a</span>, K: Sync, V: Sync&gt; Sync <span class="kw">for </span>Iter&lt;<span class="lifetime">'a</span>, K, V&gt; {}
 
 <span class="doccomment">/// An iterator over mutables entries of a `LruCache`.
 ///
@@ -3520,19 +3521,19 @@
 ///
 /// [`iter_mut`]: struct.LruCache.html#method.iter_mut
 /// [`LruCache`]: struct.LruCache.html
-</span><span class="kw">pub struct </span>IterMut&lt;<span class="lifetime">&#39;a</span>, K: <span class="lifetime">&#39;a</span>, V: <span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>IterMut&lt;<span class="lifetime">'a</span>, K: <span class="lifetime">'a</span>, V: <span class="lifetime">'a</span>&gt; {
     len: usize,
 
     ptr: <span class="kw-2">*mut </span>LruEntry&lt;K, V&gt;,
     end: <span class="kw-2">*mut </span>LruEntry&lt;K, V&gt;,
 
-    phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K&gt;,
+    phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; Iterator <span class="kw">for </span>IterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
-    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V);
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; Iterator <span class="kw">for </span>IterMut&lt;<span class="lifetime">'a</span>, K, V&gt; {
+    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V);
 
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V)&gt; {
+    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V)&gt; {
         <span class="kw">if </span><span class="self">self</span>.len == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
@@ -3555,8 +3556,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; DoubleEndedIterator <span class="kw">for </span>IterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
-    <span class="kw">fn </span>next_back(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V)&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; DoubleEndedIterator <span class="kw">for </span>IterMut&lt;<span class="lifetime">'a</span>, K, V&gt; {
+    <span class="kw">fn </span>next_back(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V)&gt; {
         <span class="kw">if </span><span class="self">self</span>.len == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
@@ -3571,13 +3572,13 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; ExactSizeIterator <span class="kw">for </span>IterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {}
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; FusedIterator <span class="kw">for </span>IterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {}
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; ExactSizeIterator <span class="kw">for </span>IterMut&lt;<span class="lifetime">'a</span>, K, V&gt; {}
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K, V&gt; FusedIterator <span class="kw">for </span>IterMut&lt;<span class="lifetime">'a</span>, K, V&gt; {}
 
 <span class="comment">// The compiler does not automatically derive Send and Sync for Iter because it contains
 // raw pointers.
-</span><span class="kw">unsafe impl</span>&lt;<span class="lifetime">&#39;a</span>, K: Send, V: Send&gt; Send <span class="kw">for </span>IterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {}
-<span class="kw">unsafe impl</span>&lt;<span class="lifetime">&#39;a</span>, K: Sync, V: Sync&gt; Sync <span class="kw">for </span>IterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {}
+</span><span class="kw">unsafe impl</span>&lt;<span class="lifetime">'a</span>, K: Send, V: Send&gt; Send <span class="kw">for </span>IterMut&lt;<span class="lifetime">'a</span>, K, V&gt; {}
+<span class="kw">unsafe impl</span>&lt;<span class="lifetime">'a</span>, K: Sync, V: Sync&gt; Sync <span class="kw">for </span>IterMut&lt;<span class="lifetime">'a</span>, K, V&gt; {}
 
 <span class="doccomment">/// An iterator that moves out of a `LruCache`.
 ///
@@ -3672,7 +3673,7 @@
     }
 
     <span class="attr">#[test]
-    #[cfg(feature = <span class="string">&quot;hashbrown&quot;</span>)]
+    #[cfg(feature = <span class="string">"hashbrown"</span>)]
     </span><span class="kw">fn </span>test_with_hasher() {
         <span class="kw">use </span>core::num::NonZeroUsize;
 
@@ -3692,14 +3693,14 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
         <span class="macro">assert!</span>(cache.is_empty());
 
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>), <span class="prelude-val">None</span>);
 
         <span class="macro">assert_eq!</span>(cache.cap().get(), <span class="number">2</span>);
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
         <span class="macro">assert!</span>(!cache.is_empty());
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"red"</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
     }
 
     <span class="attr">#[test]
@@ -3707,16 +3708,16 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
         <span class="macro">assert!</span>(cache.is_empty());
 
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>), <span class="prelude-val">None</span>);
 
         <span class="macro">assert_eq!</span>(cache.cap().get(), <span class="number">2</span>);
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
         <span class="macro">assert!</span>(!cache.is_empty());
-        <span class="macro">assert_eq!</span>(cache.get_or_insert(<span class="string">&quot;apple&quot;</span>, || <span class="string">&quot;orange&quot;</span>), <span class="kw-2">&amp;</span><span class="string">&quot;red&quot;</span>);
-        <span class="macro">assert_eq!</span>(cache.get_or_insert(<span class="string">&quot;banana&quot;</span>, || <span class="string">&quot;orange&quot;</span>), <span class="kw-2">&amp;</span><span class="string">&quot;yellow&quot;</span>);
-        <span class="macro">assert_eq!</span>(cache.get_or_insert(<span class="string">&quot;lemon&quot;</span>, || <span class="string">&quot;orange&quot;</span>), <span class="kw-2">&amp;</span><span class="string">&quot;orange&quot;</span>);
-        <span class="macro">assert_eq!</span>(cache.get_or_insert(<span class="string">&quot;lemon&quot;</span>, || <span class="string">&quot;red&quot;</span>), <span class="kw-2">&amp;</span><span class="string">&quot;orange&quot;</span>);
+        <span class="macro">assert_eq!</span>(cache.get_or_insert(<span class="string">"apple"</span>, || <span class="string">"orange"</span>), <span class="kw-2">&amp;</span><span class="string">"red"</span>);
+        <span class="macro">assert_eq!</span>(cache.get_or_insert(<span class="string">"banana"</span>, || <span class="string">"orange"</span>), <span class="kw-2">&amp;</span><span class="string">"yellow"</span>);
+        <span class="macro">assert_eq!</span>(cache.get_or_insert(<span class="string">"lemon"</span>, || <span class="string">"orange"</span>), <span class="kw-2">&amp;</span><span class="string">"orange"</span>);
+        <span class="macro">assert_eq!</span>(cache.get_or_insert(<span class="string">"lemon"</span>, || <span class="string">"red"</span>), <span class="kw-2">&amp;</span><span class="string">"orange"</span>);
     }
 
     <span class="attr">#[test]
@@ -3724,24 +3725,24 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
         <span class="macro">assert_eq!</span>(
-            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">&quot;apple&quot;</span>, || <span class="prelude-val">Ok</span>(<span class="string">&quot;red&quot;</span>)),
-            <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="string">&quot;red&quot;</span>)
+            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">"apple"</span>, || <span class="prelude-val">Ok</span>(<span class="string">"red"</span>)),
+            <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="string">"red"</span>)
         );
         <span class="macro">assert_eq!</span>(
-            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">&quot;apple&quot;</span>, || <span class="prelude-val">Err</span>(<span class="string">&quot;failed&quot;</span>)),
-            <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="string">&quot;red&quot;</span>)
+            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">"apple"</span>, || <span class="prelude-val">Err</span>(<span class="string">"failed"</span>)),
+            <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="string">"red"</span>)
         );
         <span class="macro">assert_eq!</span>(
-            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">&quot;banana&quot;</span>, || <span class="prelude-val">Ok</span>(<span class="string">&quot;orange&quot;</span>)),
-            <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="string">&quot;orange&quot;</span>)
+            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">"banana"</span>, || <span class="prelude-val">Ok</span>(<span class="string">"orange"</span>)),
+            <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="string">"orange"</span>)
         );
         <span class="macro">assert_eq!</span>(
-            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">&quot;lemon&quot;</span>, || <span class="prelude-val">Err</span>(<span class="string">&quot;failed&quot;</span>)),
-            <span class="prelude-val">Err</span>(<span class="string">&quot;failed&quot;</span>)
+            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">"lemon"</span>, || <span class="prelude-val">Err</span>(<span class="string">"failed"</span>)),
+            <span class="prelude-val">Err</span>(<span class="string">"failed"</span>)
         );
         <span class="macro">assert_eq!</span>(
-            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">&quot;banana&quot;</span>, || <span class="prelude-val">Err</span>(<span class="string">&quot;failed&quot;</span>)),
-            <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="string">&quot;orange&quot;</span>)
+            cache.try_get_or_insert::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span>str&gt;(<span class="string">"banana"</span>, || <span class="prelude-val">Err</span>(<span class="string">"failed"</span>)),
+            <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="string">"orange"</span>)
         );
     }
 
@@ -3750,146 +3751,146 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
         <span class="macro">assert!</span>(cache.is_empty());
 
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>), <span class="prelude-val">None</span>);
 
         <span class="macro">assert_eq!</span>(cache.cap().get(), <span class="number">2</span>);
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
 
-        <span class="kw">let </span>v = cache.get_or_insert_mut(<span class="string">&quot;apple&quot;</span>, || <span class="string">&quot;orange&quot;</span>);
-        <span class="macro">assert_eq!</span>(v, <span class="kw-2">&amp;</span><span class="string">&quot;red&quot;</span>);
-        <span class="kw-2">*</span>v = <span class="string">&quot;blue&quot;</span>;
+        <span class="kw">let </span>v = cache.get_or_insert_mut(<span class="string">"apple"</span>, || <span class="string">"orange"</span>);
+        <span class="macro">assert_eq!</span>(v, <span class="kw-2">&amp;</span><span class="string">"red"</span>);
+        <span class="kw-2">*</span>v = <span class="string">"blue"</span>;
 
-        <span class="macro">assert_eq!</span>(cache.get_or_insert_mut(<span class="string">&quot;apple&quot;</span>, || <span class="string">&quot;orange&quot;</span>), <span class="kw-2">&amp;</span><span class="string">&quot;blue&quot;</span>);
-        <span class="macro">assert_eq!</span>(cache.get_or_insert_mut(<span class="string">&quot;banana&quot;</span>, || <span class="string">&quot;orange&quot;</span>), <span class="kw-2">&amp;</span><span class="string">&quot;yellow&quot;</span>);
-        <span class="macro">assert_eq!</span>(cache.get_or_insert_mut(<span class="string">&quot;lemon&quot;</span>, || <span class="string">&quot;orange&quot;</span>), <span class="kw-2">&amp;</span><span class="string">&quot;orange&quot;</span>);
-        <span class="macro">assert_eq!</span>(cache.get_or_insert_mut(<span class="string">&quot;lemon&quot;</span>, || <span class="string">&quot;red&quot;</span>), <span class="kw-2">&amp;</span><span class="string">&quot;orange&quot;</span>);
+        <span class="macro">assert_eq!</span>(cache.get_or_insert_mut(<span class="string">"apple"</span>, || <span class="string">"orange"</span>), <span class="kw-2">&amp;</span><span class="string">"blue"</span>);
+        <span class="macro">assert_eq!</span>(cache.get_or_insert_mut(<span class="string">"banana"</span>, || <span class="string">"orange"</span>), <span class="kw-2">&amp;</span><span class="string">"yellow"</span>);
+        <span class="macro">assert_eq!</span>(cache.get_or_insert_mut(<span class="string">"lemon"</span>, || <span class="string">"orange"</span>), <span class="kw-2">&amp;</span><span class="string">"orange"</span>);
+        <span class="macro">assert_eq!</span>(cache.get_or_insert_mut(<span class="string">"lemon"</span>, || <span class="string">"red"</span>), <span class="kw-2">&amp;</span><span class="string">"orange"</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_try_get_or_insert_mut() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="number">1</span>, <span class="string">&quot;a&quot;</span>);
-        cache.put(<span class="number">2</span>, <span class="string">&quot;b&quot;</span>);
-        cache.put(<span class="number">2</span>, <span class="string">&quot;c&quot;</span>);
+        cache.put(<span class="number">1</span>, <span class="string">"a"</span>);
+        cache.put(<span class="number">2</span>, <span class="string">"b"</span>);
+        cache.put(<span class="number">2</span>, <span class="string">"c"</span>);
 
-        <span class="kw">let </span>f = || -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt; { <span class="prelude-val">Err</span>(<span class="string">&quot;failed&quot;</span>) };
-        <span class="kw">let </span>a = || -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt; { <span class="prelude-val">Ok</span>(<span class="string">&quot;a&quot;</span>) };
-        <span class="kw">let </span>b = || -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt; { <span class="prelude-val">Ok</span>(<span class="string">&quot;b&quot;</span>) };
+        <span class="kw">let </span>f = || -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt; { <span class="prelude-val">Err</span>(<span class="string">"failed"</span>) };
+        <span class="kw">let </span>a = || -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt; { <span class="prelude-val">Ok</span>(<span class="string">"a"</span>) };
+        <span class="kw">let </span>b = || -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt; { <span class="prelude-val">Ok</span>(<span class="string">"b"</span>) };
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(v) = cache.try_get_or_insert_mut(<span class="number">2</span>, a) {
-            <span class="kw-2">*</span>v = <span class="string">&quot;d&quot;</span>;
+            <span class="kw-2">*</span>v = <span class="string">"d"</span>;
         }
-        <span class="macro">assert_eq!</span>(cache.try_get_or_insert_mut(<span class="number">2</span>, a), <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut </span><span class="string">&quot;d&quot;</span>));
-        <span class="macro">assert_eq!</span>(cache.try_get_or_insert_mut(<span class="number">3</span>, f), <span class="prelude-val">Err</span>(<span class="string">&quot;failed&quot;</span>));
-        <span class="macro">assert_eq!</span>(cache.try_get_or_insert_mut(<span class="number">4</span>, b), <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut </span><span class="string">&quot;b&quot;</span>));
-        <span class="macro">assert_eq!</span>(cache.try_get_or_insert_mut(<span class="number">4</span>, a), <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut </span><span class="string">&quot;b&quot;</span>));
+        <span class="macro">assert_eq!</span>(cache.try_get_or_insert_mut(<span class="number">2</span>, a), <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut </span><span class="string">"d"</span>));
+        <span class="macro">assert_eq!</span>(cache.try_get_or_insert_mut(<span class="number">3</span>, f), <span class="prelude-val">Err</span>(<span class="string">"failed"</span>));
+        <span class="macro">assert_eq!</span>(cache.try_get_or_insert_mut(<span class="number">4</span>, b), <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut </span><span class="string">"b"</span>));
+        <span class="macro">assert_eq!</span>(cache.try_get_or_insert_mut(<span class="number">4</span>, a), <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut </span><span class="string">"b"</span>));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_put_and_get_mut() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>);
+        cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>);
 
         <span class="macro">assert_eq!</span>(cache.cap().get(), <span class="number">2</span>);
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
-        assert_opt_eq_mut(cache.get_mut(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
-        assert_opt_eq_mut(cache.get_mut(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
+        assert_opt_eq_mut(cache.get_mut(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"red"</span>);
+        assert_opt_eq_mut(cache.get_mut(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_get_mut_and_update() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="number">1</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="number">3</span>);
+        cache.put(<span class="string">"apple"</span>, <span class="number">1</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="number">3</span>);
 
         {
-            <span class="kw">let </span>v = cache.get_mut(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>).unwrap();
+            <span class="kw">let </span>v = cache.get_mut(<span class="kw-2">&amp;</span><span class="string">"apple"</span>).unwrap();
             <span class="kw-2">*</span>v = <span class="number">4</span>;
         }
 
         <span class="macro">assert_eq!</span>(cache.cap().get(), <span class="number">2</span>);
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
-        assert_opt_eq_mut(cache.get_mut(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="number">4</span>);
-        assert_opt_eq_mut(cache.get_mut(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="number">3</span>);
+        assert_opt_eq_mut(cache.get_mut(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="number">4</span>);
+        assert_opt_eq_mut(cache.get_mut(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="number">3</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_put_update() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;green&quot;</span>), <span class="prelude-val">Some</span>(<span class="string">&quot;red&quot;</span>));
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"apple"</span>, <span class="string">"green"</span>), <span class="prelude-val">Some</span>(<span class="string">"red"</span>));
 
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">1</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;green&quot;</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"green"</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_put_removes_oldest() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;pear&quot;</span>, <span class="string">&quot;green&quot;</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"pear"</span>, <span class="string">"green"</span>), <span class="prelude-val">None</span>);
 
-        <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>).is_none());
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;pear&quot;</span>), <span class="string">&quot;green&quot;</span>);
+        <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>).is_none());
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"pear"</span>), <span class="string">"green"</span>);
 
-        <span class="comment">// Even though we inserted &quot;apple&quot; into the cache earlier it has since been removed from
+        <span class="comment">// Even though we inserted "apple" into the cache earlier it has since been removed from
         // the cache so there is no current value for `put` to return.
-        </span><span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;green&quot;</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq!</span>(cache.put(<span class="string">&quot;tomato&quot;</span>, <span class="string">&quot;red&quot;</span>), <span class="prelude-val">None</span>);
+        </span><span class="macro">assert_eq!</span>(cache.put(<span class="string">"apple"</span>, <span class="string">"green"</span>), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(cache.put(<span class="string">"tomato"</span>, <span class="string">"red"</span>), <span class="prelude-val">None</span>);
 
-        <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;pear&quot;</span>).is_none());
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;green&quot;</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;tomato&quot;</span>), <span class="string">&quot;red&quot;</span>);
+        <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="string">"pear"</span>).is_none());
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"green"</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"tomato"</span>), <span class="string">"red"</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_peek() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>);
+        cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>);
 
-        assert_opt_eq(cache.peek(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
-        assert_opt_eq(cache.peek(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
+        assert_opt_eq(cache.peek(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
+        assert_opt_eq(cache.peek(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"red"</span>);
 
-        cache.put(<span class="string">&quot;pear&quot;</span>, <span class="string">&quot;green&quot;</span>);
+        cache.put(<span class="string">"pear"</span>, <span class="string">"green"</span>);
 
-        <span class="macro">assert!</span>(cache.peek(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>).is_none());
-        assert_opt_eq(cache.peek(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
-        assert_opt_eq(cache.peek(<span class="kw-2">&amp;</span><span class="string">&quot;pear&quot;</span>), <span class="string">&quot;green&quot;</span>);
+        <span class="macro">assert!</span>(cache.peek(<span class="kw-2">&amp;</span><span class="string">"apple"</span>).is_none());
+        assert_opt_eq(cache.peek(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
+        assert_opt_eq(cache.peek(<span class="kw-2">&amp;</span><span class="string">"pear"</span>), <span class="string">"green"</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_peek_mut() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>);
+        cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>);
 
-        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
-        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
-        <span class="macro">assert!</span>(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">&quot;pear&quot;</span>).is_none());
+        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
+        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"red"</span>);
+        <span class="macro">assert!</span>(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">"pear"</span>).is_none());
 
-        cache.put(<span class="string">&quot;pear&quot;</span>, <span class="string">&quot;green&quot;</span>);
+        cache.put(<span class="string">"pear"</span>, <span class="string">"green"</span>);
 
-        <span class="macro">assert!</span>(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>).is_none());
-        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
-        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">&quot;pear&quot;</span>), <span class="string">&quot;green&quot;</span>);
+        <span class="macro">assert!</span>(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">"apple"</span>).is_none());
+        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
+        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">"pear"</span>), <span class="string">"green"</span>);
 
         {
-            <span class="kw">let </span>v = cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>).unwrap();
-            <span class="kw-2">*</span>v = <span class="string">&quot;green&quot;</span>;
+            <span class="kw">let </span>v = cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">"banana"</span>).unwrap();
+            <span class="kw-2">*</span>v = <span class="string">"green"</span>;
         }
 
-        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;green&quot;</span>);
+        assert_opt_eq_mut(cache.peek_mut(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"green"</span>);
     }
 
     <span class="attr">#[test]
@@ -3898,12 +3899,12 @@
 
         <span class="macro">assert!</span>(cache.peek_lru().is_none());
 
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>);
-        assert_opt_eq_tuple(cache.peek_lru(), (<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>));
+        cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>);
+        assert_opt_eq_tuple(cache.peek_lru(), (<span class="string">"apple"</span>, <span class="string">"red"</span>));
 
-        cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>);
-        assert_opt_eq_tuple(cache.peek_lru(), (<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>));
+        cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>);
+        assert_opt_eq_tuple(cache.peek_lru(), (<span class="string">"banana"</span>, <span class="string">"yellow"</span>));
 
         cache.clear();
         <span class="macro">assert!</span>(cache.peek_lru().is_none());
@@ -3913,50 +3914,50 @@
     </span><span class="kw">fn </span>test_contains() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>);
-        cache.put(<span class="string">&quot;pear&quot;</span>, <span class="string">&quot;green&quot;</span>);
+        cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>);
+        cache.put(<span class="string">"pear"</span>, <span class="string">"green"</span>);
 
-        <span class="macro">assert!</span>(!cache.contains(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>));
-        <span class="macro">assert!</span>(cache.contains(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>));
-        <span class="macro">assert!</span>(cache.contains(<span class="kw-2">&amp;</span><span class="string">&quot;pear&quot;</span>));
+        <span class="macro">assert!</span>(!cache.contains(<span class="kw-2">&amp;</span><span class="string">"apple"</span>));
+        <span class="macro">assert!</span>(cache.contains(<span class="kw-2">&amp;</span><span class="string">"banana"</span>));
+        <span class="macro">assert!</span>(cache.contains(<span class="kw-2">&amp;</span><span class="string">"pear"</span>));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_pop() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>);
+        cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>);
 
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"red"</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
 
-        <span class="kw">let </span>popped = cache.pop(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>);
+        <span class="kw">let </span>popped = cache.pop(<span class="kw-2">&amp;</span><span class="string">"apple"</span>);
         <span class="macro">assert!</span>(popped.is_some());
-        <span class="macro">assert_eq!</span>(popped.unwrap(), <span class="string">&quot;red&quot;</span>);
+        <span class="macro">assert_eq!</span>(popped.unwrap(), <span class="string">"red"</span>);
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">1</span>);
-        <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>).is_none());
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
+        <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>).is_none());
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_pop_entry() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>);
+        cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>);
 
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"red"</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
 
-        <span class="kw">let </span>popped = cache.pop_entry(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>);
+        <span class="kw">let </span>popped = cache.pop_entry(<span class="kw-2">&amp;</span><span class="string">"apple"</span>);
         <span class="macro">assert!</span>(popped.is_some());
-        <span class="macro">assert_eq!</span>(popped.unwrap(), (<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>));
+        <span class="macro">assert_eq!</span>(popped.unwrap(), (<span class="string">"apple"</span>, <span class="string">"red"</span>));
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">1</span>);
-        <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>).is_none());
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
+        <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>).is_none());
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
     }
 
     <span class="attr">#[test]
@@ -3964,31 +3965,31 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">200</span>).unwrap());
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">75 </span>{
-            cache.put(i, <span class="string">&quot;A&quot;</span>);
+            cache.put(i, <span class="string">"A"</span>);
         }
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">75 </span>{
-            cache.put(i + <span class="number">100</span>, <span class="string">&quot;B&quot;</span>);
+            cache.put(i + <span class="number">100</span>, <span class="string">"B"</span>);
         }
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">75 </span>{
-            cache.put(i + <span class="number">200</span>, <span class="string">&quot;C&quot;</span>);
+            cache.put(i + <span class="number">200</span>, <span class="string">"C"</span>);
         }
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">200</span>);
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">75 </span>{
-            assert_opt_eq(cache.get(<span class="kw-2">&amp;</span>(<span class="number">74 </span>- i + <span class="number">100</span>)), <span class="string">&quot;B&quot;</span>);
+            assert_opt_eq(cache.get(<span class="kw-2">&amp;</span>(<span class="number">74 </span>- i + <span class="number">100</span>)), <span class="string">"B"</span>);
         }
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="number">25</span>), <span class="string">&quot;A&quot;</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="number">25</span>), <span class="string">"A"</span>);
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">26</span>..<span class="number">75 </span>{
-            <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">Some</span>((i, <span class="string">&quot;A&quot;</span>)));
+            <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">Some</span>((i, <span class="string">"A"</span>)));
         }
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">75 </span>{
-            <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">Some</span>((i + <span class="number">200</span>, <span class="string">&quot;C&quot;</span>)));
+            <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">Some</span>((i + <span class="number">200</span>, <span class="string">"C"</span>)));
         }
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">75 </span>{
-            <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">Some</span>((<span class="number">74 </span>- i + <span class="number">100</span>, <span class="string">&quot;B&quot;</span>)));
+            <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">Some</span>((<span class="number">74 </span>- i + <span class="number">100</span>, <span class="string">"B"</span>)));
         }
-        <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">Some</span>((<span class="number">25</span>, <span class="string">&quot;A&quot;</span>)));
+        <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">Some</span>((<span class="number">25</span>, <span class="string">"A"</span>)));
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">50 </span>{
             <span class="macro">assert_eq!</span>(cache.pop_lru(), <span class="prelude-val">None</span>);
         }
@@ -3998,12 +3999,12 @@
     </span><span class="kw">fn </span>test_clear() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;red&quot;</span>);
-        cache.put(<span class="string">&quot;banana&quot;</span>, <span class="string">&quot;yellow&quot;</span>);
+        cache.put(<span class="string">"apple"</span>, <span class="string">"red"</span>);
+        cache.put(<span class="string">"banana"</span>, <span class="string">"yellow"</span>);
 
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
-        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">&quot;banana&quot;</span>), <span class="string">&quot;yellow&quot;</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"apple"</span>), <span class="string">"red"</span>);
+        assert_opt_eq(cache.get(<span class="kw-2">&amp;</span><span class="string">"banana"</span>), <span class="string">"yellow"</span>);
 
         cache.clear();
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">0</span>);
@@ -4013,35 +4014,35 @@
     </span><span class="kw">fn </span>test_resize_larger() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        cache.put(<span class="number">1</span>, <span class="string">&quot;a&quot;</span>);
-        cache.put(<span class="number">2</span>, <span class="string">&quot;b&quot;</span>);
+        cache.put(<span class="number">1</span>, <span class="string">"a"</span>);
+        cache.put(<span class="number">2</span>, <span class="string">"b"</span>);
         cache.resize(NonZeroUsize::new(<span class="number">4</span>).unwrap());
-        cache.put(<span class="number">3</span>, <span class="string">&quot;c&quot;</span>);
-        cache.put(<span class="number">4</span>, <span class="string">&quot;d&quot;</span>);
+        cache.put(<span class="number">3</span>, <span class="string">"c"</span>);
+        cache.put(<span class="number">4</span>, <span class="string">"d"</span>);
 
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">4</span>);
-        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">1</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;a&quot;</span>));
-        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">2</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;b&quot;</span>));
-        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">3</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;c&quot;</span>));
-        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">4</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;d&quot;</span>));
+        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">1</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"a"</span>));
+        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">2</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"b"</span>));
+        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">3</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"c"</span>));
+        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">4</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"d"</span>));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_resize_smaller() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">4</span>).unwrap());
 
-        cache.put(<span class="number">1</span>, <span class="string">&quot;a&quot;</span>);
-        cache.put(<span class="number">2</span>, <span class="string">&quot;b&quot;</span>);
-        cache.put(<span class="number">3</span>, <span class="string">&quot;c&quot;</span>);
-        cache.put(<span class="number">4</span>, <span class="string">&quot;d&quot;</span>);
+        cache.put(<span class="number">1</span>, <span class="string">"a"</span>);
+        cache.put(<span class="number">2</span>, <span class="string">"b"</span>);
+        cache.put(<span class="number">3</span>, <span class="string">"c"</span>);
+        cache.put(<span class="number">4</span>, <span class="string">"d"</span>);
 
         cache.resize(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
         <span class="macro">assert_eq!</span>(cache.len(), <span class="number">2</span>);
         <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">1</span>).is_none());
         <span class="macro">assert!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">2</span>).is_none());
-        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">3</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;c&quot;</span>));
-        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">4</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;d&quot;</span>));
+        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">3</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"c"</span>));
+        <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">4</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"d"</span>));
     }
 
     <span class="attr">#[test]
@@ -4049,10 +4050,10 @@
         <span class="kw">use </span>std::thread;
 
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">4</span>).unwrap());
-        cache.put(<span class="number">1</span>, <span class="string">&quot;a&quot;</span>);
+        cache.put(<span class="number">1</span>, <span class="string">"a"</span>);
 
         <span class="kw">let </span>handle = thread::spawn(<span class="kw">move </span>|| {
-            <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">1</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;a&quot;</span>));
+            <span class="macro">assert_eq!</span>(cache.get(<span class="kw-2">&amp;</span><span class="number">1</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"a"</span>));
         });
 
         <span class="macro">assert!</span>(handle.join().is_ok());
@@ -4062,36 +4063,36 @@
     </span><span class="kw">fn </span>test_multiple_threads() {
         <span class="kw">let </span><span class="kw-2">mut </span>pool = Pool::new(<span class="number">1</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">4</span>).unwrap());
-        cache.put(<span class="number">1</span>, <span class="string">&quot;a&quot;</span>);
+        cache.put(<span class="number">1</span>, <span class="string">"a"</span>);
 
         <span class="kw">let </span>cache_ref = <span class="kw-2">&amp;</span>cache;
         pool.scoped(|scoped| {
             scoped.execute(<span class="kw">move </span>|| {
-                <span class="macro">assert_eq!</span>(cache_ref.peek(<span class="kw-2">&amp;</span><span class="number">1</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;a&quot;</span>));
+                <span class="macro">assert_eq!</span>(cache_ref.peek(<span class="kw-2">&amp;</span><span class="number">1</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"a"</span>));
             });
         });
 
-        <span class="macro">assert_eq!</span>((cache_ref).peek(<span class="kw-2">&amp;</span><span class="number">1</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">&quot;a&quot;</span>));
+        <span class="macro">assert_eq!</span>((cache_ref).peek(<span class="kw-2">&amp;</span><span class="number">1</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"a"</span>));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_iter_forwards() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">3</span>).unwrap());
-        cache.put(<span class="string">&quot;a&quot;</span>, <span class="number">1</span>);
-        cache.put(<span class="string">&quot;b&quot;</span>, <span class="number">2</span>);
-        cache.put(<span class="string">&quot;c&quot;</span>, <span class="number">3</span>);
+        cache.put(<span class="string">"a"</span>, <span class="number">1</span>);
+        cache.put(<span class="string">"b"</span>, <span class="number">2</span>);
+        cache.put(<span class="string">"c"</span>, <span class="number">3</span>);
 
         {
             <span class="comment">// iter const
             </span><span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter();
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">3</span>);
-            assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;c&quot;</span>, <span class="number">3</span>));
+            assert_opt_eq_tuple(iter.next(), (<span class="string">"c"</span>, <span class="number">3</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">2</span>);
-            assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+            assert_opt_eq_tuple(iter.next(), (<span class="string">"b"</span>, <span class="number">2</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-            assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+            assert_opt_eq_tuple(iter.next(), (<span class="string">"a"</span>, <span class="number">1</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
             <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">None</span>);
@@ -4100,13 +4101,13 @@
             <span class="comment">// iter mut
             </span><span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter_mut();
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">3</span>);
-            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">&quot;c&quot;</span>, <span class="number">3</span>));
+            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">"c"</span>, <span class="number">3</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">2</span>);
-            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">"b"</span>, <span class="number">2</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">"a"</span>, <span class="number">1</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
             <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">None</span>);
@@ -4116,21 +4117,21 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_iter_backwards() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">3</span>).unwrap());
-        cache.put(<span class="string">&quot;a&quot;</span>, <span class="number">1</span>);
-        cache.put(<span class="string">&quot;b&quot;</span>, <span class="number">2</span>);
-        cache.put(<span class="string">&quot;c&quot;</span>, <span class="number">3</span>);
+        cache.put(<span class="string">"a"</span>, <span class="number">1</span>);
+        cache.put(<span class="string">"b"</span>, <span class="number">2</span>);
+        cache.put(<span class="string">"c"</span>, <span class="number">3</span>);
 
         {
             <span class="comment">// iter const
             </span><span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter();
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">3</span>);
-            assert_opt_eq_tuple(iter.next_back(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+            assert_opt_eq_tuple(iter.next_back(), (<span class="string">"a"</span>, <span class="number">1</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">2</span>);
-            assert_opt_eq_tuple(iter.next_back(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+            assert_opt_eq_tuple(iter.next_back(), (<span class="string">"b"</span>, <span class="number">2</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-            assert_opt_eq_tuple(iter.next_back(), (<span class="string">&quot;c&quot;</span>, <span class="number">3</span>));
+            assert_opt_eq_tuple(iter.next_back(), (<span class="string">"c"</span>, <span class="number">3</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
             <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">None</span>);
@@ -4140,13 +4141,13 @@
             <span class="comment">// iter mut
             </span><span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter_mut();
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">3</span>);
-            assert_opt_eq_mut_tuple(iter.next_back(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+            assert_opt_eq_mut_tuple(iter.next_back(), (<span class="string">"a"</span>, <span class="number">1</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">2</span>);
-            assert_opt_eq_mut_tuple(iter.next_back(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+            assert_opt_eq_mut_tuple(iter.next_back(), (<span class="string">"b"</span>, <span class="number">2</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-            assert_opt_eq_mut_tuple(iter.next_back(), (<span class="string">&quot;c&quot;</span>, <span class="number">3</span>));
+            assert_opt_eq_mut_tuple(iter.next_back(), (<span class="string">"c"</span>, <span class="number">3</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
             <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">None</span>);
@@ -4156,21 +4157,21 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_iter_forwards_and_backwards() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">3</span>).unwrap());
-        cache.put(<span class="string">&quot;a&quot;</span>, <span class="number">1</span>);
-        cache.put(<span class="string">&quot;b&quot;</span>, <span class="number">2</span>);
-        cache.put(<span class="string">&quot;c&quot;</span>, <span class="number">3</span>);
+        cache.put(<span class="string">"a"</span>, <span class="number">1</span>);
+        cache.put(<span class="string">"b"</span>, <span class="number">2</span>);
+        cache.put(<span class="string">"c"</span>, <span class="number">3</span>);
 
         {
             <span class="comment">// iter const
             </span><span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter();
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">3</span>);
-            assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;c&quot;</span>, <span class="number">3</span>));
+            assert_opt_eq_tuple(iter.next(), (<span class="string">"c"</span>, <span class="number">3</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">2</span>);
-            assert_opt_eq_tuple(iter.next_back(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+            assert_opt_eq_tuple(iter.next_back(), (<span class="string">"a"</span>, <span class="number">1</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-            assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+            assert_opt_eq_tuple(iter.next(), (<span class="string">"b"</span>, <span class="number">2</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
             <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">None</span>);
@@ -4179,13 +4180,13 @@
             <span class="comment">// iter mut
             </span><span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter_mut();
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">3</span>);
-            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">&quot;c&quot;</span>, <span class="number">3</span>));
+            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">"c"</span>, <span class="number">3</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">2</span>);
-            assert_opt_eq_mut_tuple(iter.next_back(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+            assert_opt_eq_mut_tuple(iter.next_back(), (<span class="string">"a"</span>, <span class="number">1</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+            assert_opt_eq_mut_tuple(iter.next(), (<span class="string">"b"</span>, <span class="number">2</span>));
 
             <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
             <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">None</span>);
@@ -4196,26 +4197,26 @@
     </span><span class="kw">fn </span>test_iter_multiple_threads() {
         <span class="kw">let </span><span class="kw-2">mut </span>pool = Pool::new(<span class="number">1</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">3</span>).unwrap());
-        cache.put(<span class="string">&quot;a&quot;</span>, <span class="number">1</span>);
-        cache.put(<span class="string">&quot;b&quot;</span>, <span class="number">2</span>);
-        cache.put(<span class="string">&quot;c&quot;</span>, <span class="number">3</span>);
+        cache.put(<span class="string">"a"</span>, <span class="number">1</span>);
+        cache.put(<span class="string">"b"</span>, <span class="number">2</span>);
+        cache.put(<span class="string">"c"</span>, <span class="number">3</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter();
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">3</span>);
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;c&quot;</span>, <span class="number">3</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"c"</span>, <span class="number">3</span>));
 
         {
             <span class="kw">let </span>iter_ref = <span class="kw-2">&amp;mut </span>iter;
             pool.scoped(|scoped| {
                 scoped.execute(<span class="kw">move </span>|| {
                     <span class="macro">assert_eq!</span>(iter_ref.len(), <span class="number">2</span>);
-                    assert_opt_eq_tuple(iter_ref.next(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+                    assert_opt_eq_tuple(iter_ref.next(), (<span class="string">"b"</span>, <span class="number">2</span>));
                 });
             });
         }
 
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"a"</span>, <span class="number">1</span>));
 
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">None</span>);
@@ -4224,21 +4225,21 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_iter_clone() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">3</span>).unwrap());
-        cache.put(<span class="string">&quot;a&quot;</span>, <span class="number">1</span>);
-        cache.put(<span class="string">&quot;b&quot;</span>, <span class="number">2</span>);
+        cache.put(<span class="string">"a"</span>, <span class="number">1</span>);
+        cache.put(<span class="string">"b"</span>, <span class="number">2</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter();
         <span class="kw">let </span><span class="kw-2">mut </span>iter_clone = iter.clone();
 
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">2</span>);
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"b"</span>, <span class="number">2</span>));
         <span class="macro">assert_eq!</span>(iter_clone.len(), <span class="number">2</span>);
-        assert_opt_eq_tuple(iter_clone.next(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
+        assert_opt_eq_tuple(iter_clone.next(), (<span class="string">"b"</span>, <span class="number">2</span>));
 
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"a"</span>, <span class="number">1</span>));
         <span class="macro">assert_eq!</span>(iter_clone.len(), <span class="number">1</span>);
-        assert_opt_eq_tuple(iter_clone.next(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+        assert_opt_eq_tuple(iter_clone.next(), (<span class="string">"a"</span>, <span class="number">1</span>));
 
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">None</span>);
@@ -4249,19 +4250,19 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_into_iter() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">3</span>).unwrap());
-        cache.put(<span class="string">&quot;a&quot;</span>, <span class="number">1</span>);
-        cache.put(<span class="string">&quot;b&quot;</span>, <span class="number">2</span>);
-        cache.put(<span class="string">&quot;c&quot;</span>, <span class="number">3</span>);
+        cache.put(<span class="string">"a"</span>, <span class="number">1</span>);
+        cache.put(<span class="string">"b"</span>, <span class="number">2</span>);
+        cache.put(<span class="string">"c"</span>, <span class="number">3</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>iter = cache.into_iter();
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">3</span>);
-        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>((<span class="string">&quot;a&quot;</span>, <span class="number">1</span>)));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>((<span class="string">"a"</span>, <span class="number">1</span>)));
 
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">2</span>);
-        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>((<span class="string">&quot;b&quot;</span>, <span class="number">2</span>)));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>((<span class="string">"b"</span>, <span class="number">2</span>)));
 
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">1</span>);
-        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>((<span class="string">&quot;c&quot;</span>, <span class="number">3</span>)));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>((<span class="string">"c"</span>, <span class="number">3</span>)));
 
         <span class="macro">assert_eq!</span>(iter.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">None</span>);
@@ -4271,22 +4272,22 @@
     </span><span class="kw">fn </span>test_that_pop_actually_detaches_node() {
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">5</span>).unwrap());
 
-        cache.put(<span class="string">&quot;a&quot;</span>, <span class="number">1</span>);
-        cache.put(<span class="string">&quot;b&quot;</span>, <span class="number">2</span>);
-        cache.put(<span class="string">&quot;c&quot;</span>, <span class="number">3</span>);
-        cache.put(<span class="string">&quot;d&quot;</span>, <span class="number">4</span>);
-        cache.put(<span class="string">&quot;e&quot;</span>, <span class="number">5</span>);
+        cache.put(<span class="string">"a"</span>, <span class="number">1</span>);
+        cache.put(<span class="string">"b"</span>, <span class="number">2</span>);
+        cache.put(<span class="string">"c"</span>, <span class="number">3</span>);
+        cache.put(<span class="string">"d"</span>, <span class="number">4</span>);
+        cache.put(<span class="string">"e"</span>, <span class="number">5</span>);
 
-        <span class="macro">assert_eq!</span>(cache.pop(<span class="kw-2">&amp;</span><span class="string">&quot;c&quot;</span>), <span class="prelude-val">Some</span>(<span class="number">3</span>));
+        <span class="macro">assert_eq!</span>(cache.pop(<span class="kw-2">&amp;</span><span class="string">"c"</span>), <span class="prelude-val">Some</span>(<span class="number">3</span>));
 
-        cache.put(<span class="string">&quot;f&quot;</span>, <span class="number">6</span>);
+        cache.put(<span class="string">"f"</span>, <span class="number">6</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>iter = cache.iter();
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;f&quot;</span>, <span class="number">6</span>));
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;e&quot;</span>, <span class="number">5</span>));
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;d&quot;</span>, <span class="number">4</span>));
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;b&quot;</span>, <span class="number">2</span>));
-        assert_opt_eq_tuple(iter.next(), (<span class="string">&quot;a&quot;</span>, <span class="number">1</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"f"</span>, <span class="number">6</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"e"</span>, <span class="number">5</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"d"</span>, <span class="number">4</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"b"</span>, <span class="number">2</span>));
+        assert_opt_eq_tuple(iter.next(), (<span class="string">"a"</span>, <span class="number">1</span>));
         <span class="macro">assert!</span>(iter.next().is_none());
     }
 
@@ -4296,10 +4297,10 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        <span class="kw">let </span>key = String::from(<span class="string">&quot;apple&quot;</span>);
-        cache.put(key, <span class="string">&quot;red&quot;</span>);
+        <span class="kw">let </span>key = String::from(<span class="string">"apple"</span>);
+        cache.put(key, <span class="string">"red"</span>);
 
-        assert_opt_eq(cache.get(<span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
+        assert_opt_eq(cache.get(<span class="string">"apple"</span>), <span class="string">"red"</span>);
     }
 
     <span class="attr">#[test]
@@ -4308,10 +4309,10 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>cache = LruCache::new(NonZeroUsize::new(<span class="number">2</span>).unwrap());
 
-        <span class="kw">let </span>key = String::from(<span class="string">&quot;apple&quot;</span>);
-        cache.put(key, <span class="string">&quot;red&quot;</span>);
+        <span class="kw">let </span>key = String::from(<span class="string">"apple"</span>);
+        cache.put(key, <span class="string">"red"</span>);
 
-        assert_opt_eq_mut(cache.get_mut(<span class="string">&quot;apple&quot;</span>), <span class="string">&quot;red&quot;</span>);
+        assert_opt_eq_mut(cache.get_mut(<span class="string">"apple"</span>), <span class="string">"red"</span>);
     }
 
     <span class="attr">#[test]
@@ -4437,13 +4438,13 @@
 ///
 /// ```compile_fail
 /// let mut cache = lru::LruCache::&lt;u32, u32&gt;::unbounded();
-/// let _: &amp;&#39;static u32 = cache.get_or_insert(0, || 92);
+/// let _: &amp;'static u32 = cache.get_or_insert(0, || 92);
 /// ```
 ///
 /// ```compile_fail
 /// let mut cache = lru::LruCache::&lt;u32, u32&gt;::unbounded();
-/// let _: Option&lt;(&amp;&#39;static u32, _)&gt; = cache.peek_lru();
-/// let _: Option&lt;(_, &amp;&#39;static u32)&gt; = cache.peek_lru();
+/// let _: Option&lt;(&amp;'static u32, _)&gt; = cache.peek_lru();
+/// let _: Option&lt;(_, &amp;'static u32)&gt; = cache.peek_lru();
 /// ```
 </span><span class="kw">fn </span>_test_lifetimes() {}
 </code></pre></div></section></main></body></html>

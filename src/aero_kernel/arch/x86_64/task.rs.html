@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/task.rs`."><title>task.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/task.rs`."><title>task.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -663,10 +664,10 @@
 </span><span class="doccomment">//! ## How does `x86_64` context switching work?
 //!
 //! The [`arch_task_spinup`] function is responsible for switching the current
-//! task to the next one. This function works by updating the TSS&#39;s RSP0 field to point
+//! task to the next one. This function works by updating the TSS's RSP0 field to point
 //! to the per-task kernel stack and switches the page table for the next process.
 //!
-//! After a task is born, it directly context switches to it&#39;s specific trampoline. The
+//! After a task is born, it directly context switches to it's specific trampoline. The
 //! trampoline is responsible for jumping to its appropriate context. At the point when
 //! the trampoline is called, the stack should have the switch frame pushed.
 //!
@@ -733,8 +734,8 @@
 /// explode dangerously. We avoid this particular problem by preventing anything from
 /// being mapped at the maximum canonical address.
 ///
-/// * On AMD CPUs in the Ryzen family, there&#39;s a nasty bug in which the CPUs malfunction if they
-/// execute code from the highest canonical page. They&#39;ll speculate right off the end of the
+/// * On AMD CPUs in the Ryzen family, there's a nasty bug in which the CPUs malfunction if they
+/// execute code from the highest canonical page. They'll speculate right off the end of the
 /// canonical space and bad things happen. This is worked around in the same way as the Intel
 /// problem.
 </span><span class="kw">pub fn </span>userland_last_address() -&gt; VirtAddr {
@@ -780,7 +781,7 @@
             context: Unique::dangling(),
             context_switch_rsp: VirtAddr::zero(),
 
-            <span class="comment">// Since the IDLE task is a special kernel task, we use the kernel&#39;s
+            <span class="comment">// Since the IDLE task is a special kernel task, we use the kernel's
             // address space here and we also use the kernel privilege level here.
             </span>address_space: AddressSpace::this(),
             user: <span class="bool-val">false</span>,
@@ -813,7 +814,7 @@
         kframe.stack.iret.rsp = task_stack <span class="kw">as </span>u64;
         kframe.stack.iret.rflags = <span class="kw">if </span>enable_interrupts { <span class="number">0x200 </span>} <span class="kw">else </span>{ <span class="number">0x00 </span>};
 
-        <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
+        <span class="kw">extern </span><span class="string">"C" </span>{
             <span class="kw">fn </span>iretq_init();
         }
 
@@ -841,9 +842,9 @@
         entry: usize,
         usr_stack: usize,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, MapToError&lt;Size4KiB&gt;&gt; {
-        <span class="macro">log::trace!</span>(<span class="string">&quot;ArchTask::clone_process(entry={entry:#x}, stack={usr_stack:#x})&quot;</span>);
+        <span class="macro">log::trace!</span>(<span class="string">"ArchTask::clone_process(entry={entry:#x}, stack={usr_stack:#x})"</span>);
 
-        <span class="macro">assert!</span>(<span class="self">self</span>.user, <span class="string">&quot;cannot clone a kernel task&quot;</span>);
+        <span class="macro">assert!</span>(<span class="self">self</span>.user, <span class="string">"cannot clone a kernel task"</span>);
 
         <span class="kw">let </span>address_space = AddressSpace::this();
         <span class="kw">let </span>switch_stack = <span class="self">Self</span>::alloc_switch_stack()<span class="question-mark">?</span>.as_mut_ptr::&lt;u8&gt;();
@@ -869,7 +870,7 @@
 
         </span><span class="kw">let </span>context = <span class="kw">unsafe </span>{ new_stack.offset::&lt;Context&gt;() };
 
-        <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
+        <span class="kw">extern </span><span class="string">"C" </span>{
             <span class="kw">fn </span>fork_init();
         }
 
@@ -894,7 +895,7 @@
     }
 
     <span class="kw">pub fn </span>fork(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, MapToError&lt;Size4KiB&gt;&gt; {
-        <span class="macro">assert!</span>(<span class="self">self</span>.user, <span class="string">&quot;cannot fork a kernel task&quot;</span>);
+        <span class="macro">assert!</span>(<span class="self">self</span>.user, <span class="string">"cannot fork a kernel task"</span>);
 
         <span class="kw">let </span>new_address_space = AddressSpace::this().offset_page_table().fork()<span class="question-mark">?</span>;
 
@@ -902,7 +903,7 @@
         // and the parent address spaces as read only, we will flush the page table of the
         // current process to trigger COW.
         </span><span class="kw">unsafe </span>{
-            <span class="macro">asm!</span>(<span class="string">&quot;mov cr3, {}&quot;</span>, <span class="kw">in</span>(reg) controlregs::read_cr3_raw(), options(nostack));
+            <span class="macro">asm!</span>(<span class="string">"mov cr3, {}"</span>, <span class="kw">in</span>(reg) controlregs::read_cr3_raw(), options(nostack));
         }
 
         <span class="kw">let </span>switch_stack = <span class="self">Self</span>::alloc_switch_stack()<span class="question-mark">?</span>.as_mut_ptr::&lt;u8&gt;();
@@ -924,7 +925,7 @@
         <span class="comment">// Prepare the trampoline...
         </span><span class="kw">let </span>context = <span class="kw">unsafe </span>{ new_stack.offset::&lt;Context&gt;() };
 
-        <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
+        <span class="kw">extern </span><span class="string">"C" </span>{
             <span class="kw">fn </span>fork_init();
         }
 
@@ -965,7 +966,7 @@
 
         <span class="kw">let </span>loaded_binary = vm
             .load_bin(executable, argv, envv)
-            .expect(<span class="string">&quot;exec: failed to load ELF&quot;</span>);
+            .expect(<span class="string">"exec: failed to load ELF"</span>);
 
         <span class="comment">// a kernel task can only execute a user executable
         </span><span class="self">self</span>.user = <span class="bool-val">true</span>;
@@ -998,7 +999,7 @@
         //     // FPU precision to 64 bits (as documented in Intel SDM volume 1 section
         //     // 8.1.5).
         //     const DEFAULT_FPU_CWORD: u16 = 0x37f;
-        //     asm!(&quot;fldcw [{}]&quot;, in(reg) &amp;DEFAULT_FPU_CWORD, options(nomem));
+        //     asm!("fldcw [{}]", in(reg) &amp;DEFAULT_FPU_CWORD, options(nomem));
 
         //     // Set the default MXCSR value at reset as documented in Intel SDM volume 2A.
         //     controlregs::write_mxcsr(
@@ -1015,7 +1016,7 @@
 
         </span><span class="self">self</span>.fpu_storage = <span class="prelude-val">Some</span>(fpu_storage);
 
-        <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
+        <span class="kw">extern </span><span class="string">"C" </span>{
             <span class="kw">fn </span>jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
         }
 
@@ -1110,7 +1111,7 @@
                     <span class="prelude-val">Ok</span>(())
                 },
             )
-            .expect(<span class="string">&quot;dealloc: failed to unref the page table&quot;</span>);
+            .expect(<span class="string">"dealloc: failed to unref the page table"</span>);
     }
 
     <span class="doccomment">/// Deallocates the architecture-specific task resources. This function is called
@@ -1168,7 +1169,7 @@
     <span class="kw-2">*</span>XSAVE_SIZE.call_once(|| {
         CpuId::new()
             .get_extended_state_info()
-            .expect(<span class="string">&quot;xsave: cpuid extended state info unavailable&quot;</span>)
+            .expect(<span class="string">"xsave: cpuid extended state info unavailable"</span>)
             .xsave_size()
     })
 }
@@ -1241,7 +1242,7 @@
     // components saved correspond to the bits set in the requested-feature bitmap (RFBM), which is
     // the logical-AND of EDX:EAX and XCR0.
     // unsafe {
-    //     asm!(&quot;xsave64 [{}]&quot;, in(reg) fpu.as_ptr(), in(&quot;eax&quot;) u32::MAX, in(&quot;edx&quot;) u32::MAX,
+    //     asm!("xsave64 [{}]", in(reg) fpu.as_ptr(), in("eax") u32::MAX, in("edx") u32::MAX,
     // options(nomem, nostack)) }
 
     </span><span class="kw">use </span>core::arch::x86_64::_fxsave64;
@@ -1251,7 +1252,7 @@
 
 <span class="kw">fn </span>xrstor(fpu: <span class="kw-2">&amp;</span>FpuState) {
     <span class="comment">// unsafe {
-    //     asm!(&quot;xrstor [{}]&quot;, in(reg) fpu.as_ptr(), in(&quot;eax&quot;) u32::MAX, in(&quot;edx&quot;) u32::MAX,
+    //     asm!("xrstor [{}]", in(reg) fpu.as_ptr(), in("eax") u32::MAX, in("edx") u32::MAX,
     // options(nomem, nostack)); }
     </span><span class="kw">use </span>core::arch::x86_64::_fxrstor64;
 
@@ -1260,7 +1261,7 @@
 
 <span class="doccomment">/// Check out the module level documentation for more information.
 </span><span class="kw">pub fn </span>arch_task_spinup(from: <span class="kw-2">&amp;mut </span>ArchTask, to: <span class="kw-2">&amp;</span>ArchTask) {
-    <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
+    <span class="kw">extern </span><span class="string">"C" </span>{
         <span class="kw">fn </span>task_spinup(from: <span class="kw-2">&amp;mut </span>Unique&lt;Context&gt;, to: <span class="kw-2">&amp;</span>Context);
     }
 
@@ -1273,7 +1274,7 @@
             xrstor(fpu);
         }
 
-        <span class="comment">// Load the new thread&#39;s kernel stack pointer everywhere it&#39;s needed.
+        <span class="comment">// Load the new thread's kernel stack pointer everywhere it's needed.
         </span><span class="kw">let </span>kstackp = to.context_switch_rsp.as_u64();
         <span class="kw">super</span>::gdt::TSS.rsp[<span class="number">0</span>] = kstackp;
         io::wrmsr(io::IA32_SYSENTER_ESP, kstackp);

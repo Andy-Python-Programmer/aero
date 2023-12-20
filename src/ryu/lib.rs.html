@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ryu-1.0.15/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ryu" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ryu-1.0.15/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ryu" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -132,11 +133,11 @@
 //! Pure Rust implementation of Ryū, an algorithm to quickly convert floating
 //! point numbers to decimal strings.
 //!
-//! The PLDI&#39;18 paper [*Ryū: fast float-to-string conversion*][paper] by Ulf
+//! The PLDI'18 paper [*Ryū: fast float-to-string conversion*][paper] by Ulf
 //! Adams includes a complete correctness proof of the algorithm. The paper is
 //! available under the creative commons CC-BY-SA license.
 //!
-//! This Rust implementation is a line-by-line port of Ulf Adams&#39; implementation
+//! This Rust implementation is a line-by-line port of Ulf Adams' implementation
 //! in C, [https://github.com/ulfjack/ryu][upstream].
 //!
 //! [paper]: https://dl.acm.org/citation.cfm?id=3192369
@@ -148,7 +149,7 @@
 //! fn main() {
 //!     let mut buffer = ryu::Buffer::new();
 //!     let printed = buffer.format(1.234);
-//!     assert_eq!(printed, &quot;1.234&quot;);
+//!     assert_eq!(printed, "1.234");
 //! }
 //! ```
 //!
@@ -156,7 +157,7 @@
 //!
 //! ![performance](https://raw.githubusercontent.com/dtolnay/ryu/master/performance.png)
 //!
-//! You can run upstream&#39;s benchmarks with:
+//! You can run upstream's benchmarks with:
 //!
 //! ```console
 //! $ git clone https://github.com/ulfjack/ryu c-ryu
@@ -194,7 +195,7 @@
 //! ## Formatting
 //!
 //! This library tends to produce more human-readable output than the standard
-//! library&#39;s to\_string, which never uses scientific notation. Here are two
+//! library's to\_string, which never uses scientific notation. Here are two
 //! examples:
 //!
 //! - *ryu:* 1.23e40, *std:* 12300000000000000000000000000000000000000
@@ -204,7 +205,7 @@
 //! notation.
 
 </span><span class="attr">#![no_std]
-#![doc(html_root_url = <span class="string">&quot;https://docs.rs/ryu/1.0.15&quot;</span>)]
+#![doc(html_root_url = <span class="string">"https://docs.rs/ryu/1.0.15"</span>)]
 #![allow(
     clippy::cast_lossless,
     clippy::cast_possible_truncation,
@@ -228,10 +229,10 @@
 </span><span class="kw">mod </span>buffer;
 <span class="kw">mod </span>common;
 <span class="kw">mod </span>d2s;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;small&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"small"</span>))]
 </span><span class="kw">mod </span>d2s_full_table;
 <span class="kw">mod </span>d2s_intrinsics;
-<span class="attr">#[cfg(feature = <span class="string">&quot;small&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"small"</span>)]
 </span><span class="kw">mod </span>d2s_small_table;
 <span class="kw">mod </span>digit_table;
 <span class="kw">mod </span>f2s;

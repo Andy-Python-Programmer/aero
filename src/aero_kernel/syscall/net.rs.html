@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/syscall/net.rs`."><title>net.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/syscall/net.rs`."><title>net.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -353,7 +354,7 @@
 
 <span class="doccomment">/// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.
-</span><span class="kw">fn </span>socket_addr_from_addr&lt;<span class="lifetime">&#39;sys</span>&gt;(address: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddrRef&lt;<span class="lifetime">&#39;sys</span>&gt;&gt; {
+</span><span class="kw">fn </span>socket_addr_from_addr&lt;<span class="lifetime">'sys</span>&gt;(address: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddrRef&lt;<span class="lifetime">'sys</span>&gt;&gt; {
     <span class="kw">let </span>family = <span class="kw-2">*</span>address.read_mut::&lt;u32&gt;()<span class="question-mark">?</span>;
     SocketAddrRef::from_family(address, family)
 }
@@ -398,7 +399,7 @@
 
     <span class="kw">let </span>connection_sock = socket.inode().accept(address)<span class="question-mark">?</span>;
     <span class="kw">let </span>handle = file_table.open_file(
-        DirEntry::from_inode(connection_sock, String::from(<span class="string">&quot;&lt;socket&gt;&quot;</span>)),
+        DirEntry::from_inode(connection_sock, String::from(<span class="string">"&lt;socket&gt;"</span>)),
         OpenFlags::O_RDWR,
     )<span class="question-mark">?</span>;
 
@@ -440,7 +441,7 @@
     <span class="kw">match </span>layer {
         SocketOptionLevel::Socket =&gt; {
             <span class="macro">unimplemented!</span>(
-                <span class="string">&quot;setsockopt(fd={:?}, layer={:?}, number={:?}, buf={:?})&quot;</span>,
+                <span class="string">"setsockopt(fd={:?}, layer={:?}, number={:?}, buf={:?})"</span>,
                 fd,
                 layer,
                 number,
@@ -467,42 +468,42 @@
     <span class="kw">let </span>protocol = IpProtocol::from_usize(protocol).ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>(name, socket) = <span class="kw">match </span>domain <span class="kw">as </span>u32 {
-        AF_UNIX =&gt; (<span class="string">&quot;unix&quot;</span>, UnixSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;),
+        AF_UNIX =&gt; (<span class="string">"unix"</span>, UnixSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;),
         AF_INET =&gt; <span class="kw">match </span>(typ, protocol) {
             (SocketType::Dgram, IpProtocol::Default | IpProtocol::Udp) =&gt; {
-                (<span class="string">&quot;udp&quot;</span>, UdpSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;)
+                (<span class="string">"udp"</span>, UdpSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;)
             }
 
             (SocketType::Dgram, IpProtocol::Raw) =&gt; {
-                (<span class="string">&quot;ipv4&quot;</span>, Ipv4Socket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;)
+                (<span class="string">"ipv4"</span>, Ipv4Socket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;)
             }
 
             (SocketType::Stream, IpProtocol::Default | IpProtocol::Tcp) =&gt; {
-                (<span class="string">&quot;tcp&quot;</span>, TcpSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;)
+                (<span class="string">"tcp"</span>, TcpSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;)
             }
 
             <span class="kw">_ </span>=&gt; {
                 <span class="macro">log::warn!</span>(
-                    <span class="string">&quot;unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol:?}&quot;
+                    <span class="string">"unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol:?}"
                 </span>);
 
                 <span class="kw">return </span><span class="prelude-val">Err</span>(SyscallError::EINVAL);
             }
         },
 
-        AF_NETLINK =&gt; (<span class="string">&quot;netlink&quot;</span>, NetLinkSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;),
+        AF_NETLINK =&gt; (<span class="string">"netlink"</span>, NetLinkSocket::new() <span class="kw">as </span>Arc&lt;<span class="kw">dyn </span>INodeInterface&gt;),
 
         <span class="kw">_ </span>=&gt; {
             <span class="macro">log::warn!</span>(
-                <span class="string">&quot;unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol:?}&quot;
+                <span class="string">"unsupported socket type: domain={domain}, socket_type={socket_type}, protocol={protocol:?}"
             </span>);
 
             <span class="kw">return </span><span class="prelude-val">Err</span>(SyscallError::EINVAL);
         }
     };
-    <span class="macro">log::warn!</span>(<span class="string">&quot;&lt;{name}_socket&gt; -EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE&quot;</span>);
+    <span class="macro">log::warn!</span>(<span class="string">"&lt;{name}_socket&gt; -EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"</span>);
 
-    <span class="kw">let </span>entry = DirEntry::from_inode(socket, <span class="macro">alloc::format!</span>(<span class="string">&quot;&lt;{name}_socket&gt;&quot;</span>));
+    <span class="kw">let </span>entry = DirEntry::from_inode(socket, <span class="macro">alloc::format!</span>(<span class="string">"&lt;{name}_socket&gt;"</span>));
     <span class="prelude-val">Ok</span>(entry)
 }
 
@@ -571,7 +572,7 @@
             <span class="kw-2">*</span>len = size;
         }
 
-        SocketAddr::Netlink(peer) =&gt; <span class="macro">unimplemented!</span>(<span class="string">&quot;{:?}&quot;</span>, peer),
+        SocketAddr::Netlink(peer) =&gt; <span class="macro">unimplemented!</span>(<span class="string">"{:?}"</span>, peer),
         SocketAddr::Unix(peer) =&gt; {
             <span class="kw">let </span>size = core::mem::size_of::&lt;SocketAddrUnix&gt;() <span class="kw">as </span>u32;
             <span class="macro">assert!</span>(<span class="kw-2">*</span>len &gt;= size);

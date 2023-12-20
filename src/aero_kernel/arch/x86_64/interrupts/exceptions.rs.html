@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/interrupts/exceptions.rs`."><title>exceptions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (2f8d81f9d 2023-11-21)" data-channel="nightly" data-search-js="search-21db098bdc95be9e.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/arch/x86_64/interrupts/exceptions.rs`."><title>exceptions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-804b98a1284a310a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (f704f3b93 2023-12-19)" data-channel="nightly" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -258,10 +259,10 @@
     <span class="kw">pub fn </span><span class="macro-nonterminal">$name</span>(stack: <span class="kw-2">&amp;mut </span>InterruptErrorStack) {
         unwind::prepare_panic();
 
-        <span class="macro">log::error!</span>(<span class="string">&quot;EXCEPTION: {}&quot;</span>, <span class="macro-nonterminal">$message</span>);
-        <span class="macro">log::error!</span>(<span class="string">&quot;FS={:#x}&quot;</span>, <span class="kw">unsafe </span>{ io::rdmsr(io::IA32_FS_BASE) },);
-        <span class="macro">log::error!</span>(<span class="string">&quot;GS={:#x}&quot;</span>, <span class="kw">unsafe </span>{ io::rdmsr(io::IA32_GS_BASE) });
-        <span class="macro">log::error!</span>(<span class="string">&quot;Stack: {:#x?}&quot;</span>, stack);
+        <span class="macro">log::error!</span>(<span class="string">"EXCEPTION: {}"</span>, <span class="macro-nonterminal">$message</span>);
+        <span class="macro">log::error!</span>(<span class="string">"FS={:#x}"</span>, <span class="kw">unsafe </span>{ io::rdmsr(io::IA32_FS_BASE) },);
+        <span class="macro">log::error!</span>(<span class="string">"GS={:#x}"</span>, <span class="kw">unsafe </span>{ io::rdmsr(io::IA32_GS_BASE) });
+        <span class="macro">log::error!</span>(<span class="string">"Stack: {:#x?}"</span>, stack);
         <span class="macro">dbg!</span>(
             scheduler::get_scheduler()
                 .current_task()
@@ -272,7 +273,7 @@
         <span class="kw">if </span>stack.stack.iret.rip != <span class="number">0 </span>{
             <span class="kw">unsafe </span>{
                 <span class="macro">log::error!</span>(
-                    <span class="string">&quot;RIP={:?}&quot;</span>,
+                    <span class="string">"RIP={:?}"</span>,
                     core::slice::from_raw_parts(stack.stack.iret.rip <span class="kw">as </span><span class="kw-2">*const </span>u8, <span class="number">512</span>)
                 );
             }
@@ -288,29 +289,29 @@
     }
 }
 
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>divide_by_zero() =&gt; <span class="string">&quot;Division by zero&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>debug() =&gt; <span class="string">&quot;Debug&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>non_maskable() =&gt; <span class="string">&quot;Non Maskable&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>overflow() =&gt; <span class="string">&quot;Stack Overflow&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>bound_range() =&gt; <span class="string">&quot;Out of Bounds&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>device_not_available() =&gt; <span class="string">&quot;Device not Available&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>double_fault() =&gt; <span class="string">&quot;Double Fault&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>invalid_tss() =&gt; <span class="string">&quot;Invalid TSS&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>segment_not_present() =&gt; <span class="string">&quot;Segment not Present&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>stack_segment() =&gt; <span class="string">&quot;Stack Segment Fault&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>protection() =&gt; <span class="string">&quot;Protection Fault&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>fpu_fault() =&gt; <span class="string">&quot;FPU floating point fault&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>alignment_check() =&gt; <span class="string">&quot;Alignment check fault&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>machine_check() =&gt; <span class="string">&quot;Machine check fault&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>virtualization() =&gt; <span class="string">&quot;Virtualization fault&quot;</span>);
-<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>security() =&gt; <span class="string">&quot;Security exception&quot;</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>divide_by_zero() =&gt; <span class="string">"Division by zero"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>debug() =&gt; <span class="string">"Debug"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>non_maskable() =&gt; <span class="string">"Non Maskable"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>overflow() =&gt; <span class="string">"Stack Overflow"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>bound_range() =&gt; <span class="string">"Out of Bounds"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>device_not_available() =&gt; <span class="string">"Device not Available"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>double_fault() =&gt; <span class="string">"Double Fault"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>invalid_tss() =&gt; <span class="string">"Invalid TSS"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>segment_not_present() =&gt; <span class="string">"Segment not Present"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>stack_segment() =&gt; <span class="string">"Stack Segment Fault"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>protection() =&gt; <span class="string">"Protection Fault"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>fpu_fault() =&gt; <span class="string">"FPU floating point fault"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>alignment_check() =&gt; <span class="string">"Alignment check fault"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>machine_check() =&gt; <span class="string">"Machine check fault"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>virtualization() =&gt; <span class="string">"Virtualization fault"</span>);
+<span class="macro">interrupt_exception!</span>(<span class="kw">fn </span>security() =&gt; <span class="string">"Security exception"</span>);
 
 <span class="kw">pub fn </span>simd(stack: <span class="kw-2">&amp;mut </span>InterruptErrorStack) {
     unwind::prepare_panic();
 
-    <span class="macro">log::error!</span>(<span class="string">&quot;EXCEPTION: SIMD floating point fault&quot;</span>);
-    <span class="macro">log::error!</span>(<span class="string">&quot;Stack: {:#x?}&quot;</span>, stack);
-    <span class="macro">log::error!</span>(<span class="string">&quot;MXCSR: {:?}&quot;</span>, controlregs::read_mxcsr());
+    <span class="macro">log::error!</span>(<span class="string">"EXCEPTION: SIMD floating point fault"</span>);
+    <span class="macro">log::error!</span>(<span class="string">"Stack: {:#x?}"</span>, stack);
+    <span class="macro">log::error!</span>(<span class="string">"MXCSR: {:?}"</span>, controlregs::read_mxcsr());
 
     unwind::unwind_stack_trace();
 
@@ -330,7 +331,7 @@
 
     <span class="kw">let </span>opcode = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>(stack.stack.iret.rip <span class="kw">as </span><span class="kw-2">*const </span>[u8; <span class="number">2</span>]) };
     <span class="kw">if </span>opcode == SYSENTER_OPCODE {
-        <span class="macro">log::debug!</span>(<span class="string">&quot;handling SYSENTER via #UD&quot;</span>);
+        <span class="macro">log::debug!</span>(<span class="string">"handling SYSENTER via #UD"</span>);
 
         stack.stack.iret.rip = stack.stack.scratch.rcx;
         stack.stack.iret.rsp = stack.stack.scratch.r11;
@@ -344,8 +345,8 @@
 
     </span>unwind::prepare_panic();
 
-    <span class="macro">log::error!</span>(<span class="string">&quot;EXCEPTION: Invalid Opcode&quot;</span>);
-    <span class="macro">log::error!</span>(<span class="string">&quot;Stack: {:#x?}&quot;</span>, stack);
+    <span class="macro">log::error!</span>(<span class="string">"EXCEPTION: Invalid Opcode"</span>);
+    <span class="macro">log::error!</span>(<span class="string">"Stack: {:#x?}"</span>, stack);
 
     unwind::unwind_stack_trace();
 
@@ -385,14 +386,14 @@
 
     <span class="comment">// prints out the error information for this page fault.
     </span><span class="kw">let </span>print_info = || {
-        <span class="macro">log::error!</span>(<span class="string">&quot;&quot;</span>);
-        <span class="macro">log::error!</span>(<span class="string">&quot;FS={:#x}&quot;</span>, <span class="kw">unsafe </span>{ io::rdmsr(io::IA32_FS_BASE) },);
-        <span class="macro">log::error!</span>(<span class="string">&quot;GS={:#x}&quot;</span>, <span class="kw">unsafe </span>{ io::rdmsr(io::IA32_GS_BASE) });
-        <span class="macro">log::error!</span>(<span class="string">&quot;&quot;</span>);
-        <span class="macro">log::error!</span>(<span class="string">&quot;accessed address: {:#x}&quot;</span>, accessed_address);
-        <span class="macro">log::error!</span>(<span class="string">&quot;reason: {:?}&quot;</span>, reason);
-        <span class="macro">log::error!</span>(<span class="string">&quot;&quot;</span>);
-        <span class="macro">log::error!</span>(<span class="string">&quot;stack: {:#x?}&quot;</span>, stack);
+        <span class="macro">log::error!</span>(<span class="string">""</span>);
+        <span class="macro">log::error!</span>(<span class="string">"FS={:#x}"</span>, <span class="kw">unsafe </span>{ io::rdmsr(io::IA32_FS_BASE) },);
+        <span class="macro">log::error!</span>(<span class="string">"GS={:#x}"</span>, <span class="kw">unsafe </span>{ io::rdmsr(io::IA32_GS_BASE) });
+        <span class="macro">log::error!</span>(<span class="string">""</span>);
+        <span class="macro">log::error!</span>(<span class="string">"accessed address: {:#x}"</span>, accessed_address);
+        <span class="macro">log::error!</span>(<span class="string">"reason: {:?}"</span>, reason);
+        <span class="macro">log::error!</span>(<span class="string">""</span>);
+        <span class="macro">log::error!</span>(<span class="string">"stack: {:#x?}"</span>, stack);
     };
 
     <span class="kw">if </span>accessed_address &lt; userland_last_address &amp;&amp; scheduler::is_initialized()
@@ -404,21 +405,21 @@
             .handle_page_fault(reason, accessed_address);
 
         <span class="kw">if </span>!signal &amp;&amp; stack.stack.iret.is_user() {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Segmentation fault&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"Segmentation fault"</span>);
             print_info();
 
             <span class="kw">let </span>task = scheduler::get_scheduler().current_task();
 
             <span class="macro">log::error!</span>(
-                <span class="string">&quot;process: (tid={}, pid={})&quot;</span>,
+                <span class="string">"process: (tid={}, pid={})"</span>,
                 task.tid().as_usize(),
                 task.pid().as_usize()
             );
 
             <span class="macro">log::error!</span>(
-                <span class="string">&quot;process: (path=`{}`)&quot;</span>,
+                <span class="string">"process: (path=`{}`)"</span>,
                 task.path()
-                    .expect(<span class="string">&quot;userland application does not have a path set&quot;</span>)
+                    .expect(<span class="string">"userland application does not have a path set"</span>)
             );
 
             task.file_table.log();
@@ -439,7 +440,7 @@
 
     unwind::prepare_panic();
 
-    <span class="macro">log::error!</span>(<span class="string">&quot;Page fault&quot;</span>);
+    <span class="macro">log::error!</span>(<span class="string">"Page fault"</span>);
     print_info();
 
     unwind::unwind_stack_trace();
