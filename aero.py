@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2021-2022 The Aero Project Developers.
+# Copyright (C) 2021-2024 The Aero Project Developers.
 #
 # This file is part of The Aero Project.
 #
@@ -89,6 +89,7 @@ class BuildInfo:
 
 def get_userland_tool(): return os.path.join(SYSROOT_DIR, "tools")
 def get_userland_package(): return os.path.join(SYSROOT_DIR, "packages")
+
 
 def remove_prefix(string: str, prefix: str):
     if string.startswith(prefix):
@@ -295,7 +296,7 @@ def build_userland_sysroot(minimal):
     if not os.path.islink(blink):
         # symlink the bootstrap.yml file in the src root to sysroot/bootstrap.link
         symlink_rel('bootstrap.yml', blink)
-    
+
     def run_xbstrap(args):
         try:
             return run_command(['xbstrap', *args], cwd=SYSROOT_DIR)
@@ -310,7 +311,8 @@ def build_userland_sysroot(minimal):
     code, _, _ = run_xbstrap(command)
 
     if code != 0:
-        log_error(f"`xbstrap {' '.join(command)}` exited with a non-zero status code")
+        log_error(
+            f"`xbstrap {' '.join(command)}` exited with a non-zero status code")
         exit(1)
 
 
@@ -320,7 +322,8 @@ def build_userland(args):
     host_cargo = os.path.join(SYSROOT_DIR, "tools/host-rust")
 
     if not os.path.exists(host_cargo):
-        log_error("host-rust not built as a part of the sysroot, skipping compilation of `userland/`")
+        log_error(
+            "host-rust not built as a part of the sysroot, skipping compilation of `userland/`")
         return []
 
     HOST_RUST = "host-rust/bin/rustc"
@@ -465,7 +468,7 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
                  '-serial', 'stdio',
                  '-drive', 'file=build/disk.img,if=none,id=NVME1,format=raw', '-device', 'nvme,drive=NVME1,serial=nvme',
                  # Specify the boot order (where `d` is the first CD-ROM drive)
-                 '--boot', 'd', 
+                 '--boot', 'd',
                  '-s']
 
     if args.bios == 'uefi':
@@ -503,7 +506,8 @@ def run_in_emulator(build_info: BuildInfo, iso_path):
     if not qemu_binary:
         qemu_binary = f'qemu-system-{build_info.target_arch}'
     else:
-        qemu_binary = os.path.join(qemu_binary, f'qemu-system-{build_info.target_arch}');
+        qemu_binary = os.path.join(
+            qemu_binary, f'qemu-system-{build_info.target_arch}')
 
     log_info(f"{qemu_binary} {' '.join(qemu_args)}")
     run_command([qemu_binary, *qemu_args])
@@ -597,7 +601,8 @@ def main():
 
     if os.path.exists(BUILD_DIR):
         system_root = os.path.join(SYSROOT_DIR, 'system-root')
-        sysroot_mod = max(os.path.getmtime(os.path.join(system_root, file)) for file in os.listdir(system_root)) 
+        sysroot_mod = max(os.path.getmtime(os.path.join(system_root, file))
+                          for file in os.listdir(system_root))
         build_mod = os.path.getmtime(BUILD_DIR)
         if sysroot_mod > build_mod:
             log_info("sysroot modified, rebuilding")
@@ -649,7 +654,7 @@ def main():
 
         if not kernel_bin or args.check:
             return
-        
+
         if not user_bins:
             user_bins = []
 
