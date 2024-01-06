@@ -336,7 +336,7 @@ impl INodeInterface for DevFb {
                     // This is a shared file mapping.
                     let fb = lock.get_framebuffer();
 
-                    let fb_ptr = fb.as_ptr() as *const u8;
+                    let fb_ptr = fb.as_ptr().cast::<u8>();
                     let fb_ptr = fb_ptr.add(offset);
 
                     let fb_phys_ptr = fb_ptr.sub(crate::PHYSICAL_MEMORY_OFFSET.as_u64() as usize);

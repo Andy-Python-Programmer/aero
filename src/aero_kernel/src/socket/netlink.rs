@@ -292,7 +292,7 @@ impl INodeInterface for NetLinkSocket {
         let mut offset = 0;
 
         while offset + hdr_size <= data.len() {
-            let header = unsafe { &*(data.as_ptr().add(offset) as *const netlink::nlmsghdr) };
+            let header = unsafe { &*(data.as_ptr().cast::<netlink::nlmsghdr>().byte_add(offset)) };
             let payload = &data[offset + hdr_size..];
 
             match header.nlmsg_type {

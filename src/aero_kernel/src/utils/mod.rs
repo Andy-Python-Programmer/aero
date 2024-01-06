@@ -162,7 +162,7 @@ impl<T> PerCpu<T> {
 }
 
 pub fn slice_into_bytes<T: Sized>(slice: &[T]) -> &[u8] {
-    let data = slice.as_ptr() as *const u8;
+    let data = slice.as_ptr().cast::<u8>();
     let size = core::mem::size_of_val(slice);
 
     unsafe { core::slice::from_raw_parts(data, size) }
