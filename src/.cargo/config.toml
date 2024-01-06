@@ -4,4 +4,14 @@ build-std-features = ["compiler-builtins-mem"]
 
 [build]
 target = "./.cargo/x86_64-aero_os.json"
-rustflags = ["-Cforce-frame-pointers=yes"]
+rustflags = [
+    # Miscellaneous:
+    "-Cforce-frame-pointers=yes",
+
+    # Unstable faster compilation time flags:
+    #
+    # https://blog.rust-lang.org/2023/11/09/parallel-rustc.html
+    "-Zthreads=8",
+    # https://blog.rust-lang.org/inside-rust/2023/12/22/trait-system-refactor-initiative.html
+    "-Znext-solver=coherence",
+]
