@@ -1,0 +1,13 @@
+JINX_MAJOR_VER=0.2
+
+export CFLAGS='-O2 -pipe'
+export CXXFLAGS="${CFLAGS}"
+
+OS_TRIPLET=x86_64-aero
+
+autotools_recursive_regen() {
+    for f in $(find . -name configure.ac); do
+        echo "* autotools regen in '$(dirname $f)'..."
+        ( cd "$(dirname "$f")" && libtoolize -cfvi && autoreconf -fvi "$@" )
+    done
+}

@@ -25,3 +25,7 @@ base-files/server
 
 # todo: remove these
 debug
+
+# XXXXXXXXXXXXXXXX
+3rdparty/
+.jinx-cache
