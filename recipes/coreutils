@@ -1,0 +1,40 @@
+name=coreutils
+version=9.4
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/coreutils/coreutils-${version}.tar.xz"
+tarball_blake2b="83d41c48804c1d470c0e5eed38e692bb6875436dda3f6e2c29784ad6ef563d86e8e066a050e222621b400f78ea4630b1e127d20fc9b76f12096528c42677e35d"
+source_imagedeps="gcc gperf"
+source_hostdeps="automake autoconf libtool pkg-config"
+imagedeps="gcc gperf"
+hostdeps="gcc automake autoconf libtool pkg-config"
+deps="core-libs tzdata"
+
+regenerate() {
+    autotools_recursive_regen
+
+    # Huge hack: coreutils does not compile the build-machine binary make-prime-list
+    # using the build-machine compiler. Hence, build and invoke the binary manually here.
+    mkdir tmp_build_dir
+    pushd tmp_build_dir
+
+    ../configure
+    make src/make-prime-list
+    ./src/make-prime-list 5000 > ../src/primes.h
+
+    popd
+    rm -rf tmp_build_dir
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+
+    configure_script_path=./configure \
+    CFLAGS="-DSLOW_BUT_NO_HACKS $CFLAGS" \
+    autotools_configure
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install-strip
+}

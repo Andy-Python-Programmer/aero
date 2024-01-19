@@ -68,6 +68,24 @@ impl FileHandle {
         let offset = self.offset.load(Ordering::SeqCst);
         let new_offset = self.inode.inode().read_at(offset, buffer)?;
 
+        if self.inode.absolute_path_str().contains("/tmp/ccAAAAAA.s") {
+            log::debug!(
+                "read {} bytes from {}  ----- hi mom ----- {:?}",
+                new_offset,
+                self.inode.absolute_path_str(),
+                buffer
+            );
+        }
+
+        self.offset.fetch_add(new_offset, Ordering::SeqCst);
+
+        Ok(new_offset)
+    }
+
+    pub fn write(&self, buffer: &[u8]) -> super::Result<usize> {
+        let offset = self.offset.load(Ordering::SeqCst);
+        let new_offset = self.inode.inode().write_at(offset, buffer)?;
+
         self.offset.fetch_add(new_offset, Ordering::SeqCst);
 
         Ok(new_offset)
@@ -106,15 +124,6 @@ impl FileHandle {
         } else {
             Err(FileSystemError::IsPipe)
         }
-    }
-
-    pub fn write(&self, buffer: &[u8]) -> super::Result<usize> {
-        let offset = self.offset.load(Ordering::SeqCst);
-        let new_offset = self.inode.inode().write_at(offset, buffer)?;
-
-        self.offset.fetch_add(new_offset, Ordering::SeqCst);
-
-        Ok(new_offset)
     }
 
     pub fn dirnode(&self) -> DirCacheItem {

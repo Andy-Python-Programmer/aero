@@ -1,0 +1,48 @@
+# set -x -e
+
+# IMAGE_PATH="$base_dir/target/disk.img"
+# LOOPBACK_DEV_PATH="$base_dir/target/loopback_dev"
+
+# ls /dev
+
+# # echo $in_container
+# # whoami
+
+# # # ls $base_dir
+
+IMAGE_PATH="./target/disk.img"
+
+dd if=/dev/zero bs=1G count=0 seek=512 of=$IMAGE_PATH
+parted -s $IMAGE_PATH mklabel gpt
+parted -s $IMAGE_PATH mkpart primary 2048s 100%
+
+# # # ensure loop kernel module is enabled
+# # if ! lsmod | grep -q 'loop'; then
+# #     echo 'mkimage: `loop` kernel module not found, attempting to load'
+# #     modprobe loop
+# # fi
+
+# # losetup -Pf --show $IMAGE_PATH > $LOOPBACK_DEV_PATH
+# # losetup -d `cat $LOOPBACK_DEV_PATH`
+
+# # # echo $in_container
+# # # ls /de
+
+# -L: volume-label
+# -N: Overrides the default calculation of the number of inodes that should be reserved for the filesystem.
+# -O: Features (disabled are prefixed with `^`)
+# -d: root-directory
+# -m: reserved-blocks-percentage
+# -r: fs-revision-level
+# # -t: filesystem-type
+# mke2fs \
+#     -L '' \
+#     -N 0 \
+#     -O ^64bit \
+#     -d "./sysroot" \
+#     -m 5 \
+#     -r 1 \
+#     -t ext2 \
+#     "./target/disk.img" \
+#     5G \
+# ;

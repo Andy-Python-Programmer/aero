@@ -29,3 +29,8 @@ debug
 # XXXXXXXXXXXXXXXX
 3rdparty/
 .jinx-cache
+sources/
+host-pkgs/
+host-builds/
+pkgs/
+builds/

@@ -1,0 +1,21 @@
+name=automake
+from_source=automake
+revision=1
+hostdeps="autoconf"
+imagedeps="gcc"
+
+build() {
+    "${source_dir}"/configure --prefix="${prefix}"
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    cp -pv /usr/local/share/autoconf/build-aux/config.sub "${dest_dir}${prefix}"/share/automake-1.16/
+    cp -pv /usr/local/share/autoconf/build-aux/config.guess "${dest_dir}${prefix}"/share/automake-1.16/
+
+        strip_command=strip \
+    post_package_strip
+}

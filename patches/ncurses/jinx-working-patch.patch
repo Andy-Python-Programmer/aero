@@ -1,0 +1,15 @@
+diff --git ncurses-clean/configure ncurses-workdir/configure
+index d652dc0..1572ae3 100755
+--- ncurses-clean/configure
++++ ncurses-workdir/configure
+@@ -6923,6 +6923,10 @@ CF_EOF
+ 		LINK_PROGS="$SHELL ${rel_builddir}/mk_prog.sh"
+ 		LINK_TESTS="$SHELL ${rel_builddir}/mk_prog.sh"
+ 		;;
++	(aero*)
++		CC_SHARED_OPTS='-fPIC'
++		MK_SHARED_LIB='${CC} -shared -o $@'
++		;;
+ 	(mingw*)
+ 		cf_cv_shlib_version=mingw
+ 		cf_cv_shlib_version_infix=mingw

@@ -1,0 +1,21 @@
+name=linux-headers
+version=6.6.12
+source_method=tarball
+tarball_url="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${version}.tar.xz"
+tarball_sha512="bb48a1a40d4db13da075ec46420e5abb0a80b4259fedd65883bcf4a67cd11e2d89026a57c370a11f704e9a41973c8bcbc52be12aa10a0e28e17ead59c9d6c4df"
+imagedeps="base-devel rsync"
+
+regenerate() {
+	true
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+}
+
+package() {
+	make headers_install ARCH=x86_64 INSTALL_HDR_PATH=${dest_dir}/${prefix}/
+
+	# remove this file, as mlibc will override this file with one suited to mlibc
+	rm -rf ${dest_dir}/${prefix}/include/linux/libc-compat.h
+}

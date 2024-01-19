@@ -166,6 +166,11 @@ impl Path {
         unsafe { &*(path as *const str as *const Path) }
     }
 
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Returns [`true`] if the path is absolute.
     pub fn is_absolute(&self) -> bool {
         self.0.starts_with('/')

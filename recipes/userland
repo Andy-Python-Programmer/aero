@@ -1,0 +1,17 @@
+name=userland
+version=0.0
+revision=1
+source_dir="userland"
+hostdeps="gcc binutils"
+deps="core-libs"
+
+build() {
+    cp -r "${source_dir}"/. ./
+
+    make -j${parallelism} CC=x86_64-aero-gcc
+}
+
+package() {
+    make install PREFIX="${prefix}" DESTDIR="${dest_dir}"
+    post_package_strip
+}
