@@ -1,0 +1,66 @@
+name=bzip2
+version=1.0.8
+revision=1
+tarball_url="https://sourceware.org/ftp/bzip2/bzip2-${version}.tar.gz"
+tarball_blake2b="22ab3acd84f4db8c3d6f59340c252faedfd4447cea00dafbd652e65b6cf8a20adf6835c22e58563004cfafdb15348c924996230b4b23cae42da5e25eeac4bdad"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+build() {
+    cp -r ${source_dir}/. .
+    sed -i 's/all: libbz2.a bzip2 bzip2recover test/all: libbz2.a bzip2 bzip2recover/g' Makefile
+
+    make CC=${OS_TRIPLET}-gcc CFLAGS="$CFLAGS -fPIC" -f Makefile-libbz2_so
+    make clean
+    make CC=${OS_TRIPLET}-gcc AR=${OS_TRIPLET}-ar CFLAGS="$CFLAGS -fPIC" -j${parallelism}
+}
+
+package() {
+    mkdir -p "${dest_dir}${prefix}/bin" "${dest_dir}${prefix}/lib" "${dest_dir}${prefix}/lib/pkgconfig" "${dest_dir}${prefix}/include"
+    install bzip2-shared "${dest_dir}${prefix}/bin/bzip2"
+    install bzip2recover "${dest_dir}${prefix}/bin/"
+    install bzdiff "${dest_dir}${prefix}/bin/"
+    install bzgrep "${dest_dir}${prefix}/bin/"
+    install bzmore "${dest_dir}${prefix}/bin/"
+    install libbz2.so.${version} "${dest_dir}${prefix}/lib/"
+    install -m 644 bzlib.h "${dest_dir}${prefix}/include/"
+    ln -sf libbz2.so.${version} "${dest_dir}${prefix}/lib/libbz2.so.1.0"
+    ln -sf libbz2.so.1.0 "${dest_dir}${prefix}/lib/libbz2.so.1"
+    ln -sf libbz2.so.1 "${dest_dir}${prefix}/lib/libbz2.so"
+    ln -sf bzdiff "${dest_dir}${prefix}/bin/bzcmp"
+    ln -sf bzgrep "${dest_dir}${prefix}/bin/bzegrep"
+    ln -sf bzgrep "${dest_dir}${prefix}/bin/bzfgrep"
+    ln -sf bzmore "${dest_dir}${prefix}/bin/bzless"
+    cat <<EOF >"${dest_dir}${prefix}/lib/pkgconfig/bzip2.pc"
+prefix=${prefix}
+exec_prefix=${prefix}/bin
+libdir=${prefix}/lib
+sharedlibdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: bzip2
+Description: BZip2 compression library
+Version: ${version}
+
+Requires:
+Libs: -L${prefix}/lib -lbz2
+Cflags: -I${prefix}/include
+EOF
+    cat <<EOF >"${dest_dir}${prefix}/lib/pkgconfig/libbz2.pc"
+prefix=${prefix}
+exec_prefix=${prefix}/bin
+libdir=${prefix}/lib
+sharedlibdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libbz2
+Description: BZip2 compression library
+Version: ${version}
+
+Requires:
+Libs: -L${prefix}/lib -lbz2
+Cflags: -I${prefix}/include
+EOF
+
+    post_package_strip
+}

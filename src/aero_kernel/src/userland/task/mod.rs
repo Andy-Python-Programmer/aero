@@ -527,11 +527,11 @@ impl Task {
             *self.cwd.write() = Some(Cwd::new())
         }
 
-        if executable.absolute_path_str().contains("gcc")
-            || executable.absolute_path_str().contains("ls")
-        {
-            self.enable_systrace();
-        }
+        // if executable.absolute_path_str().contains("gcc")
+        //     || executable.absolute_path_str().contains("ls")
+        // {
+        // self.enable_systrace();
+        // }
 
         *self.mem_tags.lock() = HashMap::new();
         self.file_table.close_on_exec();

@@ -1,0 +1,25 @@
+name=mesa
+version=23.3.3
+revision=1
+tarball_url="https://archive.mesa3d.org/mesa-${version}.tar.xz"
+tarball_blake2b="6b57e99356abccf398c5fb84953fc1490ddf516dbeed1feca8d16344a04c1c15183325752717447a34a61dd4cdda897147e3194f869d8dbadfa5c45a0c95dab5"
+imagedeps="binutils meson ninja python-mako"
+hostdeps="gcc pkg-config"
+deps="core-libs llvm zlib libxshmfence libxrandr libxdamage libxxf86vm libxfixes libx11 libxext libxcb libexpat"
+
+build() {
+    meson_configure \
+        -Dglx=xlib \
+        -Dplatforms=x11 \
+        -Dgallium-drivers=swrast \
+        -Dvulkan-drivers= \
+        -Dllvm=enabled
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+
+    post_package_strip
+}

@@ -1,8 +1,8 @@
 name=mlibc
-version=b5627685013748f0faff3c16ebc2569f958f3cb5
+version=0dd4dbdd377dc776e6f7d698281ac6781d652922
 revision=1
 tarball_url="https://github.com/aero-os/mlibc/archive/${version}.tar.gz"
-tarball_blake2b="c98c20c03647f0f5828bc95d82217ece8e5d0eee1bbb293dc809d1b39bd8219064d68ab8499c5f7e26c7377a8829cccdeeca1974bdd574cd3d85166e56c7622d"
+tarball_blake2b="a4886c2d6a85c781293db9139c0773469c3877e5db2a76f1a735e2cc04ee78fef5b8fc1693b724f9fc8879322464ddf48eac8c018ebfd4f8aa983141013d64e3"
 imagedeps="meson ninja"
 hostdeps="gcc pkg-config libgcc-binaries"
 builddeps="cxxshim frigg linux-headers"
