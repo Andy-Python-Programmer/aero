@@ -1,0 +1,22 @@
+# [unstable]
+# patch-in-config = true
+
+[build]
+rustc = "/base_dir/host-pkgs/rust/bin/rustc"
+target = "x86_64-unknown-aero"
+rustflags = ["-C", "link-args=-no-pie", "-C", "link-args=-lgcc_s"]
+
+[target.x86_64-unknown-aero]
+linker = "/base_dir/host-pkgs/gcc/usr/local/bin/x86_64-aero-gcc"
+
+[patch.crates-io]
+libc = { path = "/base_dir/sources/rust-libc" }
+# num_cpus = { path = "@SOURCE_ROOT@/bundled/rust-num-cpus" }
+# users = { path = "@SOURCE_ROOT@/bundled/rust-users" }
+# winit = { path = "@SOURCE_ROOT@/bundled/rust-winit" }
+# nix = { path = "@SOURCE_ROOT@/bundled/rust-nix" }
+# mio-06 = { path = "@SOURCE_ROOT@/bundled/rust-mio-0.6", package = "mio" }
+# mio-08 = { path = "@SOURCE_ROOT@/bundled/rust-mio-0.8", package = "mio" }
+# glutin = { path = "@SOURCE_ROOT@/bundled/rust-glutin/glutin" }
+# shared_library = { path = "@SOURCE_ROOT@/bundled/rust-shared-library" }
+# libloading = { path = "@SOURCE_ROOT@/bundled/rust-libloading" }

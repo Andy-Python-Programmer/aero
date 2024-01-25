@@ -1,0 +1,36 @@
+name=libxslt
+version=1.1.39
+tarball_url="https://gitlab.gnome.org/GNOME/libxslt/-/archive/v${version}/libxslt-v${version}.tar.gz"
+tarball_blake2b="c534663795335273fbb0abccaa4bf7df4bf86200fc52a36c4f7e71ab30158630496665c8886cfd6ecfa3d43bcc475c7b8a1f2839fb288c442063e4b2f0b86d77"
+imagedeps="ninja python"
+hostdeps="gcc cmake pkg-config"
+deps="core-libs libxml"
+
+build() {
+    cmake \
+        -GNinja \
+        -DCMAKE_TOOLCHAIN_FILE=${base_dir}/userland/CMakeToolchain-x86_64.cmake \
+        -DCMAKE_INSTALL_PREFIX=${prefix} \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_STATIC=FALSE \
+        -DCMAKE_INSTALL_DEFAULT_LIBDIR=lib \
+        -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+        -DLIBXSLT_WITH_DEBUGGER=OFF \
+        -DLIBXSLT_WITH_CRYPTO=OFF \
+        -DLIBXSLT_WITH_MEM_DEBUG=OFF \
+        -DLIBXSLT_WITH_MODULES=ON \
+        -DLIBXSLT_WITH_PROFILER=OFF \
+        -DLIBXSLT_WITH_PYTHON=OFF \
+        -DLIBXSLT_WITH_XSLT_DEBUG=OFF \
+        -DLIBXSLT_WITH_TESTS=OFF \
+        -DLIBXSLT_WITH_THREADS=ON \
+        ${source_dir}
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+
+    post_package_strip
+}

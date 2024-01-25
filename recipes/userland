@@ -4,6 +4,8 @@ revision=1
 source_dir="userland"
 hostdeps="gcc binutils"
 deps="core-libs"
+imagedeps="rust"
+allow_network=yes
 
 build() {
     cp -r "${source_dir}"/. ./

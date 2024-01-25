@@ -16,7 +16,7 @@
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 #![no_std]
-#![feature(decl_macro)]
+// #![feature(decl_macro)]
 // cc <https://github.com/bitflags/bitflags/issues/110>
 #![allow(clippy::bad_bit_mask)]
 

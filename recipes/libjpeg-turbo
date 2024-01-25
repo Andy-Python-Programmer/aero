@@ -1,0 +1,29 @@
+name=libjpeg-turbo
+version=2.1.5.1
+revision=1
+tarball_url="https://github.com/libjpeg-turbo/libjpeg-turbo/archive/refs/tags/${version}.tar.gz"
+tarball_blake2b="44a6f61594f0d0cfac3e3a63ddfa9dcc940a5249fcd69e6d5324749d62e8a5e575bb2c5de9b651d63f27d6f03927146367cd8b8275aa1f4f51fd412ebac95797"
+imagedeps="gcc ninja python git cmake nasm"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+build() {
+    cmake \
+        -GNinja \
+        -DCMAKE_TOOLCHAIN_FILE=${base_dir}/userland/CMakeToolchain-x86_64.cmake \
+        -DCMAKE_INSTALL_PREFIX=${prefix} \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_STATIC=FALSE \
+        -DCMAKE_INSTALL_DEFAULT_LIBDIR=lib \
+        -DWITH_JPEGS=ON \
+        -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+        ${source_dir}
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+
+    post_package_strip
+}

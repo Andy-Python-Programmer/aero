@@ -1,0 +1,21 @@
+name=glib
+version=2.78.1
+revision=1
+tarball_url="https://download.gnome.org/sources/glib/2.78/glib-${version}.tar.xz"
+tarball_blake2b="af8f2e83600dfb3ec84702399cb00a3aaedbc80087e35dc7cc2e2374d4fe5fdf82707ac8c911da1c53eb7b027c9da9ecfc1c0a8f56b39431fa4cf44cad5b10f7"
+imagedeps="meson ninja"
+hostdeps="gcc pkg-config"
+deps="core-libs pcre2 libffi zlib"
+
+build() {
+    meson_configure \
+        -Dxattr=false
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+
+    post_package_strip
+}

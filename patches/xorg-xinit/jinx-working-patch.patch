@@ -1,0 +1,13 @@
+diff --git xorg-xinit-clean/startx.cpp xorg-xinit-workdir/startx.cpp
+index dfbebe1..99a0586 100644
+--- xorg-xinit-clean/startx.cpp
++++ xorg-xinit-workdir/startx.cpp
+@@ -127,6 +127,8 @@ if defaults read $X11_PREFS_DOMAIN 2> /dev/null | grep -q 'dpi' && defaults read
+     defaultserverargs="$defaultserverargs -dpi `defaults read $X11_PREFS_DOMAIN dpi`"
+ fi
+ 
++#elif defined(__aero__)
++enable_xauth=0
+ #else
+ enable_xauth=1
+ #endif

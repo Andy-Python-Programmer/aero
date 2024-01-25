@@ -1,5 +1,17 @@
+diff --git mlibc-clean/options/ansi/generic/time-stubs.cpp mlibc-workdir/options/ansi/generic/time-stubs.cpp
+index 887a7d3..7fd46bc 100644
+--- mlibc-clean/options/ansi/generic/time-stubs.cpp
++++ mlibc-workdir/options/ansi/generic/time-stubs.cpp
+@@ -242,6 +242,7 @@ size_t strftime(char *__restrict dest, size_t max_size,
+ 			c++;
+ 			break;
+ 		}
++		case 'l':
+ 		case 'I': {
+ 			int hour = tm->tm_hour;
+ 			if(!hour)
 diff --git mlibc-clean/options/posix/generic/posix_stdlib.cpp mlibc-workdir/options/posix/generic/posix_stdlib.cpp
-index 95a4fa5..2e2fc22 100644
+index 7128e16..14e1dd7 100644
 --- mlibc-clean/options/posix/generic/posix_stdlib.cpp
 +++ mlibc-workdir/options/posix/generic/posix_stdlib.cpp
 @@ -139,23 +139,34 @@ char *setstate(char *state) {
@@ -90,10 +102,10 @@ index 0000000..1b61d5a
 +	ret
 +.section .note.GNU-stack,"",%progbits
 diff --git mlibc-clean/sysdeps/aero/generic/filesystem.cpp mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
-index fa5a369..049f4c0 100644
+index 33a11f4..8795382 100644
 --- mlibc-clean/sysdeps/aero/generic/filesystem.cpp
 +++ mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
-@@ -92,31 +92,24 @@ int sys_access(const char *filename, int mode) {
+@@ -102,31 +102,24 @@ int sys_access(const char *filename, int mode) {
  
  int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
               struct stat *statbuf) {

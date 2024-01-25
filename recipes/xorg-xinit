@@ -1,0 +1,25 @@
+name=xorg-xinit
+version=1.4.2
+tarball_url="https://gitlab.freedesktop.org/xorg/app/xinit/-/archive/xinit-${version}/xinit-xinit-${version}.tar.gz"
+tarball_blake2b="23a48ddee9eab2510fc3322dc203a994f886b765f49c3c92c34b75ed871c844e860ae47581167d905ae59822a8e69fcd1b94e680db933aea251596286d19617b"
+source_hostdeps="automake autoconf libtool pkg-config"
+source_deps="xorg-util-macros"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs libx11 xorg-proto"
+
+regenerate() {
+    autotools_recursive_regen
+}
+
+build() {
+    autotools_configure
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    # We have our own xinitrc.
+    rm -rf "${dest_dir}/etc/X11/xinit/xinitrc"
+
+    post_package_strip
+}

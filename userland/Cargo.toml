@@ -1,6 +1,0 @@
-[workspace]
-resolver = "2"
-members = ["apps/*", "servers/*"]
-
-[profile.release]
-debug = true
