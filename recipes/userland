@@ -10,7 +10,7 @@ allow_network=yes
 build() {
     cp -r "${source_dir}"/. ./
 
-    make -j${parallelism} CC=x86_64-aero-gcc
+    make -j${parallelism} CC=x86_64-aero-gcc CXX=x86_64-aero-g++
 }
 
 package() {

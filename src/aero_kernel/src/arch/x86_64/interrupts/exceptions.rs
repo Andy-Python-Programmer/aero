@@ -205,6 +205,7 @@ pub(super) fn page_fault(stack: &mut InterruptErrorStack) {
 
             let task = scheduler::get_scheduler().current_task();
             task.signal(aero_syscall::signal::SIGSEGV);
+            return;
         } else if !signal {
         } else {
             return;

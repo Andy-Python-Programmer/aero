@@ -1152,7 +1152,7 @@ impl VmProtected {
             } else {
                 // end
                 let mut mapping = map.clone();
-                mapping.start_addr = end;
+                mapping.start_addr = start;
                 mapping.protection = prot;
 
                 map.end_addr = start;

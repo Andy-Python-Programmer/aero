@@ -259,37 +259,37 @@ namespace {
 
 	template <typename Func>
 	void runChecks(Func &&f) {
-		// pid_t pid = fork();
-		// assert_errno("fork", pid >= 0);
+		pid_t pid = fork();
+		assert_errno("fork", pid >= 0);
 
-		// struct sigaction sa, old_sa;
-		// sigemptyset(&sa.sa_mask);
-		// sa.sa_sigaction = signalHandler;
-		// sa.sa_flags = SA_SIGINFO;
+		struct sigaction sa, old_sa;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_sigaction = signalHandler;
+		sa.sa_flags = SA_SIGINFO;
 
-		// int ret = sigaction(SIGSEGV, &sa, &old_sa);
-		// assert_errno("sigaction", ret != -1);
+		int ret = sigaction(SIGSEGV, &sa, &old_sa);
+		assert_errno("sigaction", ret != -1);
 
-		// if (pid == 0) {
-		// 	f();
-		// 	exit(0);
-		// } else {
-		// 	int status = 0;
-		// 	while (waitpid(pid, &status, 0) == -1) {
-		// 		if (errno == EINTR) continue;
-		// 		assert_errno("waitpid", false);
-		// 	}
+		if (pid == 0) {
+			f();
+			exit(0);
+		} else {
+			int status = 0;
+			while (waitpid(pid, &status, 0) == -1) {
+				if (errno == EINTR) continue;
+				assert_errno("waitpid", false);
+			}
 
-		// 	if (WIFSIGNALED(status) || WEXITSTATUS(status) != 0) {
-		// 		fprintf(stderr, "Test failed on subprocess!\n");
-		// 		abort();
-		// 	}
+			if (WIFSIGNALED(status) || WEXITSTATUS(status) != 0) {
+				fprintf(stderr, "Test failed on subprocess!\n");
+				abort();
+			}
 
-		// 	f();
-		// }
+			f();
+		}
 
-		// ret = sigaction(SIGSEGV, &old_sa, nullptr);
-		// assert_errno("sigaction", ret != -1);
+		ret = sigaction(SIGSEGV, &old_sa, nullptr);
+		assert_errno("sigaction", ret != -1);
 	}
 
 	const size_t pageSize = sysconf(_SC_PAGESIZE);
