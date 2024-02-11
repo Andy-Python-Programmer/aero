@@ -7,7 +7,7 @@ index 7f0e520..3bf670c 100644
  _gtk_accessibility_init (void)
  {
 +// We don't care about a11y at this point in time and dbus isn't working, so let's just not start that.
-+#ifdef __lyre__
++#ifdef __aero__
 +  return;
 +#else
    if (initialized)
@@ -27,7 +27,7 @@ index ae64e18..2d43754 100644
  check_setugid (void)
  {
  /* this isn't at all relevant on MS Windows and doesn't compile ... --hb */
-+#ifdef __lyre__
++#ifdef __aero__
 +  /* Lyre runs everything as root for the time being, this check is thus useless. */
 +  g_warning("Lyre ignores the setugid check!\n");
 +  return TRUE;
