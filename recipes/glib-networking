@@ -1,0 +1,22 @@
+name=glib-networking
+version=2.78.0
+tarball_url="https://gitlab.gnome.org/GNOME/glib-networking/-/archive/${version}/glib-networking-${version}.tar.gz"
+tarball_blake2b="a8b73a303f427c8069db9060f4037051b11a5bcc83f5c3673ac3ca630f22de31a911b9a31056e35e59ace52609718f2d4055aac08d1975a158d4a4a135a81204"
+deps="core-libs glib openssl"
+imagedeps="meson"
+hostdeps="gcc pkg-config"
+
+build() {
+    meson_configure \
+        -Dgnutls=disabled \
+        -Dopenssl=enabled \
+        -Dinstalled_tests=false \
+        -Dlibproxy=disabled \
+        -Dgnome_proxy=disabled
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+}

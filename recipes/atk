@@ -1,0 +1,18 @@
+name=atk
+version=2.38.0
+tarball_url="https://gitlab.gnome.org/GNOME/atk/-/archive/2.38.0/atk-2.38.0.tar.gz"
+tarball_blake2b="13a4c186fb8a2361019c637501c620e50bbe118f452ca92f06c5201a91ac35283391371598202262f1e758464ff6d836305a3583b584c5256fdd8345c5efc91b"
+deps="core-libs glib"
+imagedeps="meson"
+hostdeps="gcc pkg-config"
+
+build() {
+    meson_configure \
+        -Dintrospection=false
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+}

@@ -1,0 +1,29 @@
+name=libtasn
+version=4.19.0
+revision=1
+tarball_url="https://au.mirrors.cicku.me/gnu/libtasn1/libtasn1-${version}.tar.gz"
+tarball_blake2b="6e8232590cd87da3bfd9182ed44eccdfbdfcc85e88d8cf19fffdb3d600e04694b77079b95bbd822d2c3fff29458ddae0f0440f9c1c19c711923a2507bd19270f"
+source_hostdeps="automake autoconf libtool pkg-config"
+imagedeps="gcc"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs glib"
+source_imagedeps="gtk-doc"
+
+regenerate() {
+    autotools_recursive_regen
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+
+    autotools_configure \
+        --disable-doc
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

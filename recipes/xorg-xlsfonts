@@ -1,0 +1,24 @@
+name=xorg-xlsfonts
+version=1.0.7
+revision=1
+tarball_url="https://www.x.org/pub/individual/app/xlsfonts-${version}.tar.xz"
+tarball_blake2b="13f2e2007c38f7d1724e6ffd0c7fe9a3b887a150f50107b892327c3620e4ffdbd4ae1191a9764cc4000d6422fe0f331dcbef11c0b50013ff2d94b699c0cba1ee"
+source_hostdeps="autoconf automake libtool pkg-config"
+source_deps="xorg-util-macros"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs libxmu libxaw"
+
+regenerate() {
+    autotools_recursive_regen
+}
+
+build() {
+    autotools_configure
+
+    make -j${parallelism}
+}
+
+package() {
+    make DESTDIR=${dest_dir} install
+    post_package_strip
+}

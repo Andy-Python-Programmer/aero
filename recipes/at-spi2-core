@@ -1,0 +1,22 @@
+name=at-spi2-core
+version=2.51.0
+revision=1
+tarball_url="https://download.gnome.org/sources/at-spi2-core/2.51/at-spi2-core-${version}.tar.xz"
+tarball_blake2b="67a622f1ffba322183c6c04c8de6311bceb48f6ad6d34ad7bc33b22ab0c695a5395b5aad729eff699ab1c0525d1a4059c30899b03be8656e87204ec4333e432c"
+imagedeps="meson ninja"
+hostdeps="gcc pkg-config"
+deps="core-libs dbus glib libxml"
+
+build() {
+    meson_configure \
+        -Dsystemd_user_dir=/tmp \
+        -Dintrospection=disabled
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+
+    post_package_strip
+}

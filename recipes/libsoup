@@ -1,0 +1,27 @@
+name=libsoup
+version=3.4.4
+tarball_url="https://gitlab.gnome.org/GNOME/libsoup/-/archive/${version}/libsoup-${version}.tar.gz"
+tarball_blake2b="006af4bd6f9e5be63421b33bb5b0204d0013fe1312ce2392cbd7fc609d650dc07fa38849f0d179d7907568e9faa0843a74f54e86fe6803e665865d5fed4d3b36"
+deps="core-libs glib glib-networking zlib libxml libpsl sqlite libnghttp2"
+imagedeps="meson"
+hostdeps="gcc pkg-config"
+
+build() {
+    meson_configure \
+        -Dintrospection=disabled \
+        -Dinstalled_tests=false \
+        -Dsysprof=disabled \
+        -Ddocs=disabled \
+        -Dvapi=disabled \
+        -Dtls_check=false \
+        -Dbrotli=disabled \
+        -Dntlm=disabled \
+        -Dgssapi=disabled \
+        -Dtests=false 
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+}

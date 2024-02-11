@@ -12,6 +12,8 @@
             <Program icon="image" label="Gimp">gimp</Program>
             <Program icon="email" label="Mail">claws-mail</Program>
             <Program icon="system-file-manager" label="ROX">rox ~</Program>
+            <Program label="glxgears">glxgears</Program>
+            <Program label="gtk3-demo">gtk3-demo</Program>
         </Menu>
         <Menu icon="folder" label="Utilities">
             <Program icon="font" label="Fonts">xfontsel</Program>
