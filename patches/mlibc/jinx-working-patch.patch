@@ -1,0 +1,180 @@
+diff --git mlibc-clean/options/ansi/generic/time-stubs.cpp mlibc-workdir/options/ansi/generic/time-stubs.cpp
+index 887a7d3..7fd46bc 100644
+--- mlibc-clean/options/ansi/generic/time-stubs.cpp
++++ mlibc-workdir/options/ansi/generic/time-stubs.cpp
+@@ -242,6 +242,7 @@ size_t strftime(char *__restrict dest, size_t max_size,
+ 			c++;
+ 			break;
+ 		}
++		case 'l':
+ 		case 'I': {
+ 			int hour = tm->tm_hour;
+ 			if(!hour)
+diff --git mlibc-clean/options/posix/generic/posix_stdlib.cpp mlibc-workdir/options/posix/generic/posix_stdlib.cpp
+index 7128e16..14e1dd7 100644
+--- mlibc-clean/options/posix/generic/posix_stdlib.cpp
++++ mlibc-workdir/options/posix/generic/posix_stdlib.cpp
+@@ -139,23 +139,34 @@ char *setstate(char *state) {
+ // ----------------------------------------------------------------------------
+ 
+ int mkostemp(char *pattern, int flags) {
++	return mkostemps(pattern, 0, flags);
++}
++
++int mkstemp(char *path) {
++	return mkostemp(path, 0);
++}
++
++int mkostemps(char *pattern, int suffixlen, int flags) {
+ 	flags &= ~O_WRONLY;
+ 	auto n = strlen(pattern);
+ 	__ensure(n >= 6);
+-	if(n < 6) {
++
++	if(n < 6 || suffixlen > (n - 6)) {
+ 		errno = EINVAL;
+ 		return -1;
+ 	}
+-	for(size_t i = 0; i < 6; i++) {
+-		if(pattern[n - 6 + i] == 'X')
+-			continue;
++
++	if (memcmp(pattern + (n - suffixlen - 6), "XXXXXX", 6)) {
+ 		errno = EINVAL;
+ 		return -1;
+ 	}
+ 
+ 	// TODO: Do an exponential search.
+ 	for(size_t i = 0; i < 999999; i++) {
+-		__ensure(sprintf(pattern + (n - 6), "%06zu", i) == 6);
++		int x = i;
++		for (int j = 0; j < 6; j++, x >>= 5) {
++			pattern[(n - suffixlen - 6) + j] = 'A' + (x & 15) + (x & 16) * 2;
++		}
+ //		mlibc::infoLogger() << "mlibc: mkstemp candidate is "
+ //				<< (const char *)pattern << frg::endlog;
+ 
+@@ -172,16 +183,6 @@ int mkostemp(char *pattern, int flags) {
+ 	return -1;
+ }
+ 
+-int mkstemp(char *path) {
+-	return mkostemp(path, 0);
+-}
+-
+-int mkostemps(char *pattern, int suffixlen, int flags) {
+-	(void)suffixlen;
+-	mlibc::infoLogger() << "mlibc: mkostemps ignores suffixlen!" << frg::endlog;
+-	return mkostemp(pattern, flags);
+-}
+-
+ int mkstemps(char *pattern, int suffixlen) {
+ 	return mkostemps(pattern, suffixlen, 0);
+ }
+diff --git mlibc-workdir/sysdeps/aero/crt-x86_64/crti.S mlibc-workdir/sysdeps/aero/crt-x86_64/crti.S
+new file mode 100644
+index 0000000..f04679c
+--- /dev/null
++++ mlibc-workdir/sysdeps/aero/crt-x86_64/crti.S
+@@ -0,0 +1,10 @@
++.section .init
++.global _init
++_init:
++	push %rax
++
++.section .fini
++.global _fini
++_fini:
++	push %rax
++.section .note.GNU-stack,"",%progbits
+diff --git mlibc-workdir/sysdeps/aero/crt-x86_64/crtn.S mlibc-workdir/sysdeps/aero/crt-x86_64/crtn.S
+new file mode 100644
+index 0000000..1b61d5a
+--- /dev/null
++++ mlibc-workdir/sysdeps/aero/crt-x86_64/crtn.S
+@@ -0,0 +1,8 @@
++.section .init
++	pop %rax
++	ret
++
++.section .fini
++	pop %rax
++	ret
++.section .note.GNU-stack,"",%progbits
+diff --git mlibc-clean/sysdeps/aero/generic/filesystem.cpp mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
+index 33a11f4..8795382 100644
+--- mlibc-clean/sysdeps/aero/generic/filesystem.cpp
++++ mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
+@@ -102,31 +102,24 @@ int sys_access(const char *filename, int mode) {
+ 
+ int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
+              struct stat *statbuf) {
+-    auto result = 0;
+-
+     switch (fsfdt) {
+-    case fsfd_target::path: {
+-        result = syscall(SYS_STAT, path, strlen(path), statbuf);
++    case fsfd_target::path:
++        fd = AT_FDCWD;
+         break;
+-    }
+-
+-    case fsfd_target::fd: {
+-        result = syscall(SYS_FSTAT, fd, statbuf);
++    case fsfd_target::fd:
++        flags |= AT_EMPTY_PATH;
++    
++    case fsfd_target::fd_path:
+         break;
+-    }
+-
+-    default: {
+-        mlibc::infoLogger()
+-            << "mlibc warning: sys_stat: unsupported fsfd target"
+-            << frg::endlog;
+-        return EINVAL;
+-    }
+-    }
+ 
+-    if (result < 0) {
+-        return -result;
++    default:
++        __ensure(!"Invalid fsfd_target");
++        __builtin_unreachable();
+     }
+ 
++    auto ret = syscall(SYS_FSTAT, fd, path, strlen(path), flags, statbuf);
++    if(int e = sc_error(ret); e)
++        return e;
+     return 0;
+ }
+ 
+diff --git mlibc-clean/sysdeps/aero/meson.build mlibc-workdir/sysdeps/aero/meson.build
+index 9d10701..3d2a883 100644
+--- mlibc-clean/sysdeps/aero/meson.build
++++ mlibc-workdir/sysdeps/aero/meson.build
+@@ -75,6 +75,24 @@ if not headers_only
+ 		install: true,
+ 		install_dir: get_option('libdir')
+ 	)
++
++	custom_target('crti',
++		build_by_default: true,
++		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
++		input: 'crt-x86_64/crti.S',
++		output: 'crti.o',
++		install: true,
++		install_dir: get_option('libdir')
++	)
++
++	custom_target('crtn',
++		build_by_default: true,
++		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
++		input: 'crt-x86_64/crtn.S',
++		output: 'crtn.o',
++		install: true,
++		install_dir: get_option('libdir')
++	)
+ endif
+ 
+ if host_machine.cpu_family() == 'x86_64'

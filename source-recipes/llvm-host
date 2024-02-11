@@ -1,0 +1,11 @@
+name=llvm-host
+version=17.0.6
+tarball_url="https://github.com/llvm/llvm-project/releases/download/llvmorg-${version}/llvm-project-${version}.src.tar.xz"
+tarball_blake2b="d6ede1a9fda8756995c3e0654111941649e15794179641806f18919f1dc68c41ca0cabd5693b5096d05dccc3a391cd20d34af1137bf8af92ed3117a1ce84d1b2"
+
+regenerate() {
+    echo "Regenerating LLVM..."
+    for i in "${base_dir}"/patches/llvm/*; do
+        patch -p1 < "$i"
+    done
+}

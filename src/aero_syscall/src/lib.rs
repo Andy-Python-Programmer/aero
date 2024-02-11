@@ -16,7 +16,7 @@
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 #![no_std]
-#![feature(decl_macro)]
+// #![feature(decl_macro)]
 // cc <https://github.com/bitflags/bitflags/issues/110>
 #![allow(clippy::bad_bit_mask)]
 
@@ -712,4 +712,15 @@ pub struct Stat {
     pub st_ctim: TimeSpec,
     pub st_blksize: u64,
     pub st_blocks: u64,
+}
+
+bitflags::bitflags! {
+    #[repr(transparent)]
+    pub struct AtFlags: usize {
+        const EMPTY_PATH = 1;
+        const SYMLINK_FOLLOW = 2;
+        const SYMLINK_NOFOLLOW = 4;
+        const REMOVEDIR = 8;
+        const EACCESS = 512;
+    }
 }

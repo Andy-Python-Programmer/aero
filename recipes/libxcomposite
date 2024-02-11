@@ -1,0 +1,29 @@
+name=libxcomposite
+version=0.4.6
+revision=1
+tarball_url="https://gitlab.freedesktop.org/xorg/lib/libxcomposite/-/archive/libXcomposite-${version}/libxcomposite-libXcomposite-${version}.tar.gz"
+tarball_blake2b="6603273ca9481e540478d13b37f0f1267d110dc911cfe02cfe6a22d544071e864821cdfc57dc1348d7f17a0004d2cafc8bca00d5b565e2c85fe8a1149ed50224"
+source_hostdeps="automake autoconf libtool pkg-config"
+imagedeps="gcc"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs libx11 libxfixes xorg-proto"
+source_deps="xorg-util-macros"
+
+regenerate() {
+    autotools_recursive_regen
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+
+    autotools_configure \
+        --disable-doc
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

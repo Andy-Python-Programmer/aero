@@ -1,0 +1,27 @@
+name=llvm
+version=17.0.6
+revision=1
+from_source=llvm-host
+imagedeps="gcc cmake ninja git"
+source_deps="binutils"
+
+build() {
+    cmake \
+        -GNinja \
+        -DCMAKE_INSTALL_PREFIX="${prefix}" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DLLVM_TARGETS_TO_BUILD=X86 \
+        -DLLVM_ENABLE_PROJECTS="llvm;clang;clang-tools-extra" \
+        -DDEFAULT_SYSROOT="${sysroot_dir}" \
+        -DLLVM_BINUTILS_INCDIR="${source_dir}/../binutils/include" \
+        "${source_dir}/llvm"
+
+    ninja -j ${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+
+        strip_command=strip \
+    post_package_strip
+}

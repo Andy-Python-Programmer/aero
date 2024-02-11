@@ -1,0 +1,4 @@
+name=rust-libc
+version=fe4e9cda46b0be8421b0f56df0b63b8c4dcaf5e6
+tarball_url="https://github.com/Andy-Python-Programmer/libc/archive/${version}.tar.gz"
+tarball_blake2b="xadfdf"

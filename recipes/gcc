@@ -1,0 +1,48 @@
+name=gcc
+version=13.2.0
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/gcc/gcc-${version}/gcc-${version}.tar.xz"
+tarball_blake2b="0034b29d3d6cc05821f0c4253ce077805943aff7b370729dd203bda57d89c107edd657eeddc2fb1e69ea15c7b0323b961f46516c7f4af89a3ccf7fea84701be2"
+source_hostdeps="automake autoconf-2.69 libtool pkg-config"
+source_imagedeps="git"
+hostdeps="gcc autoconf-2.69 automake libtool pkg-config"
+deps="core-libs binutils zlib gmp mpfr mpc"
+imagedeps="gcc"
+
+regenerate() {
+    for i in "${base_dir}"/patches/gcc-host/*; do
+        patch -p1 < "$i"
+    done
+
+    autotools_recursive_regen -I"$(realpath ./config)"
+
+    cp -pv /usr/local/share/libtool/build-aux/{config.sub,config.guess,install-sh} libiberty/
+}
+
+build() {
+        CXXFLAGS_FOR_TARGET="$CFLAGS" \
+        CFLAGS_FOR_TARGET="$CFLAGS" \
+    autotools_configure \
+        --target=${OS_TRIPLET} \
+        --with-sysroot=/ \
+        --with-build-sysroot=${sysroot_dir} \
+        --enable-languages=c,c++,lto \
+        --enable-initfini-array \
+        --disable-multilib \
+        --with-system-zlib \
+        --enable-host-shared \
+        --with-pkgversion=aero \
+        --with-bugurl="https://github.com/Andy-Python-Programmer/aero/issues"
+
+    make -j${parallelism} all-gcc
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install-gcc
+
+    ln -s gcc "${dest_dir}${prefix}"/bin/cc
+    # Remove static libraries
+    rm -rf "${dest_dir}${prefix}"/lib/*.a
+
+    post_package_strip
+}

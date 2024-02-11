@@ -24,10 +24,10 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm
+        sudo apt-get install -y nasm make
         python3 -m pip install requests xbstrap
     - name: Build Documentation
-      run: ./aero.py --document
+      run: make doc
     - name: Formatting Check
       run: |
         ./aero.py --fmt

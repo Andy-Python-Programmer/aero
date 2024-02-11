@@ -1,0 +1,24 @@
+name=limine
+from_source=limine
+revision=1
+hostdeps="gcc pkg-config"
+imagedeps="nasm gcc mtools"
+
+build() {
+    "${source_dir}"/configure \
+        --enable-uefi-ia32 \
+        --enable-uefi-x86-64 \
+        --enable-uefi-cd \
+        --enable-bios \
+        --enable-bios-cd \
+        --enable-bios-pxe
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+        strip_command=strip \
+    post_package_strip
+}

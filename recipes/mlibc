@@ -1,0 +1,28 @@
+name=mlibc
+version=0dd4dbdd377dc776e6f7d698281ac6781d652922
+revision=1
+tarball_url="https://github.com/aero-os/mlibc/archive/${version}.tar.gz"
+tarball_blake2b="a4886c2d6a85c781293db9139c0773469c3877e5db2a76f1a735e2cc04ee78fef5b8fc1693b724f9fc8879322464ddf48eac8c018ebfd4f8aa983141013d64e3"
+imagedeps="meson ninja"
+hostdeps="gcc pkg-config libgcc-binaries"
+builddeps="cxxshim frigg linux-headers"
+deps="mlibc-headers"
+
+build() {
+    LDFLAGS="-Wl,/usr/local/libgcc-binaries/libgcc-x86_64.a" \
+    meson_configure \
+        --buildtype=debugoptimized \
+        -Dmlibc_no_headers=true \
+        -Ddefault_library=both \
+        -Ddisable_crypt_option=true \
+        -Ddisable_iconv_option=true \
+        -Ddisable_intl_option=true \
+        -Ddisable_libgcc_dependency=true \
+        -Dlinux_kernel_headers=${sysroot_dir}/${prefix}/include
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+}

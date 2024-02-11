@@ -1,0 +1,27 @@
+name=libnghttp2
+version=1.59.0
+tarball_url="https://github.com/nghttp2/nghttp2/releases/download/v${version}/nghttp2-${version}.tar.gz"
+tarball_blake2b="167e973844131915ce8c50e8e4cfa6807ca56cdbacf0c5d03b0b9d8846c76020d7ffde492d62a9d5f91801024126f2ff52833a58e1458246dcbbafbf76b8b99c"
+imagedeps="ninja python"
+hostdeps="gcc cmake pkg-config"
+deps="core-libs"
+
+build() {
+    cmake \
+        -GNinja \
+        -DCMAKE_TOOLCHAIN_FILE=${base_dir}/userland/CMakeToolchain-x86_64.cmake \
+        -DCMAKE_INSTALL_PREFIX=${prefix} \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_STATIC=FALSE \
+        -DCMAKE_INSTALL_DEFAULT_LIBDIR=lib \
+        -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+        ${source_dir}
+
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+
+    post_package_strip
+}

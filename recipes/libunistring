@@ -1,0 +1,24 @@
+name=libunistring
+version=1.1
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/libunistring/libunistring-${version}.tar.xz"
+tarball_blake2b="721adc90884006480055b95d0fa06cd862417aa02b467f1e14688292ad9c11f1e33520b14ed5dc2d2724c6df8713d3af1e8032014259d8355156cb72edfcb983"
+source_hostdeps="automake autoconf libtool pkg-config"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs"
+
+regenerate() {
+    autotools_recursive_regen
+}
+
+build() {
+    autotools_configure
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

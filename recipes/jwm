@@ -1,0 +1,29 @@
+name=jwm
+version=2.4.3
+revision=1
+tarball_url="https://github.com/joewing/jwm/releases/download/v${version}/jwm-${version}.tar.xz"
+tarball_blake2b="d0b0ff1088ab3390a90c054162ea2c2fe782b61f28b3fdb28464ace362143fdc94e25ec82f7f4178b86a26c9315cdfcf9a81bff2e76bb5e3d62f88968a4ee80b"
+source_hostdeps="automake autoconf libtool pkg-config"
+source_deps="gettext"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs libx11 libxft libjpeg-turbo libxpm libxinerama libpng"
+
+regenerate() {
+        AUTOMAKE=true \
+    autotools_recursive_regen
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+
+    autotools_configure \
+        --disable-fribidi
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+	cp -v "${base_dir}"/build-support/jwm/system.jwmrc "${dest_dir}"/etc/
+    post_package_strip
+}

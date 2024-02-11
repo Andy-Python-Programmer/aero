@@ -166,6 +166,11 @@ impl Path {
         unsafe { &*(path as *const str as *const Path) }
     }
 
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Returns [`true`] if the path is absolute.
     pub fn is_absolute(&self) -> bool {
         self.0.starts_with('/')
@@ -275,10 +280,11 @@ pub fn lookup_path_with(
                     let resolved_path = Path::new(&resolved_path_str);
 
                     if resolved_path.is_absolute() {
-                        return lookup_path(resolved_path);
+                        cwd = lookup_path(resolved_path)?;
+                        continue;
                     }
 
-                    return lookup_path_with(parent, resolved_path, LookupMode::None);
+                    cwd = lookup_path_with(parent, resolved_path, LookupMode::None)?;
                 } else if metadata.is_directory() {
                     if let Ok(mount_point) = MOUNT_MANAGER.find_mount(cwd.clone()) {
                         cwd = mount_point.root_entry;

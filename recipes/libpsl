@@ -1,0 +1,28 @@
+name=libpsl
+version=0.21.5
+tarball_url="https://github.com/rockdaboot/libpsl/releases/download/${version}/libpsl-${version}.tar.gz"
+tarball_blake2b="a0076f622b85df99f866de6707850ac216b764bdb68c6d516f4603da42dac8eae3ee4c53d68dbb6af6f779c2c7f1b9caab74c8b558209b1f6823f95c13fc3ceb"
+deps="core-libs libunistring libiconv"
+hostdeps="gcc pkg-config autoconf automake libtool"
+source_hostdeps="automake autoconf libtool pkg-config"
+source_imagedeps="gtk-doc"
+
+regenerate() {
+    autotools_recursive_regen
+}
+
+build() {
+    autotools_configure \
+        --disable-asan \
+        --disable-cfi \
+        --disable-ubsan \
+        --disable-man
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

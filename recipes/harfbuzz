@@ -1,0 +1,35 @@
+name=harfbuzz
+version=8.3.0
+revision=1
+tarball_url="https://github.com/harfbuzz/harfbuzz/releases/download/${version}/harfbuzz-${version}.tar.xz"
+tarball_blake2b="3749d2ff7955e135cf0d740bf6fe8b5c20a6bbf171480a29e6ae14fde8c26e1457506278b8c66e3b9630cbeb006874c19075c784a575e490c41297274a27fe59"
+imagedeps="meson ninja"
+hostdeps="gcc pkg-config"
+deps="core-libs graphite2 glib zlib freetype2 cairo icu"
+
+build() {
+    cp -rp "${source_dir}"/. ./
+
+    mkdir build && cd build
+
+        meson_source_dir=.. \
+    meson_configure \
+        -Dgraphite2=enabled \
+        -Dglib=enabled \
+        -Dgobject=disabled \
+        -Dicu=enabled \
+        -Dfreetype=enabled \
+        -Dcairo=enabled \
+        -Dintrospection=disabled \
+        -Dtests=disabled
+
+    ninja -j${parallelism}
+
+    cd ..
+}
+
+package() {
+    ( cd build && DESTDIR="${dest_dir}" ninja install )
+
+    post_package_strip
+}

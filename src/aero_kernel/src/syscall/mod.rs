@@ -229,7 +229,7 @@ pub fn generic_do_syscall(
         SYS_DUP2 => fs::dup2(b, c, d),
         SYS_FCNTL => fs::fcntl(b, c, d),
         SYS_STAT => fs::stat(b, c, d),
-        SYS_FSTAT => fs::fstat(b, c),
+        SYS_FSTAT => fs::fstat(b, c, d, e, f),
         SYS_READ_LINK => fs::read_link(b, c, d, e),
         SYS_EVENT_FD => fs::event_fd(b, c),
         SYS_LINK => fs::link(b, c, d, e),

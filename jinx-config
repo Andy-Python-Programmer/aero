@@ -1,0 +1,72 @@
+JINX_MAJOR_VER=0.2
+
+export CFLAGS='-O2 -pipe'
+export CXXFLAGS="${CFLAGS}"
+
+OS_TRIPLET=x86_64-aero
+export CARGO_HOME="${base_dir}/target/cargo-home"
+
+# Required by scripts/mkimage
+imagedeps="parted"
+
+autotools_recursive_regen() {
+    ACLOCAL_INCLUDE=""
+    if [ -d ${sysroot_dir}/usr/share/aclocal ]; then
+        ACLOCAL_INCLUDE="-I${sysroot_dir}/usr/share/aclocal"
+    fi
+
+    for f in $(find . -name configure.ac -type f); do
+        echo "* autotools regen in '$(dirname $f)'..."
+        ( cd "$(dirname "$f")" && autoreconf -fvi "$@" $ACLOCAL_INCLUDE )
+    done
+}
+
+post_package_strip() {
+    if [ -z "$strip_command" ]; then
+        strip_command="${OS_TRIPLET}-strip"
+    fi
+
+    for f in $(find "${dest_dir}"); do
+        if file "$f" | grep 'not stripped' >/dev/null; then
+            echo "* stripping '$f'..."
+            stripped_file="$(mktemp)"
+            ${strip_command} "$f" -o "$stripped_file"
+            chmod --reference="$f" "$stripped_file"
+            mv -f "$stripped_file" "$f"
+        fi
+    done
+}
+
+autotools_configure() {
+    if [ -z "${configure_script_path}" ]; then
+        configure_script_path="${source_dir}/configure"
+    fi
+
+    ${configure_script_path} \
+        --host=${OS_TRIPLET} \
+        --with-sysroot=${sysroot_dir} \
+        --prefix=${prefix} \
+        --sysconfdir=/etc \
+        --localstatedir=/var \
+        --libdir=${prefix}/lib \
+        --disable-static \
+        --enable-shared \
+        --disable-malloc0returnsnull \
+        "$@"
+}
+
+meson_configure() {
+    if [ -z "${meson_source_dir}" ]; then
+        meson_source_dir="${source_dir}"
+    fi
+
+    # TODO(andypython): Move cross-file.ini to build-support/
+    meson setup "${meson_source_dir}" \
+        --cross-file "${base_dir}/userland/cross-file.ini" \
+        --prefix=${prefix} \
+        --sysconfdir=/etc \
+        --libdir=lib \
+        --buildtype=release \
+        -Ddefault_library=shared \
+        "$@"
+}

@@ -527,6 +527,12 @@ impl Task {
             *self.cwd.write() = Some(Cwd::new())
         }
 
+        // if executable.absolute_path_str().contains("gcc")
+        //     || executable.absolute_path_str().contains("ls")
+        // {
+        // self.enable_systrace();
+        // }
+
         *self.mem_tags.lock() = HashMap::new();
         self.file_table.close_on_exec();
 
@@ -625,7 +631,12 @@ impl Task {
     }
 
     pub fn parent_pid(&self) -> TaskId {
-        self.get_parent().unwrap().pid()
+        if let Some(parent) = self.get_parent() {
+            parent.pid()
+        } else {
+            // On top of the family tree.
+            self.pid()
+        }
     }
 
     pub fn tid(&self) -> TaskId {

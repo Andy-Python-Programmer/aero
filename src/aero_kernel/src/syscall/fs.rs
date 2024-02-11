@@ -19,7 +19,7 @@ use core::fmt;
 
 use aero_syscall::prelude::*;
 use aero_syscall::signal::SigProcMask;
-use aero_syscall::{OpenFlags, Stat, SyscallError, TimeSpec, AT_FDCWD};
+use aero_syscall::{AtFlags, OpenFlags, Stat, SyscallError, TimeSpec, AT_FDCWD};
 use alloc::sync::Arc;
 
 use crate::fs::cache::{self, DirCacheImpl};
@@ -29,6 +29,7 @@ use crate::fs::file_table::{DuplicateHint, FileHandle};
 use crate::fs::inode::{DirEntry, PollTable};
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
+use crate::syscall::SysArg;
 use crate::userland::scheduler;
 
 use crate::fs::Path;
@@ -103,7 +104,7 @@ pub fn read(fd: FileDescriptor, buffer: &mut [u8]) -> Result<usize, SyscallError
 #[syscall]
 pub fn open(fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> {
     let dir = match fd as isize {
-        AT_FDCWD => {
+        0 => {
             if !path.is_absolute() {
                 scheduler::get_scheduler().current_task().cwd_dirent()
             } else {
@@ -111,7 +112,9 @@ pub fn open(fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> 
             }
         }
 
-        _ => todo!(),
+        _ => {
+            todo!()
+        }
     };
 
     let mut flags = OpenFlags::from_bits(mode).ok_or(SyscallError::EINVAL)?;
@@ -253,9 +256,14 @@ pub fn rmdir(path: &str) -> Result<usize, SyscallError> {
 
 #[syscall]
 pub fn getcwd(buffer: &mut [u8]) -> Result<usize, SyscallError> {
-    let cwd = scheduler::get_scheduler().current_task().get_cwd();
+    let cwd = scheduler::current_thread().get_cwd();
+    log::debug!("getcwd: {}", cwd);
 
+    // FIXME: fix this before commiting
+    buffer.fill(0);
     buffer[..cwd.len()].copy_from_slice(cwd.as_bytes());
+
+    // TOOD: mlibc doesnt give a shit and will increase the buf size till it fits. make it smarter.
     Ok(cwd.len())
 }
 
@@ -440,8 +448,30 @@ pub fn fcntl(fd: FileDescriptor, command: usize, arg: usize) -> Result<usize, Sy
 }
 
 #[syscall]
-pub fn fstat(fd: FileDescriptor, stat: &mut Stat) -> Result<usize, SyscallError> {
-    *stat = fd.handle()?.inode().stat()?;
+pub fn fstat(fd: usize, path: &Path, flags: usize, stat: &mut Stat) -> Result<usize, SyscallError> {
+    let at = match fd as isize {
+        AT_FDCWD if !path.is_absolute() => scheduler::current_thread().cwd_dirent(),
+        _ if !path.is_absolute() => FileDescriptor::from_usize(fd).handle()?.inode.clone(),
+        _ => fs::root_dir().clone(),
+    };
+
+    // TODO: derive(SysArg) for bitflags.
+    let flags = AtFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
+    dbg!(flags);
+
+    if path.is_empty() {
+        if !flags.contains(AtFlags::EMPTY_PATH) {
+            return Err(SyscallError::EINVAL);
+        }
+
+        *stat = at.inode().stat()?;
+        return Ok(0);
+    }
+
+    log::debug!("{}", at.absolute_path_str());
+
+    let ent = fs::lookup_path_with(at, path, LookupMode::None)?;
+    *stat = ent.inode().stat()?;
     Ok(0)
 }
 

@@ -1,2 +1,6 @@
 * text=auto eol=lf
-*.real linguist-language=Assembly
+
+jinx-config linguist-language=Shell
+host-recipes/* linguist-language=Shell
+recipes/* linguist-language=Shell
+source-recipes/* linguist-language=Shell

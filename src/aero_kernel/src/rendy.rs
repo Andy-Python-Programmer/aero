@@ -267,6 +267,15 @@ impl IndexMut<NamedColor> for ColorList {
     }
 }
 
+impl Index<usize> for ColorList {
+    type Output = u32;
+
+    #[inline]
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.0[idx]
+    }
+}
+
 pub struct Inner<'this> {
     buffer: &'this mut [u32],
     info: RendyInfo,
@@ -869,6 +878,7 @@ impl<'a> vte::ansi::Handler for Inner<'a> {
             Attr::Foreground(color) => {
                 let code = match color {
                     vte::ansi::Color::Named(c) => self.color_list[c],
+                    vte::ansi::Color::Indexed(c) => self.color_list[c as usize],
                     _ => unimplemented!(),
                 };
 

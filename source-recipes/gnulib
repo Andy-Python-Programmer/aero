@@ -1,0 +1,4 @@
+name=gnulib
+version=4f6545e79c4a7cd7feb2c8f23f1d5167e7165907
+tarball_url="https://git.savannah.gnu.org/cgit/gnulib.git/snapshot/gnulib-${version}.tar.gz"
+tarball_blake2b="0206d3bdeb25bdc3562065dc1832d3ea2ac95920b84ed0461626efba83de3edfcdcbc257c493a9a3d6035d0edb09526248c2483f898110be774ac31caf650e58"

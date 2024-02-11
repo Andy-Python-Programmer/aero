@@ -1,0 +1,33 @@
+name=rust-host
+version=1.75.0
+tarball_url="https://static.rust-lang.org/dist/rustc-${version}-src.tar.xz"
+tarball_blake2b="8937b80585eddaa3e1f1ef948899d14a170308518c6fef9fe569560cdd870053776956743f796055f2119399b9ca6c0df12fedd789ae46324d071e5126c4e495"
+
+regenerate() {
+    cat > ${source_dir}/config.toml <<EOL
+change-id = 115898
+
+[llvm]
+download-ci-llvm = false
+targets = "X86"
+
+[build]
+target = ["x86_64-unknown-aero", "x86_64-unknown-linux-gnu"]
+build-dir = "${base_dir}/host-builds/rust"
+docs = false
+
+[install]
+prefix = "${prefix}"
+sysconfdir = "${prefix}/etc"
+
+[rust]
+codegen-tests = false
+deny-warnings = false # work around rust-num-cpus warning
+
+[target.x86_64-unknown-linux-gnu]
+llvm-config = "${base_dir}/host-pkgs/llvm/usr/local/bin/llvm-config"
+
+[target.x86_64-unknown-aero]
+llvm-config = "${base_dir}/host-pkgs/llvm/usr/local/bin/llvm-config"
+EOL
+}

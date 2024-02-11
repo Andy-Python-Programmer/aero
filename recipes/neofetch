@@ -1,0 +1,9 @@
+name=neofetch
+version=534b1c8cdbda567066517aeb75d8bdde3641dab7
+tarball_url="https://github.com/Andy-Python-Programmer/neofetch/archive/${version}.tar.gz"
+tarball_blake2b="9f9f49a941e70dfe764c38c039c69e21bdf33c72ffbc2cd64a0287c0f8220f8a5ed456ef227da6dc843ef55602f20c9e0ac181cee261e65c373f69ceb5951668"
+
+package() {
+    mkdir -p "${dest_dir}/usr/bin"
+    cp -f "${source_dir}"/neofetch "${dest_dir}"/usr/bin/neofetch
+}

@@ -1,0 +1,368 @@
+diff --git bash-clean/builtins/psize.c bash-workdir/builtins/psize.c
+index 30881fb..6c99972 100644
+--- bash-clean/builtins/psize.c
++++ bash-workdir/builtins/psize.c
+@@ -21,33 +21,36 @@
+ /*  Write output in 128-byte chunks until we get a sigpipe or write gets an
+     EPIPE.  Then report how many bytes we wrote.  We assume that this is the
+     pipe size. */
+-#include <config.h>
+-
+-#if defined (HAVE_UNISTD_H)
+-#  ifdef _MINIX
+-#    include <sys/types.h>
+-#  endif
+-#  include <unistd.h>
+-#endif
+-
+-#include <stdio.h>
+-#ifndef _MINIX
+-#include "../bashtypes.h"
+-#endif
++// #include <config.h>
++
++// #if defined (HAVE_UNISTD_H)
++// #  ifdef _MINIX
++// #    include <sys/types.h>
++// #  endif
++// #  include <unistd.h>
++// #endif
++
++// #include <stdio.h>
++// #ifndef _MINIX
++// #include "../bashtypes.h"
++// #endif
+ #include <signal.h>
+-#include <errno.h>
++// #include <errno.h>
+ 
+-#include "../command.h"
+-#include "../general.h"
+-#include "../sig.h"
++// #include "../command.h"
++// #include "../general.h"
++// #include "../sig.h"
+ 
+-#ifndef errno
+-extern int errno;
+-#endif
++// #ifndef errno
++// extern int errno;
++// #endif
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
+ 
+ int nw;
+ 
+-sighandler
++void
+ sigpipe (sig)
+      int sig;
+ {
+diff --git bash-clean/lib/termcap/termcap.c bash-workdir/lib/termcap/termcap.c
+index 87fae05..ed9d105 100644
+--- bash-clean/lib/termcap/termcap.c
++++ bash-workdir/lib/termcap/termcap.c
+@@ -630,7 +630,7 @@ scan_file (str, fd, bufp)
+   bufp->ateof = 0;
+   *bufp->ptr = '\0';
+ 
+-  lseek (fd, 0L, 0);
++  lseek (fd, 0L, SEEK_SET);
+ 
+   while (!bufp->ateof)
+     {
+diff --git bash-clean/mksyntax.c bash-workdir/mksyntax.c
+index 0385686..53011a2 100644
+--- bash-clean/mksyntax.c
++++ bash-workdir/mksyntax.c
+@@ -20,29 +20,31 @@
+    along with Bash.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-#include "config.h"
++// #include "config.h"
+ 
++#include <string.h>
+ #include <stdio.h>
+ #include "bashansi.h"
+ #include "chartypes.h"
+ #include <errno.h>
+ 
+-#ifdef HAVE_UNISTD_H
+-#  include <unistd.h>
+-#endif
++// #ifdef HAVE_UNISTD_H
++// #  include <unistd.h>
++// #endif
++#include <unistd.h>
+ 
+ #include "syntax.h"
+ 
+ extern int optind;
+ extern char *optarg;
+ 
+-#ifndef errno
+-extern int errno;
+-#endif
++// #ifndef errno
++// extern int errno;
++// #endif
+ 
+-#ifndef HAVE_STRERROR
+-extern char *strerror();
+-#endif
++// #ifndef HAVE_STRERROR
++// extern char *strerror();
++// #endif
+ 
+ struct wordflag {
+ 	int	flag;
+@@ -377,39 +379,39 @@ main(argc, argv)
+ }
+ 
+ 
+-#if !defined (HAVE_STRERROR)
+-
+-#include <bashtypes.h>
+-#if defined (HAVE_SYS_PARAM_H)
+-#  include <sys/param.h>
+-#endif
+-
+-#if defined (HAVE_UNISTD_H)
+-#  include <unistd.h>
+-#endif
+-
+-/* Return a string corresponding to the error number E.  From
+-   the ANSI C spec. */
+-#if defined (strerror)
+-#  undef strerror
+-#endif
+-
+-char *
+-strerror (e)
+-     int e;
+-{
+-  static char emsg[40];
+-#if defined (HAVE_SYS_ERRLIST)
+-  extern int sys_nerr;
+-  extern char *sys_errlist[];
+-
+-  if (e > 0 && e < sys_nerr)
+-    return (sys_errlist[e]);
+-  else
+-#endif /* HAVE_SYS_ERRLIST */
+-    {
+-      sprintf (emsg, "Unknown system error %d", e);
+-      return (&emsg[0]);
+-    }
+-}
+-#endif /* HAVE_STRERROR */
++// #if !defined (HAVE_STRERROR)
++
++// #include <bashtypes.h>
++// #if defined (HAVE_SYS_PARAM_H)
++// #  include <sys/param.h>
++// #endif
++
++// #if defined (HAVE_UNISTD_H)
++// #  include <unistd.h>
++// #endif
++
++// /* Return a string corresponding to the error number E.  From
++//    the ANSI C spec. */
++// #if defined (strerror)
++// #  undef strerror
++// #endif
++
++// char *
++// strerror (e)
++//      int e;
++// {
++//   static char emsg[40];
++// #if defined (HAVE_SYS_ERRLIST)
++//   extern int sys_nerr;
++//   extern char *sys_errlist[];
++
++//   if (e > 0 && e < sys_nerr)
++//     return (sys_errlist[e]);
++//   else
++// #endif /* HAVE_SYS_ERRLIST */
++//     {
++//       sprintf (emsg, "Unknown system error %d", e);
++//       return (&emsg[0]);
++//     }
++// }
++// #endif /* HAVE_STRERROR */
+diff --git bash-clean/shell.c bash-workdir/shell.c
+index ebd8965..05d6a85 100644
+--- bash-clean/shell.c
++++ bash-workdir/shell.c
+@@ -1647,7 +1647,7 @@ open_shell_script (script_name)
+ #endif
+ 
+   /* Only do this with non-tty file descriptors we can seek on. */
+-  if (fd_is_tty == 0 && (lseek (fd, 0L, 1) != -1))
++  if (fd_is_tty == 0 && (lseek (fd, 0L, SEEK_CUR) != -1))
+     {
+       /* Check to see if the `file' in `bash file' is a binary file
+ 	 according to the same tests done by execute_simple_command (),
+@@ -1684,7 +1684,7 @@ open_shell_script (script_name)
+ 	  exit (EX_BINARY_FILE);
+ 	}
+       /* Now rewind the file back to the beginning. */
+-      lseek (fd, 0L, 0);
++      lseek (fd, 0L, SEEK_SET);
+     }
+ 
+   /* Open the script.  But try to move the file descriptor to a randomly
+diff --git bash-clean/support/bashversion.c bash-workdir/support/bashversion.c
+index ad02d46..1b8a4ae 100644
+--- bash-clean/support/bashversion.c
++++ bash-workdir/support/bashversion.c
+@@ -18,15 +18,17 @@
+    along with Bash.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-#include "config.h"
++// #include "config.h"
+ 
+ #include "stdc.h"
+ 
+ #include <stdio.h>
++#include <string.h>
+ 
+-#if defined (HAVE_UNISTD_H)
+-#  include <unistd.h>
+-#endif
++// #if defined (HAVE_UNISTD_H)
++// #  include <unistd.h>
++// #endif
++#include <unistd.h>
+ 
+ #include "bashansi.h"
+ 
+diff --git bash-clean/support/man2html.c bash-workdir/support/man2html.c
+index e6f441b..906e9f8 100644
+--- bash-clean/support/man2html.c
++++ bash-workdir/support/man2html.c
+@@ -62,9 +62,9 @@
+  *    that all these features work on all manpages. (I didn't have the
+  *    time to look through all the available manpages.)
+  */
+-#ifdef HAVE_CONFIG_H
+-#include <config.h>
+-#endif
++// #ifdef HAVE_CONFIG_H
++// #include <config.h>
++// #endif
+ 
+ #define NROFF 0
+ 
+@@ -123,26 +123,26 @@ char *manpage;
+ #define BD_LITERAL  1
+ #define BD_INDENT   2
+ 
+-#ifndef HAVE_STRERROR
+-static char *
+-strerror(int e)
+-{
+-	static char emsg[40];
+-
+-#if defined (HAVE_SYS_ERRLIST)
+-	extern int sys_nerr;
+-	extern char *sys_errlist[];
+-
+-	if (e > 0 && e < sys_nerr)
+-		return (sys_errlist[e]);
+-	else
+-#endif				/* HAVE_SYS_ERRLIST */
+-	{
+-		sprintf(emsg, "Unknown system error %d", e);
+-		return (&emsg[0]);
+-	}
+-}
+-#endif				/* !HAVE_STRERROR */
++// #ifndef HAVE_STRERROR
++// static char *
++// strerror(int e)
++// {
++// 	static char emsg[40];
++
++// #if defined (HAVE_SYS_ERRLIST)
++// 	extern int sys_nerr;
++// 	extern char *sys_errlist[];
++
++// 	if (e > 0 && e < sys_nerr)
++// 		return (sys_errlist[e]);
++// 	else
++// #endif				/* HAVE_SYS_ERRLIST */
++// 	{
++// 		sprintf(emsg, "Unknown system error %d", e);
++// 		return (&emsg[0]);
++// 	}
++// }
++// #endif				/* !HAVE_STRERROR */
+ 
+ static char *
+ strgrow(char *old, int len)
+diff --git bash-clean/support/mksignames.c bash-workdir/support/mksignames.c
+index ba87ae8..bd13bab 100644
+--- bash-clean/support/mksignames.c
++++ bash-workdir/support/mksignames.c
+@@ -19,17 +19,18 @@
+    along with Bash.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-#include <config.h>
++// #include <config.h>
+ 
+ #include <sys/types.h>
+ #include <signal.h>
+ 
+ #include <stdio.h>
+-#if defined (HAVE_STDLIB_H)
+-#  include <stdlib.h>
+-#else
+-#  include "ansi_stdlib.h"
+-#endif /* HAVE_STDLIB_H */
++// #if defined (HAVE_STDLIB_H)
++// #  include <stdlib.h>
++// #else
++// #  include "ansi_stdlib.h"
++// #endif /* HAVE_STDLIB_H */
++#include <stdlib.h>
+ 
+ /* Duplicated from signames.c */
+ #if !defined (NSIG)
+diff --git bash-clean/support/signames.c bash-workdir/support/signames.c
+index 84864fd..6b4e29f 100644
+--- bash-clean/support/signames.c
++++ bash-workdir/support/signames.c
+@@ -18,18 +18,19 @@
+    along with Bash.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-#include <config.h>
++// #include <config.h>
+ 
+ #include <stdio.h>
+ 
+ #include <sys/types.h>
+ #include <signal.h>
+ 
+-#if defined (HAVE_STDLIB_H)
+-#  include <stdlib.h>
+-#else
+-#  include "ansi_stdlib.h"
+-#endif /* HAVE_STDLIB_H */
++// #if defined (HAVE_STDLIB_H)
++// #  include <stdlib.h>
++// #else
++// #  include "ansi_stdlib.h"
++// #endif /* HAVE_STDLIB_H */
++#include <stdlib.h>
+ 
+ #if !defined (NSIG)
+ #  define NSIG 64

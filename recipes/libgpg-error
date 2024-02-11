@@ -1,0 +1,30 @@
+name=libgpg-error
+version=1.47
+revision=1
+tarball_url="https://www.gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-${version}.tar.gz"
+tarball_blake2b="f1e185127192396cde5676030217471f31f46b5f8bde9314bfe74039297a608356f89208139245c9efce3cba1ba7609f230219c8c6cab9f24de05ad384c43c7d"
+source_hostdeps="automake autoconf libtool pkg-config"
+imagedeps="gcc"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs"
+
+regenerate() {
+    cp -v src/syscfg/lock-obj-pub.x86_64-unknown-linux-gnu.h src/syscfg/lock-obj-pub.aero.h
+
+    autotools_recursive_regen
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+
+        configure_script_path=./configure \
+    autotools_configure
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

@@ -148,6 +148,7 @@ impl INode {
         let mut progress = 0;
         let count = buffer.len();
 
+        let size = self.inode.read().size();
         while progress < count {
             let block = (offset + progress) / block_size;
             let loc = (offset + progress) % block_size;
@@ -174,6 +175,7 @@ impl INode {
 
             progress += chunk;
         }
+        self.inode.write().set_size(offset + count);
 
         Ok(count)
     }
