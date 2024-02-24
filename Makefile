@@ -1,6 +1,7 @@
 jinx:
-	if [ ! -d "target/jinx" ]; then \
-		git clone https://github.com/mintsuki/jinx target/jinx; \
+	if [ ! -f "target/jinx" ]; then \
+		curl -Lo target/jinx https://github.com/mintsuki/jinx/raw/30e7d5487bff67a66dfba332113157a08a324820/jinx; \
+		chmod +x target/jinx; \
 	fi
 
 	# FIXME: autosync
@@ -9,7 +10,7 @@ jinx:
 
 .PHONY: distro
 distro: jinx
-	./target/jinx/jinx build-all
+	./target/jinx build-all
 
 SOURCE_DIR := src
 USERLAND_DIR := userland
@@ -25,7 +26,7 @@ $(KERNEL_TARGET): $(shell find $(SOURCE_DIR) -type f -not -path '$(SOURCE_DIR)/t
 	./build-support/mkiso.sh
 
 $(USERLAND_TARGET): $(shell find $(USERLAND_DIR) -type f -not -path '$(USERLAND_DIR)/target/*')
-	./target/jinx/jinx rebuild userland
+	./target/jinx rebuild userland
 	@$(MAKE) distro-image
 
 .PHONY: iso

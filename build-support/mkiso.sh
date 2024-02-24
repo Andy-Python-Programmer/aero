@@ -1,6 +1,6 @@
 set -ex
 
-./target/jinx/jinx host-build limine
+./target/jinx host-build limine
 
 rm -rf target/iso_root
 mkdir -pv target/iso_root/boot

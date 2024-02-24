@@ -1,6 +1,6 @@
 IMAGE_PATH=target/disk.img
 
-./target/jinx/jinx sysroot
+./target/jinx sysroot
 
 rm -rf $IMAGE_PATH
 
