@@ -75,9 +75,11 @@ $ cd aero
 make distro-image
 make qemu
 
-# To build documentation run the following command. The documentation will be outputed to the `target/doc` directory.
-make doc
-# The documentation will be available in the `target/doc` directory.
+# To build documentation run the following command. The documentation will be outputed
+# to the `target/doc` directory.
+#
+# Optionally you can pass `open=yes` to open the documentation in the default browser.
+make doc open=yes
 ```
 
 # Contributing

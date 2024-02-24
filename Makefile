@@ -41,6 +41,8 @@ qemu: $(KERNEL_TARGET) $(USERLAND_TARGET)
 
 .PHONY: doc
 doc:
-	rm -rf target/doc
 	cd src && cargo doc --package aero_kernel --release --target-dir=../target/doc/
 	cp web/index.html target/doc/index.html
+ifeq ($(open),yes)
+	xdg-open target/doc/index.html
+endif
