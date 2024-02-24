@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["ansi"],"struct":["Params","ParamsIter","Parser"],"trait":["Perform"]};

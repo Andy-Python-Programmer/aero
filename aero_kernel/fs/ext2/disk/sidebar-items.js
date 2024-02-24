@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["FileType","Revision"],"struct":["DirEntry","GroupDescriptor","INode","SuperBlock"],"trait":["Revsion"]};

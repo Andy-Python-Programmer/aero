@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["FileContents","FileType"],"fn":["fetch_dir_entry"],"static":["DIR_CACHE_MARKER"],"struct":["DirEntry","DirProtectedData","Metadata","PollFlags","PollTable"],"trait":["INodeInterface"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["get_device","init"],"mod":["channel","registers"],"static":["DRIVER","__MODULE_INIT"],"struct":["Ide","IdeDevice","IdeDrive"]};

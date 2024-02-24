@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["ALTGR_MAP","ALT_MAP","CTRL_ALT_MAP","CTRL_MAP","PLAIN_MAP","SHIFT_CTRL_MAP","SHIFT_MAP"],"fn":["init"],"struct":["StdinBuffer","TERMIOS","TTY","Tty","TtyState"]};

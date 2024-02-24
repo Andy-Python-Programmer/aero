@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["ArrayString","ArrayVec","CapacityError","Drain","IntoIter"]};

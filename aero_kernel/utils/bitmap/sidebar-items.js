@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["BLOCK_BITS"],"fn":["calculate_blocks"],"struct":["Bitmap"]};

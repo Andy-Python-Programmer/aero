@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["accept","bind","connect","create_socket","get_peername","get_sockname","listen","setopt","shutdown","sock_recv","sock_send","socket","socket_addr_from_addr","socket_pair"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["AtomicLink","AtomicLinkOps","Cursor","CursorMut","CursorOwning","IntoIter","Iter","Link","LinkOps","LinkedList"],"trait":["LinkedListOps"]};

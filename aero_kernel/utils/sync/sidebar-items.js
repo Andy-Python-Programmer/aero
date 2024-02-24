@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["BMutex","BMutexGuard","IrqGuard","Mutex","MutexGuard","WaitQueue"]};

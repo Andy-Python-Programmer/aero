@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Size1GiB","Size2MiB","Size4KiB"],"struct":["AddressNotAligned","Page","PageRange","PhysFrame","PhysFrameRange","PhysFrameRangeInclusive"],"trait":["NotGiantPageSize","PageSize"]};

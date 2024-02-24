@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["demangle","try_demangle"],"struct":["Demangle","TryDemangleError"]};

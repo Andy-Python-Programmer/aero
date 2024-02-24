@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["IDT_ENTRIES"],"enum":["IrqHandler"],"fn":["init","load_idt"],"static":["IDT","INTERRUPT_HANDLERS"],"struct":["IDTFlags","IdtDescriptor","IdtEntry","InterruptErrorStack","InterruptStack","IretRegisters","PreservedRegisters","ScratchRegisters"]};

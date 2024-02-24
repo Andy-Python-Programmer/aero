@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Status"],"fn":["do_recv","get","init","make_arp","request_ip"],"static":["CACHE"],"struct":["Cache","Entry"]};

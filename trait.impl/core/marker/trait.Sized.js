@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"aero_kernel":[["impl !<a class=\"trait\" href=\"aero_kernel/prelude/rust_2021/_core/marker/trait.Sized.html\" title=\"trait aero_kernel::prelude::rust_2021::_core::marker::Sized\">Sized</a> for <a class=\"struct\" href=\"aero_kernel/fs/struct.Path.html\" title=\"struct aero_kernel::fs::Path\">Path</a>",1,["aero_kernel::fs::Path"]]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

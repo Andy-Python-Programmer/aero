@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["slice_into_bytes","validate_array_mut","validate_mut_ptr","validate_ptr","validate_slice","validate_slice_mut","validate_str"],"mod":["bitmap","buffer","dma","sync"],"struct":["LinkerSymbol","PerCpu","StackHelper","VolatileCell"],"trait":["Downcastable"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ArpHardwareType","ArpOpcode","EthType"],"struct":["Arp","ArpAddress","Eth","MacAddr","Tun"]};

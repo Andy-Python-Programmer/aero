@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["SleepState"],"fn":["get_subsystem","init"],"static":["AML_SUBSYSTEM"],"trait":["AmlSubsystem"]};

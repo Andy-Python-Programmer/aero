@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["active_level_4_table","init","level_5_paging_enabled"],"mod":["addr","frame","mapper","page","page_table"],"static":["FRAME_ALLOCATOR"],"struct":["PageFaultErrorCode"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Action"],"fn":["action","handle_default","stop","terminate","terminate_thread"],"static":["DEFAULT_ACTIONS"]};

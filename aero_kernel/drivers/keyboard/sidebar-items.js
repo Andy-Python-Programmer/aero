@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["KeyCode"],"fn":["keyboard_irq_handler","ps2_keyboard_init","register_keyboard_listener"],"static":["KEYBOARD_LISTENER","PS2_KEYBOARD_STATE","__MODULE_INIT"],"struct":["ConfigFlags","KEYBOARD","KeyboardDevice","Ps2KeyboardState"],"trait":["KeyboardListener"]};

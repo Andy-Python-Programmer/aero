@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["init"],"macro":["serial_print","serial_println"],"static":["COM_1"],"struct":["InterruptEnable","LineStatus","SerialPort"]};

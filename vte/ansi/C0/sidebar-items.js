@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["ACK","BEL","BS","CAN","CR","DC2","DC4","DEL","DLE","EM","ENQ","EOT","ESC","ETB","ETX","FF","FS","GS","HT","LF","NAK","NUL","RS","SI","SO","SOH","STX","SUB","SYN","US","VT","XOFF","XON"]};

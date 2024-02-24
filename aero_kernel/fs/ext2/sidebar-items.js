@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["disk","group_desc"],"struct":["DirEntryIter","Ext2","INode"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["copy_field","make_dmt_modes","make_mode_info"],"mod":["rawfb"],"static":["DRM_CARD_ID"],"struct":["BufferObject","Connector","Crtc","Drm","Encoder","Framebuffer","IdAllocator"],"trait":["DrmDevice","ModeObject"]};

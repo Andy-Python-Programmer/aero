@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["PIT_DIVIDEND","PIT_FREQUENCY_HZ"],"fn":["get_current_count","get_realtime_clock","get_uptime_ticks","init","pit_irq_handler","set_frequency","set_reload_value"],"static":["EPOCH","REALTIME_CLOCK","UPTIME_RAW","UPTIME_SEC"]};

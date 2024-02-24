@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["__resolve_memcpy","__resolve_memset","memcpy","memcpy_movsb","memcpy_movsq","memmove","memmove_erms","memset","memset_stosb","memset_stosq","should_store_by_byte"]};

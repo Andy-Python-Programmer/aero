@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["UnixSocketState"],"fn":["path_from_unix_sock"],"struct":["AcceptQueue","Message","MessageQueue","UnixSocket","UnixSocketInner"]};

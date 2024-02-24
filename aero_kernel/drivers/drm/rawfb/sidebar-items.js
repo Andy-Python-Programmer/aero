@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["init"],"static":["__MODULE_INIT"],"struct":["RawFramebuffer"]};

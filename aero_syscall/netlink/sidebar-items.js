@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["RT_TABLE_DEFAULT","RT_TABLE_LOCAL","RT_TABLE_MAIN","RT_TABLE_UNSPEC"],"enum":["MessageType","RtAttrType"],"fn":["nlmsg_align","rta_align","rta_length"],"struct":["MessageFlags","nlmsghdr","rtattr","rtgenmsg","rtmsg","sockaddr_nl"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["iter_files"],"struct":["Entry","Mode"]};

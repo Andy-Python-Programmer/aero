@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Bound"],"macro":["container_of","intrusive_adapter","offset_of"],"mod":["linked_list","rbtree","singly_linked_list","xor_linked_list"],"struct":["DefaultPointerOps","UnsafeRef"],"trait":["Adapter","DefaultLinkOps","KeyAdapter","LinkOps","PointerOps"]};

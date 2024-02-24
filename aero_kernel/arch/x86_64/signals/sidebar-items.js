@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["REDZONE_SIZE","SYSCALL_INSTRUCTION_SIZE"],"fn":["interrupt_check_signals","sigreturn","syscall_check_signals"],"struct":["SignalFrame"]};
