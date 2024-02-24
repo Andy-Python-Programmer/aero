@@ -1,2 +1,2 @@
-28.36s
-
+total_build: 28.36s
+rebuild: 8.27s

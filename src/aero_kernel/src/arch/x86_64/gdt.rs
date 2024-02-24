@@ -54,6 +54,7 @@ bitflags::bitflags! {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Ring {
     Ring0 = 0b00,
+    Ring3 = 0b11,
 }
 
 const BOOT_GDT_ENTRY_COUNT: usize = 4;
@@ -175,10 +176,13 @@ impl GdtAccessFlags {
 
 pub struct GdtEntryType;
 
+#[rustfmt::skip]
 impl GdtEntryType {
     pub const KERNEL_CODE: u16 = 1;
     pub const KERNEL_DATA: u16 = 2;
     pub const KERNEL_TLS: u16 = 3;
+    pub const USER_DATA: u16 = 4;
+    pub const USER_CODE: u16 = 5;
     pub const TSS: u16 = 8;
     pub const TSS_HI: u16 = 9;
 }
@@ -266,7 +270,7 @@ pub struct Tss {
     /// The full 64-bit canonical forms of the stack pointers (RSP) for
     /// privilege levels 0-2.
     pub rsp: [u64; 3], // offset 0x04
-    reserved2: u64, // offset 0x1C
+    pub reserved2: u64, // offset 0x1C
 
     /// The full 64-bit canonical forms of the interrupt stack table
     /// (IST) pointers.
@@ -316,6 +320,9 @@ pub fn init_boot() {
 }
 
 static STK: [u8; 4096 * 16] = [0; 4096 * 16];
+
+pub const USER_SS: SegmentSelector = SegmentSelector::new(GdtEntryType::USER_DATA, Ring::Ring3);
+pub const USER_CS: SegmentSelector = SegmentSelector::new(GdtEntryType::USER_CODE, Ring::Ring3);
 
 /// Initialize the *actual* GDT stored in TLS.
 ///

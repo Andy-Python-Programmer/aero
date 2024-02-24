@@ -113,6 +113,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     })?;
 
+    // Tell cargo to pass the linker script to the linker..
+    println!("cargo:rustc-link-arg=-T.cargo/kernel.ld");
+    // ..and to re-run if it changes.
     println!("cargo:rerun-if-changed=.cargo/kernel.ld");
 
     Ok(())

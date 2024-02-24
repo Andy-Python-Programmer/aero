@@ -530,7 +530,7 @@ impl Task {
         // if executable.absolute_path_str().contains("gcc")
         //     || executable.absolute_path_str().contains("ls")
         // {
-        // self.enable_systrace();
+        self.enable_systrace();
         // }
 
         *self.mem_tags.lock() = HashMap::new();

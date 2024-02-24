@@ -1,7 +1,7 @@
 use aero_syscall::SyscallError;
 use raw_cpuid::CpuId;
 
-use crate::arch::gdt::GdtEntryType;
+use crate::arch::gdt::{GdtEntryType, Tss, USER_CS, USER_SS};
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler::{self, ExitStatus};
 use crate::utils::sync::IrqGuard;
@@ -9,15 +9,157 @@ use crate::utils::sync::IrqGuard;
 use super::interrupts::InterruptErrorStack;
 use super::io;
 
-extern "C" {
-    fn x86_64_syscall_handler();
-    fn x86_64_sysenter_handler();
-}
+use core::mem::offset_of;
 
 const ARCH_SET_GS: usize = 0x1001;
 const ARCH_SET_FS: usize = 0x1002;
 const ARCH_GET_FS: usize = 0x1003;
 const ARCH_GET_GS: usize = 0x1004;
+
+core::arch::global_asm!(include_str!("./registers.S"));
+
+/// 64-bit SYSCALL instruction entry point.
+///
+/// The instruction supports to to 6 arguments in registers.
+///
+/// Registers state on entry:
+/// * `RAX` - system call number
+/// * `RCX` - return address
+/// * `R11` - saved flags (note: R11 is callee-clobbered register in C ABI)
+/// * `RDI` - argument 1
+/// * `RSI` - argument 2
+/// * `RDX` - argument 3
+/// * `R10` - argument 4 (needs to be moved to RCX to conform to C ABI)
+/// * `R8`  - argument 5
+/// * `R9`  - argument 6
+///
+/// (note: `R12`..`R15`, `RBP`, `RBX` are callee-preserved in C ABI)
+///
+/// The instruction saves the `RIP` to `RCX`, clears `RFLAGS.RF` then saves `RFLAGS` to `R11`.
+/// Followed by, it loads the new `SS`, `CS`, and `RIP` from previously programmed MSRs.
+///
+/// The instruction also does not save anything on the stack and does *not* change the `RSP`.
+#[naked]
+unsafe extern "C" fn x86_64_syscall_handler() {
+    asm!(
+        // make the GS base point to the kernel TLS
+        "swapgs",
+        // save the user stack pointer
+        "mov qword ptr gs:{tss_temp_ustack_off}, rsp",
+        // restore kernel stack
+        "mov rsp, qword ptr gs:{tss_rsp0_off}",
+        "push {userland_ss}",
+        // push userspace stack ptr
+        "push qword ptr gs:{tss_temp_ustack_off}",
+        "push r11",
+        "push {userland_cs}",
+        "push rcx",
+
+        "push rax",
+        "push_scratch",
+        "push_preserved",
+
+        // push a fake error code to match with the layout of `InterruptErrorStack`
+        "push 0",
+
+        "mov rdi, rsp",
+
+        "cld",
+        "call {x86_64_do_syscall}",
+        "cli",
+
+        // pop the fake error code
+        "add rsp, 8",
+
+        "pop_preserved",
+        "pop_scratch",
+
+        // cook the sysret frame
+        "pop rcx",
+        "add rsp, 8",
+        "pop r11",
+        "pop rsp",
+
+        // restore user GS
+        "swapgs",
+        "sysretq",
+
+        // constants:
+        userland_cs = const USER_CS.bits(),
+        userland_ss = const USER_SS.bits(),
+        // XXX: add 8 bytes to skip the x86_64 cpu local self ptr
+        tss_temp_ustack_off = const offset_of!(Tss, reserved2) + core::mem::size_of::<usize>(),
+        tss_rsp0_off = const offset_of!(Tss, rsp) + core::mem::size_of::<usize>(),
+        x86_64_do_syscall = sym x86_64_do_syscall,
+        options(noreturn)
+    )
+}
+
+/// 64-bit SYSENTER instruction entry point.
+///
+/// The SYSENTER mechanism performs a fast transition to the kernel.
+///
+/// The new `CS` is loaded from the `IA32_SYSENTER_CS` MSR, and the new instruction and stack
+/// pointers are loaded from `IA32_SYSENTER_EIP` and `IA32_SYSENTER_ESP`, respectively. `RFLAGS.IF`
+/// is cleared, but other flags are unchanged.
+///
+/// As the instruction does not save *any* state, the user is required to provide the return `RIP`
+/// and `RSP` in the `RCX` and `R11` registers, respectively. These addresses must be canonical.
+///
+/// The instruction expects the call number and arguments in the same registers as for SYSCALL.
+#[naked]
+unsafe extern "C" fn x86_64_sysenter_handler() {
+    asm!(
+        "swapgs",
+        // Build the interrupt frame expected by the kernel.
+        "push {userland_ss}",
+        "push r11",
+        "pushfq",
+        "push {userland_cs}",
+        "push rcx",
+        // Mask the same flags as for SYSCALL.
+        // XXX: Up to this point the code can be single-stepped if the user sets TF.
+        "pushfq",
+        "and dword ptr [rsp], 0x300",
+        "popfq",
+        "push rax",
+        "push_scratch",
+        "push_preserved",
+        "push 0",
+        // Store the stack pointer (interrupt frame ptr) in `RBP` for safe keeping, and align the
+        // stack as specified by the SysV calling convention.
+        "mov rbp, rsp",
+        "and rsp, ~0xf",
+        "mov rdi, rbp",
+        "call {x86_64_check_sysenter}",
+        "mov rdi, rbp",
+        "call {x86_64_do_syscall}",
+        // Reload the stack pointer, skipping the error code.
+        "lea rsp, [rbp + 8]",
+        "pop_preserved",
+        "pop_scratch",
+        // Pop the `IRET` frame into the registers expected by `SYSEXIT`.
+        "pop rdx", // return `RIP` in `RDX`
+        "add rsp, 8",
+        "popfq",   // restore saved `RFLAGS`
+        "pop rcx", // return `RSP` in `RCX`
+        // SAFETY: The above call to `x86_64_check_sysenter` is guarantees that we execute
+        // `sysexit` with canonical addresses in RCX and RDX. Otherwise we would fault in the
+        // kernel having already swapped back to the user's GS.
+        "swapgs",
+        // SYSEXIT does *not* restore `IF` to re-enable interrupts.
+        // This is done here, rather then when restoring `RFLAGS` above, since `STI` will keep
+        "sti",
+        // interrupts inhibited until after the *following* instruction executes.
+        "sysexitq",
+        // constants:
+        userland_cs = const USER_CS.bits(),
+        userland_ss = const USER_SS.bits(),
+        x86_64_check_sysenter = sym x86_64_check_sysenter,
+        x86_64_do_syscall = sym x86_64_do_syscall,
+        options(noreturn)
+    )
+}
 
 fn arch_prctl(command: usize, address: usize) -> Result<usize, SyscallError> {
     match command {
@@ -63,7 +205,6 @@ fn arch_prctl(command: usize, address: usize) -> Result<usize, SyscallError> {
 ///
 /// We cannot execute `sysexit` on return with non-canonical return addresses, or we
 /// will take a fault in the kernel with the user's GS base already swapped back.
-#[no_mangle]
 pub(super) extern "sysv64" fn x86_64_check_sysenter(stack: &mut InterruptErrorStack) {
     let rip = stack.stack.iret.rip;
     let rsp = stack.stack.iret.rsp;
@@ -77,7 +218,6 @@ pub(super) extern "sysv64" fn x86_64_check_sysenter(stack: &mut InterruptErrorSt
     }
 }
 
-#[no_mangle]
 pub(super) extern "C" fn x86_64_do_syscall(stack: &mut InterruptErrorStack) {
     let stack = &mut stack.stack;
 
@@ -156,6 +296,7 @@ pub(super) fn init() {
         .map_or(false, |i| i.has_sysenter_sysexit());
 
     if has_sysenter {
+        log::info!("enabling support for sysenter");
         unsafe {
             io::wrmsr(
                 io::IA32_SYSENTER_CS,

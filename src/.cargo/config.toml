@@ -3,7 +3,7 @@ build-std = ["core", "compiler_builtins", "alloc"]
 build-std-features = ["compiler-builtins-mem"]
 
 [build]
-target = "./.cargo/x86_64-aero_os.json"
+target = "x86_64-unknown-none"
 rustflags = [
     # Miscellaneous:
     "-Cforce-frame-pointers=yes",
@@ -14,4 +14,7 @@ rustflags = [
     "-Zthreads=8",
     # https://blog.rust-lang.org/inside-rust/2023/12/22/trait-system-refactor-initiative.html
     "-Znext-solver=coherence",
+
+    # Linker flags:
+    "-Clink-arg=--no-pie",
 ]

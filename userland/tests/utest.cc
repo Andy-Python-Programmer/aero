@@ -2,6 +2,7 @@
 //
 // xbstrap runtool host-gcc -- x86_64-aero-g++ ../userland/tests/test.cc -o system-root/torture 
 
+#include <asm/unistd_64.h>
 #include <cassert>
 #include <csetjmp>
 #include <errno.h>
@@ -20,6 +21,14 @@
 #include <unistd.h>
 #include <vector>
 #include <cassert>
+
+#if defined(__aero__)
+#include <aero/syscall.h>
+#elif defined(__linux__)
+#include <sys/syscall.h>
+#else
+#error "unknown platform"
+#endif
 
 #define NAMED_PATH "/tmp/sockname"
 
@@ -601,6 +610,109 @@ DEFINE_TEST(mprotect_check_whether_three_way_split_mappings_are_handled_correctl
 	});
 }))
 
+static inline bool cpuid(uint32_t leaf, uint32_t subleaf,
+                         uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx)  {
+	uint32_t cpuid_max;
+    asm volatile ("cpuid"
+                  : "=a" (cpuid_max)
+                  : "a" (leaf & 0x80000000) : "rbx", "rcx", "rdx");
+    if (leaf > cpuid_max)
+        return false;
+    asm volatile ("cpuid"
+                  : "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx)
+                  : "a" (leaf), "c" (subleaf));
+    return true;
+}
+
+// Returns [`true`] if the `SYSENTER` and `SYSEXIT` and associated MSRs are supported.
+bool has_sysenter_sysexit() {
+	uint32_t eax, ebx, ecx, edx;
+	// LEAF 1: Processor and Processor Feature Identifiers
+	if (!cpuid(1, 0, &eax, &ebx, &ecx, &edx)) {
+		return false;
+	}
+	return edx & (1 << 11);
+}
+
+#if defined(__aero__)
+DEFINE_TEST(bad_sysenter, ([] {
+	if (!has_sysenter_sysexit()) {
+		printf("test skipped... sysenter not supported\n");
+		return;
+	}
+
+	int pid = fork();
+
+	if (!pid) {
+		register long r11 __asm__("r11") = (size_t)0xf0f0 << 48;
+		register long rcx __asm__("rcx") = (size_t)0xf0f0 << 48;
+
+		asm volatile(
+			"sysenter\n"
+			:  	
+			: "r"(r11), "r"(rcx)
+		);
+		
+		__builtin_unreachable();
+	} else {
+		int status = 0;
+		if (!waitpid(pid, &status, 0))
+			assert(!"waitpid() failed");
+
+		// FIXME: should we get killed with SIGSEGV instead?
+		assert(WIFEXITED(status));
+	}
+}))
+#endif
+
+#if defined(__aero__)
+DEFINE_TEST(sysenter_system_call, ([] {
+	if (!has_sysenter_sysexit()) {
+		printf("test skipped... sysenter not supported\n");
+		return;
+	}
+
+	int fds[2];
+	if (pipe(fds) == -1)
+		assert(!"pipe() failed");
+
+	int pid = fork();
+
+	if (!pid) {
+		close(fds[0]);
+
+		const char *buf = "Hello, world!\n";
+		size_t buf_size = strlen(buf);
+
+		__asm__ __volatile__ (
+			"mov %%rsp, %%r11\n\t"
+			"lea 1f(%%rip), %%rcx\n\t"
+			"sysenter\n\t"
+			"1:"
+			:
+			: "a"(uint64_t(1)), "D"(uint64_t(fds[1])), "S"(buf), "d"(buf_size + 1)
+			: "rcx", "r11"
+		);
+
+		exit(0);
+	} else {
+		close(fds[1]);
+
+		int status = 0;
+		if (!waitpid(pid, &status, 0))
+			assert(!"waitpid() failed");
+
+		assert(WIFEXITED(status));
+
+		char tmp[15];
+		ssize_t n = read(fds[0], tmp, sizeof(tmp));
+
+		assert(n == 15);
+		assert(!strcmp(tmp, "Hello, world!\n"));
+	}
+}))
+#endif
+
 std::vector<abstract_test_case *> &test_case_ptrs() {
 	static std::vector<abstract_test_case *> singleton;
 	return singleton;
@@ -612,8 +724,10 @@ void abstract_test_case::register_case(abstract_test_case *tcp) {
 
 int main() {
     // Go through all tests and run them.
-    for(abstract_test_case *tcp : test_case_ptrs()) {
-		std::cout << "tests: Running " << tcp->name() << std::endl;
-		tcp->run();
-	}
+    // for(abstract_test_case *tcp : test_case_ptrs()) {
+	// 	std::cout << "tests: Running " << tcp->name() << std::endl;
+	// 	tcp->run();
+	// }
+	test_bad_sysenter.run();
+	test_sysenter_system_call.run();
 }

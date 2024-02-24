@@ -116,6 +116,107 @@ const USERLAND_STACK_SIZE: u64 = 0x64000;
 const USERLAND_STACK_TOP: VirtAddr = VirtAddr::new(0x7fffffffe000);
 const USERLAND_STACK_BOTTOM: VirtAddr = USERLAND_STACK_TOP.const_sub_u64(USERLAND_STACK_SIZE);
 
+core::arch::global_asm!(
+    "
+    .macro pop_preserved
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
+    pop rbx
+    .endm
+
+    .macro pop_scratch
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rsi
+    pop rdi
+    pop rdx
+    pop rcx
+    pop rax
+    .endm
+    "
+);
+
+#[naked]
+unsafe extern "C" fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64) {
+    asm!(
+        "push rdi", // stack
+        "push rsi", // rip
+        "push rdx", // rflags
+        "cli",
+        "pop r11",
+        "pop rcx",
+        "pop rsp",
+        "swapgs",
+        "sysretq",
+        options(noreturn)
+    );
+}
+
+#[naked]
+unsafe extern "C" fn task_spinup(prev: &mut Unique<Context>, next: &Context) {
+    asm!(
+        // save callee-saved registers
+        "push rbp",
+        "push rbx",
+        "push r12",
+        "push r13",
+        "push r14",
+        "push r15",
+        // save CR3
+        "mov rax, cr3",
+        "push rax",
+        // update old context
+        "mov [rdi], rsp",
+        // switch to new stack
+        "mov rsp, rsi",
+        // restore CR3
+        "pop rax",
+        "mov cr3, rax",
+        // restore callee-saved registers
+        "pop r15",
+        "pop r14",
+        "pop r13",
+        "pop r12",
+        "pop rbx",
+        "pop rbp",
+        // resume the next thread
+        "ret",
+        options(noreturn)
+    );
+}
+
+#[naked]
+unsafe extern "C" fn iretq_init() {
+    asm!(
+        "cli",
+        // pop the error code
+        "add rsp, 8",
+        "pop_preserved",
+        "pop_scratch",
+        "iretq",
+        options(noreturn)
+    )
+}
+
+#[naked]
+unsafe extern "C" fn fork_init() {
+    asm!(
+        "cli",
+        // pop the error code
+        "add rsp, 8",
+        "pop_preserved",
+        "pop_scratch",
+        "swapgs",
+        "iretq",
+        options(noreturn)
+    )
+}
+
 pub struct ArchTask {
     context: Unique<Context>,
 
@@ -167,10 +268,6 @@ impl ArchTask {
         kframe.stack.iret.rip = entry_point.as_u64();
         kframe.stack.iret.rsp = task_stack as u64;
         kframe.stack.iret.rflags = if enable_interrupts { 0x200 } else { 0x00 };
-
-        extern "C" {
-            fn iretq_init();
-        }
 
         let context = unsafe { stack.offset::<Context>() };
 
@@ -224,10 +321,6 @@ impl ArchTask {
 
         let context = unsafe { new_stack.offset::<Context>() };
 
-        extern "C" {
-            fn fork_init();
-        }
-
         *context = Context::default();
         context.rip = fork_init as _;
         context.cr3 = address_space.cr3().start_address().as_u64();
@@ -278,10 +371,6 @@ impl ArchTask {
 
         // Prepare the trampoline...
         let context = unsafe { new_stack.offset::<Context>() };
-
-        extern "C" {
-            fn fork_init();
-        }
 
         *context = Context::default();
         context.rip = fork_init as u64;
@@ -369,10 +458,6 @@ impl ArchTask {
         // }
 
         self.fpu_storage = Some(fpu_storage);
-
-        extern "C" {
-            fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64);
-        }
 
         let mut stack_addr = USERLAND_STACK_TOP.as_u64();
         let mut stack = StackHelper::new(&mut stack_addr);
@@ -615,10 +700,6 @@ fn xrstor(fpu: &FpuState) {
 
 /// Check out the module level documentation for more information.
 pub fn arch_task_spinup(from: &mut ArchTask, to: &ArchTask) {
-    extern "C" {
-        fn task_spinup(from: &mut Unique<Context>, to: &Context);
-    }
-
     unsafe {
         if let Some(fpu) = from.fpu_storage.as_mut() {
             xsave(fpu);

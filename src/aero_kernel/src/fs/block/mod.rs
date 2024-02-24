@@ -241,7 +241,7 @@ pub trait CachedAccess: BlockDeviceInterface {
             let page_offset = offset % Size4KiB::SIZE as usize;
             let size = core::cmp::min(Size4KiB::SIZE as usize - page_offset, buffer.len() - loc);
 
-            MaybeUninit::write_slice(
+            MaybeUninit::copy_from_slice(
                 &mut page.data_mut()[page_offset..page_offset + size],
                 &buffer[loc..loc + size],
             );
