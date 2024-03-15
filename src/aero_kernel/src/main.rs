@@ -133,7 +133,7 @@ pub fn relocate_self() {
     for section in kernel_elf.section_iter() {
         if let Ok(SectionData::Rela64(rela)) = section.get_data(kernel_elf) {
             for item in rela {
-                if !item.get_type() == STT_GNU_IFUNC {
+                if item.get_type() != STT_GNU_IFUNC {
                     continue;
                 }
 

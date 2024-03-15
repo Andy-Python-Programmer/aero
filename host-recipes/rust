@@ -1,22 +1,20 @@
 name=rust
 revision=1
 from_source=rust-host
-hostdeps="llvm gcc"
+hostdeps="llvm gcc rust-libc"
 source_deps="rust-libc"
 imagedeps="python git wget gcc"
 allow_network="yes"
 
-#unset CARGO_HOME
-
 build() {
     # Rust memes.
-    # cp -rp "${source_dir}/." ./
+    cp -rp "${source_dir}/." ./
 
-    ./x.py build --stage 2 -j${parallelism}
+    CARGO_HOME=/tmp/cargo ./x.py build --stage 2 -j${parallelism}
 }
 
 package() {
-    DESTDIR="${dest_dir}" ./x.py install -j${parallelism}
+    CARGO_HOME=/tmp/cargo DESTDIR="${dest_dir}" ./x.py install -j${parallelism}
 
     find ${dest_dir} -name "*.old" -delete
 
