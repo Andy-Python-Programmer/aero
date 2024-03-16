@@ -676,17 +676,14 @@ impl<'a, P: PageTableFrameMapping> Mapper<Size4KiB> for MappedPageTable<'a, P> {
         page: Page<Size4KiB>,
         flags: PageTableFlags,
     ) -> Result<MapperFlush<Size4KiB>, FlagUpdateError> {
-        let p4;
-
-        if self.level_5_paging_enabled {
+        let p4 = if self.level_5_paging_enabled {
             let p5 = &mut self.page_table;
 
-            p4 = self
-                .page_table_walker
-                .next_table_mut(&mut p5[page.p5_index()])?;
+            self.page_table_walker
+                .next_table_mut(&mut p5[page.p5_index()])?
         } else {
-            p4 = &mut self.page_table;
-        }
+            &mut self.page_table
+        };
 
         let p3 = self
             .page_table_walker

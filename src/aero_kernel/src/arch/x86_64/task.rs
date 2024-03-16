@@ -661,7 +661,7 @@ fn xsave(fpu: &mut FpuState) {
 
     use core::arch::x86_64::_fxsave64;
 
-    unsafe { _fxsave64(fpu as *mut FpuState as *mut _) }
+    unsafe { _fxsave64((fpu as *mut FpuState).cast()) }
 }
 
 fn xrstor(fpu: &FpuState) {
@@ -670,7 +670,7 @@ fn xrstor(fpu: &FpuState) {
     // options(nomem, nostack)); }
     use core::arch::x86_64::_fxrstor64;
 
-    unsafe { _fxrstor64(fpu as *const FpuState as *const _) }
+    unsafe { _fxrstor64((fpu as *const FpuState).cast()) }
 }
 
 /// Check out the module level documentation for more information.

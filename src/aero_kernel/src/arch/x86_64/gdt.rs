@@ -337,7 +337,7 @@ pub fn init() {
         let gdt_size = gdt_ent_size * GDT_ENTRY_COUNT;
         let layout = Layout::from_size_align_unchecked(gdt_size, gdt_ent_align);
 
-        let ptr = alloc_zeroed(layout) as *mut GdtEntry;
+        let ptr = alloc_zeroed(layout).cast::<GdtEntry>();
         core::slice::from_raw_parts_mut::<GdtEntry>(ptr, GDT_ENTRY_COUNT)
     };
 

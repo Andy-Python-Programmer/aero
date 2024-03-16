@@ -371,7 +371,9 @@ impl<'a> Inner<'a> {
 
             for x in xstart..xend {
                 let img_pixel = unsafe {
-                    (image.image.as_ptr()).add(fixedp6_to_int(img_x) * col_size + off) as *const u32
+                    (image.image.as_ptr())
+                        .add(fixedp6_to_int(img_x) * col_size + off)
+                        .cast::<u32>()
                 };
 
                 let i = blender(x, y, unsafe { *img_pixel });

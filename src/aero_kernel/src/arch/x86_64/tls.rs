@@ -119,7 +119,7 @@ pub fn init() {
                 .map(|(name, _)| name)
                 .collect::<Vec<_>>()
         })
-        .unwrap_or(Vec::new());
+        .unwrap_or_default();
 
     CPU_INFO.lock().push(CpuInfo {
         cpuid: 0,

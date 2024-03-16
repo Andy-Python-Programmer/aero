@@ -65,7 +65,7 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfL
         .read_at(0, pt1_hdr_slice)
         .map_err(ElfLoadError::IOError)?;
 
-    let pt1_header: &'header _ = unsafe { &*(pt1_hdr_slice.as_ptr() as *const HeaderPt1) };
+    let pt1_header: &'header _ = unsafe { &*pt1_hdr_slice.as_ptr().cast::<HeaderPt1>() };
 
     // 2. Ensure that the header has the correct magic number:
     if pt1_header.magic != ELF_HEADER_MAGIC {
@@ -82,7 +82,7 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfL
                 .map_err(ElfLoadError::IOError)?;
 
             let pt2_header_ptr = pt2_hdr_slice.as_ptr();
-            let pt2_header: &'header _ = unsafe { &*(pt2_header_ptr as *const HeaderPt2_<P64>) };
+            let pt2_header: &'header _ = unsafe { &*pt2_header_ptr.cast::<HeaderPt2_<P64>>() };
 
             Ok(HeaderPt2::Header64(pt2_header))
         }
@@ -130,13 +130,13 @@ fn parse_program_header<'pheader>(
     match header.pt1.class() {
         // 3. Cast and return the 64-bit program header:
         Class::SixtyFour => {
-            let phdr: &'pheader _ = unsafe { &*(phdr_ptr as *const ProgramHeader64) };
+            let phdr: &'pheader _ = unsafe { &*phdr_ptr.cast::<ProgramHeader64>() };
             Ok(ProgramHeader::Ph64(phdr))
         }
 
         // 3. Cast and return the 32-bit program header:
         Class::ThirtyTwo => {
-            let phdr: &'pheader _ = unsafe { &*(phdr_ptr as *const ProgramHeader32) };
+            let phdr: &'pheader _ = unsafe { &*phdr_ptr.cast::<ProgramHeader32>() };
             Ok(ProgramHeader::Ph32(phdr))
         }
 

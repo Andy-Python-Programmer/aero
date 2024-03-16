@@ -299,31 +299,19 @@ impl GlobalFrameAllocator {
     fn new(memory_map_resp: &mut limine::response::MemoryMapResponse) -> Self {
         let memory_map = memory_map_resp.entries_mut();
 
-        // Find a memory map entry that is big enough to fit all of the items in
-        // range memory iter.
         let requested_size = (core::mem::size_of::<MemoryRange>() * memory_map.len()) as u64;
-        let mut region = None;
 
-        for i in 0..memory_map.len() {
-            let entry = &mut memory_map[i];
+        let entry = memory_map
+            .iter_mut()
+            .find(|entry| {
+                entry.entry_type == memory_map::EntryType::USABLE && entry.length >= requested_size
+            })
+            .expect("OOM");
 
-            // Make sure that the memory map entry is marked as usable.
-            if entry.entry_type != memory_map::EntryType::USABLE {
-                continue;
-            }
+        let region = PhysAddr::new(entry.base);
 
-            // Found a big enough memory map entry.
-            if entry.length >= requested_size {
-                let base = entry.base;
-
-                entry.base += requested_size;
-                entry.length -= requested_size;
-
-                region = Some(PhysAddr::new(base));
-
-                break;
-            }
-        }
+        entry.base += requested_size;
+        entry.length -= requested_size;
 
         let mut iter = memory_map_resp.entries().iter();
 
@@ -332,7 +320,7 @@ impl GlobalFrameAllocator {
             .expect("stivale2: unexpected end of the memory map");
 
         let ranges = unsafe {
-            let virt_addr = region.expect("stivale2: out of memory").as_hhdm_virt();
+            let virt_addr = region.as_hhdm_virt();
 
             core::slice::from_raw_parts_mut::<MemoryRange>(
                 virt_addr.as_mut_ptr(),

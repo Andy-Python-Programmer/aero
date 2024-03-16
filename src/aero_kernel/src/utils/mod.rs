@@ -132,7 +132,7 @@ impl<T> PerCpu<T> {
         let cpu_count = get_cpu_count();
         let size = mem::size_of::<T>() * cpu_count;
 
-        let raw = unsafe { alloc_zeroed(Layout::from_size_align_unchecked(size, 8)) as *mut T };
+        let raw = unsafe { alloc_zeroed(Layout::from_size_align_unchecked(size, 8)).cast::<T>() };
 
         unsafe {
             for i in 0..cpu_count {
