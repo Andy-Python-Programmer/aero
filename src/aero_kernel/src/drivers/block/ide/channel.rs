@@ -126,7 +126,7 @@ impl IdeChannelData {
 
         let status = self.base.status();
 
-        if status == BaseStatusReg::empty() {
+        if status.is_empty() {
             return false;
         }
 

@@ -63,6 +63,7 @@ impl Version {
 }
 
 bitflags::bitflags! {
+    #[derive(Debug)]
     struct CommandSetsSupported: u8 {
         /// Controller supports the NVM command set.
         const NVM = 1 << 0;

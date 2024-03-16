@@ -35,6 +35,7 @@ pub static FRAME_ALLOCATOR: LockedFrameAllocator = LockedFrameAllocator::new_uni
 
 bitflags::bitflags! {
     /// Describes an page fault error code.
+    #[derive(Debug, Copy, Clone)]
     #[repr(transparent)]
     pub struct PageFaultErrorCode: u64 {
         /// If this flag is set, the page fault was caused by a page-protection violation,

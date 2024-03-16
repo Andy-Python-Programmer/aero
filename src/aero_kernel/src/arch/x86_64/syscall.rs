@@ -1,7 +1,7 @@
 use aero_syscall::SyscallError;
 use raw_cpuid::CpuId;
 
-use crate::arch::gdt::{GdtEntryType, Tss, USER_CS, USER_SS};
+use crate::arch::gdt::{GdtEntryIndex, Tss, USER_CS, USER_SS};
 use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler::{self, ExitStatus};
 use crate::utils::sync::IrqGuard;
@@ -267,8 +267,8 @@ pub(super) fn init() {
     unsafe {
         // Enable support for `syscall` and `sysret` instructions if the current
         // CPU supports them and the target pointer width is 64.
-        let syscall_base = GdtEntryType::KERNEL_CODE << 3;
-        let sysret_base = (GdtEntryType::KERNEL_TLS << 3) | 3;
+        let syscall_base = GdtEntryIndex::KERNEL_CODE << 3;
+        let sysret_base = (GdtEntryIndex::KERNEL_TLS << 3) | 3;
 
         let star_hi = syscall_base as u32 | ((sysret_base as u32) << 16);
 
@@ -298,7 +298,7 @@ pub(super) fn init() {
         unsafe {
             io::wrmsr(
                 io::IA32_SYSENTER_CS,
-                (GdtEntryType::KERNEL_CODE << 3) as u64,
+                (GdtEntryIndex::KERNEL_CODE << 3) as u64,
             );
             io::wrmsr(io::IA32_SYSENTER_EIP, x86_64_sysenter_handler as u64);
         }

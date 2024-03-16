@@ -35,6 +35,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    #[derive(Debug, Copy, Clone)]
     pub struct LineStatus: u8 {
         const INPUT_FULL = 1;
         const OUTPUT_EMPTY = 1 << 5;

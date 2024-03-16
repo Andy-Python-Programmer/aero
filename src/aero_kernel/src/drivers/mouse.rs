@@ -27,7 +27,7 @@ use crate::utils::sync::{Mutex, WaitQueue};
 
 bitflags::bitflags! {
     /// Represents the flags currently set for the mouse.
-    #[derive(Default)]
+    #[derive(Default, Debug, Copy, Clone)]
     pub struct MouseFlags: u8 {
         const LEFT_BUTTON = 0b0000_0001;
         const RIGHT_BUTTON = 0b0000_0010;

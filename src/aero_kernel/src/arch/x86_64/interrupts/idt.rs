@@ -21,26 +21,15 @@
 
 const IDT_ENTRIES: usize = 256;
 
-pub(super) static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
+pub(super) static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::EMPTY; IDT_ENTRIES];
 
 use core::mem::size_of;
 use core::ptr::addr_of;
 
-use crate::arch::gdt::SegmentSelector;
-use crate::utils::sync::Mutex;
+use bit_field::BitField;
 
-bitflags::bitflags! {
-    pub struct IDTFlags: u8 {
-        const PRESENT = 1 << 7;
-        const RING_0 = 0 << 5;
-        const RING_1 = 1 << 5;
-        const RING_2 = 2 << 5;
-        const RING_3 = 3 << 5;
-        const SS = 1 << 4;
-        const INTERRUPT = 0xE;
-        const TRAP = 0xF;
-    }
-}
+use crate::arch::gdt::{GdtEntryIndex, PrivilegeLevel, SegmentSelector};
+use crate::utils::sync::Mutex;
 
 #[repr(C, packed)]
 struct IdtDescriptor {
@@ -56,47 +45,72 @@ impl IdtDescriptor {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+#[repr(C)]
+struct EntryOptions {
+    cs: SegmentSelector,
+    bits: u16,
+}
+
+impl EntryOptions {
+    #[inline]
+    const fn default() -> Self {
+        Self {
+            cs: SegmentSelector::empty(),
+            // bits 11:8 specify the gate-descriptor type, default to 64-bit interrupt gate (0xe).
+            bits: 0b1110_0000_0000,
+        }
+    }
+
+    #[inline]
+    fn set_privilege_level(&mut self, dpl: PrivilegeLevel) {
+        self.bits.set_bits(13..15, dpl as u16);
+    }
+
+    #[inline]
+    fn set_code_segment(&mut self, cs: SegmentSelector) {
+        self.cs = cs;
+    }
+
+    #[inline]
+    fn set_present(&mut self, present: bool) {
+        self.bits.set_bit(15, present);
+    }
+}
+
 #[derive(Copy, Clone)]
-#[repr(C, packed)]
+#[repr(C)]
 pub(super) struct IdtEntry {
-    offset_low: u16,
-    selector: u16,
-    ist: u8,
-    type_attr: u8,
-    offset_middle: u16,
-    offset_hi: u32,
+    ptr_low: u16,
+    options: EntryOptions,
+    ptr_middle: u16,
+    ptr_high: u32,
     ignore: u32,
 }
 
 impl IdtEntry {
-    /// IDT entry with all values defaulted to 0, ie `null`.
-    const NULL: Self = Self {
-        offset_low: 0x00,
-        selector: 0x00,
-        ist: 0x00,
-        type_attr: 0x00,
-        offset_middle: 0x00,
-        offset_hi: 0x00,
-        ignore: 0x00,
+    const EMPTY: Self = Self {
+        ptr_low: 0,
+        options: EntryOptions::default(),
+        ptr_middle: 0,
+        ptr_high: 0,
+        ignore: 0,
     };
 
-    /// Set the IDT entry flags.
-    fn set_flags(&mut self, flags: IDTFlags) {
-        self.type_attr = flags.bits;
-    }
+    pub(crate) fn set_function(&mut self, ptr: *const u8) {
+        self.options.set_privilege_level(PrivilegeLevel::Ring0);
+        self.options.set_code_segment(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_CODE,
+            PrivilegeLevel::Ring0,
+        ));
 
-    /// Set the IDT entry offset.
-    fn set_offset(&mut self, selector: u16, base: usize) {
-        self.selector = selector;
-        self.offset_low = base as u16;
-        self.offset_middle = (base >> 16) as u16;
-        self.offset_hi = (base >> 32) as u32;
-    }
+        let addr = ptr.addr();
 
-    /// Set the handler function of the IDT entry.
-    pub(crate) fn set_function(&mut self, handler: *const u8) {
-        self.set_flags(IDTFlags::PRESENT | IDTFlags::RING_0 | IDTFlags::INTERRUPT);
-        self.set_offset(8, handler as usize);
+        self.ptr_low = addr as u16;
+        self.ptr_middle = (addr >> 16) as u16;
+        self.ptr_high = (addr >> 32) as u32;
+
+        self.options.set_present(true);
     }
 }
 
@@ -137,7 +151,8 @@ pub struct IretRegisters {
 
 impl IretRegisters {
     pub fn is_user(&self) -> bool {
-        SegmentSelector::from_bits_truncate(self.cs as u16).contains(SegmentSelector::RPL_3)
+        let selector = SegmentSelector::from_bits(self.cs as u16);
+        selector.privilege_level().is_user()
     }
 }
 

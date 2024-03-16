@@ -31,31 +31,23 @@ use core::ptr::addr_of;
 use alloc::alloc::alloc_zeroed;
 
 bitflags::bitflags! {
-    /// Specifies which element to load into a segment from
-    /// descriptor tables (i.e., is a index to LDT or GDT table
-    /// with some additional flags).
-    pub struct SegmentSelector: u16 {
-        const RPL_0 = 0b00;
-        const RPL_1 = 0b01;
-        const RPL_2 = 0b10;
-        const RPL_3 = 0b11;
-        const TI_GDT = 0 << 2;
-        const TI_LDT = 1 << 2;
-    }
-}
-
-bitflags::bitflags! {
     struct GdtEntryFlags: u8 {
-        const NULL = 0;
         const PROTECTED_MODE = 1 << 6;
         const LONG_MODE = 1 << 5;
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Ring {
-    Ring0 = 0b00,
-    Ring3 = 0b11,
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[repr(u8)]
+pub enum PrivilegeLevel {
+    Ring0 = 0,
+    Ring3 = 3,
+}
+
+impl PrivilegeLevel {
+    pub fn is_user(&self) -> bool {
+        matches!(self, Self::Ring3)
+    }
 }
 
 const BOOT_GDT_ENTRY_COUNT: usize = 4;
@@ -155,7 +147,7 @@ static GDT: [GdtEntry; GDT_ENTRY_COUNT] = [
     // GDT TSS descriptor.
     GdtEntry::new(
         GdtAccessFlags::PRESENT | GdtAccessFlags::RING_3 | GdtAccessFlags::TSS_AVAIL,
-        GdtEntryFlags::NULL,
+        GdtEntryFlags::empty(),
     ),
     // GDT null descriptor as the TSS should be 16 bytes long
     // and twice the normal size.
@@ -175,10 +167,10 @@ impl GdtAccessFlags {
     const TSS_AVAIL: u8 = 9;
 }
 
-pub struct GdtEntryType;
+pub struct GdtEntryIndex;
 
 #[rustfmt::skip]
-impl GdtEntryType {
+impl GdtEntryIndex {
     pub const KERNEL_CODE: u16 = 1;
     pub const KERNEL_DATA: u16 = 2;
     pub const KERNEL_TLS: u16 = 3;
@@ -188,10 +180,32 @@ impl GdtEntryType {
     pub const TSS_HI: u16 = 9;
 }
 
+#[derive(Debug, Copy, Clone)]
+#[repr(transparent)]
+pub struct SegmentSelector(u16);
+
 impl SegmentSelector {
-    const fn new(index: u16, rpl: Ring) -> Self {
-        Self {
-            bits: index << 3 | (rpl as u16),
+    pub const fn empty() -> Self {
+        Self(0)
+    }
+
+    pub const fn new(index: u16, privilege_level: PrivilegeLevel) -> Self {
+        Self(index << 3 | (privilege_level as u16))
+    }
+
+    pub const fn bits(&self) -> u16 {
+        self.0
+    }
+
+    pub const fn from_bits(value: u16) -> Self {
+        Self(value)
+    }
+
+    pub const fn privilege_level(&self) -> PrivilegeLevel {
+        match self.bits() & 0b11 {
+            0 => PrivilegeLevel::Ring0,
+            3 => PrivilegeLevel::Ring3,
+            _ => unreachable!(),
         }
     }
 }
@@ -230,7 +244,7 @@ pub(super) struct GdtEntry {
 }
 
 impl GdtEntry {
-    const NULL: Self = Self::new(GdtAccessFlags::NULL, GdtEntryFlags::NULL);
+    const NULL: Self = Self::new(GdtAccessFlags::NULL, GdtEntryFlags::empty());
 
     const fn new(access_flags: u8, entry_flags: GdtEntryFlags) -> Self {
         Self {
@@ -311,19 +325,45 @@ pub fn init_boot() {
 
     // Load the GDT segments.
     unsafe {
-        load_cs(SegmentSelector::new(GdtEntryType::KERNEL_CODE, Ring::Ring0));
-        load_ds(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
-        load_es(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
-        load_fs(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
-        load_gs(SegmentSelector::new(GdtEntryType::KERNEL_TLS, Ring::Ring0));
-        load_ss(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_cs(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_CODE,
+            PrivilegeLevel::Ring0,
+        ));
+
+        load_ds(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_DATA,
+            PrivilegeLevel::Ring0,
+        ));
+
+        load_es(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_DATA,
+            PrivilegeLevel::Ring0,
+        ));
+
+        load_fs(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_DATA,
+            PrivilegeLevel::Ring0,
+        ));
+
+        load_gs(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_TLS,
+            PrivilegeLevel::Ring0,
+        ));
+
+        load_ss(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_DATA,
+            PrivilegeLevel::Ring0,
+        ));
     }
 }
 
 static STK: [u8; 4096 * 16] = [0; 4096 * 16];
 
-pub const USER_SS: SegmentSelector = SegmentSelector::new(GdtEntryType::USER_DATA, Ring::Ring3);
-pub const USER_CS: SegmentSelector = SegmentSelector::new(GdtEntryType::USER_CODE, Ring::Ring3);
+pub const USER_SS: SegmentSelector =
+    SegmentSelector::new(GdtEntryIndex::USER_DATA, PrivilegeLevel::Ring3);
+
+pub const USER_CS: SegmentSelector =
+    SegmentSelector::new(GdtEntryIndex::USER_CODE, PrivilegeLevel::Ring3);
 
 /// Initialize the *actual* GDT stored in TLS.
 ///
@@ -347,9 +387,9 @@ pub fn init() {
     unsafe {
         let tss_ptr = TSS.addr().as_mut_ptr::<Tss>();
 
-        gdt[GdtEntryType::TSS as usize].set_offset(tss_ptr as u32);
-        gdt[GdtEntryType::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
-        gdt[GdtEntryType::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
+        gdt[GdtEntryIndex::TSS as usize].set_offset(tss_ptr as u32);
+        gdt[GdtEntryIndex::TSS as usize].set_limit(mem::size_of::<Tss>() as u32);
+        gdt[GdtEntryIndex::TSS_HI as usize].set_raw((tss_ptr as u64) >> 32);
 
         TSS.rsp[0] = STK.as_ptr().offset(4096 * 16) as u64;
 
@@ -361,13 +401,28 @@ pub fn init() {
         load_gdt(&gdt_descriptor);
 
         // Reload the GDT segments.
-        load_cs(SegmentSelector::new(GdtEntryType::KERNEL_CODE, Ring::Ring0));
-        load_ds(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
-        load_es(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
-        load_ss(SegmentSelector::new(GdtEntryType::KERNEL_DATA, Ring::Ring0));
+        load_cs(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_CODE,
+            PrivilegeLevel::Ring0,
+        ));
+        load_ds(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_DATA,
+            PrivilegeLevel::Ring0,
+        ));
+        load_es(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_DATA,
+            PrivilegeLevel::Ring0,
+        ));
+        load_ss(SegmentSelector::new(
+            GdtEntryIndex::KERNEL_DATA,
+            PrivilegeLevel::Ring0,
+        ));
 
         // Load the Task State Segment.
-        load_tss(SegmentSelector::new(GdtEntryType::TSS, Ring::Ring0));
+        load_tss(SegmentSelector::new(
+            GdtEntryIndex::TSS,
+            PrivilegeLevel::Ring0,
+        ));
     }
 
     // // Now we update the per-cpu storage to store a reference

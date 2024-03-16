@@ -91,6 +91,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    #[derive(Debug, Copy, Clone)]
     struct HbaHostCont: u32 {
         const HR =   1 << 0;  // HBA Reset
         const IE =   1 << 1;  // Interrupt Enable
@@ -100,6 +101,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    #[derive(Debug, Copy, Clone)]
     struct HbaPortIS: u32 {
         const DHRS = 1 << 0; // Device to Host Register FIS Interrupt
         const PSS = 1 << 1; // PIO Setup FIS Interrupt
@@ -122,6 +124,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    #[derive(Debug, Copy, Clone)]
     struct HbaPortIE: u32 {
         const DHRE = 1 << 0; // Device to Host Register FIS Interrupt
         const PSE = 1 << 1; // PIO Setup FIS Interrupt
@@ -144,6 +147,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    #[derive(Debug, Copy, Clone)]
     struct HbaPortCmd: u32 {
         const ST = 1 << 0; // Start
         const SUD = 1 << 1; // Spin-Up Device
@@ -168,8 +172,12 @@ bitflags::bitflags! {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+#[repr(transparent)]
+struct HbaCmdHeaderFlags(u16);
+
 bitflags::bitflags! {
-    struct HbaCmdHeaderFlags: u16 {
+    impl HbaCmdHeaderFlags: u16 {
         const A = 1 << 5; // ATAPI
         const W = 1 << 6; // Write
         const P = 1 << 7; // Prefetchable
@@ -180,11 +188,11 @@ bitflags::bitflags! {
 }
 
 impl HbaCmdHeaderFlags {
-    /// Sets the length of the command FIS. The HBA uses this field to know the
-    /// length of the FIS it shall send to the device.
+    /// Sets the length of the command FIS. The HBA uses this field to know the length of the FIS it
+    /// shall send to the device.
     #[inline]
     fn set_command_fis_size(&mut self, size: usize) {
-        self.bits.set_bits(0..=4, size as _);
+        self.0.set_bits(0..=4, size as _);
     }
 }
 

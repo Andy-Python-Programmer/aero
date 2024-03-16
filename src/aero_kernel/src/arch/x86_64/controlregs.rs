@@ -184,6 +184,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    #[derive(Debug)]
     pub struct MxCsr: u32 {
         const INVALID_OPERATION = 1 << 0;
         const DENORMAL = 1 << 1;

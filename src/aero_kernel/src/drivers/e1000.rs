@@ -123,8 +123,10 @@ bitflags::bitflags! {
     }
 }
 
+struct TCtl(u32);
+
 bitflags::bitflags! {
-    struct TCtl: u32 {
+    impl TCtl: u32 {
         const EN     = 1 << 1;  // Transmit Enable
         const PSP    = 1 << 3;  // Pad Short Packets
         const SWXOFF = 1 << 22; // Software XOFF Transmission
@@ -136,13 +138,13 @@ impl TCtl {
     /// Sets the number of attempts at retransmission prior to giving
     /// up on the packet (not including the first transmission attempt).
     fn set_collision_threshold(&mut self, value: u8) {
-        self.bits |= (value as u32) << 4;
+        self.0 |= (value as u32) << 4;
     }
 
     /// Sets the minimum number of byte times which must elapse for
     /// proper CSMA/CD operation.
     fn set_collision_distance(&mut self, value: u8) {
-        self.bits |= (value as u32) << 12;
+        self.0 |= (value as u32) << 12;
     }
 }
 
@@ -158,7 +160,7 @@ bitflags::bitflags! {
         const RDMTS_HALF    = 0 << 8;  // Free Buffer Threshold is 1/2 of RDLEN
         const RDMTS_QUARTER = 1 << 8;  // Free Buffer Threshold is 1/4 of RDLEN
         const RDMTS_EIGHTH  = 2 << 8;  // Free Buffer Threshold is 1/8 of RDLEN
-        const MO_36         = 0 << 12; // Multicast Offset - bits 47:36
+        // const MO_36         = 0 << 12; // Multicast Offset - bits 47:36
         const MO_35         = 1 << 12; // Multicast Offset - bits 46:35
         const MO_34         = 2 << 12; // Multicast Offset - bits 45:34
         const MO_32         = 3 << 12; // Multicast Offset - bits 43:32
@@ -174,7 +176,7 @@ bitflags::bitflags! {
         const BSIZE_256     = 3 << 16;
         const BSIZE_512     = 2 << 16;
         const BSIZE_1024    = 1 << 16;
-        const BSIZE_2048    = 0 << 16;
+        // const BSIZE_2048    = 0 << 16;
         const BSIZE_4096    = (3 << 16) | (1 << 25);
         const BSIZE_8192    = (2 << 16) | (1 << 25);
         const BSIZE_16384   = (1 << 16) | (1 << 25);
@@ -466,7 +468,7 @@ impl E1000 {
         self.write(Register::TxDescHead, 0);
         self.write(Register::TxDescTail, 0);
 
-        let mut flags = TCtl { bits: 1 << 28 } | TCtl::EN | TCtl::PSP | TCtl::RTLC;
+        let mut flags = TCtl(1 << 28) | TCtl::EN | TCtl::PSP | TCtl::RTLC;
         flags.set_collision_distance(64);
         flags.set_collision_threshold(15);
 
