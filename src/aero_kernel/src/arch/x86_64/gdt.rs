@@ -26,6 +26,7 @@
 
 use core::alloc::Layout;
 use core::mem;
+use core::ptr::addr_of;
 
 use alloc::alloc::alloc_zeroed;
 
@@ -302,7 +303,7 @@ pub fn init_boot() {
     unsafe {
         let gdt_descriptor = GdtDescriptor::new(
             (mem::size_of::<[GdtEntry; BOOT_GDT_ENTRY_COUNT]>() - 1) as u16,
-            (&BOOT_GDT as *const _) as u64,
+            addr_of!(BOOT_GDT).addr() as u64,
         );
 
         load_gdt(&gdt_descriptor);

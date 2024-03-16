@@ -18,15 +18,10 @@
 use core::alloc::Layout;
 use core::ops::{Deref, DerefMut};
 
+use crate::extern_sym;
 use crate::mem::paging::VirtAddr;
-use crate::utils::LinkerSymbol;
 
 use super::io;
-
-extern "C" {
-    static __cpu_local_start: LinkerSymbol<u8>;
-    static __cpu_local_end: LinkerSymbol<u8>;
-}
 
 #[repr(C)]
 pub struct CpuLocal<T>(T);
@@ -49,7 +44,7 @@ impl<T> CpuLocal<T> {
         }
 
         let self_addr = VirtAddr::new(self as *const _ as u64);
-        let section_addr = VirtAddr::new(unsafe { &__cpu_local_start as *const _ as u64 });
+        let section_addr = VirtAddr::new(extern_sym!(__cpu_local_start) as u64);
 
         let offset = self_addr - section_addr;
         VirtAddr::new(val) + offset
@@ -81,9 +76,10 @@ static SELF_PTR: u64 = 0;
 static mut CPUID: usize = 0;
 
 pub fn init(cpu_id: usize) {
+    let start = VirtAddr::new(extern_sym!(__cpu_local_start).addr() as u64);
+    let end = VirtAddr::new(extern_sym!(__cpu_local_end).addr() as u64);
+
     unsafe {
-        let start = VirtAddr::new(&__cpu_local_start as *const _ as u64);
-        let end = VirtAddr::new(&__cpu_local_end as *const _ as u64);
         let size = end - start;
 
         let layout = Layout::from_size_align_unchecked(size as _, 64);

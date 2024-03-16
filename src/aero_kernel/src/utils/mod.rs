@@ -223,5 +223,15 @@ impl<'a> StackHelper<'a> {
     }
 }
 
-#[repr(transparent)]
-pub struct LinkerSymbol<T: Copy>(core::cell::UnsafeCell<T>);
+#[macro_export]
+macro_rules! extern_sym {
+    ($sym:ident) => {{
+        extern "C" {
+            static $sym: ::core::ffi::c_void;
+        }
+
+        // SAFETY: The value is not accessed, we only take its address. The `addr_of!()` ensures
+        // that no intermediate references is created.
+        unsafe { ::core::ptr::addr_of!($sym) }
+    }};
+}

@@ -24,6 +24,7 @@ const IDT_ENTRIES: usize = 256;
 pub(super) static mut IDT: [IdtEntry; IDT_ENTRIES] = [IdtEntry::NULL; IDT_ENTRIES];
 
 use core::mem::size_of;
+use core::ptr::addr_of;
 
 use crate::arch::gdt::SegmentSelector;
 use crate::utils::sync::Mutex;
@@ -216,7 +217,7 @@ pub fn init() {
     unsafe {
         let idt_descriptor = IdtDescriptor::new(
             ((IDT.len() * size_of::<IdtEntry>()) - 1) as u16,
-            (&IDT as *const _) as u64,
+            addr_of!(IDT).addr() as u64,
         );
 
         load_idt(&idt_descriptor);
