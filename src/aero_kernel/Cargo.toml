@@ -40,9 +40,9 @@ lai = { git = "https://github.com/aero-os/lai-rs" }
 uapi = { path = "../uapi" }
 cpio_reader = { git = "https://github.com/Andy-Python-Programmer/cpio_reader" }
 static_assertions = "1.1.0"
-lru = "0.12.1"
-bytemuck = "1.14.1"
-limine = { git = "https://github.com/limine-bootloader/limine-rs" }
+lru = "0.12.3"
+bytemuck = "1.15.0"
+limine = "0.2.0"
 num-traits = { version = "0.2", default-features = false }
 vte = { version = "0.13.0", features = ["ansi"] }
 

@@ -20,7 +20,8 @@ use core::ptr::NonNull;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::vec::Vec;
-use limine::{MemmapEntry, MemoryMapEntryType, NonNullPtr};
+
+use limine::memory_map;
 use spin::Once;
 
 use super::mapper::*;
@@ -72,7 +73,7 @@ impl LockedFrameAllocator {
     }
 
     /// Initializes the inner locked global frame allocator.
-    pub(super) fn init(&self, memory_map: &mut [NonNullPtr<MemmapEntry>]) {
+    pub(super) fn init(&self, memory_map: &mut limine::response::MemoryMapResponse) {
         self.0
             .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
     }
@@ -134,7 +135,7 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
 }
 
 struct RangeMemoryIter<'a> {
-    iter: core::slice::Iter<'a, NonNullPtr<MemmapEntry>>,
+    iter: core::slice::Iter<'a, &'a memory_map::Entry>,
 
     cursor_base: PhysAddr,
     cursor_end: PhysAddr,
@@ -150,12 +151,12 @@ impl<'a> Iterator for RangeMemoryIter<'a> {
                 // the memory map and set the cursor to the start of it.
                 let next = self.iter.next()?;
 
-                if next.typ == MemoryMapEntryType::Usable {
+                if next.entry_type == memory_map::EntryType::USABLE {
                     break Some(next);
                 }
             } {
                 self.cursor_base = PhysAddr::new(entry.base).align_up(Size4KiB::SIZE);
-                self.cursor_end = PhysAddr::new(entry.base + entry.len);
+                self.cursor_end = PhysAddr::new(entry.base + entry.length);
             } else {
                 // We reached the end of the memory map.
                 return None;
@@ -295,7 +296,9 @@ pub struct GlobalFrameAllocator {
 }
 
 impl GlobalFrameAllocator {
-    fn new(memory_map: &mut [NonNullPtr<MemmapEntry>]) -> Self {
+    fn new(memory_map_resp: &mut limine::response::MemoryMapResponse) -> Self {
+        let memory_map = memory_map_resp.entries_mut();
+
         // Find a memory map entry that is big enough to fit all of the items in
         // range memory iter.
         let requested_size = (core::mem::size_of::<MemoryRange>() * memory_map.len()) as u64;
@@ -305,16 +308,16 @@ impl GlobalFrameAllocator {
             let entry = &mut memory_map[i];
 
             // Make sure that the memory map entry is marked as usable.
-            if entry.typ != MemoryMapEntryType::Usable {
+            if entry.entry_type != memory_map::EntryType::USABLE {
                 continue;
             }
 
             // Found a big enough memory map entry.
-            if entry.len >= requested_size {
+            if entry.length >= requested_size {
                 let base = entry.base;
 
                 entry.base += requested_size;
-                entry.len -= requested_size;
+                entry.length -= requested_size;
 
                 region = Some(PhysAddr::new(base));
 
@@ -322,7 +325,7 @@ impl GlobalFrameAllocator {
             }
         }
 
-        let mut iter = memory_map.iter();
+        let mut iter = memory_map_resp.entries().iter();
 
         let cursor = iter
             .next()
@@ -341,7 +344,7 @@ impl GlobalFrameAllocator {
             iter,
 
             cursor_base: PhysAddr::new(cursor.base),
-            cursor_end: PhysAddr::new(cursor.base + cursor.len),
+            cursor_end: PhysAddr::new(cursor.base + cursor.length),
         };
 
         // Lets goo! Now lets initialize the bootstrap allocator so we can initialize

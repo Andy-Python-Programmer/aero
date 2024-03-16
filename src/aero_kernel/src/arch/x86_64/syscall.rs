@@ -7,7 +7,7 @@ use crate::userland::scheduler::{self, ExitStatus};
 use crate::utils::sync::IrqGuard;
 
 use super::interrupts::InterruptErrorStack;
-use super::io;
+use super::{asm_macros, io};
 
 use core::mem::offset_of;
 
@@ -15,8 +15,6 @@ const ARCH_SET_GS: usize = 0x1001;
 const ARCH_SET_FS: usize = 0x1002;
 const ARCH_GET_FS: usize = 0x1003;
 const ARCH_GET_GS: usize = 0x1004;
-
-core::arch::global_asm!(include_str!("./registers.S"));
 
 /// 64-bit SYSCALL instruction entry point.
 ///
@@ -56,8 +54,8 @@ unsafe extern "C" fn x86_64_syscall_handler() {
         "push rcx",
 
         "push rax",
-        "push_scratch",
-        "push_preserved",
+        asm_macros::push_scratch!(),
+        asm_macros::push_preserved!(),
 
         // push a fake error code to match with the layout of `InterruptErrorStack`
         "push 0",
@@ -71,8 +69,8 @@ unsafe extern "C" fn x86_64_syscall_handler() {
         // pop the fake error code
         "add rsp, 8",
 
-        "pop_preserved",
-        "pop_scratch",
+        asm_macros::pop_preserved!(),
+        asm_macros::pop_scratch!(),
 
         // cook the sysret frame
         "pop rcx",
@@ -123,8 +121,8 @@ unsafe extern "C" fn x86_64_sysenter_handler() {
         "and dword ptr [rsp], 0x300",
         "popfq",
         "push rax",
-        "push_scratch",
-        "push_preserved",
+        asm_macros::push_scratch!(),
+        asm_macros::push_preserved!(),
         "push 0",
         // Store the stack pointer (interrupt frame ptr) in `RBP` for safe keeping, and align the
         // stack as specified by the SysV calling convention.
@@ -136,8 +134,8 @@ unsafe extern "C" fn x86_64_sysenter_handler() {
         "call {x86_64_do_syscall}",
         // Reload the stack pointer, skipping the error code.
         "lea rsp, [rbp + 8]",
-        "pop_preserved",
-        "pop_scratch",
+        asm_macros::pop_preserved!(),
+        asm_macros::pop_scratch!(),
         // Pop the `IRET` frame into the registers expected by `SYSEXIT`.
         "pop rdx", // return `RIP` in `RDX`
         "add rsp, 8",

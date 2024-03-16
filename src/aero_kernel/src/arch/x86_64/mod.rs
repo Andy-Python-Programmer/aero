@@ -30,6 +30,9 @@ pub mod time;
 pub mod tls;
 pub mod user_copy;
 
+mod asm_macros;
+
+use core::cell::SyncUnsafeCell;
 use core::sync::atomic::Ordering;
 
 use crate::acpi::aml;
@@ -42,32 +45,31 @@ use crate::{drivers, logger, rendy};
 
 use raw_cpuid::CpuId;
 
-use limine::*;
+use limine::request::*;
+use limine::smp::Cpu;
+
 use spin::Once;
 
 use self::interrupts::INTERRUPT_CONTROLLER;
 
-static MEMMAP: MemmapRequest = MemmapRequest::new(0);
-static SMP: SmpRequest = SmpRequest::new(0);
-static KERNEL_FILE: KernelFileRequest = KernelFileRequest::new(0);
-static MODULES: ModuleRequest = ModuleRequest::new(0);
-static FRAMEBUFFER: FramebufferRequest = FramebufferRequest::new(0);
-static RSDP: RsdpRequest = RsdpRequest::new(0);
-static BOOT_TIME: BootTimeRequest = BootTimeRequest::new(0);
-static STACK: StackSizeRequest = StackSizeRequest::new(0).stack_size(0x1000 * 32); // 16KiB of stack for both the BSP and the APs
-static HHDM: HhdmRequest = HhdmRequest::new(0);
+static SMP: SyncUnsafeCell<SmpRequest> = SyncUnsafeCell::new(SmpRequest::new());
+static MEMMAP: SyncUnsafeCell<MemoryMapRequest> = SyncUnsafeCell::new(MemoryMapRequest::new());
+
+static KERNEL_FILE: KernelFileRequest = KernelFileRequest::new();
+static MODULES: ModuleRequest = ModuleRequest::new();
+static FRAMEBUFFER: FramebufferRequest = FramebufferRequest::new();
+static RSDP: RsdpRequest = RsdpRequest::new();
+static BOOT_TIME: BootTimeRequest = BootTimeRequest::new();
+static STACK: StackSizeRequest = StackSizeRequest::new().with_size(0x1000 * 32); // 16KiB of stack for both the BSP and the APs
+static HHDM: HhdmRequest = HhdmRequest::new();
 
 #[no_mangle]
 extern "C" fn arch_aero_main() -> ! {
     let kernel_file_resp = KERNEL_FILE
         .get_response()
-        .get()
         .expect("limine: invalid kernel file response");
 
-    let kernel_file = kernel_file_resp
-        .kernel_file
-        .get()
-        .expect("limine: invalid kernel file pointer");
+    let kernel_file = kernel_file_resp.file();
 
     // Before we start the initialization process, we need to make sure
     // the unwind info is available; just in case if there is a kernel
@@ -76,13 +78,10 @@ extern "C" fn arch_aero_main() -> ! {
         use crate::unwind::UnwindInfo;
         use xmas_elf::ElfFile;
 
-        let start = kernel_file
-            .base
-            .as_ptr()
-            .expect("limine: invalid kernel file base");
+        let start = kernel_file.addr();
 
         // SAFETY: The bootloader will provide a valid pointer to the kernel file.
-        let elf_slice = unsafe { core::slice::from_raw_parts(start, kernel_file.length as usize) };
+        let elf_slice = unsafe { core::slice::from_raw_parts(start, kernel_file.size() as usize) };
         let elf = ElfFile::new(elf_slice).expect("limine: invalid kernel file");
 
         UnwindInfo::new(elf)
@@ -91,22 +90,18 @@ extern "C" fn arch_aero_main() -> ! {
     crate::relocate_self();
 
     unsafe {
-        core::ptr::read_volatile(STACK.get_response().as_ptr().unwrap());
+        core::ptr::read_volatile(STACK.get_response().unwrap());
     }
 
     // SAFETY: We have exclusive access to the memory map.
-    let memmap = MEMMAP
-        .get_response()
-        .get_mut()
-        .expect("limine: invalid memmap response")
-        .memmap_mut();
+    let memmap = unsafe { &mut *MEMMAP.get() }.get_response_mut().unwrap();
 
     unsafe {
         interrupts::disable_interrupts();
     }
 
     unsafe {
-        crate::PHYSICAL_MEMORY_OFFSET = VirtAddr::new(HHDM.get_response().get().unwrap().offset);
+        crate::PHYSICAL_MEMORY_OFFSET = VirtAddr::new(HHDM.get_response().unwrap().offset());
     }
 
     // Now that we have unwind info, we can initialize the COM ports. This
@@ -120,23 +115,11 @@ extern "C" fn arch_aero_main() -> ! {
 
     let modules = MODULES
         .get_response()
-        .get()
         .expect("limine: invalid modules response")
         .modules();
 
-    // Now, we need to parse the kernel command line so we can
-    // setup the debug renderer.
-    //
-    // SAFETY: The `cmdline` is a valid, aligned, and NULL terminated string.
-    let command_line = kernel_file
-        .cmdline
-        .to_str()
-        .expect("limine: bad command line");
-
-    let command_line = cmdline::parse(
-        command_line.to_str().expect("cmdline: invalid utf8"),
-        modules,
-    );
+    let command_line = core::str::from_utf8(kernel_file.cmdline()).unwrap();
+    let command_line = cmdline::parse(command_line, modules);
 
     paging::init(memmap).unwrap();
     log::info!("loaded paging");
@@ -145,17 +128,17 @@ extern "C" fn arch_aero_main() -> ! {
     log::info!("loaded heap");
 
     // SMP initialization.
-    let smp_response = SMP.get_response().get_mut().unwrap();
-    let bsp_lapic_id = smp_response.bsp_lapic_id;
+    let smp_response = unsafe { &mut *SMP.get() }.get_response_mut().unwrap();
+    let bsp_lapic_id = smp_response.bsp_lapic_id();
 
-    for cpu in smp_response.cpus().iter_mut() {
+    for cpu in smp_response.cpus_mut() {
         apic::CPU_COUNT.fetch_add(1, Ordering::SeqCst);
 
         if cpu.lapic_id == bsp_lapic_id {
             continue;
         }
 
-        cpu.goto_address = x86_64_aero_ap_main;
+        cpu.goto_address.write(x86_64_aero_ap_main);
     }
 
     gdt::init_boot();
@@ -165,10 +148,9 @@ extern "C" fn arch_aero_main() -> ! {
 
     let framebuffer = FRAMEBUFFER
         .get_response()
-        .get()
         .expect("limine: invalid framebuffer response")
         .framebuffers()
-        .first()
+        .next()
         .expect("limine: no framebuffer found!");
 
     rendy::init(framebuffer, &command_line);
@@ -180,7 +162,7 @@ extern "C" fn arch_aero_main() -> ! {
     apic::init();
     log::info!("loaded APIC");
 
-    let rsdp = VirtAddr::new(RSDP.get_response().get().unwrap().address.as_ptr().unwrap() as u64);
+    let rsdp = VirtAddr::new(RSDP.get_response().unwrap().address().addr() as u64);
 
     acpi::init(rsdp);
     log::info!("loaded ACPI");
@@ -196,18 +178,16 @@ extern "C" fn arch_aero_main() -> ! {
 
     syscall::init();
 
-    let boot_time = BOOT_TIME.get_response().get().unwrap();
-    time::EPOCH.store(boot_time.boot_time as _, Ordering::SeqCst);
+    let boot_time = BOOT_TIME.get_response().unwrap();
+    time::EPOCH.store(boot_time.boot_time().as_secs() as usize, Ordering::SeqCst);
 
     // Architecture init is done. Now we can initialize and start the init
     // process in the non-architecture specific part of the kernel.
     crate::aero_main();
 }
 
-#[no_mangle]
-extern "C" fn x86_64_aero_ap_main(boot_info: *const SmpInfo) -> ! {
-    let boot_info = unsafe { &*boot_info };
-    let ap_id = boot_info.processor_id as usize;
+extern "C" fn x86_64_aero_ap_main(cpu: &Cpu) -> ! {
+    let ap_id = cpu.id as usize;
 
     log::debug!("booting CPU {}", ap_id);
 

@@ -23,7 +23,7 @@ use core::{fmt, u8};
 
 use alloc::boxed::Box;
 
-use limine::Framebuffer;
+use limine::framebuffer::Framebuffer;
 use spin::Once;
 use vte::ansi::{Handler, NamedColor, Timeout};
 
@@ -1027,28 +1027,33 @@ pub unsafe fn force_unlock() {
     }
 }
 
-pub fn init(framebuffer_tag: &Framebuffer, cmdline: &CommandLine) {
+pub fn init(fb_info: Framebuffer, cmdline: &CommandLine) {
+    let stride = fb_info.pitch() as usize;
+    let height = fb_info.height() as usize;
+    let bits_per_pixel = fb_info.bpp() as usize;
+    let byte_len = stride * height * (bits_per_pixel / 8);
+
     let framebuffer_info = RendyInfo {
-        byte_len: framebuffer_tag.size(),
-        bits_per_pixel: framebuffer_tag.bpp as usize,
-        horizontal_resolution: framebuffer_tag.width as usize,
-        vertical_resolution: framebuffer_tag.height as usize,
+        byte_len,
+        bits_per_pixel,
+        horizontal_resolution: fb_info.width() as usize,
+        vertical_resolution: height,
         pixel_format: PixelFormat::BGR,
-        stride: framebuffer_tag.pitch as usize,
+        stride,
 
-        red_mask_shift: framebuffer_tag.red_mask_shift,
-        red_mask_size: framebuffer_tag.red_mask_size,
+        red_mask_shift: fb_info.red_mask_shift(),
+        red_mask_size: fb_info.red_mask_size(),
 
-        green_mask_shift: framebuffer_tag.green_mask_shift,
-        green_mask_size: framebuffer_tag.green_mask_size,
+        green_mask_shift: fb_info.green_mask_shift(),
+        green_mask_size: fb_info.green_mask_size(),
 
-        blue_mask_shift: framebuffer_tag.blue_mask_shift,
-        blue_mask_size: framebuffer_tag.blue_mask_size,
+        blue_mask_shift: fb_info.blue_mask_shift(),
+        blue_mask_size: fb_info.blue_mask_size(),
     };
 
     let framebuffer = unsafe {
         core::slice::from_raw_parts_mut::<u32>(
-            framebuffer_tag.address.as_ptr().unwrap().cast::<u32>(),
+            fb_info.addr().cast::<u32>(),
             framebuffer_info.byte_len,
         )
     };

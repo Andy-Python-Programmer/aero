@@ -17,8 +17,9 @@
 
 use core::num::ParseIntError;
 
-use limine::NonNullPtr;
 use spin::Once;
+
+use limine::file::File;
 
 use crate::rendy;
 
@@ -44,16 +45,14 @@ impl CommandLine {
     }
 }
 
-fn resolve_module(modules: &[NonNullPtr<limine::File>], name: &str) -> &'static [u8] {
+fn resolve_module(modules: &[&File], name: &str) -> &'static [u8] {
     modules
         .iter()
         .find(|m| {
-            let n = m.cmdline.to_str().unwrap().to_str().unwrap();
+            let n = core::str::from_utf8(m.cmdline()).unwrap();
             n == name
         })
-        .map(|m| unsafe {
-            core::slice::from_raw_parts(m.base.as_ptr().unwrap(), m.length as usize)
-        })
+        .map(|m| unsafe { core::slice::from_raw_parts(m.addr(), m.size() as usize) })
         .expect("resolve_module: invalid operand")
 }
 
@@ -72,7 +71,7 @@ fn parse_number(mut string: &str) -> Result<usize, ParseIntError> {
     }
 }
 
-pub fn parse(cmdline: &'static str, modules: &[NonNullPtr<limine::File>]) -> CommandLine {
+pub fn parse(cmdline: &'static str, modules: &[&File]) -> CommandLine {
     RAW_CMDLINE_STR.call_once(|| cmdline);
 
     // Chew up the leading spaces.

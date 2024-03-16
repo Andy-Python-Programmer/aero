@@ -50,7 +50,8 @@
     strict_provenance,
     associated_type_defaults,
     trait_upcasting,
-    asm_const
+    asm_const,
+    sync_unsafe_cell
 )]
 // TODO(andypython): can we remove the dependency of "prelude_import" and "lang_items"?
 //     `lang_items`     => is currently used for the personality function (`rust_eh_personality`).

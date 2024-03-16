@@ -49,7 +49,7 @@ use crate::syscall::ExecArgs;
 use crate::userland::vm::Vm;
 use crate::utils::StackHelper;
 
-use super::{controlregs, io};
+use super::{asm_macros, controlregs, io};
 
 use crate::mem::AddressSpace;
 
@@ -116,31 +116,6 @@ const USERLAND_STACK_SIZE: u64 = 0x64000;
 const USERLAND_STACK_TOP: VirtAddr = VirtAddr::new(0x7fffffffe000);
 const USERLAND_STACK_BOTTOM: VirtAddr = USERLAND_STACK_TOP.const_sub_u64(USERLAND_STACK_SIZE);
 
-core::arch::global_asm!(
-    "
-    .macro pop_preserved
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbp
-    pop rbx
-    .endm
-
-    .macro pop_scratch
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rsi
-    pop rdi
-    pop rdx
-    pop rcx
-    pop rax
-    .endm
-    "
-);
-
 #[naked]
 unsafe extern "C" fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64) {
     asm!(
@@ -196,8 +171,8 @@ unsafe extern "C" fn iretq_init() {
         "cli",
         // pop the error code
         "add rsp, 8",
-        "pop_preserved",
-        "pop_scratch",
+        asm_macros::pop_preserved!(),
+        asm_macros::pop_scratch!(),
         "iretq",
         options(noreturn)
     )
@@ -209,8 +184,8 @@ unsafe extern "C" fn fork_init() {
         "cli",
         // pop the error code
         "add rsp, 8",
-        "pop_preserved",
-        "pop_scratch",
+        asm_macros::pop_preserved!(),
+        asm_macros::pop_scratch!(),
         "swapgs",
         "iretq",
         options(noreturn)
