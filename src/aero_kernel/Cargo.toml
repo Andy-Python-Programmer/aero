@@ -28,7 +28,7 @@ spin = { version = "0.9.8", default-features = false, features = [
 ] }
 bitflags = "2.4.2"
 bit_field = "0.10.2"
-log = "0.4.20"
+log = "0.4.21"
 xmas-elf = "0.9.1"
 hashbrown = "0.14.3"
 rustc-demangle = "0.1.23"
