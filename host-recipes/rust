@@ -7,10 +7,12 @@ imagedeps="python git wget gcc"
 allow_network="yes"
 
 build() {
-    # Rust memes.
+    echo "Patching out rust memes..."
     cp -rp "${source_dir}/." ./
 
-    CARGO_HOME=/tmp/cargo ./x.py build --stage 2 -j${parallelism}
+    mkdir /tmp/cargo
+    cp ${base_dir}/build-support/rust/host-config.toml /tmp/cargo/config.toml
+    CARGO_HOME=/tmp/cargo ./x.py build --stage 2 -j${parallelism} --verbose 
 }
 
 package() {

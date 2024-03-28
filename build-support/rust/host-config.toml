@@ -1,0 +1,2 @@
+[patch.crates-io]
+libc = { path = "/base_dir/sources/rust-libc" }
