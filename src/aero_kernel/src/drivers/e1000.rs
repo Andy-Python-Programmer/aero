@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use core::ptr;
+
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use spin::Once;
@@ -570,14 +572,14 @@ impl E1000 {
 
     unsafe fn write_raw(&self, register: u32, value: u32) {
         unsafe {
-            let register = self.base.as_mut_ptr::<u8>().add(register as usize);
-            core::ptr::write_volatile(register as *mut u32, value);
+            let register = self.base.as_mut_ptr::<u32>().byte_add(register as usize);
+            ptr::write_volatile(register, value);
         }
     }
 
     unsafe fn read_raw(&self, register: u32) -> u32 {
-        let register = self.base.as_ptr::<u8>().add(register as usize);
-        core::ptr::read_volatile(register as *const u32)
+        let register = self.base.as_ptr::<u32>().byte_add(register as usize);
+        ptr::read_volatile(register)
     }
 }
 

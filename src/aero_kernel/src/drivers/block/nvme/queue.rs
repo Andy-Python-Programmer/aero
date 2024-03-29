@@ -1,11 +1,13 @@
 use core::cell::UnsafeCell;
+use core::ptr;
 use core::sync::atomic::{AtomicU16, Ordering};
 
 use crate::mem::paging::PhysAddr;
 use crate::utils::dma::Dma;
+use crate::utils::VolatileCell;
 
 use super::command::{Command, CompletionEntry};
-use super::*;
+use super::{Error, Registers};
 
 const fn calculate_doorbell_offset(queue_id: u16, multiplier: usize, dstrd: usize) -> usize {
     0x1000 + ((((queue_id as usize) * 2) + multiplier) * (4 << dstrd))
@@ -136,11 +138,9 @@ impl<'a> QueuePair<'a> {
         let mut command = command.into();
 
         unsafe {
-            // SAFETY: Command Layout:
-            //              - opcode: u8
-            //              - flags: u8
-            //              - command_id: u16 (offset=2 bytes))
-            *(&mut command as *mut Command as *mut u16).offset(1) = self.cid;
+            // SAFETY: The offset of the `command_id` field is the same, regardless of the command
+            // type.
+            command.common.command_id = self.cid;
         }
 
         self.cid += 1;

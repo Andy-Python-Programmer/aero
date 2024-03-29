@@ -351,7 +351,7 @@ pub struct CompletionEntry {
 
 #[repr(C)]
 pub union Command {
-    common: CommonCommand,
+    pub(super) common: CommonCommand,
     identify: IdentifyCommand,
     rw: ReadWriteCommand,
     create_sq: CreateSQCommand,

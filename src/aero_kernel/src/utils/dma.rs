@@ -19,7 +19,7 @@ use alloc::boxed::Box;
 
 use core::alloc::{AllocError, Allocator, Layout};
 use core::mem::MaybeUninit;
-use core::ptr::NonNull;
+use core::ptr::{self, NonNull};
 
 use crate::mem::paging::*;
 
@@ -114,7 +114,7 @@ impl<T: ?Sized + core::fmt::Debug> core::fmt::Debug for Dma<T> {
 impl<T: ?Sized> Dma<T> {
     pub fn addr(&self) -> PhysAddr {
         unsafe {
-            let phys = (&*self.0 as *const T as *const u8) as u64;
+            let phys = ptr::addr_of!(*self.0).addr() as u64;
             PhysAddr::new(phys - crate::PHYSICAL_MEMORY_OFFSET.as_u64())
         }
     }

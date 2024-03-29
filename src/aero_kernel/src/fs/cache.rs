@@ -351,7 +351,7 @@ impl Cacheable<INodeCacheKey> for CachedINode {
 
 impl INodeCacheItem {
     pub fn make_key(fs: Weak<dyn FileSystem>, id: usize) -> INodeCacheKey {
-        (Weak::as_ptr(&fs) as *const () as usize, id)
+        (Weak::as_ptr(&fs).addr(), id)
     }
 }
 

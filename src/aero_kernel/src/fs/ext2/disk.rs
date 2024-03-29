@@ -15,11 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use core::ptr;
+
 use bit_field::BitField;
 
 use crate::fs::inode;
-
-trait Revsion {}
+use crate::utils::IncompleteArrayField;
 
 #[derive(Debug, PartialEq)]
 pub enum Revision {
@@ -142,13 +143,14 @@ pub struct GroupDescriptor {
 
 const_assert_eq!(core::mem::size_of::<GroupDescriptor>(), 32);
 
-#[derive(Debug, Copy, Clone)]
-#[repr(C, packed)]
+#[derive(Debug)]
+#[repr(C)]
 pub struct DirEntry {
     pub inode: u32,
     pub entry_size: u16,
     pub name_size: u8,
     pub file_type: u8,
+    name: IncompleteArrayField<u8>,
 }
 
 impl DirEntry {
@@ -157,10 +159,7 @@ impl DirEntry {
 
         self.name_size = name.len() as u8;
 
-        // SAFETY: Above we have verified that the name will fit in the entry.
-        let name_ptr = unsafe { (self as *mut _ as *mut u8).add(core::mem::size_of::<Self>()) };
-        let name_bytes = unsafe { core::slice::from_raw_parts_mut(name_ptr, name.len()) };
-
+        let name_bytes = unsafe { self.name.as_mut_slice(name.len()) };
         name_bytes.copy_from_slice(name.as_bytes());
     }
 }

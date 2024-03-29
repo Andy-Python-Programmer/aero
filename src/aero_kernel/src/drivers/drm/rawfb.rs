@@ -16,12 +16,13 @@
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use alloc::sync::Arc;
+use uapi::drm::DrmModeConStatus;
 
 use crate::fs::{devfs, FileSystem};
 
 use crate::mem::paging::*;
 
-use super::*;
+use super::{make_dmt_modes, BufferObject, Connector, Crtc, Drm, DrmDevice, Encoder};
 use crate::rendy;
 
 struct RawFramebuffer {}
@@ -54,7 +55,7 @@ impl DrmDevice for RawFramebuffer {
                     unsafe {
                         core::ptr::copy_nonoverlapping(
                             frame.as_slice_mut::<u8>().as_mut_ptr(),
-                            (fb.as_mut_ptr() as *mut u8)
+                            (fb.as_mut_ptr().cast::<u8>())
                                 .offset(i as isize * Size4KiB::SIZE as isize),
                             4096,
                         )

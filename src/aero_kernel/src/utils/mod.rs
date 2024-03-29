@@ -20,6 +20,7 @@ use alloc::sync::Arc;
 use core::alloc::Layout;
 use core::any::Any;
 use core::cell::UnsafeCell;
+use core::marker::PhantomData;
 use core::mem;
 use core::ptr::Unique;
 
@@ -234,4 +235,20 @@ macro_rules! extern_sym {
         // that no intermediate references is created.
         unsafe { ::core::ptr::addr_of!($sym) }
     }};
+}
+
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct IncompleteArrayField<T>(PhantomData<T>, [T; 0]);
+
+impl<T> IncompleteArrayField<T> {
+    #[inline]
+    pub unsafe fn as_mut_ptr(&mut self) -> *mut T {
+        self as *mut _ as *mut T
+    }
+
+    #[inline]
+    pub unsafe fn as_mut_slice(&mut self, len: usize) -> &mut [T] {
+        core::slice::from_raw_parts_mut(self.as_mut_ptr(), len)
+    }
 }
