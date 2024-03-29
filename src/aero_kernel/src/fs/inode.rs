@@ -37,7 +37,7 @@ use super::cache::{Cacheable, CachedINode, DirCacheItem, INodeCacheItem};
 use super::devfs::DevINode;
 use super::file_table::FileHandle;
 use super::path::PathBuf;
-use super::{cache, FileSystem, FileSystemError, Result};
+use super::{cache, FileSystem, FileSystemError, Path, Result};
 
 static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
 
@@ -277,6 +277,10 @@ pub trait INodeInterface: Send + Sync {
     }
 
     fn link(&self, _name: &str, _src: DirCacheItem) -> Result<()> {
+        Err(FileSystemError::NotSupported)
+    }
+
+    fn symlink(&self, _target: &Path) -> Result<()> {
         Err(FileSystemError::NotSupported)
     }
 }

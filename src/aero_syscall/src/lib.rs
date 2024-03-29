@@ -717,10 +717,15 @@ pub struct Stat {
 bitflags::bitflags! {
     #[repr(transparent)]
     pub struct AtFlags: usize {
+        /// Allow empty relative pathname.
         const EMPTY_PATH = 1;
+        /// Follow symbolic links.
         const SYMLINK_FOLLOW = 2;
+        /// Do not follow symbolic links.
         const SYMLINK_NOFOLLOW = 4;
+        /// Remove directory instead of unlinking file.
         const REMOVEDIR = 8;
+        /// Test access permitted for effective IDs, not real IDs.
         const EACCESS = 512;
     }
 }

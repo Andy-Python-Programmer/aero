@@ -459,7 +459,7 @@ pub fn fstat(fd: usize, path: &Path, flags: usize, stat: &mut Stat) -> Result<us
 
     // TODO: derive(SysArg) for bitflags.
     let flags = AtFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
-    dbg!(flags);
+    assert!(!flags.intersects(AtFlags::EACCESS | AtFlags::REMOVEDIR));
 
     if path.is_empty() {
         if !flags.contains(AtFlags::EMPTY_PATH) {
@@ -470,9 +470,8 @@ pub fn fstat(fd: usize, path: &Path, flags: usize, stat: &mut Stat) -> Result<us
         return Ok(0);
     }
 
-    log::debug!("{}", at.absolute_path());
-
-    let ent = fs::lookup_path_with(at, path, LookupMode::None, true)?;
+    let resolve_last = !flags.contains(AtFlags::SYMLINK_NOFOLLOW);
+    let ent = fs::lookup_path_with(at, path, LookupMode::None, resolve_last)?;
     *stat = ent.inode().stat()?;
     Ok(0)
 }
@@ -744,5 +743,28 @@ pub fn rename(src: &Path, dest: &Path) -> Result<usize, SyscallError> {
         src.set_name(name);
         src.set_parent(dest);
     });
+    Ok(0)
+}
+
+#[syscall]
+pub fn symlink(link_dirfd: usize, target: &Path, linkpath: &Path) -> Result<usize, SyscallError> {
+    // TODO(andypython): the following code is reused in a couple of places. Isolate this inside the
+    // syscall parsing for FileDescriptor with an argument as a generic specifing the allowance
+    // of this value.
+    //
+    // If the pathname given in `linkpath` is relative, then it is interpreted relative to the
+    // directory referred to by the file descriptor `link_dirfd`.
+    let at = match link_dirfd as isize {
+        AT_FDCWD if !linkpath.is_absolute() => scheduler::current_thread().cwd_dirent(),
+        _ if !linkpath.is_absolute() => FileDescriptor::from_usize(link_dirfd)
+            .handle()?
+            .inode
+            .clone(),
+        _ => fs::root_dir().clone(),
+    };
+
+    let ent = fs::lookup_path_with(at, linkpath, LookupMode::Create, false)?;
+    ent.inode().symlink(target)?;
+
     Ok(0)
 }

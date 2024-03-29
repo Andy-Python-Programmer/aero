@@ -4,7 +4,10 @@
 
 #include <asm/unistd_64.h>
 #include <cassert>
+#include <fcntl.h>
 #include <csetjmp>
+#include <fstream>
+#include <sys/stat.h>
 #include <errno.h>
 #include <iostream>
 #include <stddef.h>
@@ -199,7 +202,7 @@ DEFINE_TEST(epoll_mod_active, ([] {
 
 // Use mmap to change the protection flags instead of mprotect.
 DEFINE_TEST(mmap_partial_remap, ([] {
-	enable_systrace();
+	//enable_systrace();
 
 	const int bytes = PAGE_SIZE * 2;
 
@@ -610,6 +613,42 @@ DEFINE_TEST(mprotect_check_whether_three_way_split_mappings_are_handled_correctl
 	});
 }))
 
+DEFINE_TEST(stat, ([] {
+	// SYM_B -> SYM_A -> /tmp/SYM_REAL
+
+	// TODO: make mknod()
+	FILE *sym_real = fopen("/tmp/SYM_REAL", "w");
+
+	if (symlink("/tmp/SYM_REAL", "/tmp/SYM_A") == -1) 
+		assert(!"(1) symlink() failed");
+
+	if (symlink("/tmp/SYM_A", "/tmp/SYM_B") == -1) 
+		assert(!"(2) symlink() failed");
+
+	struct stat statbuf;
+	if (fstatat(AT_FDCWD, "/tmp/SYM_B", &statbuf, AT_SYMLINK_NOFOLLOW) == -1) 
+		assert(!"fstatat() failed");
+
+	// Check that the symlink is not followed.
+	assert(S_ISLNK(statbuf.st_mode));
+
+	if (fstatat(AT_FDCWD, "/tmp/SYM_B", &statbuf, 0) == -1) 
+		assert(!"fstatat() failed");
+
+	// Check that the symlink is followed.
+	assert(S_ISREG(statbuf.st_mode));
+
+	if (unlink("/tmp/SYM_A") == -1) 
+		assert(!"unlink() failed");
+
+	if (unlink("/tmp/SYM_B") == -1) 
+		assert(!"unlink() failed");
+
+	fclose(sym_real);
+	if (unlink("/tmp/SYM_REAL") == -1)
+		assert(!"unlink() failed");
+}))
+
 static inline bool cpuid(uint32_t leaf, uint32_t subleaf,
                          uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx)  {
 	uint32_t cpuid_max;
@@ -724,10 +763,8 @@ void abstract_test_case::register_case(abstract_test_case *tcp) {
 
 int main() {
     // Go through all tests and run them.
-    // for(abstract_test_case *tcp : test_case_ptrs()) {
-	// 	std::cout << "tests: Running " << tcp->name() << std::endl;
-	// 	tcp->run();
-	// }
-	test_bad_sysenter.run();
-	test_sysenter_system_call.run();
+    for(abstract_test_case *tcp : test_case_ptrs()) {
+		std::cout << "tests: Running " << tcp->name() << std::endl;
+		tcp->run();
+	}
 }

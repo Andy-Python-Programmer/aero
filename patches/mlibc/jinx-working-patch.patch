@@ -102,7 +102,7 @@ index 0000000..1b61d5a
 +	ret
 +.section .note.GNU-stack,"",%progbits
 diff --git mlibc-clean/sysdeps/aero/generic/filesystem.cpp mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
-index 33a11f4..8795382 100644
+index 33a11f4..fe5773d 100644
 --- mlibc-clean/sysdeps/aero/generic/filesystem.cpp
 +++ mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
 @@ -102,31 +102,24 @@ int sys_access(const char *filename, int mode) {
@@ -127,7 +127,7 @@ index 33a11f4..8795382 100644
 +    case fsfd_target::fd_path:
          break;
 -    }
--
+ 
 -    default: {
 -        mlibc::infoLogger()
 -            << "mlibc warning: sys_stat: unsupported fsfd target"
@@ -135,7 +135,7 @@ index 33a11f4..8795382 100644
 -        return EINVAL;
 -    }
 -    }
- 
+-
 -    if (result < 0) {
 -        return -result;
 +    default:
@@ -149,6 +149,39 @@ index 33a11f4..8795382 100644
      return 0;
  }
  
+@@ -212,6 +205,17 @@ int sys_unlinkat(int fd, const char *path, int flags) {
+ 	return 0;
+ }
+ 
++int sys_symlink(const char *target_path, const char *link_path) {
++	return sys_symlinkat(target_path, AT_FDCWD, link_path);
++}
++
++int sys_symlinkat(const char *target_path, int dirfd, const char *link_path) {
++    auto ret = syscall(SYS_SYMLINK_AT, dirfd, target_path, strlen(target_path), link_path, strlen(link_path));
++    if (int e = sc_error(ret); e)
++        return e;
++    return 0;
++}
++
+ struct aero_dir_entry {
+     size_t inode;
+     size_t offset;
+diff --git mlibc-clean/sysdeps/aero/include/aero/syscall.h mlibc-workdir/sysdeps/aero/include/aero/syscall.h
+index 39c5b65..49533cc 100644
+--- mlibc-clean/sysdeps/aero/include/aero/syscall.h
++++ mlibc-workdir/sysdeps/aero/include/aero/syscall.h
+@@ -82,6 +82,10 @@
+ #define SYS_SOCK_SHUTDOWN 75
+ #define SYS_GETPEERNAME 76
+ #define SYS_GETSOCKNAME 77
++#define SYS_DEBUG 78
++#define SYS_SETSOCKOPT 79
++#define SYS_GETSOCKOPT 80
++#define SYS_SYMLINK_AT 81
+ 
+ // Invalid syscall used to trigger a log error in the kernel (as a hint)
+ // so, that we can implement the syscall in the kernel.
 diff --git mlibc-clean/sysdeps/aero/meson.build mlibc-workdir/sysdeps/aero/meson.build
 index 9d10701..3d2a883 100644
 --- mlibc-clean/sysdeps/aero/meson.build

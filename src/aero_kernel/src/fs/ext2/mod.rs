@@ -41,7 +41,7 @@ use super::block::{self, BlockDevice, CachedAccess};
 
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::path::PathBuf;
-use super::{cache, FileSystemError};
+use super::{cache, FileSystemError, Path};
 
 use super::inode::{DirEntry, INodeInterface, Metadata, PollFlags, PollTable};
 use super::FileSystem;
@@ -529,6 +529,8 @@ impl INodeInterface for INode {
         let path_len = inode.size();
         let data_bytes: &[u8] = bytemuck::cast_slice(&inode.data_ptr);
 
+        // XXX: Symlinks under 60 bytes store data within the inode to avoid allocating a full
+        // block.
         if path_len <= data_bytes.len() {
             let path_bytes = &data_bytes[..path_len];
             let path = core::str::from_utf8(path_bytes).or(Err(FileSystemError::InvalidPath))?;
@@ -543,6 +545,26 @@ impl INodeInterface for INode {
 
             Ok(path.into())
         }
+    }
+
+    fn symlink(&self, target: &Path) -> super::Result<()> {
+        let mut inode = self.inode.write();
+        inode.set_file_type(FileType::Symlink);
+
+        let target_len = target.len();
+        let data_bytes: &mut [u8] = bytemuck::cast_slice_mut(&mut inode.data_ptr);
+
+        // XXX: Symlinks under 60 bytes store data within the inode to avoid allocating a full
+        // block.
+        if target_len <= data_bytes.len() {
+            data_bytes[..target_len].copy_from_slice(target.as_bytes());
+            inode.set_size(target_len);
+        } else {
+            drop(inode);
+            assert_eq!(self.write(0, target.as_bytes())?, target_len);
+        }
+
+        Ok(())
     }
 
     fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> super::Result<PhysFrame> {

@@ -101,6 +101,7 @@ pub const SYS_GETSOCKNAME: usize = 77;
 pub const SYS_DEBUG: usize = 78;
 pub const SYS_SETSOCKOPT: usize = 79;
 pub const SYS_GETSOCKOPT: usize = 80;
+pub const SYS_SYMLINK_AT: usize = 81;
 
 // constants for fcntl()'s command argument:
 pub const F_DUPFD: usize = 1;

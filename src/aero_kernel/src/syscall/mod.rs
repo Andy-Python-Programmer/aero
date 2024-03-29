@@ -230,6 +230,7 @@ pub fn generic_do_syscall(
         SYS_LINK => fs::link(b, c, d, e),
         SYS_POLL => fs::poll(b, c, d, e),
         SYS_RENAME => fs::rename(b, c, d, e),
+        SYS_SYMLINK_AT => fs::symlink(b, c, d, e, f),
 
         // epoll calls:
         SYS_EPOLL_CREATE => fs::epoll_create(b),
