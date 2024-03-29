@@ -24,18 +24,13 @@ use aero_syscall::prelude::*;
 
 mod fs;
 mod futex;
-mod ipc;
+pub mod ipc;
 mod net;
 mod process;
-mod time;
+pub mod time;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-
-pub use fs::*;
-pub use ipc::*;
-pub use process::*;
-pub use time::*;
 
 use crate::utils::StackHelper;
 

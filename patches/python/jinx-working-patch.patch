@@ -1,0 +1,54 @@
+diff --git python-clean/configure.ac python-workdir/configure.ac
+index cd69f0e..74fc416 100644
+--- python-clean/configure.ac
++++ python-workdir/configure.ac
+@@ -553,6 +553,9 @@ then
+ 	*-*-cygwin*)
+ 		ac_sys_system=Cygwin
+ 		;;
++  *-*-aero*)
++    ac_sys_system=Aero
++    ;;
+ 	*-*-vxworks*)
+ 	    ac_sys_system=VxWorks
+ 	    ;;
+@@ -619,6 +622,9 @@ if test "$cross_compiling" = yes; then
+ 	*-*-vxworks*)
+ 		_host_cpu=$host_cpu
+ 		;;
++  *-*-aero*)
++    _host_cpu=$host_cpu
++    ;;
+ 	wasm32-*-* | wasm64-*-*)
+ 		_host_cpu=$host_cpu
+ 		;;
+@@ -3216,6 +3222,9 @@ then
+ 	CYGWIN*)
+ 		LDSHARED="gcc -shared -Wl,--enable-auto-image-base"
+ 		LDCXXSHARED="g++ -shared -Wl,--enable-auto-image-base";;
++  Aero*)
++    LDSHARED='$(CC) -shared'
++    LDCXXSHARED='$(CXX) - shared';;
+ 	*)	LDSHARED="ld";;
+ 	esac
+ fi
+@@ -3268,7 +3277,9 @@ then
+ 		else CCSHARED="-Kpic -belf"
+ 		fi;;
+ 	VxWorks*)
+-		CCSHARED="-fpic -D__SO_PICABILINUX__  -ftls-model=global-dynamic"
++		CCSHARED="-fpic -D__SO_PICABILINUX__  -ftls-model=global-dynamic";;
++  Aero*)
++    CCSHARED="-fPIC";;
+ 	esac
+ fi
+ AC_MSG_RESULT([$CCSHARED])
+@@ -3338,6 +3349,8 @@ then
+ 		LINKFORSHARED='-Wl,-E -N 2048K';;
+ 	VxWorks*)
+ 		LINKFORSHARED='-Wl,-export-dynamic';;
++  Aero*)
++    LINKFORSHARED='-export-dynamic';;
+ 	esac
+ fi
+ AC_MSG_RESULT([$LINKFORSHARED])

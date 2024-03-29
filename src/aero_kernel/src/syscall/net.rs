@@ -35,9 +35,8 @@ use crate::socket::unix::*;
 use crate::socket::{SocketAddr, SocketAddrRef};
 
 use crate::userland::scheduler;
-use crate::userland::task::TaskId;
 
-use super::FileDescriptor;
+use crate::syscall::fs::FileDescriptor;
 
 /// Creates a [`SocketAddr`] from the provided userland socket structure address. This
 /// is done by looking at the family field present in every socket address structure.

@@ -147,7 +147,7 @@ impl INodeInterface for Mouse {
         assert_eq!(buffer.len(), size);
 
         unsafe {
-            *(buffer.as_mut_ptr() as *mut Packet) = packet;
+            *(buffer.as_mut_ptr().cast::<Packet>()) = packet;
         }
 
         Ok(size)

@@ -27,8 +27,6 @@ pub use self::mapper::*;
 pub use self::page::*;
 pub use self::page_table::*;
 
-pub use frame::LockedFrameAllocator;
-
 use crate::PHYSICAL_MEMORY_OFFSET;
 
 pub static FRAME_ALLOCATOR: LockedFrameAllocator = LockedFrameAllocator::new_uninit();

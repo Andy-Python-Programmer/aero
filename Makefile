@@ -21,6 +21,10 @@ KERNEL_TARGET := src/target/x86_64-unknown-none/release/aero_kernel
 clean:
 	rm -rf src/target
 
+.PHONY: check
+check:	
+	cd src && cargo check
+
 $(KERNEL_TARGET): $(shell find $(SOURCE_DIR) -type f -not -path '$(SOURCE_DIR)/target/*')
 	cd src && cargo build --package aero_kernel --release
 	./build-support/mkiso.sh

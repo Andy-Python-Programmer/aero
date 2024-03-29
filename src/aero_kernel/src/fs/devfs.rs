@@ -310,7 +310,7 @@ impl INodeInterface for DevFb {
                     count = buffer.len() - ((offset + buffer.len()) - fb.len());
                 }
 
-                let raw = buffer.as_ptr() as *const u32;
+                let raw = buffer.as_ptr().cast::<u32>();
                 let src = unsafe { core::slice::from_raw_parts(raw, count) };
 
                 fb[offset..offset + count].copy_from_slice(src);

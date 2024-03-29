@@ -172,7 +172,7 @@ impl FileHandle {
             let file_type = entry.inode().metadata()?.file_type();
             let file_type: aero_syscall::SysFileType = file_type.into();
 
-            let sysd = unsafe { &mut *(buffer.as_mut_ptr() as *mut SysDirEntry) };
+            let sysd = unsafe { &mut *(buffer.as_mut_ptr().cast::<SysDirEntry>()) };
 
             sysd.inode = entry.inode().metadata()?.id();
             sysd.offset = reclen;

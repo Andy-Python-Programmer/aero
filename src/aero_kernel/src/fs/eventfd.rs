@@ -60,7 +60,7 @@ impl INodeInterface for EventFd {
 
         // SAFETY: We have above verified that it is safe to dereference
         //         the value.
-        let value = unsafe { &mut *(buffer.as_mut_ptr() as *mut u64) };
+        let value = unsafe { &mut *(buffer.as_mut_ptr().cast::<u64>()) };
         let mut count = self.wq.block_on(&self.count, |e| **e != 0)?;
 
         *value = *count;
@@ -75,7 +75,7 @@ impl INodeInterface for EventFd {
         assert!(buffer.len() >= chunk_size);
 
         // TODO: use bytemuck to remove the unsafe.
-        let target = unsafe { *(buffer.as_ptr() as *const u64) };
+        let target = unsafe { *(buffer.as_ptr().cast::<u64>()) };
 
         if target == u64::MAX {
             return Err(FileSystemError::NotSupported);

@@ -19,7 +19,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use aero_syscall::MMapFlags;
 use alloc::collections::BTreeMap;
-use alloc::string::{String, ToString};
+use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
 
 use alloc::vec::Vec;

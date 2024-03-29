@@ -36,6 +36,7 @@ use crate::utils::sync::{BMutex, Mutex, WaitQueue};
 use super::cache::{Cacheable, CachedINode, DirCacheItem, INodeCacheItem};
 use super::devfs::DevINode;
 use super::file_table::FileHandle;
+use super::path::PathBuf;
 use super::{cache, FileSystem, FileSystemError, Result};
 
 static DIR_CACHE_MARKER: AtomicUsize = AtomicUsize::new(0x00);
@@ -120,7 +121,7 @@ pub trait INodeInterface: Send + Sync {
     /// ## Errors
     /// - `FileSystemError::NotSupported` - If the inode is not a symbolic link or the filesystem
     ///   does not support symbolic links.
-    fn resolve_link(&self) -> Result<String> {
+    fn resolve_link(&self) -> Result<PathBuf> {
         Err(FileSystemError::NotSupported)
     }
 

@@ -19,22 +19,22 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use alloc::borrow::ToOwned;
 use alloc::collections::BTreeMap;
-use alloc::string::{String, ToString};
+use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
 
 use spin::{Once, RwLock};
 
+use crate::fs;
 use crate::fs::inode::FileType;
 
 use crate::arch::tls;
+use crate::userland::scheduler;
 
-use super::cache;
 use super::cache::*;
+use super::{cache, FileSystem, Path, MOUNT_MANAGER};
 
+use super::inode::{DirEntry, INodeInterface, Metadata};
 use super::FileSystemError;
-
-use super::inode::*;
-use super::*;
 
 // TODO: put this mf in prelude
 use alloc::vec;
@@ -151,7 +151,7 @@ impl LockedProcINode {
         name: &str,
         file_type: FileType,
         contents: FileContents,
-    ) -> Result<INodeCacheItem> {
+    ) -> fs::Result<INodeCacheItem> {
         let icache = cache::icache();
         let mut this = self.0.write();
 
@@ -183,7 +183,7 @@ impl LockedProcINode {
 }
 
 impl INodeInterface for LockedProcINode {
-    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
+    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         let this = self.0.read();
 
         let data = match &this.contents {
@@ -216,7 +216,7 @@ impl INodeInterface for LockedProcINode {
         Ok(count)
     }
 
-    fn lookup(&self, dir: DirCacheItem, name: &str) -> Result<DirCacheItem> {
+    fn lookup(&self, dir: DirCacheItem, name: &str) -> fs::Result<DirCacheItem> {
         let this = self.0.read();
         let child = this
             .children
@@ -226,7 +226,7 @@ impl INodeInterface for LockedProcINode {
         Ok(DirEntry::new(dir, child.clone(), String::from(name)))
     }
 
-    fn metadata(&self) -> Result<Metadata> {
+    fn metadata(&self) -> fs::Result<Metadata> {
         let this = self.0.read();
 
         Ok(Metadata {
@@ -237,7 +237,7 @@ impl INodeInterface for LockedProcINode {
         })
     }
 
-    fn dirent(&self, parent: DirCacheItem, index: usize) -> Result<Option<DirCacheItem>> {
+    fn dirent(&self, parent: DirCacheItem, index: usize) -> fs::Result<Option<DirCacheItem>> {
         let this = self.0.read();
 
         if this.file_type != FileType::Directory {
@@ -282,7 +282,7 @@ struct ProcFs {
 }
 
 impl ProcFs {
-    pub fn new() -> Result<Arc<Self>> {
+    pub fn new() -> fs::Result<Arc<Self>> {
         let icache = cache::icache();
 
         let root_node = Arc::new(LockedProcINode::new(ProcINode::default()));
@@ -345,7 +345,7 @@ impl FileSystem for ProcFs {
 
 static PROC_FS: Once<Arc<ProcFs>> = Once::new();
 
-pub fn init() -> Result<()> {
+pub fn init() -> fs::Result<()> {
     let fs = ProcFs::new()?;
     let fs = PROC_FS.call_once(|| fs);
 

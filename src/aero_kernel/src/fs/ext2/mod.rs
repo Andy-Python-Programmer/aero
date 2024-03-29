@@ -40,6 +40,7 @@ use self::group_desc::GroupDescriptors;
 use super::block::{self, BlockDevice, CachedAccess};
 
 use super::cache::{DirCacheItem, INodeCacheItem};
+use super::path::PathBuf;
 use super::{cache, FileSystemError};
 
 use super::inode::{DirEntry, INodeInterface, Metadata, PollFlags, PollTable};
@@ -518,7 +519,7 @@ impl INodeInterface for INode {
         self.make_inode(name, FileType::Socket, Some(inode))
     }
 
-    fn resolve_link(&self) -> super::Result<String> {
+    fn resolve_link(&self) -> super::Result<PathBuf> {
         if !self.metadata()?.is_symlink() {
             return Err(FileSystemError::NotSupported);
         }

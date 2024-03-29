@@ -360,7 +360,10 @@ impl Signals {
         handler: Option<SignalEntry>,
         old: Option<&mut SigAction>,
     ) {
-        assert!(signal < SIGNAL_COUNT);
+        if signal >= SIGNAL_COUNT {
+            log::warn!("signal index is out of bounds");
+            return;
+        }
 
         if !can_override(signal) {
             return;

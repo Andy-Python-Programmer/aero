@@ -17,6 +17,11 @@
 
 use core::mem;
 
+pub mod path;
+
+// TODO: Do not re-export this.
+pub use path::Path;
+
 use aero_syscall::SyscallError;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
@@ -80,8 +85,8 @@ impl MountManager {
         let current_data = directory.data.lock();
         let mut root_data = root_dir.data.lock();
 
-        root_data.name = current_data.name.clone();
-        root_data.parent = current_data.parent.clone();
+        root_data.name.clone_from(&current_data.name);
+        root_data.parent.clone_from(&current_data.parent);
 
         mem::drop(root_data);
         mem::drop(current_data);
@@ -157,53 +162,6 @@ impl From<FileSystemError> for SyscallError {
     }
 }
 
-/// A slice of a path (akin to [str]).
-#[derive(Debug)]
-pub struct Path(str);
-
-impl Path {
-    pub fn new(path: &str) -> &Self {
-        unsafe { &*(path as *const str as *const Path) }
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// Returns [`true`] if the path is absolute.
-    pub fn is_absolute(&self) -> bool {
-        self.0.starts_with('/')
-    }
-
-    /// Returns an iterator over the components of the path.
-    pub fn components(&self) -> impl Iterator<Item = &str> {
-        self.0.split('/').filter(|e| !e.is_empty() && *e != ".")
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    /// Helper function that returns the parent path and the base name
-    /// of the path.
-    pub fn parent_and_basename(&self) -> (&Self, &str) {
-        if let Some(slash_index) = self.0.rfind('/') {
-            let parent_dir = if slash_index == 0 {
-                Path::new("/")
-            } else {
-                Path::new(&self.0[..slash_index])
-            };
-
-            let basename = &self.0[(slash_index + 1)..];
-            (parent_dir, basename)
-        } else {
-            // A relative path without any slashes.
-            (Path::new(""), &self.0)
-        }
-    }
-}
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum LookupMode {
     None,
@@ -215,7 +173,10 @@ pub fn lookup_path_with(
     mut cwd: DirCacheItem,
     path: &Path,
     mode: LookupMode,
+    resolve_last: bool,
 ) -> Result<DirCacheItem> {
+    let components_len = path.components().count();
+
     // Iterate and resolve each component. For example `a`, `b`, and `c` in `a/b/c`.
     for (i, component) in path.components().enumerate() {
         match component {
@@ -249,7 +210,7 @@ pub fn lookup_path_with(
                             if err == FileSystemError::EntryNotFound
                                 && mode == LookupMode::Create =>
                         {
-                            if i == path.components().count() - 1 {
+                            if i == components_len - 1 {
                                 cwd = cwd.inode().touch(cwd.clone(), component)?;
                             } else {
                                 // todo: fix this shit
@@ -258,6 +219,7 @@ pub fn lookup_path_with(
                                     cwd.clone(),
                                     Path::new(component),
                                     LookupMode::None,
+                                    resolve_last,
                                 ) {
                                     Ok(x) => x,
                                     Err(e) => {
@@ -275,16 +237,19 @@ pub fn lookup_path_with(
                 let inode = cwd.inode();
                 let metadata = inode.metadata()?;
 
-                if metadata.is_symlink() {
-                    let resolved_path_str = inode.resolve_link()?;
-                    let resolved_path = Path::new(&resolved_path_str);
+                if metadata.is_symlink() && resolve_last {
+                    let resolved_path = inode.resolve_link()?;
 
-                    if resolved_path.is_absolute() {
-                        cwd = lookup_path(resolved_path)?;
-                        continue;
-                    }
-
-                    cwd = lookup_path_with(parent, resolved_path, LookupMode::None)?;
+                    cwd = lookup_path_with(
+                        if resolved_path.is_absolute() {
+                            root_dir().clone()
+                        } else {
+                            parent
+                        },
+                        resolved_path.as_ref(),
+                        LookupMode::None,
+                        resolve_last,
+                    )?;
                 } else if metadata.is_directory() {
                     if let Ok(mount_point) = MOUNT_MANAGER.find_mount(cwd.clone()) {
                         cwd = mount_point.root_entry;
@@ -299,12 +264,13 @@ pub fn lookup_path_with(
 
 pub fn lookup_path(path: &Path) -> Result<DirCacheItem> {
     let cwd = if !path.is_absolute() {
-        scheduler::get_scheduler().current_task().cwd_dirent()
+        scheduler::current_thread().cwd_dirent()
     } else {
         root_dir().clone()
     };
 
-    lookup_path_with(cwd, path, LookupMode::None)
+    // TODO:Keep `resolve_last` set to true as a default?
+    lookup_path_with(cwd, path, LookupMode::None, true)
 }
 
 pub fn root_dir() -> &'static DirCacheItem {

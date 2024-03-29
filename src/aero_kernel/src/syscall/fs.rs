@@ -19,7 +19,8 @@ use core::fmt;
 
 use aero_syscall::prelude::*;
 use aero_syscall::signal::SigProcMask;
-use aero_syscall::{AtFlags, OpenFlags, Stat, SyscallError, TimeSpec, AT_FDCWD};
+use aero_syscall::{AtFlags, OpenFlags, Stat, TimeSpec, AT_FDCWD};
+use alloc::borrow::ToOwned;
 use alloc::sync::Arc;
 
 use crate::fs::cache::{self, DirCacheImpl};
@@ -27,6 +28,7 @@ use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::{DuplicateHint, FileHandle};
 use crate::fs::inode::{DirEntry, PollTable};
+use crate::fs::path::PathBuf;
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
 use crate::syscall::SysArg;
@@ -129,7 +131,7 @@ pub fn open(fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> 
         lookup_mode = LookupMode::Create;
     }
 
-    let inode = fs::lookup_path_with(dir, path, lookup_mode)?;
+    let inode = fs::lookup_path_with(dir, path, lookup_mode, true)?;
 
     if flags.contains(OpenFlags::O_DIRECTORY) && !inode.inode().metadata()?.is_directory() {
         return Err(SyscallError::ENOTDIR);
@@ -470,7 +472,7 @@ pub fn fstat(fd: usize, path: &Path, flags: usize, stat: &mut Stat) -> Result<us
 
     log::debug!("{}", at.absolute_path_str());
 
-    let ent = fs::lookup_path_with(at, path, LookupMode::None)?;
+    let ent = fs::lookup_path_with(at, path, LookupMode::None, true)?;
     *stat = ent.inode().stat()?;
     Ok(0)
 }
@@ -485,9 +487,27 @@ pub fn stat(path: &Path, stat: &mut Stat) -> Result<usize, SyscallError> {
 #[syscall]
 pub fn read_link(path: &Path, buffer: &mut [u8]) -> Result<usize, SyscallError> {
     // XXX: lookup_path with automatically resolve the link.
-    let file = fs::lookup_path(path)?;
-    let resolved_path = file.absolute_path_str();
-    let size = core::cmp::min(resolved_path.len(), buffer.len());
+    let cwd = if !path.is_absolute() {
+        scheduler::current_thread().cwd_dirent()
+    } else {
+        fs::root_dir().clone()
+    };
+
+    let file = fs::lookup_path_with(cwd.clone(), path, LookupMode::None, false)?.inode();
+    if !file.metadata()?.is_symlink() {
+        return Err(SyscallError::EINVAL);
+    }
+
+    let resolved_path = file.resolve_link()?;
+    let resolved_path = if resolved_path.is_absolute() {
+        resolved_path
+    } else {
+        Path::new(&cwd.absolute_path_str()).join(resolved_path)
+    };
+
+    let size = core::cmp::min(resolved_path.as_str().len(), buffer.len());
+
+    log::warn!("Orig: {path:?} -> {resolved_path}");
 
     buffer[..size].copy_from_slice(&resolved_path.as_bytes()[..size]);
     Ok(size)

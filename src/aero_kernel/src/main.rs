@@ -69,12 +69,12 @@
 extern crate aero_proc;
 
 mod prelude {
+    #[allow(unused)]
     pub mod rust_2021 {
         // Since asm is used almost all over the kernel, its a better idea
         // to add it to the prelude.
         pub use core::arch::asm;
         pub use core::prelude::rust_2021::*;
-        pub use core::prelude::v1::*;
 
         pub use alloc::string::String;
 
@@ -83,6 +83,7 @@ mod prelude {
     }
 }
 
+#[allow(unused)]
 #[prelude_import]
 pub use prelude::rust_2021::*;
 

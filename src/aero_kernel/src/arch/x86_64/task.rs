@@ -33,17 +33,14 @@
 use alloc::alloc::alloc_zeroed;
 
 use aero_syscall::{MMapFlags, MMapProt};
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use raw_cpuid::CpuId;
 
 use core::alloc::Layout;
 use core::ptr::Unique;
 
-use crate::arch::controlregs::MxCsr;
 use crate::arch::interrupts::InterruptErrorStack;
 use crate::fs::cache::DirCacheItem;
-use crate::mem::alloc_boxed_buffer;
 use crate::mem::paging::*;
 use crate::syscall::ExecArgs;
 use crate::userland::vm::Vm;

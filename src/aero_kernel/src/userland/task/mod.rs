@@ -33,7 +33,8 @@ use crate::mem::paging::*;
 
 use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
-use crate::syscall::{ExecArgs, MessageQueue};
+use crate::syscall::ipc::MessageQueue;
+use crate::syscall::ExecArgs;
 use crate::utils::sync::{Mutex, WaitQueue};
 
 use crate::userland::signals::Signals;
