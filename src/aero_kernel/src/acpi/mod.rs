@@ -86,7 +86,7 @@ impl AcpiTable {
     }
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Clone, Copy, Debug)]
 pub struct GenericAddressStructure {
     pub address_space: u8,

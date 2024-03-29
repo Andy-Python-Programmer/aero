@@ -9,8 +9,6 @@ export TERM=xterm-256color
 alias ls="ls --color=auto"
 alias clear='printf "\e[2J\e[H"'
 
-export PYTHONHOME="/usr/lib"
-
 # todo: https://github.com/sharkdp/bat/blob/master/src/bin/bat/directories.rs panics if not set?
 export BAT_CONFIG_DIR="/cfg/bat"
 export BAT_CACHE_PATH="/cache/bat"
