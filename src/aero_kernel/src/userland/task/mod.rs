@@ -28,6 +28,7 @@ use core::ops::Range;
 use core::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 
 use crate::fs::cache::{DirCacheImpl, DirCacheItem};
+use crate::fs::path::PathBuf;
 use crate::fs::{self, FileSystem};
 use crate::mem::paging::*;
 
@@ -510,11 +511,8 @@ impl Task {
         }
     }
 
-    pub fn path(&self) -> Option<String> {
-        self.executable
-            .lock()
-            .as_ref()
-            .map(|e| e.absolute_path_str())
+    pub fn path(&self) -> Option<PathBuf> {
+        self.executable.lock().as_ref().map(|e| e.absolute_path())
     }
 
     pub fn exec(
@@ -648,8 +646,8 @@ impl Task {
         self.cwd.read().as_ref().unwrap().inode.clone()
     }
 
-    pub fn get_cwd(&self) -> String {
-        self.cwd.read().as_ref().unwrap().inode.absolute_path_str()
+    pub fn get_cwd(&self) -> PathBuf {
+        self.cwd.read().as_ref().unwrap().inode.absolute_path()
     }
 
     pub fn set_cwd(&self, cwd: DirCacheItem) {

@@ -38,6 +38,7 @@ use spin::Once;
 use crate::fs::inode::{DirEntry, INodeInterface};
 use crate::utils::sync::BMutex;
 
+use super::path::PathBuf;
 use super::FileSystem;
 
 pub static INODE_CACHE: Once<Arc<INodeCache>> = Once::new();
@@ -317,7 +318,7 @@ pub type DirCacheItem = CacheArc<CacheItem<DirCacheKey, DirEntry>>;
 impl Debug for DirCacheItem {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("DirCacheItem")
-            .field(&self.absolute_path_str())
+            .field(&self.absolute_path())
             .finish()
     }
 }
@@ -367,14 +368,14 @@ impl Cacheable<DirCacheKey> for DirEntry {
 }
 
 pub trait DirCacheImpl {
-    fn absolute_path_str(&self) -> String;
+    fn absolute_path(&self) -> PathBuf;
 }
 
 impl DirCacheImpl for DirCacheItem {
-    fn absolute_path_str(&self) -> String {
+    fn absolute_path(&self) -> PathBuf {
         let mut current_entry = Some(self.clone());
         let mut path_nodes = Vec::new();
-        let mut result = String::new();
+        let mut result = PathBuf::new();
 
         // We need to collect all of the path nodes, reverse them and then join them
         // with the path separator.
@@ -384,12 +385,13 @@ impl DirCacheImpl for DirCacheItem {
         }
 
         for node in path_nodes.iter().rev() {
-            result.push_str(node);
+            result.push(node.as_str());
+            // result.push_str(node);
 
-            // If we are not at the root node, we need to add the path separator.
-            if node != "/" {
-                result.push('/');
-            }
+            // // If we are not at the root node, we need to add the path separator.
+            // if node != "/" {
+            //     result.push('/');
+            // }
         }
 
         result

@@ -872,7 +872,7 @@ impl VmProtected {
                 protection,
                 flags,
                 offset,
-                z.map(|f| f.absolute_path_str())
+                z.map(|f| f.absolute_path())
             );
 
             crate::unwind::unwind_stack_trace();
@@ -915,19 +915,19 @@ impl VmProtected {
         if let Some(shebang) = parse_shebang(bin.clone())? {
             log::debug!(
                 "shebang: (interpreter={}, argument={})",
-                shebang.interpreter.absolute_path_str(),
+                shebang.interpreter.absolute_path(),
                 shebang.argument
             );
 
             let mut largv = ExecArgs::default();
 
-            largv.push(shebang.interpreter.absolute_path_str().as_bytes());
+            largv.push(shebang.interpreter.absolute_path().as_bytes());
 
             if !shebang.argument.is_empty() {
                 largv.push(shebang.argument.as_bytes());
             }
 
-            largv.push(bin.absolute_path_str().as_bytes());
+            largv.push(bin.absolute_path().as_bytes());
 
             if let Some(argv) = argv {
                 largv.extend(&argv.inner[1..])

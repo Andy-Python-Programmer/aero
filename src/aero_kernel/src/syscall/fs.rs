@@ -55,7 +55,7 @@ impl FileDescriptor {
 impl fmt::Display for FileDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Ok(file_handle) = self.handle() {
-            let path = file_handle.inode.absolute_path_str();
+            let path = file_handle.inode.absolute_path();
             write!(f, "{{ {} -> {} }}", self.0, path)
         } else {
             // invalid file descriptor
@@ -470,7 +470,7 @@ pub fn fstat(fd: usize, path: &Path, flags: usize, stat: &mut Stat) -> Result<us
         return Ok(0);
     }
 
-    log::debug!("{}", at.absolute_path_str());
+    log::debug!("{}", at.absolute_path());
 
     let ent = fs::lookup_path_with(at, path, LookupMode::None, true)?;
     *stat = ent.inode().stat()?;
@@ -502,7 +502,7 @@ pub fn read_link(path: &Path, buffer: &mut [u8]) -> Result<usize, SyscallError> 
     let resolved_path = if resolved_path.is_absolute() {
         resolved_path
     } else {
-        Path::new(&cwd.absolute_path_str()).join(resolved_path)
+        cwd.absolute_path().join(resolved_path)
     };
 
     let size = core::cmp::min(resolved_path.as_str().len(), buffer.len());

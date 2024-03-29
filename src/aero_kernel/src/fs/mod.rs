@@ -223,7 +223,7 @@ pub fn lookup_path_with(
                                 ) {
                                     Ok(x) => x,
                                     Err(e) => {
-                                        dbg!(component, cwd.absolute_path_str());
+                                        dbg!(component, cwd.absolute_path());
                                         return Err(dbg!(e));
                                     }
                                 };

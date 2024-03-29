@@ -68,17 +68,7 @@ impl FileHandle {
         let offset = self.offset.load(Ordering::SeqCst);
         let new_offset = self.inode.inode().read_at(offset, buffer)?;
 
-        if self.inode.absolute_path_str().contains("/tmp/ccAAAAAA.s") {
-            log::debug!(
-                "read {} bytes from {}  ----- hi mom ----- {:?}",
-                new_offset,
-                self.inode.absolute_path_str(),
-                buffer
-            );
-        }
-
         self.offset.fetch_add(new_offset, Ordering::SeqCst);
-
         Ok(new_offset)
     }
 
@@ -87,7 +77,6 @@ impl FileHandle {
         let new_offset = self.inode.inode().write_at(offset, buffer)?;
 
         self.offset.fetch_add(new_offset, Ordering::SeqCst);
-
         Ok(new_offset)
     }
 
@@ -223,7 +212,7 @@ impl FileTable {
             log::debug!(
                 "file handle: (fd={}, path=`{}`)",
                 handle.fd,
-                handle.inode.absolute_path_str()
+                handle.inode.absolute_path()
             )
         }
     }

@@ -131,9 +131,14 @@ impl Scheduler {
 
     pub fn log_ptable(&self) {
         self.tasks.0.lock().iter().for_each(|(pid, task)| {
+            let path: String = task
+                .path()
+                .map(|path| path.into())
+                .unwrap_or("<unknown>".into());
+
             log::info!(
                 "task(pid={pid:?}, path={:?}, state={:?})",
-                task.path().unwrap_or(String::from("<unknown>")),
+                path,
                 task.state()
             )
         });
