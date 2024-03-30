@@ -20,15 +20,13 @@ use core::fmt;
 use aero_syscall::prelude::*;
 use aero_syscall::signal::SigProcMask;
 use aero_syscall::{AtFlags, OpenFlags, Stat, TimeSpec, AT_FDCWD};
-use alloc::borrow::ToOwned;
-use alloc::sync::Arc;
+use alloc::sync::{Arc, Weak};
 
 use crate::fs::cache::{self, DirCacheImpl};
 use crate::fs::epoll::EPoll;
 use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::{DuplicateHint, FileHandle};
 use crate::fs::inode::{DirEntry, PollTable};
-use crate::fs::path::PathBuf;
 use crate::fs::pipe::Pipe;
 use crate::fs::{self, lookup_path, LookupMode};
 use crate::syscall::SysArg;
@@ -70,9 +68,9 @@ impl super::SysArg for FileDescriptor {
     }
 }
 
-impl Into<usize> for FileDescriptor {
-    fn into(self) -> usize {
-        self.0
+impl From<FileDescriptor> for usize {
+    fn from(val: FileDescriptor) -> Self {
+        val.0
     }
 }
 
@@ -623,9 +621,10 @@ pub fn link(src_path: &Path, dest_path: &Path) -> Result<usize, SyscallError> {
     // strong references to it.
     //
     // TODO: Should this be moved to the inode impl?
-    if dest_dir.weak_filesystem().unwrap().as_ptr()
-        != src.inode().weak_filesystem().unwrap().as_ptr()
-    {
+    if !Weak::ptr_eq(
+        &dest_dir.weak_filesystem().unwrap(),
+        &src.inode().weak_filesystem().unwrap(),
+    ) {
         return Err(SyscallError::EINVAL);
     }
 

@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-use core::ptr;
-
 use bit_field::BitField;
 
 use crate::fs::inode;

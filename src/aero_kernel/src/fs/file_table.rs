@@ -30,6 +30,7 @@ use super::cache::{DirCacheItem, INodeCacheItem};
 use super::inode::FileType;
 use super::FileSystemError;
 
+#[derive(Debug, Copy, Clone)]
 pub enum DuplicateHint {
     Exact(usize),
     Any,
@@ -270,7 +271,7 @@ impl FileTable {
                 // Ensure the file descriptor is available.
                 if files[new_fd].is_none() {
                     files[new_fd] = Some(handle.duplicate(new_fd, flags)?);
-                    Ok(0x00)
+                    Ok(0)
                 } else {
                     // If the file descriptor is not available, then we close the
                     // old one and set its handle to the new duplicate handle.
@@ -280,7 +281,7 @@ impl FileTable {
                     old.inode.inode().close(*old.flags.read());
                     files[new_fd] = Some(handle);
 
-                    Ok(0x00)
+                    Ok(0)
                 }
             }
 

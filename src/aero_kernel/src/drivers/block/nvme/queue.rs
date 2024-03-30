@@ -1,5 +1,4 @@
 use core::cell::UnsafeCell;
-use core::ptr;
 use core::sync::atomic::{AtomicU16, Ordering};
 
 use crate::mem::paging::PhysAddr;

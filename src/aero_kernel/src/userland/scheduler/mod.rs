@@ -70,7 +70,7 @@ impl TaskContainer {
         self.0.lock().insert(task_id, task);
     }
 
-    fn remove_task(&self, task: Arc<Task>) {
+    fn remove_task(&self, task: &Task) {
         self.0.lock().remove(&task.pid());
     }
 }
@@ -104,12 +104,12 @@ impl Scheduler {
     /// Registers the provided task in the schedulers queue.
     pub fn register_task(&self, task: Arc<Task>) {
         self.tasks.register_task(task.pid(), task.clone());
-        self.inner.register_task(task.clone());
-        SESSIONS.register_task(task);
+        SESSIONS.register_task(task.clone());
+        self.inner.register_task(task);
     }
 
     #[inline]
-    pub fn exec(&self, executable: DirCacheItem, argv: Option<ExecArgs>, envv: Option<ExecArgs>) {
+    pub fn exec(&self, executable: &DirCacheItem, argv: Option<ExecArgs>, envv: Option<ExecArgs>) {
         self.inner
             .current_task()
             .exec(executable, argv, envv)
@@ -124,8 +124,8 @@ impl Scheduler {
 
     pub fn exit(&self, status: ExitStatus) -> ! {
         let current_task = self.inner.current_task();
-        SESSIONS.remove_task(current_task.clone());
-        self.tasks.remove_task(current_task);
+        SESSIONS.remove_task(&current_task);
+        self.tasks.remove_task(&current_task);
         self.inner.exit(status)
     }
 

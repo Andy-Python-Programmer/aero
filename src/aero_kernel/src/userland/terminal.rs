@@ -170,7 +170,7 @@ impl LineDiscipline {
         self.foreground.read().upgrade()
     }
 
-    pub fn set_foreground(&self, task: Arc<Task>) {
+    pub fn set_foreground(&self, task: &Arc<Task>) {
         *self.foreground.write() = Arc::downgrade(&SESSIONS.find_group(task).unwrap());
     }
 

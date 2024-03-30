@@ -63,6 +63,7 @@
 #![no_std]
 #![no_main]
 #![reexport_test_harness_main = "test_main"]
+#![warn(clippy::needless_pass_by_value)]
 #![deny(clippy::ptr_as_ptr)]
 
 #[macro_use]

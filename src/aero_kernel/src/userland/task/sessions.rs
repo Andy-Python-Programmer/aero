@@ -36,13 +36,15 @@ pub struct Group {
 impl Group {
     /// Creates a new process group.
     pub fn new(leader: Arc<Task>) -> Arc<Self> {
-        let mut tasks = HashMap::new();
-        tasks.insert(leader.pid(), leader.clone());
-
         leader.set_group_id(leader.pid().as_usize());
 
+        let id = leader.pid().as_usize();
+
+        let mut tasks = HashMap::new();
+        tasks.insert(leader.pid(), leader);
+
         Arc::new(Self {
-            id: leader.pid().as_usize(),
+            id,
             tasks: Mutex::new(tasks),
         })
     }
@@ -55,7 +57,7 @@ impl Group {
         assert!(self.tasks.lock_irq().insert(task.pid(), task).is_none());
     }
 
-    pub fn remove_task(&self, task: Arc<Task>) {
+    pub fn remove_task(&self, task: &Arc<Task>) {
         assert!(self.tasks.lock_irq().remove(&task.pid()).is_some());
     }
 
@@ -80,17 +82,17 @@ pub struct Session {
 impl Session {
     /// Creates a new process session.
     pub fn new(leader: Arc<Task>) -> Arc<Self> {
-        let mut groups = HashMap::new();
-        groups.insert(leader.pid().as_usize(), Group::new(leader.clone()));
-
         leader.set_session_id(leader.pid().as_usize());
+
+        let mut groups = HashMap::new();
+        groups.insert(leader.pid().as_usize(), Group::new(leader));
 
         Arc::new(Self {
             groups: Mutex::new(groups),
         })
     }
 
-    pub fn find(&self, target: Arc<Task>) -> Option<Arc<Group>> {
+    pub fn find(&self, target: &Arc<Task>) -> Option<Arc<Group>> {
         self.groups.lock_irq().get(&target.group_id()).cloned()
     }
 
@@ -107,13 +109,13 @@ impl Session {
         }
     }
 
-    pub fn remove_task(&self, task: Arc<Task>) {
+    pub fn remove_task(&self, task: &Arc<Task>) {
         let mut groups = self.groups.lock();
         let group = groups
             .get(&task.group_id())
             .expect("Session::remove_task: ESRCH");
 
-        group.remove_task(task.clone());
+        group.remove_task(task);
 
         if group.is_empty() {
             assert!(task.is_group_leader());
@@ -136,7 +138,7 @@ impl SessionList {
             .insert(leader.pid().as_usize(), Session::new(leader));
     }
 
-    pub fn find_group(&self, target: Arc<Task>) -> Option<Arc<Group>> {
+    pub fn find_group(&self, target: &Arc<Task>) -> Option<Arc<Group>> {
         self.0.lock_irq().get(&target.session_id())?.find(target)
     }
 
@@ -153,13 +155,13 @@ impl SessionList {
         }
     }
 
-    pub fn remove_task(&self, task: Arc<Task>) {
+    pub fn remove_task(&self, task: &Arc<Task>) {
         let mut sessions = self.0.lock_irq();
         let session = sessions
             .get(&task.session_id())
             .expect("SessionList::remove_task: ESRCH");
 
-        session.remove_task(task.clone());
+        session.remove_task(task);
 
         if session.is_empty() {
             assert!(task.is_session_leader());
@@ -167,7 +169,7 @@ impl SessionList {
         }
     }
 
-    pub fn isolate(&self, task: Arc<Task>) {
+    pub fn isolate(&self, task: &Arc<Task>) {
         assert!(!task.is_group_leader() && !task.is_session_leader());
 
         let leader = task.process_leader();

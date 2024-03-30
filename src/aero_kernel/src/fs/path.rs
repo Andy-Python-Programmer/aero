@@ -103,6 +103,13 @@ impl AsRef<Path> for &str {
     }
 }
 
+impl AsRef<Path> for String {
+    #[inline]
+    fn as_ref(&self) -> &Path {
+        Path::new(self)
+    }
+}
+
 /// An owned, mutable path (akin to [`String`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PathBuf(String);
@@ -143,6 +150,13 @@ impl PathBuf {
     }
 }
 
+impl Default for PathBuf {
+    #[inline]
+    fn default() -> Self {
+        PathBuf::new()
+    }
+}
+
 impl From<String> for PathBuf {
     #[inline]
     fn from(path: String) -> Self {
@@ -172,10 +186,10 @@ impl AsRef<Path> for PathBuf {
     }
 }
 
-impl Into<String> for PathBuf {
+impl From<PathBuf> for String {
     #[inline]
-    fn into(self) -> String {
-        self.0
+    fn from(val: PathBuf) -> Self {
+        val.0
     }
 }
 

@@ -47,7 +47,7 @@ impl GroupDescriptors {
     /// * `device` - Block device to read the group descriptors from.
     pub fn new(
         ext2: Weak<Ext2>,
-        device: Arc<BlockDevice>,
+        device: &BlockDevice,
         superblock: &disk::SuperBlock,
     ) -> Option<Self> {
         let bgdt_len = superblock.bgdt_len();
@@ -134,7 +134,7 @@ impl GroupDescriptors {
             let mut descriptors = self.descriptors.write();
             let block_group = &mut descriptors[block_group_idx];
 
-            let mut bitmap = Bitmap::new(fs, block_group.block_bitmap as usize)?;
+            let mut bitmap = Bitmap::new(&fs, block_group.block_bitmap as usize)?;
             let block_id = block_group_idx * blocks_per_group + bitmap.alloc()?;
 
             block_group.free_blocks_count -= 1;
@@ -156,7 +156,7 @@ impl GroupDescriptors {
             let mut descriptors = self.descriptors.write();
             let block_group = &mut descriptors[block_group_idx];
 
-            let mut bitmap = Bitmap::new(fs, block_group.inode_bitmap as usize)?;
+            let mut bitmap = Bitmap::new(&fs, block_group.inode_bitmap as usize)?;
             // Since inode numbers start from 1 rather than 0, the first bit in the first block
             // group's inode bitmap represent inode number 1. Thus, we add 1 to the allocated
             // inode number.
@@ -184,7 +184,7 @@ impl Bitmap {
     ///
     /// **Note**: Any changes to the bitmap will be written back to the disk when the
     /// bitmap has been dropped.
-    fn new(fs: Arc<Ext2>, block: usize) -> Option<Self> {
+    fn new(fs: &Arc<Ext2>, block: usize) -> Option<Self> {
         let block_size = fs.superblock.block_size();
         let offset = block * block_size;
 
@@ -198,7 +198,7 @@ impl Bitmap {
         Some(Self {
             bitmap,
             offset,
-            fs: Arc::downgrade(&fs),
+            fs: Arc::downgrade(fs),
         })
     }
 

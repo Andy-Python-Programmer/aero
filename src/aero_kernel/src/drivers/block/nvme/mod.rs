@@ -233,12 +233,13 @@ impl<'a> Namespace<'a> {
         assert!(size_bytes != 0);
 
         let blocks = size_bytes.div_ceil(self.block_size);
-        let mut read_cmd = ReadWriteCommand::default();
-
-        read_cmd.opcode = opcode as u8;
-        read_cmd.nsid = self.nsid;
-        read_cmd.start_lba = sector as u64;
-        read_cmd.length = (blocks - 1) as u16;
+        let mut read_cmd = ReadWriteCommand {
+            opcode: opcode as u8,
+            nsid: self.nsid,
+            start_lba: sector as u64,
+            length: (blocks - 1) as u16,
+            ..Default::default()
+        };
 
         if size_bytes > Size4KiB::SIZE as usize {
             // The data cannot fit in 8KiB frames, so we need to use
@@ -338,13 +339,18 @@ impl<'a> Controller<'a> {
         registers.set_enable(true)?;
 
         let identity = Dma::<IdentifyController>::zeroed();
-        let mut identify_command = IdentifyCommand::default();
 
-        identify_command.opcode = AdminOpcode::Identify as u8;
-        identify_command.cns = IdentifyCns::Controller as u8;
-        identify_command.data_ptr.prp1 = identity.addr().as_u64();
-
-        admin.submit_command(identify_command);
+        // TODO(andypython): builder pattern for building a command? We also shouldn't be required
+        // to manually fill in the `opcode` field.
+        admin.submit_command(IdentifyCommand {
+            opcode: AdminOpcode::Identify as u8,
+            cns: IdentifyCns::Controller as u8,
+            data_ptr: DataPointer {
+                prp1: identity.addr().as_u64(),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
 
         log::trace!(
             "nvme: identifed controller (vendor={}, subsystem_vendor={})",
@@ -355,27 +361,25 @@ impl<'a> Controller<'a> {
         // Create and initialize the I/O queues.
         let io_queue = QueuePair::new(registers, queue_size)?;
 
-        let mut io_cq_cmd = CreateCQCommand::default();
+        admin.submit_command(CreateCQCommand {
+            opcode: AdminOpcode::CreateCq as u8,
+            prp1: io_queue.completion_addr().as_u64(),
+            cqid: io_queue.id(),
+            q_size: (io_queue.len() - 1) as u16,
+            irq_vector: 0,
+            cq_flags: CommandFlags::QUEUE_PHYS_CONTIG.bits(),
+            ..Default::default()
+        });
 
-        io_cq_cmd.opcode = AdminOpcode::CreateCq as u8;
-        io_cq_cmd.prp1 = io_queue.completion_addr().as_u64();
-        io_cq_cmd.cqid = io_queue.id();
-        io_cq_cmd.q_size = (io_queue.len() - 1) as u16;
-        io_cq_cmd.irq_vector = 0;
-        io_cq_cmd.cq_flags = CommandFlags::QUEUE_PHYS_CONTIG.bits();
-
-        admin.submit_command(io_cq_cmd);
-
-        let mut io_sq_cmd = CreateSQCommand::default();
-
-        io_sq_cmd.opcode = AdminOpcode::CreateSq as u8;
-        io_sq_cmd.prp1 = io_queue.submission_addr().as_u64();
-        io_sq_cmd.cqid = io_queue.id();
-        io_sq_cmd.sqid = io_queue.id();
-        io_sq_cmd.q_size = (io_queue.len() - 1) as u16;
-        io_sq_cmd.sq_flags = CommandFlags::QUEUE_PHYS_CONTIG.bits();
-
-        admin.submit_command(io_sq_cmd);
+        admin.submit_command(CreateSQCommand {
+            opcode: AdminOpcode::CreateSq as u8,
+            prp1: io_queue.submission_addr().as_u64(),
+            cqid: io_queue.id(),
+            sqid: io_queue.id(),
+            q_size: (io_queue.len() - 1) as u16,
+            sq_flags: CommandFlags::QUEUE_PHYS_CONTIG.bits(),
+            ..Default::default()
+        });
 
         let shift = 12 + registers.capability.mpsmin() as usize;
         let max_transfer_shift = if identity.mdts != 0 {
@@ -395,13 +399,16 @@ impl<'a> Controller<'a> {
         // Discover and initialize the namespaces.
         let nsids = {
             let nsid_list = Dma::<u32>::new_uninit_slice(this.identity.nn as usize);
-            let mut nsid_command = IdentifyCommand::default();
 
-            nsid_command.opcode = AdminOpcode::Identify as u8;
-            nsid_command.cns = IdentifyCns::ActivateList as u8;
-            nsid_command.data_ptr.prp1 = nsid_list.addr().as_u64();
-
-            this.admin.lock().submit_command(nsid_command);
+            this.admin.lock().submit_command(IdentifyCommand {
+                opcode: AdminOpcode::Identify as u8,
+                cns: IdentifyCns::ActivateList as u8,
+                data_ptr: DataPointer {
+                    prp1: nsid_list.addr().as_u64(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
 
             // SAFETY: The list is initialized above.
             unsafe { nsid_list.assume_init() }
@@ -416,14 +423,17 @@ impl<'a> Controller<'a> {
             }
 
             let identity = Dma::<IdentifyNamespace>::zeroed();
-            let mut identify_command = IdentifyCommand::default();
 
-            identify_command.opcode = AdminOpcode::Identify as u8;
-            identify_command.cns = IdentifyCns::Namespace as u8;
-            identify_command.nsid = nsid;
-            identify_command.data_ptr.prp1 = identity.addr().as_u64();
-
-            this.admin.lock().submit_command(identify_command);
+            this.admin.lock().submit_command(IdentifyCommand {
+                opcode: AdminOpcode::Identify as u8,
+                cns: IdentifyCns::Namespace as u8,
+                nsid,
+                data_ptr: DataPointer {
+                    prp1: identity.addr().as_u64(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
 
             let blocks = identity.nsze as usize;
             let block_size = 1 << identity.lbaf[(identity.flbas & 0b11111) as usize].ds;

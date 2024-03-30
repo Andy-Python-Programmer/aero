@@ -76,8 +76,8 @@ impl CachedPage {
         self.page.start_address()
     }
 
-    fn make_key(device: Weak<dyn CachedAccess>, offset: usize) -> PageCacheKey {
-        (device.as_ptr() as *const u8 as usize, offset)
+    fn make_key(device: &Weak<dyn CachedAccess>, offset: usize) -> PageCacheKey {
+        (device.as_ptr().addr(), offset)
     }
 
     /// Returns whether the page has been marked dirty.
@@ -116,7 +116,7 @@ impl Drop for CachedPage {
 
 impl Cacheable<PageCacheKey> for CachedPage {
     fn cache_key(&self) -> PageCacheKey {
-        Self::make_key(self.device.clone(), self.offset)
+        Self::make_key(&self.device, self.offset)
     }
 }
 
@@ -133,9 +133,9 @@ impl Cache<PageCacheKey, CachedPage> {
     /// * `device` - The device to get the page from.
     /// * `offset` - The offset in bytes to the data. This will be rounded down to the nearest page
     ///   boundary.
-    pub fn get_page(&self, device: Weak<dyn CachedAccess>, offset: usize) -> PageCacheItem {
+    pub fn get_page(&self, device: &Weak<dyn CachedAccess>, offset: usize) -> PageCacheItem {
         let cache_offset = offset / Size4KiB::SIZE as usize;
-        let cache_key = CachedPage::make_key(device.clone(), cache_offset);
+        let cache_key = CachedPage::make_key(device, cache_offset);
 
         if let Some(page) = PAGE_CACHE.get(cache_key) {
             return page;
@@ -161,7 +161,7 @@ pub struct DirtyRef<T: Sized> {
 }
 
 impl<T> DirtyRef<T> {
-    pub fn new(device: Weak<dyn CachedAccess>, offset: usize) -> Self {
+    pub fn new(device: &Weak<dyn CachedAccess>, offset: usize) -> Self {
         let cache = PAGE_CACHE.get_page(device, offset);
 
         let ptr_offset = offset % Size4KiB::SIZE as usize;
@@ -209,7 +209,7 @@ pub trait CachedAccess: BlockDeviceInterface {
         let mut loc = 0;
 
         while loc < dest.len() {
-            let page = PAGE_CACHE.get_page(self.sref(), offset);
+            let page = PAGE_CACHE.get_page(&self.sref(), offset);
 
             let page_offset = offset % Size4KiB::SIZE as usize;
             let size = core::cmp::min(Size4KiB::SIZE as usize - page_offset, dest.len() - loc);
@@ -236,7 +236,7 @@ pub trait CachedAccess: BlockDeviceInterface {
         let mut loc = 0;
 
         while loc < buffer.len() {
-            let page = PAGE_CACHE.get_page(self.sref(), offset);
+            let page = PAGE_CACHE.get_page(&self.sref(), offset);
 
             let page_offset = offset % Size4KiB::SIZE as usize;
             let size = core::cmp::min(Size4KiB::SIZE as usize - page_offset, buffer.len() - loc);

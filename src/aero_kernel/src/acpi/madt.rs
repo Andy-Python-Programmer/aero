@@ -106,14 +106,14 @@ impl Iterator for MadtIterator {
         while self.current < self.limit {
             unsafe {
                 let entry_pointer = self.current;
-                let header = *(self.current as *const EntryHeader);
+                let header = *self.current.cast::<EntryHeader>();
 
                 self.current = self.current.offset(header.length as isize);
 
                 let item = match header.entry_type {
-                    0 => MadtEntry::LocalApic(&*(entry_pointer as *const MadtLocalApic)),
-                    1 => MadtEntry::IoApic(&*(entry_pointer as *const IoApicHeader)),
-                    2 => MadtEntry::IntSrcOverride(&*(entry_pointer as *const MadtIntSrcOverride)),
+                    0 => MadtEntry::LocalApic(&*entry_pointer.cast::<MadtLocalApic>()),
+                    1 => MadtEntry::IoApic(&*entry_pointer.cast::<IoApicHeader>()),
+                    2 => MadtEntry::IntSrcOverride(&*entry_pointer.cast::<MadtIntSrcOverride>()),
 
                     0x10..=0x7f => continue,
                     0x80..=0xff => continue,

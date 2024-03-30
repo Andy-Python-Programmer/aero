@@ -9,7 +9,7 @@ dependencies = [
  "aero_proc",
  "aero_syscall",
  "bit_field",
- "bitflags 2.4.2",
+ "bitflags 2.5.0",
  "byte_endian",
  "bytemuck",
  "cpio_reader",
@@ -81,9 +81,9 @@ checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
 
 [[package]]
 name = "autocfg"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
+checksum = "f1fdabc7756949593fe60f30ec81974b613357de856987752631dea1e3394c80"
 
 [[package]]
 name = "bit_field"
@@ -99,9 +99,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.4.2"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
+checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 
 [[package]]
 name = "byte_endian"
@@ -137,10 +137,10 @@ dependencies = [
 [[package]]
 name = "crabnet"
 version = "0.1.0"
-source = "git+https://github.com/aero-os/crabnet#3e5d0a2041e0776bb637c294c8cb552e54b3a2e2"
+source = "git+https://github.com/aero-os/crabnet#58a74ea76fb9586ac1c33fd0adbda497ebdaac43"
 dependencies = [
  "bit_field",
- "bitflags 2.4.2",
+ "bitflags 2.5.0",
  "byte_endian",
  "static_assertions",
 ]
@@ -148,7 +148,7 @@ dependencies = [
 [[package]]
 name = "crabnet_tcp"
 version = "0.1.0"
-source = "git+https://github.com/aero-os/crabnet#3e5d0a2041e0776bb637c294c8cb552e54b3a2e2"
+source = "git+https://github.com/aero-os/crabnet#58a74ea76fb9586ac1c33fd0adbda497ebdaac43"
 dependencies = [
  "crabnet",
  "log",
@@ -212,9 +212,9 @@ dependencies = [
 
 [[package]]
 name = "itoa"
-version = "1.0.10"
+version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
+checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "lai"
@@ -240,7 +240,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "846c87e24d089e8717a61098cba72b378e3525c46a87cf75b71352dcf668e68c"
 dependencies = [
- "bitflags 2.4.2",
+ "bitflags 2.5.0",
 ]
 
 [[package]]
@@ -260,9 +260,9 @@ dependencies = [
 
 [[package]]
 name = "memoffset"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
+checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
 ]
@@ -350,14 +350,14 @@ version = "11.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d86a7c4638d42c44551f4791a20e687dbb4c3de1f33c43dd71e355cd429def1"
 dependencies = [
- "bitflags 2.4.2",
+ "bitflags 2.5.0",
 ]
 
 [[package]]
 name = "rayon"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4963ed1bc86e4f3ee217022bd855b297cef07fb9eac5dfa1f788b220b49b3bd"
+checksum = "b418a60154510ca1a002a752ca9714984e21e4241e804d32555251faf8b78ffa"
 dependencies = [
  "either",
  "rayon-core",
@@ -402,14 +402,14 @@ checksum = "7eb0b34b42edc17f6b7cac84a52a1c5f0e1bb2227e997ca9011ea3dd34e8610b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.52",
+ "syn 2.0.55",
 ]
 
 [[package]]
 name = "serde_json"
-version = "1.0.114"
+version = "1.0.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5f09b1bd632ef549eaa9f60a1f8de742bdbc698e6cee2095fc84dde5f549ae0"
+checksum = "12dc5c46daa8e9fdf4f5e71b6cf9a53f2487da0e86e55808e2d35539666497dd"
 dependencies = [
  "itoa",
  "ryu",
@@ -447,9 +447,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.52"
+version = "2.0.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b699d15b36d1f02c3e7c69f8ffef53de37aefae075d8488d4ba1a7788d574a07"
+checksum = "002a1b3dbf967edfafc32655d0f377ab0bb7b994aa1d32c8cc7e9b8bf3ebb8f0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -485,7 +485,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40eb22ae96f050e0c0d6f7ce43feeae26c348fc4dea56928ca81537cfaa6188b"
 dependencies = [
  "arrayvec",
- "bitflags 2.4.2",
+ "bitflags 2.5.0",
  "cursor-icon",
  "log",
  "utf8parse",
@@ -534,5 +534,5 @@ checksum = "9ce1b18ccd8e73a9321186f97e46f9f04b778851177567b1975109d26a08d2a6"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.52",
+ "syn 2.0.55",
 ]

@@ -64,7 +64,7 @@ impl WaitQueue {
             lock = mutex.lock_irq();
         }
 
-        self.remove(task);
+        self.remove(&task);
         Ok(lock)
     }
 
@@ -72,7 +72,7 @@ impl WaitQueue {
         self.queue.lock_irq().push(task);
     }
 
-    pub fn remove(&self, task: Arc<Task>) {
+    pub fn remove(&self, task: &Task) {
         let mut tasks = self.queue.lock_irq();
 
         tasks
@@ -163,7 +163,7 @@ impl<T> BMutex<T> {
 
         loop {
             if let Some(guard) = self.spin.inner.try_lock() {
-                self.wq.remove(task);
+                self.wq.remove(&task);
 
                 return BMutexGuard { guard, mutex: self };
             }

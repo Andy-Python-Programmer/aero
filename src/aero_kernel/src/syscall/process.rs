@@ -140,7 +140,7 @@ pub fn exec(path: &Path, args: usize, argc: usize, envs: usize, envc: usize) -> 
 
     scheduler::get_scheduler()
         .current_task()
-        .exec(executable, argv, envv)
+        .exec(&executable, argv, envv)
         .expect("task: failed to exec task");
 
     unreachable!()
@@ -378,7 +378,7 @@ fn find_task_by_pid(pid: usize) -> Result<Arc<Task>> {
 #[syscall]
 pub fn getpgid(pid: usize) -> Result<usize> {
     let task = find_task_by_pid(pid)?;
-    let group = SESSIONS.find_group(task).unwrap();
+    let group = SESSIONS.find_group(&task).unwrap();
 
     Ok(group.id())
 }
@@ -416,6 +416,6 @@ pub fn setsid() -> Result<usize> {
         return Err(SyscallError::EPERM);
     }
 
-    SESSIONS.isolate(current_task);
+    SESSIONS.isolate(&current_task);
     Ok(0)
 }

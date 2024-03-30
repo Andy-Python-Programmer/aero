@@ -273,7 +273,7 @@ pub struct TimeSpec {
 }
 
 #[repr(usize)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum SeekWhence {
     SeekCur = 1,
     SeekEnd = 2,
@@ -422,7 +422,7 @@ bitflags::bitflags! {
     }
 }
 
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Clone)]
 #[repr(C)]
 pub struct Termios {
     pub c_iflag: TermiosIFlag,

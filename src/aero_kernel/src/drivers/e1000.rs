@@ -613,7 +613,7 @@ impl NetworkDriver for Device {
         loop {
             let mut e1000 = self.e1000.lock_irq();
             if let Some(data) = e1000.recv() {
-                self.wq.remove(task);
+                self.wq.remove(&task);
                 return data;
             } else {
                 drop(e1000);

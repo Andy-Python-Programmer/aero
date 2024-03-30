@@ -31,6 +31,7 @@ use core::ptr::addr_of;
 use alloc::alloc::alloc_zeroed;
 
 bitflags::bitflags! {
+    #[derive(Debug, Copy, Clone)]
     struct GdtEntryFlags: u8 {
         const PROTECTED_MODE = 1 << 6;
         const LONG_MODE = 1 << 5;

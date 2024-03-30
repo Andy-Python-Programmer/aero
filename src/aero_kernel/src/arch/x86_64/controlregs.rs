@@ -19,6 +19,8 @@ use crate::mem::paging::{PhysAddr, PhysFrame, VirtAddr};
 
 bitflags::bitflags! {
     /// Controls cache settings for the level 4 page table.
+    #[derive(Debug, Copy, Clone)]
+    #[repr(transparent)]
     pub struct Cr3Flags: u64 {
         /// Use a writethrough cache policy for the P4 table (else a writeback policy is used).
         const PAGE_LEVEL_WRITETHROUGH = 1 << 3;
@@ -29,6 +31,8 @@ bitflags::bitflags! {
 
 bitflags::bitflags! {
     /// Controls cache settings for the level 4 page table.
+    #[derive(Debug, Copy, Clone)]
+    #[repr(transparent)]
     pub struct Cr4Flags: u64 {
         /// Enables hardware-supported performance enhancements for software running in
         /// virtual-8086 mode.
@@ -86,6 +90,8 @@ bitflags::bitflags! {
 
 bitflags::bitflags! {
     /// Configuration flags of the [`Cr0`] register.
+    #[derive(Debug, Copy, Clone)]
+    #[repr(transparent)]
     pub struct Cr0Flags: u64 {
         /// Enables protected mode.
         const PROTECTED_MODE_ENABLE = 1;
@@ -184,7 +190,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     pub struct MxCsr: u32 {
         const INVALID_OPERATION = 1 << 0;
         const DENORMAL = 1 << 1;
@@ -212,6 +218,7 @@ bitflags::bitflags! {
     /// For MPX, [`BNDREG`](XCr0Flags::BNDREG) and [`BNDCSR`](XCr0Flags::BNDCSR) must be set/unset simultaneously.
     /// For AVX-512, [`OPMASK`](XCr0Flags::OPMASK), [`ZMM_HI256`](XCr0Flags::ZMM_HI256), and [`HI16_ZMM`](XCr0Flags::HI16_ZMM)
     /// must be set/unset simultaneously.
+    #[derive(Debug, Copy, Clone)]
     #[repr(transparent)]
     pub struct XCr0Flags: u64 {
         /// Enables using the x87 FPU state

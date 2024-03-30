@@ -103,9 +103,9 @@ impl MountManager {
         Ok(())
     }
 
-    fn find_mount(&self, directory: DirCacheItem) -> Result<MountPoint> {
+    fn find_mount(&self, dir: &DirCacheItem) -> Result<MountPoint> {
         let this = self.0.lock();
-        let cache_key = directory.cache_key();
+        let cache_key = dir.cache_key();
 
         if let Some(mount_point) = this.get(&cache_key) {
             Ok(mount_point.clone())
@@ -197,7 +197,7 @@ pub fn lookup_path_with(
             _ => {
                 // After we have resolved all of the special cases that might occur in a path, now
                 // we have to resolve the directory entry itself. For example `a` in `./a/`.
-                let cache_entry = inode::fetch_dir_entry(cwd.clone(), String::from(component));
+                let cache_entry = inode::fetch_dir_entry(&cwd, String::from(component));
                 let parent = cwd.clone();
 
                 if let Some(entry) = cache_entry {
@@ -251,7 +251,7 @@ pub fn lookup_path_with(
                         resolve_last,
                     )?;
                 } else if metadata.is_directory() {
-                    if let Ok(mount_point) = MOUNT_MANAGER.find_mount(cwd.clone()) {
+                    if let Ok(mount_point) = MOUNT_MANAGER.find_mount(&cwd) {
                         cwd = mount_point.root_entry;
                     }
                 }

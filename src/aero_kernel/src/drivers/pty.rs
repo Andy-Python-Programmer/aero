@@ -187,7 +187,7 @@ impl INodeInterface for Master {
 impl TerminalDevice for Slave {
     fn attach(&self, task: Arc<Task>) {
         assert!(task.is_session_leader());
-        self.master.discipline.set_foreground(task);
+        self.master.discipline.set_foreground(&task);
     }
 
     fn detach(&self, task: Arc<Task>) {
@@ -246,11 +246,11 @@ impl INodeInterface for Slave {
             TermiosCmd::GetWinSize(mut size) => *size = self.master.get_window_size(),
             TermiosCmd::SetWinSize(size) => self.master.set_window_size(*size),
             TermiosCmd::TcGets(mut termios) => *termios = self.master.discipline.termios(),
-            TermiosCmd::TcSetsf(termios) => self.master.discipline.set_termios(*termios),
+            TermiosCmd::TcSetsf(termios) => self.master.discipline.set_termios(termios.clone()),
             TermiosCmd::TcSetsw(termios) => {
                 // TODO: Allow the output buffer to drain and then set the current serial port
                 // settings.
-                self.master.discipline.set_termios(*termios)
+                self.master.discipline.set_termios(termios.clone())
             }
 
             TermiosCmd::SetCtrlTerm => {

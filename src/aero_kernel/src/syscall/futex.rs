@@ -97,7 +97,7 @@ impl FutexContainer {
 
             futex.insert(current_task.clone());
             scheduler.inner.await_io()?;
-            futex.remove(current_task);
+            futex.remove(&current_task);
 
             if futex.is_empty() {
                 self.futexes.lock().remove(&key);

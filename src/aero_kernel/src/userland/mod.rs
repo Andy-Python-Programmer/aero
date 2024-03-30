@@ -28,7 +28,7 @@ pub fn run() -> fs::Result<()> {
     let init_path = Path::new("/usr/bin/init");
     let init_inode = fs::lookup_path(init_path)?;
 
-    scheduler::get_scheduler().exec(init_inode, None, None);
+    scheduler::get_scheduler().exec(&init_inode, None, None);
     Ok(())
 }
 
@@ -37,6 +37,6 @@ pub fn run_tests() -> fs::Result<()> {
     let utest_path = Path::new("/usr/bin/utest");
     let utest_inode = fs::lookup_path(utest_path)?;
 
-    scheduler::get_scheduler().exec(utest_inode, None, None);
+    scheduler::get_scheduler().exec(&utest_inode, None, None);
     Ok(())
 }

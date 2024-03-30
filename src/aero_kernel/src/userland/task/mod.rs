@@ -517,7 +517,7 @@ impl Task {
 
     pub fn exec(
         &self,
-        executable: DirCacheItem,
+        executable: &DirCacheItem,
 
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
@@ -598,6 +598,11 @@ impl Task {
             // TODO: is_process_leader() && children.len() == 0 and then
             // assert!(self.file_table.strong_count() == 1);
             dbg!(Arc::strong_count(&self.file_table));
+            log::warn!(
+                "HI MOM HI MOM HI MOM HI MOM: I HAVE {} STRONG AND {} WEAK REFERENCES",
+                Weak::strong_count(&self.sref),
+                Weak::weak_count(&self.sref)
+            );
             if Arc::strong_count(&self.file_table) == 1 {
                 self.file_table.0.read().iter().for_each(|file| {
                     if let Some(handle) = file {

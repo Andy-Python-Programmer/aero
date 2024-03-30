@@ -367,7 +367,7 @@ impl ArchTask {
     pub fn exec(
         &mut self,
         vm: &Vm,
-        executable: DirCacheItem,
+        executable: &DirCacheItem,
 
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,

@@ -320,7 +320,7 @@ impl INodeInterface for Tty {
                 let lock = TERMIOS.lock_irq();
                 let this = &*lock;
 
-                *termios = *this;
+                *termios = this.clone();
                 Ok(0x00)
             }
 
@@ -337,7 +337,7 @@ impl INodeInterface for Tty {
                 let mut lock = TERMIOS.lock_irq();
                 let this = &mut *lock;
 
-                *this = *termios;
+                *this = termios.clone();
                 Ok(0x00)
             }
 

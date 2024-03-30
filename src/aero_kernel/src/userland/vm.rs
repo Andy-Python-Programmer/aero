@@ -57,7 +57,7 @@ pub enum ElfLoadError {
     MemoryMapError,
 }
 
-fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfLoadError> {
+fn parse_elf_header<'header>(file: &DirCacheItem) -> Result<Header<'header>, ElfLoadError> {
     // 1. Read the ELF PT1 header:
     let pt1_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT1_SIZE));
 
@@ -103,7 +103,7 @@ fn parse_elf_header<'header>(file: DirCacheItem) -> Result<Header<'header>, ElfL
 }
 
 fn parse_program_header<'pheader>(
-    file: DirCacheItem,
+    file: &DirCacheItem,
     header: Header<'pheader>,
     index: u16,
 ) -> Result<ProgramHeader<'pheader>, ElfLoadError> {
@@ -151,9 +151,8 @@ struct Shebang {
 }
 
 impl Shebang {
-    fn new(path: String, argument: String) -> Result<Self, ElfLoadError> {
-        let path = Path::new(&path);
-        let interpreter = fs::lookup_path(path).map_err(ElfLoadError::IOError)?;
+    fn new<P: AsRef<Path>>(path: P, argument: String) -> Result<Self, ElfLoadError> {
+        let interpreter = fs::lookup_path(path.as_ref()).map_err(ElfLoadError::IOError)?;
 
         Ok(Self {
             interpreter,
@@ -164,7 +163,7 @@ impl Shebang {
 
 /// Returns [`true`] if the provided executable (`bin`) contains a shebang
 /// at the start.
-fn contains_shebang(bin: DirCacheItem) -> Result<bool, ElfLoadError> {
+fn contains_shebang(bin: &DirCacheItem) -> Result<bool, ElfLoadError> {
     let shebang = &mut [0u8; 2];
 
     bin.inode()
@@ -174,8 +173,8 @@ fn contains_shebang(bin: DirCacheItem) -> Result<bool, ElfLoadError> {
     Ok(shebang[0] == b'#' && shebang[1] == b'!')
 }
 
-fn parse_shebang(bin: DirCacheItem) -> Result<Option<Shebang>, ElfLoadError> {
-    if !contains_shebang(bin.clone())? {
+fn parse_shebang(bin: &DirCacheItem) -> Result<Option<Shebang>, ElfLoadError> {
+    if !contains_shebang(bin)? {
         return Ok(None);
     }
 
@@ -238,7 +237,7 @@ pub struct Elf<'this> {
 
 impl<'this> Elf<'this> {
     fn new(file: DirCacheItem) -> Result<Self, ElfLoadError> {
-        let header = parse_elf_header(file.clone())?;
+        let header = parse_elf_header(&file)?;
         Ok(Self { header, file })
     }
 
@@ -276,8 +275,7 @@ impl<'this> Iterator for ProgramHeaderIter<'this> {
         }
 
         // Parse and return the program header.
-        let result =
-            parse_program_header(self.file.clone(), self.header, self.next_index as u16).ok();
+        let result = parse_program_header(&self.file, self.header, self.next_index as u16).ok();
 
         // Increment the next index.
         self.next_index += 1;
@@ -907,12 +905,12 @@ impl VmProtected {
 
     fn load_bin<'header>(
         &mut self,
-        bin: DirCacheItem,
+        bin: &DirCacheItem,
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
     ) -> Result<LoadedBinary<'header>, ElfLoadError> {
         // check for a shebang before proceeding.
-        if let Some(shebang) = parse_shebang(bin.clone())? {
+        if let Some(shebang) = parse_shebang(bin)? {
             log::debug!(
                 "shebang: (interpreter={}, argument={})",
                 shebang.interpreter.absolute_path(),
@@ -933,7 +931,7 @@ impl VmProtected {
                 largv.extend(&argv.inner[1..])
             }
 
-            return self.load_bin(shebang.interpreter, Some(largv), envv);
+            return self.load_bin(&shebang.interpreter, Some(largv), envv);
         }
 
         let elf = Elf::new(bin.clone())?;
@@ -1049,7 +1047,7 @@ impl VmProtected {
             } else if header_type == xmas_elf::program::Type::Interp {
                 let ld = fs::lookup_path(fs::Path::new("/usr/lib/ld.so")).unwrap();
 
-                let res = self.load_bin(ld, None, None)?;
+                let res = self.load_bin(&ld, None, None)?;
                 entry_point = res.entry_point;
             }
         }
@@ -1168,7 +1166,7 @@ impl VmProtected {
         let data = parent.inner.lock();
 
         // Copy over all of the mappings from the parent into the child.
-        self.mappings = data.mappings.clone();
+        self.mappings.clone_from(&data.mappings);
     }
 }
 
@@ -1213,7 +1211,7 @@ impl Vm {
     /// Mapping the provided `bin` file into the VM.
     pub fn load_bin(
         &self,
-        bin: DirCacheItem,
+        bin: &DirCacheItem,
         argv: Option<ExecArgs>,
         envv: Option<ExecArgs>,
     ) -> Result<LoadedBinary, ElfLoadError> {

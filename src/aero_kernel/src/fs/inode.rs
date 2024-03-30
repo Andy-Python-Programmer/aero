@@ -57,7 +57,7 @@ impl Drop for PollTable {
     fn drop(&mut self) {
         let ctask = scheduler::get_scheduler().current_task();
         for queue in self.queues.iter() {
-            queue.remove(ctask.clone());
+            queue.remove(&ctask);
         }
     }
 }
@@ -419,10 +419,16 @@ impl DirEntry {
         // ".." (ie. we do not want to re-cache the current directory's, parent directory).
         let cache_me = ![".", ".."].contains(&name.as_str());
 
+        let filesystem = if let Some(fs) = inode.weak_filesystem() {
+            Once::initialized(fs)
+        } else {
+            Once::new()
+        };
+
         let entry = Self {
             data: BMutex::new(DirProtectedData {
                 parent: Some(parent),
-                inode: inode.clone(),
+                inode,
                 name,
             }),
 
@@ -432,11 +438,7 @@ impl DirEntry {
                 0x00
             },
 
-            filesystem: if let Some(filesystem) = inode.weak_filesystem() {
-                Once::initialized(filesystem)
-            } else {
-                Once::new()
-            },
+            filesystem,
         };
 
         if cache_me {
@@ -540,7 +542,7 @@ impl DirEntry {
 
 /// Fetches a cached directory entry item from the directory cache. Returns if
 /// the provided entry exists in the given parent directory cache.
-pub fn fetch_dir_entry(parent: DirCacheItem, name: String) -> Option<DirCacheItem> {
+pub fn fetch_dir_entry(parent: &DirCacheItem, name: String) -> Option<DirCacheItem> {
     let dcache = cache::dcache();
     let cache_key = (parent.cache_marker, name);
 
