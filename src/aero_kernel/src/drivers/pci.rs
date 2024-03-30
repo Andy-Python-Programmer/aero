@@ -23,7 +23,7 @@ use crate::utils::bitmap::Bitmap;
 use crate::utils::sync::Mutex;
 
 use crate::acpi::mcfg;
-use crate::mem::paging::OffsetPageTable;
+use crate::mem::paging::{OffsetPageTable, PhysAddr};
 use crate::utils::VolatileCell;
 
 use crate::arch::{apic, io};
@@ -116,16 +116,18 @@ impl<'a> Msix<'a> {
             .get_bar(bar_index)
             .expect("msix: table bar not present");
 
+        map_bar(&bar);
+
         let bar_address = match bar {
-            Bar::Memory64 { address, .. } => address,
-            Bar::Memory32 { address, .. } => address as u64,
+            Bar::Memory64 { address, .. } => PhysAddr::new(address),
+            Bar::Memory32 { address, .. } => PhysAddr::new(address as u64),
             _ => unreachable!(),
         };
 
         // SAFETY: We have exclusive access to the BAR and the slice is in bounds.
         let messages = unsafe {
             core::slice::from_raw_parts_mut(
-                (bar_address + bar_offset as u64) as *mut Message,
+                (bar_address.as_hhdm_virt() + bar_offset as u64).as_mut_ptr::<Message>(),
                 table_length as usize,
             )
         };
@@ -785,6 +787,45 @@ struct PciTable {
 impl PciTable {
     const fn new() -> Self {
         Self { inner: Vec::new() }
+    }
+}
+
+pub fn map_bar(bar: &Bar) {
+    use crate::mem::paging::{Mapper, Page, PageTableFlags, PhysFrame, Size4KiB, UnmapError};
+
+    use crate::mem::AddressSpace;
+
+    let mut address_space = AddressSpace::this();
+    let mut offset_table = address_space.offset_page_table();
+
+    let (addr, size) = match bar {
+        Bar::Memory64 { address, size, .. } => (PhysAddr::new(*address), *size),
+        _ => unreachable!(),
+    };
+
+    for frame in PhysFrame::range(
+        PhysFrame::<Size4KiB>::from_start_address(addr).unwrap(),
+        PhysFrame::containing_address(addr + size),
+    ) {
+        let virt = frame.start_address().as_hhdm_virt();
+        let page = Page::containing_address(virt);
+
+        // Map will fail if the bar was partially mapped.
+        match offset_table.unmap(page) {
+            Ok((_, m)) => m.ignore(),
+            Err(UnmapError::PageNotMapped) => {}
+            Err(e) => unreachable!("{:?}", e),
+        }
+
+        unsafe {
+            offset_table.map_to(
+                page,
+                frame,
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
+            )
+        }
+        .unwrap()
+        .flush();
     }
 }
 

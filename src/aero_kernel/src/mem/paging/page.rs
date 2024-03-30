@@ -249,6 +249,12 @@ impl<S: PageSize> PhysFrame<S> {
         Ok(PhysFrame::containing_address(address))
     }
 
+    /// Returns a range of pages, exclusive `end`.
+    #[inline]
+    pub const fn range(start: Self, end: Self) -> PhysFrameRange<S> {
+        PhysFrameRange { start, end }
+    }
+
     /// Returns the frame that contains the given physical address.
     #[inline]
     pub fn containing_address(address: PhysAddr) -> Self {

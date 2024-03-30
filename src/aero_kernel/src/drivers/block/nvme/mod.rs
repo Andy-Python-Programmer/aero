@@ -29,7 +29,7 @@ use alloc::vec::Vec;
 use bit_field::BitField;
 
 use crate::arch::interrupts::{self, InterruptStack};
-use crate::drivers::pci::*;
+use crate::drivers::pci::{self, *};
 use crate::fs::block::{install_block_device, BlockDevice, BlockDeviceInterface};
 use crate::mem::paging::*;
 
@@ -281,10 +281,12 @@ impl<'a> Controller<'a> {
         let bar0 = header.get_bar(0).ok_or(Error::UnknownBar)?;
 
         // All NVMe registers are accessible via BAR0.
-        let registers_addr = match bar0 {
-            Bar::Memory64 { address, .. } => PhysAddr::new(address),
+        let (registers_addr, bar_size) = match bar0 {
+            Bar::Memory64 { address, size, .. } => (PhysAddr::new(address), size),
             _ => return Err(Error::UnknownBar),
         };
+
+        pci::map_bar(&bar0);
 
         let registers = registers_addr
             .as_hhdm_virt()
