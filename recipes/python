@@ -2,6 +2,7 @@ name=python
 version=3.13.0
 tarball_url="https://www.python.org/ftp/python/${version}/Python-${version}a1.tar.xz"
 tarball_blake2b="62612d22ce652f4b1d7ce93aa30bd5814dbf271dbe98e321b99d003d7da8f74798e55f556db75fc39b676295c1d1f7b31919c444fe3c667d2fbd2ea16799a211"
+imagedeps="gcc"
 source_deps="autoconf-archive"
 source_hostdeps="automake autoconf libtool pkg-config"
 hostdeps="gcc autoconf automake libtool pkg-config"
