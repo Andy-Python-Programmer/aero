@@ -63,32 +63,52 @@ const fn order_from_size(size: u64) -> usize {
     unreachable!()
 }
 
-pub struct LockedFrameAllocator(Once<Mutex<GlobalFrameAllocator>>);
+pub struct LockedFrameAllocator(Mutex<GlobalFrameAllocator>);
 
 impl LockedFrameAllocator {
     /// Constructs a new uninitialized and locked version of the global frame
     /// allocator.
     pub(super) const fn new_uninit() -> Self {
-        Self(Once::new())
+        let bstrap_ref = BootAllocRef {
+            inner: core::ptr::null(),
+        };
+
+        Self(Mutex::new(GlobalFrameAllocator {
+            buddies: [
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+                Bitmap::empty(bstrap_ref),
+            ],
+            free: [0; 10],
+
+            base: PhysAddr::zero(),
+            end: PhysAddr::zero(),
+        }))
     }
 
     /// Initializes the inner locked global frame allocator.
     pub(super) fn init(&self, memory_map: &mut limine::response::MemoryMapResponse) {
-        self.0
-            .call_once(|| Mutex::new(GlobalFrameAllocator::new(memory_map)));
+        *self.0.lock_irq() = GlobalFrameAllocator::new(memory_map);
     }
 
     pub fn dealloc(&self, addr: PhysAddr, size_bytes: usize) {
         let order = order_from_size(size_bytes as u64);
 
-        let mut allocator = self.0.get().unwrap().lock_irq();
+        let mut allocator = self.0.lock_irq();
         allocator.deallocate_frame_inner(addr, order);
     }
 
     pub fn alloc(&self, size_bytes: usize) -> Option<PhysAddr> {
         let order = order_from_size(size_bytes as u64);
 
-        let mut allocator = self.0.get()?.lock_irq();
+        let mut allocator = self.0.lock_irq();
         allocator.allocate_frame_inner(order)
     }
 
@@ -108,12 +128,8 @@ unsafe impl FrameAllocator<Size4KiB> for LockedFrameAllocator {
 
     fn deallocate_frame(&self, frame: PhysFrame<Size4KiB>) {
         self.0
-            .get()
-            .map(|m| {
-                m.lock_irq()
-                    .deallocate_frame_inner(frame.start_address(), order_from_size(Size4KiB::SIZE))
-            })
-            .unwrap()
+            .lock_irq()
+            .deallocate_frame_inner(frame.start_address(), order_from_size(Size4KiB::SIZE))
     }
 }
 
@@ -125,12 +141,8 @@ unsafe impl FrameAllocator<Size2MiB> for LockedFrameAllocator {
 
     fn deallocate_frame(&self, frame: PhysFrame<Size2MiB>) {
         self.0
-            .get()
-            .map(|m| {
-                m.lock_irq()
-                    .deallocate_frame_inner(frame.start_address(), order_from_size(Size2MiB::SIZE))
-            })
-            .unwrap()
+            .lock_irq()
+            .deallocate_frame_inner(frame.start_address(), order_from_size(Size2MiB::SIZE))
     }
 }
 
@@ -188,7 +200,7 @@ pub fn pmm_alloc(order: BuddyOrdering) -> PhysAddr {
     debug_assert!(order <= BUDDY_SIZE.len());
 
     super::FRAME_ALLOCATOR
-        .alloc_zeroed(BUDDY_SIZE[order] as _)
+        .alloc(BUDDY_SIZE[order] as _)
         .unwrap()
 }
 
@@ -232,13 +244,13 @@ impl BootAlloc {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct BootAllocRef {
     inner: *const BootAlloc,
 }
 
 impl BootAllocRef {
-    fn new(inner: &BootAlloc) -> Self {
+    const fn new(inner: &BootAlloc) -> Self {
         Self {
             inner: inner as *const _,
         }
@@ -357,16 +369,16 @@ impl GlobalFrameAllocator {
             end,
 
             buddies: [
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
-                Bitmap::empty(bref.clone()),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
+                Bitmap::empty(bref),
             ],
             free: [0; 10],
         };
@@ -376,7 +388,7 @@ impl GlobalFrameAllocator {
         // Allocate the buddies using prealloc:
         for (i, bsize) in BUDDY_SIZE.iter().enumerate() {
             let chunk = size / bsize;
-            this.buddies[i] = Bitmap::new_in(bref.clone(), chunk as usize);
+            this.buddies[i] = Bitmap::new_in(bref, chunk as usize);
         }
 
         for region in bref.get_inner().memory_ranges.lock().iter() {
@@ -545,12 +557,7 @@ impl GlobalFrameAllocator {
 
 pub fn init_vm_frames() {
     VM_FRAMES.call_once(|| {
-        let frame_count = super::FRAME_ALLOCATOR
-            .0
-            .get()
-            .unwrap()
-            .lock_irq()
-            .frame_count();
+        let frame_count = super::FRAME_ALLOCATOR.0.lock_irq().frame_count();
 
         let mut frames = Vec::<VmFrame>::new();
         frames.resize_with(frame_count, VmFrame::new);

@@ -57,6 +57,7 @@ impl PageTableEntry {
     }
 
     /// Returns whether this entry is zero.
+    #[inline]
     pub const fn is_unused(&self) -> bool {
         self.entry == 0
     }

@@ -46,9 +46,13 @@ QEMU_PATH ?= $(shell dirname $(shell which qemu-system-x86_64))
 qemu: $(KERNEL_TARGET) $(USERLAND_TARGET)
 	${QEMU_PATH}/qemu-system-x86_64 -cdrom target/aero.iso -m 8G -serial stdio --boot d -s -enable-kvm -cpu host,+vmx -drive file=target/disk.img,if=none,id=NVME1,format=raw -device nvme,drive=NVME1,serial=nvme 
 
-# .PHONY: qemu_perf
-# qemu_perf:
-# 	${QEMU_PATH}/qemu-system-x86_64 -cdrom target/aero.iso -m 8G -serial stdio --boot d -s -cpu host,+vmx -drive file=target/disk.img,if=none,id=NVME1,format=raw -device nvme,drive=NVME1,serial=nvme -plugin './target/kern-profile.so,out=raw-data,delay=1'
+.PHONY: qemu_perf
+qemu_perf: $(KERNEL_TARGET) $(USERLAND_TARGET)
+	${QEMU_PATH}/qemu-system-x86_64 -cdrom target/aero.iso -m 8G -serial stdio --boot d -s -drive file=target/disk.img,if=none,id=NVME1,format=raw -device nvme,drive=NVME1,serial=nvme -plugin './target/kern-profile.so,out=raw-data,delay=30' -d plugin -cpu max
+
+.PHONY: qemu_p
+qemu_p:
+	${QEMU_PATH}/qemu-system-x86_64 -cdrom target/aero.iso -m 8G -serial stdio --boot d -s -drive file=target/disk.img,if=none,id=NVME1,format=raw -device nvme,drive=NVME1,serial=nvme -d plugin -cpu max -qmp unix:/tmp/qmp.sock,server,nowait
 
 .PHONY: doc
 doc:

@@ -60,7 +60,7 @@ impl<A: Allocator> Bitmap<A> {
     /// ```rust
     /// let bitmap = Bitmap::new();
     /// ```
-    pub fn empty(alloc: A) -> Self {
+    pub const fn empty(alloc: A) -> Self {
         Self {
             bitmap: Vec::new_in(alloc),
         }
