@@ -738,17 +738,10 @@ impl<'this> DebugRendy<'this> {
         let cols = (width - DEFAULT_MARGIN * 2) / FONT_WIDTH;
         let rows = (height - DEFAULT_MARGIN * 2) / FONT_HEIGHT;
 
-        let grid_size = rows * cols * core::mem::size_of::<Character>();
-        let grid = mem::alloc_boxed_buffer::<Character>(grid_size);
-
-        let queue_size = rows * cols * core::mem::size_of::<QueueCharacter>();
-        let queue = mem::alloc_boxed_buffer::<QueueCharacter>(queue_size);
-
-        let map_size = rows * cols * core::mem::size_of::<Option<*const QueueCharacter>>();
-        let map = mem::alloc_boxed_buffer::<Option<*mut QueueCharacter>>(map_size);
-
-        let bg_canvas_size = width * height * core::mem::size_of::<u32>();
-        let bg_canvas = mem::alloc_boxed_buffer::<u32>(bg_canvas_size);
+        let grid = mem::alloc_boxed_buffer::<Character>(rows * cols);
+        let queue = mem::alloc_boxed_buffer::<QueueCharacter>(rows * cols);
+        let map = mem::alloc_boxed_buffer::<Option<*mut QueueCharacter>>(rows * cols);
+        let bg_canvas = mem::alloc_boxed_buffer::<u32>(width * height);
 
         let mut this = Self {
             inner: Inner {
