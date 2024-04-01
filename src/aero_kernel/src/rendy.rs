@@ -18,6 +18,7 @@
 use core::fmt::Write;
 
 use core::ops::{Index, IndexMut};
+use core::ptr::NonNull;
 use core::time::Duration;
 use core::{fmt, u8};
 
@@ -294,7 +295,7 @@ pub struct Inner<'this> {
 
     queue: Box<[QueueCharacter]>,
     grid: Box<[Character]>,
-    map: Box<[Option<*mut QueueCharacter>]>,
+    map: Box<[Option<NonNull<QueueCharacter>>]>,
     bg_canvas: Box<[u32]>,
 
     queue_cursor: usize,
@@ -496,13 +497,13 @@ impl<'a> Inner<'a> {
             queue.x = x;
             queue.y = y;
 
-            self.map[i] = Some(queue as *mut _);
+            self.map[i] = Some(NonNull::from(queue));
         }
 
         let item = self.map[i];
 
         unsafe {
-            (*item.unwrap()).char = *char;
+            item.unwrap().as_mut().char = *char;
         }
     }
 
@@ -529,7 +530,7 @@ impl<'a> Inner<'a> {
 
         if self.map[i].is_some() {
             unsafe {
-                char = (*self.map[i].unwrap()).char;
+                char = self.map[i].unwrap().as_ref().char;
             }
         } else {
             char = self.grid[i];
@@ -541,7 +542,7 @@ impl<'a> Inner<'a> {
 
         if self.map[i].is_some() {
             unsafe {
-                self.grid[i] = (*self.map[i].unwrap()).char;
+                self.grid[i] = self.map[i].unwrap().as_ref().char;
             }
 
             self.map[i] = None;
@@ -686,7 +687,7 @@ impl<'a> Inner<'a> {
 
             if let Some(char) = queue {
                 unsafe {
-                    res = (*char).char;
+                    res = char.as_ref().char;
                 }
             } else {
                 res = self.grid[i];
@@ -740,7 +741,7 @@ impl<'this> DebugRendy<'this> {
 
         let grid = mem::alloc_boxed_buffer::<Character>(rows * cols);
         let queue = mem::alloc_boxed_buffer::<QueueCharacter>(rows * cols);
-        let map = mem::alloc_boxed_buffer::<Option<*mut QueueCharacter>>(rows * cols);
+        let map = mem::alloc_boxed_buffer::<Option<NonNull<QueueCharacter>>>(rows * cols);
         let bg_canvas = mem::alloc_boxed_buffer::<u32>(width * height);
 
         let mut this = Self {
