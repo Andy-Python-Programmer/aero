@@ -450,7 +450,7 @@ pub fn init() -> ApicType {
 
     log::debug!("apic: detected APIC (addr={address_phys:?}, type={apic_type:?})");
 
-    let address_virt = unsafe { PHYSICAL_MEMORY_OFFSET } + address_phys.as_u64();
+    let address_virt = address_phys.as_hhdm_virt();
     let mut local_apic = LocalApic::new(address_virt, apic_type);
 
     local_apic.init();

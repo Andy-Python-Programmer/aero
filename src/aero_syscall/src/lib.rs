@@ -32,6 +32,8 @@ pub mod time;
 
 pub type Result<T> = core::result::Result<T, SyscallError>;
 
+use core::time::Duration;
+
 use byte_endian::BigEndian;
 
 pub use crate::syscall::*;
@@ -270,6 +272,16 @@ impl Default for Utsname {
 pub struct TimeSpec {
     pub tv_sec: isize,
     pub tv_nsec: isize,
+}
+
+impl From<Duration> for TimeSpec {
+    #[inline]
+    fn from(value: Duration) -> Self {
+        TimeSpec {
+            tv_sec: value.as_secs() as isize,
+            tv_nsec: value.subsec_nanos() as isize,
+        }
+    }
 }
 
 #[repr(usize)]

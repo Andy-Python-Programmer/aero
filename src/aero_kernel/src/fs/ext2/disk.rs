@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use core::time::Duration;
+
 use bit_field::BitField;
 
 use crate::fs::inode;
@@ -199,10 +201,10 @@ impl From<FileType> for inode::FileType {
 pub struct INode {
     type_and_perm: u16,
     pub user_id: u16,
-    pub size_lower: u32,
-    pub last_access: u32,
+    size_lower: u32,
+    last_access: u32,
     pub creation_time: u32,
-    pub last_modification: u32,
+    last_modification: u32,
     pub deletion_time: u32,
     pub group_id: u16,
     pub hl_count: u16,
@@ -252,6 +254,21 @@ impl INode {
             0xc => FileType::Socket,
             _ => FileType::Unknown,
         }
+    }
+
+    #[inline]
+    pub fn last_access(&self) -> Duration {
+        Duration::from_secs(self.last_access as u64)
+    }
+
+    #[inline]
+    pub fn last_modification(&self) -> Duration {
+        Duration::from_secs(self.last_modification as u64)
+    }
+
+    #[inline]
+    pub fn creation_time(&self) -> Duration {
+        Duration::from_secs(self.creation_time as u64)
     }
 }
 

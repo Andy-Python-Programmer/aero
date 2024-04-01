@@ -380,7 +380,7 @@ impl INodeInterface for INode {
         let inode = self.inode.read();
 
         let filesystem = self.fs.upgrade().unwrap();
-        let filetype = self.metadata()?.file_type();
+        let filetype = inode.file_type().into();
 
         let mut mode = Mode::empty();
 
@@ -400,6 +400,10 @@ impl INodeInterface for INode {
             st_blksize: filesystem.superblock.block_size() as _,
             st_size: inode.size() as _,
             st_mode: mode,
+
+            st_atim: inode.last_access().into(),
+            st_mtim: inode.last_modification().into(),
+            st_ctim: inode.creation_time().into(),
 
             ..Default::default()
         })
