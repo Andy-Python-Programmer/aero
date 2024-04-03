@@ -5,7 +5,7 @@ set -ex
 rm -rf target/iso_root
 mkdir -pv target/iso_root/boot
 
-cp src/target/x86_64-unknown-none/release/aero_kernel target/iso_root/aero
+cp $1 target/iso_root/aero
 cp build-support/limine.cfg src/.cargo/term_background.bmp target/iso_root/
 
 # Install the limine binaries
