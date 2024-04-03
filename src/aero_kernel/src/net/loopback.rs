@@ -49,12 +49,12 @@ impl NetworkDriver for Loopback {
 }
 
 lazy_static::lazy_static! {
-    pub static ref LOOPBACK: Arc<NetworkDevice> = (|| {
+    pub static ref LOOPBACK: Arc<NetworkDevice> = {
         let device = Arc::new(NetworkDevice::new(Arc::new(Loopback)));
 
         device.set_ip(Ipv4Addr::LOOPBACK);
         device.set_subnet_mask(Ipv4Addr::new(255, 0, 0, 0));
 
         device
-    })();
+    };
 }

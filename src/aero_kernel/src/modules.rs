@@ -33,7 +33,7 @@ use core::mem::size_of;
 
 use crate::{drivers, extern_sym, fs};
 
-/// Inner helper function to make sure the function provided to the [module_init] macro
+/// Inner helper function to make sure the function provided to the [`module_init`] macro
 /// has a valid function signature. This function returns the passed module init function as
 /// a const void pointer.
 

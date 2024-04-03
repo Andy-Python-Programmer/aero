@@ -23,9 +23,7 @@ mod vmalloc;
 
 use ::alloc::boxed::Box;
 
-use crate::mem::paging::*;
-
-use self::paging::{active_level_4_table, FRAME_ALLOCATOR};
+use paging::*;
 
 /// Structure representing a *virtual* address space. The address space
 /// contains a reference of the page table allocated for this address space.

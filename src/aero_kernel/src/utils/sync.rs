@@ -266,14 +266,14 @@ impl<'a, T: ?Sized> core::ops::Deref for MutexGuard<'a, T> {
 
     #[inline]
     fn deref(&self) -> &T {
-        self.guard.deref()
+        &self.guard
     }
 }
 
 impl<'a, T: ?Sized> core::ops::DerefMut for MutexGuard<'a, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut T {
-        self.guard.deref_mut()
+        &mut self.guard
     }
 }
 

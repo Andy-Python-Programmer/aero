@@ -286,7 +286,7 @@ pub trait INodeInterface: Send + Sync {
 }
 
 /// Structure representing the crucial, characteristics of an inode. The metadata
-/// of an inode can be retrieved by invoking the [INodeInterface::metadata] function.
+/// of an inode can be retrieved by invoking the [`INodeInterface::metadata`] function.
 #[derive(Debug, Copy, Clone)]
 pub struct Metadata {
     pub id: usize,
@@ -345,7 +345,7 @@ pub enum FileContents {
     /// and is backed by a static byte buffer
     StaticContent(&'static [u8]),
 
-    /// If the file type of the inode is [FileType::Device], in that case this variant
+    /// If the file type of the inode is [`FileType::Device`], in that case this variant
     /// is used.
     Device(Arc<DevINode>),
 

@@ -679,7 +679,9 @@ impl PciHeader {
 
         // bit 0:true  - the BAR is in memory
         // bit 0:false - the BAR is in I/O
-        if !bar.get_bit(0) {
+        if bar.get_bit(0) {
+            Some(Bar::IO(bar.get_bits(2..32)))
+        } else {
             let prefetchable = bar.get_bit(3);
             let address = bar.get_bits(4..32) << 4;
 
@@ -727,8 +729,6 @@ impl PciHeader {
 
                 _ => None,
             }
-        } else {
-            Some(Bar::IO(bar.get_bits(2..32)))
         }
     }
 

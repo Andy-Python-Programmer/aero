@@ -49,7 +49,7 @@ impl PageTableEntry {
     // page table entry counter.
     const COUNTER_MASK: u64 = 0x7ff0_0000_0000_0000;
     const COUNTER_SHIFT: u64 = 52;
-    const FLAGS_MASK: u64 = 0x80000000000001ff;
+    const FLAGS_MASK: u64 = 0x8000_0000_0000_01ff;
 
     /// Creates an unused page table entry.
     pub const fn new() -> Self {

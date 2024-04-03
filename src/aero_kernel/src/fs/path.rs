@@ -138,7 +138,7 @@ impl PathBuf {
             self.as_mut_vec().truncate(0);
         }
 
-        let need_sep = self.0.chars().last().map(|c| c != '/').unwrap_or(false);
+        let need_sep = self.0.chars().last().is_some_and(|c| c != '/');
 
         // TODO: verbatim pahts need . and .. removed
 

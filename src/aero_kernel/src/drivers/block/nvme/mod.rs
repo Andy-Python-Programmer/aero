@@ -21,7 +21,7 @@ mod queue;
 use core::mem::MaybeUninit;
 
 use command::*;
-use queue::*;
+use queue::QueuePair;
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -281,8 +281,8 @@ impl<'a> Controller<'a> {
         let bar0 = header.get_bar(0).ok_or(Error::UnknownBar)?;
 
         // All NVMe registers are accessible via BAR0.
-        let (registers_addr, bar_size) = match bar0 {
-            Bar::Memory64 { address, size, .. } => (PhysAddr::new(address), size),
+        let registers_addr = match bar0 {
+            Bar::Memory64 { address, .. } => PhysAddr::new(address),
             _ => return Err(Error::UnknownBar),
         };
 
@@ -538,7 +538,7 @@ impl PciDeviceHandle for Handler<'static> {
 
         for device_name in devices {
             let device = BlockDevice::new(device_name, controller.clone());
-            install_block_device(device).expect("nvme: failed to install the block device")
+            install_block_device(device).expect("nvme: failed to install the block device");
         }
 
         self.controllers.lock().push(controller);
@@ -551,7 +551,7 @@ fn irq_handler(_stack: &mut InterruptStack) {
 
 fn nvme_init() {
     // Register the NVMe device handler.
-    register_device_driver(Handler::new())
+    register_device_driver(Handler::new());
 }
 
 crate::module_init!(nvme_init, ModuleType::Block);

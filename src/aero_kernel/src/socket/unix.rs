@@ -28,7 +28,7 @@ use crate::arch::user_copy::UserRef;
 use crate::fs;
 use crate::fs::cache::DirCacheItem;
 use crate::fs::file_table::FileHandle;
-use crate::fs::inode::*;
+use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollFlags, PollTable};
 
 use crate::fs::{FileSystemError, Path};
 
@@ -342,7 +342,7 @@ impl INodeInterface for UnixSocket {
 
     fn accept(&self, address: Option<(VirtAddr, &mut u32)>) -> fs::Result<Arc<UnixSocket>> {
         let mut inner = self.wq.block_on(&self.inner, |e| {
-            e.state.queue().map(|x| !x.is_empty()).unwrap_or(false)
+            e.state.queue().is_some_and(|x| !x.is_empty())
         })?;
 
         let queue = inner
@@ -352,7 +352,7 @@ impl INodeInterface for UnixSocket {
 
         let peer = queue.pop().expect("UnixSocket::accept(): backlog is empty");
         let sock = Self::new();
-        sock.inner.lock_irq().address = inner.address.clone();
+        sock.inner.lock_irq().address.clone_from(&inner.address);
 
         {
             let mut sock_inner = sock.inner.lock_irq();

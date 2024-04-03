@@ -29,7 +29,6 @@ use crate::utils::sync::{Mutex, MutexGuard};
 use super::{io, time};
 
 use crate::acpi::madt;
-use crate::PHYSICAL_MEMORY_OFFSET;
 
 const APIC_SPURIOUS_VECTOR: u32 = 0xFF;
 

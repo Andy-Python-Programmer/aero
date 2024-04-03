@@ -327,7 +327,7 @@ pub struct MMapFile {
 impl MMapFile {
     #[inline]
     fn new(file: DirCacheItem, offset: usize, size: usize) -> Self {
-        Self { file, offset, size }
+        Self { offset, file, size }
     }
 }
 
@@ -689,7 +689,7 @@ impl VmProtected {
                     map.handle_pf_private_anon(&mut offset_table, reason, accessed_address)
                 }
 
-                (true, false) | (false, false) => {
+                (true | false, false) => {
                     map.handle_pf_file(&mut offset_table, reason, accessed_address)
                 }
 
@@ -751,10 +751,10 @@ impl VmProtected {
 
                 if hole as usize >= size {
                     return Some((start, cursor));
-                } else {
-                    // The hole is too small
-                    cursor.move_next();
                 }
+
+                // The hole is too small
+                cursor.move_next();
             } else {
                 let hole = map_start.as_u64() - address.as_u64();
 
@@ -939,7 +939,7 @@ impl VmProtected {
 
         let load_offset = VirtAddr::new(
             if header.pt2.type_().as_type() == header::Type::SharedObject {
-                0x40000000u64
+                0x4000_0000_u64
             } else {
                 0u64
             },

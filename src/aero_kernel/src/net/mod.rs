@@ -67,7 +67,6 @@ impl NetworkDevice {
             // What should the default be? Also this should really be handled inside dhcpd.
             default_gateway: Ipv4Addr::new(10, 0, 2, 2),
             subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
-            ..Default::default()
         };
 
         Self {

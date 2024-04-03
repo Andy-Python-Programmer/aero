@@ -122,7 +122,7 @@ impl<S: AsRef<[u8]> + AsMut<[u8]>> RingBuffer<S> {
     /// Appends the provided byte to the ring buffer.
     pub fn append_byte(&mut self, byte: u8) {
         self.storage.as_mut()[self.position] = byte;
-        self.position = (self.position + 1) % self.storage.as_mut().len()
+        self.position = (self.position + 1) % self.storage.as_mut().len();
     }
 }
 

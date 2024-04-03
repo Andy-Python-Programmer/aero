@@ -78,10 +78,7 @@ impl TcpSocket {
     pub fn on_packet(&self, tcp: &Tcp, options: TcpOptions, payload: &[u8]) {
         if let Some(socket) = self.tcp.lock_irq().as_mut() {
             // Ignore any invalid TCP options.
-            let options = options
-                .iter()
-                .filter_map(|option| option.ok())
-                .collect::<Vec<_>>();
+            let options = options.iter().filter_map(Result::ok).collect::<Vec<_>>();
 
             socket.on_packet(tcp, &options, payload);
             self.wq.notify_all();
@@ -96,8 +93,7 @@ impl TcpSocket {
     pub fn non_blocking(&self) -> bool {
         self.handle
             .get()
-            .map(|handle| handle.flags().contains(OpenFlags::O_NONBLOCK))
-            .unwrap_or_default()
+            .is_some_and(|handle| handle.flags().contains(OpenFlags::O_NONBLOCK))
     }
 
     pub fn do_recv(&self, buf: &mut [u8]) -> Result<usize, FileSystemError> {
@@ -113,8 +109,7 @@ impl TcpSocket {
 
                 let mut socket = self.wq.block_on(&self.tcp, |tcp| {
                     tcp.as_ref()
-                        .map(|socket| !socket.recv_queue.is_empty())
-                        .unwrap_or(true)
+                        .map_or(true, |socket| !socket.recv_queue.is_empty())
                 })?;
 
                 if let Some(socket) = socket.as_mut() {

@@ -97,19 +97,19 @@ impl VirtAddr {
     /// Converts the address to a raw pointer.
     #[cfg(target_pointer_width = "64")]
     #[inline]
-    pub fn as_ptr<T>(self) -> *const T {
+    pub const fn as_ptr<T>(self) -> *const T {
         self.as_u64() as *const T
     }
 
     /// Converts the address to a mutable raw pointer.
     #[cfg(target_pointer_width = "64")]
     #[inline]
-    pub fn as_mut_ptr<T>(self) -> *mut T {
-        self.as_ptr::<T>() as *mut T
+    pub const fn as_mut_ptr<T>(self) -> *mut T {
+        self.as_ptr::<T>().cast_mut()
     }
 
     #[inline]
-    pub fn is_zero(self) -> bool {
+    pub const fn is_zero(self) -> bool {
         self.0 == 0
     }
 
@@ -360,12 +360,6 @@ impl Step for VirtAddr {
     }
 }
 
-/// A passed `u64` was not a valid physical address.
-///
-/// This means that bits 52 to 64 were not all null.
-#[derive(Debug)]
-pub struct PhysAddrNotValid(u64);
-
 impl PhysAddr {
     /// Creates a new physical address.
     ///
@@ -570,7 +564,7 @@ pub fn align_down(addr: u64, align: u64) -> u64 {
 /// Panics if the alignment is not a power of two. Without the `const_fn`
 /// feature, the panic message will be "index out of bounds".
 #[inline]
-pub fn align_up(addr: u64, align: u64) -> u64 {
+pub const fn align_up(addr: u64, align: u64) -> u64 {
     let align_mask = align - 1;
 
     if addr & align_mask == 0 {
@@ -581,7 +575,7 @@ pub fn align_up(addr: u64, align: u64) -> u64 {
 }
 
 #[inline]
-pub fn is_aligned(addr: u64, align: u64) -> bool {
+pub const fn is_aligned(addr: u64, align: u64) -> bool {
     align_up(addr, align) == addr
 }
 

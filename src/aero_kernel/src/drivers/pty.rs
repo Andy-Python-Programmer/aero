@@ -26,7 +26,7 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::{Once, RwLock};
 
-use uapi::pty::*;
+use uapi::pty::TIOCGPTN;
 
 use crate::arch::user_copy::UserRef;
 use crate::fs::cache::*;
@@ -107,8 +107,6 @@ struct Master {
 
 impl Master {
     pub fn new() -> Self {
-        use aero_syscall::*;
-
         Self {
             id: PTY_ID.fetch_add(1, Ordering::SeqCst),
             wq: WaitQueue::new(),
@@ -191,8 +189,8 @@ impl TerminalDevice for Slave {
     }
 
     fn detach(&self, task: Arc<Task>) {
-        use aero_syscall::signal::*;
-        use aero_syscall::*;
+        use aero_syscall::signal::SIGINT;
+        use aero_syscall::VINTR;
 
         if !self.master.discipline.termios.lock().is_cooked() {
             return;

@@ -47,7 +47,7 @@ bitflags::bitflags! {
 pub struct SerialPort(u16);
 
 impl SerialPort {
-    #[inline(always)]
+    #[inline]
     pub const fn new(port: u16) -> Self {
         Self(port)
     }
@@ -90,7 +90,7 @@ impl SerialPort {
 
     fn wait_for_line_status(&self, line_status: LineStatus) {
         while !self.line_status().contains(line_status) {
-            core::hint::spin_loop()
+            core::hint::spin_loop();
         }
     }
 

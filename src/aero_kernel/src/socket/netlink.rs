@@ -33,7 +33,6 @@ use alloc::vec::Vec;
 use crabnet::network::Ipv4Addr;
 
 use crate::fs;
-use crate::fs::cache::DirCacheImpl;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags, PollTable};
 use crate::utils::sync::{Mutex, WaitQueue};
 
@@ -61,7 +60,7 @@ impl NetlinkBuilder {
         Self { buffer: Vec::new() }
     }
 
-    fn header(&mut self, header: netlink::nlmsghdr) {
+    fn header(&mut self, header: &netlink::nlmsghdr) {
         self.buffer.extend_from_slice(unsafe {
             core::slice::from_raw_parts(
                 &header as *const _ as *const u8,
@@ -72,7 +71,7 @@ impl NetlinkBuilder {
         self.buffer_align();
     }
 
-    fn message(&mut self, message: netlink::rtmsg) {
+    fn message(&mut self, message: &netlink::rtmsg) {
         self.buffer.extend_from_slice(unsafe {
             core::slice::from_raw_parts(
                 &message as *const _ as *const u8,
@@ -154,7 +153,7 @@ impl NetLinkSocket {
     fn send_route_packet(&self, header: &netlink::nlmsghdr) {
         let mut builder = NetlinkBuilder::new();
 
-        builder.header(netlink::nlmsghdr {
+        builder.header(&netlink::nlmsghdr {
             nlmsg_type: MessageType::RtmNewRoute,
             nlmsg_flags: MessageFlags::MULTI,
             nlmsg_seq: header.nlmsg_seq,
@@ -162,7 +161,7 @@ impl NetLinkSocket {
             nlmsg_len: 0,
         });
 
-        builder.message(netlink::rtmsg {
+        builder.message(&netlink::rtmsg {
             rtm_family: AF_INET as u8,
             rtm_dst_len: 0, // FIXME
             rtm_src_len: 0,
@@ -259,13 +258,11 @@ impl INodeInterface for NetLinkSocket {
 
                 bytes_copied += copy;
                 iovecs.remove(index);
+            } else if flags.contains(socket::MessageFlags::TRUNC) && bytes_copied == 0 {
+                message_hdr.flags = socket::MessageFlags::TRUNC.bits() as i32;
+                return Ok(data.len());
             } else {
-                if flags.contains(socket::MessageFlags::TRUNC) && bytes_copied == 0 {
-                    message_hdr.flags = socket::MessageFlags::TRUNC.bits() as i32;
-                    return Ok(data.len());
-                } else {
-                    unimplemented!()
-                }
+                unimplemented!()
             }
         }
 

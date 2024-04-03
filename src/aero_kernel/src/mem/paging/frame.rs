@@ -418,9 +418,9 @@ impl GlobalFrameAllocator {
 
             if mask & address.as_u64() != 0 {
                 continue;
-            } else {
-                return order;
             }
+
+            return order;
         }
 
         0

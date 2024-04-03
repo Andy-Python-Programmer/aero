@@ -23,7 +23,7 @@ use core::mem::MaybeUninit;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 
-const GPT_TABLE_SIGNATURE: u64 = 0x5452415020494645;
+const GPT_TABLE_SIGNATURE: u64 = 0x5452_4150_2049_4645;
 
 #[repr(C)]
 pub struct GptTableHeader {
