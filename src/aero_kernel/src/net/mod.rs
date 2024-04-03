@@ -153,7 +153,7 @@ fn packet_processor_thread() {
                         let options = parser.next::<TcpOptions>();
                         let payload = &parser.payload()[..size];
 
-                        tcp::on_packet(tcp, options, payload)
+                        tcp::on_packet(tcp, &options, payload)
                     }
                 }
             }

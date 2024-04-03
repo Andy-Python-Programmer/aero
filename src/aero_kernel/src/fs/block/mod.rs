@@ -398,7 +398,7 @@ pub fn launch() -> Result<()> {
     }
 
     for block in blocks_copy {
-        if let Some(gpt) = Gpt::new(block.clone()) {
+        if let Some(gpt) = Gpt::new(&block) {
             log::info!("block: found GPT on {}!", block.name());
 
             for (i, entry) in gpt

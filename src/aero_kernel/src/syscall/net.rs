@@ -337,7 +337,7 @@ pub fn socket_pair(
     let a = create_socket(domain, type_and_flags, protocol)?;
     let b = create_socket(domain, type_and_flags, protocol)?;
 
-    UnixSocket::connect_pair(a.clone(), b.clone())?;
+    UnixSocket::connect_pair(&a, &b)?;
 
     fds[0] = current_task.file_table.open_file(a, sockfd_flags)? as i32;
     fds[1] = current_task.file_table.open_file(b, sockfd_flags)? as i32;

@@ -21,7 +21,6 @@ use super::BlockDevice;
 use core::mem::MaybeUninit;
 
 use alloc::boxed::Box;
-use alloc::sync::Arc;
 
 const GPT_TABLE_SIGNATURE: u64 = 0x5452_4150_2049_4645;
 
@@ -121,7 +120,7 @@ pub struct Gpt {
 }
 
 impl Gpt {
-    pub fn new(controller: Arc<BlockDevice>) -> Option<Self> {
+    pub fn new(controller: &BlockDevice) -> Option<Self> {
         // Get the GPT header.
         let mut header = Box::<GptTableHeader>::new_uninit();
 

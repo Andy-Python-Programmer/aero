@@ -209,7 +209,7 @@ impl UnixSocket {
         })
     }
 
-    pub fn connect_pair(a: DirCacheItem, b: DirCacheItem) -> fs::Result<()> {
+    pub fn connect_pair(a: &DirCacheItem, b: &DirCacheItem) -> fs::Result<()> {
         let a = a
             .inode()
             .downcast_arc::<UnixSocket>()

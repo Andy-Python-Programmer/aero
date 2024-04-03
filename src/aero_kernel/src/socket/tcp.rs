@@ -75,7 +75,7 @@ impl TcpSocket {
         })
     }
 
-    pub fn on_packet(&self, tcp: &Tcp, options: TcpOptions, payload: &[u8]) {
+    pub fn on_packet(&self, tcp: &Tcp, options: &TcpOptions, payload: &[u8]) {
         if let Some(socket) = self.tcp.lock_irq().as_mut() {
             // Ignore any invalid TCP options.
             let options = options.iter().filter_map(Result::ok).collect::<Vec<_>>();
