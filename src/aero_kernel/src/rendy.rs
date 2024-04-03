@@ -371,13 +371,9 @@ impl<'a> Inner<'a> {
             let mut img_x = ratio * xstart;
 
             for x in xstart..xend {
-                let img_pixel = unsafe {
-                    (image.image.as_ptr())
-                        .add(fixedp6_to_int(img_x) * col_size + off)
-                        .cast::<u32>()
-                };
-
-                let i = blender(x, y, unsafe { *img_pixel });
+                let offset = fixedp6_to_int(img_x) * col_size + off;
+                let img_pixel: [u8; 4] = unsafe { *image.image.as_ptr().add(offset).cast() };
+                let i = blender(x, y, u32::from_le_bytes(img_pixel));
 
                 unsafe {
                     *self.buffer.as_mut_ptr().add(fb_off + x) = i as u32;
