@@ -41,7 +41,6 @@
     maybe_uninit_write_slice, // https://github.com/rust-lang/rust/issues/79995
     slice_ptr_get, // https://github.com/rust-lang/rust/issues/74265
     maybe_uninit_as_bytes, // https://github.com/rust-lang/rust/issues/93092
-    pointer_is_aligned, // https://github.com/rust-lang/rust/issues/96284
     const_trait_impl, // https://github.com/rust-lang/rust/issues/67792
     int_roundings, // https://github.com/rust-lang/rust/issues/88581
     const_ptr_is_null, // https://github.com/rust-lang/rust/issues/74939
