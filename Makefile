@@ -1,3 +1,11 @@
+profile ?= release
+
+ifneq ($(filter $(profile), dev debug), )
+	KERNEL_TARGET := src/target/x86_64-unknown-none/debug/aero_kernel
+else
+	KERNEL_TARGET := src/target/x86_64-unknown-none/release/aero_kernel
+endif
+
 jinx:
 	if [ ! -f "target/jinx" ]; then \
 		curl -Lo target/jinx https://github.com/mintsuki/jinx/raw/30e7d5487bff67a66dfba332113157a08a324820/jinx; \
@@ -15,7 +23,6 @@ distro: jinx
 SOURCE_DIR := src
 USERLAND_DIR := userland
 USERLAND_TARGET := builds/userland/target/init
-KERNEL_TARGET := src/target/x86_64-unknown-none/release/aero_kernel
 
 .PHONY: clean
 clean:
@@ -26,7 +33,7 @@ check:
 	cd src && cargo check
 
 $(KERNEL_TARGET): $(shell find $(SOURCE_DIR) -type f -not -path '$(SOURCE_DIR)/target/*')
-	cd src && cargo build --package aero_kernel --release
+	cd src && cargo build --package aero_kernel --profile $(profile)
 	./build-support/mkiso.sh
 
 $(USERLAND_TARGET): $(shell find $(USERLAND_DIR) -type f -not -path '$(USERLAND_DIR)/target/*')
