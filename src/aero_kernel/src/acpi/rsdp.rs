@@ -114,7 +114,7 @@ impl Rsdt<u32> {
         for i in 0..self.entries_count() {
             let item_addr_virt = unsafe {
                 let ptr = header_data_address.add(i);
-                PhysAddr::new(*ptr as u64).as_hhdm_virt()
+                PhysAddr::new(ptr.read_unaligned() as u64).as_hhdm_virt()
             };
             let item = unsafe { Sdt::from_address(item_addr_virt) };
 
