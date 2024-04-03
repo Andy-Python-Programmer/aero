@@ -43,7 +43,7 @@ use super::cache::{DirCacheItem, INodeCacheItem};
 use super::path::PathBuf;
 use super::{cache, FileSystemError, Path};
 
-use super::inode::{DirEntry, INodeInterface, Metadata, PollFlags, PollTable};
+use super::inode::{self, INodeInterface, Metadata, PollFlags, PollTable};
 use super::FileSystem;
 
 pub struct INode {
@@ -301,6 +301,7 @@ impl INode {
         entry.entry_size = block_size as _;
         entry.inode = inode.id as _;
         entry.file_type = file_type;
+        // JSDJFKDSJFHJK CHECK THIS this is ub
         entry.set_name(name);
     }
 
@@ -314,7 +315,7 @@ impl INode {
             return Err(FileSystemError::NotDirectory);
         }
 
-        if DirEntryIter::new(self.sref()).any(|(e, _)| e == name) {
+        if DirEntryIter::new(self.sref()).any(|entry| entry.name() == name) {
             return Err(FileSystemError::EntryExists);
         }
 
@@ -349,7 +350,7 @@ impl INode {
         entry: &disk::DirEntry,
     ) -> Option<DirCacheItem> {
         let inode = self.fs.upgrade()?.find_inode(entry.inode as usize, None)?;
-        Some(DirEntry::new(parent, inode, name.to_string()))
+        Some(inode::DirEntry::new(parent, inode, name.to_string()))
     }
 
     pub fn sref(&self) -> Arc<INode> {
@@ -410,19 +411,19 @@ impl INodeInterface for INode {
     }
 
     fn dirent(&self, parent: DirCacheItem, index: usize) -> super::Result<Option<DirCacheItem>> {
-        if let Some((name, entry)) = DirEntryIter::new(self.sref()).nth(index) {
-            Ok(self.make_dirent(parent, &name, &entry))
+        if let Some(entry) = DirEntryIter::new(self.sref()).nth(index) {
+            Ok(self.make_dirent(parent, entry.name(), entry))
         } else {
             Ok(None)
         }
     }
 
     fn lookup(&self, parent: DirCacheItem, name: &str) -> super::Result<DirCacheItem> {
-        let (name, entry) = DirEntryIter::new(self.sref())
-            .find(|(ename, _)| ename == name)
+        let entry = DirEntryIter::new(self.sref())
+            .find(|entry| entry.name() == name)
             .ok_or(FileSystemError::EntryNotFound)?;
 
-        Ok(self.make_dirent(parent, &name, &entry).unwrap())
+        Ok(self.make_dirent(parent, entry.name(), entry).unwrap())
     }
 
     fn read_at(&self, offset: usize, usr_buffer: &mut [u8]) -> super::Result<usize> {
@@ -456,7 +457,7 @@ impl INodeInterface for INode {
     fn rename(&self, old: DirCacheItem, dest: &str) -> super::Result<()> {
         assert!(self.metadata()?.is_directory());
 
-        if DirEntryIter::new(self.sref()).any(|(name, _)| name == dest) {
+        if DirEntryIter::new(self.sref()).any(|entry| entry.name() == dest) {
             return Err(FileSystemError::EntryExists);
         }
 
@@ -504,7 +505,7 @@ impl INodeInterface for INode {
         }
 
         let inode = self.make_inode(name, FileType::File, None)?;
-        Ok(DirEntry::new(parent, inode, name.to_string()))
+        Ok(inode::DirEntry::new(parent, inode, name.to_string()))
     }
 
     fn mkdir(&self, name: &str) -> super::Result<INodeCacheItem> {
@@ -645,46 +646,66 @@ impl INodeInterface for INode {
     }
 }
 
-pub struct DirEntryIter {
+pub struct DirEntryIter<'a> {
     inode: Arc<INode>,
     offset: usize,
+
+    current_block: Box<[MaybeUninit<u8>]>,
+    block_size: usize,
+    _phantom: core::marker::PhantomData<&'a disk::DirEntry>,
 }
 
-impl DirEntryIter {
+impl<'a> DirEntryIter<'a> {
     pub fn new(inode: Arc<INode>) -> Self {
-        Self { inode, offset: 0 }
+        let block_size = inode.fs.upgrade().unwrap().superblock.block_size();
+        let buf = Box::<[u8]>::new_uninit_slice(block_size);
+
+        Self {
+            inode,
+            offset: 0,
+            current_block: buf,
+            block_size,
+
+            _phantom: core::marker::PhantomData,
+        }
     }
 }
 
-impl Iterator for DirEntryIter {
-    type Item = (String, block::DirtyRef<disk::DirEntry>);
+impl<'a> Iterator for DirEntryIter<'a> {
+    type Item = &'a mut disk::DirEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // Read 1 block at a time.
+        //
+        // XXX: A directory entry cannot span between multiple data blocks.
         let file_size = self.inode.inode.read().size();
 
         if self.offset + core::mem::size_of::<disk::DirEntry>() > file_size {
             return None;
         }
 
-        let entry = unsafe { self.inode.read_mut::<disk::DirEntry>(self.offset) };
-        if entry.inode == 0 {
+        let block_offset = self.offset % self.block_size;
+        if block_offset == 0 {
+            self.inode
+                .read(self.offset, &mut self.current_block)
+                .unwrap();
+        }
+
+        // SAFETY: We have initialized the current block above.
+        let entry = unsafe {
+            &mut *self
+                .current_block
+                .as_mut_ptr()
+                .add(block_offset)
+                .cast::<disk::DirEntry>()
+        };
+
+        if !entry.is_used() {
             return None;
         }
 
-        let mut name = Box::<[u8]>::new_uninit_slice(entry.name_size as usize);
-        self.inode
-            .read(
-                self.offset + core::mem::size_of::<disk::DirEntry>(),
-                MaybeUninit::slice_as_bytes_mut(&mut name),
-            )
-            .ok()?;
-
-        // SAFETY: We have initialized the name above.
-        let name = unsafe { name.assume_init() };
-        let name = unsafe { core::str::from_utf8_unchecked(&name) };
-
         self.offset += entry.entry_size as usize;
-        Some((name.to_string(), entry))
+        Some(entry)
     }
 }
 
@@ -747,6 +768,6 @@ impl FileSystem for Ext2 {
             .find_inode(Ext2::ROOT_INODE_ID, None)
             .expect("ext2: invalid filesystem (root inode not found)");
 
-        DirEntry::new_root(inode, String::from("/"))
+        inode::DirEntry::new_root(inode, String::from("/"))
     }
 }

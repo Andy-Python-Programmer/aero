@@ -162,6 +162,16 @@ impl DirEntry {
         let name_bytes = unsafe { self.name.as_mut_slice(name.len()) };
         name_bytes.copy_from_slice(name.as_bytes());
     }
+
+    pub fn name(&self) -> &str {
+        unsafe { core::str::from_utf8_unchecked(self.name.as_slice(self.name_size as usize)) }
+    }
+
+    #[inline]
+    pub fn is_used(&self) -> bool {
+        // value of 0 indicates that the entry is not used
+        self.inode != 0
+    }
 }
 
 #[repr(u8)]

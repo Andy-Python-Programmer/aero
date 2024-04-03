@@ -21,8 +21,8 @@ use core::alloc::Layout;
 use core::any::Any;
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
-use core::mem;
 use core::ptr::Unique;
+use core::{mem, ptr};
 
 use crate::mem::paging::{align_down, ReadErr, VirtAddr};
 
@@ -244,11 +244,21 @@ pub struct IncompleteArrayField<T>(PhantomData<T>, [T; 0]);
 impl<T> IncompleteArrayField<T> {
     #[inline]
     pub unsafe fn as_mut_ptr(&mut self) -> *mut T {
-        self as *mut _ as *mut T
+        ptr::from_mut(self).cast::<T>()
+    }
+
+    #[inline]
+    pub unsafe fn as_ptr(&self) -> *const T {
+        ptr::from_ref(self).cast::<T>()
     }
 
     #[inline]
     pub unsafe fn as_mut_slice(&mut self, len: usize) -> &mut [T] {
         core::slice::from_raw_parts_mut(self.as_mut_ptr(), len)
+    }
+
+    #[inline]
+    pub unsafe fn as_slice(&self, len: usize) -> &[T] {
+        core::slice::from_raw_parts(self.as_ptr(), len)
     }
 }
