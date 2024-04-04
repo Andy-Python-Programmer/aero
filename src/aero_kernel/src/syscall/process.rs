@@ -267,6 +267,7 @@ pub fn gethostname(buffer: &mut [u8]) -> Result<usize> {
         Err(SyscallError::ENAMETOOLONG)
     } else {
         buffer[0..bytes.len()].copy_from_slice(bytes);
+        buffer[bytes.len()] = b'\0';
 
         Ok(bytes.len())
     }
