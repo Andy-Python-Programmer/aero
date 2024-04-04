@@ -28,7 +28,7 @@ use crate::fs::eventfd::EventFd;
 use crate::fs::file_table::{DuplicateHint, FileHandle};
 use crate::fs::inode::{DirEntry, PollTable};
 use crate::fs::pipe::Pipe;
-use crate::fs::{self, lookup_path, LookupMode};
+use crate::fs::{self, LookupMode};
 use crate::syscall::SysArg;
 use crate::userland::scheduler;
 
@@ -353,14 +353,19 @@ pub fn unlink(_fd: usize, _path: &Path, _flags: usize) -> Result<usize, SyscallE
 }
 
 #[syscall]
-pub fn access(fd: usize, path: &Path, _mode: usize, _flags: usize) -> Result<usize, SyscallError> {
-    if fd as isize == aero_syscall::AT_FDCWD {
-        lookup_path(path)?;
-        Ok(0x00)
-    } else {
-        // TODO: Implement atfd access
-        unimplemented!()
-    }
+pub fn access(fd: usize, path: &Path, _mode: usize, flags: usize) -> Result<usize, SyscallError> {
+    let at = match fd as isize {
+        AT_FDCWD if !path.is_absolute() => scheduler::current_thread().cwd_dirent(),
+        _ if !path.is_absolute() => FileDescriptor::from_usize(fd).handle()?.inode.clone(),
+        _ => fs::root_dir().clone(),
+    };
+
+    let flags = AtFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
+
+    let resolve_last = !flags.contains(AtFlags::SYMLINK_NOFOLLOW);
+    let _ = fs::lookup_path_with(at, path, LookupMode::None, resolve_last)?;
+
+    Ok(0)
 }
 
 const SETFL_MASK: OpenFlags = OpenFlags::from_bits_truncate(
