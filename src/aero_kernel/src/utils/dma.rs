@@ -32,7 +32,7 @@ unsafe impl Allocator for DmaAllocator {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let size_bytes = layout.size();
 
-        let phys = FRAME_ALLOCATOR.alloc_zeroed(size_bytes).ok_or(AllocError)?;
+        let phys = FRAME_ALLOCATOR.alloc(size_bytes).ok_or(AllocError)?;
         let virt = phys.as_hhdm_virt();
 
         // SAFETY: The frame is aligned and non-null.
@@ -77,6 +77,10 @@ impl<T> Dma<T> {
 
     pub fn new_uninit_slice(len: usize) -> Dma<[MaybeUninit<T>]> {
         Dma(DmaBuffer::new_uninit_slice_in(len, DmaAllocator))
+    }
+
+    pub fn new_zeroed_slice(len: usize) -> Dma<[MaybeUninit<T>]> {
+        Dma(DmaBuffer::new_zeroed_slice_in(len, DmaAllocator))
     }
 }
 

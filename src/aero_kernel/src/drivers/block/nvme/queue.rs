@@ -1,4 +1,5 @@
 use core::cell::UnsafeCell;
+use core::ptr;
 use core::sync::atomic::{AtomicU16, Ordering};
 
 use crate::mem::paging::PhysAddr;
@@ -56,7 +57,7 @@ impl<'bell, T: QueueType> Queue<'bell, T> {
 
         Ok(Self {
             doorbell,
-            queue: unsafe { Dma::new_uninit_slice(size).assume_init() },
+            queue: unsafe { Dma::new_zeroed_slice(size).assume_init() },
             index: 0,
             phase: true,
         })
@@ -139,7 +140,7 @@ impl<'a> QueuePair<'a> {
         unsafe {
             // SAFETY: The offset of the `command_id` field is the same, regardless of the command
             // type.
-            command.common.command_id = self.cid;
+            *ptr::addr_of_mut!(command).cast::<u16>().add(1) = self.cid;
         }
 
         self.cid += 1;
