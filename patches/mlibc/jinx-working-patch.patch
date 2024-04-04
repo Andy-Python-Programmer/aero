@@ -102,11 +102,32 @@ index 0000000..1b61d5a
 +	ret
 +.section .note.GNU-stack,"",%progbits
 diff --git mlibc-clean/sysdeps/aero/generic/filesystem.cpp mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
-index 33a11f4..fe5773d 100644
+index 33a11f4..987dc8e 100644
 --- mlibc-clean/sysdeps/aero/generic/filesystem.cpp
 +++ mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
-@@ -102,31 +102,24 @@ int sys_access(const char *filename, int mode) {
+@@ -89,44 +89,38 @@ int sys_close(int fd) {
+     return 0;
+ }
  
+-int sys_access(const char *filename, int mode) {
+-    auto result =
+-        syscall(SYS_ACCESS, AT_FDCWD, filename, strlen(filename), mode, 0);
+-
+-    if (result < 0) {
+-        return -result;
+-    }
+-
++int sys_faccessat(int dirfd, const char *pathname, int mode, int flags) {
++    auto ret = syscall(SYS_ACCESS, dirfd, pathname, strlen(pathname), mode, flags);
++    if(int e = sc_error(ret); e)
++        return e;
+     return 0;
+ }
+ 
++int sys_access(const char *filename, int mode) {
++    return sys_faccessat(AT_FDCWD, filename, mode, 0);
++}
++
  int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
               struct stat *statbuf) {
 -    auto result = 0;
@@ -118,7 +139,7 @@ index 33a11f4..fe5773d 100644
 +        fd = AT_FDCWD;
          break;
 -    }
--
+ 
 -    case fsfd_target::fd: {
 -        result = syscall(SYS_FSTAT, fd, statbuf);
 +    case fsfd_target::fd:
@@ -149,7 +170,7 @@ index 33a11f4..fe5773d 100644
      return 0;
  }
  
-@@ -212,6 +205,17 @@ int sys_unlinkat(int fd, const char *path, int flags) {
+@@ -212,6 +206,17 @@ int sys_unlinkat(int fd, const char *path, int flags) {
  	return 0;
  }
  
