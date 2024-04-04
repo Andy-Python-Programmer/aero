@@ -15,11 +15,13 @@ int main() {
   setenv("TERM", "linux", 1);
   setenv("USER", "root", 1);
   setenv("PATH", "/usr/local/bin:/usr/bin", 1);
+  setenv("HOME", "/home/aero", 1);
 
   int pid = fork();
 
   if (!pid) {
-    char *args[] = {"/usr/bin/bash", "-l", NULL};
+    char *args[] = {"/usr/bin/bash", "--login", NULL};
+    chdir(getenv("HOME"));
     execvp("/usr/bin/bash", args);
   } else {
     int status;

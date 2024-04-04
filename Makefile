@@ -51,7 +51,16 @@ QEMU_PATH ?= $(shell dirname $(shell which qemu-system-x86_64))
 
 .PHONY: qemu
 qemu: $(KERNEL_TARGET) $(USERLAND_TARGET)
-	${QEMU_PATH}/qemu-system-x86_64 -cdrom target/aero.iso -m 8G -serial stdio --boot d -s -enable-kvm -cpu host,+vmx -drive file=target/disk.img,if=none,id=NVME1,format=raw -device nvme,drive=NVME1,serial=nvme 
+	${QEMU_PATH}/qemu-system-x86_64 \
+		-cdrom target/aero.iso \
+		-m 8G \
+		-serial stdio \
+		--boot d -s \
+		-enable-kvm \
+		-cpu host,+vmx \
+		-drive file=target/disk.img,if=none,id=NVME1,format=raw \
+		-device nvme,drive=NVME1,serial=nvme \
+		${QEMU_FLAGS} 
 
 # "qemu_perf" options:
 # 	delay (default: 30) - the amount of microseconds between each sample.
