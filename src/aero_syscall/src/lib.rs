@@ -32,6 +32,7 @@ pub mod time;
 
 pub type Result<T> = core::result::Result<T, SyscallError>;
 
+use core::ffi;
 use core::time::Duration;
 
 use byte_endian::BigEndian;
@@ -65,33 +66,33 @@ bitflags::bitflags! {
 
 bitflags::bitflags! {
     pub struct OpenFlags: usize {
-        // reserve 3 bits for the access mode
-        const O_ACCMODE =  0x0007;
-        const O_EXEC    =  1;
-        const O_RDONLY  =  2;
-        const O_RDWR    =  3;
-        const O_SEARCH  =  4;
-        const O_WRONLY  =  5;
+        const O_PATH      = 0o10000000;
 
-        // these flags get their own bit
-        const O_APPEND    = 0x000008;
-        const O_CREAT     = 0x000010;
-        const O_DIRECTORY = 0x000020;
-        const O_EXCL      = 0x000040;
-        const O_NOCTTY    = 0x000080;
-        const O_NOFOLLOW  = 0x000100;
-        const O_TRUNC     = 0x000200;
-        const O_NONBLOCK  = 0x000400;
-        const O_DSYNC     = 0x000800;
-        const O_RSYNC     = 0x001000;
-        const O_SYNC      = 0x002000;
-        const O_CLOEXEC   = 0x004000;
-        const O_PATH      = 0x008000;
-        const O_LARGEFILE = 0x010000;
-        const O_NOATIME   = 0x020000;
-        const O_ASYNC     = 0x040000;
-        const O_TMPFILE   = 0x080000;
-        const O_DIRECT    = 0x100000;
+        const O_ACCMODE =  (0o3 | Self::O_PATH.bits());
+        const O_RDONLY  =  0o0;
+        const O_WRONLY  =  0o1;
+        const O_RDWR    =  0o2;
+
+        const O_SEARCH  =  Self::O_PATH.bits();
+        const O_EXEC    =  Self::O_PATH.bits();
+
+        const O_CREAT     = 0o100;
+        const O_EXCL      = 0o200;
+        const O_NOCTTY    = 0o400;
+        const O_TRUNC     = 0o1000;
+        const O_APPEND    = 0o2000;
+        const O_NONBLOCK  = 0o4000;
+        const O_DSYNC     = 0o10000;
+        const O_ASYNC     = 0o20000;
+        const O_DIRECT    = 0o40000;
+        const O_DIRECTORY = 0o200000;
+        const O_NOFOLLOW  = 0o400000;
+        const O_CLOEXEC   = 0o2000000;
+        const O_SYNC      = 0o4010000;
+        const O_RSYNC     = 0o4010000;
+        const O_LARGEFILE = 0o100000;
+        const O_NOATIME   = 0o1000000;
+        const O_TMPFILE   = 0o20000000;
     }
 }
 
@@ -672,7 +673,7 @@ pub const AF_UNSPEC: u32 = PF_UNSPEC;
 pub const AF_NETLINK: u32 = PF_NETLINK;
 pub const AF_BRIDGE: u32 = PF_BRIDGE;
 
-// sysdeps/aero/include/abi-bits/stat.h
+// mlibc/abis/linux/stat.h
 bitflags::bitflags! {
     #[derive(Default)]
     pub struct Mode: u32 {
@@ -707,37 +708,43 @@ bitflags::bitflags! {
     }
 }
 
-// sysdeps/aero/include/abi-bits/stat.h
+// mlibc/abis/linux/stat.h
+#[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[derive(Debug, Default)]
 pub struct Stat {
     pub st_dev: u64,
     pub st_ino: u64,
-    pub st_mode: Mode,
     pub st_nlink: u32,
+    pub st_mode: Mode,
     pub st_uid: u32,
     pub st_gid: u32,
+    // FIXME: make this private
+    pub __pad0: ffi::c_uint,
     pub st_rdev: u64,
     pub st_size: i64,
+    pub st_blksize: u64,
+    pub st_blocks: u64,
     pub st_atim: TimeSpec,
     pub st_mtim: TimeSpec,
     pub st_ctim: TimeSpec,
-    pub st_blksize: u64,
-    pub st_blocks: u64,
+    // FIXME: make this private
+    pub __unused: [ffi::c_long; 3],
 }
 
 bitflags::bitflags! {
+    // mlibc/abis/linux/fcntl.h
     #[repr(transparent)]
     pub struct AtFlags: usize {
-        /// Allow empty relative pathname.
-        const EMPTY_PATH = 1;
-        /// Follow symbolic links.
-        const SYMLINK_FOLLOW = 2;
         /// Do not follow symbolic links.
-        const SYMLINK_NOFOLLOW = 4;
+        const SYMLINK_NOFOLLOW = 0x100;
         /// Remove directory instead of unlinking file.
-        const REMOVEDIR = 8;
+        const REMOVEDIR = 0x200;
+        /// Follow symbolic links.
+        const SYMLINK_FOLLOW = 0x400;
         /// Test access permitted for effective IDs, not real IDs.
-        const EACCESS = 512;
+        const EACCESS = 0x200;
+        /// Allow empty relative pathname.
+        const EMPTY_PATH = 0x1000;
     }
 }

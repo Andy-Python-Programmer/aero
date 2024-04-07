@@ -28,6 +28,10 @@ USERLAND_TARGET := builds/userland/target/init
 clean:
 	rm -rf $(SOURCE_DIR)/target
 
+.PHONY: deep-clean
+deep-clean: clean
+	rm -rf target sysroot sources pkgs host-pkgs host-builds builds
+
 .PHONY: check
 check:	
 	cd $(SOURCE_DIR) && cargo check

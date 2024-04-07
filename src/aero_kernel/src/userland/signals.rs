@@ -147,7 +147,7 @@ pub struct SignalEntry {
 impl SignalEntry {
     /// Create a new `SignalEntry` with the provided `sigaction` and `sigreturn`.
     pub fn from_sigaction(
-        sigaction: SigAction,
+        sigaction: &SigAction,
         sigreturn: usize,
     ) -> Result<SignalEntry, SyscallError> {
         Ok(SignalEntry {

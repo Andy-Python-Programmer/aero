@@ -1,8 +1,8 @@
 name=mlibc
-version=0dd4dbdd377dc776e6f7d698281ac6781d652922
+version=882fdd99b503ee1b567ccacb75cf4d7b7c9395e1
 revision=1
-tarball_url="https://github.com/aero-os/mlibc/archive/${version}.tar.gz"
-tarball_blake2b="a4886c2d6a85c781293db9139c0773469c3877e5db2a76f1a735e2cc04ee78fef5b8fc1693b724f9fc8879322464ddf48eac8c018ebfd4f8aa983141013d64e3"
+tarball_url="https://github.com/Andy-Python-Programmer/mlibc/archive/${version}.tar.gz"
+tarball_blake2b="3dcb34f3e2e2d8b1cbdd5d87e722fe03b23d9f460affd82ea888bcd6dabe96a475a2153f477360b78efcad421f83c534e308e6057c319c78c3bc666a03dbd6a7"
 imagedeps="meson ninja"
 hostdeps="gcc pkg-config libgcc-binaries"
 builddeps="cxxshim frigg linux-headers"

@@ -104,17 +104,41 @@ pub const SYS_GETSOCKOPT: usize = 80;
 pub const SYS_SYMLINK_AT: usize = 81;
 
 // constants for fcntl()'s command argument:
-pub const F_DUPFD: usize = 1;
-pub const F_DUPFD_CLOEXEC: usize = 2;
-pub const F_GETFD: usize = 3;
-pub const F_SETFD: usize = 4;
-pub const F_GETFL: usize = 5;
-pub const F_SETFL: usize = 6;
-pub const F_GETLK: usize = 7;
-pub const F_SETLK: usize = 8;
-pub const F_SETLKW: usize = 9;
-pub const F_GETOWN: usize = 10;
-pub const F_SETOWN: usize = 11;
+// mlibc/abis/linux/fcntl.h
+pub const F_DUPFD: usize = 0;
+pub const F_GETFD: usize = 1;
+pub const F_SETFD: usize = 2;
+pub const F_GETFL: usize = 3;
+pub const F_SETFL: usize = 4;
+
+pub const F_SETOWN: usize = 8;
+pub const F_GETOWN: usize = 9;
+pub const F_SETSIG: usize = 10;
+pub const F_GETSIG: usize = 11;
+
+pub const F_GETLK: usize = 5;
+pub const F_SETLK: usize = 6;
+pub const F_SETLKW: usize = 7;
+
+pub const F_SETOWN_EX: usize = 15;
+pub const F_GETOWN_EX: usize = 16;
+
+pub const F_GETOWNER_UIDS: usize = 17;
+
+pub const F_DUPFD_CLOEXEC: usize = 1030;
+pub const F_ADD_SEALS: usize = 1033;
+pub const F_GET_SEALS: usize = 1034;
+
+pub const F_SEAL_SEAL: usize = 0x0001;
+pub const F_SEAL_SHRINK: usize = 0x0002;
+pub const F_SEAL_GROW: usize = 0x0004;
+pub const F_SEAL_WRITE: usize = 0x0008;
+
+pub const F_RDLCK: usize = 0;
+pub const F_WRLCK: usize = 1;
+pub const F_UNLCK: usize = 2;
+
+pub const FD_CLOEXEC: usize = 1;
 
 // constants for fcntl()'s additional argument of F_GETFD and F_SETFD:
 bitflags::bitflags! {

@@ -330,7 +330,7 @@ pub fn sigaction(
     };
 
     let entry = if let Some(new) = new {
-        Some(SignalEntry::from_sigaction(*new, sigreturn)?)
+        Some(SignalEntry::from_sigaction(&*new, sigreturn)?)
     } else {
         None
     };

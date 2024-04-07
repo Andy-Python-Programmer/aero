@@ -1,111 +1,25 @@
-diff --git mlibc-clean/options/ansi/generic/time-stubs.cpp mlibc-workdir/options/ansi/generic/time-stubs.cpp
-index 887a7d3..7fd46bc 100644
---- mlibc-clean/options/ansi/generic/time-stubs.cpp
-+++ mlibc-workdir/options/ansi/generic/time-stubs.cpp
-@@ -242,6 +242,7 @@ size_t strftime(char *__restrict dest, size_t max_size,
- 			c++;
- 			break;
- 		}
-+		case 'l':
- 		case 'I': {
- 			int hour = tm->tm_hour;
- 			if(!hour)
-diff --git mlibc-clean/options/posix/generic/posix_stdlib.cpp mlibc-workdir/options/posix/generic/posix_stdlib.cpp
-index 7128e16..14e1dd7 100644
---- mlibc-clean/options/posix/generic/posix_stdlib.cpp
-+++ mlibc-workdir/options/posix/generic/posix_stdlib.cpp
-@@ -139,23 +139,34 @@ char *setstate(char *state) {
- // ----------------------------------------------------------------------------
+diff --git mlibc-clean/options/glibc/generic/execinfo.cpp mlibc-workdir/options/glibc/generic/execinfo.cpp
+index 3474615..d06f130 100644
+--- mlibc-clean/options/glibc/generic/execinfo.cpp
++++ mlibc-workdir/options/glibc/generic/execinfo.cpp
+@@ -1,9 +1,10 @@
+ #include <execinfo.h>
+ #include <bits/ensure.h>
++#include <mlibc/charset.hpp>
  
- int mkostemp(char *pattern, int flags) {
-+	return mkostemps(pattern, 0, flags);
-+}
-+
-+int mkstemp(char *path) {
-+	return mkostemp(path, 0);
-+}
-+
-+int mkostemps(char *pattern, int suffixlen, int flags) {
- 	flags &= ~O_WRONLY;
- 	auto n = strlen(pattern);
- 	__ensure(n >= 6);
--	if(n < 6) {
-+
-+	if(n < 6 || suffixlen > (n - 6)) {
- 		errno = EINVAL;
- 		return -1;
- 	}
--	for(size_t i = 0; i < 6; i++) {
--		if(pattern[n - 6 + i] == 'X')
--			continue;
-+
-+	if (memcmp(pattern + (n - suffixlen - 6), "XXXXXX", 6)) {
- 		errno = EINVAL;
- 		return -1;
- 	}
- 
- 	// TODO: Do an exponential search.
- 	for(size_t i = 0; i < 999999; i++) {
--		__ensure(sprintf(pattern + (n - 6), "%06zu", i) == 6);
-+		int x = i;
-+		for (int j = 0; j < 6; j++, x >>= 5) {
-+			pattern[(n - suffixlen - 6) + j] = 'A' + (x & 15) + (x & 16) * 2;
-+		}
- //		mlibc::infoLogger() << "mlibc: mkstemp candidate is "
- //				<< (const char *)pattern << frg::endlog;
- 
-@@ -172,16 +183,6 @@ int mkostemp(char *pattern, int flags) {
- 	return -1;
+ int backtrace(void **, int) {
+-	__ensure(!"Not implemented");
+-	__builtin_unreachable();
++	mlibc::infoLogger() << "backtrace: Not implemented" << frg::endlog;	
++	return 0;
  }
  
--int mkstemp(char *path) {
--	return mkostemp(path, 0);
--}
--
--int mkostemps(char *pattern, int suffixlen, int flags) {
--	(void)suffixlen;
--	mlibc::infoLogger() << "mlibc: mkostemps ignores suffixlen!" << frg::endlog;
--	return mkostemp(pattern, flags);
--}
--
- int mkstemps(char *pattern, int suffixlen) {
- 	return mkostemps(pattern, suffixlen, 0);
- }
-diff --git mlibc-workdir/sysdeps/aero/crt-x86_64/crti.S mlibc-workdir/sysdeps/aero/crt-x86_64/crti.S
-new file mode 100644
-index 0000000..f04679c
---- /dev/null
-+++ mlibc-workdir/sysdeps/aero/crt-x86_64/crti.S
-@@ -0,0 +1,10 @@
-+.section .init
-+.global _init
-+_init:
-+	push %rax
-+
-+.section .fini
-+.global _fini
-+_fini:
-+	push %rax
-+.section .note.GNU-stack,"",%progbits
-diff --git mlibc-workdir/sysdeps/aero/crt-x86_64/crtn.S mlibc-workdir/sysdeps/aero/crt-x86_64/crtn.S
-new file mode 100644
-index 0000000..1b61d5a
---- /dev/null
-+++ mlibc-workdir/sysdeps/aero/crt-x86_64/crtn.S
-@@ -0,0 +1,8 @@
-+.section .init
-+	pop %rax
-+	ret
-+
-+.section .fini
-+	pop %rax
-+	ret
-+.section .note.GNU-stack,"",%progbits
+ char **backtrace_symbols(void *const *, int) {
 diff --git mlibc-clean/sysdeps/aero/generic/filesystem.cpp mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
-index 33a11f4..987dc8e 100644
+index b9a812b..95c49b9 100644
 --- mlibc-clean/sysdeps/aero/generic/filesystem.cpp
 +++ mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
-@@ -89,44 +89,38 @@ int sys_close(int fd) {
+@@ -89,23 +89,24 @@ int sys_close(int fd) {
      return 0;
  }
  
@@ -130,105 +44,49 @@ index 33a11f4..987dc8e 100644
 +
  int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
               struct stat *statbuf) {
--    auto result = 0;
--
      switch (fsfdt) {
--    case fsfd_target::path: {
--        result = syscall(SYS_STAT, path, strlen(path), statbuf);
-+    case fsfd_target::path:
-+        fd = AT_FDCWD;
+     case fsfd_target::path:
+         fd = AT_FDCWD;
          break;
--    }
- 
--    case fsfd_target::fd: {
--        result = syscall(SYS_FSTAT, fd, statbuf);
-+    case fsfd_target::fd:
-+        flags |= AT_EMPTY_PATH;
-+    
-+    case fsfd_target::fd_path:
-         break;
--    }
- 
--    default: {
--        mlibc::infoLogger()
--            << "mlibc warning: sys_stat: unsupported fsfd target"
--            << frg::endlog;
--        return EINVAL;
--    }
--    }
--
--    if (result < 0) {
--        return -result;
-+    default:
-+        __ensure(!"Invalid fsfd_target");
-+        __builtin_unreachable();
-     }
- 
-+    auto ret = syscall(SYS_FSTAT, fd, path, strlen(path), flags, statbuf);
-+    if(int e = sc_error(ret); e)
-+        return e;
-     return 0;
- }
- 
-@@ -212,6 +206,17 @@ int sys_unlinkat(int fd, const char *path, int flags) {
- 	return 0;
- }
- 
-+int sys_symlink(const char *target_path, const char *link_path) {
-+	return sys_symlinkat(target_path, AT_FDCWD, link_path);
-+}
 +
-+int sys_symlinkat(const char *target_path, int dirfd, const char *link_path) {
-+    auto ret = syscall(SYS_SYMLINK_AT, dirfd, target_path, strlen(target_path), link_path, strlen(link_path));
+     case fsfd_target::fd:
+         flags |= AT_EMPTY_PATH;
+     
+@@ -199,14 +200,14 @@ int sys_rmdir(const char *path) {
+ }
+ 
+ int sys_unlinkat(int fd, const char *path, int flags) {
+-	auto ret = syscall(SYS_UNLINK, fd, path, strlen(path), flags);
+-	if (int e = sc_error(ret); e)
+-		return e;
+-	return 0;
++    auto ret = syscall(SYS_UNLINK, fd, path, strlen(path), flags);
 +    if (int e = sc_error(ret); e)
 +        return e;
 +    return 0;
-+}
-+
- struct aero_dir_entry {
-     size_t inode;
-     size_t offset;
-diff --git mlibc-clean/sysdeps/aero/include/aero/syscall.h mlibc-workdir/sysdeps/aero/include/aero/syscall.h
-index 39c5b65..49533cc 100644
---- mlibc-clean/sysdeps/aero/include/aero/syscall.h
-+++ mlibc-workdir/sysdeps/aero/include/aero/syscall.h
-@@ -82,6 +82,10 @@
- #define SYS_SOCK_SHUTDOWN 75
- #define SYS_GETPEERNAME 76
- #define SYS_GETSOCKNAME 77
-+#define SYS_DEBUG 78
-+#define SYS_SETSOCKOPT 79
-+#define SYS_GETSOCKOPT 80
-+#define SYS_SYMLINK_AT 81
+ }
  
- // Invalid syscall used to trigger a log error in the kernel (as a hint)
- // so, that we can implement the syscall in the kernel.
-diff --git mlibc-clean/sysdeps/aero/meson.build mlibc-workdir/sysdeps/aero/meson.build
-index 9d10701..3d2a883 100644
---- mlibc-clean/sysdeps/aero/meson.build
-+++ mlibc-workdir/sysdeps/aero/meson.build
-@@ -75,6 +75,24 @@ if not headers_only
- 		install: true,
- 		install_dir: get_option('libdir')
- 	)
-+
-+	custom_target('crti',
-+		build_by_default: true,
-+		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
-+		input: 'crt-x86_64/crti.S',
-+		output: 'crti.o',
-+		install: true,
-+		install_dir: get_option('libdir')
-+	)
-+
-+	custom_target('crtn',
-+		build_by_default: true,
-+		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
-+		input: 'crt-x86_64/crtn.S',
-+		output: 'crtn.o',
-+		install: true,
-+		install_dir: get_option('libdir')
-+	)
- endif
+ int sys_symlink(const char *target_path, const char *link_path) {
+-	return sys_symlinkat(target_path, AT_FDCWD, link_path);
++    return sys_symlinkat(target_path, AT_FDCWD, link_path);
+ }
  
- if host_machine.cpu_family() == 'x86_64'
+ int sys_symlinkat(const char *target_path, int dirfd, const char *link_path) {
+diff --git mlibc-clean/sysdeps/aero/include/abi-bits/fcntl.h mlibc-workdir/sysdeps/aero/include/abi-bits/fcntl.h
+index ea5323a..463e2c9 120000
+--- mlibc-clean/sysdeps/aero/include/abi-bits/fcntl.h
++++ mlibc-workdir/sysdeps/aero/include/abi-bits/fcntl.h
+@@ -1 +1 @@
+-../../../../abis/mlibc/fcntl.h
+\ No newline at end of file
++../../../../abis/linux/fcntl.h
+\ No newline at end of file
+diff --git mlibc-clean/sysdeps/aero/include/abi-bits/stat.h mlibc-workdir/sysdeps/aero/include/abi-bits/stat.h
+index 82642c3..1f63b41 120000
+--- mlibc-clean/sysdeps/aero/include/abi-bits/stat.h
++++ mlibc-workdir/sysdeps/aero/include/abi-bits/stat.h
+@@ -1 +1 @@
+-../../../../abis/mlibc/stat.h
+\ No newline at end of file
++../../../../abis/linux/stat.h
+\ No newline at end of file

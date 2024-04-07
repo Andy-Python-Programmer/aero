@@ -110,18 +110,18 @@ impl From<SignalHandler> for u64 {
 #[derive(Copy, Clone, Debug)]
 pub struct SigAction {
     pub sa_handler: u64,
-    pub sa_mask: u64,
-    pub sa_flags: u32,
+    pub sa_flags: u64,
     pub sa_sigaction: u64,
+    pub sa_mask: u64,
 }
 
 impl SigAction {
     pub fn new(handler: SignalHandler, mask: u64, flags: SignalFlags) -> SigAction {
         SigAction {
             sa_handler: handler.into(),
-            sa_mask: mask,
             sa_flags: flags.bits(),
             sa_sigaction: 0,
+            sa_mask: mask,
         }
     }
 }
@@ -129,7 +129,7 @@ impl SigAction {
 bitflags::bitflags! {
     // mlibc/abis/linux/signal.h
     #[derive(Default)]
-    pub struct SignalFlags: u32 {
+    pub struct SignalFlags: u64 {
         const SA_NOCLDSTOP = 1;
         const SA_NOCLDWAIT = 2;
         const SA_SIGINFO = 4;
