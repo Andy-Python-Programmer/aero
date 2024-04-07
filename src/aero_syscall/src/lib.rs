@@ -746,5 +746,12 @@ bitflags::bitflags! {
         const EACCESS = 0x200;
         /// Allow empty relative pathname.
         const EMPTY_PATH = 0x1000;
+
+        const STATX_FORCE_SYNC = 0x2000;
+        const STATX_DONT_SYNC = 0x4000;
+        const STATX_SYNC_TYPE = 0x6000;
+
+        const STATX_SYNC_AS_STAT = 0x0000;
+        const NO_AUTOMOUNT = 0x800;
     }
 }
