@@ -7,8 +7,9 @@ else
 endif
 
 jinx:
+	mkdir -p target
 	if [ ! -f "target/jinx" ]; then \
-		curl -Lo target/jinx https://github.com/mintsuki/jinx/raw/30e7d5487bff67a66dfba332113157a08a324820/jinx; \
+		curl -Lo target/jinx https://github.com/mintsuki/jinx/raw/353c468765dd9404bacba8e5626d0830528e4300/jinx; \
 		chmod +x target/jinx; \
 	fi
 
