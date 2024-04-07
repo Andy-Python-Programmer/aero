@@ -1,0 +1,30 @@
+name=xfe
+version=1.46
+revision=1
+tarball_url="https://downloads.sourceforge.net/sourceforge/xfe/xfe-${version}.tar.xz"
+tarball_blake2b="d7b85e5280d1d9d6db3737f8ac14f4248ae4e99b52d843b51468299bdf71581003b21d0fb2be9949c7189481ed5f3fe88bbd146d2185c17dea3a4785edb876b7"
+source_hostdeps="autoconf automake libtool pkg-config intltool"
+source_deps="xorg-util-macros gettext"
+imagedeps="perl-xml-parser"
+hostdeps="gcc autoconf automake libtool pkg-config intltool"
+deps="core-libs fox libx11 libxft libxcb xcb-util"
+
+regenerate() {
+    autotools_recursive_regen
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+
+        configure_script_path=./configure \
+    autotools_configure \
+       --with-x
+
+    make -j${parallelism}
+}
+
+package() {
+    make DESTDIR=${dest_dir} install
+
+    post_package_strip
+}

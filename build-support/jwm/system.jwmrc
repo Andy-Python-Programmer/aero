@@ -5,6 +5,7 @@
     <!-- The root menu. -->
     <RootMenu onroot="12">
         <Program icon="utilities-terminal" label="Terminal">xterm</Program>
+        <Program icon="system-file-manager" label="File Manager">xfe</Program>
         <Menu icon="folder" label="Applications">
             <Program icon="sound" label="Audacious">audacious</Program>
             <Program icon="calc" label="Calculator">xcalc</Program>

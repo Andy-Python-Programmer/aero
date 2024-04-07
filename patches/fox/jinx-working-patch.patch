@@ -1,0 +1,25 @@
+diff --git fox-clean/configure.ac fox-workdir/configure.ac
+index ce0f651..189b5e8 100644
+--- fox-clean/configure.ac
++++ fox-workdir/configure.ac
+@@ -9,6 +9,8 @@ AC_INIT(fox,[fox_version],jeroen@fox-toolkit.com)
+ AC_CONFIG_SRCDIR([include/fx.h])
+ AM_INIT_AUTOMAKE([foreign])
+ 
++PKG_PROG_PKG_CONFIG
++
+ # Set version
+ FOX_MAJOR_VERSION=fox_major
+ FOX_MINOR_VERSION=fox_minor
+@@ -190,8 +192,8 @@ AC_MSG_CHECKING(for Xft support)
+ AC_ARG_WITH(xft,[  --with-xft              enable Xft support])
+ AC_MSG_RESULT([$with_xft])
+ if test "x$with_xft" != "xno"; then
+-XFTCFLAGS="-I/usr/include/freetype2"
+-XFTLIBS="-lfreetype -lfontconfig -lXft"
++XFTCFLAGS="$($PKG_CONFIG --cflags freetype2 fontconfig xft)"
++XFTLIBS="$($PKG_CONFIG --libs freetype2 fontconfig xft)"
+ saved_cppflags="${CXXFLAGS}"
+ CXXFLAGS="${CXXFLAGS} -DHAVE_XFT_H=1 $XFTCFLAGS"
+ X_BASE_LIBS="${X_BASE_LIBS} $XFTLIBS"
+

@@ -1,0 +1,124 @@
+diff --git xfe-clean/configure.ac xfe-workdir/configure.ac
+index 0fa6dc9..ecaa037 100644
+--- xfe-clean/configure.ac
++++ xfe-workdir/configure.ac
+@@ -69,9 +69,9 @@ AC_FUNC_GETGROUPS
+ AC_FUNC_GETMNTENT
+ AC_FUNC_LSTAT
+ AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
+-AC_FUNC_MALLOC
++#AC_FUNC_MALLOC
+ AC_FUNC_MKTIME
+-AC_FUNC_REALLOC
++#AC_FUNC_REALLOC
+ AC_FUNC_STAT
+ AC_FUNC_UTIME_NULL
+ AC_CHECK_FUNCS([endgrent endpwent gethostname getmntent gettimeofday lchown memset mkdir mkfifo putenv rmdir setlocale sqrt strchr strdup strerror strstr strtol strtoul strtoull utime])
+@@ -87,25 +87,19 @@ AC_CHECK_LIB(FOX-1.6,fxfindfox,,AC_MSG_ERROR("libFOX-1.6 not found"))
+ 
+ # Check for FOX 1.6 header files
+ AC_LANG([C++])
+-AC_CHECK_HEADER(fox-1.6/fx.h,,AC_MSG_ERROR("fox-1.6/fx.h not found"))
++#AC_CHECK_HEADER(fox-1.6/fx.h,,AC_MSG_ERROR("fox-1.6/fx.h not found"))
+ 
+ 
+-# Check if fox-config exists
+-AC_CHECK_PROGS(FOX_CONFIG,fox-config-1.6 fox-1.6-config fox-config)
+-if test no"$FOX_CONFIG" = no ; then
+-	AC_MSG_ERROR("fox-config not found")               
+-fi
+-
+ 
+ # Include flags for the FOX library
+-FOXCFLAGS=`$FOX_CONFIG --cflags`
++FOXCFLAGS=`$PKG_CONFIG --cflags fox`
+ CXXFLAGS="${CXXFLAGS} $FOXCFLAGS"
+ 
+ 
+ # Check if FOX was compiled with xft support
+-TEST_XFT=`$FOX_CONFIG --libs | grep Xft`
++TEST_XFT=yes
+ if test "x$TEST_XFT" != "x" ; then
+-	
++
+ 	echo "checking whether FOX was compiled with Xft support... yes"
+ 
+ 	# Check for FreeType2
+@@ -135,7 +129,7 @@ if test "x$TEST_XFT" != "x" ; then
+ 			CXXFLAGS="$CXXFLAGS -DHAVE_XFT_H"
+ 		], AC_MSG_ERROR("Xft not found"))
+ 	fi
+-	AC_CHECK_HEADER(X11/Xft/Xft.h,,AC_MSG_ERROR("Xft.h not found"))
++	#AC_CHECK_HEADER(X11/Xft/Xft.h,,AC_MSG_ERROR("Xft.h not found"))
+ 
+ else
+ 	echo "checking whether FOX was compiled with Xft support... no"
+@@ -149,28 +143,28 @@ else
+ 	echo "   sudo make install"
+ 	echo "============================================================================================="
+ 	echo ""
+-	AC_MSG_ERROR("missing Xft support in FOX")               
++	AC_MSG_ERROR("missing Xft support in FOX")
+ fi
+ 
+ 
+ # Check for Xlib headers
+-AC_CHECK_HEADER(X11/Xlib.h,,AC_MSG_ERROR("Xlib.h not found"))
++#AC_CHECK_HEADER(X11/Xlib.h,,AC_MSG_ERROR("Xlib.h not found"))
+ 
+ # Check for XRandR support
+ AC_MSG_CHECKING(for xrandr extension)
+ AC_ARG_WITH(xrandr,[  --with-xrandr           compile with XRandR support])
+ AC_MSG_RESULT([$with_xrandr])
+-if test "x$with_xrandr" != "xno"; then
+-AC_CHECK_HEADERS(X11/extensions/Xrandr.h,CXXFLAGS="${CXXFLAGS} -DHAVE_XRANDR_H=1"; LIBS="${LIBS} -lXrandr")
+-fi
++#if test "x$with_xrandr" != "xno"; then
++#AC_CHECK_HEADERS(X11/extensions/Xrandr.h,CXXFLAGS="${CXXFLAGS} -DHAVE_XRANDR_H=1"; LIBS="${LIBS} -lXrandr")
++#fi
+ 
+ # Check for libPNG
+ AC_CHECK_LIB(png, png_read_info,,AC_MSG_ERROR("libPNG not found"))
+-AC_CHECK_HEADER(png.h,,AC_MSG_ERROR("png.h not found"))
++#AC_CHECK_HEADER(png.h,,AC_MSG_ERROR("png.h not found"))
+ 
+ # Check for fontconfig
+ AC_CHECK_LIB(fontconfig, FcInit,, AC_MSG_ERROR("fontconfig not found"))
+-AC_CHECK_HEADER(fontconfig/fontconfig.h,,AC_MSG_ERROR("fontconfig.h not found"))
++#AC_CHECK_HEADER(fontconfig/fontconfig.h,,AC_MSG_ERROR("fontconfig.h not found"))
+ 
+ # Check for startup notification support
+ AC_MSG_CHECKING(for startup notification)
+diff --git xfe-clean/src/ArchInputDialog.cpp xfe-workdir/src/ArchInputDialog.cpp
+index f0314bb..4b6e170 100644
+--- xfe-clean/src/ArchInputDialog.cpp
++++ xfe-workdir/src/ArchInputDialog.cpp
+@@ -1,5 +1,6 @@
+ // Input dialog for the add to archive command
+ 
++#include <stdlib.h>
+ #include "config.h"
+ #include "i18n.h"
+ 
+diff --git xfe-clean/src/Bookmarks.cpp xfe-workdir/src/Bookmarks.cpp
+index 241ef32..113c503 100644
+--- xfe-clean/src/Bookmarks.cpp
++++ xfe-workdir/src/Bookmarks.cpp
+@@ -1,5 +1,6 @@
+ // Bookmarks list. Taken from the FOX library (FXRecentFiles) and slightly modified.
+ 
++#include <stdlib.h>
+ #include "config.h"
+ #include "i18n.h"
+ 
+diff --git xfe-clean/src/BrowseInputDialog.cpp xfe-workdir/src/BrowseInputDialog.cpp
+index 4c64e68..ff0c1ad 100644
+--- xfe-clean/src/BrowseInputDialog.cpp
++++ xfe-workdir/src/BrowseInputDialog.cpp
+@@ -1,5 +1,6 @@
+ // Input dialog with file browse icon
+ 
++#include <stdlib.h>
+ #include "config.h"
+ #include "i18n.h"
+ 

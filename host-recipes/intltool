@@ -1,0 +1,20 @@
+name=intltool
+from_source=intltool
+revision=1
+hostdeps="autoconf automake libtool pkg-config"
+imagedeps="gcc perl-xml-parser"
+
+build() {
+    #cp -rp "${source_dir}"/. ./
+    ${source_dir}/configure \
+        --prefix="${prefix}"
+
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+        strip_command=strip \
+    post_package_strip
+}
