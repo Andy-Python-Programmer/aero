@@ -20,6 +20,7 @@ build() {
         -DLLVM_DEFAULT_TARGET_TRIPLE=${OS_TRIPLET} \
         -DLLVM_HOST_TRIPLE=${OS_TRIPLET} \
         -DLLVM_ENABLE_TERMINFO=OFF \
+        -DLLVM_ENABLE_PROJECTS="llvm;clang;clang-tools-extra" \
         -Wno-dev \
         ${source_dir}/llvm
 
