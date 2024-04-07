@@ -1,8 +1,8 @@
 name=mlibc
-version=882fdd99b503ee1b567ccacb75cf4d7b7c9395e1
+version=71d6b326e31b88796088690278ce31bb8e9fc994
 revision=1
-tarball_url="https://github.com/Andy-Python-Programmer/mlibc/archive/${version}.tar.gz"
-tarball_blake2b="3dcb34f3e2e2d8b1cbdd5d87e722fe03b23d9f460affd82ea888bcd6dabe96a475a2153f477360b78efcad421f83c534e308e6057c319c78c3bc666a03dbd6a7"
+tarball_url="https://github.com/managarm/mlibc/archive/${version}.tar.gz"
+tarball_blake2b="b2fc2178bf9a26191a78866272da2ff6cb2b547cb3fdd5fe28f4280d5bbf98a929e9920e5c05a25ed340af8d29d45265e148eba6d31490a7a6796adfcb2158d6"
 imagedeps="meson ninja"
 hostdeps="gcc pkg-config libgcc-binaries"
 builddeps="cxxshim frigg linux-headers"
