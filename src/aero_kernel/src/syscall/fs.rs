@@ -246,9 +246,7 @@ pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn rmdir(path: &str) -> Result<usize, SyscallError> {
-    let path = Path::new(path);
-
+pub fn rmdir(path: &Path) -> Result<usize, SyscallError> {
     let (_, child) = path.parent_and_basename();
     let inode = fs::lookup_path(path)?;
 
