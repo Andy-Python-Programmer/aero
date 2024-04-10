@@ -102,22 +102,19 @@ pub fn read(fd: FileDescriptor, buffer: &mut [u8]) -> Result<usize, SyscallError
 }
 
 #[syscall]
-pub fn open(fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> {
-    let dir = match fd as isize {
-        0 => {
-            if !path.is_absolute() {
-                scheduler::get_scheduler().current_task().cwd_dirent()
-            } else {
-                crate::fs::root_dir().clone()
-            }
+pub fn open(fd: usize, path: &Path, flags: usize, _mode: usize) -> Result<usize, SyscallError> {
+    let current_thread = scheduler::current_thread();
+    let at = match fd as isize {
+        AT_FDCWD if !path.is_absolute() => current_thread.cwd_dirent(),
+        _ if !path.is_absolute() => {
+            let ent = FileDescriptor::from_usize(fd).handle()?.inode.clone();
+            assert!(ent.inode().metadata()?.is_directory());
+            ent
         }
-
-        _ => {
-            todo!()
-        }
+        _ => fs::root_dir().clone(),
     };
 
-    let mut flags = OpenFlags::from_bits(mode).ok_or(SyscallError::EINVAL)?;
+    let mut flags = OpenFlags::from_bits(flags).ok_or(SyscallError::EINVAL)?;
 
     if !flags.intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR | OpenFlags::O_WRONLY) {
         flags.insert(OpenFlags::O_RDONLY);
@@ -129,7 +126,7 @@ pub fn open(fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> 
         lookup_mode = LookupMode::Create;
     }
 
-    let inode = fs::lookup_path_with(dir, path, lookup_mode, true)?;
+    let inode = fs::lookup_path_with(at, path, lookup_mode, true)?;
 
     if flags.contains(OpenFlags::O_DIRECTORY) && !inode.inode().metadata()?.is_directory() {
         return Err(SyscallError::ENOTDIR);
@@ -139,9 +136,7 @@ pub fn open(fd: usize, path: &Path, mode: usize) -> Result<usize, SyscallError> 
         inode.inode().truncate(0)?;
     }
 
-    Ok(scheduler::current_thread()
-        .file_table
-        .open_file(inode.clone(), flags)?)
+    Ok(current_thread.file_table.open_file(inode.clone(), flags)?)
 }
 
 #[syscall]
@@ -183,15 +178,29 @@ pub fn close(fd: FileDescriptor) -> Result<usize, SyscallError> {
 }
 
 #[syscall]
-pub fn chdir(path: &str) -> Result<usize, SyscallError> {
-    let inode = fs::lookup_path(Path::new(path))?;
+pub fn chdir(fd: usize, path: &Path) -> Result<usize, SyscallError> {
+    let current_thread = scheduler::current_thread();
+    let at = match fd as isize {
+        AT_FDCWD if !path.is_absolute() => current_thread.cwd_dirent(),
+        _ if !path.is_absolute() => {
+            let ent = FileDescriptor::from_usize(fd).handle()?.inode.clone();
+            assert!(ent.inode().metadata()?.is_directory());
+            ent
+        }
+        _ => fs::root_dir().clone(),
+    };
 
-    if !inode.inode().metadata()?.is_directory() {
-        // A component of path is not a directory.
+    if path.is_empty() {
+        current_thread.set_cwd(at);
+        return Ok(0);
+    }
+
+    let ent = fs::lookup_path_with(at, path, LookupMode::None, true)?;
+    if !ent.inode().metadata()?.is_directory() {
         return Err(SyscallError::ENOTDIR);
     }
 
-    scheduler::get_scheduler().current_task().set_cwd(inode);
+    current_thread.set_cwd(ent);
     Ok(0)
 }
 

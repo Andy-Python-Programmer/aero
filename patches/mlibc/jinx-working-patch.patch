@@ -15,3 +15,58 @@ index 3474615..d06f130 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
+diff --git mlibc-clean/sysdeps/aero/generic/aero.cpp mlibc-workdir/sysdeps/aero/generic/aero.cpp
+index 80f9c6f..897986d 100644
+--- mlibc-clean/sysdeps/aero/generic/aero.cpp
++++ mlibc-workdir/sysdeps/aero/generic/aero.cpp
+@@ -200,14 +200,19 @@ int sys_getcwd(char *buffer, size_t size) {
+     return 0;
+ }
+ 
+-int sys_chdir(const char *path) {
+-    auto result = syscall(SYS_CHDIR, path, strlen(path));
++static int sys_chdir_impl(int fd, const char *path) {
++  auto ret = syscall(SYS_CHDIR, fd, path, strlen(path));
++  if(int e = sc_error(ret); e)
++    return e;
++  return 0;
++}
+ 
+-    if (result < 0) {
+-        return -result;
+-    }
++int sys_chdir(const char *path) {
++  return sys_chdir_impl(AT_FDCWD, path);
++}
+ 
+-    return 0;
++int sys_fchdir(int fd) {
++  return sys_chdir_impl(fd, "");
+ }
+ 
+ int sys_gethostname(char *buffer, size_t bufsize) {
+diff --git mlibc-clean/sysdeps/aero/generic/filesystem.cpp mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
+index 95c49b9..9416be7 100644
+--- mlibc-clean/sysdeps/aero/generic/filesystem.cpp
++++ mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
+@@ -69,13 +69,14 @@ int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
+ }
+ 
+ int sys_open(const char *filename, int flags, mode_t mode, int *fd) {
+-    auto result = syscall(SYS_OPEN, 0, filename, strlen(filename), flags);
+-
+-    if (result < 0) {
+-        return -result;
+-    }
++    return sys_openat(AT_FDCWD, filename, flags, mode, fd);
++}
+ 
+-    *fd = result;
++int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
++    auto ret = syscall(SYS_OPEN, dirfd, path, strlen(path), flags, mode);
++    if (int e = sc_error(ret); e)
++        return e;
++    *fd = ret;
+     return 0;
+ }
+ 
