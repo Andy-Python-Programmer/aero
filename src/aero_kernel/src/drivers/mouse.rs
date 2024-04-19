@@ -139,12 +139,15 @@ impl Device for Mouse {
 impl INodeInterface for Mouse {
     fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         let size = core::mem::size_of::<Packet>();
+
+        if buffer.len() < size {
+            return Err(fs::FileSystemError::NotSupported);
+        }
+
         let packet = PACKETS
             .lock_irq()
             .pop()
             .ok_or(fs::FileSystemError::WouldBlock)?;
-
-        assert_eq!(buffer.len(), size);
 
         unsafe {
             *(buffer.as_mut_ptr().cast::<Packet>()) = packet;
@@ -161,7 +164,7 @@ impl INodeInterface for Mouse {
         if !PACKETS.lock_irq().is_empty() {
             Ok(PollFlags::IN)
         } else {
-            Ok(PollFlags::OUT)
+            Ok(PollFlags::empty())
         }
     }
 }
