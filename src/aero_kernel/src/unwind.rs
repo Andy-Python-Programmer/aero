@@ -161,7 +161,7 @@ pub fn unwind_stack_trace() {
                     log::trace!("{depth:>2}: 0x{rip:016x} - <unknown>");
                 }
             } else {
-                log::trace!("{:>2}: 0x{:016x} - <unknown>", depth, rip);
+                log::trace!("{depth:>2}: 0x{rip:016x} - <unknown>");
             }
         } else {
             // RBP has been overflowed...
@@ -186,7 +186,7 @@ use crate::utils::sync::IrqGuard;
 fn rust_begin_unwind(info: &PanicInfo) -> ! {
     prepare_panic();
 
-    let message = info.message().unwrap();
+    let message = info.message();
     let location = info.location().unwrap();
 
     // Get the CPU ID where this panic happened and if PANIC_HOOK_READY is false
