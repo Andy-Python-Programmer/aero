@@ -762,8 +762,8 @@ void abstract_test_case::register_case(abstract_test_case *tcp) {
 }
 
 int main() {
-    // Go through all tests and run them.
-    for(abstract_test_case *tcp : test_case_ptrs()) {
+  // Go through all tests and run them.
+  for(abstract_test_case *tcp : test_case_ptrs()) {
 		std::cout << "tests: Running " << tcp->name() << std::endl;
 		tcp->run();
 	}

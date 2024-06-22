@@ -22,4 +22,20 @@ index ce0f651..189b5e8 100644
  saved_cppflags="${CXXFLAGS}"
  CXXFLAGS="${CXXFLAGS} -DHAVE_XFT_H=1 $XFTCFLAGS"
  X_BASE_LIBS="${X_BASE_LIBS} $XFTLIBS"
-
+diff --git fox-clean/include/FXStream.h fox-workdir/include/FXStream.h
+index 41fe97a..b483556 100644
+--- fox-clean/include/FXStream.h
++++ fox-workdir/include/FXStream.h
+@@ -52,9 +52,9 @@ enum FXStreamStatus {
+ 
+ /// Stream seeking
+ enum FXWhence {
+-  FXFromStart=0,                /// Seek from start position
+-  FXFromCurrent=1,              /// Seek from current position
+-  FXFromEnd=2                   /// Seek from end position
++  FXFromStart=3,                /// Seek from start position (SEEK_SET)
++  FXFromCurrent=1,              /// Seek from current position (SEEK_CUR)
++  FXFromEnd=2                   /// Seek from end position (SEEK_END)
+   };
+ 
+ 

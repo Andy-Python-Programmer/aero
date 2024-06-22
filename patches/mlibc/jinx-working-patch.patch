@@ -1,3 +1,16 @@
+diff --git mlibc-clean/meson.build mlibc-workdir/meson.build
+index 905fbb9..6da45e0 100644
+--- mlibc-clean/meson.build
++++ mlibc-workdir/meson.build
+@@ -213,7 +213,7 @@ elif host_machine.system() == 'aero'
+ 	rtld_include_dirs += include_directories('sysdeps/aero/include')
+ 	libc_include_dirs += include_directories('sysdeps/aero/include')
+ 	internal_conf.set10('MLIBC_MAP_DSO_SEGMENTS', true)
+-	internal_conf.set10('MLIBC_MAP_FILE_WINDOWS', true)
++	internal_conf.set10('MLIBC_MAP_FILE_WINDOWS', false)
+ 	subdir('sysdeps/aero')
+ elif host_machine.system() == 'managarm'
+ 	# TODO: Adopt the include_directories() commands from the managarm meson.build.
 diff --git mlibc-clean/options/glibc/generic/execinfo.cpp mlibc-workdir/options/glibc/generic/execinfo.cpp
 index 3474615..d06f130 100644
 --- mlibc-clean/options/glibc/generic/execinfo.cpp
@@ -15,11 +28,69 @@ index 3474615..d06f130 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
+diff --git mlibc-clean/options/rtld/generic/linker.cpp mlibc-workdir/options/rtld/generic/linker.cpp
+index b5f42af..569a8c2 100644
+--- mlibc-clean/options/rtld/generic/linker.cpp
++++ mlibc-workdir/options/rtld/generic/linker.cpp
+@@ -27,7 +27,7 @@ uintptr_t libraryBase = 0x41000000;
+ 
+ constexpr bool verbose = false;
+ constexpr bool stillSlightlyVerbose = false;
+-constexpr bool logBaseAddresses = false;
++constexpr bool logBaseAddresses = true;
+ constexpr bool logRpath = false;
+ constexpr bool logLdPath = false;
+ constexpr bool eagerBinding = true;
+@@ -470,6 +470,7 @@ frg::expected<LinkerError, void> ObjectRepository::_fetchFromFile(SharedObject *
+ 	__ensure(!(object->baseAddress & (hugeSize - 1)));
+ 
+ 	highest_address = (highest_address + mlibc::page_size - 1) & ~(mlibc::page_size - 1);
++	size_t tagSize = highest_address - object->baseAddress;
+ 
+ #if MLIBC_MMAP_ALLOCATE_DSO
+ 	void *mappedAddr = nullptr;
+@@ -492,9 +493,12 @@ frg::expected<LinkerError, void> ObjectRepository::_fetchFromFile(SharedObject *
+ 	libraryBase += (highest_address + (hugeSize - 1)) & ~(hugeSize - 1);
+ #endif
+ 
+-	if(verbose || logBaseAddresses)
++	if(verbose || logBaseAddresses) {
++		mlibc::sys_tag_memory((void *)object->baseAddress, tagSize, object->name.data());
++
+ 		mlibc::infoLogger() << "rtld: Loading " << object->name
+ 				<< " at " << (void *)object->baseAddress << frg::endlog;
++	}
+ 
+ 	// Load all segments.
+ 	constexpr size_t pageSize = 0x1000;
+diff --git mlibc-clean/options/rtld/include/mlibc/rtld-sysdeps.hpp mlibc-workdir/options/rtld/include/mlibc/rtld-sysdeps.hpp
+index 6f42d41..3e37a1d 100644
+--- mlibc-clean/options/rtld/include/mlibc/rtld-sysdeps.hpp
++++ mlibc-workdir/options/rtld/include/mlibc/rtld-sysdeps.hpp
+@@ -5,6 +5,7 @@ namespace [[gnu::visibility("hidden")]] mlibc {
+ 
+ int sys_tcb_set(void *pointer);
+ 
++[[gnu::weak]] int sys_tag_memory(void *ptr, size_t size, char *tag);
+ [[gnu::weak]] int sys_vm_readahead(void *pointer, size_t size);
+ 
+ } // namespace mlibc
 diff --git mlibc-clean/sysdeps/aero/generic/aero.cpp mlibc-workdir/sysdeps/aero/generic/aero.cpp
-index 80f9c6f..897986d 100644
+index 80f9c6f..85031cd 100644
 --- mlibc-clean/sysdeps/aero/generic/aero.cpp
 +++ mlibc-workdir/sysdeps/aero/generic/aero.cpp
-@@ -200,14 +200,19 @@ int sys_getcwd(char *buffer, size_t size) {
+@@ -62,6 +62,10 @@ static frg::vector<Slice, MemoryAllocator> create_slice(char *const arg[]) {
+ }
+ 
+ namespace mlibc {
++int sys_tag_memory(void *ptr, size_t size, char *tag) {
++    return syscall(SYS_DEBUG, ptr, size, tag, strlen(tag));
++}
++
+ int sys_uname(struct utsname *buf) {
+     auto result = syscall(SYS_UNAME, buf);
+ 
+@@ -200,14 +204,19 @@ int sys_getcwd(char *buffer, size_t size) {
      return 0;
  }
  
@@ -46,7 +117,7 @@ index 80f9c6f..897986d 100644
  
  int sys_gethostname(char *buffer, size_t bufsize) {
 diff --git mlibc-clean/sysdeps/aero/generic/filesystem.cpp mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
-index 95c49b9..9416be7 100644
+index 95c49b9..8777468 100644
 --- mlibc-clean/sysdeps/aero/generic/filesystem.cpp
 +++ mlibc-workdir/sysdeps/aero/generic/filesystem.cpp
 @@ -69,13 +69,14 @@ int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
@@ -69,4 +140,25 @@ index 95c49b9..9416be7 100644
 +    *fd = ret;
      return 0;
  }
+ 
+@@ -124,6 +125,20 @@ int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
+     return 0;
+ }
+ 
++int sys_statfs(const char *path, struct statfs *buf) {
++    __ensure(!syscall(SYS_BACKTRACE));
++    __ensure(!"statfs");
++    memset(buf, 0, sizeof(struct statfs));
++    return 0;
++}
++
++int sys_fstatfs(int fd, struct statfs *buf) {
++    __ensure(!syscall(SYS_BACKTRACE));
++    mlibc::infoLogger() << "fstatfs" << frg::endlog;
++    memset(buf, 0, sizeof(struct statfs));
++    return 0;
++}
++
+ int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
+     auto sys_res = syscall(SYS_IOCTL, fd, request, arg);
  
