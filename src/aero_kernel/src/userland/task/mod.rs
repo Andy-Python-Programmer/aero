@@ -321,52 +321,6 @@ impl Task {
         })
     }
 
-    fn make_child(&self, arch_task: UnsafeCell<ArchTask>) -> Arc<Task> {
-        let pid = TaskId::allocate();
-
-        let this = Arc::new_cyclic(|sref| Self {
-            sref: sref.clone(),
-            zombies: Zombies::new(),
-
-            arch_task,
-            file_table: Arc::new(self.file_table.deep_clone()),
-            message_queue: MessageQueue::new(),
-            vm: Arc::new(Vm::new()),
-            state: AtomicU8::new(TaskState::Runnable as _),
-
-            link: Default::default(),
-            clink: Default::default(),
-
-            sleep_duration: AtomicUsize::new(0),
-            exit_status: Once::new(),
-
-            tid: pid,
-            sid: AtomicUsize::new(self.session_id()),
-            gid: AtomicUsize::new(self.group_id()),
-            pid,
-
-            executable: Mutex::new(self.executable.lock().clone()),
-            pending_io: AtomicBool::new(false),
-
-            children: Mutex::new(Default::default()),
-            parent: Mutex::new(None),
-
-            cwd: RwLock::new(Some(self.cwd.read().as_ref().unwrap().fork())),
-            signals: Signals::new(),
-
-            systrace: AtomicBool::new(self.systrace()),
-            controlling_terminal: Mutex::new(self.controlling_terminal.lock_irq().clone()),
-
-            mem_tags: Mutex::new(self.mem_tags.lock().clone()),
-        });
-
-        self.add_child(this.clone());
-        this.signals().copy_from(self.signals());
-
-        this.vm.fork_from(self.vm());
-        this
-    }
-
     pub fn has_pending_io(&self) -> bool {
         self.pending_io.load(Ordering::SeqCst)
     }
@@ -437,13 +391,56 @@ impl Task {
     }
 
     pub fn fork(&self) -> Arc<Task> {
+        let vm = Arc::new(Vm::new());
+        let address_space = vm.fork_from(self.vm());
+
         let arch_task = UnsafeCell::new(
             self.arch_task_mut()
-                .fork()
+                .fork(address_space)
                 .expect("failed to fork arch task"),
         );
 
-        self.make_child(arch_task)
+        let pid = TaskId::allocate();
+
+        let this = Arc::new_cyclic(|sref| Self {
+            sref: sref.clone(),
+            zombies: Zombies::new(),
+
+            arch_task,
+            file_table: Arc::new(self.file_table.deep_clone()),
+            message_queue: MessageQueue::new(),
+            vm,
+            state: AtomicU8::new(TaskState::Runnable as _),
+
+            link: Default::default(),
+            clink: Default::default(),
+
+            sleep_duration: AtomicUsize::new(0),
+            exit_status: Once::new(),
+
+            tid: pid,
+            sid: AtomicUsize::new(self.session_id()),
+            gid: AtomicUsize::new(self.group_id()),
+            pid,
+
+            executable: Mutex::new(self.executable.lock().clone()),
+            pending_io: AtomicBool::new(false),
+
+            children: Mutex::new(Default::default()),
+            parent: Mutex::new(None),
+
+            cwd: RwLock::new(Some(self.cwd.read().as_ref().unwrap().fork())),
+            signals: Signals::new(),
+
+            systrace: AtomicBool::new(self.systrace()),
+            controlling_terminal: Mutex::new(self.controlling_terminal.lock_irq().clone()),
+
+            mem_tags: Mutex::new(self.mem_tags.lock().clone()),
+        });
+
+        self.add_child(this.clone());
+        this.signals().copy_from(self.signals());
+        this
     }
 
     fn this(&self) -> Arc<Self> {

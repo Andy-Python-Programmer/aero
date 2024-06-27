@@ -18,9 +18,7 @@
 // Some code borrowed from the x86_64 crate (MIT + Apache) and add support for 5-level paging
 // and some kernel specific features that cannot be directly done in the crate itself.
 
-use core::ops::Range;
-
-use crate::mem::AddressSpace;
+use core::ops::{Range, RangeInclusive};
 
 use super::addr::{PhysAddr, VirtAddr};
 use super::page::{AddressNotAligned, Page, PageSize, PhysFrame, Size1GiB, Size2MiB, Size4KiB};
@@ -1139,187 +1137,53 @@ impl<'a> OffsetPageTable<'a> {
         Ok(())
     }
 
-    pub fn fork(&mut self) -> Result<AddressSpace, MapToError<Size4KiB>> {
-        let mut address_space = AddressSpace::new()?; // Allocate the new address space
+    pub fn copy_page_range(&mut self, src: &mut OffsetPageTable, range: RangeInclusive<VirtAddr>) {
+        let mut map_to = |src: &mut OffsetPageTable, addr, frame, flags| match frame {
+            MappedFrame::Size4KiB(frame) => {
+                let page = Page::<Size4KiB>::containing_address(addr);
 
-        let offset_table = address_space.offset_page_table();
-        let make_next_level = |table: &mut PageTable,
-                               i: usize|
-         -> Result<(bool, &mut PageTable), MapToError<Size4KiB>> {
-            let entry = &mut table[i];
-            let created = if !entry.flags().contains(PageTableFlags::PRESENT) {
-                let frame = FRAME_ALLOCATOR
-                    .allocate_frame()
-                    .ok_or(MapToError::FrameAllocationFailed)?;
+                unsafe {
+                    self.map_to_with_table_flags(
+                        page,
+                        frame,
+                        flags,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::USER_ACCESSIBLE
+                            | PageTableFlags::WRITABLE,
+                    )
+                }
+                .unwrap()
+                // operating on an inactive page table
+                .ignore();
 
-                entry.set_frame(
+                unsafe { src.update_flags(page, flags) }
+                    .unwrap()
+                    // caller is required to invalidate the TLB
+                    .ignore();
+            }
+            _ => todo!(),
+        };
+
+        let mut addr = *range.start();
+
+        while addr != *range.end() {
+            match src.translate(addr) {
+                TranslateResult::Mapped {
                     frame,
-                    PageTableFlags::PRESENT
-                        | PageTableFlags::WRITABLE
-                        | PageTableFlags::USER_ACCESSIBLE,
-                );
+                    offset,
+                    flags,
+                } => {
+                    assert_eq!(offset, 0, "unaligned page range");
+                    map_to(src, addr, frame, flags & !PageTableFlags::WRITABLE);
+                }
 
-                true
-            } else {
-                entry.set_flags(
-                    PageTableFlags::PRESENT
-                        | PageTableFlags::WRITABLE
-                        | PageTableFlags::USER_ACCESSIBLE,
-                );
-
-                false
-            };
-
-            let page_table_ptr = {
-                let addr = entry.frame().unwrap().start_address().as_hhdm_virt();
-                addr.as_mut_ptr::<PageTable>()
-            };
-
-            let page_table: &mut PageTable = unsafe { &mut *page_table_ptr };
-            if created {
-                page_table.zero();
+                TranslateResult::NotMapped => {}
+                TranslateResult::InvalidFrameAddress(addr) => {
+                    panic!("invalid frame address {:#x}", addr);
+                }
             }
 
-            Ok((created, page_table))
-        };
-
-        let last_level_fork = |entry: &mut PageTableEntry, n1: &mut PageTable, i: usize| {
-            let mut flags = entry.flags();
-
-            // Check if the mapping is shared.
-            // if !flags.contains(PageTableFlags::BIT_10) {
-            // Setup copy on write page.
-            flags.remove(PageTableFlags::WRITABLE);
-            // }
-
-            entry.set_flags(flags);
-            n1[i].set_frame(entry.frame().unwrap(), flags);
-        };
-
-        // We loop through each of the page table entries in the page table which are user
-        // accessible and we remove the writeable flag from the entry if present. This will
-        // make the page table entry copy on the first write. Then we clone the page table entry
-        // and place it in the new page table.
-        if self.inner.level_5_paging_enabled {
-            self.inner.page_table.for_entries_mut(
-                PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                |i, _, table| {
-                    let (_, n4) = make_next_level(offset_table.inner.page_table, i)?;
-                    let mut count_4 = 0;
-
-                    table.for_entries_mut(
-                        PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                        |j, _, table| {
-                            let (w3, n3) = make_next_level(n4, j)?;
-                            let mut count_3 = 0;
-
-                            if w3 {
-                                count_4 += 1;
-                            }
-
-                            table.for_entries_mut(
-                                PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                                |k, _, table| {
-                                    let (w2, n2) = make_next_level(n3, k)?;
-                                    let mut count_2 = 0;
-
-                                    if w2 {
-                                        count_3 += 1;
-                                    }
-
-                                    table.for_entries_mut(
-                                        PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                                        |l, _, table| {
-                                            let (w1, n1) = make_next_level(n2, l)?;
-                                            let mut count_1 = 0;
-
-                                            if w1 {
-                                                count_2 += 1;
-                                            }
-
-                                            table.for_entries_mut(
-                                                PageTableFlags::PRESENT
-                                                    | PageTableFlags::USER_ACCESSIBLE,
-                                                |i, entry, _| {
-                                                    last_level_fork(entry, n1, i);
-
-                                                    count_1 += 1;
-                                                    Ok(())
-                                                },
-                                            )?;
-
-                                            n2[l].set_entry_count(count_1);
-                                            Ok(())
-                                        },
-                                    )?;
-
-                                    n3[k].set_entry_count(count_2);
-                                    Ok(())
-                                },
-                            )?;
-
-                            n4[j].set_entry_count(count_3);
-                            Ok(())
-                        },
-                    )?;
-
-                    offset_table.inner.page_table[i].set_entry_count(count_4);
-                    Ok(())
-                },
-            )?;
-        } else {
-            self.inner.page_table.for_entries_mut(
-                PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                |i, _, table| {
-                    let (_, n3) = make_next_level(offset_table.inner.page_table, i)?;
-                    let mut count_3 = 0;
-
-                    table.for_entries_mut(
-                        PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                        |k, _, table| {
-                            let (w2, n2) = make_next_level(n3, k)?;
-                            let mut count_2 = 0;
-
-                            if w2 {
-                                count_3 += 1;
-                            }
-
-                            table.for_entries_mut(
-                                PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                                |l, _, table| {
-                                    let (w1, n1) = make_next_level(n2, l)?;
-                                    let mut count_1 = 0;
-
-                                    if w1 {
-                                        count_2 += 1;
-                                    }
-
-                                    table.for_entries_mut(
-                                        PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE,
-                                        |i, entry, _| {
-                                            last_level_fork(entry, n1, i);
-
-                                            count_1 += 1;
-                                            Ok(())
-                                        },
-                                    )?;
-
-                                    n2[l].set_entry_count(count_1);
-                                    Ok(())
-                                },
-                            )?;
-
-                            n3[k].set_entry_count(count_2);
-                            Ok(())
-                        },
-                    )?;
-
-                    offset_table.inner.page_table[i].set_entry_count(count_3);
-                    Ok(())
-                },
-            )?;
+            addr += Size4KiB::SIZE;
         }
-
-        Ok(address_space)
     }
 }

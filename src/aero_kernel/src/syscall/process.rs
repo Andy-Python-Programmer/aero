@@ -181,8 +181,7 @@ pub fn mmap(
                 .current_task()
                 .file_table
                 .get_handle(fd)
-                .ok_or(SyscallError::EBADF)?
-                .dirnode(),
+                .ok_or(SyscallError::EBADF)?,
         );
     }
 

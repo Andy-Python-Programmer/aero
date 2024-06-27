@@ -57,6 +57,18 @@ impl FileHandle {
         }
     }
 
+    #[inline]
+    pub fn is_writable(&self) -> bool {
+        self.flags()
+            .intersects(OpenFlags::O_WRONLY | OpenFlags::O_RDWR)
+    }
+
+    #[inline]
+    pub fn is_readable(&self) -> bool {
+        self.flags()
+            .intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR)
+    }
+
     pub fn flags(&self) -> OpenFlags {
         *self.flags.read()
     }

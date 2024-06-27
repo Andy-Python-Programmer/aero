@@ -200,7 +200,7 @@ impl INodeInterface for LockedProcINode {
                         "start": map.start_addr.as_u64(),
                         "end": map.end_addr.as_u64(),
                         "flags": map.flags.bits(),
-                        "protection": map.protection.bits(),
+                        "protection": map.protection().bits(),
                     }));
                 });
 

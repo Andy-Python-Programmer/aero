@@ -23,12 +23,14 @@ use alloc::boxed::Box;
 use alloc::collections::linked_list::CursorMut;
 use alloc::collections::LinkedList;
 
+use alloc::sync::Arc;
 use xmas_elf::header::*;
 use xmas_elf::program::*;
 use xmas_elf::*;
 
 use crate::arch::task::userland_last_address;
 use crate::fs::cache::{DirCacheImpl, DirCacheItem};
+use crate::fs::file_table::FileHandle;
 use crate::fs::{FileSystemError, Path};
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
@@ -36,6 +38,47 @@ use crate::{fs, mem};
 
 use crate::syscall::ExecArgs;
 use crate::utils::sync::BMutex;
+
+bitflags::bitflags! {
+    #[derive(Debug, Copy, Clone, PartialEq)]
+    pub struct VmFlag: u8 {
+        // currently active flags
+        const READ      = MMapProt::PROT_READ.bits() as _;
+        const WRITE     = MMapProt::PROT_WRITE.bits() as _;
+        const EXEC      = MMapProt::PROT_EXEC.bits() as _;
+
+        // limits
+        const MAY_READ  = 1 << 3;
+        const MAY_WRITE = 1 << 4;
+        const MAY_EXEC  = 1 << 5;
+    }
+}
+
+const VM_PROT_MASK: VmFlag =
+    VmFlag::from_bits_retain(VmFlag::READ.bits() | VmFlag::WRITE.bits() | VmFlag::EXEC.bits());
+
+impl From<MMapProt> for VmFlag {
+    #[inline]
+    fn from(value: MMapProt) -> Self {
+        Self::from_bits_retain(value.bits().try_into().unwrap())
+    }
+}
+
+impl From<VmFlag> for PageTableFlags {
+    fn from(flags: VmFlag) -> Self {
+        let mut value = PageTableFlags::empty();
+
+        if !flags.contains(VmFlag::EXEC) {
+            value.insert(PageTableFlags::NO_EXECUTE);
+        }
+
+        if flags.contains(VmFlag::WRITE) {
+            value.insert(PageTableFlags::WRITABLE);
+        }
+
+        value
+    }
+}
 
 const ELF_HEADER_MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
@@ -283,22 +326,6 @@ impl<'this> Iterator for ProgramHeaderIter<'this> {
     }
 }
 
-impl From<MMapProt> for PageTableFlags {
-    fn from(e: MMapProt) -> Self {
-        let mut res = PageTableFlags::empty();
-
-        if !e.contains(MMapProt::PROT_EXEC) {
-            res.insert(PageTableFlags::NO_EXECUTE);
-        }
-
-        if e.contains(MMapProt::PROT_WRITE) {
-            res.insert(PageTableFlags::WRITABLE);
-        }
-
-        res
-    }
-}
-
 enum UnmapResult {
     None,
     Partial(Mapping),
@@ -333,8 +360,8 @@ impl MMapFile {
 
 #[derive(Debug, Clone)]
 pub struct Mapping {
-    pub protection: MMapProt,
     pub flags: MMapFlags,
+    vm_flags: VmFlag,
 
     pub start_addr: VirtAddr,
     pub end_addr: VirtAddr,
@@ -344,6 +371,25 @@ pub struct Mapping {
 }
 
 impl Mapping {
+    pub fn set_protection(&mut self, protection: MMapProt) -> aero_syscall::Result<()> {
+        if (protection.contains(MMapProt::PROT_READ) && !self.vm_flags.contains(VmFlag::MAY_READ))
+            || (protection.contains(MMapProt::PROT_WRITE)
+                && !self.vm_flags.contains(VmFlag::MAY_WRITE))
+            || (protection.contains(MMapProt::PROT_EXEC)
+                && !self.vm_flags.contains(VmFlag::MAY_EXEC))
+        {
+            return Err(aero_syscall::SyscallError::EACCES);
+        }
+
+        self.vm_flags = (self.vm_flags & !VM_PROT_MASK) | protection.into();
+        Ok(())
+    }
+
+    #[inline]
+    pub fn protection(&self) -> VmFlag {
+        self.vm_flags & VM_PROT_MASK
+    }
+
     /// Handler routine for private anonymous pages. Since its an anonymous page is not
     /// backed by a file, we have to alloctate a frame and map it at the faulted address.
     fn handle_pf_private_anon(
@@ -367,7 +413,7 @@ impl Mapping {
                     // the mapping gets copied on write.
                     PageTableFlags::USER_ACCESSIBLE
                         | PageTableFlags::PRESENT
-                        | self.protection.into(),
+                        | self.vm_flags.into(),
                 )
             }
             .expect("Failed to identity map userspace private mapping")
@@ -390,7 +436,7 @@ impl Mapping {
                         page,
                         PageTableFlags::USER_ACCESSIBLE
                             | PageTableFlags::PRESENT
-                            | self.protection.into(),
+                            | self.vm_flags.into(),
                     )
                     .unwrap()
                     .flush();
@@ -430,9 +476,9 @@ impl Mapping {
                     .mmap(offset as _, size as _, self.flags)
                     .expect("handle_pf_file: file does not support mmap");
 
-                let mut flags = PageTableFlags::PRESENT
+                let flags = PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE
-                    | self.protection.into();
+                    | self.vm_flags.into();
 
                 // if self.flags.contains(MMapFlags::MAP_SHARED) {
                 //     flags |= PageTableFlags::BIT_10;
@@ -459,7 +505,7 @@ impl Mapping {
     fn map_copied(
         offset_table: &mut OffsetPageTable,
         page: Page<Size4KiB>,
-        protection: MMapProt,
+        flags: VmFlag,
     ) -> Result<(), MapToError<Size4KiB>> {
         // Allocate a new frame to hold the contents.
         let new_frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
@@ -486,7 +532,7 @@ impl Mapping {
                 .map_to(
                     page,
                     new_frame,
-                    PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | protection.into(),
+                    PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | flags.into(),
                 )?
                 .flush();
         }
@@ -517,7 +563,7 @@ impl Mapping {
             if let Some(vm_frame) = phys_addr.as_vm_frame() {
                 if vm_frame.ref_count() > 1 || copy {
                     // This page is used by more then one process, so make it a private copy.
-                    Self::map_copied(offset_table, page, self.protection).unwrap();
+                    Self::map_copied(offset_table, page, self.vm_flags).unwrap();
                 } else {
                     // This page is used by only one process, so make it writable.
                     unsafe {
@@ -525,7 +571,7 @@ impl Mapping {
                             page,
                             PageTableFlags::PRESENT
                                 | PageTableFlags::USER_ACCESSIBLE
-                                | self.protection.into(),
+                                | self.vm_flags.into(),
                         )
                     }
                     .unwrap()
@@ -574,12 +620,12 @@ impl Mapping {
             });
 
             let new_mapping = Mapping {
-                protection: self.protection,
                 flags: self.flags,
                 start_addr: end,
                 end_addr: end + (self.end_addr - end),
                 file: new_file,
                 refresh_flags: true,
+                vm_flags: self.vm_flags,
             };
 
             self.end_addr = start;
@@ -662,18 +708,18 @@ impl VmProtected {
             .iter_mut()
             .find(|e| accessed_address >= e.start_addr && accessed_address < e.end_addr)
         {
-            if map.protection.is_empty() {
+            if map.protection().is_empty() {
                 return false;
             }
 
             if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
-                && !map.protection.contains(MMapProt::PROT_WRITE)
+                && !map.vm_flags.contains(VmFlag::WRITE)
             {
                 return false;
             }
 
             if reason.contains(PageFaultErrorCode::INSTRUCTION_FETCH)
-                && !map.protection.contains(MMapProt::PROT_EXEC)
+                && !map.vm_flags.contains(VmFlag::EXEC)
             {
                 return false;
             }
@@ -697,6 +743,7 @@ impl VmProtected {
             }
         } else {
             log::trace!("mapping not found for address: {:#x}", accessed_address);
+            self.log();
 
             // else the mapping does not exist, so return false.
             false
@@ -774,11 +821,14 @@ impl VmProtected {
         &mut self,
         address: VirtAddr,
         size: usize,
-        protection: MMapProt,
         flags: MMapFlags,
         offset: usize,
         file: Option<DirCacheItem>,
+        vm_flags: VmFlag,
     ) -> Option<VirtAddr> {
+        // TODO: Check file permissions:
+        //     * Do not allow writing to an {read, append}-only file.
+
         let z = file.clone();
 
         // Offset is required to be a multiple of page size.
@@ -810,6 +860,7 @@ impl VmProtected {
             }
         }
 
+        // TODO: align_up may overflow. return if size_aligned == 0
         let size_aligned = align_up(size as _, Size4KiB::SIZE);
 
         let x = if address == VirtAddr::zero() {
@@ -837,7 +888,7 @@ impl VmProtected {
             if let Some(prev) = cursor.peek_prev() {
                 if prev.end_addr == addr
                     && prev.flags == flags
-                    && prev.protection == protection
+                    && prev.protection() == (vm_flags & VM_PROT_MASK)
                     && prev.file.is_none()
                 {
                     prev.end_addr = addr + size_aligned;
@@ -847,7 +898,6 @@ impl VmProtected {
             }
 
             cursor.insert_before(Mapping {
-                protection,
                 flags,
 
                 start_addr: addr,
@@ -855,6 +905,7 @@ impl VmProtected {
 
                 file: file.map(|f| MMapFile::new(f, offset, size)),
                 refresh_flags: true,
+                vm_flags,
             });
 
             addr
@@ -867,7 +918,7 @@ impl VmProtected {
             dbg!(
                 address,
                 size,
-                protection,
+                vm_flags,
                 flags,
                 offset,
                 z.map(|f| f.absolute_path())
@@ -886,7 +937,7 @@ impl VmProtected {
                     "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
                     mmap.start_addr,
                     mmap.end_addr,
-                    mmap.protection,
+                    mmap.vm_flags,
                     mmap.flags,
                     file.offset,
                     file.size,
@@ -896,7 +947,7 @@ impl VmProtected {
                     "{:?}..{:?} => {:?}, {:?}",
                     mmap.start_addr,
                     mmap.end_addr,
-                    mmap.protection,
+                    mmap.vm_flags,
                     mmap.flags,
                 );
             }
@@ -979,18 +1030,18 @@ impl VmProtected {
 
                 let file_offset = align_down(header.offset(), Size4KiB::SIZE);
 
-                let mut prot = MMapProt::empty();
+                let mut flags = VmFlag::MAY_READ | VmFlag::MAY_WRITE | VmFlag::MAY_EXEC;
 
                 if header_flags.is_read() {
-                    prot.insert(MMapProt::PROT_READ);
+                    flags.insert(VmFlag::READ);
                 }
 
                 if header_flags.is_write() {
-                    prot.insert(MMapProt::PROT_WRITE);
+                    flags.insert(VmFlag::WRITE);
                 }
 
                 if header_flags.is_execute() {
-                    prot.insert(MMapProt::PROT_EXEC);
+                    flags.insert(VmFlag::EXEC);
                 }
 
                 #[rustfmt::skip]
@@ -1021,10 +1072,10 @@ impl VmProtected {
                     .mmap(
                         virtual_start,
                         data_size as usize,
-                        prot,
                         MMapFlags::MAP_PRIVATE | MMapFlags::MAP_FIXED,
                         file_offset as usize,
                         Some(bin.clone()),
+                        flags
                     )
                     .ok_or(ElfLoadError::MemoryMapError)?;
 
@@ -1036,10 +1087,10 @@ impl VmProtected {
                     self.mmap(
                         virtual_fend,
                         bss_size as usize,
-                        prot,
                         MMapFlags::MAP_PRIVATE | MMapFlags::MAP_ANONYOMUS | MMapFlags::MAP_FIXED,
                         0,
                         None,
+                        flags,
                     )
                     .ok_or(ElfLoadError::MemoryMapError)?;
                 }
@@ -1112,7 +1163,12 @@ impl VmProtected {
         success
     }
 
-    fn mprotect(&mut self, addr: VirtAddr, size: usize, prot: MMapProt) -> bool {
+    fn mprotect(
+        &mut self,
+        addr: VirtAddr,
+        size: usize,
+        prot: MMapProt,
+    ) -> aero_syscall::Result<()> {
         let start = addr.align_up(Size4KiB::SIZE);
         let end = (addr + size).align_up(Size4KiB::SIZE);
 
@@ -1127,7 +1183,7 @@ impl VmProtected {
                 // The address we want to unmap is in the middle of the region. So we
                 // will need to split the mapping and update the end address accordingly.
                 let (left, mut mid, right) = map.split(start, end);
-                mid.protection = prot;
+                mid.set_protection(prot)?;
 
                 cursor.insert_after(right);
                 cursor.insert_after(mid);
@@ -1136,13 +1192,13 @@ impl VmProtected {
                 break;
             } else if start <= map.start_addr && end >= map.end_addr {
                 // full
-                map.protection = prot;
+                map.set_protection(prot)?;
                 cursor.move_next();
             } else if start <= map.start_addr && end < map.end_addr {
                 // start
                 let mut mapping = map.clone();
                 mapping.end_addr = end;
-                mapping.protection = prot;
+                mapping.set_protection(prot)?;
 
                 map.start_addr = end;
                 cursor.insert_before(mapping);
@@ -1151,7 +1207,7 @@ impl VmProtected {
                 // end
                 let mut mapping = map.clone();
                 mapping.start_addr = start;
-                mapping.protection = prot;
+                mapping.set_protection(prot)?;
 
                 map.end_addr = start;
                 cursor.insert_after(mapping);
@@ -1159,14 +1215,30 @@ impl VmProtected {
             }
         }
 
-        true
+        Ok(())
     }
 
-    fn fork_from(&mut self, parent: &Vm) {
-        let data = parent.inner.lock();
+    #[must_use]
+    fn fork_from(&mut self, parent: &Vm) -> AddressSpace {
+        {
+            let parent = parent.inner.lock();
+            self.mappings.clone_from(&parent.mappings);
+        }
 
-        // Copy over all of the mappings from the parent into the child.
-        self.mappings.clone_from(&data.mappings);
+        let mut address_space = AddressSpace::new().unwrap();
+        let mut offset_table = address_space.offset_page_table();
+
+        let mut current = AddressSpace::this();
+        let mut current = current.offset_page_table();
+
+        for map in self.mappings.iter().filter(|map| {
+            // Do not copy page table entries where a page fault can map them correctly.
+            !map.flags.contains(MMapFlags::MAP_SHARED) && map.vm_flags.contains(VmFlag::MAY_WRITE)
+        }) {
+            offset_table.copy_page_range(&mut current, map.start_addr..=map.end_addr);
+        }
+
+        address_space
     }
 }
 
@@ -1189,11 +1261,38 @@ impl Vm {
         protection: MMapProt,
         flags: MMapFlags,
         offset: usize,
-        file: Option<DirCacheItem>,
+        file: Option<Arc<FileHandle>>,
     ) -> Option<VirtAddr> {
+        let vm_flags =
+            VmFlag::from(protection) | VmFlag::MAY_READ | VmFlag::MAY_WRITE | VmFlag::MAY_EXEC;
+
+        let map_type = flags & (MMapFlags::MAP_SHARED | MMapFlags::MAP_PRIVATE);
+
+        match (map_type, file.as_ref()) {
+            (MMapFlags::MAP_SHARED, Some(file)) => {
+                if protection.contains(MMapProt::PROT_WRITE) && !file.is_writable() {
+                    return None; // EACCES
+                }
+
+                // TODO: check for append-only files.
+            }
+
+            (MMapFlags::MAP_PRIVATE, Some(file)) => {
+                if !file.is_readable() {
+                    // return None; // EACCES
+                }
+
+                // TODO: * check if the filsystem is noexec mounted and remove the MAY_EXEC flag.
+                //       * error out if prot contains PROT_EXEC & filesystem is noexec.
+            }
+
+            _ => {}
+        }
+
+        let file = file.map(|file| file.dirnode());
         self.inner
             .lock()
-            .mmap(address, size, protection, flags, offset, file)
+            .mmap(address, size, flags, offset, file, vm_flags)
     }
 
     pub fn munmap(&self, address: VirtAddr, size: usize) -> bool {
@@ -1201,11 +1300,15 @@ impl Vm {
     }
 
     pub fn mprotect(&self, ptr: VirtAddr, size: usize, prot: MMapProt) {
-        assert!(self.inner.lock().mprotect(ptr, size, prot))
+        self.inner.lock().mprotect(ptr, size, prot).unwrap()
     }
 
-    pub(super) fn fork_from(&self, parent: &Vm) {
+    pub(super) fn fork_from(&self, parent: &Vm) -> AddressSpace {
         self.inner.lock().fork_from(parent)
+    }
+
+    pub fn log(&self) {
+        self.inner.lock().log()
     }
 
     /// Mapping the provided `bin` file into the VM.

@@ -313,10 +313,8 @@ impl ArchTask {
         })
     }
 
-    pub fn fork(&self) -> Result<Self, MapToError<Size4KiB>> {
+    pub fn fork(&self, address_space: AddressSpace) -> Result<Self, MapToError<Size4KiB>> {
         assert!(self.user, "cannot fork a kernel task");
-
-        let new_address_space = AddressSpace::this().offset_page_table().fork()?;
 
         // Since the fork function marks all of the userspace entries in both the forked
         // and the parent address spaces as read only, we will flush the page table of the
@@ -346,14 +344,14 @@ impl ArchTask {
 
         *context = Context::default();
         context.rip = fork_init as u64;
-        context.cr3 = new_address_space.cr3().start_address().as_u64();
+        context.cr3 = address_space.cr3().start_address().as_u64();
 
         let fpu_storage = self.fpu_storage.unwrap().clone();
 
         Ok(Self {
             context: unsafe { Unique::new_unchecked(context) },
             context_switch_rsp: VirtAddr::new(switch_stack as u64),
-            address_space: new_address_space,
+            address_space,
             user: true,
 
             // The FS and GS bases are inherited from the parent process.
