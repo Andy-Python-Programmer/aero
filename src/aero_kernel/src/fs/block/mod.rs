@@ -32,32 +32,46 @@ use crate::fs::{FileSystem, Result};
 
 use crate::fs::ext2::Ext2;
 use crate::mem::paging::*;
+use crate::mem::AddressSpace;
 use crate::utils::sync::Mutex;
 
 use super::cache::{Cache, CacheArc, CacheItem, Cacheable};
 use super::devfs::{alloc_device_marker, Device};
 use super::inode::INodeInterface;
 
-type PageCacheKey = (usize, usize); // (block device pointer, offset)
-type PageCacheItem = CacheArc<CacheItem<PageCacheKey, CachedPage>>;
+type PageCacheKey = (usize, usize); // (owner ptr, index)
+pub type PageCacheItem = CacheArc<CacheItem<PageCacheKey, CachedPage>>;
 
-struct CachedPage {
-    device: Weak<dyn CachedAccess>,
+struct DirtyMapping {
+    addr_space: AddressSpace,
+    addr: VirtAddr,
+}
+
+pub struct CachedPage {
+    owner: Weak<dyn CachedAccess>,
     offset: usize,
     page: PhysFrame,
     dirty: AtomicBool,
+    dirty_mappings: Mutex<Vec<DirtyMapping>>,
 }
 
 impl CachedPage {
-    fn new(device: Weak<dyn CachedAccess>, offset: usize) -> Self {
-        Self {
-            device,
+    fn new(owner: Weak<dyn CachedAccess>, offset: usize) -> Self {
+        let k = Self {
+            owner,
             offset,
             page: FRAME_ALLOCATOR
                 .allocate_frame()
                 .expect("page_cache: out of memory"),
             dirty: AtomicBool::new(false),
-        }
+            dirty_mappings: Mutex::new(Vec::new()),
+        };
+        // TODO: temporary hack. i mean this is fine but is there a cleaner way to do this. this is
+        // required since when the VM for the process umaps a page that contains a cached page, it
+        // will unmap this page which will decrease the refcnt to 0 and deallocate it.
+        get_vm_frames().unwrap()[k.page.start_address().as_u64() as usize / 4096usize]
+            .inc_ref_count();
+        k
     }
 
     fn data_mut(&self) -> &mut [MaybeUninit<u8>] {
@@ -72,8 +86,12 @@ impl CachedPage {
         unsafe { core::slice::from_raw_parts_mut(data_ptr, Size4KiB::SIZE as usize) }
     }
 
-    fn data_addr(&self) -> PhysAddr {
+    pub fn data_addr(&self) -> PhysAddr {
         self.page.start_address()
+    }
+
+    pub fn page(&self) -> PhysFrame {
+        self.page
     }
 
     fn make_key(device: &Weak<dyn CachedAccess>, offset: usize) -> PageCacheKey {
@@ -85,12 +103,13 @@ impl CachedPage {
         self.dirty.load(Ordering::SeqCst)
     }
 
-    fn mark_dirty(&self) {
+    pub fn mark_dirty(&self) {
+        log::error!("marking dirty --------------------------------------");
         self.dirty.store(true, Ordering::SeqCst);
     }
 
     fn device(&self) -> Arc<dyn CachedAccess> {
-        self.device.upgrade().unwrap()
+        self.owner.upgrade().unwrap()
     }
 
     fn sync(&self) {
@@ -98,13 +117,21 @@ impl CachedPage {
             return;
         }
 
-        // Commit the changes made to the cache to the disk.
-        let disk = self.device();
-
+        // Commit the changes made to the cache to the owner.
+        let owner = self.device();
         let offset_bytes = self.offset * Size4KiB::SIZE as usize;
-        let sector = offset_bytes / disk.block_size();
+        owner.write_direct(offset_bytes, self.page);
 
-        disk.write_dma(sector, self.data_addr(), Size4KiB::SIZE as usize);
+        for mut mapping in self.dirty_mappings.lock_irq().drain(..) {
+            let mut offset_table = mapping.addr_space.offset_page_table();
+            offset_table
+                .unmap(Page::<Size4KiB>::containing_address(mapping.addr))
+                .unwrap()
+                .1
+                .flush();
+        }
+
+        self.dirty.store(false, Ordering::SeqCst);
     }
 }
 
@@ -116,12 +143,12 @@ impl Drop for CachedPage {
 
 impl Cacheable<PageCacheKey> for CachedPage {
     fn cache_key(&self) -> PageCacheKey {
-        Self::make_key(&self.device, self.offset)
+        Self::make_key(&self.owner, self.offset)
     }
 }
 
 lazy_static::lazy_static! {
-    static ref PAGE_CACHE: Arc<Cache<PageCacheKey, CachedPage>> = Cache::new();
+    pub(in crate::fs) static ref PAGE_CACHE: Arc<Cache<PageCacheKey, CachedPage>> = Cache::new();
 }
 
 impl Cache<PageCacheKey, CachedPage> {
@@ -145,15 +172,15 @@ impl Cache<PageCacheKey, CachedPage> {
         let device = device.upgrade().expect("page_cache: device dropped");
 
         let aligned_offset = align_down(offset as u64, Size4KiB::SIZE) as usize;
-        let sector = aligned_offset / device.block_size();
-
         device
-            .read_dma(sector, page.data_addr(), Size4KiB::SIZE as usize)
+            .read_direct(aligned_offset, page.page())
             .expect("page_cache: failed to read block");
 
         PAGE_CACHE.make_item_cached(page)
     }
 }
+
+// TODO: cache hit miss stats
 
 pub struct DirtyRef<T: Sized> {
     cache: PageCacheItem,
@@ -202,8 +229,11 @@ pub trait BlockDeviceInterface: Send + Sync {
     fn write_block(&self, sector: usize, buf: &[u8]) -> Option<usize>;
 }
 
-pub trait CachedAccess: BlockDeviceInterface {
+pub trait CachedAccess: Send + Sync {
     fn sref(&self) -> Weak<dyn CachedAccess>;
+
+    fn read_direct(&self, offset: usize, dest: PhysFrame) -> Option<usize>;
+    fn write_direct(&self, offset: usize, src: PhysFrame) -> Option<usize>;
 
     fn read(&self, mut offset: usize, dest: &mut [MaybeUninit<u8>]) -> Option<usize> {
         let mut loc = 0;
@@ -236,6 +266,9 @@ pub trait CachedAccess: BlockDeviceInterface {
         let mut loc = 0;
 
         while loc < buffer.len() {
+            // TODO: If it is not found in the page cache, then, when the write perfectly falls on
+            // page size boundaries, the page is not even read from disk, but allocated and
+            // immediately marked dirty.
             let page = PAGE_CACHE.get_page(&self.sref(), offset);
 
             let page_offset = offset % Size4KiB::SIZE as usize;
@@ -317,6 +350,22 @@ impl BlockDeviceInterface for BlockDevice {
 impl CachedAccess for BlockDevice {
     fn sref(&self) -> Weak<dyn CachedAccess> {
         self.sref.clone()
+    }
+
+    fn read_direct(&self, offset: usize, dest: PhysFrame) -> Option<usize> {
+        self.dev.read_dma(
+            offset / self.dev.block_size(),
+            dest.start_address(),
+            Size4KiB::SIZE as _,
+        )
+    }
+
+    fn write_direct(&self, offset: usize, src: PhysFrame) -> Option<usize> {
+        self.dev.write_dma(
+            offset / self.dev.block_size(),
+            src.start_address(),
+            Size4KiB::SIZE as _,
+        )
     }
 }
 

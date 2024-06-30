@@ -33,6 +33,7 @@ use crate::socket::{SocketAddr, SocketAddrRef};
 use crate::userland::scheduler;
 use crate::utils::sync::{BMutex, Mutex, WaitQueue};
 
+use super::block::PageCacheItem;
 use super::cache::{Cacheable, CachedINode, DirCacheItem, INodeCacheItem};
 use super::devfs::DevINode;
 use super::file_table::FileHandle;
@@ -107,6 +108,11 @@ impl From<PollFlags> for PollEventFlags {
 
         flags
     }
+}
+
+pub enum MMapPage {
+    Direct(PhysFrame),
+    PageCache(PageCacheItem),
 }
 
 /// An inode describes a file. An inode structure holds metadata of the
@@ -231,6 +237,14 @@ pub trait INodeInterface: Send + Sync {
     }
 
     fn mmap(&self, _offset: usize, _size: usize, _flags: MMapFlags) -> Result<PhysFrame> {
+        Err(FileSystemError::NotSupported)
+    }
+
+    fn mmap_v2(&self, _offset: usize) -> Result<MMapPage> {
+        log::error!(
+            "{} does not support mmap_v2!",
+            core::any::type_name_of_val(self),
+        );
         Err(FileSystemError::NotSupported)
     }
 

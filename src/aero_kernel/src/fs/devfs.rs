@@ -31,7 +31,7 @@ use crate::mem::paging::*;
 use crate::rendy::RendyInfo;
 
 use super::cache::{DirCacheItem, INodeCacheItem};
-use super::inode::{INodeInterface, PollFlags, PollTable};
+use super::inode::{INodeInterface, MMapPage, PollFlags, PollTable};
 use super::ramfs::RamFs;
 use super::{FileSystem, FileSystemError, Result, MOUNT_MANAGER};
 
@@ -131,6 +131,10 @@ impl INodeInterface for DevINode {
 
     fn open(&self, handle: Arc<super::file_table::FileHandle>) -> Result<Option<DirCacheItem>> {
         self.0.inode().open(handle)
+    }
+
+    fn mmap_v2(&self, offset: usize) -> Result<MMapPage> {
+        self.0.inode().mmap_v2(offset)
     }
 }
 
@@ -355,6 +359,26 @@ impl INodeInterface for DevFb {
                 }
             })
             .expect("/dev/fb: terminal not initialized")
+    }
+
+    fn mmap_v2(&self, offset: usize) -> Result<MMapPage> {
+        let rinfo = crate::rendy::get_rendy_info();
+
+        // Make sure we are in bounds.
+        if offset > rinfo.byte_len || offset + Size4KiB::SIZE as usize > rinfo.byte_len {
+            return Err(FileSystemError::NotSupported);
+        }
+
+        let mut lock = crate::rendy::DEBUG_RENDY.get().unwrap().lock_irq();
+        let fb = lock.get_framebuffer();
+
+        let fb_ptr = fb.as_ptr().cast::<u8>();
+        let fb_ptr = unsafe { fb_ptr.add(offset) };
+        let fb_phys_ptr = unsafe { fb_ptr.sub(crate::PHYSICAL_MEMORY_OFFSET.as_u64() as usize) };
+
+        Ok(MMapPage::Direct(PhysFrame::containing_address(unsafe {
+            PhysAddr::new_unchecked(fb_phys_ptr as u64)
+        })))
     }
 
     fn ioctl(&self, command: usize, arg: usize) -> Result<usize> {

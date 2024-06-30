@@ -37,13 +37,13 @@ use crate::socket::SocketAddrRef;
 
 use self::group_desc::GroupDescriptors;
 
-use super::block::{self, BlockDevice, CachedAccess};
+use super::block::{self, BlockDevice, CachedAccess, PAGE_CACHE};
 
 use super::cache::{DirCacheItem, INodeCacheItem};
 use super::path::PathBuf;
 use super::{cache, FileSystemError, Path};
 
-use super::inode::{self, INodeInterface, Metadata, PollFlags, PollTable};
+use super::inode::{self, INodeInterface, MMapPage, Metadata, PollFlags, PollTable};
 use super::FileSystem;
 
 pub struct INode {
@@ -358,6 +358,20 @@ impl INode {
     }
 }
 
+impl CachedAccess for INode {
+    fn sref(&self) -> Weak<dyn CachedAccess> {
+        self.sref.clone()
+    }
+
+    fn read_direct(&self, offset: usize, dest: PhysFrame) -> Option<usize> {
+        INodeInterface::read_at(self, offset, dest.as_slice_mut()).ok()
+    }
+
+    fn write_direct(&self, offset: usize, src: PhysFrame) -> Option<usize> {
+        INodeInterface::write_at(self, offset, src.as_slice_mut()).ok()
+    }
+}
+
 impl INodeInterface for INode {
     fn weak_filesystem(&self) -> Option<Weak<dyn FileSystem>> {
         Some(self.fs.clone())
@@ -585,6 +599,14 @@ impl INodeInterface for INode {
         self.read_at(offset, buffer)?;
 
         Ok(private_cp)
+    }
+
+    // TODO: cleanup
+    fn mmap_v2(&self, offset: usize) -> super::Result<MMapPage> {
+        Ok(MMapPage::PageCache(PAGE_CACHE.get_page(
+            &(self.sref.clone() as Weak<dyn CachedAccess>),
+            offset,
+        )))
     }
 
     fn listen(&self, backlog: usize) -> Result<(), SyscallError> {

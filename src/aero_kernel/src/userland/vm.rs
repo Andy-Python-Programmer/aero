@@ -24,13 +24,16 @@ use alloc::collections::linked_list::CursorMut;
 use alloc::collections::LinkedList;
 
 use alloc::sync::Arc;
+use hashbrown::HashMap;
 use xmas_elf::header::*;
 use xmas_elf::program::*;
 use xmas_elf::*;
 
 use crate::arch::task::userland_last_address;
+use crate::fs::block::PageCacheItem;
 use crate::fs::cache::{DirCacheImpl, DirCacheItem};
 use crate::fs::file_table::FileHandle;
+use crate::fs::inode::MMapPage;
 use crate::fs::{FileSystemError, Path};
 use crate::mem::paging::*;
 use crate::mem::AddressSpace;
@@ -344,21 +347,27 @@ pub struct LoadedBinary<'header> {
     pub envv: Option<ExecArgs>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MMapFile {
     offset: usize,
     file: DirCacheItem,
     size: usize,
+    mappings: HashMap<VirtAddr, PageCacheItem>,
 }
 
 impl MMapFile {
     #[inline]
     fn new(file: DirCacheItem, offset: usize, size: usize) -> Self {
-        Self { offset, file, size }
+        Self {
+            offset,
+            file,
+            size,
+            mappings: HashMap::new(),
+        }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Mapping {
     pub flags: MMapFlags,
     vm_flags: VmFlag,
@@ -454,50 +463,187 @@ impl Mapping {
         &mut self,
         offset_table: &mut OffsetPageTable,
         reason: PageFaultErrorCode,
-        address: VirtAddr,
+        addr: VirtAddr,
     ) -> bool {
-        if let Some(mmap_file) = self.file.as_mut() {
+        if let Some(file) = self.file.as_ref() {
             let offset = align_down(
-                (address - self.start_addr) + mmap_file.offset as u64,
+                (addr - self.start_addr) + file.offset as u64,
                 Size4KiB::SIZE,
             );
 
-            let address = address.align_down(Size4KiB::SIZE);
-            let size = core::cmp::min(
-                Size4KiB::SIZE,
-                mmap_file.size as u64 - (address - self.start_addr),
-            );
+            let addr = addr.align_down(Size4KiB::SIZE);
+            let size = Size4KiB::SIZE.min(file.size as u64 - (addr - self.start_addr));
 
-            if !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
-                // We are writing to private file mapping so copy the content of the page.
-                let frame = mmap_file
-                    .file
-                    .inode()
-                    .mmap(offset as _, size as _, self.flags)
-                    .expect("handle_pf_file: file does not support mmap");
-
-                let flags = PageTableFlags::PRESENT
-                    | PageTableFlags::USER_ACCESSIBLE
-                    | self.vm_flags.into();
-
-                // if self.flags.contains(MMapFlags::MAP_SHARED) {
-                //     flags |= PageTableFlags::BIT_10;
-                // }
-
-                unsafe { offset_table.map_to(Page::containing_address(address), frame, flags) }
-                    .expect("failed to map allocated frame for private file read")
-                    .flush();
-
-                true
-            } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
-                self.handle_cow(offset_table, address, true)
+            return if self.flags.contains(MMapFlags::MAP_SHARED) {
+                self.handle_pf_shared_file(offset_table, reason, addr, offset as _, size as _)
             } else {
-                log::error!("    - present page read failed");
-                false
-            }
+                self.handle_pf_private_file(offset_table, reason, addr, offset as _, size as _)
+            };
+        }
+
+        false
+    }
+
+    fn handle_pf_private_file(
+        &mut self,
+        offset_table: &mut OffsetPageTable,
+        reason: PageFaultErrorCode,
+
+        addr: VirtAddr,
+        offset: usize,
+        size: usize,
+    ) -> bool {
+        let mmap_file = self.file.as_mut().unwrap();
+        let page_cache = if let MMapPage::PageCache(page_cache) =
+            mmap_file.file.inode().mmap_v2(offset).unwrap()
+        {
+            page_cache
         } else {
+            todo!()
+        };
+
+        if !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
+            && !reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
+        {
+            let frame = if size == Size4KiB::SIZE as usize {
+                page_cache.page()
+            } else {
+                // The end needs to be zeroed out so we cannot directly map the cached page.
+                let page: Page = Page::containing_address(page_cache.data_addr().as_hhdm_virt());
+
+                let new_frame: PhysFrame = PhysFrame::containing_address(
+                    FRAME_ALLOCATOR
+                        .alloc_zeroed(Size4KiB::SIZE as usize)
+                        .unwrap(),
+                );
+
+                let new_slice = new_frame.as_slice_mut::<u8>();
+                new_slice[..size].copy_from_slice(unsafe {
+                    core::slice::from_raw_parts(page.start_address().as_ptr::<u8>(), size)
+                });
+
+                new_frame
+            };
+
+            unsafe {
+                offset_table.map_to(
+                    Page::containing_address(addr),
+                    frame,
+                    PageTableFlags::PRESENT
+                        | PageTableFlags::USER_ACCESSIBLE
+                        | (self.vm_flags & !VmFlag::WRITE).into(),
+                )
+            }
+            .expect("failed to map allocated frame for private file read")
+            .flush();
+
+            true
+        } else if !reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
+            && reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
+        {
+            // We are writing to private file mapping so copy the content of the page.
+            let frame = mmap_file
+                .file
+                .inode()
+                .mmap(offset, size, self.flags)
+                .expect("handle_pf_file: file does not support mmap");
+
+            unsafe {
+                offset_table.map_to(
+                    Page::containing_address(addr),
+                    frame,
+                    PageTableFlags::PRESENT
+                        | PageTableFlags::USER_ACCESSIBLE
+                        | self.vm_flags.into(),
+                )
+            }
+            .expect("failed to map allocated frame for private file read")
+            .flush();
+
+            assert!(mmap_file.mappings.get(&addr).is_none());
+            true
+        } else if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
+            && reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
+        {
+            if self.handle_cow(offset_table, addr, true) {
+                self.file.as_mut().unwrap().mappings.remove(&addr);
+                return true;
+            }
+
+            false
+        } else {
+            log::error!("    - present page read failed");
             false
         }
+    }
+
+    fn handle_pf_shared_file(
+        &mut self,
+        offset_table: &mut OffsetPageTable,
+        reason: PageFaultErrorCode,
+
+        addr: VirtAddr,
+        offset: usize,
+        _size: usize,
+    ) -> bool {
+        let mmap_file = self.file.as_mut().unwrap();
+        let mmap_page = mmap_file.file.inode().mmap_v2(offset).unwrap();
+
+        if reason.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
+            if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
+                return false;
+            }
+        } else if let MMapPage::PageCache(page_cache) = &mmap_page {
+            mmap_file.mappings.insert(addr, page_cache.clone());
+        }
+
+        match mmap_page {
+            MMapPage::PageCache(page_cache) => {
+                if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
+                    unsafe {
+                        offset_table.map_to(
+                            Page::containing_address(addr),
+                            page_cache.page(),
+                            PageTableFlags::PRESENT
+                                | PageTableFlags::USER_ACCESSIBLE
+                                | self.vm_flags.into(),
+                        )
+                    }
+                    .unwrap()
+                    .flush();
+
+                    page_cache.mark_dirty();
+                } else {
+                    unsafe {
+                        offset_table.map_to(
+                            Page::containing_address(addr),
+                            page_cache.page(),
+                            PageTableFlags::PRESENT
+                                | PageTableFlags::USER_ACCESSIBLE
+                                | (self.vm_flags & !VmFlag::WRITE).into(),
+                        )
+                    }
+                    .unwrap()
+                    .flush();
+                }
+            }
+
+            MMapPage::Direct(frame) => {
+                unsafe {
+                    offset_table.map_to(
+                        Page::containing_address(addr),
+                        frame,
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::USER_ACCESSIBLE
+                            | self.vm_flags.into(),
+                    )
+                }
+                .unwrap()
+                .flush();
+            }
+        }
+
+        true
     }
 
     /// Copies the contents of the `page` page to a newly allocated frame and maps it to
@@ -578,13 +724,11 @@ impl Mapping {
                     .flush();
                 }
 
-                true
-            } else {
-                false
+                return true;
             }
-        } else {
-            false
         }
+
+        false
     }
 
     fn unmap(
@@ -867,7 +1011,6 @@ impl VmProtected {
             // We need to find a free mapping above 0x7000_0000_0000.
             self.find_any_above(VirtAddr::new(0x7000_0000_0000), size_aligned as _)
         } else if flags.contains(MMapFlags::MAP_FIXED) {
-            // SAFETY: The provided address should be page aligned.
             if !address.is_aligned(Size4KiB::SIZE) {
                 log::warn!("mmap: fixed mapping address is not page aligned");
                 return None;

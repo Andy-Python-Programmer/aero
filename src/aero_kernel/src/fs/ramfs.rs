@@ -33,7 +33,7 @@ use super::cache::{
 };
 use super::devfs::DevINode;
 use super::inode::{
-    DirEntry, FileContents, FileType, INodeInterface, Metadata, PollFlags, PollTable,
+    DirEntry, FileContents, FileType, INodeInterface, MMapPage, Metadata, PollFlags, PollTable,
 };
 use super::{FileSystem, FileSystemError, Result};
 
@@ -381,6 +381,21 @@ impl INodeInterface for LockedRamINode {
 
             // TODO: Support other memory mapping ramfs files:
             _ => Err(FileSystemError::NotSupported),
+        }
+    }
+
+    fn mmap_v2(&self, offset: usize) -> Result<MMapPage> {
+        let this = self.0.read();
+
+        match &this.contents {
+            FileContents::Device(dev) => {
+                let device = dev.clone();
+                drop(this);
+
+                device.mmap_v2(offset)
+            }
+
+            _ => todo!(),
         }
     }
 
