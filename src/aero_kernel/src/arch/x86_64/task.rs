@@ -80,15 +80,15 @@ pub enum AuxvType {
 /// Returns the first address outside the user range.
 ///
 /// ## Notes
-/// * On Intel CPUs, if a SYSCALL instruction is at the highest canonical address, then
-/// that syscall will enter the kernel with a non-canonical return address, and SYSRET will
-/// explode dangerously. We avoid this particular problem by preventing anything from
-/// being mapped at the maximum canonical address.
+/// * On Intel CPUs, if a SYSCALL instruction is at the highest canonical address, then that syscall
+///   will enter the kernel with a non-canonical return address, and SYSRET will explode
+///   dangerously. We avoid this particular problem by preventing anything from being mapped at the
+///   maximum canonical address.
 ///
 /// * On AMD CPUs in the Ryzen family, there's a nasty bug in which the CPUs malfunction if they
-/// execute code from the highest canonical page. They'll speculate right off the end of the
-/// canonical space and bad things happen. This is worked around in the same way as the Intel
-/// problem.
+///   execute code from the highest canonical page. They'll speculate right off the end of the
+///   canonical space and bad things happen. This is worked around in the same way as the Intel
+///   problem.
 pub fn userland_last_address() -> VirtAddr {
     // Reference: https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/page_64.h#L61
     static CACHED: spin::Once<VirtAddr> = spin::Once::new();

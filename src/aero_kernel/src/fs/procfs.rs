@@ -199,7 +199,8 @@ impl INodeInterface for LockedProcINode {
                     maps.push(serde_json::json!({
                         "start": map.start_addr.as_u64(),
                         "end": map.end_addr.as_u64(),
-                        "flags": map.flags.bits(),
+                        // "flags": map.flags.bits(),
+                        // do we need to tell if is shared?
                         "protection": map.protection().bits(),
                     }));
                 });

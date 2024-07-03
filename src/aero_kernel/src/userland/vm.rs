@@ -54,6 +54,8 @@ bitflags::bitflags! {
         const MAY_READ  = 1 << 3;
         const MAY_WRITE = 1 << 4;
         const MAY_EXEC  = 1 << 5;
+
+        const SHARED    = 1 << 6;
     }
 }
 
@@ -369,7 +371,6 @@ impl MMapFile {
 
 #[derive(Clone)]
 pub struct Mapping {
-    pub flags: MMapFlags,
     vm_flags: VmFlag,
 
     pub start_addr: VirtAddr,
@@ -474,7 +475,7 @@ impl Mapping {
             let addr = addr.align_down(Size4KiB::SIZE);
             let size = Size4KiB::SIZE.min(file.size as u64 - (addr - self.start_addr));
 
-            return if self.flags.contains(MMapFlags::MAP_SHARED) {
+            return if self.vm_flags.contains(VmFlag::SHARED) {
                 self.handle_pf_shared_file(offset_table, reason, addr, offset as _, size as _)
             } else {
                 self.handle_pf_private_file(offset_table, reason, addr, offset as _, size as _)
@@ -545,7 +546,7 @@ impl Mapping {
             let frame = mmap_file
                 .file
                 .inode()
-                .mmap(offset, size, self.flags)
+                .mmap(offset, size, MMapFlags::empty())
                 .expect("handle_pf_file: file does not support mmap");
 
             unsafe {
@@ -764,7 +765,6 @@ impl Mapping {
             });
 
             let new_mapping = Mapping {
-                flags: self.flags,
                 start_addr: end,
                 end_addr: end + (self.end_addr - end),
                 file: new_file,
@@ -868,13 +868,10 @@ impl VmProtected {
                 return false;
             }
 
-            let is_private = map.flags.contains(MMapFlags::MAP_PRIVATE);
-            let is_annon = map.flags.contains(MMapFlags::MAP_ANONYOMUS);
-
             let mut address_space = AddressSpace::this();
             let mut offset_table = address_space.offset_page_table();
 
-            match (is_private, is_annon) {
+            match (!map.vm_flags.contains(VmFlag::SHARED), map.file.is_none()) {
                 (true, true) => {
                     map.handle_pf_private_anon(&mut offset_table, reason, accessed_address)
                 }
@@ -970,9 +967,6 @@ impl VmProtected {
         file: Option<DirCacheItem>,
         vm_flags: VmFlag,
     ) -> Option<VirtAddr> {
-        // TODO: Check file permissions:
-        //     * Do not allow writing to an {read, append}-only file.
-
         let z = file.clone();
 
         // Offset is required to be a multiple of page size.
@@ -1030,19 +1024,16 @@ impl VmProtected {
             // Merge same mappings instead of creating a new one.
             if let Some(prev) = cursor.peek_prev() {
                 if prev.end_addr == addr
-                    && prev.flags == flags
-                    && prev.protection() == (vm_flags & VM_PROT_MASK)
+                    && prev.vm_flags == vm_flags
                     && prev.file.is_none()
+                    && file.is_none()
                 {
                     prev.end_addr = addr + size_aligned;
-
                     return addr;
                 }
             }
 
             cursor.insert_before(Mapping {
-                flags,
-
                 start_addr: addr,
                 end_addr: addr + size_aligned,
 
@@ -1077,21 +1068,19 @@ impl VmProtected {
         for mmap in &self.mappings {
             if let Some(file) = mmap.file.as_ref() {
                 log::debug!(
-                    "{:?}..{:?} => {:?}, {:?} (offset={:#x}, size={:#x})",
+                    "{:?}..{:?} => {:?} (offset={:#x}, size={:#x})",
                     mmap.start_addr,
                     mmap.end_addr,
                     mmap.vm_flags,
-                    mmap.flags,
                     file.offset,
                     file.size,
                 );
             } else {
                 log::debug!(
-                    "{:?}..{:?} => {:?}, {:?}",
+                    "{:?}..{:?} => {:?}",
                     mmap.start_addr,
                     mmap.end_addr,
                     mmap.vm_flags,
-                    mmap.flags,
                 );
             }
         }
@@ -1376,7 +1365,7 @@ impl VmProtected {
 
         for map in self.mappings.iter().filter(|map| {
             // Do not copy page table entries where a page fault can map them correctly.
-            !map.flags.contains(MMapFlags::MAP_SHARED) && map.vm_flags.contains(VmFlag::MAY_WRITE)
+            !map.vm_flags.contains(VmFlag::SHARED) && map.vm_flags.contains(VmFlag::MAY_WRITE)
         }) {
             offset_table.copy_page_range(&mut current, map.start_addr..=map.end_addr);
         }
@@ -1406,18 +1395,31 @@ impl Vm {
         offset: usize,
         file: Option<Arc<FileHandle>>,
     ) -> Option<VirtAddr> {
-        let vm_flags =
+        let mut vm_flags =
             VmFlag::from(protection) | VmFlag::MAY_READ | VmFlag::MAY_WRITE | VmFlag::MAY_EXEC;
 
         let map_type = flags & (MMapFlags::MAP_SHARED | MMapFlags::MAP_PRIVATE);
 
         match (map_type, file.as_ref()) {
             (MMapFlags::MAP_SHARED, Some(file)) => {
-                if protection.contains(MMapProt::PROT_WRITE) && !file.is_writable() {
-                    return None; // EACCES
+                vm_flags.insert(VmFlag::SHARED);
+
+                if !file.is_writable() {
+                    if protection.contains(MMapProt::PROT_WRITE) {
+                        return None; // EACCES
+                    }
+
+                    // The mapping is going to be read-only forever so, it can be converted into a
+                    // private mapping.
+                    vm_flags.remove(VmFlag::MAY_WRITE | VmFlag::SHARED);
                 }
 
-                // TODO: check for append-only files.
+                if !file.is_readable() {
+                    // return None; // EACCES
+                }
+
+                // TODO: * check if the filsystem is noexec mounted and remove the MAY_EXEC flag.
+                //       * error out if prot contains PROT_EXEC & filesystem is noexec.
             }
 
             (MMapFlags::MAP_PRIVATE, Some(file)) => {
@@ -1429,6 +1431,7 @@ impl Vm {
                 //       * error out if prot contains PROT_EXEC & filesystem is noexec.
             }
 
+            (MMapFlags::MAP_SHARED, None) => vm_flags.insert(VmFlag::SHARED),
             _ => {}
         }
 

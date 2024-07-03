@@ -104,7 +104,6 @@ impl CachedPage {
     }
 
     pub fn mark_dirty(&self) {
-        log::error!("marking dirty --------------------------------------");
         self.dirty.store(true, Ordering::SeqCst);
     }
 

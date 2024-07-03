@@ -113,6 +113,19 @@ impl VirtAddr {
         self.0 == 0
     }
 
+    pub fn is_canonical(self) -> bool {
+        let virtual_mask_shift = if super::level_5_paging_enabled() {
+            56
+        } else {
+            47
+        };
+
+        let shift = 64 - (virtual_mask_shift + 1);
+
+        // By doing the right shift as a signed operation will sign extend the value.
+        ((self.as_u64() << shift) as i64 >> shift) as u64 == self.as_u64()
+    }
+
     /// Validate reads `sizeof(T)` bytes from the virtual address and returns a mutable
     /// reference to the value (`&mut T`).
     ///

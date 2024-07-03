@@ -112,15 +112,14 @@ pub fn unwind_stack_trace() {
 
     for depth in 0../*64*/16 {
         if let Some(rip_rbp) = rbp.checked_add(core::mem::size_of::<usize>()) {
-            if offset_table
-                .translate_addr(VirtAddr::new(rip_rbp as u64))
-                .is_none()
-            {
+            let rip_rbp = VirtAddr::new(rip_rbp as u64);
+
+            if offset_table.translate_addr(rip_rbp).is_none() || !rip_rbp.is_canonical() {
                 log::trace!("{:>2}: <guard page>", depth);
                 break;
             }
 
-            let rip = unsafe { *(rip_rbp as *const usize) };
+            let rip = unsafe { *(rip_rbp.as_ptr::<usize>()) };
 
             if rip == 0 {
                 break;
