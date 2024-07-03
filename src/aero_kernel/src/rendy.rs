@@ -17,10 +17,10 @@
 
 use core::fmt::Write;
 
+use core::fmt;
 use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;
 use core::time::Duration;
-use core::{fmt, u8};
 
 use alloc::boxed::Box;
 

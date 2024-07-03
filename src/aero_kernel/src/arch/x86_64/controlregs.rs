@@ -335,9 +335,8 @@ pub unsafe fn write_xcr0(value: XCr0Flags) {
 /// Write the given set of CR4 flags.
 ///
 /// ## Safety
-/// - This function does not preserve the current value of the CR4 flags and
-/// reserved fields.
-/// - Its possible to violate memory safety by swapping CR4 flags.
+/// * This function does not preserve the current value of the CR4 flags and reserved fields.
+/// * Its possible to violate memory safety by swapping CR4 flags.
 pub unsafe fn write_cr4(value: Cr4Flags) {
     asm!("mov cr4, {}", in(reg) value.bits(), options(nostack, preserves_flags));
 }
@@ -345,9 +344,8 @@ pub unsafe fn write_cr4(value: Cr4Flags) {
 /// Write the given set of CR0 flags.
 ///
 /// ## Safety
-/// - This function does not preserve the current value of the CR0 flags and
-/// reserved fields.
-/// - Its possible to violate memory safety by swapping CR0 flags.
+/// * This function does not preserve the current value of the CR0 flags and reserved fields.
+/// * Its possible to violate memory safety by swapping CR0 flags.
 pub unsafe fn write_cr0(value: Cr0Flags) {
     asm!("mov cr0, {}", in(reg) value.bits(), options(nostack, preserves_flags));
 }

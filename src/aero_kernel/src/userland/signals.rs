@@ -395,12 +395,9 @@ impl Signals {
     /// Used to update or read the signal mask of a task.
     ///
     /// ## Notes
-    /// * If `old_set` is not `None`, the previous value of the signal mask is
-    /// stored in oldset.
-    ///
-    /// * If `set` is `None`, then the signal mask is unchanged (i.e., `how` is
-    /// ignored), but the current value of the signal mask is returned in `old_set`
-    /// (if it is not `None`).
+    /// * If `old_set` is not `None`, the previous value of the signal mask is stored in oldset.
+    /// * If `set` is `None`, then the signal mask is unchanged (i.e., `how` is ignored), but the
+    ///   current value of the signal mask is returned in `old_set` (if it is not `None`).
     pub fn set_mask(&self, how: SigProcMask, set: Option<u64>, old_set: Option<&mut u64>) {
         if let Some(old) = old_set {
             *old = self.blocked_mask.load(Ordering::SeqCst);

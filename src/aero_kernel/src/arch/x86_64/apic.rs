@@ -288,11 +288,11 @@ impl LocalApic {
     /// This function works for both XAPIC and X2APIC.
     ///
     /// ## Safety
-    /// * The provided `register` must be a valid APIC register and the `value` must
-    /// be a valid value for the provided APIC register.
+    /// * The provided `register` must be a valid APIC register and the `value` must be a valid
+    ///   value for the provided APIC register.
     ///
-    /// * If the `register` is 64-bit wide, then the [`Self::write_long`] function must
-    /// be used instead.
+    /// * If the `register` is 64-bit wide, then the [`Self::write_long`] function must be used
+    ///   instead.
     unsafe fn write(&mut self, register: u32, value: u32) {
         match self.apic_type {
             ApicType::X2apic => {

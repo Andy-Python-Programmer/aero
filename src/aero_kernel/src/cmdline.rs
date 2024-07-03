@@ -126,8 +126,7 @@ pub fn parse(cmdline: &'static str, modules: &[&File]) -> CommandLine {
 /// Returns the raw kernel command line string.
 ///
 /// ## Panics
-/// * If this function was invoked before the kernel command line was
-/// parsed using [`self::parse`].
+/// * If this function was invoked before the kernel command line was parsed using [`self::parse`].
 pub fn get_raw_cmdline() -> &'static str {
     RAW_CMDLINE_STR
         .get()
