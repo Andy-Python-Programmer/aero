@@ -371,7 +371,7 @@ impl MMapFile {
 
 #[derive(Clone)]
 pub struct Mapping {
-    vm_flags: VmFlag,
+    flags: VmFlag,
 
     pub start_addr: VirtAddr,
     pub end_addr: VirtAddr,
@@ -382,22 +382,21 @@ pub struct Mapping {
 
 impl Mapping {
     pub fn set_protection(&mut self, protection: MMapProt) -> aero_syscall::Result<()> {
-        if (protection.contains(MMapProt::PROT_READ) && !self.vm_flags.contains(VmFlag::MAY_READ))
+        if (protection.contains(MMapProt::PROT_READ) && !self.flags.contains(VmFlag::MAY_READ))
             || (protection.contains(MMapProt::PROT_WRITE)
-                && !self.vm_flags.contains(VmFlag::MAY_WRITE))
-            || (protection.contains(MMapProt::PROT_EXEC)
-                && !self.vm_flags.contains(VmFlag::MAY_EXEC))
+                && !self.flags.contains(VmFlag::MAY_WRITE))
+            || (protection.contains(MMapProt::PROT_EXEC) && !self.flags.contains(VmFlag::MAY_EXEC))
         {
             return Err(aero_syscall::SyscallError::EACCES);
         }
 
-        self.vm_flags = (self.vm_flags & !VM_PROT_MASK) | protection.into();
+        self.flags = (self.flags & !VM_PROT_MASK) | protection.into();
         Ok(())
     }
 
     #[inline]
     pub fn protection(&self) -> VmFlag {
-        self.vm_flags & VM_PROT_MASK
+        self.flags & VM_PROT_MASK
     }
 
     /// Handler routine for private anonymous pages. Since its an anonymous page is not
@@ -421,9 +420,7 @@ impl Mapping {
                     // NOTE: We dont need to remove the writeable flag from this mapping, since
                     // the writeable flag will be removed from the parent and child on fork so,
                     // the mapping gets copied on write.
-                    PageTableFlags::USER_ACCESSIBLE
-                        | PageTableFlags::PRESENT
-                        | self.vm_flags.into(),
+                    PageTableFlags::USER_ACCESSIBLE | PageTableFlags::PRESENT | self.flags.into(),
                 )
             }
             .expect("Failed to identity map userspace private mapping")
@@ -446,7 +443,7 @@ impl Mapping {
                         page,
                         PageTableFlags::USER_ACCESSIBLE
                             | PageTableFlags::PRESENT
-                            | self.vm_flags.into(),
+                            | self.flags.into(),
                     )
                     .unwrap()
                     .flush();
@@ -475,7 +472,7 @@ impl Mapping {
             let addr = addr.align_down(Size4KiB::SIZE);
             let size = Size4KiB::SIZE.min(file.size as u64 - (addr - self.start_addr));
 
-            return if self.vm_flags.contains(VmFlag::SHARED) {
+            return if self.flags.contains(VmFlag::SHARED) {
                 self.handle_pf_shared_file(offset_table, reason, addr, offset as _, size as _)
             } else {
                 self.handle_pf_private_file(offset_table, reason, addr, offset as _, size as _)
@@ -532,7 +529,7 @@ impl Mapping {
                     frame,
                     PageTableFlags::PRESENT
                         | PageTableFlags::USER_ACCESSIBLE
-                        | (self.vm_flags & !VmFlag::WRITE).into(),
+                        | (self.flags & !VmFlag::WRITE).into(),
                 )
             }
             .expect("failed to map allocated frame for private file read")
@@ -553,9 +550,7 @@ impl Mapping {
                 offset_table.map_to(
                     Page::containing_address(addr),
                     frame,
-                    PageTableFlags::PRESENT
-                        | PageTableFlags::USER_ACCESSIBLE
-                        | self.vm_flags.into(),
+                    PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | self.flags.into(),
                 )
             }
             .expect("failed to map allocated frame for private file read")
@@ -607,7 +602,7 @@ impl Mapping {
                             page_cache.page(),
                             PageTableFlags::PRESENT
                                 | PageTableFlags::USER_ACCESSIBLE
-                                | self.vm_flags.into(),
+                                | self.flags.into(),
                         )
                     }
                     .unwrap()
@@ -621,7 +616,7 @@ impl Mapping {
                             page_cache.page(),
                             PageTableFlags::PRESENT
                                 | PageTableFlags::USER_ACCESSIBLE
-                                | (self.vm_flags & !VmFlag::WRITE).into(),
+                                | (self.flags & !VmFlag::WRITE).into(),
                         )
                     }
                     .unwrap()
@@ -636,7 +631,7 @@ impl Mapping {
                         frame,
                         PageTableFlags::PRESENT
                             | PageTableFlags::USER_ACCESSIBLE
-                            | self.vm_flags.into(),
+                            | self.flags.into(),
                     )
                 }
                 .unwrap()
@@ -710,7 +705,7 @@ impl Mapping {
             if let Some(vm_frame) = phys_addr.as_vm_frame() {
                 if vm_frame.ref_count() > 1 || copy {
                     // This page is used by more then one process, so make it a private copy.
-                    Self::map_copied(offset_table, page, self.vm_flags).unwrap();
+                    Self::map_copied(offset_table, page, self.flags).unwrap();
                 } else {
                     // This page is used by only one process, so make it writable.
                     unsafe {
@@ -718,7 +713,7 @@ impl Mapping {
                             page,
                             PageTableFlags::PRESENT
                                 | PageTableFlags::USER_ACCESSIBLE
-                                | self.vm_flags.into(),
+                                | self.flags.into(),
                         )
                     }
                     .unwrap()
@@ -769,7 +764,7 @@ impl Mapping {
                 end_addr: end + (self.end_addr - end),
                 file: new_file,
                 refresh_flags: true,
-                vm_flags: self.vm_flags,
+                flags: self.flags,
             };
 
             self.end_addr = start;
@@ -857,13 +852,13 @@ impl VmProtected {
             }
 
             if reason.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
-                && !map.vm_flags.contains(VmFlag::WRITE)
+                && !map.flags.contains(VmFlag::WRITE)
             {
                 return false;
             }
 
             if reason.contains(PageFaultErrorCode::INSTRUCTION_FETCH)
-                && !map.vm_flags.contains(VmFlag::EXEC)
+                && !map.flags.contains(VmFlag::EXEC)
             {
                 return false;
             }
@@ -871,7 +866,7 @@ impl VmProtected {
             let mut address_space = AddressSpace::this();
             let mut offset_table = address_space.offset_page_table();
 
-            match (!map.vm_flags.contains(VmFlag::SHARED), map.file.is_none()) {
+            match (!map.flags.contains(VmFlag::SHARED), map.file.is_none()) {
                 (true, true) => {
                     map.handle_pf_private_anon(&mut offset_table, reason, accessed_address)
                 }
@@ -1024,7 +1019,7 @@ impl VmProtected {
             // Merge same mappings instead of creating a new one.
             if let Some(prev) = cursor.peek_prev() {
                 if prev.end_addr == addr
-                    && prev.vm_flags == vm_flags
+                    && prev.flags == vm_flags
                     && prev.file.is_none()
                     && file.is_none()
                 {
@@ -1039,7 +1034,7 @@ impl VmProtected {
 
                 file: file.map(|f| MMapFile::new(f, offset, size)),
                 refresh_flags: true,
-                vm_flags,
+                flags: vm_flags,
             });
 
             addr
@@ -1071,7 +1066,7 @@ impl VmProtected {
                     "{:?}..{:?} => {:?} (offset={:#x}, size={:#x})",
                     mmap.start_addr,
                     mmap.end_addr,
-                    mmap.vm_flags,
+                    mmap.flags,
                     file.offset,
                     file.size,
                 );
@@ -1080,7 +1075,7 @@ impl VmProtected {
                     "{:?}..{:?} => {:?}",
                     mmap.start_addr,
                     mmap.end_addr,
-                    mmap.vm_flags,
+                    mmap.flags,
                 );
             }
         }
@@ -1365,7 +1360,7 @@ impl VmProtected {
 
         for map in self.mappings.iter().filter(|map| {
             // Do not copy page table entries where a page fault can map them correctly.
-            !map.vm_flags.contains(VmFlag::SHARED) && map.vm_flags.contains(VmFlag::MAY_WRITE)
+            !map.flags.contains(VmFlag::SHARED) && map.flags.contains(VmFlag::MAY_WRITE)
         }) {
             offset_table.copy_page_range(&mut current, map.start_addr..=map.end_addr);
         }
