@@ -65,8 +65,10 @@ impl FileHandle {
 
     #[inline]
     pub fn is_readable(&self) -> bool {
-        self.flags()
-            .intersects(OpenFlags::O_RDONLY | OpenFlags::O_RDWR)
+        // FIXME: switch to Linux ABI for fcntl. mlibc defines O_RDONLY as 0 so, we have to infer
+        // the read-only flag.
+        let flags = self.flags();
+        flags.contains(OpenFlags::O_RDWR) || !flags.contains(OpenFlags::O_WRONLY)
     }
 
     pub fn flags(&self) -> OpenFlags {

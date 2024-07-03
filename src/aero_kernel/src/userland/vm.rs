@@ -1410,7 +1410,7 @@ impl Vm {
                 }
 
                 if !file.is_readable() {
-                    // return None; // EACCES
+                    return None; // EACCES
                 }
 
                 // TODO: * check if the filsystem is noexec mounted and remove the MAY_EXEC flag.
@@ -1419,7 +1419,7 @@ impl Vm {
 
             (MMapFlags::MAP_PRIVATE, Some(file)) => {
                 if !file.is_readable() {
-                    // return None; // EACCES
+                    return None; // EACCES
                 }
 
                 // TODO: * check if the filsystem is noexec mounted and remove the MAY_EXEC flag.
