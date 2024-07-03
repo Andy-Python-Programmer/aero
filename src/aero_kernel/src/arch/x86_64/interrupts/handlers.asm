@@ -39,6 +39,7 @@ interrupt_handler_%1:
     test qword [rsp + 16], 0x3
     ; skip the SWAPGS instruction if CS & 0b11 == 0b00.
     jz .dont_swapgs
+    lfence
     swapgs
     .dont_swapgs:
 
@@ -70,6 +71,7 @@ interrupt_handler_%1:
     test qword [rsp + 8], 0x3
     ; skip the SWAPGS instruction if CS & 0b11 == 0b00.
     jz .dont_swapgs_again
+    lfence
     swapgs
     .dont_swapgs_again:
     
