@@ -1128,15 +1128,6 @@ impl<'a> Translate for OffsetPageTable<'a> {
 }
 
 impl<'a> OffsetPageTable<'a> {
-    pub fn unmap_range(&mut self, range: Range<VirtAddr>, step: u64) -> Result<(), UnmapError> {
-        for addr in range.step_by(step as usize) {
-            let page: Page = Page::containing_address(addr);
-            self.inner.unmap(page)?.1.flush();
-        }
-
-        Ok(())
-    }
-
     pub fn copy_page_range(&mut self, src: &mut OffsetPageTable, range: RangeInclusive<VirtAddr>) {
         let mut map_to = |src: &mut OffsetPageTable, addr, frame, flags| match frame {
             MappedFrame::Size4KiB(frame) => {

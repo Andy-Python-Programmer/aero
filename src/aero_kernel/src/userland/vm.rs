@@ -16,6 +16,7 @@
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
 use core::fmt::Write;
+use core::ops::Range;
 
 use aero_syscall::{MMapFlags, MMapProt};
 
@@ -733,16 +734,17 @@ impl Mapping {
         start: VirtAddr,
         end: VirtAddr,
     ) -> Result<UnmapResult, UnmapError> {
-        let mut unmap_range_inner = |range| -> Result<(), UnmapError> {
-            match offset_table.unmap_range(range, Size4KiB::SIZE) {
-                Ok(_) => Ok(()),
-
-                // its fine since technically we are not actually allocating the range
-                // and they are just allocated on faults. So there might be a chance where we
-                // try to unmap a region that is mapped but not actually allocated.
-                Err(UnmapError::PageNotMapped) => Ok(()),
-                Err(err) => Err(err),
+        let mut unmap_range_inner = |range: Range<VirtAddr>| -> Result<(), UnmapError> {
+            for addr in range.step_by(Size4KiB::SIZE as usize) {
+                let page: Page = Page::containing_address(addr);
+                match offset_table.unmap(page) {
+                    Ok((_, flusher)) => flusher.flush(),
+                    Err(UnmapError::PageNotMapped) => {}
+                    Err(e) => return Err(e),
+                }
             }
+
+            Ok(())
         };
 
         if end <= self.start_addr || start >= self.end_addr {
