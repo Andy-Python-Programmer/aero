@@ -29,7 +29,6 @@
     custom_test_frameworks, // https://github.com/rust-lang/rust/issues/50297
     alloc_error_handler, // https://github.com/rust-lang/rust/issues/51540
     lang_items, // No tracking issue
-    panic_info_message, // https://github.com/rust-lang/rust/issues/66745
     decl_macro, // https://github.com/rust-lang/rust/issues/39412
     ptr_internals, // No tracking issue
     linked_list_cursors, // https://github.com/rust-lang/rust/issues/58533
