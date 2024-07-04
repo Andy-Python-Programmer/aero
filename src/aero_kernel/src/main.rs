@@ -49,8 +49,7 @@
     associated_type_defaults,
     trait_upcasting,
     asm_const,
-    sync_unsafe_cell,
-    // effects
+    sync_unsafe_cell
 )]
 // TODO(andypython): can we remove the dependency of "prelude_import" and "lang_items"?
 //     `lang_items`     => is currently used for the personality function (`rust_eh_personality`).
@@ -171,7 +170,9 @@ fn aero_main() -> ! {
     // Now that all of the essential initialization is done we are going to schedule
     // the kernel main thread.
     let init = Task::new_kernel(kernel_main_thread, true);
+    let kdbg = Task::new_kernel(kernel_dbg_thread, true);
     scheduler::get_scheduler().register_task(init);
+    scheduler::get_scheduler().register_task(kdbg);
 
     unsafe {
         interrupts::enable_interrupts();
@@ -210,6 +211,62 @@ fn kernel_main_thread() {
     userland::run().unwrap();
 
     unreachable!()
+}
+
+fn kernel_dbg_thread() {
+    use core::fmt::Write;
+
+    use crate::drivers::uart::{self, LineStatus, COM_1};
+    use crate::userland::task::TaskId;
+    use crate::utils::sync::WaitQueue;
+
+    uart::setup_interrupts();
+
+    let input_wq = WaitQueue::new();
+    let this_task = scheduler::current_thread();
+    uart::register_listener(this_task.clone());
+
+    let com_1 = COM_1.get().unwrap();
+
+    loop {
+        let mut input = String::new();
+
+        loop {
+            let mut com_1 = input_wq
+                .block_on(com_1, |com_1| {
+                    com_1.line_status().contains(LineStatus::INPUT_FULL)
+                })
+                .unwrap();
+
+            let c = com_1.read_byte() as char;
+
+            if c == '\r' {
+                writeln!(com_1).unwrap();
+                break;
+            }
+
+            input.push(c);
+            write!(com_1, "{c}").unwrap();
+        }
+
+        let mut commands = input.split_whitespace();
+
+        if let Some(name) = commands.next() {
+            match name {
+                "ps" => scheduler::get_scheduler().log_ptable(),
+                "wake" => {
+                    log::warn!("kdbg: forcefully waking up task");
+                    let id = commands.next().unwrap().parse::<usize>().unwrap();
+                    scheduler::get_scheduler()
+                        .find_task(TaskId::new(id))
+                        .unwrap()
+                        .wake_up();
+                }
+
+                _ => log::warn!("kdbg: unknown command {name:?}"),
+            }
+        }
+    }
 }
 
 extern "C" fn aero_ap_main(ap_id: usize) -> ! {

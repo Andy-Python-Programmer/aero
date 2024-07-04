@@ -20,10 +20,15 @@ use core::fmt::Write;
 
 use spin::Once;
 
+use crate::arch::interrupts::{self, InterruptStack};
 use crate::arch::io;
+use crate::userland::task::Task;
 use crate::utils::sync::Mutex;
 
-static COM_1: Once<Mutex<SerialPort>> = Once::new();
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+
+pub static COM_1: Once<Mutex<SerialPort>> = Once::new();
 
 bitflags::bitflags! {
     pub struct InterruptEnable: u8 {
@@ -95,24 +100,34 @@ impl SerialPort {
     }
 
     pub fn send_byte(&mut self, byte: u8) {
-        unsafe {
-            match byte {
-                8 | 0x7F => {
-                    self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
-                    io::outb(self.0, 8);
-
-                    self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
-                    io::outb(self.0, b' ');
-
-                    self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
+        match byte {
+            8 | 0x7F => {
+                self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
+                unsafe {
                     io::outb(self.0, 8);
                 }
-                _ => {
-                    self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
-                    io::outb(self.0, byte)
+
+                self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
+                unsafe {
+                    io::outb(self.0, b' ');
+                }
+
+                self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
+                unsafe {
+                    io::outb(self.0, 8);
+                }
+            }
+            _ => {
+                self.wait_for_line_status(LineStatus::OUTPUT_EMPTY);
+                unsafe {
+                    io::outb(self.0, byte);
                 }
             }
         }
+    }
+
+    pub fn read_byte(&mut self) -> u8 {
+        unsafe { io::inb(self.0) }
     }
 }
 
@@ -126,13 +141,42 @@ impl fmt::Write for SerialPort {
     }
 }
 
+fn irq_handler(_stack: &mut InterruptStack) {
+    if !unsafe { COM_1.get_unchecked() }
+        .lock_irq()
+        .line_status()
+        .contains(LineStatus::INPUT_FULL)
+    {
+        return;
+    }
+
+    (*LISTENERS)
+        .lock_irq()
+        .iter()
+        .for_each(|task| task.wake_up());
+}
+
+lazy_static::lazy_static! {
+    static ref LISTENERS: Mutex<Vec<Arc<Task>>> = Mutex::new(Vec::new());
+}
+
+pub fn register_listener(task: Arc<Task>) {
+    (*LISTENERS).lock_irq().push(task);
+}
+
 /// Initialize the serial ports if available.
 pub fn init() {
     unsafe {
-        let com_1 = SerialPort::new(0x3F8).init();
-
+        let com_1 = SerialPort::new(0x3f8).init();
         COM_1.call_once(move || Mutex::new(com_1));
     }
+}
+
+pub fn setup_interrupts() {
+    let vector = interrupts::allocate_vector();
+    interrupts::register_handler(vector, irq_handler);
+
+    crate::arch::apic::io_apic_setup_legacy_irq(4, vector, 1);
 }
 
 pub macro serial_print($($arg:tt)*) {
@@ -147,6 +191,8 @@ pub macro serial_println {
 #[doc(hidden)]
 pub fn _serial_print(args: fmt::Arguments) {
     if let Some(c) = COM_1.get() {
-        c.lock().write_fmt(args).expect("failed to write to COM1")
+        c.lock_irq()
+            .write_fmt(args)
+            .expect("failed to write to COM1")
     }
 }
