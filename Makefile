@@ -65,7 +65,7 @@ qemu: $(KERNEL_TARGET) $(USERLAND_TARGET)
 		-cpu host,+vmx \
 		-drive file=target/disk.img,if=none,id=NVME1,format=raw \
 		-device nvme,drive=NVME1,serial=nvme \
-		${QEMU_FLAGS} 
+		${QEMU_FLAGS}
 
 # "qemu_perf" options:
 # 	delay (default: 30) - the amount of microseconds between each sample.
@@ -82,7 +82,7 @@ qemu_p:
 .PHONY: doc
 doc:
 	cd src && cargo doc --package aero_kernel --release --target-dir=../target/doc/
-	cp web/index.html target/doc/index.html
+	echo "<meta http-equiv='refresh' content='0; URL=./x86_64-unknown-none/doc/aero_kernel/index.html' />" > target/doc/index.html
 ifeq ($(open),yes)
 	xdg-open target/doc/index.html
 endif

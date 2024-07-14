@@ -26,7 +26,9 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y nasm make
     - name: Build Documentation
-      run: make doc
+      run: |
+        make doc
+        find ./target -type d -name .git -prune -exec rm -rf {} \; 
     - name: Formatting Check
       run: |
         make check_fmt
@@ -36,4 +38,4 @@ jobs:
       if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./build/web/
+        publish_dir: ./target/doc/
