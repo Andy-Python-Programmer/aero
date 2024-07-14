@@ -86,3 +86,9 @@ doc:
 ifeq ($(open),yes)
 	xdg-open target/doc/index.html
 endif
+
+fmt:
+	cd $(SOURCE_DIR) && cargo fmt
+
+check_fmt:
+	cd $(SOURCE_DIR) && cargo fmt -- --check

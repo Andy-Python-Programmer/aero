@@ -25,13 +25,12 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y nasm make
-        python3 -m pip install requests xbstrap
     - name: Build Documentation
       run: make doc
     - name: Formatting Check
       run: |
-        ./aero.py --fmt
-        git diff-index --quiet HEAD -- || (printf "${RED}error${NOCOLOR}: formatting check failed, run \`./aero.py --fmt\`\n" && exit 1)
+        make check_fmt
+        git diff-index --quiet HEAD -- || (printf "${RED}error${NOCOLOR}: formatting check failed, run \`make fmt\`\n" && exit 1)
     - name: Deploy documentation
       uses: peaceiris/actions-gh-pages@v3
       if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
