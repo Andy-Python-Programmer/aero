@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["IMMUTABLE_MASK","SIGNAL_COUNT"],"enum":["SignalError","TriggerResult"],"fn":["can_override","check_for_signals"],"mod":["default"],"struct":["Entries","SignalEntry","Signals"],"type":["SignalResult"]};

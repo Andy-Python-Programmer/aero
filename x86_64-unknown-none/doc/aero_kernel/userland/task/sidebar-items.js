@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TaskState"],"mod":["sessions"],"struct":["Cwd","SchedTaskAdapter","Task","TaskAdapter","TaskId","Zombies"]};

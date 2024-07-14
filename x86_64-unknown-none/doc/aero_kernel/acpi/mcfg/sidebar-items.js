@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["SIGNATURE"],"fn":["get_mcfg_table","is_available"],"static":["MCFG"],"struct":["DeviceConfig","Mcfg"]};

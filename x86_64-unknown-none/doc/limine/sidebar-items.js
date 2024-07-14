@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["cstr"],"mod":["file","framebuffer","memory_map","modules","paging","request","response","smp"],"struct":["BaseRevision"]};

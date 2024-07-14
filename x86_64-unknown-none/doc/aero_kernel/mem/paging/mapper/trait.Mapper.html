@@ -1,0 +1,160 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A trait for common page table operations on pages of size `S`."><title>Mapper in aero_kernel::mem::paging::mapper - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (fcaa6fdfb 2024-07-13)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../aero_kernel/index.html">aero_kernel</a><span class="version">0.1.0</span></h2></div><h2 class="location"><a href="#">Mapper</a></h2><div class="sidebar-elems"><section><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.map_to_with_table_flags">map_to_with_table_flags</a></li><li><a href="#tymethod.translate_page">translate_page</a></li><li><a href="#tymethod.unmap">unmap</a></li><li><a href="#tymethod.update_flags">update_flags</a></li></ul><h3><a href="#provided-methods">Provided Methods</a></h3><ul class="block"><li><a href="#method.identity_map">identity_map</a></li><li><a href="#method.map_to">map_to</a></li></ul><h3><a href="#implementors">Implementors</a></h3></section><h2><a href="index.html">In aero_kernel::mem::paging::mapper</a></h2></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Trait <a href="../../../index.html">aero_kernel</a>::<wbr><a href="../../index.html">mem</a>::<wbr><a href="../index.html">paging</a>::<wbr><a href="index.html">mapper</a>::<wbr><a class="trait" href="#">Mapper</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#127-279">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub trait Mapper&lt;S: <a class="trait" href="../page/trait.PageSize.html" title="trait aero_kernel::mem::paging::page::PageSize">PageSize</a>&gt; {
+    // Required methods
+    unsafe fn <a href="#tymethod.map_to_with_table_flags" class="fn">map_to_with_table_flags</a>(
+        &amp;mut self,
+        page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+        frame: <a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;,
+        flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+        parent_table_flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+    ) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;, <a class="enum" href="enum.MapToError.html" title="enum aero_kernel::mem::paging::mapper::MapToError">MapToError</a>&lt;S&gt;&gt;
+       <span class="where">where Self: <a class="trait" href="../../../prelude/rust_2021/_core/marker/trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Sized">Sized</a></span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.unmap" class="fn">unmap</a>(
+        &amp;mut self,
+        page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+    ) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;(<a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;, <a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;), <a class="enum" href="enum.UnmapError.html" title="enum aero_kernel::mem::paging::mapper::UnmapError">UnmapError</a>&gt;;
+<span class="item-spacer"></span>    unsafe fn <a href="#tymethod.update_flags" class="fn">update_flags</a>(
+        &amp;mut self,
+        page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+        flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+    ) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;, <a class="enum" href="enum.FlagUpdateError.html" title="enum aero_kernel::mem::paging::mapper::FlagUpdateError">FlagUpdateError</a>&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.translate_page" class="fn">translate_page</a>(
+        &amp;self,
+        page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+    ) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;, <a class="enum" href="enum.TranslateError.html" title="enum aero_kernel::mem::paging::mapper::TranslateError">TranslateError</a>&gt;;
+
+    // Provided methods
+    unsafe fn <a href="#method.map_to" class="fn">map_to</a>(
+        &amp;mut self,
+        page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+        frame: <a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;,
+        flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+    ) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;, <a class="enum" href="enum.MapToError.html" title="enum aero_kernel::mem::paging::mapper::MapToError">MapToError</a>&lt;S&gt;&gt;
+       <span class="where">where Self: <a class="trait" href="../../../prelude/rust_2021/_core/marker/trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Sized">Sized</a></span> { ... }
+<span class="item-spacer"></span>    unsafe fn <a href="#method.identity_map" class="fn">identity_map</a>(
+        &amp;mut self,
+        frame: <a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;,
+        flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+    ) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;, <a class="enum" href="enum.MapToError.html" title="enum aero_kernel::mem::paging::mapper::MapToError">MapToError</a>&lt;S&gt;&gt;
+       <span class="where">where Self: <a class="trait" href="../../../prelude/rust_2021/_core/marker/trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Sized">Sized</a> + <a class="trait" href="trait.Mapper.html" title="trait aero_kernel::mem::paging::mapper::Mapper">Mapper</a>&lt;S&gt;,
+             S: <a class="trait" href="../page/trait.PageSize.html" title="trait aero_kernel::mem::paging::page::PageSize">PageSize</a></span> { ... }
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A trait for common page table operations on pages of size <code>S</code>.</p>
+</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.map_to_with_table_flags" class="method"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#223-231">source</a><h4 class="code-header">unsafe fn <a href="#tymethod.map_to_with_table_flags" class="fn">map_to_with_table_flags</a>(
+    &amp;mut self,
+    page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+    frame: <a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;,
+    flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+    parent_table_flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;, <a class="enum" href="enum.MapToError.html" title="enum aero_kernel::mem::paging::mapper::MapToError">MapToError</a>&lt;S&gt;&gt;<div class="where">where
+    Self: <a class="trait" href="../../../prelude/rust_2021/_core/marker/trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Sized">Sized</a>,</div></h4></section></summary><div class="docblock"><p>Creates a new mapping in the page table.</p>
+<p>The flags of the parent table(s) can be explicitly specified. Those flags are used for
+newly created table entries, and for existing entries the flags are added.</p>
+<p>Depending on the used mapper implementation, the <code>PRESENT</code> and <code>WRITABLE</code> flags might
+be set for parent tables, even if they are not specified in <code>parent_table_flags</code>.</p>
+<h6 id="safety"><a class="doc-anchor" href="#safety">§</a>Safety</h6>
+<p>Creating page table mappings is a fundamentally unsafe operation because
+there are various ways to break memory safety through it. For example,
+re-mapping an in-use page to a different frame changes and invalidates
+all values stored in that page, resulting in undefined behavior on the
+next use.</p>
+<p>The caller must ensure that no undefined behavior or memory safety
+violations can occur through the new mapping. Among other things, the
+caller must prevent the following:</p>
+<ul>
+<li>Aliasing of <code>&amp;mut</code> references, i.e. two <code>&amp;mut</code> references that point to the same physical
+address. This is undefined behavior in Rust.
+<ul>
+<li>This can be ensured by mapping each page to an individual physical frame that is not
+mapped anywhere else.</li>
+</ul>
+</li>
+<li>Creating uninitialized or invalid values: Rust requires that all values have a correct
+memory layout. For example, a <code>bool</code> must be either a 0 or a 1 in memory, but not a 3 or
+4. An exception is the <code>MaybeUninit</code> wrapper type, which abstracts over possibly
+uninitialized memory.
+<ul>
+<li>This is only a problem when re-mapping pages to different physical frames. Mapping a
+page that is not in use yet is fine.</li>
+</ul>
+</li>
+</ul>
+<p>Special care must be taken when sharing pages with other address spaces,
+e.g. by setting the <code>GLOBAL</code> flag. For example, a global mapping must be
+the same in all address spaces, otherwise undefined behavior can occur
+because of TLB races. It’s worth noting that all the above requirements
+also apply to shared mappings, including the aliasing requirements.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.unmap" class="method"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#236">source</a><h4 class="code-header">fn <a href="#tymethod.unmap" class="fn">unmap</a>(
+    &amp;mut self,
+    page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;(<a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;, <a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;), <a class="enum" href="enum.UnmapError.html" title="enum aero_kernel::mem::paging::mapper::UnmapError">UnmapError</a>&gt;</h4></section></summary><div class="docblock"><p>Removes a mapping from the page table and returns the frame that used to be mapped.</p>
+<p>Note that no page tables or pages are deallocated.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.update_flags" class="method"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#247-251">source</a><h4 class="code-header">unsafe fn <a href="#tymethod.update_flags" class="fn">update_flags</a>(
+    &amp;mut self,
+    page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+    flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;, <a class="enum" href="enum.FlagUpdateError.html" title="enum aero_kernel::mem::paging::mapper::FlagUpdateError">FlagUpdateError</a>&gt;</h4></section></summary><div class="docblock"><p>Updates the flags of an existing mapping.</p>
+<h6 id="safety-1"><a class="doc-anchor" href="#safety-1">§</a>Safety</h6>
+<p>This method is unsafe because changing the flags of a mapping
+might result in undefined behavior. For example, setting the
+<code>GLOBAL</code> and <code>MUTABLE</code> flags for a page might result in the corruption
+of values stored in that page from processes running in other address
+spaces.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.translate_page" class="method"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#257">source</a><h4 class="code-header">fn <a href="#tymethod.translate_page" class="fn">translate_page</a>(&amp;self, page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;, <a class="enum" href="enum.TranslateError.html" title="enum aero_kernel::mem::paging::mapper::TranslateError">TranslateError</a>&gt;</h4></section></summary><div class="docblock"><p>Return the frame that the specified page is mapped to.</p>
+<p>This function assumes that the page is mapped to a frame of size <code>S</code> and returns an
+error otherwise.</p>
+</div></details></div><h2 id="provided-methods" class="section-header">Provided Methods<a href="#provided-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="method.map_to" class="method"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#170-185">source</a><h4 class="code-header">unsafe fn <a href="#method.map_to" class="fn">map_to</a>(
+    &amp;mut self,
+    page: <a class="struct" href="../page/struct.Page.html" title="struct aero_kernel::mem::paging::page::Page">Page</a>&lt;S&gt;,
+    frame: <a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;,
+    flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;, <a class="enum" href="enum.MapToError.html" title="enum aero_kernel::mem::paging::mapper::MapToError">MapToError</a>&lt;S&gt;&gt;<div class="where">where
+    Self: <a class="trait" href="../../../prelude/rust_2021/_core/marker/trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Sized">Sized</a>,</div></h4></section></summary><div class="docblock"><p>Creates a new mapping in the page table.</p>
+<p>This function might need additional physical frames to create new page tables. These
+frames are allocated from the <code>allocator</code> argument. At most three frames are required.</p>
+<p>Parent page table entries are automatically updated with <code>PRESENT | WRITABLE | USER_ACCESSIBLE</code> if present in the <code>PageTableFlags</code>. Depending on the used mapper
+implementation the <code>PRESENT</code> and <code>WRITABLE</code> flags might be set for parent tables,
+even if they are not set in <code>PageTableFlags</code>.</p>
+<p>The <code>map_to_with_table_flags</code> method gives explicit control over the parent page table
+flags.</p>
+<h6 id="safety-2"><a class="doc-anchor" href="#safety-2">§</a>Safety</h6>
+<p>Creating page table mappings is a fundamentally unsafe operation because
+there are various ways to break memory safety through it. For example,
+re-mapping an in-use page to a different frame changes and invalidates
+all values stored in that page, resulting in undefined behavior on the
+next use.</p>
+<p>The caller must ensure that no undefined behavior or memory safety
+violations can occur through the new mapping. Among other things, the
+caller must prevent the following:</p>
+<ul>
+<li>Aliasing of <code>&amp;mut</code> references, i.e. two <code>&amp;mut</code> references that point to the same physical
+address. This is undefined behavior in Rust.
+<ul>
+<li>This can be ensured by mapping each page to an individual physical frame that is not
+mapped anywhere else.</li>
+</ul>
+</li>
+<li>Creating uninitialized or invalid values: Rust requires that all values have a correct
+memory layout. For example, a <code>bool</code> must be either a 0 or a 1 in memory, but not a 3 or
+4. An exception is the <code>MaybeUninit</code> wrapper type, which abstracts over possibly
+uninitialized memory.
+<ul>
+<li>This is only a problem when re-mapping pages to different physical frames. Mapping a
+page that is not in use yet is fine.</li>
+</ul>
+</li>
+</ul>
+<p>Special care must be taken when sharing pages with other address spaces,
+e.g. by setting the <code>GLOBAL</code> flag. For example, a global mapping must be
+the same in all address spaces, otherwise undefined behavior can occur
+because of TLB races. It’s worth noting that all the above requirements
+also apply to shared mappings, including the aliasing requirements.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.identity_map" class="method"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#266-278">source</a><h4 class="code-header">unsafe fn <a href="#method.identity_map" class="fn">identity_map</a>(
+    &amp;mut self,
+    frame: <a class="struct" href="../page/struct.PhysFrame.html" title="struct aero_kernel::mem::paging::page::PhysFrame">PhysFrame</a>&lt;S&gt;,
+    flags: <a class="struct" href="../page_table/struct.PageTableFlags.html" title="struct aero_kernel::mem::paging::page_table::PageTableFlags">PageTableFlags</a>,
+) -&gt; <a class="enum" href="../../../prelude/rust_2021/_core/result/enum.Result.html" title="enum aero_kernel::prelude::rust_2021::_core::result::Result">Result</a>&lt;<a class="struct" href="struct.MapperFlush.html" title="struct aero_kernel::mem::paging::mapper::MapperFlush">MapperFlush</a>&lt;S&gt;, <a class="enum" href="enum.MapToError.html" title="enum aero_kernel::mem::paging::mapper::MapToError">MapToError</a>&lt;S&gt;&gt;<div class="where">where
+    Self: <a class="trait" href="../../../prelude/rust_2021/_core/marker/trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Sized">Sized</a> + <a class="trait" href="trait.Mapper.html" title="trait aero_kernel::mem::paging::mapper::Mapper">Mapper</a>&lt;S&gt;,
+    S: <a class="trait" href="../page/trait.PageSize.html" title="trait aero_kernel::mem::paging::page::PageSize">PageSize</a>,</div></h4></section></summary><div class="docblock"><p>Maps the given frame to the virtual page with the same address.</p>
+<h6 id="safety-3"><a class="doc-anchor" href="#safety-3">§</a>Safety</h6>
+<p>This is a convencience function that invokes <a href="trait.Mapper.html#method.map_to" title="method aero_kernel::mem::paging::mapper::Mapper::map_to"><code>Mapper::map_to</code></a> internally, so
+all safety requirements of it also apply for this function.</p>
+</div></details></div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"><section id="impl-Mapper%3CSize2MiB%3E-for-OffsetPageTable%3C'a%3E" class="impl"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#1051-1085">source</a><a href="#impl-Mapper%3CSize2MiB%3E-for-OffsetPageTable%3C'a%3E" class="anchor">§</a><h3 class="code-header">impl&lt;'a&gt; <a class="trait" href="trait.Mapper.html" title="trait aero_kernel::mem::paging::mapper::Mapper">Mapper</a>&lt;<a class="enum" href="../page/enum.Size2MiB.html" title="enum aero_kernel::mem::paging::page::Size2MiB">Size2MiB</a>&gt; for <a class="struct" href="struct.OffsetPageTable.html" title="struct aero_kernel::mem::paging::mapper::OffsetPageTable">OffsetPageTable</a>&lt;'a&gt;</h3></section><section id="impl-Mapper%3CSize4KiB%3E-for-OffsetPageTable%3C'a%3E" class="impl"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#1087-1121">source</a><a href="#impl-Mapper%3CSize4KiB%3E-for-OffsetPageTable%3C'a%3E" class="anchor">§</a><h3 class="code-header">impl&lt;'a&gt; <a class="trait" href="trait.Mapper.html" title="trait aero_kernel::mem::paging::mapper::Mapper">Mapper</a>&lt;<a class="enum" href="../page/enum.Size4KiB.html" title="enum aero_kernel::mem::paging::page::Size4KiB">Size4KiB</a>&gt; for <a class="struct" href="struct.OffsetPageTable.html" title="struct aero_kernel::mem::paging::mapper::OffsetPageTable">OffsetPageTable</a>&lt;'a&gt;</h3></section><section id="impl-Mapper%3CSize2MiB%3E-for-MappedPageTable%3C'a,+P%3E" class="impl"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#515-619">source</a><a href="#impl-Mapper%3CSize2MiB%3E-for-MappedPageTable%3C'a,+P%3E" class="anchor">§</a><h3 class="code-header">impl&lt;'a, P: <a class="trait" href="trait.PageTableFrameMapping.html" title="trait aero_kernel::mem::paging::mapper::PageTableFrameMapping">PageTableFrameMapping</a>&gt; <a class="trait" href="trait.Mapper.html" title="trait aero_kernel::mem::paging::mapper::Mapper">Mapper</a>&lt;<a class="enum" href="../page/enum.Size2MiB.html" title="enum aero_kernel::mem::paging::page::Size2MiB">Size2MiB</a>&gt; for <a class="struct" href="struct.MappedPageTable.html" title="struct aero_kernel::mem::paging::mapper::MappedPageTable">MappedPageTable</a>&lt;'a, P&gt;</h3></section><section id="impl-Mapper%3CSize4KiB%3E-for-MappedPageTable%3C'a,+P%3E" class="impl"><a class="src rightside" href="../../../../src/aero_kernel/mem/paging/mapper.rs.html#621-729">source</a><a href="#impl-Mapper%3CSize4KiB%3E-for-MappedPageTable%3C'a,+P%3E" class="anchor">§</a><h3 class="code-header">impl&lt;'a, P: <a class="trait" href="trait.PageTableFrameMapping.html" title="trait aero_kernel::mem::paging::mapper::PageTableFrameMapping">PageTableFrameMapping</a>&gt; <a class="trait" href="trait.Mapper.html" title="trait aero_kernel::mem::paging::mapper::Mapper">Mapper</a>&lt;<a class="enum" href="../page/enum.Size4KiB.html" title="enum aero_kernel::mem::paging::page::Size4KiB">Size4KiB</a>&gt; for <a class="struct" href="struct.MappedPageTable.html" title="struct aero_kernel::mem::paging::mapper::MappedPageTable">MappedPageTable</a>&lt;'a, P&gt;</h3></section></div><script src="../../../../trait.impl/aero_kernel/mem/paging/mapper/trait.Mapper.js" async></script></section></div></main></body></html>

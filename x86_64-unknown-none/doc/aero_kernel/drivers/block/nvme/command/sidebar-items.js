@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AdminOpcode","CommandOpcode","IdentifyCns"],"struct":["CommandFlags","CommonCommand","CompletionEntry","CreateCQCommand","CreateSQCommand","DataPointer","IdentifyCommand","IdentifyController","IdentifyNamespace","LbaFormat","PowerState","ReadWriteCommand"],"union":["Command"]};

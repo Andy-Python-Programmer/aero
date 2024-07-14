@@ -1,0 +1,1 @@
+searchState.loadedDescShard("vte_generate_state_changes", 0, "Create a <code>const fn</code> which will return an array with all …")

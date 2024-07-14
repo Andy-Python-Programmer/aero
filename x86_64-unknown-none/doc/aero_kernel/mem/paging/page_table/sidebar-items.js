@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ENTRY_COUNT"],"enum":["FrameError"],"struct":["PageOffset","PageTable","PageTableEntry","PageTableFlags","PageTableIndex"]};

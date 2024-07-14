@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ELF_HEADER_MAGIC","ELF_PT1_SIZE","ELF_PT2_64_SIZE","VM_PROT_MASK"],"enum":["ElfLoadError","UnmapResult"],"fn":["contains_shebang","parse_elf_header","parse_program_header","parse_shebang"],"struct":["Elf","LoadedBinary","MMapFile","Mapping","ProgramHeaderIter","Shebang","Vm","VmFlag","VmProtected"]};

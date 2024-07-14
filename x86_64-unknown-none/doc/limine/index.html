@@ -1,0 +1,48 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Rust Bindings for the limine boot protocol."><title>limine - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="limine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (fcaa6fdfb 2024-07-13)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../limine/index.html">limine</a><span class="version">0.2.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#structs">Structs</a></li></ul></section></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">limine</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../src/limine/lib.rs.html#1-96">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Rust Bindings for the limine boot protocol.</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<p>An example kernel using this crate can be found
+<a href="https://github.com/limine-bootloader/limine-rust-barebones">here</a>. For
+smaller usage examples, see <a href="#usage">usage</a>.</p>
+<h2 id="crate-features"><a class="doc-anchor" href="#crate-features">§</a>Crate features</h2>
+<ul>
+<li><code>uuid</code>: Implements <code>Into&lt;uuid::Uuid&gt;</code> and <code>From&lt;uuid::Uuid&gt;</code> for <a href="file/struct.Uuid.html" title="struct limine::file::Uuid"><code>file::Uuid</code></a>.</li>
+<li><code>ipaddr</code>: Enables functions in <a href="file/struct.File.html" title="struct limine::file::File"><code>file::File</code></a> to return <code>Ipv4Addr</code>. This
+is feature gated because it will only appear in stable on Rust 1.77.0, on
+March 21st.</li>
+</ul>
+<h2 id="revisions"><a class="doc-anchor" href="#revisions">§</a>Revisions</h2>
+<p>Many types in the limine boot protocol have associated revisions. These
+signify various added fields and changes to the protocol. For requests, if a
+bootloader doesn’t support a revision, it will simply process it as if it is
+the highest revision it does support. The bootloader will only return the
+latest supported revision in responses. The response revision is
+automatically checked by the types in this crate, and types that may not be
+returned are wrapped in an [<code>Option</code>].</p>
+<p>In this crate, you may specify the revisions of your requests via
+<code>with_revision</code>, but you likely just want to use <code>new</code>. This will use the
+latest revision supported by this crate.</p>
+<h2 id="usage"><a class="doc-anchor" href="#usage">§</a>Usage</h2>
+<p>The first thing you need to do is place a <a href="struct.BaseRevision.html" title="struct limine::BaseRevision"><code>BaseRevision</code></a> tag somewhere in
+your code. This tag is used to identify what revision of the protocol your
+kernel requires. Without this tag, the bootloader will assume revision 0,
+which is likely not what you want.</p>
+<p>The <a href="struct.BaseRevision.html" title="struct limine::BaseRevision"><code>BaseRevision</code></a> tag can be placed anywhere in your code, like so:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>limine::BaseRevision;
+
+<span class="comment">// Require version 1 or higher
+</span><span class="kw">pub static </span>BASE_REVISION: BaseRevision = BaseRevision::new();</code></pre></div>
+<p>Next, you can place any requests you would like. For example, to request a
+larger stack (<em>recommended on debug Rust builds</em>), you can do the following:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>limine::request::StackSizeRequest;
+
+<span class="comment">// Some reasonable size
+</span><span class="kw">pub const </span>STACK_SIZE: u64 = <span class="number">0x100000</span>;
+
+<span class="comment">// Request a larger stack
+</span><span class="kw">pub static </span>STACK_SIZE_REQUEST: StackSizeRequest = StackSizeRequest::new().with_size(STACK_SIZE);</code></pre></div>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="file/index.html" title="mod limine::file">file</a></div><div class="desc docblock-short">File structure and related functions.</div></li><li><div class="item-name"><a class="mod" href="framebuffer/index.html" title="mod limine::framebuffer">framebuffer</a></div><div class="desc docblock-short">Auxiliary types for the <a href="request/struct.FramebufferRequest.html" title="struct limine::request::FramebufferRequest">framebuffer request</a></div></li><li><div class="item-name"><a class="mod" href="memory_map/index.html" title="mod limine::memory_map">memory_map</a></div><div class="desc docblock-short">Auxiliary types for the <a href="request/struct.MemoryMapRequest.html" title="struct limine::request::MemoryMapRequest">memory map request</a></div></li><li><div class="item-name"><a class="mod" href="modules/index.html" title="mod limine::modules">modules</a></div><div class="desc docblock-short">Auxiliary types for the <a href="request/struct.ModuleRequest.html" title="struct limine::request::ModuleRequest">module request</a></div></li><li><div class="item-name"><a class="mod" href="paging/index.html" title="mod limine::paging">paging</a></div><div class="desc docblock-short">Auxiliary types for the <a href="request/struct.PagingModeRequest.html" title="struct limine::request::PagingModeRequest">paging mode
+request</a>.</div></li><li><div class="item-name"><a class="mod" href="request/index.html" title="mod limine::request">request</a></div><div class="desc docblock-short">Request structures</div></li><li><div class="item-name"><a class="mod" href="response/index.html" title="mod limine::response">response</a></div><div class="desc docblock-short">Responses to <a href="request/index.html" title="mod limine::request">requests</a>.</div></li><li><div class="item-name"><a class="mod" href="smp/index.html" title="mod limine::smp">smp</a></div><div class="desc docblock-short">Auxiliary types for the <a href="request/struct.SmpRequest.html" title="struct limine::request::SmpRequest">SMP request</a>.</div></li></ul><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.cstr.html" title="macro limine::cstr">cstr</a></div><div class="desc docblock-short">Create a NUL-terminated C string from a string literal</div></li></ul><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.BaseRevision.html" title="struct limine::BaseRevision">BaseRevision</a></div><div class="desc docblock-short">A tag setting the base revision supported by the kernel. Set this in your
+kernel in order to require a higher revision. Without this tag, the
+bootloader will assume revision 0.</div></li></ul></section></div></main></body></html>
