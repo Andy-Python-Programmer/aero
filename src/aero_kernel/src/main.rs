@@ -33,7 +33,6 @@
     ptr_internals, // No tracking issue
     linked_list_cursors, // https://github.com/rust-lang/rust/issues/58533
     extern_types, // https://github.com/rust-lang/rust/issues/43467
-    new_uninit, // https://github.com/rust-lang/rust/issues/63291
     step_trait, // https://github.com/rust-lang/rust/issues/42168
     prelude_import, // No tracking issue
     allocator_api, // https://github.com/rust-lang/rust/issues/32838
@@ -48,7 +47,7 @@
     strict_provenance,
     associated_type_defaults,
     trait_upcasting,
-    asm_const,
+    new_zeroed_alloc, // https://github.com/rust-lang/rust/issues/129396
     sync_unsafe_cell
 )]
 // TODO(andypython): can we remove the dependency of "prelude_import" and "lang_items"?
