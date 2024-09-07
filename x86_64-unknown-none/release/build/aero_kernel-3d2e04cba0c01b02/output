@@ -1,0 +1,7 @@
+["src/arch/x86_64"]
+running: "nasm" "-felf64" "-gdwarf" "-felf64" "-Isrc/arch/x86_64/" "/home/runner/work/aero/aero/src/aero_kernel/src/arch/x86_64/interrupts/handlers.asm" "-o" "/home/runner/work/aero/aero/src/../target/doc/x86_64-unknown-none/release/build/aero_kernel-3d2e04cba0c01b02/out/handlers.o"
+running: "ar" "crus" "/home/runner/work/aero/aero/src/../target/doc/x86_64-unknown-none/release/build/aero_kernel-3d2e04cba0c01b02/out/libhandlers.asm.a" "/home/runner/work/aero/aero/src/../target/doc/x86_64-unknown-none/release/build/aero_kernel-3d2e04cba0c01b02/out/handlers.o"
+cargo:rustc-link-search=/home/runner/work/aero/aero/src/../target/doc/x86_64-unknown-none/release/build/aero_kernel-3d2e04cba0c01b02/out
+cargo:rustc-link-lib=static=handlers.asm
+cargo:rustc-link-arg=-T.cargo/kernel.ld
+cargo:rerun-if-changed=.cargo/kernel.ld
