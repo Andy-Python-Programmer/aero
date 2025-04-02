@@ -309,7 +309,7 @@
 <a href=#309 id=309 data-nosnippet>309</a>    color_list: ColorList,
 <a href=#310 id=310 data-nosnippet>310</a>}
 <a href=#311 id=311 data-nosnippet>311</a>
-<a href=#312 id=312 data-nosnippet>312</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Inner&lt;<span class="lifetime">'a</span>&gt; {
+<a href=#312 id=312 data-nosnippet>312</a><span class="kw">impl </span>Inner&lt;<span class="lifetime">'_</span>&gt; {
 <a href=#313 id=313 data-nosnippet>313</a>    <span class="kw">fn </span>genloop&lt;F&gt;(
 <a href=#314 id=314 data-nosnippet>314</a>        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
 <a href=#315 id=315 data-nosnippet>315</a>        image: <span class="kw-2">&amp;</span>Image,
@@ -793,13 +793,13 @@
 <a href=#793 id=793 data-nosnippet>793</a>    }
 <a href=#794 id=794 data-nosnippet>794</a>}
 <a href=#795 id=795 data-nosnippet>795</a>
-<a href=#796 id=796 data-nosnippet>796</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; core::ops::DerefMut <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'a</span>&gt; {
+<a href=#796 id=796 data-nosnippet>796</a><span class="kw">impl </span>core::ops::DerefMut <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {
 <a href=#797 id=797 data-nosnippet>797</a>    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
 <a href=#798 id=798 data-nosnippet>798</a>        <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner
 <a href=#799 id=799 data-nosnippet>799</a>    }
 <a href=#800 id=800 data-nosnippet>800</a>}
 <a href=#801 id=801 data-nosnippet>801</a>
-<a href=#802 id=802 data-nosnippet>802</a><span class="kw">impl</span>&lt;<span class="lifetime">'this</span>&gt; fmt::Write <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'this</span>&gt; {
+<a href=#802 id=802 data-nosnippet>802</a><span class="kw">impl </span>fmt::Write <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {
 <a href=#803 id=803 data-nosnippet>803</a>    <span class="kw">fn </span>write_str(<span class="kw-2">&amp;mut </span><span class="self">self</span>, string: <span class="kw-2">&amp;</span>str) -&gt; fmt::Result {
 <a href=#804 id=804 data-nosnippet>804</a>        <span class="kw">for </span>b <span class="kw">in </span>string.bytes() {
 <a href=#805 id=805 data-nosnippet>805</a>            <span class="self">self</span>.performer.advance(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, b);
@@ -808,7 +808,7 @@
 <a href=#808 id=808 data-nosnippet>808</a>    }
 <a href=#809 id=809 data-nosnippet>809</a>}
 <a href=#810 id=810 data-nosnippet>810</a>
-<a href=#811 id=811 data-nosnippet>811</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; vte::ansi::Handler <span class="kw">for </span>Inner&lt;<span class="lifetime">'a</span>&gt; {
+<a href=#811 id=811 data-nosnippet>811</a><span class="kw">impl </span>vte::ansi::Handler <span class="kw">for </span>Inner&lt;<span class="lifetime">'_</span>&gt; {
 <a href=#812 id=812 data-nosnippet>812</a>    <span class="kw">fn </span>input(<span class="kw-2">&amp;mut </span><span class="self">self</span>, c: char) {
 <a href=#813 id=813 data-nosnippet>813</a>        <span class="self">self</span>.write_character(c);
 <a href=#814 id=814 data-nosnippet>814</a>
@@ -883,8 +883,8 @@
 <a href=#883 id=883 data-nosnippet>883</a>    }
 <a href=#884 id=884 data-nosnippet>884</a>}
 <a href=#885 id=885 data-nosnippet>885</a>
-<a href=#886 id=886 data-nosnippet>886</a><span class="kw">unsafe impl</span>&lt;<span class="lifetime">'this</span>&gt; Send <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'this</span>&gt; {}
-<a href=#887 id=887 data-nosnippet>887</a><span class="kw">unsafe impl</span>&lt;<span class="lifetime">'this</span>&gt; Sync <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'this</span>&gt; {}
+<a href=#886 id=886 data-nosnippet>886</a><span class="kw">unsafe impl </span>Send <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {}
+<a href=#887 id=887 data-nosnippet>887</a><span class="kw">unsafe impl </span>Sync <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {}
 <a href=#888 id=888 data-nosnippet>888</a>
 <a href=#889 id=889 data-nosnippet>889</a><span class="kw">pub static </span>DEBUG_RENDY: Once&lt;Mutex&lt;DebugRendy&gt;&gt; = Once::new();
 <a href=#890 id=890 data-nosnippet>890</a>
