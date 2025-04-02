@@ -25,6 +25,7 @@ use alloc::sync::Arc;
 use hashbrown::HashMap;
 
 use crate::userland::scheduler;
+use crate::userland::task::TaskState;
 use crate::utils::sync::Mutex;
 
 use super::inode::{INodeInterface, PollTable};
@@ -193,9 +194,10 @@ impl EPoll {
         }
 
         'search: loop {
-            scheduler::get_scheduler().inner.await_io()?;
-
-            if current_task.load_sleep_duration() == 0 && timeout > 0 {
+            if current_task.state() == TaskState::AwaitingIoDeadline
+                && current_task.load_sleep_duration() == 0
+                && timeout > 0
+            {
                 // Timeout has expired.
                 return Ok(0);
             }
@@ -224,6 +226,8 @@ impl EPoll {
                     n = 1;
                     break 'search;
                 }
+
+                scheduler::get_scheduler().inner.await_io()?;
             }
         }
 

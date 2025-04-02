@@ -80,7 +80,7 @@ impl TaskQueue {
     fn push_deadline_awaiting(&mut self, task: Arc<Task>, duration: usize) {
         debug_assert!(!task.link.is_linked()); // Make sure the task is not already linked
 
-        task.update_state(TaskState::AwaitingIo);
+        task.update_state(TaskState::AwaitingIoDeadline);
         task.set_sleep_duration(crate::arch::time::get_uptime_ticks() + duration);
 
         self.deadline_awaiting.push_back(task);
@@ -214,8 +214,8 @@ impl SchedulerInterface for RoundRobin {
         let _guard = IrqGuard::new();
         let queue = self.queue.get_mut();
 
-        if task.state() == TaskState::AwaitingIo {
-            let mut cursor = if task.load_sleep_duration() > 0 {
+        if task.state() == TaskState::AwaitingIo || task.state() == TaskState::AwaitingIoDeadline {
+            let mut cursor = if task.state() == TaskState::AwaitingIoDeadline {
                 unsafe { queue.deadline_awaiting.cursor_mut_from_ptr(task.as_ref()) }
             } else {
                 unsafe { queue.awaiting.cursor_mut_from_ptr(task.as_ref()) }

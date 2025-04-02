@@ -73,6 +73,7 @@ pub enum TaskState {
     Runnable,
     Zombie,
     AwaitingIo,
+    AwaitingIoDeadline,
 }
 
 impl From<u8> for TaskState {
@@ -81,6 +82,7 @@ impl From<u8> for TaskState {
             0 => TaskState::Runnable,
             1 => TaskState::Zombie,
             2 => TaskState::AwaitingIo,
+            3 => TaskState::AwaitingIoDeadline,
             _ => panic!("invalid task state"),
         }
     }
