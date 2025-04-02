@@ -80,7 +80,7 @@
 <a href=#80 id=80 data-nosnippet>80</a>    <span class="kw">fn </span>push_deadline_awaiting(<span class="kw-2">&amp;mut </span><span class="self">self</span>, task: Arc&lt;Task&gt;, duration: usize) {
 <a href=#81 id=81 data-nosnippet>81</a>        <span class="macro">debug_assert!</span>(!task.link.is_linked()); <span class="comment">// Make sure the task is not already linked
 <a href=#82 id=82 data-nosnippet>82</a>
-<a href=#83 id=83 data-nosnippet>83</a>        </span>task.update_state(TaskState::AwaitingIo);
+<a href=#83 id=83 data-nosnippet>83</a>        </span>task.update_state(TaskState::AwaitingIoDeadline);
 <a href=#84 id=84 data-nosnippet>84</a>        task.set_sleep_duration(<span class="kw">crate</span>::arch::time::get_uptime_ticks() + duration);
 <a href=#85 id=85 data-nosnippet>85</a>
 <a href=#86 id=86 data-nosnippet>86</a>        <span class="self">self</span>.deadline_awaiting.push_back(task);
@@ -214,8 +214,8 @@
 <a href=#214 id=214 data-nosnippet>214</a>        <span class="kw">let </span>_guard = IrqGuard::new();
 <a href=#215 id=215 data-nosnippet>215</a>        <span class="kw">let </span>queue = <span class="self">self</span>.queue.get_mut();
 <a href=#216 id=216 data-nosnippet>216</a>
-<a href=#217 id=217 data-nosnippet>217</a>        <span class="kw">if </span>task.state() == TaskState::AwaitingIo {
-<a href=#218 id=218 data-nosnippet>218</a>            <span class="kw">let </span><span class="kw-2">mut </span>cursor = <span class="kw">if </span>task.load_sleep_duration() &gt; <span class="number">0 </span>{
+<a href=#217 id=217 data-nosnippet>217</a>        <span class="kw">if </span>task.state() == TaskState::AwaitingIo || task.state() == TaskState::AwaitingIoDeadline {
+<a href=#218 id=218 data-nosnippet>218</a>            <span class="kw">let </span><span class="kw-2">mut </span>cursor = <span class="kw">if </span>task.state() == TaskState::AwaitingIoDeadline {
 <a href=#219 id=219 data-nosnippet>219</a>                <span class="kw">unsafe </span>{ queue.deadline_awaiting.cursor_mut_from_ptr(task.as_ref()) }
 <a href=#220 id=220 data-nosnippet>220</a>            } <span class="kw">else </span>{
 <a href=#221 id=221 data-nosnippet>221</a>                <span class="kw">unsafe </span>{ queue.awaiting.cursor_mut_from_ptr(task.as_ref()) }
