@@ -178,7 +178,7 @@ pub struct BMutexGuard<'a, T: ?Sized + 'a> {
     mutex: &'a BMutex<T>,
 }
 
-impl<'a, T: ?Sized> core::ops::Deref for BMutexGuard<'a, T> {
+impl<T: ?Sized> core::ops::Deref for BMutexGuard<'_, T> {
     type Target = T;
 
     #[inline]
@@ -187,14 +187,14 @@ impl<'a, T: ?Sized> core::ops::Deref for BMutexGuard<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> core::ops::DerefMut for BMutexGuard<'a, T> {
+impl<T: ?Sized> core::ops::DerefMut for BMutexGuard<'_, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut T {
         self.guard.deref_mut()
     }
 }
 
-impl<'a, T: ?Sized> Drop for BMutexGuard<'a, T> {
+impl<T: ?Sized> Drop for BMutexGuard<'_, T> {
     fn drop(&mut self) {
         self.mutex.wq.notify();
     }
@@ -261,7 +261,7 @@ pub struct MutexGuard<'a, T: ?Sized + 'a> {
     irq_lock: bool,
 }
 
-impl<'a, T: ?Sized> core::ops::Deref for MutexGuard<'a, T> {
+impl<T: ?Sized> core::ops::Deref for MutexGuard<'_, T> {
     type Target = T;
 
     #[inline]
@@ -270,14 +270,14 @@ impl<'a, T: ?Sized> core::ops::Deref for MutexGuard<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> core::ops::DerefMut for MutexGuard<'a, T> {
+impl<T: ?Sized> core::ops::DerefMut for MutexGuard<'_, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut T {
         &mut self.guard
     }
 }
 
-impl<'a, T: ?Sized> Drop for MutexGuard<'a, T> {
+impl<T: ?Sized> Drop for MutexGuard<'_, T> {
     #[inline]
     fn drop(&mut self) {
         unsafe {

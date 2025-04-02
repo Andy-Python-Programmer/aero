@@ -90,6 +90,8 @@ impl TaskQueue {
         debug_assert!(!task.link.is_linked()); // Make sure the task is not already linked
 
         task.update_state(TaskState::AwaitingIo);
+        task.set_sleep_duration(0);
+
         self.awaiting.push_back(task);
     }
 }
@@ -213,7 +215,11 @@ impl SchedulerInterface for RoundRobin {
         let queue = self.queue.get_mut();
 
         if task.state() == TaskState::AwaitingIo {
-            let mut cursor = unsafe { queue.awaiting.cursor_mut_from_ptr(task.as_ref()) };
+            let mut cursor = if task.load_sleep_duration() > 0 {
+                unsafe { queue.deadline_awaiting.cursor_mut_from_ptr(task.as_ref()) }
+            } else {
+                unsafe { queue.awaiting.cursor_mut_from_ptr(task.as_ref()) }
+            };
 
             if let Some(task) = cursor.remove() {
                 queue.push_runnable(task);
