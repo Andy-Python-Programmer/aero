@@ -354,11 +354,12 @@ impl Sub<VirtAddr> for VirtAddr {
 
 impl Step for VirtAddr {
     #[inline]
-    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+    fn steps_between(start: &Self, end: &Self) -> (usize, Option<usize>) {
         if start < end {
-            Some((end.as_u64() - start.as_u64()) as _)
+            let n = (end.as_u64() - start.as_u64()) as usize;
+            (n, Some(n))
         } else {
-            None
+            (0, None)
         }
     }
 
