@@ -9,6 +9,7 @@ use crate::utils::sync::IrqGuard;
 use super::interrupts::InterruptErrorStack;
 use super::{asm_macros, io};
 
+use core::arch::naked_asm;
 use core::mem::offset_of;
 
 const ARCH_SET_GS: usize = 0x1001;
@@ -39,7 +40,7 @@ const ARCH_GET_GS: usize = 0x1004;
 /// The instruction also does not save anything on the stack and does *not* change the `RSP`.
 #[naked]
 unsafe extern "C" fn x86_64_syscall_handler() {
-    asm!(
+    naked_asm!(
         // make the GS base point to the kernel TLS
         "swapgs",
         // save the user stack pointer
@@ -89,7 +90,6 @@ unsafe extern "C" fn x86_64_syscall_handler() {
         tss_temp_ustack_off = const offset_of!(Tss, reserved2) + core::mem::size_of::<usize>(),
         tss_rsp0_off = const offset_of!(Tss, rsp) + core::mem::size_of::<usize>(),
         x86_64_do_syscall = sym x86_64_do_syscall,
-        options(noreturn)
     )
 }
 
@@ -107,7 +107,7 @@ unsafe extern "C" fn x86_64_syscall_handler() {
 /// The instruction expects the call number and arguments in the same registers as for SYSCALL.
 #[naked]
 unsafe extern "C" fn x86_64_sysenter_handler() {
-    asm!(
+    naked_asm!(
         "swapgs",
         // Build the interrupt frame expected by the kernel.
         "push {userland_ss}",
@@ -155,7 +155,6 @@ unsafe extern "C" fn x86_64_sysenter_handler() {
         userland_ss = const USER_SS.bits(),
         x86_64_check_sysenter = sym x86_64_check_sysenter,
         x86_64_do_syscall = sym x86_64_do_syscall,
-        options(noreturn)
     )
 }
 

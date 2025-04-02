@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use core::arch::naked_asm;
 use core::fmt::{Debug, Display};
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
@@ -52,7 +53,7 @@ unsafe extern "C" fn copy_to_from_user(
     // %rsi = argument 2, `src`
     // %rdx = argument 3, `size`
     // %rcx = argument 4, `fault_resume` (copied to %r10)
-    asm!(
+    naked_asm!(
         // Copy `fault_resume` out of %rcx because it will be utilized by `rep movsb` latter.
         "mov r10, rcx",
         // Setup the page fault resume.
@@ -82,7 +83,6 @@ unsafe extern "C" fn copy_to_from_user(
         "1:",
         "xor eax, eax",
         "jmp 3b",
-        options(noreturn)
     )
 }
 

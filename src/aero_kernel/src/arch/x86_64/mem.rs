@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use core::arch::naked_asm;
+
 fn should_store_by_byte() -> bool {
     let cpuid = raw_cpuid::CpuId::new();
     if let Some(features) = cpuid.get_extended_feature_info() {
@@ -32,7 +34,7 @@ unsafe extern "C" fn memcpy_movsq(dest: *mut u8, src: *const u8, len: usize) -> 
     // %rdi = argument 1, `dest`
     // %rsi = argument 2, `src`
     // %rdx = argument 3, `len`
-    asm!(
+    naked_asm!(
         // Save the return value.
         "mov rax, rdi",
         // Copy in 8 byte chunks.
@@ -44,7 +46,6 @@ unsafe extern "C" fn memcpy_movsq(dest: *mut u8, src: *const u8, len: usize) -> 
         "and rcx, 0x7",
         "rep movsb",
         "ret",
-        options(noreturn)
     );
 }
 
@@ -55,14 +56,13 @@ unsafe extern "C" fn memcpy_movsb(dest: *mut u8, src: *const u8, len: usize) -> 
     // %rdi = argument 1, `dest`
     // %rsi = argument 2, `src`
     // %rdx = argument 3, `len`
-    asm!(
+    naked_asm!(
         // Save the return value.
         "mov rax, rdi",
         // Copy!
         "mov rcx, rdx",
         "rep movsb",
         "ret",
-        options(noreturn)
     )
 }
 
@@ -82,7 +82,7 @@ unsafe extern "C" fn memset_stosq(dest: *mut u8, byte: i32, len: usize) -> *mut 
     // %rdi = argument 1, `dest`
     // %rsi = argument 2, `byte`
     // %rdx = argument 3, `len`
-    asm!(
+    naked_asm!(
         // Save the return value.
         "mov r11, rdi",
         // Create an 8-byte copy of the pattern.
@@ -101,7 +101,6 @@ unsafe extern "C" fn memset_stosq(dest: *mut u8, byte: i32, len: usize) -> *mut 
         // Restore the return value.
         "mov rax, r11",
         "ret",
-        options(noreturn)
     )
 }
 
@@ -112,7 +111,7 @@ unsafe extern "C" fn memset_stosb(dest: *mut u8, byte: i32, len: usize) -> *mut 
     // %rdi = argument 1, `dest`
     // %rsi = argument 2, `byte`
     // %rdx = argument 3, `len`
-    asm!(
+    naked_asm!(
         // Save the return value.
         "mov r11, rdi",
         "mov al, sil",
@@ -120,7 +119,6 @@ unsafe extern "C" fn memset_stosb(dest: *mut u8, byte: i32, len: usize) -> *mut 
         "rep stosb",
         "mov rax, r11",
         "ret",
-        options(noreturn)
     )
 }
 
@@ -141,7 +139,7 @@ unsafe extern "C" fn memmove_erms(dest: *mut u8, src: *const u8, len: usize) -> 
     // %rdi = argument 1, `dest`
     // %rsi = argument 2, `src`
     // %rdx = argument 3, `len`
-    asm!(
+    naked_asm!(
         "mov rax, rdi",
         // Skip zero length.
         "test rdx, rdx",
@@ -167,7 +165,6 @@ unsafe extern "C" fn memmove_erms(dest: *mut u8, src: *const u8, len: usize) -> 
         "rep movsb",
         "cld",
         "ret",
-        options(noreturn)
     )
 }
 

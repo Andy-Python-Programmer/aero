@@ -37,6 +37,7 @@ use alloc::vec::Vec;
 use raw_cpuid::CpuId;
 
 use core::alloc::Layout;
+use core::arch::naked_asm;
 use core::ptr::Unique;
 
 use crate::arch::interrupts::InterruptErrorStack;
@@ -115,7 +116,8 @@ const USERLAND_STACK_BOTTOM: VirtAddr = USERLAND_STACK_TOP.const_sub_u64(USERLAN
 
 #[naked]
 unsafe extern "C" fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: u64) {
-    asm!(
+    #[rustfmt::skip]
+    naked_asm!(
         "push rdi", // stack
         "push rsi", // rip
         "push rdx", // rflags
@@ -124,14 +126,13 @@ unsafe extern "C" fn jump_userland_exec(stack: VirtAddr, rip: VirtAddr, rflags: 
         "pop rcx",
         "pop rsp",
         "swapgs",
-        "sysretq",
-        options(noreturn)
+        "sysretq"
     );
 }
 
 #[naked]
 unsafe extern "C" fn task_spinup(prev: &mut Unique<Context>, next: &Context) {
-    asm!(
+    naked_asm!(
         // save callee-saved registers
         "push rbp",
         "push rbx",
@@ -158,26 +159,24 @@ unsafe extern "C" fn task_spinup(prev: &mut Unique<Context>, next: &Context) {
         "pop rbp",
         // resume the next thread
         "ret",
-        options(noreturn)
     );
 }
 
 #[naked]
 unsafe extern "C" fn iretq_init() {
-    asm!(
+    naked_asm!(
         "cli",
         // pop the error code
         "add rsp, 8",
         asm_macros::pop_preserved!(),
         asm_macros::pop_scratch!(),
         "iretq",
-        options(noreturn)
     )
 }
 
 #[naked]
 unsafe extern "C" fn fork_init() {
-    asm!(
+    naked_asm!(
         "cli",
         // pop the error code
         "add rsp, 8",
@@ -185,7 +184,6 @@ unsafe extern "C" fn fork_init() {
         asm_macros::pop_scratch!(),
         "swapgs",
         "iretq",
-        options(noreturn)
     )
 }
 
