@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+// TODO: The reason why XFE did not run was because of the FXSleep function which uses select() to
+// sleep.
+
 use aero_syscall::prelude::{EPollEvent, EPollEventFlags};
 use aero_syscall::SyscallError;
 
@@ -170,7 +173,7 @@ impl EPoll {
         }
 
         // If all events are ready, we can return now.
-        if n > 0 {
+        if n > 0 || fds.is_empty() {
             debug_assert!(fds.is_empty());
             return Ok(n);
         }
@@ -181,8 +184,21 @@ impl EPoll {
             return Ok(0);
         }
 
+        if timeout > 0 {
+            scheduler::get_scheduler()
+                .inner
+                .sleep(Some(timeout * 1_000_000))?;
+        } else {
+            scheduler::get_scheduler().inner.sleep(None)?;
+        }
+
         'search: loop {
             scheduler::get_scheduler().inner.await_io()?;
+
+            if current_task.load_sleep_duration() == 0 && timeout > 0 {
+                // Timeout has expired.
+                return Ok(0);
+            }
 
             for (fd, event, flags) in fds.iter_mut() {
                 // If the event mask does not contain any poll(2) events, the event
