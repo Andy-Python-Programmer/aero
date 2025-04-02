@@ -41,10 +41,8 @@
     maybe_uninit_as_bytes, // https://github.com/rust-lang/rust/issues/93092
     const_trait_impl, // https://github.com/rust-lang/rust/issues/67792
     int_roundings, // https://github.com/rust-lang/rust/issues/88581
-    const_ptr_is_null, // https://github.com/rust-lang/rust/issues/74939
     naked_functions, // https://github.com/rust-lang/rust/issues/32408
     cfg_match, // https://github.com/rust-lang/rust/issues/115585
-    strict_provenance,
     associated_type_defaults,
     trait_upcasting,
     new_zeroed_alloc, // https://github.com/rust-lang/rust/issues/129396
