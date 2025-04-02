@@ -44,7 +44,6 @@
     naked_functions, // https://github.com/rust-lang/rust/issues/32408
     cfg_match, // https://github.com/rust-lang/rust/issues/115585
     associated_type_defaults,
-    trait_upcasting,
     new_zeroed_alloc, // https://github.com/rust-lang/rust/issues/129396
     sync_unsafe_cell
 )]
