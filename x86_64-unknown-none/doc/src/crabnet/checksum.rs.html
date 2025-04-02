@@ -1,153 +1,76 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/crabnet-f1041e97df122607/58a74ea/src/checksum.rs`."><title>checksum.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-405f8b29f52305f8.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="crabnet" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (26b5599e4 2024-09-06)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-7e3bb6c46e92e77c.js" ><script src="../../static.files/storage-29b1d5a9048d38fe.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-14659ec02b58af51.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-40f72c9259523cb3.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
-<a href="#1" id="1">1</a>
-<a href="#2" id="2">2</a>
-<a href="#3" id="3">3</a>
-<a href="#4" id="4">4</a>
-<a href="#5" id="5">5</a>
-<a href="#6" id="6">6</a>
-<a href="#7" id="7">7</a>
-<a href="#8" id="8">8</a>
-<a href="#9" id="9">9</a>
-<a href="#10" id="10">10</a>
-<a href="#11" id="11">11</a>
-<a href="#12" id="12">12</a>
-<a href="#13" id="13">13</a>
-<a href="#14" id="14">14</a>
-<a href="#15" id="15">15</a>
-<a href="#16" id="16">16</a>
-<a href="#17" id="17">17</a>
-<a href="#18" id="18">18</a>
-<a href="#19" id="19">19</a>
-<a href="#20" id="20">20</a>
-<a href="#21" id="21">21</a>
-<a href="#22" id="22">22</a>
-<a href="#23" id="23">23</a>
-<a href="#24" id="24">24</a>
-<a href="#25" id="25">25</a>
-<a href="#26" id="26">26</a>
-<a href="#27" id="27">27</a>
-<a href="#28" id="28">28</a>
-<a href="#29" id="29">29</a>
-<a href="#30" id="30">30</a>
-<a href="#31" id="31">31</a>
-<a href="#32" id="32">32</a>
-<a href="#33" id="33">33</a>
-<a href="#34" id="34">34</a>
-<a href="#35" id="35">35</a>
-<a href="#36" id="36">36</a>
-<a href="#37" id="37">37</a>
-<a href="#38" id="38">38</a>
-<a href="#39" id="39">39</a>
-<a href="#40" id="40">40</a>
-<a href="#41" id="41">41</a>
-<a href="#42" id="42">42</a>
-<a href="#43" id="43">43</a>
-<a href="#44" id="44">44</a>
-<a href="#45" id="45">45</a>
-<a href="#46" id="46">46</a>
-<a href="#47" id="47">47</a>
-<a href="#48" id="48">48</a>
-<a href="#49" id="49">49</a>
-<a href="#50" id="50">50</a>
-<a href="#51" id="51">51</a>
-<a href="#52" id="52">52</a>
-<a href="#53" id="53">53</a>
-<a href="#54" id="54">54</a>
-<a href="#55" id="55">55</a>
-<a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
-<a href="#76" id="76">76</a></pre></div><pre class="rust"><code><span class="kw">use </span>byte_endian::BigEndian;
-
-<span class="kw">use </span><span class="kw">super</span>::network::{Ipv4, Ipv4Addr, Ipv4Type};
-
-<span class="attr">#[repr(C, packed)]
-</span><span class="kw">pub struct </span>PseudoHeader {
-    src_ip: Ipv4Addr,
-    dst_ip: Ipv4Addr,
-    reserved: u8,
-    ty: Ipv4Type,
-    size: BigEndian&lt;u16&gt;,
-}
-
-<span class="kw">impl </span>PseudoHeader {
-    <span class="kw">pub fn </span>new(ip_hdr: <span class="kw-2">&amp;</span>Ipv4) -&gt; PseudoHeader {
-        <span class="kw">let </span>len = ip_hdr.length;
-        PseudoHeader {
-            src_ip: ip_hdr.src_ip(),
-            dst_ip: ip_hdr.dest_ip(),
-            reserved: <span class="number">0</span>,
-            ty: ip_hdr.protocol(),
-            size: BigEndian::from(len.to_native() - core::mem::size_of::&lt;Ipv4&gt;() <span class="kw">as </span>u16),
-        }
-    }
-}
-
-<span class="doccomment">/// Compute the 32-bit internet checksum for `data`.
-</span><span class="kw">fn </span>calculate_checksum(data: <span class="kw-2">&amp;</span>[u8]) -&gt; u32 {
-    <span class="kw">let </span>bytes = <span class="kw">unsafe </span>{
-        core::slice::from_raw_parts(
-            data.as_ptr().cast::&lt;BigEndian&lt;u16&gt;&gt;(),
-            data.len() / core::mem::size_of::&lt;u16&gt;(),
-        )
-    };
-
-    <span class="kw">let </span><span class="kw-2">mut </span>sum = bytes
-        .iter()
-        .take(data.len() / <span class="number">2</span>)
-        .map(|byte| byte.to_native() <span class="kw">as </span>u32)
-        .sum();
-
-    <span class="comment">// Add left-over byte, if any.
-    </span><span class="kw">if </span>data.len() % <span class="number">2 </span>== <span class="number">1 </span>{
-        sum += ((<span class="kw-2">*</span>data.last().unwrap()) <span class="kw">as </span>u32) &lt;&lt; <span class="number">8</span>;
-    }
-
-    sum
-}
-
-<span class="doccomment">/// Folds the 32-bit sum (`sum`) to 16 bits in the network byte order.
-</span><span class="kw">pub fn </span>make(<span class="kw-2">mut </span>sum: u32) -&gt; BigEndian&lt;u16&gt; {
-    <span class="kw">while </span>(sum &gt;&gt; <span class="number">16</span>) != <span class="number">0 </span>{
-        sum = (sum &amp; <span class="number">0xffff</span>) + (sum &gt;&gt; <span class="number">16</span>);
-    }
-
-    BigEndian::from(!(sum <span class="kw">as </span>u16))
-}
-
-<span class="doccomment">/// Combine several RFC 1071 compliant checksums.
-</span><span class="kw">pub fn </span>make_combine(a: <span class="kw-2">&amp;</span>[u32]) -&gt; BigEndian&lt;u16&gt; {
-    make(a.iter().sum())
-}
-
-<span class="doccomment">/// Compute the internet checksum for `value`.
-</span><span class="kw">pub fn </span>calculate&lt;T: Sized&gt;(value: <span class="kw-2">&amp;</span>T) -&gt; u32 {
-    <span class="kw">let </span>bytes = <span class="kw">unsafe </span>{
-        core::slice::from_raw_parts(value <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>u8, core::mem::size_of::&lt;T&gt;())
-    };
-    calculate_checksum(bytes)
-}
-
-<span class="doccomment">/// Compute the internet checksum for `value` of `size`.
-</span><span class="kw">pub fn </span>calculate_with_len&lt;T: <span class="question-mark">?</span>Sized&gt;(value: <span class="kw-2">&amp;</span>T, size: usize) -&gt; u32 {
-    <span class="kw">let </span>bytes = <span class="kw">unsafe </span>{ core::slice::from_raw_parts(value <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>u8, size) };
-    calculate_checksum(bytes)
-}
-</code></pre></div></section></main></body></html>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/crabnet-d10e1db33289f111/58a74ea/src/checksum.rs`."><title>checksum.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="crabnet" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (e2014e876 2025-04-01)" data-channel="nightly" data-search-js="search-e7298875.js" data-settings-js="settings-d72f25bb.js" ><script src="../../static.files/storage-82c7156e.js"></script><script defer src="../../static.files/src-script-63605ae7.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">crabnet/</div>checksum.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>byte_endian::BigEndian;
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">super</span>::network::{Ipv4, Ipv4Addr, Ipv4Type};
+<a href=#4 id=4 data-nosnippet>4</a>
+<a href=#5 id=5 data-nosnippet>5</a><span class="attr">#[repr(C, packed)]
+<a href=#6 id=6 data-nosnippet>6</a></span><span class="kw">pub struct </span>PseudoHeader {
+<a href=#7 id=7 data-nosnippet>7</a>    src_ip: Ipv4Addr,
+<a href=#8 id=8 data-nosnippet>8</a>    dst_ip: Ipv4Addr,
+<a href=#9 id=9 data-nosnippet>9</a>    reserved: u8,
+<a href=#10 id=10 data-nosnippet>10</a>    ty: Ipv4Type,
+<a href=#11 id=11 data-nosnippet>11</a>    size: BigEndian&lt;u16&gt;,
+<a href=#12 id=12 data-nosnippet>12</a>}
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a><span class="kw">impl </span>PseudoHeader {
+<a href=#15 id=15 data-nosnippet>15</a>    <span class="kw">pub fn </span>new(ip_hdr: <span class="kw-2">&amp;</span>Ipv4) -&gt; PseudoHeader {
+<a href=#16 id=16 data-nosnippet>16</a>        <span class="kw">let </span>len = ip_hdr.length;
+<a href=#17 id=17 data-nosnippet>17</a>        PseudoHeader {
+<a href=#18 id=18 data-nosnippet>18</a>            src_ip: ip_hdr.src_ip(),
+<a href=#19 id=19 data-nosnippet>19</a>            dst_ip: ip_hdr.dest_ip(),
+<a href=#20 id=20 data-nosnippet>20</a>            reserved: <span class="number">0</span>,
+<a href=#21 id=21 data-nosnippet>21</a>            ty: ip_hdr.protocol(),
+<a href=#22 id=22 data-nosnippet>22</a>            size: BigEndian::from(len.to_native() - core::mem::size_of::&lt;Ipv4&gt;() <span class="kw">as </span>u16),
+<a href=#23 id=23 data-nosnippet>23</a>        }
+<a href=#24 id=24 data-nosnippet>24</a>    }
+<a href=#25 id=25 data-nosnippet>25</a>}
+<a href=#26 id=26 data-nosnippet>26</a>
+<a href=#27 id=27 data-nosnippet>27</a><span class="doccomment">/// Compute the 32-bit internet checksum for `data`.
+<a href=#28 id=28 data-nosnippet>28</a></span><span class="kw">fn </span>calculate_checksum(data: <span class="kw-2">&amp;</span>[u8]) -&gt; u32 {
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="kw">let </span>bytes = <span class="kw">unsafe </span>{
+<a href=#30 id=30 data-nosnippet>30</a>        core::slice::from_raw_parts(
+<a href=#31 id=31 data-nosnippet>31</a>            data.as_ptr().cast::&lt;BigEndian&lt;u16&gt;&gt;(),
+<a href=#32 id=32 data-nosnippet>32</a>            data.len() / core::mem::size_of::&lt;u16&gt;(),
+<a href=#33 id=33 data-nosnippet>33</a>        )
+<a href=#34 id=34 data-nosnippet>34</a>    };
+<a href=#35 id=35 data-nosnippet>35</a>
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="kw">let </span><span class="kw-2">mut </span>sum = bytes
+<a href=#37 id=37 data-nosnippet>37</a>        .iter()
+<a href=#38 id=38 data-nosnippet>38</a>        .take(data.len() / <span class="number">2</span>)
+<a href=#39 id=39 data-nosnippet>39</a>        .map(|byte| byte.to_native() <span class="kw">as </span>u32)
+<a href=#40 id=40 data-nosnippet>40</a>        .sum();
+<a href=#41 id=41 data-nosnippet>41</a>
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="comment">// Add left-over byte, if any.
+<a href=#43 id=43 data-nosnippet>43</a>    </span><span class="kw">if </span>data.len() % <span class="number">2 </span>== <span class="number">1 </span>{
+<a href=#44 id=44 data-nosnippet>44</a>        sum += ((<span class="kw-2">*</span>data.last().unwrap()) <span class="kw">as </span>u32) &lt;&lt; <span class="number">8</span>;
+<a href=#45 id=45 data-nosnippet>45</a>    }
+<a href=#46 id=46 data-nosnippet>46</a>
+<a href=#47 id=47 data-nosnippet>47</a>    sum
+<a href=#48 id=48 data-nosnippet>48</a>}
+<a href=#49 id=49 data-nosnippet>49</a>
+<a href=#50 id=50 data-nosnippet>50</a><span class="doccomment">/// Folds the 32-bit sum (`sum`) to 16 bits in the network byte order.
+<a href=#51 id=51 data-nosnippet>51</a></span><span class="kw">pub fn </span>make(<span class="kw-2">mut </span>sum: u32) -&gt; BigEndian&lt;u16&gt; {
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="kw">while </span>(sum &gt;&gt; <span class="number">16</span>) != <span class="number">0 </span>{
+<a href=#53 id=53 data-nosnippet>53</a>        sum = (sum &amp; <span class="number">0xffff</span>) + (sum &gt;&gt; <span class="number">16</span>);
+<a href=#54 id=54 data-nosnippet>54</a>    }
+<a href=#55 id=55 data-nosnippet>55</a>
+<a href=#56 id=56 data-nosnippet>56</a>    BigEndian::from(!(sum <span class="kw">as </span>u16))
+<a href=#57 id=57 data-nosnippet>57</a>}
+<a href=#58 id=58 data-nosnippet>58</a>
+<a href=#59 id=59 data-nosnippet>59</a><span class="doccomment">/// Combine several RFC 1071 compliant checksums.
+<a href=#60 id=60 data-nosnippet>60</a></span><span class="kw">pub fn </span>make_combine(a: <span class="kw-2">&amp;</span>[u32]) -&gt; BigEndian&lt;u16&gt; {
+<a href=#61 id=61 data-nosnippet>61</a>    make(a.iter().sum())
+<a href=#62 id=62 data-nosnippet>62</a>}
+<a href=#63 id=63 data-nosnippet>63</a>
+<a href=#64 id=64 data-nosnippet>64</a><span class="doccomment">/// Compute the internet checksum for `value`.
+<a href=#65 id=65 data-nosnippet>65</a></span><span class="kw">pub fn </span>calculate&lt;T: Sized&gt;(value: <span class="kw-2">&amp;</span>T) -&gt; u32 {
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="kw">let </span>bytes = <span class="kw">unsafe </span>{
+<a href=#67 id=67 data-nosnippet>67</a>        core::slice::from_raw_parts(value <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>u8, core::mem::size_of::&lt;T&gt;())
+<a href=#68 id=68 data-nosnippet>68</a>    };
+<a href=#69 id=69 data-nosnippet>69</a>    calculate_checksum(bytes)
+<a href=#70 id=70 data-nosnippet>70</a>}
+<a href=#71 id=71 data-nosnippet>71</a>
+<a href=#72 id=72 data-nosnippet>72</a><span class="doccomment">/// Compute the internet checksum for `value` of `size`.
+<a href=#73 id=73 data-nosnippet>73</a></span><span class="kw">pub fn </span>calculate_with_len&lt;T: <span class="question-mark">?</span>Sized&gt;(value: <span class="kw-2">&amp;</span>T, size: usize) -&gt; u32 {
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">let </span>bytes = <span class="kw">unsafe </span>{ core::slice::from_raw_parts(value <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>u8, size) };
+<a href=#75 id=75 data-nosnippet>75</a>    calculate_checksum(bytes)
+<a href=#76 id=76 data-nosnippet>76</a>}</code></pre></div></section></main></body></html>

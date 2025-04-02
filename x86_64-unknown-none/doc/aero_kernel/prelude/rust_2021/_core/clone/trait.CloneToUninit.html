@@ -1,46 +1,148 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A generalization of `Clone` to dynamically-sized types stored in arbitrary containers."><title>CloneToUninit in aero_kernel::prelude::rust_2021::_core::clone - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-405f8b29f52305f8.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (26b5599e4 2024-09-06)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-7e3bb6c46e92e77c.js" ><script src="../../../../../static.files/storage-29b1d5a9048d38fe.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../../static.files/main-14659ec02b58af51.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-40f72c9259523cb3.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../aero_kernel/index.html">aero_<wbr>kernel</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Clone<wbr>ToUninit</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#safety" title="Safety">Safety</a></li><li><a href="#see-also" title="See also">See also</a></li></ul><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.clone_to_uninit" title="clone_to_uninit">clone_to_uninit</a></li></ul><h3><a href="#object-safety">Object Safety</a></h3><h3><a href="#implementors">Implementors</a></h3></section><div id="rustdoc-modnav"><h2><a href="index.html">In aero_<wbr>kernel::<wbr>prelude::<wbr>rust_<wbr>2021::<wbr>_<wbr>core::<wbr>clone</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Trait <a href="../../../../index.html">aero_kernel</a>::<wbr><a href="../../../index.html">prelude</a>::<wbr><a href="../../index.html">rust_2021</a>::<wbr><a href="../index.html">_core</a>::<wbr><a href="index.html">clone</a>::<wbr><a class="trait" href="#">CloneToUninit</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub unsafe trait CloneToUninit {
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A generalization of `Clone` to dynamically-sized types stored in arbitrary containers."><title>CloneToUninit in aero_kernel::prelude::rust_2021::_core::clone - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (e2014e876 2025-04-01)" data-channel="nightly" data-search-js="search-e7298875.js" data-settings-js="settings-d72f25bb.js" ><script src="../../../../../static.files/storage-82c7156e.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../aero_kernel/index.html">aero_<wbr>kernel</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Clone<wbr>ToUninit</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#safety" title="Safety">Safety</a></li><li><a href="#examples" title="Examples">Examples</a></li><li><a href="#see-also" title="See Also">See Also</a></li></ul><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.clone_to_uninit" title="clone_to_uninit">clone_to_uninit</a></li></ul><h3><a href="#implementors">Implementors</a></h3></section><div id="rustdoc-modnav"><h2><a href="index.html">In aero_<wbr>kernel::<wbr>prelude::<wbr>rust_<wbr>2021::<wbr>_<wbr>core::<wbr>clone</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../../index.html">aero_kernel</a>::<wbr><a href="../../../index.html">prelude</a>::<wbr><a href="../../index.html">rust_2021</a>::<wbr><a href="../index.html">_core</a>::<wbr><a href="index.html">clone</a></div><h1>Trait <span class="trait">CloneToUninit</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"></span></div><pre class="rust item-decl"><code>pub unsafe trait CloneToUninit {
     // Required method
-    unsafe fn <a href="#tymethod.clone_to_uninit" class="fn">clone_to_uninit</a>(&amp;self, dst: *mut Self);
-}</code></pre><span class="item-info"><div class="stab unstable"><span class="emoji">🔬</span><span>This is a nightly-only experimental API. (<code>clone_to_uninit</code>)</span></div></span><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A generalization of <a href="trait.Clone.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::Clone"><code>Clone</code></a> to dynamically-sized types stored in arbitrary containers.</p>
-<p>This trait is implemented for all types implementing <a href="trait.Clone.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::Clone"><code>Clone</code></a>, and also <a href="slice">slices</a> of all
-such types. You may also implement this trait to enable cloning trait objects and custom DSTs
-(structures containing dynamically-sized fields).</p>
+    unsafe fn <a href="#tymethod.clone_to_uninit" class="fn">clone_to_uninit</a>(&amp;self, dest: *mut u8);
+}</code></pre><span class="item-info"><div class="stab unstable"><span class="emoji">🔬</span><span>This is a nightly-only experimental API. (<code>clone_to_uninit</code>)</span></div></span><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A generalization of <a href="../../trait.Clone.html" title="trait aero_kernel::prelude::rust_2021::Clone"><code>Clone</code></a> to <a href="https://doc.rust-lang.org/reference/dynamically-sized-types.html">dynamically-sized types</a> stored in arbitrary containers.</p>
+<p>This trait is implemented for all types implementing <a href="../../trait.Clone.html" title="trait aero_kernel::prelude::rust_2021::Clone"><code>Clone</code></a>, <a href="slice">slices</a> of all
+such types, and other dynamically-sized types in the standard library.
+You may also implement this trait to enable cloning custom DSTs
+(structures containing dynamically-sized fields), or use it as a supertrait to enable
+cloning a <a href="https://doc.rust-lang.org/reference/types/trait-object.html">trait object</a>.</p>
+<p>This trait is normally used via operations on container types which support DSTs,
+so you should not typically need to call <code>.clone_to_uninit()</code> explicitly except when
+implementing such a container or otherwise performing explicit management of an allocation,
+or when implementing <code>CloneToUninit</code> itself.</p>
 <h2 id="safety"><a class="doc-anchor" href="#safety">§</a>Safety</h2>
-<p>Implementations must ensure that when <code>.clone_to_uninit(dst)</code> returns normally rather than
-panicking, it always leaves <code>*dst</code> initialized as a valid value of type <code>Self</code>.</p>
-<h2 id="see-also"><a class="doc-anchor" href="#see-also">§</a>See also</h2>
+<p>Implementations must ensure that when <code>.clone_to_uninit(dest)</code> returns normally rather than
+panicking, it always leaves <code>*dest</code> initialized as a valid value of type <code>Self</code>.</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<p>If you are defining a trait, you can add <code>CloneToUninit</code> as a supertrait to enable cloning of
+<code>dyn</code> values of your trait:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#![feature(clone_to_uninit)]
+</span><span class="kw">use </span>std::rc::Rc;
+
+<span class="kw">trait </span>Foo: std::fmt::Debug + std::clone::CloneToUninit {
+    <span class="kw">fn </span>modify(<span class="kw-2">&amp;mut </span><span class="self">self</span>);
+    <span class="kw">fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i32;
+}
+
+<span class="kw">impl </span>Foo <span class="kw">for </span>i32 {
+    <span class="kw">fn </span>modify(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw-2">*</span><span class="self">self </span><span class="kw-2">*</span>= <span class="number">10</span>;
+    }
+    <span class="kw">fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i32 {
+        <span class="kw-2">*</span><span class="self">self
+    </span>}
+}
+
+<span class="kw">let </span>first: Rc&lt;<span class="kw">dyn </span>Foo&gt; = Rc::new(<span class="number">1234</span>);
+
+<span class="kw">let </span><span class="kw-2">mut </span>second = first.clone();
+Rc::make_mut(<span class="kw-2">&amp;mut </span>second).modify(); <span class="comment">// make_mut() will call clone_to_uninit()
+
+</span><span class="macro">assert_eq!</span>(first.value(), <span class="number">1234</span>);
+<span class="macro">assert_eq!</span>(second.value(), <span class="number">12340</span>);</code></pre></div>
+<p>The following is an example of implementing <code>CloneToUninit</code> for a custom DST.
+(It is essentially a limited form of what <code>derive(CloneToUninit)</code> would do,
+if such a derive macro existed.)</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#![feature(clone_to_uninit)]
+</span><span class="kw">use </span>std::clone::CloneToUninit;
+<span class="kw">use </span>std::mem::offset_of;
+<span class="kw">use </span>std::rc::Rc;
+
+<span class="attr">#[derive(PartialEq)]
+</span><span class="kw">struct </span>MyDst&lt;T: <span class="question-mark">?</span>Sized&gt; {
+    label: String,
+    contents: T,
+}
+
+<span class="kw">unsafe impl</span>&lt;T: <span class="question-mark">?</span>Sized + CloneToUninit&gt; CloneToUninit <span class="kw">for </span>MyDst&lt;T&gt; {
+    <span class="kw">unsafe fn </span>clone_to_uninit(<span class="kw-2">&amp;</span><span class="self">self</span>, dest: <span class="kw-2">*mut </span>u8) {
+        <span class="comment">// The offset of `self.contents` is dynamic because it depends on the alignment of T
+        // which can be dynamic (if `T = dyn SomeTrait`). Therefore, we have to obtain it
+        // dynamically by examining `self`, rather than using `offset_of!`.
+        //
+        // SAFETY: `self` by definition points somewhere before `&amp;self.contents` in the same
+        // allocation.
+        </span><span class="kw">let </span>offset_of_contents = <span class="kw">unsafe </span>{
+            (<span class="kw-2">&amp;</span>raw <span class="kw">const </span><span class="self">self</span>.contents).byte_offset_from_unsigned(<span class="self">self</span>)
+        };
+
+        <span class="comment">// Clone the *sized* fields of `self` (just one, in this example).
+        // (By cloning this first and storing it temporarily in a local variable, we avoid
+        // leaking it in case of any panic, using the ordinary automatic cleanup of local
+        // variables. Such a leak would be sound, but undesirable.)
+        </span><span class="kw">let </span>label = <span class="self">self</span>.label.clone();
+
+        <span class="comment">// SAFETY: The caller must provide a `dest` such that these field offsets are valid
+        // to write to.
+        </span><span class="kw">unsafe </span>{
+            <span class="comment">// Clone the unsized field directly from `self` to `dest`.
+            </span><span class="self">self</span>.contents.clone_to_uninit(dest.add(offset_of_contents));
+
+            <span class="comment">// Now write all the sized fields.
+            //
+            // Note that we only do this once all of the clone() and clone_to_uninit() calls
+            // have completed, and therefore we know that there are no more possible panics;
+            // this ensures no memory leaks in case of panic.
+            </span>dest.add(<span class="macro">offset_of!</span>(<span class="self">Self</span>, label)).cast::&lt;String&gt;().write(label);
+        }
+        <span class="comment">// All fields of the struct have been initialized; therefore, the struct is initialized,
+        // and we have satisfied our `unsafe impl CloneToUninit` obligations.
+    </span>}
+}
+
+<span class="kw">fn </span>main() {
+    <span class="comment">// Construct MyDst&lt;[u8; 4]&gt;, then coerce to MyDst&lt;[u8]&gt;.
+    </span><span class="kw">let </span>first: Rc&lt;MyDst&lt;[u8]&gt;&gt; = Rc::new(MyDst {
+        label: String::from(<span class="string">"hello"</span>),
+        contents: [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
+    });
+
+    <span class="kw">let </span><span class="kw-2">mut </span>second = first.clone();
+    <span class="comment">// make_mut() will call clone_to_uninit().
+    </span><span class="kw">for </span>elem <span class="kw">in </span>Rc::make_mut(<span class="kw-2">&amp;mut </span>second).contents.iter_mut() {
+        <span class="kw-2">*</span>elem <span class="kw-2">*</span>= <span class="number">10</span>;
+    }
+
+    <span class="macro">assert_eq!</span>(first.contents, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]);
+    <span class="macro">assert_eq!</span>(second.contents, [<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>, <span class="number">40</span>]);
+    <span class="macro">assert_eq!</span>(second.label, <span class="string">"hello"</span>);
+}</code></pre></div>
+<h2 id="see-also"><a class="doc-anchor" href="#see-also">§</a>See Also</h2>
 <ul>
-<li><a href="trait.Clone.html#method.clone_from" title="method aero_kernel::prelude::rust_2021::_core::clone::Clone::clone_from"><code>Clone::clone_from</code></a> is a safe function which may be used instead when <code>Self</code> is a <a href="../marker/trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Sized"><code>Sized</code></a>
+<li><a href="../../trait.Clone.html#method.clone_from" title="method aero_kernel::prelude::rust_2021::Clone::clone_from"><code>Clone::clone_from</code></a> is a safe function which may be used instead when <a href="../../trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::Sized"><code>Self: Sized</code></a>
 and the destination is already initialized; it may be able to reuse allocations owned by
-the destination.</li>
+the destination, whereas <code>clone_to_uninit</code> cannot, since its destination is assumed to be
+uninitialized.</li>
 <li><a href="../../std/borrow/trait.ToOwned.html"><code>ToOwned</code></a>, which allocates a new destination container.</li>
 </ul>
-</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.clone_to_uninit" class="method"><h4 class="code-header">unsafe fn <a href="#tymethod.clone_to_uninit" class="fn">clone_to_uninit</a>(&amp;self, dst: *mut Self)</h4></section><span class="item-info"><div class="stab unstable"><span class="emoji">🔬</span><span>This is a nightly-only experimental API. (<code>clone_to_uninit</code>)</span></div></span></summary><div class="docblock"><p>Performs copy-assignment from <code>self</code> to <code>dst</code>.</p>
-<p>This is analogous to <code>std::ptr::write(dst, self.clone())</code>,
-except that <code>self</code> may be a dynamically-sized type (<a href="../marker/trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Sized"><code>!Sized</code></a>).</p>
-<p>Before this function is called, <code>dst</code> may point to uninitialized memory.
-After this function is called, <code>dst</code> will point to initialized memory; it will be
-sound to create a <code>&amp;Self</code> reference from the pointer.</p>
+</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.clone_to_uninit" class="method"><h4 class="code-header">unsafe fn <a href="#tymethod.clone_to_uninit" class="fn">clone_to_uninit</a>(&amp;self, dest: *mut u8)</h4></section><span class="item-info"><div class="stab unstable"><span class="emoji">🔬</span><span>This is a nightly-only experimental API. (<code>clone_to_uninit</code>)</span></div></span></summary><div class="docblock"><p>Performs copy-assignment from <code>self</code> to <code>dest</code>.</p>
+<p>This is analogous to <code>std::ptr::write(dest.cast(), self.clone())</code>,
+except that <code>Self</code> may be a dynamically-sized type (<a href="../../trait.Sized.html" title="trait aero_kernel::prelude::rust_2021::Sized"><code>!Sized</code></a>).</p>
+<p>Before this function is called, <code>dest</code> may point to uninitialized memory.
+After this function is called, <code>dest</code> will point to initialized memory; it will be
+sound to create a <code>&amp;Self</code> reference from the pointer with the <a href="../ptr/fn.metadata.html" title="fn aero_kernel::prelude::rust_2021::_core::ptr::metadata">pointer metadata</a>
+from <code>self</code>.</p>
 <h5 id="safety-1"><a class="doc-anchor" href="#safety-1">§</a>Safety</h5>
 <p>Behavior is undefined if any of the following conditions are violated:</p>
 <ul>
-<li><code>dst</code> must be <a href="../ptr/index.html#safety" title="mod aero_kernel::prelude::rust_2021::_core::ptr">valid</a> for writes.</li>
-<li><code>dst</code> must be properly aligned.</li>
-<li><code>dst</code> must have the same <a href="../ptr/fn.metadata.html" title="fn aero_kernel::prelude::rust_2021::_core::ptr::metadata">pointer metadata</a> (slice length or <code>dyn</code> vtable) as <code>self</code>.</li>
+<li><code>dest</code> must be <a href="../ptr/index.html#safety" title="mod aero_kernel::prelude::rust_2021::_core::ptr">valid</a> for writes for <code>size_of_val(self)</code> bytes.</li>
+<li><code>dest</code> must be properly aligned to <code>align_of_val(self)</code>.</li>
 </ul>
 <h5 id="panics"><a class="doc-anchor" href="#panics">§</a>Panics</h5>
 <p>This function may panic. (For example, it might panic if memory allocation for a clone
 of a value owned by <code>self</code> fails.)
-If the call panics, then <code>*dst</code> should be treated as uninitialized memory; it must not be
+If the call panics, then <code>*dest</code> should be treated as uninitialized memory; it must not be
 read or dropped, because even if it was previously valid, it may have been partially
 overwritten.</p>
-<p>The caller may also need to take care to deallocate the allocation pointed to by <code>dst</code>,
-if applicable, to avoid a memory leak, and may need to take other precautions to ensure
-soundness in the presence of unwinding.</p>
+<p>The caller may wish to to take care to deallocate the allocation pointed to by <code>dest</code>,
+if applicable, to avoid a memory leak (but this is not a requirement).</p>
 <p>Implementors should avoid leaking values by, upon unwinding, dropping all component values
 that might have already been created. (For example, if a <code>[Foo]</code> of length 3 is being
 cloned, and the second of the three calls to <code>Foo::clone()</code> unwinds, then the first <code>Foo</code>
 cloned should be dropped.)</p>
-</div></details></div><h2 id="object-safety" class="section-header">Object Safety<a href="#object-safety" class="anchor">§</a></h2><div class="object-safety-info">This trait is <b>not</b> <a href="https://doc.rust-lang.org/nightly/reference/items/traits.html#object-safety">object safe</a>.</div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"><section id="impl-CloneToUninit-for-CStr" class="impl"><a href="#impl-CloneToUninit-for-CStr" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for <a class="struct" href="../ffi/struct.CStr.html" title="struct aero_kernel::prelude::rust_2021::_core::ffi::CStr">CStr</a></h3></section><section id="impl-CloneToUninit-for-str" class="impl"><a href="#impl-CloneToUninit-for-str" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for str</h3></section><section id="impl-CloneToUninit-for-T" class="impl"><a href="#impl-CloneToUninit-for-T" class="anchor">§</a><h3 class="code-header">impl&lt;T&gt; <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for T<div class="where">where
-    T: <a class="trait" href="trait.Clone.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::Clone">Clone</a>,</div></h3></section><section id="impl-CloneToUninit-for-%5BT%5D" class="impl"><a href="#impl-CloneToUninit-for-%5BT%5D" class="anchor">§</a><h3 class="code-header">impl&lt;T&gt; <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for [T]<div class="where">where
-    T: <a class="trait" href="trait.Clone.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::Clone">Clone</a>,</div></h3></section></div><script src="../../../../../trait.impl/core/clone/trait.CloneToUninit.js" data-ignore-extern-crates="core" async></script></section></div></main></body></html>
+</div></details></div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"><section id="impl-CloneToUninit-for-ByteStr" class="impl"><a href="#impl-CloneToUninit-for-ByteStr" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for <a class="struct" href="../bstr/struct.ByteStr.html" title="struct aero_kernel::prelude::rust_2021::_core::bstr::ByteStr">ByteStr</a></h3></section><section id="impl-CloneToUninit-for-CStr" class="impl"><a href="#impl-CloneToUninit-for-CStr" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for <a class="struct" href="../ffi/struct.CStr.html" title="struct aero_kernel::prelude::rust_2021::_core::ffi::CStr">CStr</a></h3></section><section id="impl-CloneToUninit-for-str" class="impl"><a href="#impl-CloneToUninit-for-str" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for str</h3></section><section id="impl-CloneToUninit-for-T" class="impl"><a href="#impl-CloneToUninit-for-T" class="anchor">§</a><h3 class="code-header">impl&lt;T&gt; <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for T<div class="where">where
+    T: <a class="trait" href="../../trait.Clone.html" title="trait aero_kernel::prelude::rust_2021::Clone">Clone</a>,</div></h3></section><section id="impl-CloneToUninit-for-%5BT%5D" class="impl"><a href="#impl-CloneToUninit-for-%5BT%5D" class="anchor">§</a><h3 class="code-header">impl&lt;T&gt; <a class="trait" href="trait.CloneToUninit.html" title="trait aero_kernel::prelude::rust_2021::_core::clone::CloneToUninit">CloneToUninit</a> for [T]<div class="where">where
+    T: <a class="trait" href="../../trait.Clone.html" title="trait aero_kernel::prelude::rust_2021::Clone">Clone</a>,</div></h3></section></div><script src="../../../../../trait.impl/core/clone/trait.CloneToUninit.js" data-ignore-extern-crates="core" async></script></section></div></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="SIMD and vendor intrinsics module."><title>aero_kernel::prelude::rust_2021::_core::arch - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-405f8b29f52305f8.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (26b5599e4 2024-09-06)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-7e3bb6c46e92e77c.js" ><script src="../../../../../static.files/storage-29b1d5a9048d38fe.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../../../static.files/main-14659ec02b58af51.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-40f72c9259523cb3.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../aero_kernel/index.html">aero_<wbr>kernel</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module arch</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#overview" title="Overview">Overview</a></li><li><a href="#cpu-feature-detection" title="CPU Feature Detection">CPU Feature Detection</a><ul><li><a href="#static-cpu-feature-detection" title="Static CPU Feature Detection">Static CPU Feature Detection</a></li><li><a href="#dynamic-cpu-feature-detection" title="Dynamic CPU Feature Detection">Dynamic CPU Feature Detection</a></li></ul></li><li><a href="#ergonomics" title="Ergonomics">Ergonomics</a></li><li><a href="#other-architectures" title="Other architectures">Other architectures</a></li><li><a href="#examples" title="Examples">Examples</a></li></ul><h3><a href="#modules">Module Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#macros" title="Macros">Macros</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In aero_<wbr>kernel::<wbr>prelude::<wbr>rust_<wbr>2021::<wbr>_<wbr>core</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Module <a href="../../../../index.html">aero_kernel</a>::<wbr><a href="../../../index.html">prelude</a>::<wbr><a href="../../index.html">rust_2021</a>::<wbr><a href="../index.html">_core</a>::<wbr><a class="mod" href="#">arch</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><span class="since" title="Stable since Rust version 1.27.0">1.27.0</span> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>SIMD and vendor intrinsics module.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="SIMD and vendor intrinsics module."><title>aero_kernel::prelude::rust_2021::_core::arch - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (e2014e876 2025-04-01)" data-channel="nightly" data-search-js="search-e7298875.js" data-settings-js="settings-d72f25bb.js" ><script src="../../../../../static.files/storage-82c7156e.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../aero_kernel/index.html">aero_<wbr>kernel</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module arch</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#overview" title="Overview">Overview</a></li><li><a href="#cpu-feature-detection" title="CPU Feature Detection">CPU Feature Detection</a><ul><li><a href="#static-cpu-feature-detection" title="Static CPU Feature Detection">Static CPU Feature Detection</a></li><li><a href="#dynamic-cpu-feature-detection" title="Dynamic CPU Feature Detection">Dynamic CPU Feature Detection</a></li></ul></li><li><a href="#ergonomics" title="Ergonomics">Ergonomics</a></li><li><a href="#other-architectures" title="Other architectures">Other architectures</a></li><li><a href="#examples" title="Examples">Examples</a></li></ul><h3><a href="#modules">Module Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#macros" title="Macros">Macros</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In aero_<wbr>kernel::<wbr>prelude::<wbr>rust_<wbr>2021::<wbr>_<wbr>core</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../../index.html">aero_kernel</a>::<wbr><a href="../../../index.html">prelude</a>::<wbr><a href="../../index.html">rust_2021</a>::<wbr><a href="../index.html">_core</a></div><h1>Module <span>arch</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><span class="since" title="Stable since Rust version 1.27.0">1.27.0</span></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>SIMD and vendor intrinsics module.</p>
 <p>This module is intended to be the gateway to architecture-specific
 intrinsic functions, typically related to SIMD (but not always!). Each
 architecture that Rust compiles to may contain a submodule here, which
@@ -65,11 +65,9 @@ runtime. The <code>unsafe</code> block here can be justified through the usage o
 are upheld.</p>
 <p>Statically enabling a feature is typically done with the <code>-C target-feature</code> or <code>-C target-cpu</code> flags to the compiler. For example if
 your local CPU supports AVX2 then you can compile the above function with:</p>
-<div class="example-wrap"><pre class="language-sh"><code>$ RUSTFLAGS=&#39;-C target-cpu=native&#39; cargo build
-</code></pre></div>
+<div class="example-wrap"><pre class="language-sh"><code>$ RUSTFLAGS=&#39;-C target-cpu=native&#39; cargo build</code></pre></div>
 <p>Or otherwise you can specifically enable just the AVX2 feature:</p>
-<div class="example-wrap"><pre class="language-sh"><code>$ RUSTFLAGS=&#39;-C target-feature=+avx2&#39; cargo build
-</code></pre></div>
+<div class="example-wrap"><pre class="language-sh"><code>$ RUSTFLAGS=&#39;-C target-feature=+avx2&#39; cargo build</code></pre></div>
 <p>Note that when you compile a binary with a particular feature enabled it’s
 important to ensure that you only run the binary on systems which satisfy
 the required feature set.</p>
@@ -102,7 +100,7 @@ We can do that in a manner like:</p>
     <span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
     </span><span class="kw">use </span>std::arch::x86_64::_mm256_add_epi64;
 
-    _mm256_add_epi64(...);
+    <span class="kw">unsafe </span>{ _mm256_add_epi64(...); }
 }</code></pre></div>
 <p>There’s a couple of components in play here, so let’s go through them in
 detail!</p>
@@ -234,47 +232,49 @@ we’ll be using SSE4.1 features to implement hex encoding.</p>
     <span class="attr">#[cfg(target_arch = <span class="string">"x86_64"</span>)]
     </span><span class="kw">use </span>std::arch::x86_64::<span class="kw-2">*</span>;
 
-    <span class="kw">let </span>ascii_zero = _mm_set1_epi8(<span class="string">b'0' </span><span class="kw">as </span>i8);
-    <span class="kw">let </span>nines = _mm_set1_epi8(<span class="number">9</span>);
-    <span class="kw">let </span>ascii_a = _mm_set1_epi8((<span class="string">b'a' </span>- <span class="number">9 </span>- <span class="number">1</span>) <span class="kw">as </span>i8);
-    <span class="kw">let </span>and4bits = _mm_set1_epi8(<span class="number">0xf</span>);
+    <span class="kw">unsafe </span>{
+        <span class="kw">let </span>ascii_zero = _mm_set1_epi8(<span class="string">b'0' </span><span class="kw">as </span>i8);
+        <span class="kw">let </span>nines = _mm_set1_epi8(<span class="number">9</span>);
+        <span class="kw">let </span>ascii_a = _mm_set1_epi8((<span class="string">b'a' </span>- <span class="number">9 </span>- <span class="number">1</span>) <span class="kw">as </span>i8);
+        <span class="kw">let </span>and4bits = _mm_set1_epi8(<span class="number">0xf</span>);
 
-    <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0_isize</span>;
-    <span class="kw">while </span>src.len() &gt;= <span class="number">16 </span>{
-        <span class="kw">let </span>invec = _mm_loadu_si128(src.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0_isize</span>;
+        <span class="kw">while </span>src.len() &gt;= <span class="number">16 </span>{
+            <span class="kw">let </span>invec = _mm_loadu_si128(src.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
 
-        <span class="kw">let </span>masked1 = _mm_and_si128(invec, and4bits);
-        <span class="kw">let </span>masked2 = _mm_and_si128(_mm_srli_epi64(invec, <span class="number">4</span>), and4bits);
+            <span class="kw">let </span>masked1 = _mm_and_si128(invec, and4bits);
+            <span class="kw">let </span>masked2 = _mm_and_si128(_mm_srli_epi64(invec, <span class="number">4</span>), and4bits);
 
-        <span class="comment">// return 0xff corresponding to the elements &gt; 9, or 0x00 otherwise
-        </span><span class="kw">let </span>cmpmask1 = _mm_cmpgt_epi8(masked1, nines);
-        <span class="kw">let </span>cmpmask2 = _mm_cmpgt_epi8(masked2, nines);
+            <span class="comment">// return 0xff corresponding to the elements &gt; 9, or 0x00 otherwise
+            </span><span class="kw">let </span>cmpmask1 = _mm_cmpgt_epi8(masked1, nines);
+            <span class="kw">let </span>cmpmask2 = _mm_cmpgt_epi8(masked2, nines);
 
-        <span class="comment">// add '0' or the offset depending on the masks
-        </span><span class="kw">let </span>masked1 = _mm_add_epi8(
-            masked1,
-            _mm_blendv_epi8(ascii_zero, ascii_a, cmpmask1),
-        );
-        <span class="kw">let </span>masked2 = _mm_add_epi8(
-            masked2,
-            _mm_blendv_epi8(ascii_zero, ascii_a, cmpmask2),
-        );
+            <span class="comment">// add '0' or the offset depending on the masks
+            </span><span class="kw">let </span>masked1 = _mm_add_epi8(
+                masked1,
+                _mm_blendv_epi8(ascii_zero, ascii_a, cmpmask1),
+            );
+            <span class="kw">let </span>masked2 = _mm_add_epi8(
+                masked2,
+                _mm_blendv_epi8(ascii_zero, ascii_a, cmpmask2),
+            );
 
-        <span class="comment">// interleave masked1 and masked2 bytes
-        </span><span class="kw">let </span>res1 = _mm_unpacklo_epi8(masked2, masked1);
-        <span class="kw">let </span>res2 = _mm_unpackhi_epi8(masked2, masked1);
+            <span class="comment">// interleave masked1 and masked2 bytes
+            </span><span class="kw">let </span>res1 = _mm_unpacklo_epi8(masked2, masked1);
+            <span class="kw">let </span>res2 = _mm_unpackhi_epi8(masked2, masked1);
 
-        _mm_storeu_si128(dst.as_mut_ptr().offset(i * <span class="number">2</span>) <span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_</span>, res1);
-        _mm_storeu_si128(
-            dst.as_mut_ptr().offset(i * <span class="number">2 </span>+ <span class="number">16</span>) <span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_</span>,
-            res2,
-        );
-        src = <span class="kw-2">&amp;</span>src[<span class="number">16</span>..];
-        i += <span class="number">16</span>;
+            _mm_storeu_si128(dst.as_mut_ptr().offset(i * <span class="number">2</span>) <span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_</span>, res1);
+            _mm_storeu_si128(
+                dst.as_mut_ptr().offset(i * <span class="number">2 </span>+ <span class="number">16</span>) <span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_</span>,
+                res2,
+            );
+            src = <span class="kw-2">&amp;</span>src[<span class="number">16</span>..];
+            i += <span class="number">16</span>;
+        }
+
+        <span class="kw">let </span>i = i <span class="kw">as </span>usize;
+        hex_encode_fallback(src, <span class="kw-2">&amp;mut </span>dst[i * <span class="number">2</span>..]);
     }
-
-    <span class="kw">let </span>i = i <span class="kw">as </span>usize;
-    hex_encode_fallback(src, <span class="kw-2">&amp;mut </span>dst[i * <span class="number">2</span>..]);
 }
 
 <span class="kw">fn </span>hex_encode_fallback(src: <span class="kw-2">&amp;</span>[u8], dst: <span class="kw-2">&amp;mut </span>[u8]) {
@@ -288,4 +288,4 @@ we’ll be using SSE4.1 features to implement hex encoding.</p>
         slots[<span class="number">1</span>] = hex(<span class="kw-2">*</span>byte &amp; <span class="number">0xf</span>);
     }
 }</code></pre></div>
-</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="x86_64/index.html" title="mod aero_kernel::prelude::rust_2021::_core::arch::x86_64">x86_64</a><wbr><span class="stab portability" title="Available on x86-64 only">x86-64</span></div><div class="desc docblock-short">Platform-specific intrinsics for the <code>x86_64</code> platform.</div></li></ul><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.asm.html" title="macro aero_kernel::prelude::rust_2021::_core::arch::asm">asm</a></div><div class="desc docblock-short">Inline assembly.</div></li><li><div class="item-name"><a class="macro" href="macro.global_asm.html" title="macro aero_kernel::prelude::rust_2021::_core::arch::global_asm">global_<wbr>asm</a></div><div class="desc docblock-short">Module-level inline assembly.</div></li></ul></section></div></main></body></html>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="x86_64/index.html" title="mod aero_kernel::prelude::rust_2021::_core::arch::x86_64">x86_64</a></dt><dd>Platform-specific intrinsics for the <code>x86_64</code> platform.</dd></dl><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><dl class="item-table"><dt><a class="macro" href="macro.asm.html" title="macro aero_kernel::prelude::rust_2021::_core::arch::asm">asm</a></dt><dd>Inline assembly.</dd><dt><a class="macro" href="macro.global_asm.html" title="macro aero_kernel::prelude::rust_2021::_core::arch::global_asm">global_<wbr>asm</a></dt><dd>Module-level inline assembly.</dd><dt><a class="macro" href="macro.naked_asm.html" title="macro aero_kernel::prelude::rust_2021::_core::arch::naked_asm">naked_<wbr>asm</a><wbr><span class="stab unstable" title="">Experimental</span></dt><dd>Inline assembly used in combination with <code>#[naked]</code> functions.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.breakpoint.html" title="fn aero_kernel::prelude::rust_2021::_core::arch::breakpoint">breakpoint</a><wbr><span class="stab unstable" title="">Experimental</span></dt><dd>Compiles to a target-specific software breakpoint instruction or equivalent.</dd></dl></section></div></main></body></html>

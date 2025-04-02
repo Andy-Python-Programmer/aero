@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Types that pin data to a location in memory."><title>aero_kernel::prelude::rust_2021::_core::pin - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-405f8b29f52305f8.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (26b5599e4 2024-09-06)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-7e3bb6c46e92e77c.js" ><script src="../../../../../static.files/storage-29b1d5a9048d38fe.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../../../static.files/main-14659ec02b58af51.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-40f72c9259523cb3.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../aero_kernel/index.html">aero_<wbr>kernel</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module pin</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#what-is-moving" title="What is “moving”?">What is “moving”?</a></li><li><a href="#what-is-pinning" title="What is “pinning”?">What is “pinning”?</a><ul><li><a href="#address-sensitive-values-aka-when-we-need-pinning" title="Address-sensitive values, AKA “when we need pinning”">Address-sensitive values, AKA “when we need pinning”</a></li><li><a href="#using-pinptr-to-pin-values" title="Using `Pin&#60;Ptr&#62;` to pin values">Using <code>Pin&lt;Ptr&gt;</code> to pin values</a></li><li><a href="#interaction-between-deref-and-pinptr" title="Interaction between `Deref` and `Pin&#60;Ptr&#62;`">Interaction between <code>Deref</code> and <code>Pin&lt;Ptr&gt;</code></a></li><li><a href="#fixing-addrtracker" title="Fixing `AddrTracker`">Fixing <code>AddrTracker</code></a></li><li><a href="#unpin" title="`Unpin`"><code>Unpin</code></a></li></ul></li><li><a href="#examples-of-address-sensitive-types" title="Examples of address-sensitive types">Examples of address-sensitive types</a><ul><li><a href="#a-self-referential-struct" title="A self-referential struct">A self-referential struct</a></li><li><a href="#an-intrusive-doubly-linked-list" title="An intrusive, doubly-linked list">An intrusive, doubly-linked list</a></li></ul></li><li><a href="#subtle-details-and-the-drop-guarantee" title="Subtle details and the `Drop` guarantee">Subtle details and the <code>Drop</code> guarantee</a><ul><li><a href="#drop-guarantee" title="`Drop` guarantee"><code>Drop</code> guarantee</a></li></ul></li><li><a href="#implementing-an-address-sensitive-type" title="Implementing an address-sensitive type.">Implementing an address-sensitive type.</a><ul><li><a href="#implementing-drop-for-types-with-address-sensitive-states" title="Implementing `Drop` for types with address-sensitive states">Implementing <code>Drop</code> for types with address-sensitive states</a></li><li><a href="#assigning-pinned-data" title="“Assigning” pinned data">“Assigning” pinned data</a></li><li><a href="#projections-and-structural-pinning" title="Projections and Structural Pinning">Projections and Structural Pinning</a></li></ul></li></ul><h3><a href="#macros">Module Items</a></h3><ul class="block"><li><a href="#macros" title="Macros">Macros</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#traits" title="Traits">Traits</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In aero_<wbr>kernel::<wbr>prelude::<wbr>rust_<wbr>2021::<wbr>_<wbr>core</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Module <a href="../../../../index.html">aero_kernel</a>::<wbr><a href="../../../index.html">prelude</a>::<wbr><a href="../../index.html">rust_2021</a>::<wbr><a href="../index.html">_core</a>::<wbr><a class="mod" href="#">pin</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><span class="since" title="Stable since Rust version 1.33.0">1.33.0</span> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Types that pin data to a location in memory.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Types that pin data to a location in memory."><title>aero_kernel::prelude::rust_2021::_core::pin - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (e2014e876 2025-04-01)" data-channel="nightly" data-search-js="search-e7298875.js" data-settings-js="settings-d72f25bb.js" ><script src="../../../../../static.files/storage-82c7156e.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../../aero_kernel/index.html">aero_<wbr>kernel</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module pin</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#what-is-moving" title="What is “moving”?">What is “moving”?</a></li><li><a href="#what-is-pinning" title="What is “pinning”?">What is “pinning”?</a><ul><li><a href="#address-sensitive-values-aka-when-we-need-pinning" title="Address-sensitive values, AKA “when we need pinning”">Address-sensitive values, AKA “when we need pinning”</a></li><li><a href="#using-pinptr-to-pin-values" title="Using `Pin&#60;Ptr&#62;` to pin values">Using <code>Pin&lt;Ptr&gt;</code> to pin values</a></li><li><a href="#interaction-between-deref-and-pinptr" title="Interaction between `Deref` and `Pin&#60;Ptr&#62;`">Interaction between <code>Deref</code> and <code>Pin&lt;Ptr&gt;</code></a></li><li><a href="#fixing-addrtracker" title="Fixing `AddrTracker`">Fixing <code>AddrTracker</code></a></li><li><a href="#unpin" title="`Unpin`"><code>Unpin</code></a></li></ul></li><li><a href="#examples-of-address-sensitive-types" title="Examples of address-sensitive types">Examples of address-sensitive types</a><ul><li><a href="#a-self-referential-struct" title="A self-referential struct">A self-referential struct</a></li><li><a href="#an-intrusive-doubly-linked-list" title="An intrusive, doubly-linked list">An intrusive, doubly-linked list</a></li></ul></li><li><a href="#subtle-details-and-the-drop-guarantee" title="Subtle details and the `Drop` guarantee">Subtle details and the <code>Drop</code> guarantee</a><ul><li><a href="#drop-guarantee" title="`Drop` guarantee"><code>Drop</code> guarantee</a></li></ul></li><li><a href="#implementing-an-address-sensitive-type" title="Implementing an address-sensitive type.">Implementing an address-sensitive type.</a><ul><li><a href="#implementing-drop-for-types-with-address-sensitive-states" title="Implementing `Drop` for types with address-sensitive states">Implementing <code>Drop</code> for types with address-sensitive states</a></li><li><a href="#assigning-pinned-data" title="“Assigning” pinned data">“Assigning” pinned data</a></li><li><a href="#projections-and-structural-pinning" title="Projections and Structural Pinning">Projections and Structural Pinning</a></li></ul></li></ul><h3><a href="#macros">Module Items</a></h3><ul class="block"><li><a href="#macros" title="Macros">Macros</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#traits" title="Traits">Traits</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In aero_<wbr>kernel::<wbr>prelude::<wbr>rust_<wbr>2021::<wbr>_<wbr>core</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../../index.html">aero_kernel</a>::<wbr><a href="../../../index.html">prelude</a>::<wbr><a href="../../index.html">rust_2021</a>::<wbr><a href="../index.html">_core</a></div><h1>Module <span>pin</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><span class="since" title="Stable since Rust version 1.33.0">1.33.0</span></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Types that pin data to a location in memory.</p>
 <p>It is sometimes useful to be able to rely upon a certain value not being able to <em>move</em>,
 in the sense that its address in memory cannot change. This is useful especially when there
 are one or more [<em>pointers</em>][pointer] pointing at that value. The ability to rely on this
@@ -18,7 +18,7 @@ intrusive data structures which cannot currently be modeled in fully safe Rust u
 borrow-checked [references][reference].</p>
 <p>“Pinning” allows us to put a <em>value</em> which exists at some location in memory into a state where
 safe code cannot <em>move</em> that value to a different location in memory or otherwise invalidate it
-at its current location (unless it implements <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>, which we will
+at its current location (unless it implements <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>, which we will
 <a href="index.html#unpin" title="mod aero_kernel::prelude::rust_2021::_core::pin">talk about below</a>). Anything that wants to interact with the pinned value in a way
 that has the potential to violate these guarantees must promise that it will not actually
 violate them, using the <a href="../../std/keyword.unsafe.html" title="keyword unsafe"><code>unsafe</code></a> keyword to mark that such a promise is upheld by the user
@@ -47,9 +47,9 @@ users of <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021
 <h2 id="what-is-moving"><a class="doc-anchor" href="#what-is-moving">§</a>What is “<em>moving</em>”?</h2>
 <p>When we say a value is <em>moved</em>, we mean that the compiler copies, byte-for-byte, the
 value from one location to another. In a purely mechanical sense, this is identical to
-<a href="../marker/trait.Copy.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Copy"><code>Copy</code></a>ing a value from one place in memory to another. In Rust, “move” carries with it the
+<a href="../../trait.Copy.html" title="trait aero_kernel::prelude::rust_2021::Copy"><code>Copy</code></a>ing a value from one place in memory to another. In Rust, “move” carries with it the
 semantics of ownership transfer from one variable to another, which is the key difference
-between a <a href="../marker/trait.Copy.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Copy"><code>Copy</code></a> and a move. For the purposes of this module’s documentation, however, when
+between a <a href="../../trait.Copy.html" title="trait aero_kernel::prelude::rust_2021::Copy"><code>Copy</code></a> and a move. For the purposes of this module’s documentation, however, when
 we write <em>move</em> in italics, we mean <em>specifically</em> that the value has <em>moved</em> in the mechanical
 sense of being located at a new place in memory.</p>
 <p>All values in Rust are trivially <em>moveable</em>. This means that the address at which a value is
@@ -94,11 +94,11 @@ pointer isn’t enough on its own to ensure that its address does not change.</p
 <h2 id="what-is-pinning"><a class="doc-anchor" href="#what-is-pinning">§</a>What is “pinning”?</h2>
 <p>We say that a value has been <em>pinned</em> when it has been put into a state where it is guaranteed
 to remain <em>located at the same place in memory</em> from the time it is pinned until its
-<a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> is called.</p>
+<a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> is called.</p>
 <h3 id="address-sensitive-values-aka-when-we-need-pinning"><a class="doc-anchor" href="#address-sensitive-values-aka-when-we-need-pinning">§</a>Address-sensitive values, AKA “when we need pinning”</h3>
 <p>Most values in Rust are entirely okay with being <em>moved</em> around at-will.
 Types for which it is <em>always</em> the case that <em>any</em> value of that type can be
-<em>moved</em> at-will should implement <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>, which we will discuss more <a href="index.html#unpin" title="mod aero_kernel::prelude::rust_2021::_core::pin">below</a>.</p>
+<em>moved</em> at-will should implement <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>, which we will discuss more <a href="index.html#unpin" title="mod aero_kernel::prelude::rust_2021::_core::pin">below</a>.</p>
 <p><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a> is specifically targeted at allowing the implementation of <em>safe interfaces</em> around
 types which have some state during which they become “address-sensitive.” A value in such an
 “address-sensitive” state is <em>not</em> okay with being <em>moved</em> around at-will. Such a value must
@@ -133,7 +133,7 @@ assume that the address of the value is stable
 <li>Before the value is invalidated (e.g. deallocated), it is <em>dropped</em>, giving it a chance to
 notify anything with pointers to itself that those pointers will be invalidated
 <ul>
-<li>e.g. <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a>ping the <a href="../future/trait.Future.html" title="future::Future"><code>Future</code></a> <sup id="fnref1"><a href="#fn1">1</a></sup></li>
+<li>e.g. <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a>ping the <a href="../future/trait.Future.html" title="future::Future"><code>Future</code></a> <sup id="fnref1"><a href="#fn1">1</a></sup></li>
 </ul>
 </li>
 </ol>
@@ -149,8 +149,8 @@ dereference.</li>
 first option is ruled out.</p>
 <p>In order to implement the second option, we must in some way enforce its key invariant,
 <em>i.e.</em> prevent the value from being <em>moved</em> or otherwise invalidated (you may notice this
-sounds an awful lot like the definition of <em>pinning</em> a value). There a few ways one might be
-able to enforce this invariant in Rust:</p>
+sounds an awful lot like the definition of <em>pinning</em> a value). There are a few ways one might
+be able to enforce this invariant in Rust:</p>
 <ol>
 <li>Offer a wholly <code>unsafe</code> API to interact with the object, thus requiring every caller to
 uphold the invariant themselves</li>
@@ -236,7 +236,7 @@ pinned <code>T</code>, and a <code><a href="struct.Pin.html" title="struct aero_
 pinned <code>T</code>.</p>
 <p><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a> also uses the <a href="../ops/trait.Deref.html#associatedtype.Target" title="ops::Deref::Target"><code>&lt;Ptr as Deref&gt;::Target</code></a> type information to modify the
 interface it is allowed to provide for interacting with that data (for example, when a
-pinning pointer points at pinned data which implements <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>, as
+pinning pointer points at pinned data which implements <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>, as
 <a href="index.html#unpin" title="mod aero_kernel::prelude::rust_2021::_core::pin">discussed below</a>).</p>
 <p><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a> requires that implementations of <a href="../ops/trait.Deref.html" title="ops::Deref"><code>Deref</code></a> and <a href="../ops/trait.DerefMut.html" title="ops::DerefMut"><code>DerefMut</code></a> on <code>Ptr</code> return a
 pointer to the pinned data directly and do not <em>move</em> out of the <code>self</code> parameter during their
@@ -292,47 +292,47 @@ ptr_to_pinned_tracker.as_mut().check_for_move();
 </span>ptr_to_pinned_tracker.as_mut().check_for_move();</code></pre></div>
 <p>Note that this invariant is enforced by simply making it impossible to call code that would
 perform a move on the pinned value. This is the case since the only way to access that pinned
-value is through the pinning <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut</a> T&gt;&gt;</code>, which in turn restricts our access.</p>
-<h3 id="unpin"><a class="doc-anchor" href="#unpin">§</a><a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a></h3>
+value is through the pinning <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut</a> T&gt;</code>, which in turn restricts our access.</p>
+<h3 id="unpin"><a class="doc-anchor" href="#unpin">§</a><a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a></h3>
 <p>The vast majority of Rust types have no address-sensitive states. These types
-implement the <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> auto-trait, which cancels the restrictive effects of
-<a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a> when the <em>pointee</em> type <code>T</code> is <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>. When <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>T: Unpin</code></a>,
+implement the <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> auto-trait, which cancels the restrictive effects of
+<a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a> when the <em>pointee</em> type <code>T</code> is <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>. When <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>T: Unpin</code></a>,
 <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="../../std/boxed/struct.Box.html" title="Box">Box</a>&lt;T&gt;&gt;</code> functions identically to a non-pinning <a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a>; similarly,
 <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut</a> T&gt;</code> would impose no additional restrictions above a regular
 <a href="&amp;mut"><code>&amp;mut T</code></a>.</p>
 <p>The idea of this trait is to alleviate the reduced ergonomics of APIs that require the use
 of <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a> for soundness for some types, but which also want to be used by other types that
 don’t care about pinning. The prime example of such an API is <a href="../future/trait.Future.html#tymethod.poll" title="method aero_kernel::prelude::rust_2021::_core::future::Future::poll"><code>Future::poll</code></a>. There are many
-<a href="../future/trait.Future.html" title="future::Future"><code>Future</code></a> types that don’t care about pinning. These futures can implement <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> and
+<a href="../future/trait.Future.html" title="future::Future"><code>Future</code></a> types that don’t care about pinning. These futures can implement <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> and
 therefore get around the pinning related restrictions in the API, while still allowing the
 subset of <a href="../future/trait.Future.html" title="future::Future"><code>Future</code></a>s which <em>do</em> require pinning to be implemented soundly.</p>
-<p>Note that the interaction between a <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a> and <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> is through the type of the
+<p>Note that the interaction between a <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a> and <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> is through the type of the
 <strong>pointee</strong> value, <a href="../ops/trait.Deref.html#associatedtype.Target" title="ops::Deref::Target"><code>&lt;Ptr as Deref&gt;::Target</code></a>. Whether the <code>Ptr</code> type itself
-implements <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> does not affect the behavior of a <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a>. For example, whether or not
-<a href="../../std/boxed/struct.Box.html" title="Box"><code>Box</code></a> is <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> has no effect on the behavior of <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="../../std/boxed/struct.Box.html" title="Box">Box</a>&lt;T&gt;&gt;</code>, because
-<code>T</code> is the type of the pointee value, not <a href="../../std/boxed/struct.Box.html" title="Box"><code>Box</code></a>. So, whether <code>T</code> implements <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> is
+implements <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> does not affect the behavior of a <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a>. For example, whether or not
+<a href="../../std/boxed/struct.Box.html" title="Box"><code>Box</code></a> is <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> has no effect on the behavior of <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="../../std/boxed/struct.Box.html" title="Box">Box</a>&lt;T&gt;&gt;</code>, because
+<code>T</code> is the type of the pointee value, not <a href="../../std/boxed/struct.Box.html" title="Box"><code>Box</code></a>. So, whether <code>T</code> implements <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> is
 the thing that will affect the behavior of the <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="../../std/boxed/struct.Box.html" title="Box">Box</a>&lt;T&gt;&gt;</code>.</p>
-<p>Builtin types that are <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> include all of the primitive types, like [<code>bool</code>], [<code>i32</code>],
+<p>Builtin types that are <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> include all of the primitive types, like [<code>bool</code>], [<code>i32</code>],
 and [<code>f32</code>], references (<code><a href="reference" title="shared reference">&amp;</a>T</code> and <code><a href="reference" title="mutable reference">&amp;mut</a> T</code>), etc., as well as many
 core and standard library types like <a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a>, <a href="../../std/string/struct.String.html" title="String"><code>String</code></a>, and more.
-These types are marked <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> because they do not have an address-sensitive state like the
+These types are marked <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> because they do not have an address-sensitive state like the
 ones we discussed above. If they did have such a state, those parts of their interface would be
 unsound without being expressed through pinning, and they would then need to not
-implement <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>.</p>
-<p>The compiler is free to take the conservative stance of marking types as <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> so long as
-all of the types that compose its fields are also <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>. This is because if a type
-implements <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>, then it is unsound for that type’s implementation to rely on
+implement <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>.</p>
+<p>The compiler is free to take the conservative stance of marking types as <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> so long as
+all of the types that compose its fields are also <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>. This is because if a type
+implements <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>, then it is unsound for that type’s implementation to rely on
 pinning-related guarantees for soundness, <em>even</em> when viewed through a “pinning” pointer! It is
 the responsibility of the implementor of a type that relies upon pinning for soundness to
-ensure that type is <em>not</em> marked as <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> by adding <a href="../marker/struct.PhantomPinned.html" title="struct aero_kernel::prelude::rust_2021::_core::marker::PhantomPinned"><code>PhantomPinned</code></a> field. This is
+ensure that type is <em>not</em> marked as <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> by adding <a href="../marker/struct.PhantomPinned.html" title="struct aero_kernel::prelude::rust_2021::_core::marker::PhantomPinned"><code>PhantomPinned</code></a> field. This is
 exactly what we did with our <code>AddrTracker</code> example above. Without doing this, you <em>must not</em>
 rely on pinning-related guarantees to apply to your type!</p>
-<p>If need to truly pin a value of a foreign or built-in type that implements <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>, you’ll
-need to create your own wrapper type around the <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> type you want to pin and then
-opts-out of <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> using <a href="../marker/struct.PhantomPinned.html" title="struct aero_kernel::prelude::rust_2021::_core::marker::PhantomPinned"><code>PhantomPinned</code></a>.</p>
+<p>If you really need to pin a value of a foreign or built-in type that implements <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>,
+you’ll need to create your own wrapper type around the <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> type you want to pin and then
+opt-out of <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> using <a href="../marker/struct.PhantomPinned.html" title="struct aero_kernel::prelude::rust_2021::_core::marker::PhantomPinned"><code>PhantomPinned</code></a>.</p>
 <p>Exposing access to the inner field which you want to remain pinned must then be carefully
 considered as well! Remember, exposing a method that gives access to a
-<code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut</a> InnerT&gt;&gt;</code> where <code>InnerT: <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin">Unpin</a></code> would allow safe code to
+<code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut</a> InnerT&gt;</code> where <code>InnerT: <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin">Unpin</a></code> would allow safe code to
 trivially move the inner value out of that pinning pointer, which is precisely what you’re
 seeking to prevent! Exposing a field of a pinned value through a pinning pointer is called
 “projecting” a pin, and the more general case of deciding in which cases a pin should be able
@@ -428,12 +428,12 @@ about the consequences of adding non-pinned values to such a list, this becomes 
 which are stored in the elements ahead and behind it. Thus, in order to soundly dereference
 the pointers stored to the next and previous elements, we must satisfy the guarantee that
 nothing has invalidated those pointers (which point to data that we do not own).</p>
-<p>Moreover, the <a href="../ops/trait.Drop.html" title="trait aero_kernel::prelude::rust_2021::_core::ops::Drop"><code>Drop</code></a> implementation of each element must in some way notify its
+<p>Moreover, the <a href="../../trait.Drop.html" title="trait aero_kernel::prelude::rust_2021::Drop"><code>Drop</code></a> implementation of each element must in some way notify its
 predecessor and successor elements that it should be removed from the list before it is fully
 destroyed, otherwise the pointers back to it would again become invalidated.</p>
-<p>Crucially, this means we have to be able to rely on <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> always being called before an
+<p>Crucially, this means we have to be able to rely on <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> always being called before an
 element is invalidated. If an element could be deallocated or otherwise invalidated without
-calling <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a>, the pointers to it stored in its neighboring elements would
+calling <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a>, the pointers to it stored in its neighboring elements would
 become invalid, which would break the data structure.</p>
 <p>Therefore, pinning data also comes with <a href="index.html#subtle-details-and-the-drop-guarantee" title="mod aero_kernel::prelude::rust_2021::_core::pin">the “<code>Drop</code> guarantee”</a>.</p>
 <h2 id="subtle-details-and-the-drop-guarantee"><a class="doc-anchor" href="#subtle-details-and-the-drop-guarantee">§</a>Subtle details and the <code>Drop</code> guarantee</h2>
@@ -444,7 +444,7 @@ memory.</p>
 of the pinned data to be valid, on top of the ones that must be upheld for a non-pinned value
 of the same type to be valid:</p>
 <p>From the moment a value is pinned by constructing a <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a>ning pointer to it, that value
-must <em>remain, <strong>valid</strong></em>, at that same address in memory, <em>until its <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> handler is
+must <em>remain, <strong>valid</strong></em>, at that same address in memory, <em>until its <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> handler is
 called.</em></p>
 <p>There is some subtlety to this which we have not yet talked about in detail. The invariant
 described above means that, yes,</p>
@@ -454,7 +454,7 @@ described above means that, yes,</p>
 <p>but it also implies that,</p>
 <ol start="2">
 <li>The memory location that stores the value must not get invalidated or otherwise repurposed
-during the lifespan of the pinned value until its <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> returns or panics</li>
+during the lifespan of the pinned value until its <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> returns or panics</li>
 </ol>
 <p>This point is subtle but required for intrusive data structures to be implemented soundly.</p>
 <h3 id="drop-guarantee"><a class="doc-anchor" href="#drop-guarantee">§</a><code>Drop</code> guarantee</h3>
@@ -462,22 +462,22 @@ during the lifespan of the pinned value until its <a href="../ops/trait.Drop.htm
 status that it is about to be destroyed. In this way, the dependent code can remove the
 pinned value’s address from its data structures or otherwise change its behavior with the
 knowledge that it can no longer rely on that value existing at the location it was pinned to.</p>
-<p>Thus, in any situation where we may want to overwrite a pinned value, that value’s <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> must
-be called beforehand (unless the pinned value implements <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>, in which case we can ignore
+<p>Thus, in any situation where we may want to overwrite a pinned value, that value’s <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> must
+be called beforehand (unless the pinned value implements <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>, in which case we can ignore
 all of <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a>’s guarantees, as usual).</p>
 <p>The most common storage-reuse situations occur when a value on the stack is destroyed as part
-of a function return and when heap storage is freed. In both cases, <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> gets run for us
+of a function return and when heap storage is freed. In both cases, <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> gets run for us
 by Rust when using standard safe code. However, for manual heap allocations or otherwise
 custom-allocated storage, <a href="../../std/keyword.unsafe.html" title="keyword unsafe"><code>unsafe</code></a> code must make sure to call <a href="../ptr/fn.drop_in_place.html" title="fn aero_kernel::prelude::rust_2021::_core::ptr::drop_in_place"><code>ptr::drop_in_place</code></a> before
 deallocating and re-using said storage.</p>
 <p>In addition, storage “re-use”/invalidation can happen even if no storage is (de-)allocated.
-For example, if we had an <a href="../option/enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option</code></a> which contained a <code>Some(v)</code> where <code>v</code> is pinned, then <code>v</code>
+For example, if we had an <a href="../../enum.Option.html" title="enum aero_kernel::prelude::rust_2021::Option"><code>Option</code></a> which contained a <code>Some(v)</code> where <code>v</code> is pinned, then <code>v</code>
 would be invalidated by setting that option to <code>None</code>.</p>
 <p>Similarly, if a <a href="../../std/vec/struct.Vec.html" title="Vec"><code>Vec</code></a> was used to store pinned values and <a href="../../std/vec/struct.Vec.html#method.set_len" title="Vec::set_len"><code>Vec::set_len</code></a> was used to
 manually “kill” some elements of a vector, all of the items “killed” would become invalidated,
 which would be <em>undefined behavior</em> if those items were pinned.</p>
 <p>Both of these cases are somewhat contrived, but it is crucial to remember that <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a>ned data
-<em>must</em> be <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a>ped before it is invalidated; not just to prevent memory leaks, but as a
+<em>must</em> be <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a>ped before it is invalidated; not just to prevent memory leaks, but as a
 matter of soundness. As a corollary, the following code can <em>never</em> be made safe:</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// Pin something inside a `ManuallyDrop`. This is fine on its own.
@@ -493,23 +493,23 @@ matter of soundness. As a corollary, the following code can <em>never</em> be ma
 <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut</a> Type&gt;&gt;</code>.</p>
 <p>Of course, <em>leaking</em> memory in such a way that its underlying storage will never get invalidated
 or re-used is still fine: <a href="../mem/fn.forget.html" title="mem::forget"><code>mem::forget</code></a>ing a <a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a> prevents its storage from ever getting
-re-used, so the <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> guarantee is still satisfied.</p>
+re-used, so the <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> guarantee is still satisfied.</p>
 <h2 id="implementing-an-address-sensitive-type"><a class="doc-anchor" href="#implementing-an-address-sensitive-type">§</a>Implementing an address-sensitive type.</h2>
 <p>This section goes into detail on important considerations for implementing your own
 address-sensitive types, which are different from merely using <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a> in a generic
 way.</p>
-<h3 id="implementing-drop-for-types-with-address-sensitive-states"><a class="doc-anchor" href="#implementing-drop-for-types-with-address-sensitive-states">§</a>Implementing <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>Drop</code></a> for types with address-sensitive states</h3>
-<p>The <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> function takes <a href="&amp;mut"><code>&amp;mut self</code></a>, but this is called <em>even if that <code>self</code> has been
-pinned</em>! Implementing <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>Drop</code></a> for a type with address-sensitive states, because if <code>self</code> was
-indeed in an address-sensitive state before <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> was called, it is as if the compiler
+<h3 id="implementing-drop-for-types-with-address-sensitive-states"><a class="doc-anchor" href="#implementing-drop-for-types-with-address-sensitive-states">§</a>Implementing <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>Drop</code></a> for types with address-sensitive states</h3>
+<p>The <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> function takes <a href="&amp;mut"><code>&amp;mut self</code></a>, but this is called <em>even if that <code>self</code> has been
+pinned</em>! Implementing <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>Drop</code></a> for a type with address-sensitive states requires some care, because if <code>self</code> was
+indeed in an address-sensitive state before <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> was called, it is as if the compiler
 automatically called <a href="struct.Pin.html#method.get_unchecked_mut" title="method aero_kernel::prelude::rust_2021::_core::pin::Pin::get_unchecked_mut"><code>Pin::get_unchecked_mut</code></a>.</p>
 <p>This can never cause a problem in purely safe code because creating a pinning pointer to
 a type which has an address-sensitive (thus does not implement <code>Unpin</code>) requires <code>unsafe</code>,
 but it is important to note that choosing to take advantage of pinning-related guarantees
 to justify validity in the implementation of your type has consequences for that type’s
-<a href="../ops/trait.Drop.html" title="trait aero_kernel::prelude::rust_2021::_core::ops::Drop"><code>Drop</code></a> implementation as well: if an element of your type could have been pinned,
-you must treat <a href="../ops/trait.Drop.html" title="trait aero_kernel::prelude::rust_2021::_core::ops::Drop"><code>Drop</code></a> as implicitly taking <code>self: <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut</a> Self&gt;</code>.</p>
-<p>You should implement <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>Drop</code></a> as follows:</p>
+<a href="../../trait.Drop.html" title="trait aero_kernel::prelude::rust_2021::Drop"><code>Drop</code></a> implementation as well: if an element of your type could have been pinned,
+you must treat <a href="../../trait.Drop.html" title="trait aero_kernel::prelude::rust_2021::Drop"><code>Drop</code></a> as implicitly taking <code>self: <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut</a> Self&gt;</code>.</p>
+<p>You should implement <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>Drop</code></a> as follows:</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">impl </span>Drop <span class="kw">for </span>Type {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
@@ -521,19 +521,19 @@ you must treat <a href="../ops/trait.Drop.html" title="trait aero_kernel::prelud
         </span>}
     }
 }</code></pre></div>
-<p>The function <code>inner_drop</code> has the signature that <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> <em>should</em> have in this situation.
+<p>The function <code>inner_drop</code> has the signature that <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> <em>should</em> have in this situation.
 This makes sure that you do not accidentally use <code>self</code>/<code>this</code> in a way that is in conflict
 with pinning’s invariants.</p>
 <p>Moreover, if your type is <a href="https://doc.rust-lang.org/nomicon/other-reprs.html#reprpacked"><code>#[repr(packed)]</code></a>, the compiler will automatically
 move fields around to be able to drop them. It might even do
 that for fields that happen to be sufficiently aligned. As a consequence, you cannot use
 pinning with a <a href="https://doc.rust-lang.org/nomicon/other-reprs.html#reprpacked"><code>#[repr(packed)]</code></a> type.</p>
-<h4 id="implementing-drop-for-pointer-types-which-will-be-used-as-pinning-pointers"><a class="doc-anchor" href="#implementing-drop-for-pointer-types-which-will-be-used-as-pinning-pointers">§</a>Implementing <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>Drop</code></a> for pointer types which will be used as <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a>ning pointers</h4>
+<h4 id="implementing-drop-for-pointer-types-which-will-be-used-as-pinning-pointers"><a class="doc-anchor" href="#implementing-drop-for-pointer-types-which-will-be-used-as-pinning-pointers">§</a>Implementing <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>Drop</code></a> for pointer types which will be used as <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin</code></a>ning pointers</h4>
 <p>It should further be noted that creating a pinning pointer of some type <code>Ptr</code> <em>also</em> carries
-with it implications on the way that <code>Ptr</code> type must implement <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>Drop</code></a>
+with it implications on the way that <code>Ptr</code> type must implement <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>Drop</code></a>
 (as well as <a href="../ops/trait.Deref.html" title="ops::Deref"><code>Deref</code></a> and <a href="../ops/trait.DerefMut.html" title="ops::DerefMut"><code>DerefMut</code></a>)! When implementing a pointer type that may be used as
 a pinning pointer, you must also take the same care described above not to <em>move</em> out of or
-otherwise invalidate the pointee during <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>Drop</code></a>, <a href="../ops/trait.Deref.html" title="ops::Deref"><code>Deref</code></a>, or <a href="../ops/trait.DerefMut.html" title="ops::DerefMut"><code>DerefMut</code></a>
+otherwise invalidate the pointee during <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>Drop</code></a>, <a href="../ops/trait.Deref.html" title="ops::Deref"><code>Deref</code></a>, or <a href="../ops/trait.DerefMut.html" title="ops::DerefMut"><code>DerefMut</code></a>
 implementations.</p>
 <h3 id="assigning-pinned-data"><a class="doc-anchor" href="#assigning-pinned-data">§</a>“Assigning” pinned data</h3>
 <p>Although in general it is not valid to swap data or assign through a <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a> for the same
@@ -568,8 +568,8 @@ address (and any other invariants necessary to satisfy validity for that type). 
 <p>Even though we can’t have the compiler do the assignment for us, it’s possible to write
 such specialized functions for types that might need it.</p>
 <p>Note that it <em>is</em> possible to assign generically through a <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin"><code>Pin&lt;Ptr&gt;</code></a> by way of <a href="struct.Pin.html#method.set" title="method aero_kernel::prelude::rust_2021::_core::pin::Pin::set"><code>Pin::set()</code></a>.
-This does not violate any guarantees, since it will run <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> on the pointee value before
-assigning the new value. Thus, the <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> implementation still has a chance to perform the
+This does not violate any guarantees, since it will run <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> on the pointee value before
+assigning the new value. Thus, the <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> implementation still has a chance to perform the
 necessary notifications to dependent values before the memory location of the original pinned
 value is overwritten.</p>
 <h3 id="projections-and-structural-pinning"><a class="doc-anchor" href="#projections-and-structural-pinning">§</a>Projections and Structural Pinning</h3>
@@ -623,8 +623,8 @@ field <em>is</em> structurally pinned!</p>
         </span><span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut </span><span class="self">self</span>.get_unchecked_mut().field }
     }
 }</code></pre></div>
-<p>You may also in this situation <code>impl <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin">Unpin</a> for Struct {}</code> <em>even if</em> the type of
-<code>field</code> is not <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>. Since we have explicitly chosen not to care about pinning guarantees
+<p>You may also in this situation <code>impl <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin">Unpin</a> for Struct {}</code> <em>even if</em> the type of
+<code>field</code> is not <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>. Since we have explicitly chosen not to care about pinning guarantees
 for <code>field</code>, the way <code>field</code>’s type interacts with pinning is no longer relevant in the
 context of its use in <code>Struct</code>.</p>
 <h4 id="choosing-pinning-to-be-structural-for-field"><a class="doc-anchor" href="#choosing-pinning-to-be-structural-for-field">§</a>Choosing pinning <em>to be</em> structural for <code>field</code>…</h4>
@@ -642,17 +642,17 @@ witnessing that the field is pinned:</p>
 <p>Structural pinning comes with a few extra requirements:</p>
 <ol>
 <li>
-<p><em>Structural <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>.</em> A struct can be <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> only if all of its
-structurally-pinned fields are, too. This is <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>’s behavior by default.
+<p><em>Structural <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>.</em> A struct can be <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> only if all of its
+structurally-pinned fields are, too. This is <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>’s behavior by default.
 However, as a libray author, it is your responsibility not to write something like
-<code>impl&lt;T&gt; <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin">Unpin</a> for Struct&lt;T&gt; {}</code> and then offer a method that provides
-structural pinning to an inner field of <code>T</code>, which may not be <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>! (Adding <em>any</em>
-projection operation requires unsafe code, so the fact that <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> is a safe trait does
+<code>impl&lt;T&gt; <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin">Unpin</a> for Struct&lt;T&gt; {}</code> and then offer a method that provides
+structural pinning to an inner field of <code>T</code>, which may not be <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>! (Adding <em>any</em>
+projection operation requires unsafe code, so the fact that <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> is a safe trait does
 not break the principle that you only have to worry about any of this if you use
 <a href="../../std/keyword.unsafe.html" title="keyword unsafe"><code>unsafe</code></a>)</p>
 </li>
 <li>
-<p><em>Pinned Destruction.</em> As discussed <a href="index.html#implementing-drop-for-types-with-address-sensitive-states" title="mod aero_kernel::prelude::rust_2021::_core::pin">above</a>, <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> takes
+<p><em>Pinned Destruction.</em> As discussed <a href="index.html#implementing-drop-for-types-with-address-sensitive-states" title="mod aero_kernel::prelude::rust_2021::_core::pin">above</a>, <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> takes
 <a href="&amp;mut"><code>&amp;mut self</code></a>, but the struct (and hence its fields) might have been pinned
 before. The destructor must be written as if its argument was
 <code>self: <a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="&amp;mut"><code>&amp;mut Self</code></a>&gt;</code>, instead.</p>
@@ -663,7 +663,7 @@ before. The destructor must be written as if its argument was
 <a href="index.html#subtle-details-and-the-drop-guarantee" title="mod aero_kernel::prelude::rust_2021::_core::pin"><code>Drop</code> guarantee</a>: once your struct is pinned, the struct’s storage cannot
 be re-used without calling the structurally-pinned fields’ destructors, as well.</p>
 <p>This can be tricky, as witnessed by <a href="../../std/collections/struct.VecDeque.html"><code>VecDeque&lt;T&gt;</code></a>: the destructor of <a href="../../std/collections/struct.VecDeque.html"><code>VecDeque&lt;T&gt;</code></a>
-can fail to call <a href="../ops/trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::_core::ops::Drop::drop"><code>drop</code></a> on all elements if one of the destructors panics. This violates
+can fail to call <a href="../../trait.Drop.html#tymethod.drop" title="method aero_kernel::prelude::rust_2021::Drop::drop"><code>drop</code></a> on all elements if one of the destructors panics. This violates
 the <a href="index.html#subtle-details-and-the-drop-guarantee" title="mod aero_kernel::prelude::rust_2021::_core::pin"><code>Drop</code> guarantee</a>, because it can lead to elements being deallocated
 without their destructor being called.</p>
 <p><a href="../../std/collections/struct.VecDeque.html"><code>VecDeque&lt;T&gt;</code></a> has no pinning projections, so its destructor is sound. If it wanted
@@ -673,8 +673,8 @@ of the destructors panicked.</p>
 <li>
 <p>You must not offer any other operations that could lead to data being <em>moved</em> out of
 the structural fields when your type is pinned. For example, if the struct contains an
-<a href="../option/enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option&lt;T&gt;</code></a> and there is a <a href="../option/enum.Option.html#method.take" title="method aero_kernel::prelude::rust_2021::_core::option::Option::take"><code>take</code></a>-like operation with type
-<code>fn(<a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut Struct&lt;T&gt;</a>&gt;) -&gt; <a href="../option/enum.Option.html" title="enum aero_kernel::prelude::rust_2021::_core::option::Option"><code>Option&lt;T&gt;</code></a></code>,
+<a href="../../enum.Option.html" title="enum aero_kernel::prelude::rust_2021::Option"><code>Option&lt;T&gt;</code></a> and there is a <a href="../../enum.Option.html#method.take" title="method aero_kernel::prelude::rust_2021::Option::take"><code>take</code></a>-like operation with type
+<code>fn(<a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="reference" title="mutable reference">&amp;mut Struct&lt;T&gt;</a>&gt;) -&gt; <a href="../../enum.Option.html" title="enum aero_kernel::prelude::rust_2021::Option"><code>Option&lt;T&gt;</code></a></code>,
 then that operation can be used to move a <code>T</code> out of a pinned <code>Struct&lt;T&gt;</code> – which
 means pinning cannot be structural for the field holding this data.</p>
 <p>For a more complex example of moving data out of a pinned type,
@@ -704,15 +704,15 @@ methods to get pinning references to elements. However, it could <em>not</em> al
 pinned) contents! Nor could it allow <a href="../../std/vec/struct.Vec.html#method.push" title="Vec::push"><code>push</code></a>, which might reallocate and thus also
 move the contents.</p>
 <p>A <a href="../../std/vec/struct.Vec.html"><code>Vec&lt;T&gt;</code></a> without structural pinning could
-<code>impl&lt;T&gt; <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin">Unpin</a> for <a href="../../std/vec/struct.Vec.html"><code>Vec&lt;T&gt;</code></a></code>, because the contents are never pinned
+<code>impl&lt;T&gt; <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin">Unpin</a> for <a href="../../std/vec/struct.Vec.html"><code>Vec&lt;T&gt;</code></a></code>, because the contents are never pinned
 and the <a href="../../std/vec/struct.Vec.html"><code>Vec&lt;T&gt;</code></a> itself is fine with being moved as well.
 At that point pinning just has no effect on the vector at all.</p>
 <p>In the standard library, pointer types generally do not have structural pinning,
-and thus they do not offer pinning projections. This is why <code><a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a>: <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin">Unpin</a></code>
+and thus they do not offer pinning projections. This is why <code><a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a>: <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin">Unpin</a></code>
 holds for all <code>T</code>. It makes sense to do this for pointer types, because moving the
 <a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a> does not actually move the <code>T</code>: the <a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a> can be freely
-movable (aka <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a>) even if the <code>T</code> is not. In fact, even <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a>&gt;</code> and
-<code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="&amp;mut"><code>&amp;mut T</code></a>&gt;</code> are always <a href="../marker/trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::_core::marker::Unpin"><code>Unpin</code></a> themselves, for the same reason:
+movable (aka <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a>) even if the <code>T</code> is not. In fact, even <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a>&gt;</code> and
+<code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="&amp;mut"><code>&amp;mut T</code></a>&gt;</code> are always <a href="../../trait.Unpin.html" title="trait aero_kernel::prelude::rust_2021::Unpin"><code>Unpin</code></a> themselves, for the same reason:
 their contents (the <code>T</code>) are pinned, but the pointers themselves can be moved without moving
 the pinned data. For both <a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a> and <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;<a href="../../std/boxed/struct.Box.html"><code>Box&lt;T&gt;</code></a>&gt;</code>,
 whether the content is pinned is entirely independent of whether the
@@ -725,5 +725,5 @@ mutable reference even when you just have <code><a href="struct.Pin.html" title=
 (such as in your own <a href="../future/trait.Future.html#tymethod.poll" title="future::Future::poll"><code>poll</code></a> implementation).</p>
 <div class="footnotes"><hr><ol><li id="fn1"><p>Futures themselves do not ever need to notify other bits of code that
 they are being dropped, however data structures like stack-based intrusive linked lists do.&nbsp;<a href="#fnref1">↩</a></p></li><li id="fn2"><p>There is a bit of nuance here that is still being decided about what the aliasing
-semantics of <code>Pin&lt;&amp;mut T&gt;</code> should be, but this is true as of today.&nbsp;<a href="#fnref2">↩</a></p></li></ol></div></div></details><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.pin.html" title="macro aero_kernel::prelude::rust_2021::_core::pin::pin">pin</a></div><div class="desc docblock-short">Constructs a <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;[&amp;mut] T&gt;</code>, by pinning a <code>value: T</code> locally.</div></li></ul><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a></div><div class="desc docblock-short">A pointer which pins its pointee in place.</div></li></ul><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="trait" href="trait.PinCoerceUnsized.html" title="trait aero_kernel::prelude::rust_2021::_core::pin::PinCoerceUnsized">PinCoerce<wbr>Unsized</a><wbr><span class="stab unstable" title="">Experimental</span></div><div class="desc docblock-short">Trait that indicates that this is a pointer or a wrapper for one, where
-unsizing can be performed on the pointee when it is pinned.</div></li></ul></section></div></main></body></html>
+semantics of <code>Pin&lt;&amp;mut T&gt;</code> should be, but this is true as of today.&nbsp;<a href="#fnref2">↩</a></p></li></ol></div></div></details><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><dl class="item-table"><dt><a class="macro" href="macro.pin.html" title="macro aero_kernel::prelude::rust_2021::_core::pin::pin">pin</a></dt><dd>Constructs a <code><a href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a>&lt;[&amp;mut] T&gt;</code>, by pinning a <code>value: T</code> locally.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Pin.html" title="struct aero_kernel::prelude::rust_2021::_core::pin::Pin">Pin</a></dt><dd>A pointer which pins its pointee in place.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.PinCoerceUnsized.html" title="trait aero_kernel::prelude::rust_2021::_core::pin::PinCoerceUnsized">PinCoerce<wbr>Unsized</a><wbr><span class="stab unstable" title="">Experimental</span></dt><dd>Trait that indicates that this is a pointer or a wrapper for one, where
+unsizing can be performed on the pointee when it is pinned.</dd></dl></section></div></main></body></html>
