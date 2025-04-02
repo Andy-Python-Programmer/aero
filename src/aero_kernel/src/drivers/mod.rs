@@ -36,12 +36,12 @@ pub mod pty;
 pub mod tty;
 
 cfg_match! {
-    cfg(target_arch = "x86_64") => {
+    target_arch = "x86_64" => {
         pub mod uart_16550;
         pub use self::uart_16550 as uart;
     }
 
-    cfg(target_arch = "aarch64") => {
+    target_arch = "aarch64" => {
         pub mod uart_pl011;
         pub use self::uart_pl011 as uart;
     }
