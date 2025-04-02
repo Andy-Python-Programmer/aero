@@ -184,7 +184,7 @@ impl<'a> CapabilityIter<'a> {
     }
 }
 
-impl<'a> Iterator for CapabilityIter<'a> {
+impl Iterator for CapabilityIter<'_> {
     type Item = (u32, Capability);
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -297,7 +297,7 @@ impl INodeInterface for Slave {
             for b in buffer.iter() {
                 if *b == b'\n' {
                     // ONLCR: Convert NL to CR + NL
-                    master.extend_from_slice(&[b'\r', b'\n']);
+                    master.extend_from_slice(b"\r\n");
                     continue;
                 }
 

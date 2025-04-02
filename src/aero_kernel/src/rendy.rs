@@ -309,7 +309,7 @@ pub struct Inner<'this> {
     color_list: ColorList,
 }
 
-impl<'a> Inner<'a> {
+impl Inner<'_> {
     fn genloop<F>(
         &mut self,
         image: &Image,
@@ -793,13 +793,13 @@ impl<'a> core::ops::Deref for DebugRendy<'a> {
     }
 }
 
-impl<'a> core::ops::DerefMut for DebugRendy<'a> {
+impl core::ops::DerefMut for DebugRendy<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<'this> fmt::Write for DebugRendy<'this> {
+impl fmt::Write for DebugRendy<'_> {
     fn write_str(&mut self, string: &str) -> fmt::Result {
         for b in string.bytes() {
             self.performer.advance(&mut self.inner, b);
@@ -808,7 +808,7 @@ impl<'this> fmt::Write for DebugRendy<'this> {
     }
 }
 
-impl<'a> vte::ansi::Handler for Inner<'a> {
+impl vte::ansi::Handler for Inner<'_> {
     fn input(&mut self, c: char) {
         self.write_character(c);
 
@@ -883,8 +883,8 @@ impl<'a> vte::ansi::Handler for Inner<'a> {
     }
 }
 
-unsafe impl<'this> Send for DebugRendy<'this> {}
-unsafe impl<'this> Sync for DebugRendy<'this> {}
+unsafe impl Send for DebugRendy<'_> {}
+unsafe impl Sync for DebugRendy<'_> {}
 
 pub static DEBUG_RENDY: Once<Mutex<DebugRendy>> = Once::new();
 
