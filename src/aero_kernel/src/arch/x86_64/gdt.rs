@@ -25,8 +25,8 @@
 //! * <https://wiki.osdev.org/Global_Descriptor_Table>
 
 use core::alloc::Layout;
-use core::mem;
 use core::ptr::addr_of;
+use core::{mem, ptr};
 
 use alloc::alloc::alloc_zeroed;
 
@@ -271,7 +271,7 @@ impl GdtEntry {
 
     fn set_raw<T>(&mut self, value: T) {
         unsafe {
-            *(self as *mut _ as *mut T) = value;
+            *(ptr::addr_of_mut!(*self).cast::<T>()) = value;
         }
     }
 }

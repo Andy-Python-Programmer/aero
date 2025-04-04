@@ -557,7 +557,7 @@ impl INodeInterface for INode {
             Ok(path.into())
         } else {
             let mut buffer = Box::<[u8]>::new_uninit_slice(path_len);
-            self.read(0, MaybeUninit::slice_as_bytes_mut(&mut buffer))?;
+            self.read(0, buffer.as_bytes_mut())?;
 
             let path_bytes = unsafe { buffer.assume_init() };
             let path = core::str::from_utf8(&path_bytes).or(Err(FileSystemError::InvalidPath))?;

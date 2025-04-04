@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
-use core::mem::MaybeUninit;
-
 use alloc::boxed::Box;
 use alloc::sync::{Arc, Weak};
 
@@ -53,10 +51,7 @@ impl GroupDescriptors {
         let bgdt_len = superblock.bgdt_len();
         let mut bgdt = Box::<[disk::GroupDescriptor]>::new_uninit_slice(bgdt_len);
 
-        device.read(
-            superblock.bgdt_block(),
-            MaybeUninit::slice_as_bytes_mut(&mut bgdt),
-        )?;
+        device.read(superblock.bgdt_block(), bgdt.as_bytes_mut())?;
 
         // SAFETY: We have initialized the BGD (Block Group Descriptor Table) above.
         let bgdt = unsafe { bgdt.assume_init() };
