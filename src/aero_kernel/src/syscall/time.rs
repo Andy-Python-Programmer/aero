@@ -31,7 +31,7 @@ const CLOCK_TYPE_MONOTONIC: usize = 1;
 pub fn sleep(timespec: &TimeSpec) -> Result<usize, SyscallError> {
     let duration = (timespec.tv_nsec as usize).div_ceil(1000000000) + timespec.tv_sec as usize;
 
-    scheduler::get_scheduler().inner.sleep(Some(duration))?;
+    scheduler::get_scheduler().sleep(Some(duration))?;
 
     Ok(0x00)
 }

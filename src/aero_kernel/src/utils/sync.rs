@@ -58,7 +58,7 @@ impl WaitQueue {
         // Wait until the future is completed.
         while !future(&mut lock) {
             core::mem::drop(lock); // Drop the IRQ lock and await for IO to complete.
-            scheduler.inner.await_io()?;
+            scheduler.await_io()?;
 
             // Re-acquire the lock.
             lock = mutex.lock_irq();
@@ -94,7 +94,7 @@ impl WaitQueue {
         let this = self.queue.lock_irq();
 
         for task in this.iter() {
-            scheduler.inner.wake_up(task.clone());
+            scheduler.wake_up(task.clone());
         }
     }
 
@@ -104,7 +104,7 @@ impl WaitQueue {
         let this: MutexGuard<Vec<Arc<Task>>> = self.queue.lock_irq();
 
         if let Some(task) = this.first() {
-            scheduler.inner.wake_up(task.clone());
+            scheduler.wake_up(task.clone());
         }
     }
 
@@ -168,7 +168,7 @@ impl<T> BMutex<T> {
                 return BMutexGuard { guard, mutex: self };
             }
 
-            let _ = scheduler::get_scheduler().inner.await_io();
+            let _ = scheduler::get_scheduler().await_io();
         }
     }
 }

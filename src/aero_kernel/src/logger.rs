@@ -69,7 +69,7 @@ impl log::Log for AeroLogger {
 
             if scheduler::is_initialized() {
                 // fetch the current task, grab the TID and PID.
-                if let Some(task) = scheduler::get_scheduler().inner.current_task_optional() {
+                if let Some(task) = scheduler::get_scheduler().current_task_optional() {
                     serial_print!(
                         "(tid={}, pid={}) ",
                         task.tid().as_usize(),

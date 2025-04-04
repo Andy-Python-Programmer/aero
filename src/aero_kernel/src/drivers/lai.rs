@@ -51,7 +51,6 @@ impl lai::Host for LaiHost {
 
     fn sleep(&self, ms: u64) {
         scheduler::get_scheduler()
-            .inner
             .sleep(Some(ms as usize / 1000))
             .expect("lai: unexpected signal during sleep")
     }

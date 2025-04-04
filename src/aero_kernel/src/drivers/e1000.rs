@@ -617,7 +617,7 @@ impl NetworkDriver for Device {
                 return data;
             } else {
                 drop(e1000);
-                scheduler::get_scheduler().inner.await_io().unwrap();
+                scheduler::get_scheduler().await_io().unwrap();
             }
         }
     }

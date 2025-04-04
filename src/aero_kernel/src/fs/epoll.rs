@@ -186,11 +186,9 @@ impl EPoll {
         }
 
         if timeout > 0 {
-            scheduler::get_scheduler()
-                .inner
-                .sleep(Some(timeout * 1_000_000))?;
+            scheduler::get_scheduler().sleep(Some(timeout * 1_000_000))?;
         } else {
-            scheduler::get_scheduler().inner.sleep(None)?;
+            scheduler::get_scheduler().sleep(None)?;
         }
 
         'search: loop {
@@ -227,7 +225,7 @@ impl EPoll {
                     break 'search;
                 }
 
-                scheduler::get_scheduler().inner.await_io()?;
+                scheduler::get_scheduler().await_io()?;
             }
         }
 

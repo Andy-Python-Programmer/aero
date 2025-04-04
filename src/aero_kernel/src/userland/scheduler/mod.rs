@@ -18,6 +18,8 @@
 #[cfg(feature = "round-robin")]
 pub mod round_robin;
 
+use core::ops;
+
 use alloc::sync::Arc;
 
 use crate::arch::interrupts::{self, InterruptStack};
@@ -86,7 +88,7 @@ pub enum ExitStatus {
 
 pub struct Scheduler {
     tasks: TaskContainer,
-    pub inner: Arc<dyn SchedulerInterface>,
+    inner: Arc<dyn SchedulerInterface>,
 }
 
 impl Scheduler {
@@ -152,6 +154,14 @@ impl Scheduler {
     #[inline]
     pub fn find_task(&self, task_id: TaskId) -> Option<Arc<Task>> {
         self.tasks.0.lock().get(&task_id).cloned()
+    }
+}
+
+impl ops::Deref for Scheduler {
+    type Target = dyn SchedulerInterface;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.inner
     }
 }
 

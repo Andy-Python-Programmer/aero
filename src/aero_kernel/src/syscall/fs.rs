@@ -697,7 +697,7 @@ fn do_poll(fds: &mut [PollFd], timeout: Option<&TimeSpec>) -> Result<usize, Sysc
     }
 
     'search: loop {
-        scheduler::get_scheduler().inner.await_io()?;
+        scheduler::get_scheduler().await_io()?;
 
         for (handle, index) in refds.iter() {
             let pollfd = &mut fds[*index];

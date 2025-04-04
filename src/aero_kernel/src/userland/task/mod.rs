@@ -667,7 +667,7 @@ impl Task {
     }
 
     pub fn wake_up(&self) {
-        scheduler::get_scheduler().inner.wake_up(self.this())
+        scheduler::get_scheduler().wake_up(self.this())
     }
 
     pub fn is_process_leader(&self) -> bool {
