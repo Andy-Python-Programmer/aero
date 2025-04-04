@@ -36,7 +36,7 @@
 <a href=#36 id=36 data-nosnippet>36</a><span class="kw">use super</span>::{FileSystem, FileSystemError, <span class="prelude-ty">Result</span>, MOUNT_MANAGER};
 <a href=#37 id=37 data-nosnippet>37</a>
 <a href=#38 id=38 data-nosnippet>38</a><span class="kw">use </span>aero_syscall::prelude::<span class="kw-2">*</span>;
-<a href=#39 id=39 data-nosnippet>39</a><span class="kw">use </span>aero_syscall::MMapFlags;
+<a href=#39 id=39 data-nosnippet>39</a><span class="kw">use </span>aero_syscall::{MMapFlags, OpenFlags};
 <a href=#40 id=40 data-nosnippet>40</a>
 <a href=#41 id=41 data-nosnippet>41</a><span class="macro">lazy_static::lazy_static!</span> {
 <a href=#42 id=42 data-nosnippet>42</a>    <span class="kw">pub static </span><span class="kw-2">ref </span>DEV_FILESYSTEM: Arc&lt;DevFs&gt; = DevFs::new();
@@ -113,8 +113,8 @@
 <a href=#113 id=113 data-nosnippet>113</a>        <span class="self">self</span>.<span class="number">0</span>.inode().write_at(offset, buffer)
 <a href=#114 id=114 data-nosnippet>114</a>    }
 <a href=#115 id=115 data-nosnippet>115</a>
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
-<a href=#117 id=117 data-nosnippet>117</a>        <span class="self">self</span>.<span class="number">0</span>.inode().read_at(offset, buffer)
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, flags: OpenFlags, offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+<a href=#117 id=117 data-nosnippet>117</a>        <span class="self">self</span>.<span class="number">0</span>.inode().read_at(flags, offset, buffer)
 <a href=#118 id=118 data-nosnippet>118</a>    }
 <a href=#119 id=119 data-nosnippet>119</a>
 <a href=#120 id=120 data-nosnippet>120</a>    <span class="kw">fn </span>mmap(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, size: usize, flags: MMapFlags) -&gt; <span class="prelude-ty">Result</span>&lt;PhysFrame&gt; {
@@ -178,7 +178,7 @@
 <a href=#178 id=178 data-nosnippet>178</a>}
 <a href=#179 id=179 data-nosnippet>179</a>
 <a href=#180 id=180 data-nosnippet>180</a><span class="kw">impl </span>INodeInterface <span class="kw">for </span>DevNull {
-<a href=#181 id=181 data-nosnippet>181</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _offset: usize, _buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+<a href=#181 id=181 data-nosnippet>181</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _flags: OpenFlags, _offset: usize, _buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
 <a href=#182 id=182 data-nosnippet>182</a>        <span class="prelude-val">Ok</span>(<span class="number">0x00</span>)
 <a href=#183 id=183 data-nosnippet>183</a>    }
 <a href=#184 id=184 data-nosnippet>184</a>
@@ -214,7 +214,7 @@
 <a href=#214 id=214 data-nosnippet>214</a>}
 <a href=#215 id=215 data-nosnippet>215</a>
 <a href=#216 id=216 data-nosnippet>216</a><span class="kw">impl </span>INodeInterface <span class="kw">for </span>DevKmsg {
-<a href=#217 id=217 data-nosnippet>217</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+<a href=#217 id=217 data-nosnippet>217</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _flags: OpenFlags, offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
 <a href=#218 id=218 data-nosnippet>218</a>        <span class="kw">let </span>buf = logger::get_log_buffer();
 <a href=#219 id=219 data-nosnippet>219</a>
 <a href=#220 id=220 data-nosnippet>220</a>        <span class="kw">let </span>size = core::cmp::min(buffer.len(), buf.len());
@@ -448,7 +448,7 @@
 <a href=#448 id=448 data-nosnippet>448</a>}
 <a href=#449 id=449 data-nosnippet>449</a>
 <a href=#450 id=450 data-nosnippet>450</a><span class="kw">impl </span>INodeInterface <span class="kw">for </span>DevUrandom {
-<a href=#451 id=451 data-nosnippet>451</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+<a href=#451 id=451 data-nosnippet>451</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _flags: OpenFlags, _offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
 <a href=#452 id=452 data-nosnippet>452</a>        <span class="kw">for </span>(<span class="kw">_</span>, b) <span class="kw">in </span>buffer.iter_mut().enumerate() {
 <a href=#453 id=453 data-nosnippet>453</a>            <span class="kw-2">*</span>b = <span class="number">0</span>;
 <a href=#454 id=454 data-nosnippet>454</a>        }

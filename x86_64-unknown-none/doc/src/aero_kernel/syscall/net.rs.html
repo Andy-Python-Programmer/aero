@@ -117,7 +117,7 @@
 <a href=#117 id=117 data-nosnippet>117</a>        .get_handle(sockfd)
 <a href=#118 id=118 data-nosnippet>118</a>        .ok_or(SyscallError::EINVAL)<span class="question-mark">?</span>;
 <a href=#119 id=119 data-nosnippet>119</a>
-<a href=#120 id=120 data-nosnippet>120</a>    <span class="prelude-val">Ok</span>(socket.inode().recv(header, flags)<span class="question-mark">?</span>)
+<a href=#120 id=120 data-nosnippet>120</a>    <span class="prelude-val">Ok</span>(socket.inode().recv(socket.flags(), header, flags)<span class="question-mark">?</span>)
 <a href=#121 id=121 data-nosnippet>121</a>}
 <a href=#122 id=122 data-nosnippet>122</a>
 <a href=#123 id=123 data-nosnippet>123</a><span class="attr">#[syscall]

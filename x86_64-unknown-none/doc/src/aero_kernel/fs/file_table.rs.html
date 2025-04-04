@@ -81,7 +81,7 @@
 <a href=#81 id=81 data-nosnippet>81</a>
 <a href=#82 id=82 data-nosnippet>82</a>    <span class="kw">pub fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="kw">super</span>::Result&lt;usize&gt; {
 <a href=#83 id=83 data-nosnippet>83</a>        <span class="kw">let </span>offset = <span class="self">self</span>.offset.load(Ordering::SeqCst);
-<a href=#84 id=84 data-nosnippet>84</a>        <span class="kw">let </span>new_offset = <span class="self">self</span>.inode.inode().read_at(offset, buffer)<span class="question-mark">?</span>;
+<a href=#84 id=84 data-nosnippet>84</a>        <span class="kw">let </span>new_offset = <span class="self">self</span>.inode.inode().read_at(<span class="self">self</span>.flags(), offset, buffer)<span class="question-mark">?</span>;
 <a href=#85 id=85 data-nosnippet>85</a>
 <a href=#86 id=86 data-nosnippet>86</a>        <span class="self">self</span>.offset.fetch_add(new_offset, Ordering::SeqCst);
 <a href=#87 id=87 data-nosnippet>87</a>        <span class="prelude-val">Ok</span>(new_offset)

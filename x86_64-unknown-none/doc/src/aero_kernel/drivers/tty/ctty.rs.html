@@ -17,7 +17,7 @@
 <a href=#17 id=17 data-nosnippet>17</a>
 <a href=#18 id=18 data-nosnippet>18</a></span><span class="doccomment">//! `/dev/tty`: Controlling terminal of the current process.
 <a href=#19 id=19 data-nosnippet>19</a>
-<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">use </span>aero_syscall::TIOCNOTTY;
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">use </span>aero_syscall::{OpenFlags, TIOCNOTTY};
 <a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>alloc::sync::{Arc, Weak};
 <a href=#22 id=22 data-nosnippet>22</a>
 <a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span><span class="kw">crate</span>::fs::devfs::Device;
@@ -64,8 +64,8 @@
 <a href=#64 id=64 data-nosnippet>64</a>        })
 <a href=#65 id=65 data-nosnippet>65</a>    }
 <a href=#66 id=66 data-nosnippet>66</a>
-<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; fs::Result&lt;usize&gt; {
-<a href=#68 id=68 data-nosnippet>68</a>        <span class="self">Self</span>::controlling_terminal()<span class="question-mark">?</span>.read_at(offset, buffer)
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, flags: OpenFlags, offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; fs::Result&lt;usize&gt; {
+<a href=#68 id=68 data-nosnippet>68</a>        <span class="self">Self</span>::controlling_terminal()<span class="question-mark">?</span>.read_at(flags, offset, buffer)
 <a href=#69 id=69 data-nosnippet>69</a>    }
 <a href=#70 id=70 data-nosnippet>70</a>
 <a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">fn </span>write_at(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, buffer: <span class="kw-2">&amp;</span>[u8]) -&gt; fs::Result&lt;usize&gt; {

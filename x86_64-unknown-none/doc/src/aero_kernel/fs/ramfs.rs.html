@@ -17,7 +17,7 @@
 <a href=#17 id=17 data-nosnippet>17</a>
 <a href=#18 id=18 data-nosnippet>18</a></span><span class="kw">use </span>core::sync::atomic::{AtomicUsize, Ordering};
 <a href=#19 id=19 data-nosnippet>19</a>
-<a href=#20 id=20 data-nosnippet>20</a><span class="kw">use </span>aero_syscall::MMapFlags;
+<a href=#20 id=20 data-nosnippet>20</a><span class="kw">use </span>aero_syscall::{MMapFlags, OpenFlags};
 <a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>alloc::collections::BTreeMap;
 <a href=#22 id=22 data-nosnippet>22</a><span class="kw">use </span>alloc::string::ToString;
 <a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span>alloc::sync::{Arc, Weak};
@@ -261,7 +261,7 @@
 <a href=#261 id=261 data-nosnippet>261</a>        }
 <a href=#262 id=262 data-nosnippet>262</a>    }
 <a href=#263 id=263 data-nosnippet>263</a>
-<a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+<a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">fn </span>read_at(<span class="kw-2">&amp;</span><span class="self">self</span>, flags: OpenFlags, offset: usize, buffer: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
 <a href=#265 id=265 data-nosnippet>265</a>        <span class="kw">let </span>this = <span class="self">self</span>.<span class="number">0</span>.read();
 <a href=#266 id=266 data-nosnippet>266</a>
 <a href=#267 id=267 data-nosnippet>267</a>        <span class="kw">match </span><span class="kw-2">&amp;</span>this.contents {
@@ -294,10 +294,10 @@
 <a href=#294 id=294 data-nosnippet>294</a>                <span class="kw">let </span>device = device.clone();
 <a href=#295 id=295 data-nosnippet>295</a>                drop(this);
 <a href=#296 id=296 data-nosnippet>296</a>
-<a href=#297 id=297 data-nosnippet>297</a>                device.read_at(offset, buffer)
+<a href=#297 id=297 data-nosnippet>297</a>                device.read_at(flags, offset, buffer)
 <a href=#298 id=298 data-nosnippet>298</a>            }
 <a href=#299 id=299 data-nosnippet>299</a>
-<a href=#300 id=300 data-nosnippet>300</a>            FileContents::Socket(e) =&gt; e.read_at(offset, buffer),
+<a href=#300 id=300 data-nosnippet>300</a>            FileContents::Socket(e) =&gt; e.read_at(flags, offset, buffer),
 <a href=#301 id=301 data-nosnippet>301</a>            FileContents::None =&gt; <span class="prelude-val">Err</span>(FileSystemError::NotSupported),
 <a href=#302 id=302 data-nosnippet>302</a>        }
 <a href=#303 id=303 data-nosnippet>303</a>    }
