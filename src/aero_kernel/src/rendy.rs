@@ -801,9 +801,7 @@ impl core::ops::DerefMut for DebugRendy<'_> {
 
 impl fmt::Write for DebugRendy<'_> {
     fn write_str(&mut self, string: &str) -> fmt::Result {
-        for b in string.bytes() {
-            self.performer.advance(&mut self.inner, b);
-        }
+        self.performer.advance(&mut self.inner, string.as_bytes());
         Ok(())
     }
 }
