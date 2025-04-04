@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["vec"],"mod":["alloc","boxed","vec"],"trait":["SliceExt"]};
+window.SIDEBAR_ITEMS = {"macro":["unsize_box","vec"],"mod":["alloc","boxed","collections","vec"],"trait":["SliceExt"]};

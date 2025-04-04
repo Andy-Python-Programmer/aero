@@ -1,0 +1,11 @@
+/home/runner/work/aero/aero/src/../target/doc/x86_64-unknown-none/release/deps/libxmas_elf-13661cc9e1ea0564.rmeta: /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/header.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/sections.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/program.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/symbol_table.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/dynamic.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/hash.rs
+
+/home/runner/work/aero/aero/src/../target/doc/x86_64-unknown-none/release/deps/xmas_elf-13661cc9e1ea0564.d: /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/header.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/sections.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/program.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/symbol_table.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/dynamic.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/hash.rs
+
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/lib.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/header.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/sections.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/program.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/symbol_table.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/dynamic.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xmas-elf-0.10.0/src/hash.rs:

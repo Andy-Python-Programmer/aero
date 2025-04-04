@@ -51,89 +51,88 @@
 <a href=#51 id=51 data-nosnippet>51</a>
 <a href=#52 id=52 data-nosnippet>52</a>    <span class="kw">fn </span>sleep(<span class="kw-2">&amp;</span><span class="self">self</span>, ms: u64) {
 <a href=#53 id=53 data-nosnippet>53</a>        scheduler::get_scheduler()
-<a href=#54 id=54 data-nosnippet>54</a>            .inner
-<a href=#55 id=55 data-nosnippet>55</a>            .sleep(<span class="prelude-val">Some</span>(ms <span class="kw">as </span>usize / <span class="number">1000</span>))
-<a href=#56 id=56 data-nosnippet>56</a>            .expect(<span class="string">"lai: unexpected signal during sleep"</span>)
-<a href=#57 id=57 data-nosnippet>57</a>    }
-<a href=#58 id=58 data-nosnippet>58</a>
-<a href=#59 id=59 data-nosnippet>59</a>    <span class="comment">// Port I/O functions:
-<a href=#60 id=60 data-nosnippet>60</a>    </span><span class="kw">fn </span>outb(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16, value: u8) {
-<a href=#61 id=61 data-nosnippet>61</a>        <span class="kw">unsafe </span>{ io::outb(port, value) }
-<a href=#62 id=62 data-nosnippet>62</a>    }
-<a href=#63 id=63 data-nosnippet>63</a>
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">fn </span>outw(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16, value: u16) {
-<a href=#65 id=65 data-nosnippet>65</a>        <span class="kw">unsafe </span>{ io::outw(port, value) }
-<a href=#66 id=66 data-nosnippet>66</a>    }
-<a href=#67 id=67 data-nosnippet>67</a>
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="kw">fn </span>outd(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16, value: u32) {
-<a href=#69 id=69 data-nosnippet>69</a>        <span class="kw">unsafe </span>{ io::outl(port, value) }
-<a href=#70 id=70 data-nosnippet>70</a>    }
-<a href=#71 id=71 data-nosnippet>71</a>
-<a href=#72 id=72 data-nosnippet>72</a>    <span class="kw">fn </span>inb(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; u8 {
-<a href=#73 id=73 data-nosnippet>73</a>        <span class="kw">unsafe </span>{ io::inb(port) }
-<a href=#74 id=74 data-nosnippet>74</a>    }
-<a href=#75 id=75 data-nosnippet>75</a>
-<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">fn </span>inw(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; u16 {
-<a href=#77 id=77 data-nosnippet>77</a>        <span class="kw">unsafe </span>{ io::inw(port) }
-<a href=#78 id=78 data-nosnippet>78</a>    }
-<a href=#79 id=79 data-nosnippet>79</a>
-<a href=#80 id=80 data-nosnippet>80</a>    <span class="kw">fn </span>ind(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; u32 {
-<a href=#81 id=81 data-nosnippet>81</a>        <span class="kw">unsafe </span>{ io::inl(port) }
-<a href=#82 id=82 data-nosnippet>82</a>    }
-<a href=#83 id=83 data-nosnippet>83</a>
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="comment">// PCI read functions:
-<a href=#85 id=85 data-nosnippet>85</a>    //
-<a href=#86 id=86 data-nosnippet>86</a>    // todo: do not ignore the segment once we use MCFG.
-<a href=#87 id=87 data-nosnippet>87</a>    </span><span class="kw">fn </span>pci_readb(<span class="kw-2">&amp;</span><span class="self">self</span>, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -&gt; u8 {
-<a href=#88 id=88 data-nosnippet>88</a>        <span class="kw">let </span>header = PciHeader::new(bus, slot, fun);
-<a href=#89 id=89 data-nosnippet>89</a>        <span class="kw">unsafe </span>{ header.read::&lt;u8&gt;(offset <span class="kw">as </span>u32) <span class="kw">as </span>u8 }
-<a href=#90 id=90 data-nosnippet>90</a>    }
-<a href=#91 id=91 data-nosnippet>91</a>
-<a href=#92 id=92 data-nosnippet>92</a>    <span class="kw">fn </span>pci_readw(<span class="kw-2">&amp;</span><span class="self">self</span>, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -&gt; u16 {
-<a href=#93 id=93 data-nosnippet>93</a>        <span class="kw">let </span>header = PciHeader::new(bus, slot, fun);
-<a href=#94 id=94 data-nosnippet>94</a>        <span class="kw">unsafe </span>{ header.read::&lt;u16&gt;(offset <span class="kw">as </span>u32) <span class="kw">as </span>u16 }
-<a href=#95 id=95 data-nosnippet>95</a>    }
-<a href=#96 id=96 data-nosnippet>96</a>
-<a href=#97 id=97 data-nosnippet>97</a>    <span class="kw">fn </span>pci_readd(<span class="kw-2">&amp;</span><span class="self">self</span>, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -&gt; u32 {
-<a href=#98 id=98 data-nosnippet>98</a>        <span class="kw">let </span>header = PciHeader::new(bus, slot, fun);
-<a href=#99 id=99 data-nosnippet>99</a>        <span class="kw">unsafe </span>{ header.read::&lt;u32&gt;(offset <span class="kw">as </span>u32) }
-<a href=#100 id=100 data-nosnippet>100</a>    }
-<a href=#101 id=101 data-nosnippet>101</a>
-<a href=#102 id=102 data-nosnippet>102</a>    <span class="comment">// Memory functions:
-<a href=#103 id=103 data-nosnippet>103</a>    </span><span class="kw">fn </span>map(<span class="kw-2">&amp;</span><span class="self">self</span>, address: usize, _count: usize) -&gt; <span class="kw-2">*mut </span>u8 {
-<a href=#104 id=104 data-nosnippet>104</a>        PhysAddr::new(address <span class="kw">as </span>u64)
-<a href=#105 id=105 data-nosnippet>105</a>            .as_hhdm_virt()
-<a href=#106 id=106 data-nosnippet>106</a>            .as_mut_ptr::&lt;u8&gt;()
-<a href=#107 id=107 data-nosnippet>107</a>    }
-<a href=#108 id=108 data-nosnippet>108</a>}
-<a href=#109 id=109 data-nosnippet>109</a>
-<a href=#110 id=110 data-nosnippet>110</a><span class="kw">struct </span>LaiSubsystem;
-<a href=#111 id=111 data-nosnippet>111</a>
-<a href=#112 id=112 data-nosnippet>112</a><span class="kw">impl </span>aml::AmlSubsystem <span class="kw">for </span>LaiSubsystem {
-<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">fn </span>enter_state(<span class="kw-2">&amp;</span><span class="self">self</span>, state: aml::SleepState) {
-<a href=#114 id=114 data-nosnippet>114</a>        lai::enter_sleep(state <span class="kw">as </span>u8)
-<a href=#115 id=115 data-nosnippet>115</a>    }
-<a href=#116 id=116 data-nosnippet>116</a>
-<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">fn </span>enable_acpi(<span class="kw-2">&amp;</span><span class="self">self</span>, mode: u32) {
-<a href=#118 id=118 data-nosnippet>118</a>        lai::enable_acpi(mode);
-<a href=#119 id=119 data-nosnippet>119</a>    }
-<a href=#120 id=120 data-nosnippet>120</a>
-<a href=#121 id=121 data-nosnippet>121</a>    <span class="kw">fn </span>pci_route_pin(<span class="kw-2">&amp;</span><span class="self">self</span>, seg: u16, bus: u8, slot: u8, function: u8, pin: u8) -&gt; u8 {
-<a href=#122 id=122 data-nosnippet>122</a>        lai::pci_route_pin(seg, bus, slot, function, pin)
-<a href=#123 id=123 data-nosnippet>123</a>            .expect(<span class="string">"lai: failed to route pin"</span>)
-<a href=#124 id=124 data-nosnippet>124</a>            .base <span class="kw">as </span>u8
-<a href=#125 id=125 data-nosnippet>125</a>    }
-<a href=#126 id=126 data-nosnippet>126</a>}
-<a href=#127 id=127 data-nosnippet>127</a>
-<a href=#128 id=128 data-nosnippet>128</a><span class="kw">pub fn </span>init_lai() {
-<a href=#129 id=129 data-nosnippet>129</a>    <span class="kw">let </span>lai_host = Arc::new(LaiHost);
-<a href=#130 id=130 data-nosnippet>130</a>    lai::init(lai_host);
-<a href=#131 id=131 data-nosnippet>131</a>
-<a href=#132 id=132 data-nosnippet>132</a>    lai::set_acpi_revision(get_acpi_table().revision() <span class="kw">as _</span>);
-<a href=#133 id=133 data-nosnippet>133</a>    lai::create_namespace();
-<a href=#134 id=134 data-nosnippet>134</a>
-<a href=#135 id=135 data-nosnippet>135</a>    <span class="kw">let </span>subsystem = Arc::new(LaiSubsystem);
-<a href=#136 id=136 data-nosnippet>136</a>    aml::init(subsystem);
-<a href=#137 id=137 data-nosnippet>137</a>}
-<a href=#138 id=138 data-nosnippet>138</a>
-<a href=#139 id=139 data-nosnippet>139</a><span class="macro">crate::module_init!</span>(init_lai, ModuleType::Block);</code></pre></div></section></main></body></html>
+<a href=#54 id=54 data-nosnippet>54</a>            .sleep(<span class="prelude-val">Some</span>(ms <span class="kw">as </span>usize / <span class="number">1000</span>))
+<a href=#55 id=55 data-nosnippet>55</a>            .expect(<span class="string">"lai: unexpected signal during sleep"</span>)
+<a href=#56 id=56 data-nosnippet>56</a>    }
+<a href=#57 id=57 data-nosnippet>57</a>
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="comment">// Port I/O functions:
+<a href=#59 id=59 data-nosnippet>59</a>    </span><span class="kw">fn </span>outb(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16, value: u8) {
+<a href=#60 id=60 data-nosnippet>60</a>        <span class="kw">unsafe </span>{ io::outb(port, value) }
+<a href=#61 id=61 data-nosnippet>61</a>    }
+<a href=#62 id=62 data-nosnippet>62</a>
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">fn </span>outw(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16, value: u16) {
+<a href=#64 id=64 data-nosnippet>64</a>        <span class="kw">unsafe </span>{ io::outw(port, value) }
+<a href=#65 id=65 data-nosnippet>65</a>    }
+<a href=#66 id=66 data-nosnippet>66</a>
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">fn </span>outd(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16, value: u32) {
+<a href=#68 id=68 data-nosnippet>68</a>        <span class="kw">unsafe </span>{ io::outl(port, value) }
+<a href=#69 id=69 data-nosnippet>69</a>    }
+<a href=#70 id=70 data-nosnippet>70</a>
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">fn </span>inb(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; u8 {
+<a href=#72 id=72 data-nosnippet>72</a>        <span class="kw">unsafe </span>{ io::inb(port) }
+<a href=#73 id=73 data-nosnippet>73</a>    }
+<a href=#74 id=74 data-nosnippet>74</a>
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">fn </span>inw(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; u16 {
+<a href=#76 id=76 data-nosnippet>76</a>        <span class="kw">unsafe </span>{ io::inw(port) }
+<a href=#77 id=77 data-nosnippet>77</a>    }
+<a href=#78 id=78 data-nosnippet>78</a>
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="kw">fn </span>ind(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; u32 {
+<a href=#80 id=80 data-nosnippet>80</a>        <span class="kw">unsafe </span>{ io::inl(port) }
+<a href=#81 id=81 data-nosnippet>81</a>    }
+<a href=#82 id=82 data-nosnippet>82</a>
+<a href=#83 id=83 data-nosnippet>83</a>    <span class="comment">// PCI read functions:
+<a href=#84 id=84 data-nosnippet>84</a>    //
+<a href=#85 id=85 data-nosnippet>85</a>    // todo: do not ignore the segment once we use MCFG.
+<a href=#86 id=86 data-nosnippet>86</a>    </span><span class="kw">fn </span>pci_readb(<span class="kw-2">&amp;</span><span class="self">self</span>, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -&gt; u8 {
+<a href=#87 id=87 data-nosnippet>87</a>        <span class="kw">let </span>header = PciHeader::new(bus, slot, fun);
+<a href=#88 id=88 data-nosnippet>88</a>        <span class="kw">unsafe </span>{ header.read::&lt;u8&gt;(offset <span class="kw">as </span>u32) <span class="kw">as </span>u8 }
+<a href=#89 id=89 data-nosnippet>89</a>    }
+<a href=#90 id=90 data-nosnippet>90</a>
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="kw">fn </span>pci_readw(<span class="kw-2">&amp;</span><span class="self">self</span>, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -&gt; u16 {
+<a href=#92 id=92 data-nosnippet>92</a>        <span class="kw">let </span>header = PciHeader::new(bus, slot, fun);
+<a href=#93 id=93 data-nosnippet>93</a>        <span class="kw">unsafe </span>{ header.read::&lt;u16&gt;(offset <span class="kw">as </span>u32) <span class="kw">as </span>u16 }
+<a href=#94 id=94 data-nosnippet>94</a>    }
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a>    <span class="kw">fn </span>pci_readd(<span class="kw-2">&amp;</span><span class="self">self</span>, _seg: u16, bus: u8, slot: u8, fun: u8, offset: u16) -&gt; u32 {
+<a href=#97 id=97 data-nosnippet>97</a>        <span class="kw">let </span>header = PciHeader::new(bus, slot, fun);
+<a href=#98 id=98 data-nosnippet>98</a>        <span class="kw">unsafe </span>{ header.read::&lt;u32&gt;(offset <span class="kw">as </span>u32) }
+<a href=#99 id=99 data-nosnippet>99</a>    }
+<a href=#100 id=100 data-nosnippet>100</a>
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="comment">// Memory functions:
+<a href=#102 id=102 data-nosnippet>102</a>    </span><span class="kw">fn </span>map(<span class="kw-2">&amp;</span><span class="self">self</span>, address: usize, _count: usize) -&gt; <span class="kw-2">*mut </span>u8 {
+<a href=#103 id=103 data-nosnippet>103</a>        PhysAddr::new(address <span class="kw">as </span>u64)
+<a href=#104 id=104 data-nosnippet>104</a>            .as_hhdm_virt()
+<a href=#105 id=105 data-nosnippet>105</a>            .as_mut_ptr::&lt;u8&gt;()
+<a href=#106 id=106 data-nosnippet>106</a>    }
+<a href=#107 id=107 data-nosnippet>107</a>}
+<a href=#108 id=108 data-nosnippet>108</a>
+<a href=#109 id=109 data-nosnippet>109</a><span class="kw">struct </span>LaiSubsystem;
+<a href=#110 id=110 data-nosnippet>110</a>
+<a href=#111 id=111 data-nosnippet>111</a><span class="kw">impl </span>aml::AmlSubsystem <span class="kw">for </span>LaiSubsystem {
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">fn </span>enter_state(<span class="kw-2">&amp;</span><span class="self">self</span>, state: aml::SleepState) {
+<a href=#113 id=113 data-nosnippet>113</a>        lai::enter_sleep(state <span class="kw">as </span>u8)
+<a href=#114 id=114 data-nosnippet>114</a>    }
+<a href=#115 id=115 data-nosnippet>115</a>
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">fn </span>enable_acpi(<span class="kw-2">&amp;</span><span class="self">self</span>, mode: u32) {
+<a href=#117 id=117 data-nosnippet>117</a>        lai::enable_acpi(mode);
+<a href=#118 id=118 data-nosnippet>118</a>    }
+<a href=#119 id=119 data-nosnippet>119</a>
+<a href=#120 id=120 data-nosnippet>120</a>    <span class="kw">fn </span>pci_route_pin(<span class="kw-2">&amp;</span><span class="self">self</span>, seg: u16, bus: u8, slot: u8, function: u8, pin: u8) -&gt; u8 {
+<a href=#121 id=121 data-nosnippet>121</a>        lai::pci_route_pin(seg, bus, slot, function, pin)
+<a href=#122 id=122 data-nosnippet>122</a>            .expect(<span class="string">"lai: failed to route pin"</span>)
+<a href=#123 id=123 data-nosnippet>123</a>            .base <span class="kw">as </span>u8
+<a href=#124 id=124 data-nosnippet>124</a>    }
+<a href=#125 id=125 data-nosnippet>125</a>}
+<a href=#126 id=126 data-nosnippet>126</a>
+<a href=#127 id=127 data-nosnippet>127</a><span class="kw">pub fn </span>init_lai() {
+<a href=#128 id=128 data-nosnippet>128</a>    <span class="kw">let </span>lai_host = Arc::new(LaiHost);
+<a href=#129 id=129 data-nosnippet>129</a>    lai::init(lai_host);
+<a href=#130 id=130 data-nosnippet>130</a>
+<a href=#131 id=131 data-nosnippet>131</a>    lai::set_acpi_revision(get_acpi_table().revision() <span class="kw">as _</span>);
+<a href=#132 id=132 data-nosnippet>132</a>    lai::create_namespace();
+<a href=#133 id=133 data-nosnippet>133</a>
+<a href=#134 id=134 data-nosnippet>134</a>    <span class="kw">let </span>subsystem = Arc::new(LaiSubsystem);
+<a href=#135 id=135 data-nosnippet>135</a>    aml::init(subsystem);
+<a href=#136 id=136 data-nosnippet>136</a>}
+<a href=#137 id=137 data-nosnippet>137</a>
+<a href=#138 id=138 data-nosnippet>138</a><span class="macro">crate::module_init!</span>(init_lai, ModuleType::Block);</code></pre></div></section></main></body></html>

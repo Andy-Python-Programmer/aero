@@ -697,7 +697,7 @@
 <a href=#697 id=697 data-nosnippet>697</a>    }
 <a href=#698 id=698 data-nosnippet>698</a>
 <a href=#699 id=699 data-nosnippet>699</a>    <span class="lifetime">'search</span>: <span class="kw">loop </span>{
-<a href=#700 id=700 data-nosnippet>700</a>        scheduler::get_scheduler().inner.await_io()<span class="question-mark">?</span>;
+<a href=#700 id=700 data-nosnippet>700</a>        scheduler::get_scheduler().await_io()<span class="question-mark">?</span>;
 <a href=#701 id=701 data-nosnippet>701</a>
 <a href=#702 id=702 data-nosnippet>702</a>        <span class="kw">for </span>(handle, index) <span class="kw">in </span>refds.iter() {
 <a href=#703 id=703 data-nosnippet>703</a>            <span class="kw">let </span>pollfd = <span class="kw-2">&amp;mut </span>fds[<span class="kw-2">*</span>index];

@@ -31,7 +31,7 @@
 <a href=#31 id=31 data-nosnippet>31</a></span><span class="kw">pub fn </span>sleep(timespec: <span class="kw-2">&amp;</span>TimeSpec) -&gt; <span class="prelude-ty">Result</span>&lt;usize, SyscallError&gt; {
 <a href=#32 id=32 data-nosnippet>32</a>    <span class="kw">let </span>duration = (timespec.tv_nsec <span class="kw">as </span>usize).div_ceil(<span class="number">1000000000</span>) + timespec.tv_sec <span class="kw">as </span>usize;
 <a href=#33 id=33 data-nosnippet>33</a>
-<a href=#34 id=34 data-nosnippet>34</a>    scheduler::get_scheduler().inner.sleep(<span class="prelude-val">Some</span>(duration))<span class="question-mark">?</span>;
+<a href=#34 id=34 data-nosnippet>34</a>    scheduler::get_scheduler().sleep(<span class="prelude-val">Some</span>(duration))<span class="question-mark">?</span>;
 <a href=#35 id=35 data-nosnippet>35</a>
 <a href=#36 id=36 data-nosnippet>36</a>    <span class="prelude-val">Ok</span>(<span class="number">0x00</span>)
 <a href=#37 id=37 data-nosnippet>37</a>}

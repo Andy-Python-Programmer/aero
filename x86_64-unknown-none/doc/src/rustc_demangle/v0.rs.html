@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustc-demangle-0.1.23/src/v0.rs`."><title>v0.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rustc_demangle" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (d5b4c2e4f 2025-04-02)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-d72f25bb.js" ><script src="../../static.files/storage-4e99c027.js"></script><script defer src="../../static.files/src-script-63605ae7.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rustc_demangle/</div>v0.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>core::convert::TryFrom;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustc-demangle-0.1.24/src/v0.rs`."><title>v0.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rustc_demangle" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (d5b4c2e4f 2025-04-02)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-d72f25bb.js" ><script src="../../static.files/storage-4e99c027.js"></script><script defer src="../../static.files/src-script-63605ae7.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rustc_demangle/</div>v0.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>core::convert::TryFrom;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>core::{char, fmt, iter, mem, str};
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="attr">#[allow(unused_macros)]
@@ -803,7 +803,7 @@
 <a href=#803 id=803 data-nosnippet>803</a>
 <a href=#804 id=804 data-nosnippet>804</a>                <span class="self">self</span>.print(name)<span class="question-mark">?</span>;
 <a href=#805 id=805 data-nosnippet>805</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(out) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.out {
-<a href=#806 id=806 data-nosnippet>806</a>                    <span class="kw">if </span>!out.alternate() {
+<a href=#806 id=806 data-nosnippet>806</a>                    <span class="kw">if </span>!out.alternate() &amp;&amp; dis != <span class="number">0 </span>{
 <a href=#807 id=807 data-nosnippet>807</a>                        out.write_str(<span class="string">"["</span>)<span class="question-mark">?</span>;
 <a href=#808 id=808 data-nosnippet>808</a>                        fmt::LowerHex::fmt(<span class="kw-2">&amp;</span>dis, out)<span class="question-mark">?</span>;
 <a href=#809 id=809 data-nosnippet>809</a>                        out.write_str(<span class="string">"]"</span>)<span class="question-mark">?</span>;
@@ -1271,7 +1271,7 @@
 <a href=#1271 id=1271 data-nosnippet>1271</a>            <span class="macro">t_const!</span>(<span class="macro-nonterminal">$mangled</span>, <span class="macro-nonterminal">$value</span>);
 <a href=#1272 id=1272 data-nosnippet>1272</a>            <span class="macro">t!</span>(
 <a href=#1273 id=1273 data-nosnippet>1273</a>                <span class="macro">concat!</span>(<span class="string">"_RIC0K"</span>, <span class="macro-nonterminal">$mangled</span>, <span class="string">"E"</span>),
-<a href=#1274 id=1274 data-nosnippet>1274</a>                <span class="macro">concat!</span>(<span class="string">"[0]::&lt;"</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$value_ty_suffix</span>, <span class="string">"&gt;"</span>)
+<a href=#1274 id=1274 data-nosnippet>1274</a>                <span class="macro">concat!</span>(<span class="string">"::&lt;"</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$value_ty_suffix</span>, <span class="string">"&gt;"</span>)
 <a href=#1275 id=1275 data-nosnippet>1275</a>            );
 <a href=#1276 id=1276 data-nosnippet>1276</a>        }};
 <a href=#1277 id=1277 data-nosnippet>1277</a>    }
@@ -1282,249 +1282,255 @@
 <a href=#1282 id=1282 data-nosnippet>1282</a>    }
 <a href=#1283 id=1283 data-nosnippet>1283</a>
 <a href=#1284 id=1284 data-nosnippet>1284</a>    <span class="attr">#[test]
-<a href=#1285 id=1285 data-nosnippet>1285</a>    </span><span class="kw">fn </span>demangle_utf8_idents() {
-<a href=#1286 id=1286 data-nosnippet>1286</a>        <span class="macro">t_nohash!</span>(
-<a href=#1287 id=1287 data-nosnippet>1287</a>            <span class="string">"_RNqCs4fqI2P2rA04_11utf8_identsu30____7hkackfecea1cbdathfdh9hlq6y"</span>,
-<a href=#1288 id=1288 data-nosnippet>1288</a>            <span class="string">"utf8_idents::საჭმელად_გემრიელი_სადილი"
-<a href=#1289 id=1289 data-nosnippet>1289</a>        </span>);
-<a href=#1290 id=1290 data-nosnippet>1290</a>    }
-<a href=#1291 id=1291 data-nosnippet>1291</a>
-<a href=#1292 id=1292 data-nosnippet>1292</a>    <span class="attr">#[test]
-<a href=#1293 id=1293 data-nosnippet>1293</a>    </span><span class="kw">fn </span>demangle_closure() {
-<a href=#1294 id=1294 data-nosnippet>1294</a>        <span class="macro">t_nohash!</span>(
-<a href=#1295 id=1295 data-nosnippet>1295</a>            <span class="string">"_RNCNCNgCs6DXkGYLi8lr_2cc5spawn00B5_"</span>,
-<a href=#1296 id=1296 data-nosnippet>1296</a>            <span class="string">"cc::spawn::{closure#0}::{closure#0}"
-<a href=#1297 id=1297 data-nosnippet>1297</a>        </span>);
-<a href=#1298 id=1298 data-nosnippet>1298</a>        <span class="macro">t_nohash!</span>(
-<a href=#1299 id=1299 data-nosnippet>1299</a>            <span class="string">"_RNCINkXs25_NgCsbmNqQUJIY6D_4core5sliceINyB9_4IterhENuNgNoBb_4iter8iterator8Iterator9rpositionNCNgNpB9_6memchr7memrchrs_0E0Bb_"</span>,
-<a href=#1300 id=1300 data-nosnippet>1300</a>            <span class="string">"&lt;core::slice::Iter&lt;u8&gt; as core::iter::iterator::Iterator&gt;::rposition::&lt;core::slice::memchr::memrchr::{closure#1}&gt;::{closure#0}"
-<a href=#1301 id=1301 data-nosnippet>1301</a>        </span>);
-<a href=#1302 id=1302 data-nosnippet>1302</a>    }
-<a href=#1303 id=1303 data-nosnippet>1303</a>
-<a href=#1304 id=1304 data-nosnippet>1304</a>    <span class="attr">#[test]
-<a href=#1305 id=1305 data-nosnippet>1305</a>    </span><span class="kw">fn </span>demangle_dyn_trait() {
-<a href=#1306 id=1306 data-nosnippet>1306</a>        <span class="macro">t_nohash!</span>(
-<a href=#1307 id=1307 data-nosnippet>1307</a>            <span class="string">"_RINbNbCskIICzLVDPPb_5alloc5alloc8box_freeDINbNiB4_5boxed5FnBoxuEp6OutputuEL_ECs1iopQbuBiw2_3std"</span>,
-<a href=#1308 id=1308 data-nosnippet>1308</a>            <span class="string">"alloc::alloc::box_free::&lt;dyn alloc::boxed::FnBox&lt;(), Output = ()&gt;&gt;"
-<a href=#1309 id=1309 data-nosnippet>1309</a>        </span>);
-<a href=#1310 id=1310 data-nosnippet>1310</a>    }
-<a href=#1311 id=1311 data-nosnippet>1311</a>
-<a href=#1312 id=1312 data-nosnippet>1312</a>    <span class="attr">#[test]
-<a href=#1313 id=1313 data-nosnippet>1313</a>    </span><span class="kw">fn </span>demangle_const_generics_preview() {
-<a href=#1314 id=1314 data-nosnippet>1314</a>        <span class="comment">// NOTE(eddyb) this was hand-written, before rustc had working
-<a href=#1315 id=1315 data-nosnippet>1315</a>        // const generics support (but the mangling format did include them).
-<a href=#1316 id=1316 data-nosnippet>1316</a>        </span><span class="macro">t_nohash_type!</span>(
-<a href=#1317 id=1317 data-nosnippet>1317</a>            <span class="string">"INtC8arrayvec8ArrayVechKj7b_E"</span>,
-<a href=#1318 id=1318 data-nosnippet>1318</a>            <span class="string">"arrayvec::ArrayVec&lt;u8, 123&gt;"
-<a href=#1319 id=1319 data-nosnippet>1319</a>        </span>);
-<a href=#1320 id=1320 data-nosnippet>1320</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"j7b_"</span>, <span class="string">"123"</span>, <span class="string">"usize"</span>);
-<a href=#1321 id=1321 data-nosnippet>1321</a>    }
-<a href=#1322 id=1322 data-nosnippet>1322</a>
-<a href=#1323 id=1323 data-nosnippet>1323</a>    <span class="attr">#[test]
-<a href=#1324 id=1324 data-nosnippet>1324</a>    </span><span class="kw">fn </span>demangle_min_const_generics() {
-<a href=#1325 id=1325 data-nosnippet>1325</a>        <span class="macro">t_const!</span>(<span class="string">"p"</span>, <span class="string">"_"</span>);
-<a href=#1326 id=1326 data-nosnippet>1326</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"hb_"</span>, <span class="string">"11"</span>, <span class="string">"u8"</span>);
-<a href=#1327 id=1327 data-nosnippet>1327</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"off00ff00ff00ff00ff_"</span>, <span class="string">"0xff00ff00ff00ff00ff"</span>, <span class="string">"u128"</span>);
-<a href=#1328 id=1328 data-nosnippet>1328</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"s98_"</span>, <span class="string">"152"</span>, <span class="string">"i16"</span>);
-<a href=#1329 id=1329 data-nosnippet>1329</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"anb_"</span>, <span class="string">"-11"</span>, <span class="string">"i8"</span>);
-<a href=#1330 id=1330 data-nosnippet>1330</a>        <span class="macro">t_const!</span>(<span class="string">"b0_"</span>, <span class="string">"false"</span>);
-<a href=#1331 id=1331 data-nosnippet>1331</a>        <span class="macro">t_const!</span>(<span class="string">"b1_"</span>, <span class="string">"true"</span>);
-<a href=#1332 id=1332 data-nosnippet>1332</a>        <span class="macro">t_const!</span>(<span class="string">"c76_"</span>, <span class="string">"'v'"</span>);
-<a href=#1333 id=1333 data-nosnippet>1333</a>        <span class="macro">t_const!</span>(<span class="string">"c22_"</span>, <span class="string">r#"'"'"#</span>);
-<a href=#1334 id=1334 data-nosnippet>1334</a>        <span class="macro">t_const!</span>(<span class="string">"ca_"</span>, <span class="string">"'\\n'"</span>);
-<a href=#1335 id=1335 data-nosnippet>1335</a>        <span class="macro">t_const!</span>(<span class="string">"c2202_"</span>, <span class="string">"'∂'"</span>);
-<a href=#1336 id=1336 data-nosnippet>1336</a>    }
-<a href=#1337 id=1337 data-nosnippet>1337</a>
-<a href=#1338 id=1338 data-nosnippet>1338</a>    <span class="attr">#[test]
-<a href=#1339 id=1339 data-nosnippet>1339</a>    </span><span class="kw">fn </span>demangle_const_str() {
-<a href=#1340 id=1340 data-nosnippet>1340</a>        <span class="macro">t_const!</span>(<span class="string">"e616263_"</span>, <span class="string">"{*\"abc\"}"</span>);
-<a href=#1341 id=1341 data-nosnippet>1341</a>        <span class="macro">t_const!</span>(<span class="string">"e27_"</span>, <span class="string">r#"{*"'"}"#</span>);
-<a href=#1342 id=1342 data-nosnippet>1342</a>        <span class="macro">t_const!</span>(<span class="string">"e090a_"</span>, <span class="string">"{*\"\\t\\n\"}"</span>);
-<a href=#1343 id=1343 data-nosnippet>1343</a>        <span class="macro">t_const!</span>(<span class="string">"ee28882c3bc_"</span>, <span class="string">"{*\"∂ü\"}"</span>);
-<a href=#1344 id=1344 data-nosnippet>1344</a>        <span class="macro">t_const!</span>(
-<a href=#1345 id=1345 data-nosnippet>1345</a>            <span class="string">"ee183a1e18390e183ade1839be18394e1839ae18390e183935fe18392e18394e1839b\
-<a href=#1346 id=1346 data-nosnippet>1346</a>              e183a0e18398e18394e1839ae183985fe183a1e18390e18393e18398e1839ae18398_"</span>,
-<a href=#1347 id=1347 data-nosnippet>1347</a>            <span class="string">"{*\"საჭმელად_გემრიელი_სადილი\"}"
-<a href=#1348 id=1348 data-nosnippet>1348</a>        </span>);
-<a href=#1349 id=1349 data-nosnippet>1349</a>        <span class="macro">t_const!</span>(
-<a href=#1350 id=1350 data-nosnippet>1350</a>            <span class="string">"ef09f908af09fa688f09fa686f09f90ae20c2a720f09f90b6f09f9192e298\
-<a href=#1351 id=1351 data-nosnippet>1351</a>              95f09f94a520c2a720f09fa7a1f09f929bf09f929af09f9299f09f929c_"</span>,
-<a href=#1352 id=1352 data-nosnippet>1352</a>            <span class="string">"{*\"🐊🦈🦆🐮 § 🐶👒☕🔥 § 🧡💛💚💙💜\"}"
-<a href=#1353 id=1353 data-nosnippet>1353</a>        </span>);
-<a href=#1354 id=1354 data-nosnippet>1354</a>    }
-<a href=#1355 id=1355 data-nosnippet>1355</a>
-<a href=#1356 id=1356 data-nosnippet>1356</a>    <span class="comment">// NOTE(eddyb) this uses the same strings as `demangle_const_str` and should
-<a href=#1357 id=1357 data-nosnippet>1357</a>    // be kept in sync with it - while a macro could be used to generate both
-<a href=#1358 id=1358 data-nosnippet>1358</a>    // `str` and `&amp;str` tests, from a single list of strings, this seems clearer.
-<a href=#1359 id=1359 data-nosnippet>1359</a>    </span><span class="attr">#[test]
-<a href=#1360 id=1360 data-nosnippet>1360</a>    </span><span class="kw">fn </span>demangle_const_ref_str() {
-<a href=#1361 id=1361 data-nosnippet>1361</a>        <span class="macro">t_const!</span>(<span class="string">"Re616263_"</span>, <span class="string">"\"abc\""</span>);
-<a href=#1362 id=1362 data-nosnippet>1362</a>        <span class="macro">t_const!</span>(<span class="string">"Re27_"</span>, <span class="string">r#""'""#</span>);
-<a href=#1363 id=1363 data-nosnippet>1363</a>        <span class="macro">t_const!</span>(<span class="string">"Re090a_"</span>, <span class="string">"\"\\t\\n\""</span>);
-<a href=#1364 id=1364 data-nosnippet>1364</a>        <span class="macro">t_const!</span>(<span class="string">"Ree28882c3bc_"</span>, <span class="string">"\"∂ü\""</span>);
-<a href=#1365 id=1365 data-nosnippet>1365</a>        <span class="macro">t_const!</span>(
-<a href=#1366 id=1366 data-nosnippet>1366</a>            <span class="string">"Ree183a1e18390e183ade1839be18394e1839ae18390e183935fe18392e18394e1839b\
-<a href=#1367 id=1367 data-nosnippet>1367</a>               e183a0e18398e18394e1839ae183985fe183a1e18390e18393e18398e1839ae18398_"</span>,
-<a href=#1368 id=1368 data-nosnippet>1368</a>            <span class="string">"\"საჭმელად_გემრიელი_სადილი\""
-<a href=#1369 id=1369 data-nosnippet>1369</a>        </span>);
-<a href=#1370 id=1370 data-nosnippet>1370</a>        <span class="macro">t_const!</span>(
-<a href=#1371 id=1371 data-nosnippet>1371</a>            <span class="string">"Ref09f908af09fa688f09fa686f09f90ae20c2a720f09f90b6f09f9192e298\
-<a href=#1372 id=1372 data-nosnippet>1372</a>               95f09f94a520c2a720f09fa7a1f09f929bf09f929af09f9299f09f929c_"</span>,
-<a href=#1373 id=1373 data-nosnippet>1373</a>            <span class="string">"\"🐊🦈🦆🐮 § 🐶👒☕🔥 § 🧡💛💚💙💜\""
-<a href=#1374 id=1374 data-nosnippet>1374</a>        </span>);
-<a href=#1375 id=1375 data-nosnippet>1375</a>    }
-<a href=#1376 id=1376 data-nosnippet>1376</a>
-<a href=#1377 id=1377 data-nosnippet>1377</a>    <span class="attr">#[test]
-<a href=#1378 id=1378 data-nosnippet>1378</a>    </span><span class="kw">fn </span>demangle_const_ref() {
-<a href=#1379 id=1379 data-nosnippet>1379</a>        <span class="macro">t_const!</span>(<span class="string">"Rp"</span>, <span class="string">"{&amp;_}"</span>);
-<a href=#1380 id=1380 data-nosnippet>1380</a>        <span class="macro">t_const!</span>(<span class="string">"Rh7b_"</span>, <span class="string">"{&amp;123}"</span>);
-<a href=#1381 id=1381 data-nosnippet>1381</a>        <span class="macro">t_const!</span>(<span class="string">"Rb0_"</span>, <span class="string">"{&amp;false}"</span>);
-<a href=#1382 id=1382 data-nosnippet>1382</a>        <span class="macro">t_const!</span>(<span class="string">"Rc58_"</span>, <span class="string">"{&amp;'X'}"</span>);
-<a href=#1383 id=1383 data-nosnippet>1383</a>        <span class="macro">t_const!</span>(<span class="string">"RRRh0_"</span>, <span class="string">"{&amp;&amp;&amp;0}"</span>);
-<a href=#1384 id=1384 data-nosnippet>1384</a>        <span class="macro">t_const!</span>(<span class="string">"RRRe_"</span>, <span class="string">"{&amp;&amp;\"\"}"</span>);
-<a href=#1385 id=1385 data-nosnippet>1385</a>        <span class="macro">t_const!</span>(<span class="string">"QAE"</span>, <span class="string">"{&amp;mut []}"</span>);
-<a href=#1386 id=1386 data-nosnippet>1386</a>    }
-<a href=#1387 id=1387 data-nosnippet>1387</a>
-<a href=#1388 id=1388 data-nosnippet>1388</a>    <span class="attr">#[test]
-<a href=#1389 id=1389 data-nosnippet>1389</a>    </span><span class="kw">fn </span>demangle_const_array() {
-<a href=#1390 id=1390 data-nosnippet>1390</a>        <span class="macro">t_const!</span>(<span class="string">"AE"</span>, <span class="string">"{[]}"</span>);
-<a href=#1391 id=1391 data-nosnippet>1391</a>        <span class="macro">t_const!</span>(<span class="string">"Aj0_E"</span>, <span class="string">"{[0]}"</span>);
-<a href=#1392 id=1392 data-nosnippet>1392</a>        <span class="macro">t_const!</span>(<span class="string">"Ah1_h2_h3_E"</span>, <span class="string">"{[1, 2, 3]}"</span>);
-<a href=#1393 id=1393 data-nosnippet>1393</a>        <span class="macro">t_const!</span>(<span class="string">"ARe61_Re62_Re63_E"</span>, <span class="string">"{[\"a\", \"b\", \"c\"]}"</span>);
-<a href=#1394 id=1394 data-nosnippet>1394</a>        <span class="macro">t_const!</span>(<span class="string">"AAh1_h2_EAh3_h4_EE"</span>, <span class="string">"{[[1, 2], [3, 4]]}"</span>);
-<a href=#1395 id=1395 data-nosnippet>1395</a>    }
-<a href=#1396 id=1396 data-nosnippet>1396</a>
-<a href=#1397 id=1397 data-nosnippet>1397</a>    <span class="attr">#[test]
-<a href=#1398 id=1398 data-nosnippet>1398</a>    </span><span class="kw">fn </span>demangle_const_tuple() {
-<a href=#1399 id=1399 data-nosnippet>1399</a>        <span class="macro">t_const!</span>(<span class="string">"TE"</span>, <span class="string">"{()}"</span>);
-<a href=#1400 id=1400 data-nosnippet>1400</a>        <span class="macro">t_const!</span>(<span class="string">"Tj0_E"</span>, <span class="string">"{(0,)}"</span>);
-<a href=#1401 id=1401 data-nosnippet>1401</a>        <span class="macro">t_const!</span>(<span class="string">"Th1_b0_E"</span>, <span class="string">"{(1, false)}"</span>);
-<a href=#1402 id=1402 data-nosnippet>1402</a>        <span class="macro">t_const!</span>(
-<a href=#1403 id=1403 data-nosnippet>1403</a>            <span class="string">"TRe616263_c78_RAh1_h2_h3_EE"</span>,
-<a href=#1404 id=1404 data-nosnippet>1404</a>            <span class="string">"{(\"abc\", 'x', &amp;[1, 2, 3])}"
-<a href=#1405 id=1405 data-nosnippet>1405</a>        </span>);
-<a href=#1406 id=1406 data-nosnippet>1406</a>    }
-<a href=#1407 id=1407 data-nosnippet>1407</a>
-<a href=#1408 id=1408 data-nosnippet>1408</a>    <span class="attr">#[test]
-<a href=#1409 id=1409 data-nosnippet>1409</a>    </span><span class="kw">fn </span>demangle_const_adt() {
-<a href=#1410 id=1410 data-nosnippet>1410</a>        <span class="macro">t_const!</span>(
-<a href=#1411 id=1411 data-nosnippet>1411</a>            <span class="string">"VNvINtNtC4core6option6OptionjE4NoneU"</span>,
-<a href=#1412 id=1412 data-nosnippet>1412</a>            <span class="string">"{core::option::Option::&lt;usize&gt;::None}"
-<a href=#1413 id=1413 data-nosnippet>1413</a>        </span>);
-<a href=#1414 id=1414 data-nosnippet>1414</a>        <span class="macro">t_const!</span>(
-<a href=#1415 id=1415 data-nosnippet>1415</a>            <span class="string">"VNvINtNtC4core6option6OptionjE4SomeTj0_E"</span>,
-<a href=#1416 id=1416 data-nosnippet>1416</a>            <span class="string">"{core::option::Option::&lt;usize&gt;::Some(0)}"
-<a href=#1417 id=1417 data-nosnippet>1417</a>        </span>);
-<a href=#1418 id=1418 data-nosnippet>1418</a>        <span class="macro">t_const!</span>(
-<a href=#1419 id=1419 data-nosnippet>1419</a>            <span class="string">"VNtC3foo3BarS1sRe616263_2chc78_5sliceRAh1_h2_h3_EE"</span>,
-<a href=#1420 id=1420 data-nosnippet>1420</a>            <span class="string">"{foo::Bar { s: \"abc\", ch: 'x', slice: &amp;[1, 2, 3] }}"
-<a href=#1421 id=1421 data-nosnippet>1421</a>        </span>);
-<a href=#1422 id=1422 data-nosnippet>1422</a>    }
-<a href=#1423 id=1423 data-nosnippet>1423</a>
-<a href=#1424 id=1424 data-nosnippet>1424</a>    <span class="attr">#[test]
-<a href=#1425 id=1425 data-nosnippet>1425</a>    </span><span class="kw">fn </span>demangle_exponential_explosion() {
-<a href=#1426 id=1426 data-nosnippet>1426</a>        <span class="comment">// NOTE(eddyb) because of the prefix added by `t_nohash_type!` is
-<a href=#1427 id=1427 data-nosnippet>1427</a>        // 3 bytes long, `B2_` refers to the start of the type, not `B_`.
-<a href=#1428 id=1428 data-nosnippet>1428</a>        // 6 backrefs (`B8_E` through `B3_E`) result in 2^6 = 64 copies of `_`.
-<a href=#1429 id=1429 data-nosnippet>1429</a>        // Also, because the `p` (`_`) type is after all of the starts of the
-<a href=#1430 id=1430 data-nosnippet>1430</a>        // backrefs, it can be replaced with any other type, independently.
-<a href=#1431 id=1431 data-nosnippet>1431</a>        </span><span class="macro">t_nohash_type!</span>(
-<a href=#1432 id=1432 data-nosnippet>1432</a>            <span class="macro">concat!</span>(<span class="string">"TTTTTT"</span>, <span class="string">"p"</span>, <span class="string">"B8_E"</span>, <span class="string">"B7_E"</span>, <span class="string">"B6_E"</span>, <span class="string">"B5_E"</span>, <span class="string">"B4_E"</span>, <span class="string">"B3_E"</span>),
-<a href=#1433 id=1433 data-nosnippet>1433</a>            <span class="string">"((((((_, _), (_, _)), ((_, _), (_, _))), (((_, _), (_, _)), ((_, _), (_, _)))), \
-<a href=#1434 id=1434 data-nosnippet>1434</a>             ((((_, _), (_, _)), ((_, _), (_, _))), (((_, _), (_, _)), ((_, _), (_, _))))), \
-<a href=#1435 id=1435 data-nosnippet>1435</a>             (((((_, _), (_, _)), ((_, _), (_, _))), (((_, _), (_, _)), ((_, _), (_, _)))), \
-<a href=#1436 id=1436 data-nosnippet>1436</a>             ((((_, _), (_, _)), ((_, _), (_, _))), (((_, _), (_, _)), ((_, _), (_, _))))))"
-<a href=#1437 id=1437 data-nosnippet>1437</a>        </span>);
-<a href=#1438 id=1438 data-nosnippet>1438</a>    }
-<a href=#1439 id=1439 data-nosnippet>1439</a>
-<a href=#1440 id=1440 data-nosnippet>1440</a>    <span class="attr">#[test]
-<a href=#1441 id=1441 data-nosnippet>1441</a>    </span><span class="kw">fn </span>demangle_thinlto() {
-<a href=#1442 id=1442 data-nosnippet>1442</a>        <span class="macro">t_nohash!</span>(<span class="string">"_RC3foo.llvm.9D1C9369"</span>, <span class="string">"foo"</span>);
-<a href=#1443 id=1443 data-nosnippet>1443</a>        <span class="macro">t_nohash!</span>(<span class="string">"_RC3foo.llvm.9D1C9369@@16"</span>, <span class="string">"foo"</span>);
-<a href=#1444 id=1444 data-nosnippet>1444</a>        <span class="macro">t_nohash!</span>(<span class="string">"_RNvC9backtrace3foo.llvm.A5310EB9"</span>, <span class="string">"backtrace::foo"</span>);
-<a href=#1445 id=1445 data-nosnippet>1445</a>    }
-<a href=#1446 id=1446 data-nosnippet>1446</a>
-<a href=#1447 id=1447 data-nosnippet>1447</a>    <span class="attr">#[test]
-<a href=#1448 id=1448 data-nosnippet>1448</a>    </span><span class="kw">fn </span>demangle_extra_suffix() {
-<a href=#1449 id=1449 data-nosnippet>1449</a>        <span class="comment">// From alexcrichton/rustc-demangle#27:
-<a href=#1450 id=1450 data-nosnippet>1450</a>        </span><span class="macro">t_nohash!</span>(
-<a href=#1451 id=1451 data-nosnippet>1451</a>            <span class="string">"_RNvNtNtNtNtCs92dm3009vxr_4rand4rngs7adapter9reseeding4fork23FORK_HANDLER_REGISTERED.0.0"</span>,
-<a href=#1452 id=1452 data-nosnippet>1452</a>            <span class="string">"rand::rngs::adapter::reseeding::fork::FORK_HANDLER_REGISTERED.0.0"
-<a href=#1453 id=1453 data-nosnippet>1453</a>        </span>);
-<a href=#1454 id=1454 data-nosnippet>1454</a>    }
-<a href=#1455 id=1455 data-nosnippet>1455</a>
-<a href=#1456 id=1456 data-nosnippet>1456</a>    <span class="attr">#[test]
-<a href=#1457 id=1457 data-nosnippet>1457</a>    </span><span class="kw">fn </span>demangling_limits() {
-<a href=#1458 id=1458 data-nosnippet>1458</a>        <span class="comment">// Stress tests found via fuzzing.
-<a href=#1459 id=1459 data-nosnippet>1459</a>
-<a href=#1460 id=1460 data-nosnippet>1460</a>        </span><span class="kw">for </span>sym <span class="kw">in </span><span class="macro">include_str!</span>(<span class="string">"v0-large-test-symbols/early-recursion-limit"</span>)
-<a href=#1461 id=1461 data-nosnippet>1461</a>            .lines()
-<a href=#1462 id=1462 data-nosnippet>1462</a>            .filter(|line| !line.is_empty() &amp;&amp; !line.starts_with(<span class="string">'#'</span>))
-<a href=#1463 id=1463 data-nosnippet>1463</a>        {
-<a href=#1464 id=1464 data-nosnippet>1464</a>            <span class="macro">assert_eq!</span>(
-<a href=#1465 id=1465 data-nosnippet>1465</a>                <span class="kw">super</span>::demangle(sym).map(|<span class="kw">_</span>| ()),
-<a href=#1466 id=1466 data-nosnippet>1466</a>                <span class="prelude-val">Err</span>(<span class="kw">super</span>::ParseError::RecursedTooDeep)
-<a href=#1467 id=1467 data-nosnippet>1467</a>            );
-<a href=#1468 id=1468 data-nosnippet>1468</a>        }
-<a href=#1469 id=1469 data-nosnippet>1469</a>
-<a href=#1470 id=1470 data-nosnippet>1470</a>        <span class="macro">assert_contains!</span>(
-<a href=#1471 id=1471 data-nosnippet>1471</a>            ::demangle(
-<a href=#1472 id=1472 data-nosnippet>1472</a>                <span class="string">"RIC20tRYIMYNRYFG05_EB5_B_B6_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR\
-<a href=#1473 id=1473 data-nosnippet>1473</a>        RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRB_E"</span>,
-<a href=#1474 id=1474 data-nosnippet>1474</a>            )
-<a href=#1475 id=1475 data-nosnippet>1475</a>            .to_string(),
-<a href=#1476 id=1476 data-nosnippet>1476</a>            <span class="string">"{recursion limit reached}"
-<a href=#1477 id=1477 data-nosnippet>1477</a>        </span>);
-<a href=#1478 id=1478 data-nosnippet>1478</a>    }
-<a href=#1479 id=1479 data-nosnippet>1479</a>
-<a href=#1480 id=1480 data-nosnippet>1480</a>    <span class="attr">#[test]
-<a href=#1481 id=1481 data-nosnippet>1481</a>    </span><span class="kw">fn </span>recursion_limit_leaks() {
-<a href=#1482 id=1482 data-nosnippet>1482</a>        <span class="comment">// NOTE(eddyb) this test checks that both paths and types support the
-<a href=#1483 id=1483 data-nosnippet>1483</a>        // recursion limit correctly, i.e. matching `push_depth` and `pop_depth`,
-<a href=#1484 id=1484 data-nosnippet>1484</a>        // and don't leak "recursion levels" and trip the limit.
-<a href=#1485 id=1485 data-nosnippet>1485</a>        // The test inputs are generated on the fly, using a repeated pattern,
-<a href=#1486 id=1486 data-nosnippet>1486</a>        // as hardcoding the actual strings would be too verbose.
-<a href=#1487 id=1487 data-nosnippet>1487</a>        // Also, `MAX_DEPTH` can be directly used, instead of assuming its value.
-<a href=#1488 id=1488 data-nosnippet>1488</a>        </span><span class="kw">for </span><span class="kw-2">&amp;</span>(sym_leaf, expected_leaf) <span class="kw">in </span><span class="kw-2">&amp;</span>[(<span class="string">"p"</span>, <span class="string">"_"</span>), (<span class="string">"Rp"</span>, <span class="string">"&amp;_"</span>), (<span class="string">"C1x"</span>, <span class="string">"x"</span>)] {
-<a href=#1489 id=1489 data-nosnippet>1489</a>            <span class="kw">let </span><span class="kw-2">mut </span>sym = <span class="macro">format!</span>(<span class="string">"_RIC0p"</span>);
-<a href=#1490 id=1490 data-nosnippet>1490</a>            <span class="kw">let </span><span class="kw-2">mut </span>expected = <span class="macro">format!</span>(<span class="string">"::&lt;_"</span>);
-<a href=#1491 id=1491 data-nosnippet>1491</a>            <span class="kw">for _ in </span><span class="number">0</span>..(<span class="kw">super</span>::MAX_DEPTH * <span class="number">2</span>) {
-<a href=#1492 id=1492 data-nosnippet>1492</a>                sym.push_str(sym_leaf);
-<a href=#1493 id=1493 data-nosnippet>1493</a>                expected.push_str(<span class="string">", "</span>);
-<a href=#1494 id=1494 data-nosnippet>1494</a>                expected.push_str(expected_leaf);
-<a href=#1495 id=1495 data-nosnippet>1495</a>            }
-<a href=#1496 id=1496 data-nosnippet>1496</a>            sym.push(<span class="string">'E'</span>);
-<a href=#1497 id=1497 data-nosnippet>1497</a>            expected.push(<span class="string">'&gt;'</span>);
-<a href=#1498 id=1498 data-nosnippet>1498</a>
-<a href=#1499 id=1499 data-nosnippet>1499</a>            <span class="macro">t_nohash!</span>(<span class="kw-2">&amp;</span>sym, expected);
-<a href=#1500 id=1500 data-nosnippet>1500</a>        }
-<a href=#1501 id=1501 data-nosnippet>1501</a>    }
-<a href=#1502 id=1502 data-nosnippet>1502</a>
-<a href=#1503 id=1503 data-nosnippet>1503</a>    <span class="attr">#[test]
-<a href=#1504 id=1504 data-nosnippet>1504</a>    </span><span class="kw">fn </span>recursion_limit_backref_free_bypass() {
-<a href=#1505 id=1505 data-nosnippet>1505</a>        <span class="comment">// NOTE(eddyb) this test checks that long symbols cannot bypass the
-<a href=#1506 id=1506 data-nosnippet>1506</a>        // recursion limit by not using backrefs, and cause a stack overflow.
-<a href=#1507 id=1507 data-nosnippet>1507</a>
-<a href=#1508 id=1508 data-nosnippet>1508</a>        // This value was chosen to be high enough that stack overflows were
-<a href=#1509 id=1509 data-nosnippet>1509</a>        // observed even with `cargo test --release`.
-<a href=#1510 id=1510 data-nosnippet>1510</a>        </span><span class="kw">let </span>depth = <span class="number">100_000</span>;
-<a href=#1511 id=1511 data-nosnippet>1511</a>
-<a href=#1512 id=1512 data-nosnippet>1512</a>        <span class="comment">// In order to hide the long mangling from the initial "shallow" parse,
-<a href=#1513 id=1513 data-nosnippet>1513</a>        // it's nested in an identifier (crate name), preceding its use.
-<a href=#1514 id=1514 data-nosnippet>1514</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>sym = <span class="macro">format!</span>(<span class="string">"_RIC{}"</span>, depth);
-<a href=#1515 id=1515 data-nosnippet>1515</a>        <span class="kw">let </span>backref_start = sym.len() - <span class="number">2</span>;
-<a href=#1516 id=1516 data-nosnippet>1516</a>        <span class="kw">for _ in </span><span class="number">0</span>..depth {
-<a href=#1517 id=1517 data-nosnippet>1517</a>            sym.push(<span class="string">'R'</span>);
-<a href=#1518 id=1518 data-nosnippet>1518</a>        }
-<a href=#1519 id=1519 data-nosnippet>1519</a>
-<a href=#1520 id=1520 data-nosnippet>1520</a>        <span class="comment">// Write a backref to just after the length of the identifier.
-<a href=#1521 id=1521 data-nosnippet>1521</a>        </span>sym.push(<span class="string">'B'</span>);
-<a href=#1522 id=1522 data-nosnippet>1522</a>        sym.push(char::from_digit((backref_start - <span class="number">1</span>) <span class="kw">as </span>u32, <span class="number">36</span>).unwrap());
-<a href=#1523 id=1523 data-nosnippet>1523</a>        sym.push(<span class="string">'_'</span>);
-<a href=#1524 id=1524 data-nosnippet>1524</a>
-<a href=#1525 id=1525 data-nosnippet>1525</a>        <span class="comment">// Close the `I` at the start.
-<a href=#1526 id=1526 data-nosnippet>1526</a>        </span>sym.push(<span class="string">'E'</span>);
-<a href=#1527 id=1527 data-nosnippet>1527</a>
-<a href=#1528 id=1528 data-nosnippet>1528</a>        <span class="macro">assert_contains!</span>(::demangle(<span class="kw-2">&amp;</span>sym).to_string(), <span class="string">"{recursion limit reached}"</span>);
-<a href=#1529 id=1529 data-nosnippet>1529</a>    }
-<a href=#1530 id=1530 data-nosnippet>1530</a>}</code></pre></div></section></main></body></html>
+<a href=#1285 id=1285 data-nosnippet>1285</a>    </span><span class="kw">fn </span>demangle_crate_with_zero_disambiguator() {
+<a href=#1286 id=1286 data-nosnippet>1286</a>        <span class="macro">t!</span>(<span class="string">"_RC4f128"</span>, <span class="string">"f128"</span>);
+<a href=#1287 id=1287 data-nosnippet>1287</a>        <span class="macro">t_nohash!</span>(<span class="string">"_RC4f128"</span>, <span class="string">"f128"</span>);
+<a href=#1288 id=1288 data-nosnippet>1288</a>    }
+<a href=#1289 id=1289 data-nosnippet>1289</a>
+<a href=#1290 id=1290 data-nosnippet>1290</a>    <span class="attr">#[test]
+<a href=#1291 id=1291 data-nosnippet>1291</a>    </span><span class="kw">fn </span>demangle_utf8_idents() {
+<a href=#1292 id=1292 data-nosnippet>1292</a>        <span class="macro">t_nohash!</span>(
+<a href=#1293 id=1293 data-nosnippet>1293</a>            <span class="string">"_RNqCs4fqI2P2rA04_11utf8_identsu30____7hkackfecea1cbdathfdh9hlq6y"</span>,
+<a href=#1294 id=1294 data-nosnippet>1294</a>            <span class="string">"utf8_idents::საჭმელად_გემრიელი_სადილი"
+<a href=#1295 id=1295 data-nosnippet>1295</a>        </span>);
+<a href=#1296 id=1296 data-nosnippet>1296</a>    }
+<a href=#1297 id=1297 data-nosnippet>1297</a>
+<a href=#1298 id=1298 data-nosnippet>1298</a>    <span class="attr">#[test]
+<a href=#1299 id=1299 data-nosnippet>1299</a>    </span><span class="kw">fn </span>demangle_closure() {
+<a href=#1300 id=1300 data-nosnippet>1300</a>        <span class="macro">t_nohash!</span>(
+<a href=#1301 id=1301 data-nosnippet>1301</a>            <span class="string">"_RNCNCNgCs6DXkGYLi8lr_2cc5spawn00B5_"</span>,
+<a href=#1302 id=1302 data-nosnippet>1302</a>            <span class="string">"cc::spawn::{closure#0}::{closure#0}"
+<a href=#1303 id=1303 data-nosnippet>1303</a>        </span>);
+<a href=#1304 id=1304 data-nosnippet>1304</a>        <span class="macro">t_nohash!</span>(
+<a href=#1305 id=1305 data-nosnippet>1305</a>            <span class="string">"_RNCINkXs25_NgCsbmNqQUJIY6D_4core5sliceINyB9_4IterhENuNgNoBb_4iter8iterator8Iterator9rpositionNCNgNpB9_6memchr7memrchrs_0E0Bb_"</span>,
+<a href=#1306 id=1306 data-nosnippet>1306</a>            <span class="string">"&lt;core::slice::Iter&lt;u8&gt; as core::iter::iterator::Iterator&gt;::rposition::&lt;core::slice::memchr::memrchr::{closure#1}&gt;::{closure#0}"
+<a href=#1307 id=1307 data-nosnippet>1307</a>        </span>);
+<a href=#1308 id=1308 data-nosnippet>1308</a>    }
+<a href=#1309 id=1309 data-nosnippet>1309</a>
+<a href=#1310 id=1310 data-nosnippet>1310</a>    <span class="attr">#[test]
+<a href=#1311 id=1311 data-nosnippet>1311</a>    </span><span class="kw">fn </span>demangle_dyn_trait() {
+<a href=#1312 id=1312 data-nosnippet>1312</a>        <span class="macro">t_nohash!</span>(
+<a href=#1313 id=1313 data-nosnippet>1313</a>            <span class="string">"_RINbNbCskIICzLVDPPb_5alloc5alloc8box_freeDINbNiB4_5boxed5FnBoxuEp6OutputuEL_ECs1iopQbuBiw2_3std"</span>,
+<a href=#1314 id=1314 data-nosnippet>1314</a>            <span class="string">"alloc::alloc::box_free::&lt;dyn alloc::boxed::FnBox&lt;(), Output = ()&gt;&gt;"
+<a href=#1315 id=1315 data-nosnippet>1315</a>        </span>);
+<a href=#1316 id=1316 data-nosnippet>1316</a>    }
+<a href=#1317 id=1317 data-nosnippet>1317</a>
+<a href=#1318 id=1318 data-nosnippet>1318</a>    <span class="attr">#[test]
+<a href=#1319 id=1319 data-nosnippet>1319</a>    </span><span class="kw">fn </span>demangle_const_generics_preview() {
+<a href=#1320 id=1320 data-nosnippet>1320</a>        <span class="comment">// NOTE(eddyb) this was hand-written, before rustc had working
+<a href=#1321 id=1321 data-nosnippet>1321</a>        // const generics support (but the mangling format did include them).
+<a href=#1322 id=1322 data-nosnippet>1322</a>        </span><span class="macro">t_nohash_type!</span>(
+<a href=#1323 id=1323 data-nosnippet>1323</a>            <span class="string">"INtC8arrayvec8ArrayVechKj7b_E"</span>,
+<a href=#1324 id=1324 data-nosnippet>1324</a>            <span class="string">"arrayvec::ArrayVec&lt;u8, 123&gt;"
+<a href=#1325 id=1325 data-nosnippet>1325</a>        </span>);
+<a href=#1326 id=1326 data-nosnippet>1326</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"j7b_"</span>, <span class="string">"123"</span>, <span class="string">"usize"</span>);
+<a href=#1327 id=1327 data-nosnippet>1327</a>    }
+<a href=#1328 id=1328 data-nosnippet>1328</a>
+<a href=#1329 id=1329 data-nosnippet>1329</a>    <span class="attr">#[test]
+<a href=#1330 id=1330 data-nosnippet>1330</a>    </span><span class="kw">fn </span>demangle_min_const_generics() {
+<a href=#1331 id=1331 data-nosnippet>1331</a>        <span class="macro">t_const!</span>(<span class="string">"p"</span>, <span class="string">"_"</span>);
+<a href=#1332 id=1332 data-nosnippet>1332</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"hb_"</span>, <span class="string">"11"</span>, <span class="string">"u8"</span>);
+<a href=#1333 id=1333 data-nosnippet>1333</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"off00ff00ff00ff00ff_"</span>, <span class="string">"0xff00ff00ff00ff00ff"</span>, <span class="string">"u128"</span>);
+<a href=#1334 id=1334 data-nosnippet>1334</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"s98_"</span>, <span class="string">"152"</span>, <span class="string">"i16"</span>);
+<a href=#1335 id=1335 data-nosnippet>1335</a>        <span class="macro">t_const_suffixed!</span>(<span class="string">"anb_"</span>, <span class="string">"-11"</span>, <span class="string">"i8"</span>);
+<a href=#1336 id=1336 data-nosnippet>1336</a>        <span class="macro">t_const!</span>(<span class="string">"b0_"</span>, <span class="string">"false"</span>);
+<a href=#1337 id=1337 data-nosnippet>1337</a>        <span class="macro">t_const!</span>(<span class="string">"b1_"</span>, <span class="string">"true"</span>);
+<a href=#1338 id=1338 data-nosnippet>1338</a>        <span class="macro">t_const!</span>(<span class="string">"c76_"</span>, <span class="string">"'v'"</span>);
+<a href=#1339 id=1339 data-nosnippet>1339</a>        <span class="macro">t_const!</span>(<span class="string">"c22_"</span>, <span class="string">r#"'"'"#</span>);
+<a href=#1340 id=1340 data-nosnippet>1340</a>        <span class="macro">t_const!</span>(<span class="string">"ca_"</span>, <span class="string">"'\\n'"</span>);
+<a href=#1341 id=1341 data-nosnippet>1341</a>        <span class="macro">t_const!</span>(<span class="string">"c2202_"</span>, <span class="string">"'∂'"</span>);
+<a href=#1342 id=1342 data-nosnippet>1342</a>    }
+<a href=#1343 id=1343 data-nosnippet>1343</a>
+<a href=#1344 id=1344 data-nosnippet>1344</a>    <span class="attr">#[test]
+<a href=#1345 id=1345 data-nosnippet>1345</a>    </span><span class="kw">fn </span>demangle_const_str() {
+<a href=#1346 id=1346 data-nosnippet>1346</a>        <span class="macro">t_const!</span>(<span class="string">"e616263_"</span>, <span class="string">"{*\"abc\"}"</span>);
+<a href=#1347 id=1347 data-nosnippet>1347</a>        <span class="macro">t_const!</span>(<span class="string">"e27_"</span>, <span class="string">r#"{*"'"}"#</span>);
+<a href=#1348 id=1348 data-nosnippet>1348</a>        <span class="macro">t_const!</span>(<span class="string">"e090a_"</span>, <span class="string">"{*\"\\t\\n\"}"</span>);
+<a href=#1349 id=1349 data-nosnippet>1349</a>        <span class="macro">t_const!</span>(<span class="string">"ee28882c3bc_"</span>, <span class="string">"{*\"∂ü\"}"</span>);
+<a href=#1350 id=1350 data-nosnippet>1350</a>        <span class="macro">t_const!</span>(
+<a href=#1351 id=1351 data-nosnippet>1351</a>            <span class="string">"ee183a1e18390e183ade1839be18394e1839ae18390e183935fe18392e18394e1839b\
+<a href=#1352 id=1352 data-nosnippet>1352</a>              e183a0e18398e18394e1839ae183985fe183a1e18390e18393e18398e1839ae18398_"</span>,
+<a href=#1353 id=1353 data-nosnippet>1353</a>            <span class="string">"{*\"საჭმელად_გემრიელი_სადილი\"}"
+<a href=#1354 id=1354 data-nosnippet>1354</a>        </span>);
+<a href=#1355 id=1355 data-nosnippet>1355</a>        <span class="macro">t_const!</span>(
+<a href=#1356 id=1356 data-nosnippet>1356</a>            <span class="string">"ef09f908af09fa688f09fa686f09f90ae20c2a720f09f90b6f09f9192e298\
+<a href=#1357 id=1357 data-nosnippet>1357</a>              95f09f94a520c2a720f09fa7a1f09f929bf09f929af09f9299f09f929c_"</span>,
+<a href=#1358 id=1358 data-nosnippet>1358</a>            <span class="string">"{*\"🐊🦈🦆🐮 § 🐶👒☕🔥 § 🧡💛💚💙💜\"}"
+<a href=#1359 id=1359 data-nosnippet>1359</a>        </span>);
+<a href=#1360 id=1360 data-nosnippet>1360</a>    }
+<a href=#1361 id=1361 data-nosnippet>1361</a>
+<a href=#1362 id=1362 data-nosnippet>1362</a>    <span class="comment">// NOTE(eddyb) this uses the same strings as `demangle_const_str` and should
+<a href=#1363 id=1363 data-nosnippet>1363</a>    // be kept in sync with it - while a macro could be used to generate both
+<a href=#1364 id=1364 data-nosnippet>1364</a>    // `str` and `&amp;str` tests, from a single list of strings, this seems clearer.
+<a href=#1365 id=1365 data-nosnippet>1365</a>    </span><span class="attr">#[test]
+<a href=#1366 id=1366 data-nosnippet>1366</a>    </span><span class="kw">fn </span>demangle_const_ref_str() {
+<a href=#1367 id=1367 data-nosnippet>1367</a>        <span class="macro">t_const!</span>(<span class="string">"Re616263_"</span>, <span class="string">"\"abc\""</span>);
+<a href=#1368 id=1368 data-nosnippet>1368</a>        <span class="macro">t_const!</span>(<span class="string">"Re27_"</span>, <span class="string">r#""'""#</span>);
+<a href=#1369 id=1369 data-nosnippet>1369</a>        <span class="macro">t_const!</span>(<span class="string">"Re090a_"</span>, <span class="string">"\"\\t\\n\""</span>);
+<a href=#1370 id=1370 data-nosnippet>1370</a>        <span class="macro">t_const!</span>(<span class="string">"Ree28882c3bc_"</span>, <span class="string">"\"∂ü\""</span>);
+<a href=#1371 id=1371 data-nosnippet>1371</a>        <span class="macro">t_const!</span>(
+<a href=#1372 id=1372 data-nosnippet>1372</a>            <span class="string">"Ree183a1e18390e183ade1839be18394e1839ae18390e183935fe18392e18394e1839b\
+<a href=#1373 id=1373 data-nosnippet>1373</a>               e183a0e18398e18394e1839ae183985fe183a1e18390e18393e18398e1839ae18398_"</span>,
+<a href=#1374 id=1374 data-nosnippet>1374</a>            <span class="string">"\"საჭმელად_გემრიელი_სადილი\""
+<a href=#1375 id=1375 data-nosnippet>1375</a>        </span>);
+<a href=#1376 id=1376 data-nosnippet>1376</a>        <span class="macro">t_const!</span>(
+<a href=#1377 id=1377 data-nosnippet>1377</a>            <span class="string">"Ref09f908af09fa688f09fa686f09f90ae20c2a720f09f90b6f09f9192e298\
+<a href=#1378 id=1378 data-nosnippet>1378</a>               95f09f94a520c2a720f09fa7a1f09f929bf09f929af09f9299f09f929c_"</span>,
+<a href=#1379 id=1379 data-nosnippet>1379</a>            <span class="string">"\"🐊🦈🦆🐮 § 🐶👒☕🔥 § 🧡💛💚💙💜\""
+<a href=#1380 id=1380 data-nosnippet>1380</a>        </span>);
+<a href=#1381 id=1381 data-nosnippet>1381</a>    }
+<a href=#1382 id=1382 data-nosnippet>1382</a>
+<a href=#1383 id=1383 data-nosnippet>1383</a>    <span class="attr">#[test]
+<a href=#1384 id=1384 data-nosnippet>1384</a>    </span><span class="kw">fn </span>demangle_const_ref() {
+<a href=#1385 id=1385 data-nosnippet>1385</a>        <span class="macro">t_const!</span>(<span class="string">"Rp"</span>, <span class="string">"{&amp;_}"</span>);
+<a href=#1386 id=1386 data-nosnippet>1386</a>        <span class="macro">t_const!</span>(<span class="string">"Rh7b_"</span>, <span class="string">"{&amp;123}"</span>);
+<a href=#1387 id=1387 data-nosnippet>1387</a>        <span class="macro">t_const!</span>(<span class="string">"Rb0_"</span>, <span class="string">"{&amp;false}"</span>);
+<a href=#1388 id=1388 data-nosnippet>1388</a>        <span class="macro">t_const!</span>(<span class="string">"Rc58_"</span>, <span class="string">"{&amp;'X'}"</span>);
+<a href=#1389 id=1389 data-nosnippet>1389</a>        <span class="macro">t_const!</span>(<span class="string">"RRRh0_"</span>, <span class="string">"{&amp;&amp;&amp;0}"</span>);
+<a href=#1390 id=1390 data-nosnippet>1390</a>        <span class="macro">t_const!</span>(<span class="string">"RRRe_"</span>, <span class="string">"{&amp;&amp;\"\"}"</span>);
+<a href=#1391 id=1391 data-nosnippet>1391</a>        <span class="macro">t_const!</span>(<span class="string">"QAE"</span>, <span class="string">"{&amp;mut []}"</span>);
+<a href=#1392 id=1392 data-nosnippet>1392</a>    }
+<a href=#1393 id=1393 data-nosnippet>1393</a>
+<a href=#1394 id=1394 data-nosnippet>1394</a>    <span class="attr">#[test]
+<a href=#1395 id=1395 data-nosnippet>1395</a>    </span><span class="kw">fn </span>demangle_const_array() {
+<a href=#1396 id=1396 data-nosnippet>1396</a>        <span class="macro">t_const!</span>(<span class="string">"AE"</span>, <span class="string">"{[]}"</span>);
+<a href=#1397 id=1397 data-nosnippet>1397</a>        <span class="macro">t_const!</span>(<span class="string">"Aj0_E"</span>, <span class="string">"{[0]}"</span>);
+<a href=#1398 id=1398 data-nosnippet>1398</a>        <span class="macro">t_const!</span>(<span class="string">"Ah1_h2_h3_E"</span>, <span class="string">"{[1, 2, 3]}"</span>);
+<a href=#1399 id=1399 data-nosnippet>1399</a>        <span class="macro">t_const!</span>(<span class="string">"ARe61_Re62_Re63_E"</span>, <span class="string">"{[\"a\", \"b\", \"c\"]}"</span>);
+<a href=#1400 id=1400 data-nosnippet>1400</a>        <span class="macro">t_const!</span>(<span class="string">"AAh1_h2_EAh3_h4_EE"</span>, <span class="string">"{[[1, 2], [3, 4]]}"</span>);
+<a href=#1401 id=1401 data-nosnippet>1401</a>    }
+<a href=#1402 id=1402 data-nosnippet>1402</a>
+<a href=#1403 id=1403 data-nosnippet>1403</a>    <span class="attr">#[test]
+<a href=#1404 id=1404 data-nosnippet>1404</a>    </span><span class="kw">fn </span>demangle_const_tuple() {
+<a href=#1405 id=1405 data-nosnippet>1405</a>        <span class="macro">t_const!</span>(<span class="string">"TE"</span>, <span class="string">"{()}"</span>);
+<a href=#1406 id=1406 data-nosnippet>1406</a>        <span class="macro">t_const!</span>(<span class="string">"Tj0_E"</span>, <span class="string">"{(0,)}"</span>);
+<a href=#1407 id=1407 data-nosnippet>1407</a>        <span class="macro">t_const!</span>(<span class="string">"Th1_b0_E"</span>, <span class="string">"{(1, false)}"</span>);
+<a href=#1408 id=1408 data-nosnippet>1408</a>        <span class="macro">t_const!</span>(
+<a href=#1409 id=1409 data-nosnippet>1409</a>            <span class="string">"TRe616263_c78_RAh1_h2_h3_EE"</span>,
+<a href=#1410 id=1410 data-nosnippet>1410</a>            <span class="string">"{(\"abc\", 'x', &amp;[1, 2, 3])}"
+<a href=#1411 id=1411 data-nosnippet>1411</a>        </span>);
+<a href=#1412 id=1412 data-nosnippet>1412</a>    }
+<a href=#1413 id=1413 data-nosnippet>1413</a>
+<a href=#1414 id=1414 data-nosnippet>1414</a>    <span class="attr">#[test]
+<a href=#1415 id=1415 data-nosnippet>1415</a>    </span><span class="kw">fn </span>demangle_const_adt() {
+<a href=#1416 id=1416 data-nosnippet>1416</a>        <span class="macro">t_const!</span>(
+<a href=#1417 id=1417 data-nosnippet>1417</a>            <span class="string">"VNvINtNtC4core6option6OptionjE4NoneU"</span>,
+<a href=#1418 id=1418 data-nosnippet>1418</a>            <span class="string">"{core::option::Option::&lt;usize&gt;::None}"
+<a href=#1419 id=1419 data-nosnippet>1419</a>        </span>);
+<a href=#1420 id=1420 data-nosnippet>1420</a>        <span class="macro">t_const!</span>(
+<a href=#1421 id=1421 data-nosnippet>1421</a>            <span class="string">"VNvINtNtC4core6option6OptionjE4SomeTj0_E"</span>,
+<a href=#1422 id=1422 data-nosnippet>1422</a>            <span class="string">"{core::option::Option::&lt;usize&gt;::Some(0)}"
+<a href=#1423 id=1423 data-nosnippet>1423</a>        </span>);
+<a href=#1424 id=1424 data-nosnippet>1424</a>        <span class="macro">t_const!</span>(
+<a href=#1425 id=1425 data-nosnippet>1425</a>            <span class="string">"VNtC3foo3BarS1sRe616263_2chc78_5sliceRAh1_h2_h3_EE"</span>,
+<a href=#1426 id=1426 data-nosnippet>1426</a>            <span class="string">"{foo::Bar { s: \"abc\", ch: 'x', slice: &amp;[1, 2, 3] }}"
+<a href=#1427 id=1427 data-nosnippet>1427</a>        </span>);
+<a href=#1428 id=1428 data-nosnippet>1428</a>    }
+<a href=#1429 id=1429 data-nosnippet>1429</a>
+<a href=#1430 id=1430 data-nosnippet>1430</a>    <span class="attr">#[test]
+<a href=#1431 id=1431 data-nosnippet>1431</a>    </span><span class="kw">fn </span>demangle_exponential_explosion() {
+<a href=#1432 id=1432 data-nosnippet>1432</a>        <span class="comment">// NOTE(eddyb) because of the prefix added by `t_nohash_type!` is
+<a href=#1433 id=1433 data-nosnippet>1433</a>        // 3 bytes long, `B2_` refers to the start of the type, not `B_`.
+<a href=#1434 id=1434 data-nosnippet>1434</a>        // 6 backrefs (`B8_E` through `B3_E`) result in 2^6 = 64 copies of `_`.
+<a href=#1435 id=1435 data-nosnippet>1435</a>        // Also, because the `p` (`_`) type is after all of the starts of the
+<a href=#1436 id=1436 data-nosnippet>1436</a>        // backrefs, it can be replaced with any other type, independently.
+<a href=#1437 id=1437 data-nosnippet>1437</a>        </span><span class="macro">t_nohash_type!</span>(
+<a href=#1438 id=1438 data-nosnippet>1438</a>            <span class="macro">concat!</span>(<span class="string">"TTTTTT"</span>, <span class="string">"p"</span>, <span class="string">"B8_E"</span>, <span class="string">"B7_E"</span>, <span class="string">"B6_E"</span>, <span class="string">"B5_E"</span>, <span class="string">"B4_E"</span>, <span class="string">"B3_E"</span>),
+<a href=#1439 id=1439 data-nosnippet>1439</a>            <span class="string">"((((((_, _), (_, _)), ((_, _), (_, _))), (((_, _), (_, _)), ((_, _), (_, _)))), \
+<a href=#1440 id=1440 data-nosnippet>1440</a>             ((((_, _), (_, _)), ((_, _), (_, _))), (((_, _), (_, _)), ((_, _), (_, _))))), \
+<a href=#1441 id=1441 data-nosnippet>1441</a>             (((((_, _), (_, _)), ((_, _), (_, _))), (((_, _), (_, _)), ((_, _), (_, _)))), \
+<a href=#1442 id=1442 data-nosnippet>1442</a>             ((((_, _), (_, _)), ((_, _), (_, _))), (((_, _), (_, _)), ((_, _), (_, _))))))"
+<a href=#1443 id=1443 data-nosnippet>1443</a>        </span>);
+<a href=#1444 id=1444 data-nosnippet>1444</a>    }
+<a href=#1445 id=1445 data-nosnippet>1445</a>
+<a href=#1446 id=1446 data-nosnippet>1446</a>    <span class="attr">#[test]
+<a href=#1447 id=1447 data-nosnippet>1447</a>    </span><span class="kw">fn </span>demangle_thinlto() {
+<a href=#1448 id=1448 data-nosnippet>1448</a>        <span class="macro">t_nohash!</span>(<span class="string">"_RC3foo.llvm.9D1C9369"</span>, <span class="string">"foo"</span>);
+<a href=#1449 id=1449 data-nosnippet>1449</a>        <span class="macro">t_nohash!</span>(<span class="string">"_RC3foo.llvm.9D1C9369@@16"</span>, <span class="string">"foo"</span>);
+<a href=#1450 id=1450 data-nosnippet>1450</a>        <span class="macro">t_nohash!</span>(<span class="string">"_RNvC9backtrace3foo.llvm.A5310EB9"</span>, <span class="string">"backtrace::foo"</span>);
+<a href=#1451 id=1451 data-nosnippet>1451</a>    }
+<a href=#1452 id=1452 data-nosnippet>1452</a>
+<a href=#1453 id=1453 data-nosnippet>1453</a>    <span class="attr">#[test]
+<a href=#1454 id=1454 data-nosnippet>1454</a>    </span><span class="kw">fn </span>demangle_extra_suffix() {
+<a href=#1455 id=1455 data-nosnippet>1455</a>        <span class="comment">// From alexcrichton/rustc-demangle#27:
+<a href=#1456 id=1456 data-nosnippet>1456</a>        </span><span class="macro">t_nohash!</span>(
+<a href=#1457 id=1457 data-nosnippet>1457</a>            <span class="string">"_RNvNtNtNtNtCs92dm3009vxr_4rand4rngs7adapter9reseeding4fork23FORK_HANDLER_REGISTERED.0.0"</span>,
+<a href=#1458 id=1458 data-nosnippet>1458</a>            <span class="string">"rand::rngs::adapter::reseeding::fork::FORK_HANDLER_REGISTERED.0.0"
+<a href=#1459 id=1459 data-nosnippet>1459</a>        </span>);
+<a href=#1460 id=1460 data-nosnippet>1460</a>    }
+<a href=#1461 id=1461 data-nosnippet>1461</a>
+<a href=#1462 id=1462 data-nosnippet>1462</a>    <span class="attr">#[test]
+<a href=#1463 id=1463 data-nosnippet>1463</a>    </span><span class="kw">fn </span>demangling_limits() {
+<a href=#1464 id=1464 data-nosnippet>1464</a>        <span class="comment">// Stress tests found via fuzzing.
+<a href=#1465 id=1465 data-nosnippet>1465</a>
+<a href=#1466 id=1466 data-nosnippet>1466</a>        </span><span class="kw">for </span>sym <span class="kw">in </span><span class="macro">include_str!</span>(<span class="string">"v0-large-test-symbols/early-recursion-limit"</span>)
+<a href=#1467 id=1467 data-nosnippet>1467</a>            .lines()
+<a href=#1468 id=1468 data-nosnippet>1468</a>            .filter(|line| !line.is_empty() &amp;&amp; !line.starts_with(<span class="string">'#'</span>))
+<a href=#1469 id=1469 data-nosnippet>1469</a>        {
+<a href=#1470 id=1470 data-nosnippet>1470</a>            <span class="macro">assert_eq!</span>(
+<a href=#1471 id=1471 data-nosnippet>1471</a>                <span class="kw">super</span>::demangle(sym).map(|<span class="kw">_</span>| ()),
+<a href=#1472 id=1472 data-nosnippet>1472</a>                <span class="prelude-val">Err</span>(<span class="kw">super</span>::ParseError::RecursedTooDeep)
+<a href=#1473 id=1473 data-nosnippet>1473</a>            );
+<a href=#1474 id=1474 data-nosnippet>1474</a>        }
+<a href=#1475 id=1475 data-nosnippet>1475</a>
+<a href=#1476 id=1476 data-nosnippet>1476</a>        <span class="macro">assert_contains!</span>(
+<a href=#1477 id=1477 data-nosnippet>1477</a>            ::demangle(
+<a href=#1478 id=1478 data-nosnippet>1478</a>                <span class="string">"RIC20tRYIMYNRYFG05_EB5_B_B6_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR\
+<a href=#1479 id=1479 data-nosnippet>1479</a>        RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRB_E"</span>,
+<a href=#1480 id=1480 data-nosnippet>1480</a>            )
+<a href=#1481 id=1481 data-nosnippet>1481</a>            .to_string(),
+<a href=#1482 id=1482 data-nosnippet>1482</a>            <span class="string">"{recursion limit reached}"
+<a href=#1483 id=1483 data-nosnippet>1483</a>        </span>);
+<a href=#1484 id=1484 data-nosnippet>1484</a>    }
+<a href=#1485 id=1485 data-nosnippet>1485</a>
+<a href=#1486 id=1486 data-nosnippet>1486</a>    <span class="attr">#[test]
+<a href=#1487 id=1487 data-nosnippet>1487</a>    </span><span class="kw">fn </span>recursion_limit_leaks() {
+<a href=#1488 id=1488 data-nosnippet>1488</a>        <span class="comment">// NOTE(eddyb) this test checks that both paths and types support the
+<a href=#1489 id=1489 data-nosnippet>1489</a>        // recursion limit correctly, i.e. matching `push_depth` and `pop_depth`,
+<a href=#1490 id=1490 data-nosnippet>1490</a>        // and don't leak "recursion levels" and trip the limit.
+<a href=#1491 id=1491 data-nosnippet>1491</a>        // The test inputs are generated on the fly, using a repeated pattern,
+<a href=#1492 id=1492 data-nosnippet>1492</a>        // as hardcoding the actual strings would be too verbose.
+<a href=#1493 id=1493 data-nosnippet>1493</a>        // Also, `MAX_DEPTH` can be directly used, instead of assuming its value.
+<a href=#1494 id=1494 data-nosnippet>1494</a>        </span><span class="kw">for </span><span class="kw-2">&amp;</span>(sym_leaf, expected_leaf) <span class="kw">in </span><span class="kw-2">&amp;</span>[(<span class="string">"p"</span>, <span class="string">"_"</span>), (<span class="string">"Rp"</span>, <span class="string">"&amp;_"</span>), (<span class="string">"C1x"</span>, <span class="string">"x"</span>)] {
+<a href=#1495 id=1495 data-nosnippet>1495</a>            <span class="kw">let </span><span class="kw-2">mut </span>sym = <span class="macro">format!</span>(<span class="string">"_RIC0p"</span>);
+<a href=#1496 id=1496 data-nosnippet>1496</a>            <span class="kw">let </span><span class="kw-2">mut </span>expected = <span class="macro">format!</span>(<span class="string">"::&lt;_"</span>);
+<a href=#1497 id=1497 data-nosnippet>1497</a>            <span class="kw">for _ in </span><span class="number">0</span>..(<span class="kw">super</span>::MAX_DEPTH * <span class="number">2</span>) {
+<a href=#1498 id=1498 data-nosnippet>1498</a>                sym.push_str(sym_leaf);
+<a href=#1499 id=1499 data-nosnippet>1499</a>                expected.push_str(<span class="string">", "</span>);
+<a href=#1500 id=1500 data-nosnippet>1500</a>                expected.push_str(expected_leaf);
+<a href=#1501 id=1501 data-nosnippet>1501</a>            }
+<a href=#1502 id=1502 data-nosnippet>1502</a>            sym.push(<span class="string">'E'</span>);
+<a href=#1503 id=1503 data-nosnippet>1503</a>            expected.push(<span class="string">'&gt;'</span>);
+<a href=#1504 id=1504 data-nosnippet>1504</a>
+<a href=#1505 id=1505 data-nosnippet>1505</a>            <span class="macro">t_nohash!</span>(<span class="kw-2">&amp;</span>sym, expected);
+<a href=#1506 id=1506 data-nosnippet>1506</a>        }
+<a href=#1507 id=1507 data-nosnippet>1507</a>    }
+<a href=#1508 id=1508 data-nosnippet>1508</a>
+<a href=#1509 id=1509 data-nosnippet>1509</a>    <span class="attr">#[test]
+<a href=#1510 id=1510 data-nosnippet>1510</a>    </span><span class="kw">fn </span>recursion_limit_backref_free_bypass() {
+<a href=#1511 id=1511 data-nosnippet>1511</a>        <span class="comment">// NOTE(eddyb) this test checks that long symbols cannot bypass the
+<a href=#1512 id=1512 data-nosnippet>1512</a>        // recursion limit by not using backrefs, and cause a stack overflow.
+<a href=#1513 id=1513 data-nosnippet>1513</a>
+<a href=#1514 id=1514 data-nosnippet>1514</a>        // This value was chosen to be high enough that stack overflows were
+<a href=#1515 id=1515 data-nosnippet>1515</a>        // observed even with `cargo test --release`.
+<a href=#1516 id=1516 data-nosnippet>1516</a>        </span><span class="kw">let </span>depth = <span class="number">100_000</span>;
+<a href=#1517 id=1517 data-nosnippet>1517</a>
+<a href=#1518 id=1518 data-nosnippet>1518</a>        <span class="comment">// In order to hide the long mangling from the initial "shallow" parse,
+<a href=#1519 id=1519 data-nosnippet>1519</a>        // it's nested in an identifier (crate name), preceding its use.
+<a href=#1520 id=1520 data-nosnippet>1520</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>sym = <span class="macro">format!</span>(<span class="string">"_RIC{}"</span>, depth);
+<a href=#1521 id=1521 data-nosnippet>1521</a>        <span class="kw">let </span>backref_start = sym.len() - <span class="number">2</span>;
+<a href=#1522 id=1522 data-nosnippet>1522</a>        <span class="kw">for _ in </span><span class="number">0</span>..depth {
+<a href=#1523 id=1523 data-nosnippet>1523</a>            sym.push(<span class="string">'R'</span>);
+<a href=#1524 id=1524 data-nosnippet>1524</a>        }
+<a href=#1525 id=1525 data-nosnippet>1525</a>
+<a href=#1526 id=1526 data-nosnippet>1526</a>        <span class="comment">// Write a backref to just after the length of the identifier.
+<a href=#1527 id=1527 data-nosnippet>1527</a>        </span>sym.push(<span class="string">'B'</span>);
+<a href=#1528 id=1528 data-nosnippet>1528</a>        sym.push(char::from_digit((backref_start - <span class="number">1</span>) <span class="kw">as </span>u32, <span class="number">36</span>).unwrap());
+<a href=#1529 id=1529 data-nosnippet>1529</a>        sym.push(<span class="string">'_'</span>);
+<a href=#1530 id=1530 data-nosnippet>1530</a>
+<a href=#1531 id=1531 data-nosnippet>1531</a>        <span class="comment">// Close the `I` at the start.
+<a href=#1532 id=1532 data-nosnippet>1532</a>        </span>sym.push(<span class="string">'E'</span>);
+<a href=#1533 id=1533 data-nosnippet>1533</a>
+<a href=#1534 id=1534 data-nosnippet>1534</a>        <span class="macro">assert_contains!</span>(::demangle(<span class="kw-2">&amp;</span>sym).to_string(), <span class="string">"{recursion limit reached}"</span>);
+<a href=#1535 id=1535 data-nosnippet>1535</a>    }
+<a href=#1536 id=1536 data-nosnippet>1536</a>}</code></pre></div></section></main></body></html>

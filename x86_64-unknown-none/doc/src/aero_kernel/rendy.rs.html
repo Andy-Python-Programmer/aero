@@ -801,256 +801,254 @@
 <a href=#801 id=801 data-nosnippet>801</a>
 <a href=#802 id=802 data-nosnippet>802</a><span class="kw">impl </span>fmt::Write <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {
 <a href=#803 id=803 data-nosnippet>803</a>    <span class="kw">fn </span>write_str(<span class="kw-2">&amp;mut </span><span class="self">self</span>, string: <span class="kw-2">&amp;</span>str) -&gt; fmt::Result {
-<a href=#804 id=804 data-nosnippet>804</a>        <span class="kw">for </span>b <span class="kw">in </span>string.bytes() {
-<a href=#805 id=805 data-nosnippet>805</a>            <span class="self">self</span>.performer.advance(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, b);
-<a href=#806 id=806 data-nosnippet>806</a>        }
-<a href=#807 id=807 data-nosnippet>807</a>        <span class="prelude-val">Ok</span>(())
-<a href=#808 id=808 data-nosnippet>808</a>    }
-<a href=#809 id=809 data-nosnippet>809</a>}
-<a href=#810 id=810 data-nosnippet>810</a>
-<a href=#811 id=811 data-nosnippet>811</a><span class="kw">impl </span>vte::ansi::Handler <span class="kw">for </span>Inner&lt;<span class="lifetime">'_</span>&gt; {
-<a href=#812 id=812 data-nosnippet>812</a>    <span class="kw">fn </span>input(<span class="kw-2">&amp;mut </span><span class="self">self</span>, c: char) {
-<a href=#813 id=813 data-nosnippet>813</a>        <span class="self">self</span>.write_character(c);
-<a href=#814 id=814 data-nosnippet>814</a>
-<a href=#815 id=815 data-nosnippet>815</a>        <span class="kw">if </span><span class="self">self</span>.auto_flush {
-<a href=#816 id=816 data-nosnippet>816</a>            <span class="self">self</span>.double_buffer_flush();
-<a href=#817 id=817 data-nosnippet>817</a>        }
-<a href=#818 id=818 data-nosnippet>818</a>    }
-<a href=#819 id=819 data-nosnippet>819</a>
-<a href=#820 id=820 data-nosnippet>820</a>    <span class="attr">#[inline]
-<a href=#821 id=821 data-nosnippet>821</a>    </span><span class="kw">fn </span>linefeed(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-<a href=#822 id=822 data-nosnippet>822</a>        <span class="self">self</span>.input(<span class="string">'\n'</span>);
-<a href=#823 id=823 data-nosnippet>823</a>    }
-<a href=#824 id=824 data-nosnippet>824</a>
-<a href=#825 id=825 data-nosnippet>825</a>    <span class="kw">fn </span>backspace(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-<a href=#826 id=826 data-nosnippet>826</a>        <span class="kw">let </span>empty = Character {
-<a href=#827 id=827 data-nosnippet>827</a>            char: <span class="string">' '</span>,
-<a href=#828 id=828 data-nosnippet>828</a>            fg: <span class="self">self</span>.color.get_foreground(),
-<a href=#829 id=829 data-nosnippet>829</a>            bg: <span class="self">self</span>.color.get_background(),
-<a href=#830 id=830 data-nosnippet>830</a>        };
-<a href=#831 id=831 data-nosnippet>831</a>
-<a href=#832 id=832 data-nosnippet>832</a>        <span class="kw">if </span><span class="self">self</span>.x_pos == <span class="number">0 </span>{
-<a href=#833 id=833 data-nosnippet>833</a>            <span class="self">self</span>.y_pos -= <span class="number">1</span>;
-<a href=#834 id=834 data-nosnippet>834</a>            <span class="self">self</span>.x_pos = <span class="self">self</span>.cols - <span class="number">1</span>;
-<a href=#835 id=835 data-nosnippet>835</a>        } <span class="kw">else </span>{
-<a href=#836 id=836 data-nosnippet>836</a>            <span class="self">self</span>.x_pos -= <span class="number">1</span>;
-<a href=#837 id=837 data-nosnippet>837</a>        }
-<a href=#838 id=838 data-nosnippet>838</a>
-<a href=#839 id=839 data-nosnippet>839</a>        <span class="self">self</span>.push_to_queue(<span class="kw-2">&amp;</span>empty, <span class="self">self</span>.x_pos, <span class="self">self</span>.y_pos);
-<a href=#840 id=840 data-nosnippet>840</a>        <span class="self">self</span>.double_buffer_flush();
-<a href=#841 id=841 data-nosnippet>841</a>    }
-<a href=#842 id=842 data-nosnippet>842</a>
-<a href=#843 id=843 data-nosnippet>843</a>    <span class="kw">fn </span>terminal_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, attr: Attr) {
-<a href=#844 id=844 data-nosnippet>844</a>        <span class="kw">match </span>attr {
-<a href=#845 id=845 data-nosnippet>845</a>            Attr::Reset =&gt; {
-<a href=#846 id=846 data-nosnippet>846</a>                <span class="self">self</span>.color = ColorCode::new(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
-<a href=#847 id=847 data-nosnippet>847</a>            }
-<a href=#848 id=848 data-nosnippet>848</a>
-<a href=#849 id=849 data-nosnippet>849</a>            <span class="comment">// Attr::Bold =&gt; todo!(),
-<a href=#850 id=850 data-nosnippet>850</a>            // Attr::Dim =&gt; todo!(),
-<a href=#851 id=851 data-nosnippet>851</a>            // Attr::Italic =&gt; todo!(),
-<a href=#852 id=852 data-nosnippet>852</a>            // Attr::Underline =&gt; todo!(),
-<a href=#853 id=853 data-nosnippet>853</a>            // Attr::DoubleUnderline =&gt; todo!(),
-<a href=#854 id=854 data-nosnippet>854</a>            // Attr::Undercurl =&gt; todo!(),
-<a href=#855 id=855 data-nosnippet>855</a>            // Attr::DottedUnderline =&gt; todo!(),
-<a href=#856 id=856 data-nosnippet>856</a>            // Attr::DashedUnderline =&gt; todo!(),
-<a href=#857 id=857 data-nosnippet>857</a>            // Attr::BlinkSlow =&gt; todo!(),
-<a href=#858 id=858 data-nosnippet>858</a>            // Attr::BlinkFast =&gt; todo!(),
-<a href=#859 id=859 data-nosnippet>859</a>            // Attr::Reverse =&gt; todo!(),
-<a href=#860 id=860 data-nosnippet>860</a>            // Attr::Hidden =&gt; todo!(),
-<a href=#861 id=861 data-nosnippet>861</a>            // Attr::Strike =&gt; todo!(),
-<a href=#862 id=862 data-nosnippet>862</a>            // Attr::CancelBold =&gt; todo!(),
-<a href=#863 id=863 data-nosnippet>863</a>            // Attr::CancelBoldDim =&gt; todo!(),
-<a href=#864 id=864 data-nosnippet>864</a>            // Attr::CancelItalic =&gt; todo!(),
-<a href=#865 id=865 data-nosnippet>865</a>            // Attr::CancelUnderline =&gt; todo!(),
-<a href=#866 id=866 data-nosnippet>866</a>            // Attr::CancelBlink =&gt; todo!(),
-<a href=#867 id=867 data-nosnippet>867</a>            // Attr::CancelReverse =&gt; todo!(),
-<a href=#868 id=868 data-nosnippet>868</a>            // Attr::CancelHidden =&gt; todo!(),
-<a href=#869 id=869 data-nosnippet>869</a>            // Attr::CancelStrike =&gt; todo!(),
-<a href=#870 id=870 data-nosnippet>870</a>            </span>Attr::Foreground(color) =&gt; {
-<a href=#871 id=871 data-nosnippet>871</a>                <span class="kw">let </span>code = <span class="kw">match </span>color {
-<a href=#872 id=872 data-nosnippet>872</a>                    vte::ansi::Color::Named(c) =&gt; <span class="self">self</span>.color_list[c],
-<a href=#873 id=873 data-nosnippet>873</a>                    vte::ansi::Color::Indexed(c) =&gt; <span class="self">self</span>.color_list[c <span class="kw">as </span>usize],
-<a href=#874 id=874 data-nosnippet>874</a>                    <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
-<a href=#875 id=875 data-nosnippet>875</a>                };
-<a href=#876 id=876 data-nosnippet>876</a>
-<a href=#877 id=877 data-nosnippet>877</a>                <span class="self">self</span>.color.<span class="number">0 </span>= code;
-<a href=#878 id=878 data-nosnippet>878</a>            }
-<a href=#879 id=879 data-nosnippet>879</a>            <span class="comment">// Attr::Background(_) =&gt; todo!(),
-<a href=#880 id=880 data-nosnippet>880</a>            // Attr::UnderlineColor(_) =&gt; todo!(),
-<a href=#881 id=881 data-nosnippet>881</a>            </span><span class="kw">_ </span>=&gt; {}
-<a href=#882 id=882 data-nosnippet>882</a>        }
-<a href=#883 id=883 data-nosnippet>883</a>    }
-<a href=#884 id=884 data-nosnippet>884</a>}
-<a href=#885 id=885 data-nosnippet>885</a>
-<a href=#886 id=886 data-nosnippet>886</a><span class="kw">unsafe impl </span>Send <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {}
-<a href=#887 id=887 data-nosnippet>887</a><span class="kw">unsafe impl </span>Sync <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {}
+<a href=#804 id=804 data-nosnippet>804</a>        <span class="self">self</span>.performer.advance(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, string.as_bytes());
+<a href=#805 id=805 data-nosnippet>805</a>        <span class="prelude-val">Ok</span>(())
+<a href=#806 id=806 data-nosnippet>806</a>    }
+<a href=#807 id=807 data-nosnippet>807</a>}
+<a href=#808 id=808 data-nosnippet>808</a>
+<a href=#809 id=809 data-nosnippet>809</a><span class="kw">impl </span>vte::ansi::Handler <span class="kw">for </span>Inner&lt;<span class="lifetime">'_</span>&gt; {
+<a href=#810 id=810 data-nosnippet>810</a>    <span class="kw">fn </span>input(<span class="kw-2">&amp;mut </span><span class="self">self</span>, c: char) {
+<a href=#811 id=811 data-nosnippet>811</a>        <span class="self">self</span>.write_character(c);
+<a href=#812 id=812 data-nosnippet>812</a>
+<a href=#813 id=813 data-nosnippet>813</a>        <span class="kw">if </span><span class="self">self</span>.auto_flush {
+<a href=#814 id=814 data-nosnippet>814</a>            <span class="self">self</span>.double_buffer_flush();
+<a href=#815 id=815 data-nosnippet>815</a>        }
+<a href=#816 id=816 data-nosnippet>816</a>    }
+<a href=#817 id=817 data-nosnippet>817</a>
+<a href=#818 id=818 data-nosnippet>818</a>    <span class="attr">#[inline]
+<a href=#819 id=819 data-nosnippet>819</a>    </span><span class="kw">fn </span>linefeed(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#820 id=820 data-nosnippet>820</a>        <span class="self">self</span>.input(<span class="string">'\n'</span>);
+<a href=#821 id=821 data-nosnippet>821</a>    }
+<a href=#822 id=822 data-nosnippet>822</a>
+<a href=#823 id=823 data-nosnippet>823</a>    <span class="kw">fn </span>backspace(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#824 id=824 data-nosnippet>824</a>        <span class="kw">let </span>empty = Character {
+<a href=#825 id=825 data-nosnippet>825</a>            char: <span class="string">' '</span>,
+<a href=#826 id=826 data-nosnippet>826</a>            fg: <span class="self">self</span>.color.get_foreground(),
+<a href=#827 id=827 data-nosnippet>827</a>            bg: <span class="self">self</span>.color.get_background(),
+<a href=#828 id=828 data-nosnippet>828</a>        };
+<a href=#829 id=829 data-nosnippet>829</a>
+<a href=#830 id=830 data-nosnippet>830</a>        <span class="kw">if </span><span class="self">self</span>.x_pos == <span class="number">0 </span>{
+<a href=#831 id=831 data-nosnippet>831</a>            <span class="self">self</span>.y_pos -= <span class="number">1</span>;
+<a href=#832 id=832 data-nosnippet>832</a>            <span class="self">self</span>.x_pos = <span class="self">self</span>.cols - <span class="number">1</span>;
+<a href=#833 id=833 data-nosnippet>833</a>        } <span class="kw">else </span>{
+<a href=#834 id=834 data-nosnippet>834</a>            <span class="self">self</span>.x_pos -= <span class="number">1</span>;
+<a href=#835 id=835 data-nosnippet>835</a>        }
+<a href=#836 id=836 data-nosnippet>836</a>
+<a href=#837 id=837 data-nosnippet>837</a>        <span class="self">self</span>.push_to_queue(<span class="kw-2">&amp;</span>empty, <span class="self">self</span>.x_pos, <span class="self">self</span>.y_pos);
+<a href=#838 id=838 data-nosnippet>838</a>        <span class="self">self</span>.double_buffer_flush();
+<a href=#839 id=839 data-nosnippet>839</a>    }
+<a href=#840 id=840 data-nosnippet>840</a>
+<a href=#841 id=841 data-nosnippet>841</a>    <span class="kw">fn </span>terminal_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, attr: Attr) {
+<a href=#842 id=842 data-nosnippet>842</a>        <span class="kw">match </span>attr {
+<a href=#843 id=843 data-nosnippet>843</a>            Attr::Reset =&gt; {
+<a href=#844 id=844 data-nosnippet>844</a>                <span class="self">self</span>.color = ColorCode::new(DEFAULT_TEXT_FOREGROUND, DEFAULT_TEXT_BACKGROUND)
+<a href=#845 id=845 data-nosnippet>845</a>            }
+<a href=#846 id=846 data-nosnippet>846</a>
+<a href=#847 id=847 data-nosnippet>847</a>            <span class="comment">// Attr::Bold =&gt; todo!(),
+<a href=#848 id=848 data-nosnippet>848</a>            // Attr::Dim =&gt; todo!(),
+<a href=#849 id=849 data-nosnippet>849</a>            // Attr::Italic =&gt; todo!(),
+<a href=#850 id=850 data-nosnippet>850</a>            // Attr::Underline =&gt; todo!(),
+<a href=#851 id=851 data-nosnippet>851</a>            // Attr::DoubleUnderline =&gt; todo!(),
+<a href=#852 id=852 data-nosnippet>852</a>            // Attr::Undercurl =&gt; todo!(),
+<a href=#853 id=853 data-nosnippet>853</a>            // Attr::DottedUnderline =&gt; todo!(),
+<a href=#854 id=854 data-nosnippet>854</a>            // Attr::DashedUnderline =&gt; todo!(),
+<a href=#855 id=855 data-nosnippet>855</a>            // Attr::BlinkSlow =&gt; todo!(),
+<a href=#856 id=856 data-nosnippet>856</a>            // Attr::BlinkFast =&gt; todo!(),
+<a href=#857 id=857 data-nosnippet>857</a>            // Attr::Reverse =&gt; todo!(),
+<a href=#858 id=858 data-nosnippet>858</a>            // Attr::Hidden =&gt; todo!(),
+<a href=#859 id=859 data-nosnippet>859</a>            // Attr::Strike =&gt; todo!(),
+<a href=#860 id=860 data-nosnippet>860</a>            // Attr::CancelBold =&gt; todo!(),
+<a href=#861 id=861 data-nosnippet>861</a>            // Attr::CancelBoldDim =&gt; todo!(),
+<a href=#862 id=862 data-nosnippet>862</a>            // Attr::CancelItalic =&gt; todo!(),
+<a href=#863 id=863 data-nosnippet>863</a>            // Attr::CancelUnderline =&gt; todo!(),
+<a href=#864 id=864 data-nosnippet>864</a>            // Attr::CancelBlink =&gt; todo!(),
+<a href=#865 id=865 data-nosnippet>865</a>            // Attr::CancelReverse =&gt; todo!(),
+<a href=#866 id=866 data-nosnippet>866</a>            // Attr::CancelHidden =&gt; todo!(),
+<a href=#867 id=867 data-nosnippet>867</a>            // Attr::CancelStrike =&gt; todo!(),
+<a href=#868 id=868 data-nosnippet>868</a>            </span>Attr::Foreground(color) =&gt; {
+<a href=#869 id=869 data-nosnippet>869</a>                <span class="kw">let </span>code = <span class="kw">match </span>color {
+<a href=#870 id=870 data-nosnippet>870</a>                    vte::ansi::Color::Named(c) =&gt; <span class="self">self</span>.color_list[c],
+<a href=#871 id=871 data-nosnippet>871</a>                    vte::ansi::Color::Indexed(c) =&gt; <span class="self">self</span>.color_list[c <span class="kw">as </span>usize],
+<a href=#872 id=872 data-nosnippet>872</a>                    <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
+<a href=#873 id=873 data-nosnippet>873</a>                };
+<a href=#874 id=874 data-nosnippet>874</a>
+<a href=#875 id=875 data-nosnippet>875</a>                <span class="self">self</span>.color.<span class="number">0 </span>= code;
+<a href=#876 id=876 data-nosnippet>876</a>            }
+<a href=#877 id=877 data-nosnippet>877</a>            <span class="comment">// Attr::Background(_) =&gt; todo!(),
+<a href=#878 id=878 data-nosnippet>878</a>            // Attr::UnderlineColor(_) =&gt; todo!(),
+<a href=#879 id=879 data-nosnippet>879</a>            </span><span class="kw">_ </span>=&gt; {}
+<a href=#880 id=880 data-nosnippet>880</a>        }
+<a href=#881 id=881 data-nosnippet>881</a>    }
+<a href=#882 id=882 data-nosnippet>882</a>}
+<a href=#883 id=883 data-nosnippet>883</a>
+<a href=#884 id=884 data-nosnippet>884</a><span class="kw">unsafe impl </span>Send <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {}
+<a href=#885 id=885 data-nosnippet>885</a><span class="kw">unsafe impl </span>Sync <span class="kw">for </span>DebugRendy&lt;<span class="lifetime">'_</span>&gt; {}
+<a href=#886 id=886 data-nosnippet>886</a>
+<a href=#887 id=887 data-nosnippet>887</a><span class="kw">pub static </span>DEBUG_RENDY: Once&lt;Mutex&lt;DebugRendy&gt;&gt; = Once::new();
 <a href=#888 id=888 data-nosnippet>888</a>
-<a href=#889 id=889 data-nosnippet>889</a><span class="kw">pub static </span>DEBUG_RENDY: Once&lt;Mutex&lt;DebugRendy&gt;&gt; = Once::new();
-<a href=#890 id=890 data-nosnippet>890</a>
-<a href=#891 id=891 data-nosnippet>891</a><span class="kw">pub macro </span>print {
-<a href=#892 id=892 data-nosnippet>892</a>    ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$crate::rendy::_print</span>(<span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>))),
-<a href=#893 id=893 data-nosnippet>893</a>}
-<a href=#894 id=894 data-nosnippet>894</a>
-<a href=#895 id=895 data-nosnippet>895</a><span class="kw">pub macro </span>println {
-<a href=#896 id=896 data-nosnippet>896</a>    () =&gt; (<span class="macro-nonterminal">$</span><span class="macro">crate::rendy::print!</span>(<span class="string">"\n"</span>)),
-<a href=#897 id=897 data-nosnippet>897</a>    ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$</span><span class="macro">crate::rendy::print!</span>(<span class="string">"{}\n"</span>, <span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>))),
-<a href=#898 id=898 data-nosnippet>898</a>}
-<a href=#899 id=899 data-nosnippet>899</a>
-<a href=#900 id=900 data-nosnippet>900</a><span class="kw">pub macro </span>dbg {
-<a href=#901 id=901 data-nosnippet>901</a>    () =&gt; {
-<a href=#902 id=902 data-nosnippet>902</a>        <span class="macro">log::debug!</span>(<span class="string">"[{}:{}]"</span>, <span class="macro-nonterminal">$</span><span class="macro">crate::file!</span>(), <span class="macro-nonterminal">$</span><span class="macro">crate::line!</span>());
-<a href=#903 id=903 data-nosnippet>903</a>    },
-<a href=#904 id=904 data-nosnippet>904</a>
-<a href=#905 id=905 data-nosnippet>905</a>    (<span class="macro-nonterminal">$val</span>:expr $(,)<span class="question-mark">?</span>) =&gt; {
-<a href=#906 id=906 data-nosnippet>906</a>        <span class="comment">// Use of `match` here is intentional because it affects the lifetimes
-<a href=#907 id=907 data-nosnippet>907</a>        // of temporaries - https://stackoverflow.com/a/48732525/1063961
-<a href=#908 id=908 data-nosnippet>908</a>        </span><span class="kw">match </span><span class="macro-nonterminal">$val </span>{
-<a href=#909 id=909 data-nosnippet>909</a>            tmp =&gt; {
-<a href=#910 id=910 data-nosnippet>910</a>                <span class="macro">log::debug!</span>(<span class="string">"[{}:{}] {} = {:#?}"</span>, <span class="macro">core::file!</span>(), <span class="macro">core::line!</span>(), <span class="macro">core::stringify!</span>(<span class="macro-nonterminal">$val</span>), <span class="kw-2">&amp;</span>tmp);
-<a href=#911 id=911 data-nosnippet>911</a>                tmp
-<a href=#912 id=912 data-nosnippet>912</a>            }
-<a href=#913 id=913 data-nosnippet>913</a>        }
-<a href=#914 id=914 data-nosnippet>914</a>    },
-<a href=#915 id=915 data-nosnippet>915</a>
-<a href=#916 id=916 data-nosnippet>916</a>    ($(<span class="macro-nonterminal">$val</span>:expr),+ $(,)<span class="question-mark">?</span>) =&gt; {
-<a href=#917 id=917 data-nosnippet>917</a>        ($(<span class="macro-nonterminal">$</span><span class="macro">crate::rendy::dbg!</span>(<span class="macro-nonterminal">$val</span>)),+,)
-<a href=#918 id=918 data-nosnippet>918</a>    },
-<a href=#919 id=919 data-nosnippet>919</a>}
-<a href=#920 id=920 data-nosnippet>920</a>
-<a href=#921 id=921 data-nosnippet>921</a><span class="doccomment">/// Return true if the terminal is initialized.
-<a href=#922 id=922 data-nosnippet>922</a></span><span class="kw">pub fn </span>is_initialized() -&gt; bool {
-<a href=#923 id=923 data-nosnippet>923</a>    DEBUG_RENDY.get().is_some()
-<a href=#924 id=924 data-nosnippet>924</a>}
-<a href=#925 id=925 data-nosnippet>925</a>
-<a href=#926 id=926 data-nosnippet>926</a><span class="attr">#[doc(hidden)]
-<a href=#927 id=927 data-nosnippet>927</a></span><span class="kw">pub fn </span>_print(args: fmt::Arguments) {
-<a href=#928 id=928 data-nosnippet>928</a>    DEBUG_RENDY.get().map(|l| l.lock_irq().write_fmt(args));
-<a href=#929 id=929 data-nosnippet>929</a>}
-<a href=#930 id=930 data-nosnippet>930</a>
-<a href=#931 id=931 data-nosnippet>931</a><span class="doccomment">/// Clears the screen and if `mv` is set to true, resets the
-<a href=#932 id=932 data-nosnippet>932</a>/// cursor position to `0`.
-<a href=#933 id=933 data-nosnippet>933</a></span><span class="kw">pub fn </span>clear_screen(mv: bool) {
-<a href=#934 id=934 data-nosnippet>934</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = DEBUG_RENDY.get() {
-<a href=#935 id=935 data-nosnippet>935</a>        l.lock_irq().clear(mv)
-<a href=#936 id=936 data-nosnippet>936</a>    }
-<a href=#937 id=937 data-nosnippet>937</a>}
-<a href=#938 id=938 data-nosnippet>938</a>
-<a href=#939 id=939 data-nosnippet>939</a><span class="kw">pub fn </span>backspace() {
-<a href=#940 id=940 data-nosnippet>940</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = DEBUG_RENDY.get() {
-<a href=#941 id=941 data-nosnippet>941</a>        l.lock_irq().backspace()
-<a href=#942 id=942 data-nosnippet>942</a>    }
-<a href=#943 id=943 data-nosnippet>943</a>}
-<a href=#944 id=944 data-nosnippet>944</a>
-<a href=#945 id=945 data-nosnippet>945</a><span class="doccomment">/// Returns the terminal's resolution in the form of a `(horizontal_resolution,
-<a href=#946 id=946 data-nosnippet>946</a>/// vertical_resolution)` tuple.
-<a href=#947 id=947 data-nosnippet>947</a>///
-<a href=#948 id=948 data-nosnippet>948</a>/// # Panics
-<a href=#949 id=949 data-nosnippet>949</a>/// This function was called before the terminal was initialized.
-<a href=#950 id=950 data-nosnippet>950</a></span><span class="kw">pub fn </span>get_resolution() -&gt; (usize, usize) {
-<a href=#951 id=951 data-nosnippet>951</a>    DEBUG_RENDY
-<a href=#952 id=952 data-nosnippet>952</a>        .get()
-<a href=#953 id=953 data-nosnippet>953</a>        .map(|l| {
-<a href=#954 id=954 data-nosnippet>954</a>            <span class="kw">let </span>this = l.lock_irq();
-<a href=#955 id=955 data-nosnippet>955</a>
-<a href=#956 id=956 data-nosnippet>956</a>            (
-<a href=#957 id=957 data-nosnippet>957</a>                this.info.horizontal_resolution,
-<a href=#958 id=958 data-nosnippet>958</a>                this.info.vertical_resolution,
-<a href=#959 id=959 data-nosnippet>959</a>            )
-<a href=#960 id=960 data-nosnippet>960</a>        })
-<a href=#961 id=961 data-nosnippet>961</a>        .expect(<span class="string">"get_resolution: invoked before the terminal was initialized"</span>)
-<a href=#962 id=962 data-nosnippet>962</a>}
-<a href=#963 id=963 data-nosnippet>963</a>
-<a href=#964 id=964 data-nosnippet>964</a><span class="doccomment">/// # Panics
-<a href=#965 id=965 data-nosnippet>965</a>/// This function was called before the terminal was initialized.
-<a href=#966 id=966 data-nosnippet>966</a></span><span class="kw">pub fn </span>get_rendy_info() -&gt; RendyInfo {
-<a href=#967 id=967 data-nosnippet>967</a>    DEBUG_RENDY
-<a href=#968 id=968 data-nosnippet>968</a>        .get()
-<a href=#969 id=969 data-nosnippet>969</a>        .map(|l| {
-<a href=#970 id=970 data-nosnippet>970</a>            <span class="kw">let </span>this = l.lock_irq();
-<a href=#971 id=971 data-nosnippet>971</a>            this.info
-<a href=#972 id=972 data-nosnippet>972</a>        })
-<a href=#973 id=973 data-nosnippet>973</a>        .expect(<span class="string">"get_rendy_info: invoked before the terminal was initialized"</span>)
-<a href=#974 id=974 data-nosnippet>974</a>}
-<a href=#975 id=975 data-nosnippet>975</a>
-<a href=#976 id=976 data-nosnippet>976</a><span class="doccomment">/// Returns the terminal's rows and columns in the form of a `(rows, columns)` tuple.
-<a href=#977 id=977 data-nosnippet>977</a></span><span class="kw">pub fn </span>get_rows_cols() -&gt; (usize, usize) {
-<a href=#978 id=978 data-nosnippet>978</a>    DEBUG_RENDY
-<a href=#979 id=979 data-nosnippet>979</a>        .get()
-<a href=#980 id=980 data-nosnippet>980</a>        .map(|l| {
-<a href=#981 id=981 data-nosnippet>981</a>            <span class="kw">let </span>this = l.lock_irq();
-<a href=#982 id=982 data-nosnippet>982</a>            (this.rows, this.cols)
-<a href=#983 id=983 data-nosnippet>983</a>        })
-<a href=#984 id=984 data-nosnippet>984</a>        .expect(<span class="string">"get_rows_cols: invoked before the terminal was initialized"</span>)
-<a href=#985 id=985 data-nosnippet>985</a>}
-<a href=#986 id=986 data-nosnippet>986</a>
-<a href=#987 id=987 data-nosnippet>987</a><span class="doccomment">/// Gets the cursor position as a tuple `(x, y)`.
-<a href=#988 id=988 data-nosnippet>988</a>///
-<a href=#989 id=989 data-nosnippet>989</a>/// ## Panics
-<a href=#990 id=990 data-nosnippet>990</a>/// Attempted to get the cursor position before the terminal was initialized.
-<a href=#991 id=991 data-nosnippet>991</a></span><span class="kw">pub fn </span>get_cursor_position() -&gt; (usize, usize) {
-<a href=#992 id=992 data-nosnippet>992</a>    DEBUG_RENDY
-<a href=#993 id=993 data-nosnippet>993</a>        .get()
-<a href=#994 id=994 data-nosnippet>994</a>        .map(|l| {
-<a href=#995 id=995 data-nosnippet>995</a>            <span class="kw">let </span>lock = l.lock_irq();
-<a href=#996 id=996 data-nosnippet>996</a>            (lock.x_pos, lock.y_pos)
-<a href=#997 id=997 data-nosnippet>997</a>        })
-<a href=#998 id=998 data-nosnippet>998</a>        .expect(<span class="string">"get_cursor_position: invoked before the terminal was initialized"</span>)
-<a href=#999 id=999 data-nosnippet>999</a>}
-<a href=#1000 id=1000 data-nosnippet>1000</a>
-<a href=#1001 id=1001 data-nosnippet>1001</a><span class="doccomment">/// Sets the cursor position to the provided `x` and `y` coordinates.
-<a href=#1002 id=1002 data-nosnippet>1002</a>///
-<a href=#1003 id=1003 data-nosnippet>1003</a>/// ## Panics
-<a href=#1004 id=1004 data-nosnippet>1004</a>/// * If the provided `x` position is greator then the amount of columns.
-<a href=#1005 id=1005 data-nosnippet>1005</a>/// * If the provided `y` position is greator then the amount of rows.
-<a href=#1006 id=1006 data-nosnippet>1006</a></span><span class="kw">pub fn </span>set_cursor_position(x: usize, y: usize) {
-<a href=#1007 id=1007 data-nosnippet>1007</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = DEBUG_RENDY.get() {
-<a href=#1008 id=1008 data-nosnippet>1008</a>        l.lock_irq().set_cursor_position(x, y)
-<a href=#1009 id=1009 data-nosnippet>1009</a>    }
-<a href=#1010 id=1010 data-nosnippet>1010</a>}
-<a href=#1011 id=1011 data-nosnippet>1011</a>
-<a href=#1012 id=1012 data-nosnippet>1012</a><span class="doccomment">/// Force-unlocks the rendy to prevent a deadlock.
-<a href=#1013 id=1013 data-nosnippet>1013</a>///
-<a href=#1014 id=1014 data-nosnippet>1014</a>/// ## Safety
-<a href=#1015 id=1015 data-nosnippet>1015</a>/// This method is not memory safe and should be only used when absolutely necessary.
-<a href=#1016 id=1016 data-nosnippet>1016</a></span><span class="kw">pub unsafe fn </span>force_unlock() {
-<a href=#1017 id=1017 data-nosnippet>1017</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = DEBUG_RENDY.get() {
-<a href=#1018 id=1018 data-nosnippet>1018</a>        l.force_unlock()
-<a href=#1019 id=1019 data-nosnippet>1019</a>    }
-<a href=#1020 id=1020 data-nosnippet>1020</a>}
-<a href=#1021 id=1021 data-nosnippet>1021</a>
-<a href=#1022 id=1022 data-nosnippet>1022</a><span class="kw">pub fn </span>init(fb_info: Framebuffer, cmdline: <span class="kw-2">&amp;</span>CommandLine) {
-<a href=#1023 id=1023 data-nosnippet>1023</a>    <span class="kw">let </span>stride = fb_info.pitch() <span class="kw">as </span>usize;
-<a href=#1024 id=1024 data-nosnippet>1024</a>    <span class="kw">let </span>height = fb_info.height() <span class="kw">as </span>usize;
-<a href=#1025 id=1025 data-nosnippet>1025</a>    <span class="kw">let </span>bits_per_pixel = fb_info.bpp() <span class="kw">as </span>usize;
-<a href=#1026 id=1026 data-nosnippet>1026</a>    <span class="kw">let </span>byte_len = stride * height * (bits_per_pixel / <span class="number">8</span>);
-<a href=#1027 id=1027 data-nosnippet>1027</a>
-<a href=#1028 id=1028 data-nosnippet>1028</a>    <span class="kw">let </span>framebuffer_info = RendyInfo {
-<a href=#1029 id=1029 data-nosnippet>1029</a>        byte_len,
-<a href=#1030 id=1030 data-nosnippet>1030</a>        bits_per_pixel,
-<a href=#1031 id=1031 data-nosnippet>1031</a>        horizontal_resolution: fb_info.width() <span class="kw">as </span>usize,
-<a href=#1032 id=1032 data-nosnippet>1032</a>        vertical_resolution: height,
-<a href=#1033 id=1033 data-nosnippet>1033</a>        pixel_format: PixelFormat::BGR,
-<a href=#1034 id=1034 data-nosnippet>1034</a>        stride,
-<a href=#1035 id=1035 data-nosnippet>1035</a>
-<a href=#1036 id=1036 data-nosnippet>1036</a>        red_mask_shift: fb_info.red_mask_shift(),
-<a href=#1037 id=1037 data-nosnippet>1037</a>        red_mask_size: fb_info.red_mask_size(),
-<a href=#1038 id=1038 data-nosnippet>1038</a>
-<a href=#1039 id=1039 data-nosnippet>1039</a>        green_mask_shift: fb_info.green_mask_shift(),
-<a href=#1040 id=1040 data-nosnippet>1040</a>        green_mask_size: fb_info.green_mask_size(),
-<a href=#1041 id=1041 data-nosnippet>1041</a>
-<a href=#1042 id=1042 data-nosnippet>1042</a>        blue_mask_shift: fb_info.blue_mask_shift(),
-<a href=#1043 id=1043 data-nosnippet>1043</a>        blue_mask_size: fb_info.blue_mask_size(),
-<a href=#1044 id=1044 data-nosnippet>1044</a>    };
-<a href=#1045 id=1045 data-nosnippet>1045</a>
-<a href=#1046 id=1046 data-nosnippet>1046</a>    <span class="kw">let </span>framebuffer = <span class="kw">unsafe </span>{
-<a href=#1047 id=1047 data-nosnippet>1047</a>        core::slice::from_raw_parts_mut::&lt;u32&gt;(
-<a href=#1048 id=1048 data-nosnippet>1048</a>            fb_info.addr().cast::&lt;u32&gt;(),
-<a href=#1049 id=1049 data-nosnippet>1049</a>            framebuffer_info.byte_len,
-<a href=#1050 id=1050 data-nosnippet>1050</a>        )
-<a href=#1051 id=1051 data-nosnippet>1051</a>    };
+<a href=#889 id=889 data-nosnippet>889</a><span class="kw">pub macro </span>print {
+<a href=#890 id=890 data-nosnippet>890</a>    ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$crate::rendy::_print</span>(<span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>))),
+<a href=#891 id=891 data-nosnippet>891</a>}
+<a href=#892 id=892 data-nosnippet>892</a>
+<a href=#893 id=893 data-nosnippet>893</a><span class="kw">pub macro </span>println {
+<a href=#894 id=894 data-nosnippet>894</a>    () =&gt; (<span class="macro-nonterminal">$</span><span class="macro">crate::rendy::print!</span>(<span class="string">"\n"</span>)),
+<a href=#895 id=895 data-nosnippet>895</a>    ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$</span><span class="macro">crate::rendy::print!</span>(<span class="string">"{}\n"</span>, <span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>))),
+<a href=#896 id=896 data-nosnippet>896</a>}
+<a href=#897 id=897 data-nosnippet>897</a>
+<a href=#898 id=898 data-nosnippet>898</a><span class="kw">pub macro </span>dbg {
+<a href=#899 id=899 data-nosnippet>899</a>    () =&gt; {
+<a href=#900 id=900 data-nosnippet>900</a>        <span class="macro">log::debug!</span>(<span class="string">"[{}:{}]"</span>, <span class="macro-nonterminal">$</span><span class="macro">crate::file!</span>(), <span class="macro-nonterminal">$</span><span class="macro">crate::line!</span>());
+<a href=#901 id=901 data-nosnippet>901</a>    },
+<a href=#902 id=902 data-nosnippet>902</a>
+<a href=#903 id=903 data-nosnippet>903</a>    (<span class="macro-nonterminal">$val</span>:expr $(,)<span class="question-mark">?</span>) =&gt; {
+<a href=#904 id=904 data-nosnippet>904</a>        <span class="comment">// Use of `match` here is intentional because it affects the lifetimes
+<a href=#905 id=905 data-nosnippet>905</a>        // of temporaries - https://stackoverflow.com/a/48732525/1063961
+<a href=#906 id=906 data-nosnippet>906</a>        </span><span class="kw">match </span><span class="macro-nonterminal">$val </span>{
+<a href=#907 id=907 data-nosnippet>907</a>            tmp =&gt; {
+<a href=#908 id=908 data-nosnippet>908</a>                <span class="macro">log::debug!</span>(<span class="string">"[{}:{}] {} = {:#?}"</span>, <span class="macro">core::file!</span>(), <span class="macro">core::line!</span>(), <span class="macro">core::stringify!</span>(<span class="macro-nonterminal">$val</span>), <span class="kw-2">&amp;</span>tmp);
+<a href=#909 id=909 data-nosnippet>909</a>                tmp
+<a href=#910 id=910 data-nosnippet>910</a>            }
+<a href=#911 id=911 data-nosnippet>911</a>        }
+<a href=#912 id=912 data-nosnippet>912</a>    },
+<a href=#913 id=913 data-nosnippet>913</a>
+<a href=#914 id=914 data-nosnippet>914</a>    ($(<span class="macro-nonterminal">$val</span>:expr),+ $(,)<span class="question-mark">?</span>) =&gt; {
+<a href=#915 id=915 data-nosnippet>915</a>        ($(<span class="macro-nonterminal">$</span><span class="macro">crate::rendy::dbg!</span>(<span class="macro-nonterminal">$val</span>)),+,)
+<a href=#916 id=916 data-nosnippet>916</a>    },
+<a href=#917 id=917 data-nosnippet>917</a>}
+<a href=#918 id=918 data-nosnippet>918</a>
+<a href=#919 id=919 data-nosnippet>919</a><span class="doccomment">/// Return true if the terminal is initialized.
+<a href=#920 id=920 data-nosnippet>920</a></span><span class="kw">pub fn </span>is_initialized() -&gt; bool {
+<a href=#921 id=921 data-nosnippet>921</a>    DEBUG_RENDY.get().is_some()
+<a href=#922 id=922 data-nosnippet>922</a>}
+<a href=#923 id=923 data-nosnippet>923</a>
+<a href=#924 id=924 data-nosnippet>924</a><span class="attr">#[doc(hidden)]
+<a href=#925 id=925 data-nosnippet>925</a></span><span class="kw">pub fn </span>_print(args: fmt::Arguments) {
+<a href=#926 id=926 data-nosnippet>926</a>    DEBUG_RENDY.get().map(|l| l.lock_irq().write_fmt(args));
+<a href=#927 id=927 data-nosnippet>927</a>}
+<a href=#928 id=928 data-nosnippet>928</a>
+<a href=#929 id=929 data-nosnippet>929</a><span class="doccomment">/// Clears the screen and if `mv` is set to true, resets the
+<a href=#930 id=930 data-nosnippet>930</a>/// cursor position to `0`.
+<a href=#931 id=931 data-nosnippet>931</a></span><span class="kw">pub fn </span>clear_screen(mv: bool) {
+<a href=#932 id=932 data-nosnippet>932</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = DEBUG_RENDY.get() {
+<a href=#933 id=933 data-nosnippet>933</a>        l.lock_irq().clear(mv)
+<a href=#934 id=934 data-nosnippet>934</a>    }
+<a href=#935 id=935 data-nosnippet>935</a>}
+<a href=#936 id=936 data-nosnippet>936</a>
+<a href=#937 id=937 data-nosnippet>937</a><span class="kw">pub fn </span>backspace() {
+<a href=#938 id=938 data-nosnippet>938</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = DEBUG_RENDY.get() {
+<a href=#939 id=939 data-nosnippet>939</a>        l.lock_irq().backspace()
+<a href=#940 id=940 data-nosnippet>940</a>    }
+<a href=#941 id=941 data-nosnippet>941</a>}
+<a href=#942 id=942 data-nosnippet>942</a>
+<a href=#943 id=943 data-nosnippet>943</a><span class="doccomment">/// Returns the terminal's resolution in the form of a `(horizontal_resolution,
+<a href=#944 id=944 data-nosnippet>944</a>/// vertical_resolution)` tuple.
+<a href=#945 id=945 data-nosnippet>945</a>///
+<a href=#946 id=946 data-nosnippet>946</a>/// # Panics
+<a href=#947 id=947 data-nosnippet>947</a>/// This function was called before the terminal was initialized.
+<a href=#948 id=948 data-nosnippet>948</a></span><span class="kw">pub fn </span>get_resolution() -&gt; (usize, usize) {
+<a href=#949 id=949 data-nosnippet>949</a>    DEBUG_RENDY
+<a href=#950 id=950 data-nosnippet>950</a>        .get()
+<a href=#951 id=951 data-nosnippet>951</a>        .map(|l| {
+<a href=#952 id=952 data-nosnippet>952</a>            <span class="kw">let </span>this = l.lock_irq();
+<a href=#953 id=953 data-nosnippet>953</a>
+<a href=#954 id=954 data-nosnippet>954</a>            (
+<a href=#955 id=955 data-nosnippet>955</a>                this.info.horizontal_resolution,
+<a href=#956 id=956 data-nosnippet>956</a>                this.info.vertical_resolution,
+<a href=#957 id=957 data-nosnippet>957</a>            )
+<a href=#958 id=958 data-nosnippet>958</a>        })
+<a href=#959 id=959 data-nosnippet>959</a>        .expect(<span class="string">"get_resolution: invoked before the terminal was initialized"</span>)
+<a href=#960 id=960 data-nosnippet>960</a>}
+<a href=#961 id=961 data-nosnippet>961</a>
+<a href=#962 id=962 data-nosnippet>962</a><span class="doccomment">/// # Panics
+<a href=#963 id=963 data-nosnippet>963</a>/// This function was called before the terminal was initialized.
+<a href=#964 id=964 data-nosnippet>964</a></span><span class="kw">pub fn </span>get_rendy_info() -&gt; RendyInfo {
+<a href=#965 id=965 data-nosnippet>965</a>    DEBUG_RENDY
+<a href=#966 id=966 data-nosnippet>966</a>        .get()
+<a href=#967 id=967 data-nosnippet>967</a>        .map(|l| {
+<a href=#968 id=968 data-nosnippet>968</a>            <span class="kw">let </span>this = l.lock_irq();
+<a href=#969 id=969 data-nosnippet>969</a>            this.info
+<a href=#970 id=970 data-nosnippet>970</a>        })
+<a href=#971 id=971 data-nosnippet>971</a>        .expect(<span class="string">"get_rendy_info: invoked before the terminal was initialized"</span>)
+<a href=#972 id=972 data-nosnippet>972</a>}
+<a href=#973 id=973 data-nosnippet>973</a>
+<a href=#974 id=974 data-nosnippet>974</a><span class="doccomment">/// Returns the terminal's rows and columns in the form of a `(rows, columns)` tuple.
+<a href=#975 id=975 data-nosnippet>975</a></span><span class="kw">pub fn </span>get_rows_cols() -&gt; (usize, usize) {
+<a href=#976 id=976 data-nosnippet>976</a>    DEBUG_RENDY
+<a href=#977 id=977 data-nosnippet>977</a>        .get()
+<a href=#978 id=978 data-nosnippet>978</a>        .map(|l| {
+<a href=#979 id=979 data-nosnippet>979</a>            <span class="kw">let </span>this = l.lock_irq();
+<a href=#980 id=980 data-nosnippet>980</a>            (this.rows, this.cols)
+<a href=#981 id=981 data-nosnippet>981</a>        })
+<a href=#982 id=982 data-nosnippet>982</a>        .expect(<span class="string">"get_rows_cols: invoked before the terminal was initialized"</span>)
+<a href=#983 id=983 data-nosnippet>983</a>}
+<a href=#984 id=984 data-nosnippet>984</a>
+<a href=#985 id=985 data-nosnippet>985</a><span class="doccomment">/// Gets the cursor position as a tuple `(x, y)`.
+<a href=#986 id=986 data-nosnippet>986</a>///
+<a href=#987 id=987 data-nosnippet>987</a>/// ## Panics
+<a href=#988 id=988 data-nosnippet>988</a>/// Attempted to get the cursor position before the terminal was initialized.
+<a href=#989 id=989 data-nosnippet>989</a></span><span class="kw">pub fn </span>get_cursor_position() -&gt; (usize, usize) {
+<a href=#990 id=990 data-nosnippet>990</a>    DEBUG_RENDY
+<a href=#991 id=991 data-nosnippet>991</a>        .get()
+<a href=#992 id=992 data-nosnippet>992</a>        .map(|l| {
+<a href=#993 id=993 data-nosnippet>993</a>            <span class="kw">let </span>lock = l.lock_irq();
+<a href=#994 id=994 data-nosnippet>994</a>            (lock.x_pos, lock.y_pos)
+<a href=#995 id=995 data-nosnippet>995</a>        })
+<a href=#996 id=996 data-nosnippet>996</a>        .expect(<span class="string">"get_cursor_position: invoked before the terminal was initialized"</span>)
+<a href=#997 id=997 data-nosnippet>997</a>}
+<a href=#998 id=998 data-nosnippet>998</a>
+<a href=#999 id=999 data-nosnippet>999</a><span class="doccomment">/// Sets the cursor position to the provided `x` and `y` coordinates.
+<a href=#1000 id=1000 data-nosnippet>1000</a>///
+<a href=#1001 id=1001 data-nosnippet>1001</a>/// ## Panics
+<a href=#1002 id=1002 data-nosnippet>1002</a>/// * If the provided `x` position is greator then the amount of columns.
+<a href=#1003 id=1003 data-nosnippet>1003</a>/// * If the provided `y` position is greator then the amount of rows.
+<a href=#1004 id=1004 data-nosnippet>1004</a></span><span class="kw">pub fn </span>set_cursor_position(x: usize, y: usize) {
+<a href=#1005 id=1005 data-nosnippet>1005</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = DEBUG_RENDY.get() {
+<a href=#1006 id=1006 data-nosnippet>1006</a>        l.lock_irq().set_cursor_position(x, y)
+<a href=#1007 id=1007 data-nosnippet>1007</a>    }
+<a href=#1008 id=1008 data-nosnippet>1008</a>}
+<a href=#1009 id=1009 data-nosnippet>1009</a>
+<a href=#1010 id=1010 data-nosnippet>1010</a><span class="doccomment">/// Force-unlocks the rendy to prevent a deadlock.
+<a href=#1011 id=1011 data-nosnippet>1011</a>///
+<a href=#1012 id=1012 data-nosnippet>1012</a>/// ## Safety
+<a href=#1013 id=1013 data-nosnippet>1013</a>/// This method is not memory safe and should be only used when absolutely necessary.
+<a href=#1014 id=1014 data-nosnippet>1014</a></span><span class="kw">pub unsafe fn </span>force_unlock() {
+<a href=#1015 id=1015 data-nosnippet>1015</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = DEBUG_RENDY.get() {
+<a href=#1016 id=1016 data-nosnippet>1016</a>        l.force_unlock()
+<a href=#1017 id=1017 data-nosnippet>1017</a>    }
+<a href=#1018 id=1018 data-nosnippet>1018</a>}
+<a href=#1019 id=1019 data-nosnippet>1019</a>
+<a href=#1020 id=1020 data-nosnippet>1020</a><span class="kw">pub fn </span>init(fb_info: Framebuffer, cmdline: <span class="kw-2">&amp;</span>CommandLine) {
+<a href=#1021 id=1021 data-nosnippet>1021</a>    <span class="kw">let </span>stride = fb_info.pitch() <span class="kw">as </span>usize;
+<a href=#1022 id=1022 data-nosnippet>1022</a>    <span class="kw">let </span>height = fb_info.height() <span class="kw">as </span>usize;
+<a href=#1023 id=1023 data-nosnippet>1023</a>    <span class="kw">let </span>bits_per_pixel = fb_info.bpp() <span class="kw">as </span>usize;
+<a href=#1024 id=1024 data-nosnippet>1024</a>    <span class="kw">let </span>byte_len = stride * height * (bits_per_pixel / <span class="number">8</span>);
+<a href=#1025 id=1025 data-nosnippet>1025</a>
+<a href=#1026 id=1026 data-nosnippet>1026</a>    <span class="kw">let </span>framebuffer_info = RendyInfo {
+<a href=#1027 id=1027 data-nosnippet>1027</a>        byte_len,
+<a href=#1028 id=1028 data-nosnippet>1028</a>        bits_per_pixel,
+<a href=#1029 id=1029 data-nosnippet>1029</a>        horizontal_resolution: fb_info.width() <span class="kw">as </span>usize,
+<a href=#1030 id=1030 data-nosnippet>1030</a>        vertical_resolution: height,
+<a href=#1031 id=1031 data-nosnippet>1031</a>        pixel_format: PixelFormat::BGR,
+<a href=#1032 id=1032 data-nosnippet>1032</a>        stride,
+<a href=#1033 id=1033 data-nosnippet>1033</a>
+<a href=#1034 id=1034 data-nosnippet>1034</a>        red_mask_shift: fb_info.red_mask_shift(),
+<a href=#1035 id=1035 data-nosnippet>1035</a>        red_mask_size: fb_info.red_mask_size(),
+<a href=#1036 id=1036 data-nosnippet>1036</a>
+<a href=#1037 id=1037 data-nosnippet>1037</a>        green_mask_shift: fb_info.green_mask_shift(),
+<a href=#1038 id=1038 data-nosnippet>1038</a>        green_mask_size: fb_info.green_mask_size(),
+<a href=#1039 id=1039 data-nosnippet>1039</a>
+<a href=#1040 id=1040 data-nosnippet>1040</a>        blue_mask_shift: fb_info.blue_mask_shift(),
+<a href=#1041 id=1041 data-nosnippet>1041</a>        blue_mask_size: fb_info.blue_mask_size(),
+<a href=#1042 id=1042 data-nosnippet>1042</a>    };
+<a href=#1043 id=1043 data-nosnippet>1043</a>
+<a href=#1044 id=1044 data-nosnippet>1044</a>    <span class="kw">let </span>framebuffer = <span class="kw">unsafe </span>{
+<a href=#1045 id=1045 data-nosnippet>1045</a>        core::slice::from_raw_parts_mut::&lt;u32&gt;(
+<a href=#1046 id=1046 data-nosnippet>1046</a>            fb_info.addr().cast::&lt;u32&gt;(),
+<a href=#1047 id=1047 data-nosnippet>1047</a>            framebuffer_info.byte_len,
+<a href=#1048 id=1048 data-nosnippet>1048</a>        )
+<a href=#1049 id=1049 data-nosnippet>1049</a>    };
+<a href=#1050 id=1050 data-nosnippet>1050</a>
+<a href=#1051 id=1051 data-nosnippet>1051</a>    <span class="kw">let </span>rendy = DebugRendy::new(framebuffer, framebuffer_info, cmdline);
 <a href=#1052 id=1052 data-nosnippet>1052</a>
-<a href=#1053 id=1053 data-nosnippet>1053</a>    <span class="kw">let </span>rendy = DebugRendy::new(framebuffer, framebuffer_info, cmdline);
-<a href=#1054 id=1054 data-nosnippet>1054</a>
-<a href=#1055 id=1055 data-nosnippet>1055</a>    DEBUG_RENDY.call_once(|| Mutex::new(rendy));
-<a href=#1056 id=1056 data-nosnippet>1056</a>}</code></pre></div></section></main></body></html>
+<a href=#1053 id=1053 data-nosnippet>1053</a>    DEBUG_RENDY.call_once(|| Mutex::new(rendy));
+<a href=#1054 id=1054 data-nosnippet>1054</a>}</code></pre></div></section></main></body></html>

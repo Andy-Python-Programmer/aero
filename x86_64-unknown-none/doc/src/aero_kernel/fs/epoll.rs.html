@@ -186,56 +186,54 @@
 <a href=#186 id=186 data-nosnippet>186</a>        }
 <a href=#187 id=187 data-nosnippet>187</a>
 <a href=#188 id=188 data-nosnippet>188</a>        <span class="kw">if </span>timeout &gt; <span class="number">0 </span>{
-<a href=#189 id=189 data-nosnippet>189</a>            scheduler::get_scheduler()
-<a href=#190 id=190 data-nosnippet>190</a>                .inner
-<a href=#191 id=191 data-nosnippet>191</a>                .sleep(<span class="prelude-val">Some</span>(timeout * <span class="number">1_000_000</span>))<span class="question-mark">?</span>;
-<a href=#192 id=192 data-nosnippet>192</a>        } <span class="kw">else </span>{
-<a href=#193 id=193 data-nosnippet>193</a>            scheduler::get_scheduler().inner.sleep(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#194 id=194 data-nosnippet>194</a>        }
-<a href=#195 id=195 data-nosnippet>195</a>
-<a href=#196 id=196 data-nosnippet>196</a>        <span class="lifetime">'search</span>: <span class="kw">loop </span>{
-<a href=#197 id=197 data-nosnippet>197</a>            <span class="kw">if </span>current_task.state() == TaskState::AwaitingIoDeadline
-<a href=#198 id=198 data-nosnippet>198</a>                &amp;&amp; current_task.load_sleep_duration() == <span class="number">0
-<a href=#199 id=199 data-nosnippet>199</a>                </span>&amp;&amp; timeout &gt; <span class="number">0
-<a href=#200 id=200 data-nosnippet>200</a>            </span>{
-<a href=#201 id=201 data-nosnippet>201</a>                <span class="comment">// Timeout has expired.
-<a href=#202 id=202 data-nosnippet>202</a>                </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="number">0</span>);
-<a href=#203 id=203 data-nosnippet>203</a>            }
-<a href=#204 id=204 data-nosnippet>204</a>
-<a href=#205 id=205 data-nosnippet>205</a>            <span class="kw">for </span>(fd, event, flags) <span class="kw">in </span>fds.iter_mut() {
-<a href=#206 id=206 data-nosnippet>206</a>                <span class="comment">// If the event mask does not contain any poll(2) events, the event
-<a href=#207 id=207 data-nosnippet>207</a>                // descriptor is disabled.
-<a href=#208 id=208 data-nosnippet>208</a>                </span><span class="kw">if </span><span class="kw-2">*</span>flags == <span class="self">Self</span>::PRIVATE_BITS {
-<a href=#209 id=209 data-nosnippet>209</a>                    <span class="kw">continue</span>;
-<a href=#210 id=210 data-nosnippet>210</a>                }
+<a href=#189 id=189 data-nosnippet>189</a>            scheduler::get_scheduler().sleep(<span class="prelude-val">Some</span>(timeout * <span class="number">1_000_000</span>))<span class="question-mark">?</span>;
+<a href=#190 id=190 data-nosnippet>190</a>        } <span class="kw">else </span>{
+<a href=#191 id=191 data-nosnippet>191</a>            scheduler::get_scheduler().sleep(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#192 id=192 data-nosnippet>192</a>        }
+<a href=#193 id=193 data-nosnippet>193</a>
+<a href=#194 id=194 data-nosnippet>194</a>        <span class="lifetime">'search</span>: <span class="kw">loop </span>{
+<a href=#195 id=195 data-nosnippet>195</a>            <span class="kw">if </span>current_task.state() == TaskState::AwaitingIoDeadline
+<a href=#196 id=196 data-nosnippet>196</a>                &amp;&amp; current_task.load_sleep_duration() == <span class="number">0
+<a href=#197 id=197 data-nosnippet>197</a>                </span>&amp;&amp; timeout &gt; <span class="number">0
+<a href=#198 id=198 data-nosnippet>198</a>            </span>{
+<a href=#199 id=199 data-nosnippet>199</a>                <span class="comment">// Timeout has expired.
+<a href=#200 id=200 data-nosnippet>200</a>                </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="number">0</span>);
+<a href=#201 id=201 data-nosnippet>201</a>            }
+<a href=#202 id=202 data-nosnippet>202</a>
+<a href=#203 id=203 data-nosnippet>203</a>            <span class="kw">for </span>(fd, event, flags) <span class="kw">in </span>fds.iter_mut() {
+<a href=#204 id=204 data-nosnippet>204</a>                <span class="comment">// If the event mask does not contain any poll(2) events, the event
+<a href=#205 id=205 data-nosnippet>205</a>                // descriptor is disabled.
+<a href=#206 id=206 data-nosnippet>206</a>                </span><span class="kw">if </span><span class="kw-2">*</span>flags == <span class="self">Self</span>::PRIVATE_BITS {
+<a href=#207 id=207 data-nosnippet>207</a>                    <span class="kw">continue</span>;
+<a href=#208 id=208 data-nosnippet>208</a>                }
+<a href=#209 id=209 data-nosnippet>209</a>
+<a href=#210 id=210 data-nosnippet>210</a>                <span class="kw">let </span>ready: EPollEventFlags = fd.inode().poll(<span class="prelude-val">None</span>)<span class="question-mark">?</span>.into();
 <a href=#211 id=211 data-nosnippet>211</a>
-<a href=#212 id=212 data-nosnippet>212</a>                <span class="kw">let </span>ready: EPollEventFlags = fd.inode().poll(<span class="prelude-val">None</span>)<span class="question-mark">?</span>.into();
-<a href=#213 id=213 data-nosnippet>213</a>
-<a href=#214 id=214 data-nosnippet>214</a>                <span class="kw">if </span>!(ready &amp; <span class="kw-2">*</span>flags).is_empty() {
-<a href=#215 id=215 data-nosnippet>215</a>                    <span class="comment">// The event is ready; break out of the search loop and set ready
-<a href=#216 id=216 data-nosnippet>216</a>                    // events to 1.
-<a href=#217 id=217 data-nosnippet>217</a>                    </span>ret_events[n].events = ready &amp; <span class="kw-2">*</span>flags;
-<a href=#218 id=218 data-nosnippet>218</a>                    ret_events[n].data = event.data;
-<a href=#219 id=219 data-nosnippet>219</a>
-<a href=#220 id=220 data-nosnippet>220</a>                    <span class="kw">if </span>flags.contains(EPollEventFlags::ONESHOT) {
-<a href=#221 id=221 data-nosnippet>221</a>                        <span class="comment">// The `EPOLLONESHOT` bit that disables the descriptor when an event is
-<a href=#222 id=222 data-nosnippet>222</a>                        // received, until the next `EPOLL_CTL_MOD` will be issued.
-<a href=#223 id=223 data-nosnippet>223</a>                        </span>event.events = <span class="self">Self</span>::PRIVATE_BITS;
-<a href=#224 id=224 data-nosnippet>224</a>                    }
-<a href=#225 id=225 data-nosnippet>225</a>
-<a href=#226 id=226 data-nosnippet>226</a>                    n = <span class="number">1</span>;
-<a href=#227 id=227 data-nosnippet>227</a>                    <span class="kw">break </span><span class="lifetime">'search</span>;
-<a href=#228 id=228 data-nosnippet>228</a>                }
-<a href=#229 id=229 data-nosnippet>229</a>
-<a href=#230 id=230 data-nosnippet>230</a>                scheduler::get_scheduler().inner.await_io()<span class="question-mark">?</span>;
-<a href=#231 id=231 data-nosnippet>231</a>            }
-<a href=#232 id=232 data-nosnippet>232</a>        }
-<a href=#233 id=233 data-nosnippet>233</a>
-<a href=#234 id=234 data-nosnippet>234</a>        <span class="prelude-val">Ok</span>(n)
-<a href=#235 id=235 data-nosnippet>235</a>    }
-<a href=#236 id=236 data-nosnippet>236</a>}
-<a href=#237 id=237 data-nosnippet>237</a>
-<a href=#238 id=238 data-nosnippet>238</a><span class="kw">unsafe impl </span>Send <span class="kw">for </span>EPoll {}
-<a href=#239 id=239 data-nosnippet>239</a><span class="kw">unsafe impl </span>Sync <span class="kw">for </span>EPoll {}
-<a href=#240 id=240 data-nosnippet>240</a>
-<a href=#241 id=241 data-nosnippet>241</a><span class="kw">impl </span>INodeInterface <span class="kw">for </span>EPoll {}</code></pre></div></section></main></body></html>
+<a href=#212 id=212 data-nosnippet>212</a>                <span class="kw">if </span>!(ready &amp; <span class="kw-2">*</span>flags).is_empty() {
+<a href=#213 id=213 data-nosnippet>213</a>                    <span class="comment">// The event is ready; break out of the search loop and set ready
+<a href=#214 id=214 data-nosnippet>214</a>                    // events to 1.
+<a href=#215 id=215 data-nosnippet>215</a>                    </span>ret_events[n].events = ready &amp; <span class="kw-2">*</span>flags;
+<a href=#216 id=216 data-nosnippet>216</a>                    ret_events[n].data = event.data;
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a>                    <span class="kw">if </span>flags.contains(EPollEventFlags::ONESHOT) {
+<a href=#219 id=219 data-nosnippet>219</a>                        <span class="comment">// The `EPOLLONESHOT` bit that disables the descriptor when an event is
+<a href=#220 id=220 data-nosnippet>220</a>                        // received, until the next `EPOLL_CTL_MOD` will be issued.
+<a href=#221 id=221 data-nosnippet>221</a>                        </span>event.events = <span class="self">Self</span>::PRIVATE_BITS;
+<a href=#222 id=222 data-nosnippet>222</a>                    }
+<a href=#223 id=223 data-nosnippet>223</a>
+<a href=#224 id=224 data-nosnippet>224</a>                    n = <span class="number">1</span>;
+<a href=#225 id=225 data-nosnippet>225</a>                    <span class="kw">break </span><span class="lifetime">'search</span>;
+<a href=#226 id=226 data-nosnippet>226</a>                }
+<a href=#227 id=227 data-nosnippet>227</a>
+<a href=#228 id=228 data-nosnippet>228</a>                scheduler::get_scheduler().await_io()<span class="question-mark">?</span>;
+<a href=#229 id=229 data-nosnippet>229</a>            }
+<a href=#230 id=230 data-nosnippet>230</a>        }
+<a href=#231 id=231 data-nosnippet>231</a>
+<a href=#232 id=232 data-nosnippet>232</a>        <span class="prelude-val">Ok</span>(n)
+<a href=#233 id=233 data-nosnippet>233</a>    }
+<a href=#234 id=234 data-nosnippet>234</a>}
+<a href=#235 id=235 data-nosnippet>235</a>
+<a href=#236 id=236 data-nosnippet>236</a><span class="kw">unsafe impl </span>Send <span class="kw">for </span>EPoll {}
+<a href=#237 id=237 data-nosnippet>237</a><span class="kw">unsafe impl </span>Sync <span class="kw">for </span>EPoll {}
+<a href=#238 id=238 data-nosnippet>238</a>
+<a href=#239 id=239 data-nosnippet>239</a><span class="kw">impl </span>INodeInterface <span class="kw">for </span>EPoll {}</code></pre></div></section></main></body></html>

@@ -58,7 +58,7 @@
 <a href=#58 id=58 data-nosnippet>58</a>        <span class="comment">// Wait until the future is completed.
 <a href=#59 id=59 data-nosnippet>59</a>        </span><span class="kw">while </span>!future(<span class="kw-2">&amp;mut </span>lock) {
 <a href=#60 id=60 data-nosnippet>60</a>            core::mem::drop(lock); <span class="comment">// Drop the IRQ lock and await for IO to complete.
-<a href=#61 id=61 data-nosnippet>61</a>            </span>scheduler.inner.await_io()<span class="question-mark">?</span>;
+<a href=#61 id=61 data-nosnippet>61</a>            </span>scheduler.await_io()<span class="question-mark">?</span>;
 <a href=#62 id=62 data-nosnippet>62</a>
 <a href=#63 id=63 data-nosnippet>63</a>            <span class="comment">// Re-acquire the lock.
 <a href=#64 id=64 data-nosnippet>64</a>            </span>lock = mutex.lock_irq();
@@ -94,7 +94,7 @@
 <a href=#94 id=94 data-nosnippet>94</a>        <span class="kw">let </span>this = <span class="self">self</span>.queue.lock_irq();
 <a href=#95 id=95 data-nosnippet>95</a>
 <a href=#96 id=96 data-nosnippet>96</a>        <span class="kw">for </span>task <span class="kw">in </span>this.iter() {
-<a href=#97 id=97 data-nosnippet>97</a>            scheduler.inner.wake_up(task.clone());
+<a href=#97 id=97 data-nosnippet>97</a>            scheduler.wake_up(task.clone());
 <a href=#98 id=98 data-nosnippet>98</a>        }
 <a href=#99 id=99 data-nosnippet>99</a>    }
 <a href=#100 id=100 data-nosnippet>100</a>
@@ -104,7 +104,7 @@
 <a href=#104 id=104 data-nosnippet>104</a>        <span class="kw">let </span>this: MutexGuard&lt;Vec&lt;Arc&lt;Task&gt;&gt;&gt; = <span class="self">self</span>.queue.lock_irq();
 <a href=#105 id=105 data-nosnippet>105</a>
 <a href=#106 id=106 data-nosnippet>106</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(task) = this.first() {
-<a href=#107 id=107 data-nosnippet>107</a>            scheduler.inner.wake_up(task.clone());
+<a href=#107 id=107 data-nosnippet>107</a>            scheduler.wake_up(task.clone());
 <a href=#108 id=108 data-nosnippet>108</a>        }
 <a href=#109 id=109 data-nosnippet>109</a>    }
 <a href=#110 id=110 data-nosnippet>110</a>
@@ -168,7 +168,7 @@
 <a href=#168 id=168 data-nosnippet>168</a>                <span class="kw">return </span>BMutexGuard { guard, mutex: <span class="self">self </span>};
 <a href=#169 id=169 data-nosnippet>169</a>            }
 <a href=#170 id=170 data-nosnippet>170</a>
-<a href=#171 id=171 data-nosnippet>171</a>            <span class="kw">let _ </span>= scheduler::get_scheduler().inner.await_io();
+<a href=#171 id=171 data-nosnippet>171</a>            <span class="kw">let _ </span>= scheduler::get_scheduler().await_io();
 <a href=#172 id=172 data-nosnippet>172</a>        }
 <a href=#173 id=173 data-nosnippet>173</a>    }
 <a href=#174 id=174 data-nosnippet>174</a>}
