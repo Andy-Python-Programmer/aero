@@ -117,7 +117,7 @@ pub fn sock_recv(sockfd: usize, header: &mut MessageHeader, flags: usize) -> Res
         .get_handle(sockfd)
         .ok_or(SyscallError::EINVAL)?;
 
-    Ok(socket.inode().recv(header, flags)?)
+    Ok(socket.inode().recv(socket.flags(), header, flags)?)
 }
 
 #[syscall]

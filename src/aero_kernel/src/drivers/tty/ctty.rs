@@ -17,7 +17,7 @@
 
 //! `/dev/tty`: Controlling terminal of the current process.
 
-use aero_syscall::TIOCNOTTY;
+use aero_syscall::{OpenFlags, TIOCNOTTY};
 use alloc::sync::{Arc, Weak};
 
 use crate::fs::devfs::Device;
@@ -64,8 +64,8 @@ impl INodeInterface for Ctty {
         })
     }
 
-    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        Self::controlling_terminal()?.read_at(offset, buffer)
+    fn read_at(&self, flags: OpenFlags, offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+        Self::controlling_terminal()?.read_at(flags, offset, buffer)
     }
 
     fn write_at(&self, offset: usize, buffer: &[u8]) -> fs::Result<usize> {

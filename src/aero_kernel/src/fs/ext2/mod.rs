@@ -21,7 +21,7 @@ mod group_desc;
 use core::mem::MaybeUninit;
 
 use aero_syscall::socket::{MessageFlags, MessageHeader};
-use aero_syscall::{MMapFlags, SyscallError};
+use aero_syscall::{MMapFlags, OpenFlags, SyscallError};
 use alloc::boxed::Box;
 use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
@@ -364,7 +364,7 @@ impl CachedAccess for INode {
     }
 
     fn read_direct(&self, offset: usize, dest: PhysFrame) -> Option<usize> {
-        INodeInterface::read_at(self, offset, dest.as_slice_mut()).ok()
+        INodeInterface::read_at(self, OpenFlags::empty(), offset, dest.as_slice_mut()).ok()
     }
 
     fn write_direct(&self, offset: usize, src: PhysFrame) -> Option<usize> {
@@ -440,9 +440,14 @@ impl INodeInterface for INode {
         Ok(self.make_dirent(parent, entry.name(), entry).unwrap())
     }
 
-    fn read_at(&self, offset: usize, usr_buffer: &mut [u8]) -> super::Result<usize> {
+    fn read_at(
+        &self,
+        flags: OpenFlags,
+        offset: usize,
+        usr_buffer: &mut [u8],
+    ) -> super::Result<usize> {
         if let Some(proxy) = self.proxy.as_ref() {
-            return proxy.read_at(offset, usr_buffer);
+            return proxy.read_at(flags, offset, usr_buffer);
         }
 
         if !self.metadata()?.is_file() {
@@ -596,7 +601,7 @@ impl INodeInterface for INode {
         private_cp.as_slice_mut().fill(0);
 
         let buffer = &mut private_cp.as_slice_mut()[..size];
-        self.read_at(offset, buffer)?;
+        self.read_at(OpenFlags::empty(), offset, buffer)?;
 
         Ok(private_cp)
     }
@@ -644,9 +649,14 @@ impl INodeInterface for INode {
         }
     }
 
-    fn recv(&self, message_hdr: &mut MessageHeader, flags: MessageFlags) -> super::Result<usize> {
+    fn recv(
+        &self,
+        fd_flags: OpenFlags,
+        message_hdr: &mut MessageHeader,
+        flags: MessageFlags,
+    ) -> super::Result<usize> {
         if let Some(proxy) = self.proxy.as_ref() {
-            proxy.recv(message_hdr, flags)
+            proxy.recv(fd_flags, message_hdr, flags)
         } else {
             Err(FileSystemError::NotSupported)
         }

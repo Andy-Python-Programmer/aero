@@ -27,7 +27,6 @@ use crabnet::data_link::{Eth, EthType, MacAddr};
 use crabnet::transport::{Tcp, TcpOptions};
 use crabnet_tcp::{Address, Error as TcpError, Packet as TcpPacket, State};
 
-use crate::fs::file_table::FileHandle;
 use crate::fs::inode::{FileType, INodeInterface, Metadata, PollFlags, PollTable};
 use crate::fs::{self, FileSystemError};
 use crate::net;
@@ -59,7 +58,6 @@ impl crabnet_tcp::NetworkDevice for DeviceShim {
 pub struct TcpSocket {
     tcp: Mutex<Option<crabnet_tcp::Socket<DeviceShim>>>,
     wq: WaitQueue,
-    handle: Once<Arc<FileHandle>>,
     sref: Weak<TcpSocket>,
     peer: Once<SocketAddrInet>,
 }
@@ -70,7 +68,6 @@ impl TcpSocket {
             tcp: Mutex::new(None),
             wq: WaitQueue::new(),
             sref: sref.clone(),
-            handle: Once::new(),
             peer: Once::new(),
         })
     }
@@ -89,27 +86,20 @@ impl TcpSocket {
         self.sref.upgrade().unwrap()
     }
 
-    /// Returns whether the socket is in non-blocking mode.
-    pub fn non_blocking(&self) -> bool {
-        self.handle
-            .get()
-            .is_some_and(|handle| handle.flags().contains(OpenFlags::O_NONBLOCK))
-    }
-
-    pub fn do_recv(&self, buf: &mut [u8]) -> Result<usize, FileSystemError> {
+    pub fn do_recv(&self, flags: OpenFlags, buf: &mut [u8]) -> Result<usize, FileSystemError> {
         let mut tcp = self.tcp.lock_irq();
         let socket = tcp.as_mut().ok_or(FileSystemError::NotConnected)?;
 
         match socket.recv(buf) {
             Ok(bytes_read) => Ok(bytes_read),
 
-            Err(TcpError::WouldBlock) if self.non_blocking() => Err(FileSystemError::WouldBlock),
+            Err(TcpError::WouldBlock) if flags.is_nonblock() => Err(FileSystemError::WouldBlock),
             Err(TcpError::WouldBlock) => {
                 drop(tcp);
 
                 let mut socket = self.wq.block_on(&self.tcp, |tcp| {
                     tcp.as_ref()
-                        .map_or(true, |socket| !socket.recv_queue.is_empty())
+                        .is_none_or(|socket| !socket.recv_queue.is_empty())
                 })?;
 
                 if let Some(socket) = socket.as_mut() {
@@ -162,19 +152,19 @@ impl INodeInterface for TcpSocket {
         Ok(())
     }
 
-    fn open(&self, handle: Arc<FileHandle>) -> fs::Result<Option<fs::cache::DirCacheItem>> {
-        self.handle.call_once(|| handle);
-        Ok(None)
-    }
-
     #[inline]
     fn metadata(&self) -> Result<Metadata, FileSystemError> {
         Ok(Metadata::with_file_type(FileType::Socket))
     }
 
     #[inline]
-    fn read_at(&self, _offset: usize, buf: &mut [u8]) -> Result<usize, FileSystemError> {
-        self.do_recv(buf)
+    fn read_at(
+        &self,
+        flags: OpenFlags,
+        _offset: usize,
+        buf: &mut [u8],
+    ) -> Result<usize, FileSystemError> {
+        self.do_recv(flags, buf)
     }
 
     #[inline]
@@ -230,13 +220,18 @@ impl INodeInterface for TcpSocket {
         }
     }
 
-    fn recv(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
+    fn recv(
+        &self,
+        fd_flags: OpenFlags,
+        message_hdr: &mut MessageHeader,
+        _flags: MessageFlags,
+    ) -> fs::Result<usize> {
         Ok(message_hdr
             .iovecs_mut()
             .iter_mut()
             .map(|iovec| {
                 let iovec = iovec.as_slice_mut();
-                self.do_recv(iovec).unwrap()
+                self.do_recv(fd_flags, iovec).unwrap()
             })
             .sum::<usize>())
     }

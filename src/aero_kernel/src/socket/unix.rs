@@ -22,7 +22,6 @@ use aero_syscall::socket::{MessageFlags, MessageHeader};
 use alloc::collections::VecDeque;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
-use spin::Once;
 
 use crate::arch::user_copy::UserRef;
 use crate::fs;
@@ -194,7 +193,6 @@ pub struct UnixSocket {
     buffer: Mutex<MessageQueue>,
     wq: WaitQueue,
     weak: Weak<UnixSocket>,
-    handle: Once<Arc<FileHandle>>,
 }
 
 impl UnixSocket {
@@ -205,7 +203,6 @@ impl UnixSocket {
             buffer: Mutex::new(MessageQueue::default()),
             wq: WaitQueue::new(),
             weak: weak.clone(),
-            handle: Once::new(),
         })
     }
 
@@ -228,14 +225,6 @@ impl UnixSocket {
     pub fn sref(&self) -> Arc<Self> {
         self.weak.upgrade().unwrap()
     }
-
-    pub fn is_non_block(&self) -> bool {
-        self.handle
-            .get()
-            .expect("unix: not bound to an fd")
-            .flags()
-            .contains(OpenFlags::O_NONBLOCK)
-    }
 }
 
 impl INodeInterface for UnixSocket {
@@ -248,13 +237,13 @@ impl INodeInterface for UnixSocket {
         })
     }
 
-    fn open(&self, handle: Arc<FileHandle>) -> fs::Result<Option<DirCacheItem>> {
-        self.handle.call_once(|| handle);
-        Ok(None)
-    }
-
-    fn read_at(&self, _offset: usize, user_buffer: &mut [u8]) -> fs::Result<usize> {
-        if self.buffer.lock_irq().is_empty() && self.is_non_block() {
+    fn read_at(
+        &self,
+        flags: OpenFlags,
+        _offset: usize,
+        user_buffer: &mut [u8],
+    ) -> fs::Result<usize> {
+        if self.buffer.lock_irq().is_empty() && flags.is_nonblock() {
             return Err(FileSystemError::WouldBlock);
         }
 
@@ -383,7 +372,12 @@ impl INodeInterface for UnixSocket {
         Ok(sock)
     }
 
-    fn recv(&self, header: &mut MessageHeader, flags: MessageFlags) -> fs::Result<usize> {
+    fn recv(
+        &self,
+        fd_flags: OpenFlags,
+        header: &mut MessageHeader,
+        flags: MessageFlags,
+    ) -> fs::Result<usize> {
         // assert!(flags.is_empty());
 
         let inner = self.inner.lock_irq();
@@ -393,7 +387,7 @@ impl INodeInterface for UnixSocket {
             _ => return Err(FileSystemError::NotConnected),
         };
 
-        if self.buffer.lock_irq().is_empty() && self.is_non_block() {
+        if self.buffer.lock_irq().is_empty() && fd_flags.is_nonblock() {
             return Err(FileSystemError::WouldBlock);
         }
 

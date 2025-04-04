@@ -18,7 +18,7 @@
 use core::fmt::Write;
 use core::ops::Range;
 
-use aero_syscall::{MMapFlags, MMapProt};
+use aero_syscall::{MMapFlags, MMapProt, OpenFlags};
 
 use alloc::boxed::Box;
 use alloc::collections::linked_list::CursorMut;
@@ -111,7 +111,7 @@ fn parse_elf_header<'header>(file: &DirCacheItem) -> Result<Header<'header>, Elf
     let pt1_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT1_SIZE));
 
     file.inode()
-        .read_at(0, pt1_hdr_slice)
+        .read_at(OpenFlags::empty(), 0, pt1_hdr_slice)
         .map_err(ElfLoadError::IOError)?;
 
     let pt1_header: &'header _ = unsafe { &*pt1_hdr_slice.as_ptr().cast::<HeaderPt1>() };
@@ -127,7 +127,7 @@ fn parse_elf_header<'header>(file: &DirCacheItem) -> Result<Header<'header>, Elf
             let pt2_hdr_slice = Box::leak(mem::alloc_boxed_buffer::<u8>(ELF_PT2_64_SIZE));
 
             file.inode()
-                .read_at(ELF_PT1_SIZE, pt2_hdr_slice)
+                .read_at(OpenFlags::empty(), ELF_PT1_SIZE, pt2_hdr_slice)
                 .map_err(ElfLoadError::IOError)?;
 
             let pt2_header_ptr = pt2_hdr_slice.as_ptr();
@@ -171,7 +171,7 @@ fn parse_program_header<'pheader>(
     let phdr_buffer = Box::leak(mem::alloc_boxed_buffer::<u8>(size));
 
     file.inode()
-        .read_at(start, phdr_buffer)
+        .read_at(OpenFlags::empty(), start, phdr_buffer)
         .map_err(ElfLoadError::IOError)?;
 
     let phdr_ptr = phdr_buffer.as_ptr();
@@ -216,7 +216,7 @@ fn contains_shebang(bin: &DirCacheItem) -> Result<bool, ElfLoadError> {
     let shebang = &mut [0u8; 2];
 
     bin.inode()
-        .read_at(0, shebang)
+        .read_at(OpenFlags::empty(), 0, shebang)
         .map_err(ElfLoadError::IOError)?;
 
     Ok(shebang[0] == b'#' && shebang[1] == b'!')
@@ -235,7 +235,9 @@ fn parse_shebang(bin: &DirCacheItem) -> Result<Option<Shebang>, ElfLoadError> {
     let read_at_index = |idx: usize| -> Result<char, ElfLoadError> {
         let c = &mut [0u8; 1];
 
-        bin.inode().read_at(idx, c).map_err(ElfLoadError::IOError)?;
+        bin.inode()
+            .read_at(OpenFlags::empty(), idx, c)
+            .map_err(ElfLoadError::IOError)?;
 
         Ok(c[0] as char)
     };

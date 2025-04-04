@@ -96,6 +96,12 @@ bitflags::bitflags! {
     }
 }
 
+impl OpenFlags {
+    pub fn is_nonblock(&self) -> bool {
+        self.contains(Self::O_NONBLOCK)
+    }
+}
+
 bitflags::bitflags! {
     pub struct WaitPidFlags: usize {
         const WNOHANG    = 1;

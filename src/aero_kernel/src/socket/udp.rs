@@ -185,7 +185,12 @@ impl INodeInterface for UdpSocket {
         Ok(data.len())
     }
 
-    fn recv(&self, message_hdr: &mut MessageHeader, _flags: MessageFlags) -> fs::Result<usize> {
+    fn recv(
+        &self,
+        _fd_flags: OpenFlags,
+        message_hdr: &mut MessageHeader,
+        _flags: MessageFlags,
+    ) -> fs::Result<usize> {
         // assert!(flags.is_empty());
 
         if self.inner.lock_irq().incoming.is_empty() && self.is_non_block() {

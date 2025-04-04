@@ -54,7 +54,12 @@ impl INodeInterface for EventFd {
         Ok(None)
     }
 
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> super::Result<usize> {
+    fn read_at(
+        &self,
+        _flags: OpenFlags,
+        _offset: usize,
+        buffer: &mut [u8],
+    ) -> super::Result<usize> {
         let size = core::mem::size_of::<u64>();
         assert!(buffer.len() >= size);
 

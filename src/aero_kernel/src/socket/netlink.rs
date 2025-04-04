@@ -27,7 +27,7 @@
 
 use aero_syscall::netlink::{MessageFlags, MessageType, RtAttrType};
 use aero_syscall::socket::{self, MessageHeader};
-use aero_syscall::{netlink, AF_INET, AF_NETLINK, AF_UNSPEC};
+use aero_syscall::{netlink, OpenFlags, AF_INET, AF_NETLINK, AF_UNSPEC};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use crabnet::network::Ipv4Addr;
@@ -211,7 +211,7 @@ impl INodeInterface for NetLinkSocket {
         unimplemented!()
     }
 
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> fs::Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, _buffer: &mut [u8]) -> fs::Result<usize> {
         unimplemented!()
     }
 
@@ -221,6 +221,7 @@ impl INodeInterface for NetLinkSocket {
 
     fn recv(
         &self,
+        _fd_flags: OpenFlags,
         message_hdr: &mut MessageHeader,
         flags: socket::MessageFlags,
     ) -> fs::Result<usize> {

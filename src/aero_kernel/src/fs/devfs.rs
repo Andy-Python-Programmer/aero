@@ -36,7 +36,7 @@ use super::ramfs::RamFs;
 use super::{FileSystem, FileSystemError, Result, MOUNT_MANAGER};
 
 use aero_syscall::prelude::*;
-use aero_syscall::MMapFlags;
+use aero_syscall::{MMapFlags, OpenFlags};
 
 lazy_static::lazy_static! {
     pub static ref DEV_FILESYSTEM: Arc<DevFs> = DevFs::new();
@@ -113,8 +113,8 @@ impl INodeInterface for DevINode {
         self.0.inode().write_at(offset, buffer)
     }
 
-    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
-        self.0.inode().read_at(offset, buffer)
+    fn read_at(&self, flags: OpenFlags, offset: usize, buffer: &mut [u8]) -> Result<usize> {
+        self.0.inode().read_at(flags, offset, buffer)
     }
 
     fn mmap(&self, offset: usize, size: usize, flags: MMapFlags) -> Result<PhysFrame> {
@@ -178,7 +178,7 @@ impl Device for DevNull {
 }
 
 impl INodeInterface for DevNull {
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
         Ok(0x00)
     }
 
@@ -214,7 +214,7 @@ impl Device for DevKmsg {
 }
 
 impl INodeInterface for DevKmsg {
-    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, offset: usize, buffer: &mut [u8]) -> Result<usize> {
         let buf = logger::get_log_buffer();
 
         let size = core::cmp::min(buffer.len(), buf.len());
@@ -448,7 +448,7 @@ impl Device for DevUrandom {
 }
 
 impl INodeInterface for DevUrandom {
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> Result<usize> {
         for (_, b) in buffer.iter_mut().enumerate() {
             *b = 0;
         }

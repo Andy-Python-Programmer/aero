@@ -137,7 +137,7 @@ pub trait INodeInterface: Send + Sync {
     }
 
     /// Read at the provided `offset` to the given `buffer`.
-    fn read_at(&self, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, _buffer: &mut [u8]) -> Result<usize> {
         Err(FileSystemError::NotSupported)
     }
 
@@ -269,7 +269,12 @@ pub trait INodeInterface: Send + Sync {
         Err(FileSystemError::NotSupported)
     }
 
-    fn recv(&self, _message_hdr: &mut MessageHeader, _flags: MessageFlags) -> Result<usize> {
+    fn recv(
+        &self,
+        _fd_flags: OpenFlags,
+        _message_hdr: &mut MessageHeader,
+        _flags: MessageFlags,
+    ) -> Result<usize> {
         Err(FileSystemError::NotSocket)
     }
 

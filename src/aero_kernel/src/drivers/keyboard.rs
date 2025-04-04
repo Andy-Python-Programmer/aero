@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use aero_syscall::OpenFlags;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::RwLock;
@@ -228,7 +229,7 @@ impl KeyboardListener for KeyboardDevice {
 }
 
 impl INodeInterface for KeyboardDevice {
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         if self.buffer.lock_irq().is_empty() {
             return Ok(0);
         }

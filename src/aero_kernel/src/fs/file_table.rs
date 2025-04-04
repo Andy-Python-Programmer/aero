@@ -81,7 +81,7 @@ impl FileHandle {
 
     pub fn read(&self, buffer: &mut [u8]) -> super::Result<usize> {
         let offset = self.offset.load(Ordering::SeqCst);
-        let new_offset = self.inode.inode().read_at(offset, buffer)?;
+        let new_offset = self.inode.inode().read_at(self.flags(), offset, buffer)?;
 
         self.offset.fetch_add(new_offset, Ordering::SeqCst);
         Ok(new_offset)

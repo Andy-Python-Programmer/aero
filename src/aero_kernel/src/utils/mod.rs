@@ -231,9 +231,9 @@ macro_rules! extern_sym {
             static $sym: ::core::ffi::c_void;
         }
 
-        // SAFETY: The value is not accessed, we only take its address. The `addr_of!()` ensures
+        // The value is not accessed, we only take its address. The `addr_of!()` ensures
         // that no intermediate references is created.
-        unsafe { ::core::ptr::addr_of!($sym) }
+        ::core::ptr::addr_of!($sym)
     }};
 }
 

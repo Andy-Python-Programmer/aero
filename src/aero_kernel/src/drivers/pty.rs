@@ -17,8 +17,7 @@
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use aero_syscall as libc;
-use aero_syscall::{Termios, WinSize};
+use aero_syscall::{self as libc, OpenFlags, Termios, WinSize};
 
 use alloc::collections::BTreeMap;
 use alloc::string::ToString;
@@ -128,7 +127,7 @@ impl Master {
 }
 
 impl INodeInterface for Master {
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         let mut pty_buffer = self.buffer.lock_irq();
 
         if pty_buffer.is_empty() {
@@ -280,7 +279,7 @@ impl INodeInterface for Slave {
         Ok(flags)
     }
 
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         Ok(self.master.discipline.read(buffer)?)
     }
 

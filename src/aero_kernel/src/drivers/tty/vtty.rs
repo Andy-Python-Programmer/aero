@@ -19,6 +19,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::OpenFlags;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 
@@ -246,7 +247,7 @@ impl INodeInterface for Tty {
         self.connected.fetch_sub(1, Ordering::SeqCst);
     }
 
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         self.block_queue
             .block_on(&self.stdin, |future| future.is_complete())?;
 

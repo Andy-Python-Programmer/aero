@@ -17,6 +17,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+use aero_syscall::OpenFlags;
 use alloc::borrow::ToOwned;
 use alloc::collections::BTreeMap;
 use alloc::string::ToString;
@@ -183,7 +184,7 @@ impl LockedProcINode {
 }
 
 impl INodeInterface for LockedProcINode {
-    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         let this = self.0.read();
 
         let data = match &this.contents {

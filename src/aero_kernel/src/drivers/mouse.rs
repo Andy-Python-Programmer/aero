@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use aero_syscall::OpenFlags;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
@@ -137,7 +138,7 @@ impl Device for Mouse {
 }
 
 impl INodeInterface for Mouse {
-    fn read_at(&self, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+    fn read_at(&self, _flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
         let size = core::mem::size_of::<Packet>();
 
         if buffer.len() < size {

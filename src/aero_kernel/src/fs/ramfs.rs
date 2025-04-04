@@ -17,7 +17,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use aero_syscall::MMapFlags;
+use aero_syscall::{MMapFlags, OpenFlags};
 use alloc::collections::BTreeMap;
 use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
@@ -261,7 +261,7 @@ impl INodeInterface for LockedRamINode {
         }
     }
 
-    fn read_at(&self, offset: usize, buffer: &mut [u8]) -> Result<usize> {
+    fn read_at(&self, flags: OpenFlags, offset: usize, buffer: &mut [u8]) -> Result<usize> {
         let this = self.0.read();
 
         match &this.contents {
@@ -294,10 +294,10 @@ impl INodeInterface for LockedRamINode {
                 let device = device.clone();
                 drop(this);
 
-                device.read_at(offset, buffer)
+                device.read_at(flags, offset, buffer)
             }
 
-            FileContents::Socket(e) => e.read_at(offset, buffer),
+            FileContents::Socket(e) => e.read_at(flags, offset, buffer),
             FileContents::None => Err(FileSystemError::NotSupported),
         }
     }

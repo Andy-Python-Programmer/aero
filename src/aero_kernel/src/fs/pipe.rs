@@ -37,8 +37,6 @@ pub struct Pipe {
 
     /// The number of writers currently connected to the pipe.
     num_writers: AtomicUsize,
-
-    handle: Once<Arc<FileHandle>>,
 }
 
 impl Pipe {
@@ -50,8 +48,6 @@ impl Pipe {
             writers: WaitQueue::new(),
 
             num_writers: AtomicUsize::new(0),
-
-            handle: Once::new(),
         })
     }
 
@@ -66,7 +62,6 @@ impl INodeInterface for Pipe {
         // Write end of the pipe:
         if handle.flags().contains(OpenFlags::O_WRONLY) {
             self.num_writers.fetch_add(1, Ordering::SeqCst);
-            self.handle.call_once(|| handle);
         }
 
         Ok(None)
@@ -84,11 +79,8 @@ impl INodeInterface for Pipe {
         }
     }
 
-    fn read_at(&self, _offset: usize, buf: &mut [u8]) -> super::Result<usize> {
-        let flags = self.handle.get().expect("pipe: internal error").flags();
-
-        let nonblock = flags.contains(OpenFlags::O_NONBLOCK);
-        if nonblock && !self.queue.lock_irq().has_data() {
+    fn read_at(&self, flags: OpenFlags, _offset: usize, buf: &mut [u8]) -> super::Result<usize> {
+        if flags.is_nonblock() && !self.queue.lock_irq().has_data() {
             return Err(FileSystemError::WouldBlock);
         }
 
