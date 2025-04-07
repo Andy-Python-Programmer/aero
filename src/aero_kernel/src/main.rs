@@ -45,7 +45,7 @@
     cfg_match, // https://github.com/rust-lang/rust/issues/115585
     associated_type_defaults,
     new_zeroed_alloc, // https://github.com/rust-lang/rust/issues/129396
-    sync_unsafe_cell
+    sync_unsafe_cell,
 )]
 // TODO(andypython): can we remove the dependency of "prelude_import" and "lang_items"?
 //     `lang_items`     => is currently used for the personality function (`rust_eh_personality`).
@@ -59,6 +59,7 @@
 #![reexport_test_harness_main = "test_main"]
 #![warn(clippy::needless_pass_by_value)]
 #![deny(clippy::ptr_as_ptr)]
+#![allow(binary_asm_labels)]
 
 #[macro_use]
 extern crate aero_proc;
@@ -214,7 +215,7 @@ fn kernel_dbg_thread() {
 
     use crate::drivers::uart::{self, LineStatus, COM_1};
     use crate::userland::task::TaskId;
-    use crate::utils::sync::WaitQueue;
+    use crate::utils::sync::{WaitQueue, WaitQueueFlags};
 
     uart::setup_interrupts();
 
@@ -229,7 +230,7 @@ fn kernel_dbg_thread() {
 
         loop {
             let mut com_1 = input_wq
-                .block_on(com_1, |com_1| {
+                .wait(WaitQueueFlags::empty(), com_1, |com_1| {
                     com_1.line_status().contains(LineStatus::INPUT_FULL)
                 })
                 .unwrap();

@@ -221,7 +221,7 @@ impl INodeInterface for NetLinkSocket {
 
     fn recv(
         &self,
-        _fd_flags: OpenFlags,
+        fd_flags: OpenFlags,
         message_hdr: &mut MessageHeader,
         flags: socket::MessageFlags,
     ) -> fs::Result<usize> {
@@ -239,7 +239,7 @@ impl INodeInterface for NetLinkSocket {
 
         let mut queue = self
             .recv_wq
-            .block_on(&self.recv_queue, |queue| !queue.is_empty())?;
+            .wait(fd_flags.into(), &self.recv_queue, |queue| !queue.is_empty())?;
 
         let mut bytes_copied = 0;
         dbg!(message_hdr.iovecs_mut());

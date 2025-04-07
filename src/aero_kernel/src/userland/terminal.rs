@@ -22,8 +22,9 @@ use alloc::vec::Vec;
 
 use spin::RwLock;
 
+use crate::fs;
 use crate::fs::inode::INodeInterface;
-use crate::utils::sync::{Mutex, WaitQueue};
+use crate::utils::sync::{Mutex, WaitQueue, WaitQueueFlags};
 
 use super::signals::SignalError;
 use super::task::sessions::{Group, SESSIONS};
@@ -114,8 +115,10 @@ impl LineDiscipline {
         *self.termios.lock() = termios;
     }
 
-    pub fn read(&self, target: &mut [u8]) -> Result<usize, SignalError> {
-        let mut buffer = self.wq.block_on(&self.buffer, |buf| !buf.is_empty())?;
+    pub fn read(&self, target: &mut [u8]) -> fs::Result<usize> {
+        let mut buffer = self
+            .wq
+            .wait(WaitQueueFlags::empty(), &self.buffer, |buf| !buf.is_empty())?;
 
         let size = core::cmp::min(target.len(), buffer.len());
         target[..size].copy_from_slice(&buffer.drain(..size).collect::<Vec<_>>());

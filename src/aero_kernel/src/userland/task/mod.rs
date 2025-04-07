@@ -36,7 +36,7 @@ use crate::arch::task::ArchTask;
 use crate::fs::file_table::FileTable;
 use crate::syscall::ipc::MessageQueue;
 use crate::syscall::ExecArgs;
-use crate::utils::sync::{Mutex, WaitQueue};
+use crate::utils::sync::{Mutex, WaitQueue, WaitQueueError, WaitQueueFlags};
 
 use crate::userland::signals::Signals;
 
@@ -142,10 +142,10 @@ impl Zombies {
         pids: &[usize],
         status: &mut u32,
         flags: WaitPidFlags,
-    ) -> SignalResult<usize> {
+    ) -> Result<usize, WaitQueueError> {
         let mut captured = None;
 
-        self.block.block_on(&self.list, |l| {
+        self.block.wait(WaitQueueFlags::empty(), &self.list, |l| {
             let mut cursor = l.front_mut();
 
             while let Some(t) = cursor.get() {
@@ -488,7 +488,7 @@ impl Task {
         pid: isize,
         status: &mut u32,
         flags: WaitPidFlags,
-    ) -> SignalResult<usize> {
+    ) -> Result<usize, WaitQueueError> {
         if pid == -1 {
             // wait for any child process if no specific process is requested.
             //

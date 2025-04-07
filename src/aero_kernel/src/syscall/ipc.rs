@@ -18,7 +18,7 @@
 use crate::userland::scheduler::get_scheduler;
 use crate::userland::task::TaskId;
 
-use crate::utils::sync::{Mutex, WaitQueue};
+use crate::utils::sync::{Mutex, WaitQueue, WaitQueueFlags};
 
 use aero_syscall::SyscallError;
 use alloc::collections::VecDeque;
@@ -103,7 +103,9 @@ pub fn recv(pid_ptr: &mut usize, output: &mut [u8], block: usize) -> Result<usiz
     let mq = &current.message_queue;
     let mut our_queue = mq
         .blockqueue
-        .block_on(&mq.queue, |msg| msg.front().is_some())
+        .wait(WaitQueueFlags::empty(), &mq.queue, |msg| {
+            msg.front().is_some()
+        })
         .unwrap();
 
     let msg = our_queue

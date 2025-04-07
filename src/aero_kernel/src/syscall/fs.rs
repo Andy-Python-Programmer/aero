@@ -56,7 +56,6 @@ impl fmt::Display for FileDescriptor {
             let path = file_handle.inode.absolute_path();
             write!(f, "{{ {} -> {} }}", self.0, path)
         } else {
-            // invalid file descriptor
             write!(f, "{{ {} -> INVALID }}", self.0)
         }
     }
@@ -164,10 +163,7 @@ pub fn getdents(fd: FileDescriptor, buffer: &mut [u8]) -> Result<usize, SyscallE
 
 #[syscall]
 pub fn close(fd: FileDescriptor) -> Result<usize, SyscallError> {
-    let res = scheduler::get_scheduler()
-        .current_task()
-        .file_table
-        .close_file(fd.into());
+    let res = scheduler::current_thread().file_table.close_file(fd.into());
 
     if res {
         Ok(0)
@@ -218,11 +214,10 @@ pub fn mkdirat(dfd: usize, path: &Path) -> Result<usize, SyscallError> {
         // pathname is interpreted relative to the current working directory of the
         // calling task.
         if dfd as isize == aero_syscall::AT_FDCWD {
-            let cwd = scheduler::get_scheduler().current_task().cwd_dirent();
+            let cwd = scheduler::current_thread().cwd_dirent();
             (cwd.inode(), path.as_str())
         } else {
-            let handle = scheduler::get_scheduler()
-                .current_task()
+            let handle = scheduler::current_thread()
                 .file_table
                 .get_handle(dfd)
                 .ok_or(SyscallError::EBADFD)?;

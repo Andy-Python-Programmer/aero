@@ -32,7 +32,7 @@ use crate::fs::{self, FileSystemError};
 use crate::net;
 use crate::net::shim::PacketSend;
 use crate::net::{tcp, NetworkDevice};
-use crate::utils::sync::{Mutex, WaitQueue};
+use crate::utils::sync::{Mutex, WaitQueue, WaitQueueFlags};
 
 // ./aero.py -- -netdev user,id=mynet0 -device e1000,netdev=mynet0,id=ck_nic0 -object
 // filter-dump,id=mynet0,netdev=mynet0,file=qemulog.log
@@ -97,7 +97,7 @@ impl TcpSocket {
             Err(TcpError::WouldBlock) => {
                 drop(tcp);
 
-                let mut socket = self.wq.block_on(&self.tcp, |tcp| {
+                let mut socket = self.wq.wait(flags.into(), &self.tcp, |tcp| {
                     tcp.as_ref()
                         .is_none_or(|socket| !socket.recv_queue.is_empty())
                 })?;
@@ -145,7 +145,8 @@ impl INodeInterface for TcpSocket {
             *tcp = Some(socket);
         }
 
-        let _ = self.wq.block_on(&self.tcp, |x| {
+        // FIXME: connect() should pass the fd.
+        let _ = self.wq.wait(WaitQueueFlags::empty(), &self.tcp, |x| {
             x.as_ref().unwrap().state() == State::Established
         });
 

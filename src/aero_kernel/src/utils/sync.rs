@@ -15,57 +15,161 @@
 // You should have received a copy of the GNU General Public License
 // along with Aero. If not, see <https://www.gnu.org/licenses/>.
 
+use aero_syscall::{OpenFlags, SyscallError};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
 use crate::arch::interrupts;
+use crate::fs::FileSystemError;
 use crate::userland::scheduler;
-use crate::userland::signals::SignalResult;
+use crate::userland::signals::SignalError;
 use crate::userland::task::Task;
 
-/// Used to manage and block threads that are waiting for a condition to be true.
+bitflags::bitflags! {
+    #[derive(Debug, Copy, Clone)]
+    pub struct WaitQueueFlags: u32 {
+        const DISABLE_IRQ = 1 << 1;
+        const NON_BLOCK = 1 << 2;
+    }
+}
+
+impl WaitQueueFlags {
+    pub const fn is_nonblock(&self) -> bool {
+        self.contains(WaitQueueFlags::NON_BLOCK)
+    }
+}
+
+impl From<OpenFlags> for WaitQueueFlags {
+    fn from(flags: OpenFlags) -> Self {
+        let mut result = WaitQueueFlags::empty();
+        if flags.contains(OpenFlags::O_NONBLOCK) {
+            result.insert(WaitQueueFlags::NON_BLOCK);
+        }
+        result
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum WaitQueueError {
+    Interrupted,
+    WouldBlock,
+}
+
+impl From<WaitQueueError> for FileSystemError {
+    fn from(err: WaitQueueError) -> Self {
+        match err {
+            WaitQueueError::Interrupted => FileSystemError::Interrupted,
+            WaitQueueError::WouldBlock => FileSystemError::WouldBlock,
+        }
+    }
+}
+
+impl From<WaitQueueError> for SyscallError {
+    fn from(err: WaitQueueError) -> Self {
+        match err {
+            WaitQueueError::Interrupted => SyscallError::EINTR,
+            WaitQueueError::WouldBlock => SyscallError::EAGAIN,
+        }
+    }
+}
+
+/// Queue of tasks waiting for an event to occur.
 pub struct WaitQueue {
     queue: Mutex<Vec<Arc<Task>>>,
 }
 
 impl WaitQueue {
-    /// Creates a new block queue.
+    /// Create a new wait queue.
     pub const fn new() -> Self {
         Self {
             queue: Mutex::new(Vec::new()),
         }
     }
 
-    /// Run a future to completion on the current task. This function will block
-    /// the caller until the given future has completed.
-    pub fn block_on<'future, T, F: FnMut(&mut MutexGuard<T>) -> bool>(
+    fn _wait<'a, T, F>(
         &self,
-        mutex: &'future Mutex<T>,
-        mut future: F,
-    ) -> SignalResult<MutexGuard<'future, T>> {
-        let mut lock = mutex.lock_irq();
+        mutex: &'a Mutex<T>,
+        mut cond: F,
+        interruptable: bool,
+        flags: WaitQueueFlags,
+    ) -> Result<MutexGuard<'a, T>, WaitQueueError>
+    where
+        F: FnMut(&mut MutexGuard<T>) -> bool,
+    {
+        let acquire = || {
+            if flags.contains(WaitQueueFlags::DISABLE_IRQ) {
+                mutex.lock()
+            } else {
+                mutex.lock_irq()
+            }
+        };
 
-        // Check if the future was already completed.
-        if future(&mut lock) {
+        let mut lock = acquire();
+        if cond(&mut lock) {
+            // Condition is already satisfied.
             return Ok(lock);
         }
 
+        if flags.is_nonblock() {
+            return Err(WaitQueueError::WouldBlock);
+        }
+
         let scheduler = scheduler::get_scheduler();
-        let task = scheduler.current_task();
+        let task = scheduler::current_thread();
 
-        self.queue.lock_irq().push(task.clone());
+        // If no IRQs was requested, the above lock would have disabled them so,
+        // `lock_irq` is not required here.
+        self.queue.lock().push(task.clone());
 
-        // Wait until the future is completed.
-        while !future(&mut lock) {
-            core::mem::drop(lock); // Drop the IRQ lock and await for IO to complete.
-            scheduler.await_io()?;
+        while !cond(&mut lock) {
+            drop(lock);
 
-            // Re-acquire the lock.
-            lock = mutex.lock_irq();
+            match scheduler.await_io() {
+                Ok(()) => lock = mutex.lock_irq(),
+                Err(SignalError::Interrupted) if !interruptable => lock = acquire(),
+
+                Err(SignalError::Interrupted) => {
+                    self.remove(&task);
+                    return Err(WaitQueueError::Interrupted);
+                }
+            }
         }
 
         self.remove(&task);
         Ok(lock)
+    }
+
+    /// Sleeps until a condition is met.
+    ///
+    /// Should be used when waiting for events such as completion of disk I/O. Any signals sent
+    /// while waiting shall not be delivered until the condition is met and the wait is over.
+    pub fn wait_uninterruptible<'a, T, F>(
+        &self,
+        flags: WaitQueueFlags,
+        mutex: &'a Mutex<T>,
+        cond: F,
+    ) -> MutexGuard<'a, T>
+    where
+        F: FnMut(&mut MutexGuard<T>) -> bool,
+    {
+        unsafe {
+            self._wait(mutex, cond, false, flags)
+                // SAFETY: [`SignalError`] cannot occur on non-interruptible wait.
+                .unwrap_unchecked()
+        }
+    }
+
+    /// Sleeps until a condition is met.
+    ///
+    /// Should be used when waiting for events such as data being written to a pipe. Returns
+    /// [`SignalError::Interrupted`] if the wait was interrupted by a signal.
+    pub fn wait<'a, T, F: FnMut(&mut MutexGuard<T>) -> bool>(
+        &self,
+        flags: WaitQueueFlags,
+        mutex: &'a Mutex<T>,
+        cond: F,
+    ) -> Result<MutexGuard<'a, T>, WaitQueueError> {
+        self._wait(mutex, cond, true, flags)
     }
 
     pub fn insert(&self, task: Arc<Task>) {
@@ -110,6 +214,12 @@ impl WaitQueue {
 
     pub fn is_empty(&self) -> bool {
         self.queue.lock_irq().is_empty()
+    }
+}
+
+impl Default for WaitQueue {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

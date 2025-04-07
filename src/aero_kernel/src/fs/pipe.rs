@@ -22,7 +22,7 @@ use alloc::sync::Arc;
 use spin::Once;
 
 use crate::utils::buffer::Buffer;
-use crate::utils::sync::{Mutex, WaitQueue};
+use crate::utils::sync::{Mutex, WaitQueue, WaitQueueFlags};
 
 use super::cache::DirCacheItem;
 use super::file_table::FileHandle;
@@ -84,7 +84,7 @@ impl INodeInterface for Pipe {
             return Err(FileSystemError::WouldBlock);
         }
 
-        let mut buffer = self.readers.block_on(&self.queue, |lock| {
+        let mut buffer = self.readers.wait(flags.into(), &self.queue, |lock| {
             lock.has_data() || self.active_writers() == 0
         })?;
 

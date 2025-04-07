@@ -187,17 +187,16 @@ impl INodeInterface for UdpSocket {
 
     fn recv(
         &self,
-        _fd_flags: OpenFlags,
+        fd_flags: OpenFlags,
         message_hdr: &mut MessageHeader,
         _flags: MessageFlags,
     ) -> fs::Result<usize> {
         // assert!(flags.is_empty());
 
-        if self.inner.lock_irq().incoming.is_empty() && self.is_non_block() {
-            return Err(FileSystemError::WouldBlock);
-        }
+        let mut this = self
+            .wq
+            .wait(fd_flags.into(), &self.inner, |e| !e.incoming.is_empty())?;
 
-        let mut this = self.wq.block_on(&self.inner, |e| !e.incoming.is_empty())?;
         let packet = this.incoming.pop().expect("recv: someone was greedy");
 
         let mut data = packet.as_slice().to_vec();

@@ -32,7 +32,7 @@ use crate::mem::paging::VirtAddr;
 use crate::userland::scheduler;
 use crate::userland::task::Task;
 use crate::userland::terminal::TerminalDevice;
-use crate::utils::sync::{Mutex, WaitQueue};
+use crate::utils::sync::{Mutex, WaitQueue, WaitQueueFlags};
 
 #[cfg(target_arch = "x86_64")]
 use crate::drivers::keyboard::KeyCode;
@@ -247,11 +247,12 @@ impl INodeInterface for Tty {
         self.connected.fetch_sub(1, Ordering::SeqCst);
     }
 
-    fn read_at(&self, _flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
-        self.block_queue
-            .block_on(&self.stdin, |future| future.is_complete())?;
-
-        let mut stdin = self.stdin.lock_irq();
+    fn read_at(&self, flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> fs::Result<usize> {
+        let mut stdin = self.block_queue.wait(
+            WaitQueueFlags::from(flags) | WaitQueueFlags::DISABLE_IRQ,
+            &self.stdin,
+            |future| future.is_complete(),
+        )?;
 
         // record the back buffer size before swapping
         stdin.swap_buffer();

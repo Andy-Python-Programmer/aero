@@ -54,19 +54,14 @@ impl INodeInterface for EventFd {
         Ok(None)
     }
 
-    fn read_at(
-        &self,
-        _flags: OpenFlags,
-        _offset: usize,
-        buffer: &mut [u8],
-    ) -> super::Result<usize> {
+    fn read_at(&self, flags: OpenFlags, _offset: usize, buffer: &mut [u8]) -> super::Result<usize> {
         let size = core::mem::size_of::<u64>();
         assert!(buffer.len() >= size);
 
         // SAFETY: We have above verified that it is safe to dereference
         //         the value.
         let value = unsafe { &mut *(buffer.as_mut_ptr().cast::<u64>()) };
-        let mut count = self.wq.block_on(&self.count, |e| **e != 0)?;
+        let mut count = self.wq.wait(flags.into(), &self.count, |e| **e != 0)?;
 
         *value = *count;
         *count = 0; // reset the counter

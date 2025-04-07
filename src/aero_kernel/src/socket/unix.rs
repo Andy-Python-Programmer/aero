@@ -32,7 +32,7 @@ use crate::fs::inode::{DirEntry, FileType, INodeInterface, Metadata, PollFlags, 
 use crate::fs::{FileSystemError, Path};
 
 use crate::mem::paging::VirtAddr;
-use crate::utils::sync::{Mutex, WaitQueue};
+use crate::utils::sync::{Mutex, WaitQueue, WaitQueueFlags};
 
 use super::SocketAddrRef;
 
@@ -243,14 +243,11 @@ impl INodeInterface for UnixSocket {
         _offset: usize,
         user_buffer: &mut [u8],
     ) -> fs::Result<usize> {
-        if self.buffer.lock_irq().is_empty() && flags.is_nonblock() {
-            return Err(FileSystemError::WouldBlock);
-        }
+        let mut buf = self
+            .wq
+            .wait(flags.into(), &self.buffer, |e| !e.is_empty())?;
 
-        let mut buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
-
-        let read = buffer.read(user_buffer);
-        Ok(read)
+        Ok(buf.read(user_buffer))
     }
 
     fn write_at(&self, _offset: usize, buffer: &[u8]) -> fs::Result<usize> {
@@ -325,12 +322,16 @@ impl INodeInterface for UnixSocket {
         target.wq.notify_all();
         core::mem::drop(itarget); // release the lock
 
-        let _ = self.wq.block_on(&self.inner, |e| e.state.is_connected())?;
+        // FIXME: connect() should pass fd.
+        let _ = self.wq.wait(WaitQueueFlags::empty(), &self.inner, |e| {
+            e.state.is_connected()
+        })?;
         Ok(())
     }
 
     fn accept(&self, address: Option<(VirtAddr, &mut u32)>) -> fs::Result<Arc<UnixSocket>> {
-        let mut inner = self.wq.block_on(&self.inner, |e| {
+        // TODO: accept
+        let mut inner = self.wq.wait(WaitQueueFlags::empty(), &self.inner, |e| {
             e.state.queue().is_some_and(|x| !x.is_empty())
         })?;
 
@@ -387,11 +388,9 @@ impl INodeInterface for UnixSocket {
             _ => return Err(FileSystemError::NotConnected),
         };
 
-        if self.buffer.lock_irq().is_empty() && fd_flags.is_nonblock() {
-            return Err(FileSystemError::WouldBlock);
-        }
-
-        let mut buffer = self.wq.block_on(&self.buffer, |e| !e.is_empty())?;
+        let mut buffer = self
+            .wq
+            .wait(fd_flags.into(), &self.buffer, |e| !e.is_empty())?;
 
         if let Some(addr) = header.name_mut::<SocketAddrUnix>() {
             *addr = peer.inner.lock_irq().address.as_ref().cloned().unwrap();
