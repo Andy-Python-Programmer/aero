@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["BMutex","BMutexGuard","IrqGuard","Mutex","MutexGuard","WaitQueue"]};
+window.SIDEBAR_ITEMS = {"enum":["WaitQueueError"],"struct":["BMutex","BMutexGuard","IrqGuard","Mutex","MutexGuard","WaitQueue","WaitQueueFlags"]};

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/socket/unix.rs`."><title>unix.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (d5b4c2e4f 2025-04-02)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-d72f25bb.js" ><script src="../../../static.files/storage-4e99c027.js"></script><script defer src="../../../static.files/src-script-63605ae7.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">aero_kernel/socket/</div>unix.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="comment">// Copyright (C) 2021-2024 The Aero Project Developers.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `aero_kernel/src/socket/unix.rs`."><title>unix.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-de575e9a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="aero_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (2fa8b11f0 2025-04-06)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../../../static.files/storage-4e99c027.js"></script><script defer src="../../../static.files/src-script-63605ae7.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-7ef8a74a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">aero_kernel/socket/</div>unix.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="comment">// Copyright (C) 2021-2024 The Aero Project Developers.
 <a href=#2 id=2 data-nosnippet>2</a>//
 <a href=#3 id=3 data-nosnippet>3</a>// This file is part of The Aero Project.
 <a href=#4 id=4 data-nosnippet>4</a>//
@@ -32,7 +32,7 @@
 <a href=#32 id=32 data-nosnippet>32</a><span class="kw">use </span><span class="kw">crate</span>::fs::{FileSystemError, Path};
 <a href=#33 id=33 data-nosnippet>33</a>
 <a href=#34 id=34 data-nosnippet>34</a><span class="kw">use </span><span class="kw">crate</span>::mem::paging::VirtAddr;
-<a href=#35 id=35 data-nosnippet>35</a><span class="kw">use </span><span class="kw">crate</span>::utils::sync::{Mutex, WaitQueue};
+<a href=#35 id=35 data-nosnippet>35</a><span class="kw">use </span><span class="kw">crate</span>::utils::sync::{Mutex, WaitQueue, WaitQueueFlags};
 <a href=#36 id=36 data-nosnippet>36</a>
 <a href=#37 id=37 data-nosnippet>37</a><span class="kw">use </span><span class="kw">super</span>::SocketAddrRef;
 <a href=#38 id=38 data-nosnippet>38</a>
@@ -243,231 +243,230 @@
 <a href=#243 id=243 data-nosnippet>243</a>        _offset: usize,
 <a href=#244 id=244 data-nosnippet>244</a>        user_buffer: <span class="kw-2">&amp;mut </span>[u8],
 <a href=#245 id=245 data-nosnippet>245</a>    ) -&gt; fs::Result&lt;usize&gt; {
-<a href=#246 id=246 data-nosnippet>246</a>        <span class="kw">if </span><span class="self">self</span>.buffer.lock_irq().is_empty() &amp;&amp; flags.is_nonblock() {
-<a href=#247 id=247 data-nosnippet>247</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::WouldBlock);
-<a href=#248 id=248 data-nosnippet>248</a>        }
+<a href=#246 id=246 data-nosnippet>246</a>        <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="self">self
+<a href=#247 id=247 data-nosnippet>247</a>            </span>.wq
+<a href=#248 id=248 data-nosnippet>248</a>            .wait(flags.into(), <span class="kw-2">&amp;</span><span class="self">self</span>.buffer, |e| !e.is_empty())<span class="question-mark">?</span>;
 <a href=#249 id=249 data-nosnippet>249</a>
-<a href=#250 id=250 data-nosnippet>250</a>        <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="self">self</span>.wq.block_on(<span class="kw-2">&amp;</span><span class="self">self</span>.buffer, |e| !e.is_empty())<span class="question-mark">?</span>;
-<a href=#251 id=251 data-nosnippet>251</a>
-<a href=#252 id=252 data-nosnippet>252</a>        <span class="kw">let </span>read = buffer.read(user_buffer);
-<a href=#253 id=253 data-nosnippet>253</a>        <span class="prelude-val">Ok</span>(read)
-<a href=#254 id=254 data-nosnippet>254</a>    }
-<a href=#255 id=255 data-nosnippet>255</a>
-<a href=#256 id=256 data-nosnippet>256</a>    <span class="kw">fn </span>write_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _offset: usize, buffer: <span class="kw-2">&amp;</span>[u8]) -&gt; fs::Result&lt;usize&gt; {
-<a href=#257 id=257 data-nosnippet>257</a>        <span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
-<a href=#258 id=258 data-nosnippet>258</a>        <span class="kw">let </span>peer = <span class="kw">match </span>inner.state {
-<a href=#259 id=259 data-nosnippet>259</a>            UnixSocketState::Connected(<span class="kw-2">ref </span>peer) =&gt; peer,
-<a href=#260 id=260 data-nosnippet>260</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotConnected),
-<a href=#261 id=261 data-nosnippet>261</a>        };
+<a href=#250 id=250 data-nosnippet>250</a>        <span class="prelude-val">Ok</span>(buf.read(user_buffer))
+<a href=#251 id=251 data-nosnippet>251</a>    }
+<a href=#252 id=252 data-nosnippet>252</a>
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">fn </span>write_at(<span class="kw-2">&amp;</span><span class="self">self</span>, _offset: usize, buffer: <span class="kw-2">&amp;</span>[u8]) -&gt; fs::Result&lt;usize&gt; {
+<a href=#254 id=254 data-nosnippet>254</a>        <span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
+<a href=#255 id=255 data-nosnippet>255</a>        <span class="kw">let </span>peer = <span class="kw">match </span>inner.state {
+<a href=#256 id=256 data-nosnippet>256</a>            UnixSocketState::Connected(<span class="kw-2">ref </span>peer) =&gt; peer,
+<a href=#257 id=257 data-nosnippet>257</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotConnected),
+<a href=#258 id=258 data-nosnippet>258</a>        };
+<a href=#259 id=259 data-nosnippet>259</a>
+<a href=#260 id=260 data-nosnippet>260</a>        peer.buffer.lock_irq().write(buffer);
+<a href=#261 id=261 data-nosnippet>261</a>        peer.wq.notify_all();
 <a href=#262 id=262 data-nosnippet>262</a>
-<a href=#263 id=263 data-nosnippet>263</a>        peer.buffer.lock_irq().write(buffer);
-<a href=#264 id=264 data-nosnippet>264</a>        peer.wq.notify_all();
+<a href=#263 id=263 data-nosnippet>263</a>        <span class="prelude-val">Ok</span>(buffer.len())
+<a href=#264 id=264 data-nosnippet>264</a>    }
 <a href=#265 id=265 data-nosnippet>265</a>
-<a href=#266 id=266 data-nosnippet>266</a>        <span class="prelude-val">Ok</span>(buffer.len())
-<a href=#267 id=267 data-nosnippet>267</a>    }
-<a href=#268 id=268 data-nosnippet>268</a>
-<a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">fn </span>listen(<span class="kw-2">&amp;</span><span class="self">self</span>, backlog: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), SyscallError&gt; {
-<a href=#270 id=270 data-nosnippet>270</a>        <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.lock_irq();
-<a href=#271 id=271 data-nosnippet>271</a>        <span class="kw">let </span>is_bound = inner.address.is_some();
-<a href=#272 id=272 data-nosnippet>272</a>
-<a href=#273 id=273 data-nosnippet>273</a>        <span class="kw">match </span><span class="kw-2">&amp;mut </span>inner.state {
-<a href=#274 id=274 data-nosnippet>274</a>            <span class="comment">// We cannot listen on a socket that has not been bound.
-<a href=#275 id=275 data-nosnippet>275</a>            </span>UnixSocketState::Disconnected <span class="kw">if </span>is_bound =&gt; {
-<a href=#276 id=276 data-nosnippet>276</a>                inner.state = UnixSocketState::Listening(AcceptQueue::new(backlog));
-<a href=#277 id=277 data-nosnippet>277</a>                <span class="prelude-val">Ok</span>(())
-<a href=#278 id=278 data-nosnippet>278</a>            }
-<a href=#279 id=279 data-nosnippet>279</a>
-<a href=#280 id=280 data-nosnippet>280</a>            UnixSocketState::Listening(queue) =&gt; {
-<a href=#281 id=281 data-nosnippet>281</a>                queue.set_backlog(backlog)<span class="question-mark">?</span>;
-<a href=#282 id=282 data-nosnippet>282</a>                <span class="prelude-val">Ok</span>(())
-<a href=#283 id=283 data-nosnippet>283</a>            }
-<a href=#284 id=284 data-nosnippet>284</a>
-<a href=#285 id=285 data-nosnippet>285</a>            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
-<a href=#286 id=286 data-nosnippet>286</a>        }
-<a href=#287 id=287 data-nosnippet>287</a>    }
-<a href=#288 id=288 data-nosnippet>288</a>
-<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">fn </span>bind(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddrRef, _length: usize) -&gt; fs::Result&lt;()&gt; {
-<a href=#290 id=290 data-nosnippet>290</a>        <span class="kw">let </span>address = address.as_unix().ok_or(FileSystemError::NotSupported)<span class="question-mark">?</span>;
-<a href=#291 id=291 data-nosnippet>291</a>        <span class="kw">let </span>path = path_from_unix_sock(address)<span class="question-mark">?</span>;
-<a href=#292 id=292 data-nosnippet>292</a>
-<a href=#293 id=293 data-nosnippet>293</a>        <span class="kw">if </span>fs::lookup_path(path).is_ok() {
-<a href=#294 id=294 data-nosnippet>294</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::EntryExists);
-<a href=#295 id=295 data-nosnippet>295</a>        }
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">fn </span>listen(<span class="kw-2">&amp;</span><span class="self">self</span>, backlog: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), SyscallError&gt; {
+<a href=#267 id=267 data-nosnippet>267</a>        <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.lock_irq();
+<a href=#268 id=268 data-nosnippet>268</a>        <span class="kw">let </span>is_bound = inner.address.is_some();
+<a href=#269 id=269 data-nosnippet>269</a>
+<a href=#270 id=270 data-nosnippet>270</a>        <span class="kw">match </span><span class="kw-2">&amp;mut </span>inner.state {
+<a href=#271 id=271 data-nosnippet>271</a>            <span class="comment">// We cannot listen on a socket that has not been bound.
+<a href=#272 id=272 data-nosnippet>272</a>            </span>UnixSocketState::Disconnected <span class="kw">if </span>is_bound =&gt; {
+<a href=#273 id=273 data-nosnippet>273</a>                inner.state = UnixSocketState::Listening(AcceptQueue::new(backlog));
+<a href=#274 id=274 data-nosnippet>274</a>                <span class="prelude-val">Ok</span>(())
+<a href=#275 id=275 data-nosnippet>275</a>            }
+<a href=#276 id=276 data-nosnippet>276</a>
+<a href=#277 id=277 data-nosnippet>277</a>            UnixSocketState::Listening(queue) =&gt; {
+<a href=#278 id=278 data-nosnippet>278</a>                queue.set_backlog(backlog)<span class="question-mark">?</span>;
+<a href=#279 id=279 data-nosnippet>279</a>                <span class="prelude-val">Ok</span>(())
+<a href=#280 id=280 data-nosnippet>280</a>            }
+<a href=#281 id=281 data-nosnippet>281</a>
+<a href=#282 id=282 data-nosnippet>282</a>            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
+<a href=#283 id=283 data-nosnippet>283</a>        }
+<a href=#284 id=284 data-nosnippet>284</a>    }
+<a href=#285 id=285 data-nosnippet>285</a>
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">fn </span>bind(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddrRef, _length: usize) -&gt; fs::Result&lt;()&gt; {
+<a href=#287 id=287 data-nosnippet>287</a>        <span class="kw">let </span>address = address.as_unix().ok_or(FileSystemError::NotSupported)<span class="question-mark">?</span>;
+<a href=#288 id=288 data-nosnippet>288</a>        <span class="kw">let </span>path = path_from_unix_sock(address)<span class="question-mark">?</span>;
+<a href=#289 id=289 data-nosnippet>289</a>
+<a href=#290 id=290 data-nosnippet>290</a>        <span class="kw">if </span>fs::lookup_path(path).is_ok() {
+<a href=#291 id=291 data-nosnippet>291</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::EntryExists);
+<a href=#292 id=292 data-nosnippet>292</a>        }
+<a href=#293 id=293 data-nosnippet>293</a>
+<a href=#294 id=294 data-nosnippet>294</a>        <span class="kw">let </span>(parent, name) = path.parent_and_basename();
+<a href=#295 id=295 data-nosnippet>295</a>        DirEntry::from_socket_inode(fs::lookup_path(parent)<span class="question-mark">?</span>, String::from(name), <span class="self">self</span>.sref())<span class="question-mark">?</span>;
 <a href=#296 id=296 data-nosnippet>296</a>
-<a href=#297 id=297 data-nosnippet>297</a>        <span class="kw">let </span>(parent, name) = path.parent_and_basename();
-<a href=#298 id=298 data-nosnippet>298</a>        DirEntry::from_socket_inode(fs::lookup_path(parent)<span class="question-mark">?</span>, String::from(name), <span class="self">self</span>.sref())<span class="question-mark">?</span>;
+<a href=#297 id=297 data-nosnippet>297</a>        <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.lock_irq();
+<a href=#298 id=298 data-nosnippet>298</a>        inner.address = <span class="prelude-val">Some</span>(address.clone());
 <a href=#299 id=299 data-nosnippet>299</a>
-<a href=#300 id=300 data-nosnippet>300</a>        <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.lock_irq();
-<a href=#301 id=301 data-nosnippet>301</a>        inner.address = <span class="prelude-val">Some</span>(address.clone());
+<a href=#300 id=300 data-nosnippet>300</a>        <span class="prelude-val">Ok</span>(())
+<a href=#301 id=301 data-nosnippet>301</a>    }
 <a href=#302 id=302 data-nosnippet>302</a>
-<a href=#303 id=303 data-nosnippet>303</a>        <span class="prelude-val">Ok</span>(())
-<a href=#304 id=304 data-nosnippet>304</a>    }
-<a href=#305 id=305 data-nosnippet>305</a>
-<a href=#306 id=306 data-nosnippet>306</a>    <span class="kw">fn </span>connect(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddrRef, _length: usize) -&gt; fs::Result&lt;()&gt; {
-<a href=#307 id=307 data-nosnippet>307</a>        <span class="kw">let </span>address = address.as_unix().ok_or(FileSystemError::NotSupported)<span class="question-mark">?</span>;
-<a href=#308 id=308 data-nosnippet>308</a>        <span class="kw">let </span>path = path_from_unix_sock(address)<span class="question-mark">?</span>;
-<a href=#309 id=309 data-nosnippet>309</a>        <span class="kw">let </span>socket = fs::lookup_path(path)<span class="question-mark">?</span>;
-<a href=#310 id=310 data-nosnippet>310</a>
-<a href=#311 id=311 data-nosnippet>311</a>        <span class="kw">let </span>target = socket
-<a href=#312 id=312 data-nosnippet>312</a>            .inode()
-<a href=#313 id=313 data-nosnippet>313</a>            .as_unix_socket()<span class="question-mark">?
-<a href=#314 id=314 data-nosnippet>314</a>            </span>.downcast_arc::&lt;UnixSocket&gt;()
-<a href=#315 id=315 data-nosnippet>315</a>            .ok_or(FileSystemError::NotSocket)<span class="question-mark">?</span>;
-<a href=#316 id=316 data-nosnippet>316</a>
-<a href=#317 id=317 data-nosnippet>317</a>        <span class="kw">let </span><span class="kw-2">mut </span>itarget = target.inner.lock_irq();
-<a href=#318 id=318 data-nosnippet>318</a>
-<a href=#319 id=319 data-nosnippet>319</a>        <span class="kw">let </span>queue = <span class="kw">match </span><span class="kw-2">&amp;mut </span>itarget.state {
-<a href=#320 id=320 data-nosnippet>320</a>            UnixSocketState::Listening(queue) =&gt; queue,
-<a href=#321 id=321 data-nosnippet>321</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::ConnectionRefused),
-<a href=#322 id=322 data-nosnippet>322</a>        };
-<a href=#323 id=323 data-nosnippet>323</a>
-<a href=#324 id=324 data-nosnippet>324</a>        queue.push(<span class="self">self</span>.sref()).unwrap();
-<a href=#325 id=325 data-nosnippet>325</a>        target.wq.notify_all();
-<a href=#326 id=326 data-nosnippet>326</a>        core::mem::drop(itarget); <span class="comment">// release the lock
-<a href=#327 id=327 data-nosnippet>327</a>
-<a href=#328 id=328 data-nosnippet>328</a>        </span><span class="kw">let _ </span>= <span class="self">self</span>.wq.block_on(<span class="kw-2">&amp;</span><span class="self">self</span>.inner, |e| e.state.is_connected())<span class="question-mark">?</span>;
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="kw">fn </span>connect(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddrRef, _length: usize) -&gt; fs::Result&lt;()&gt; {
+<a href=#304 id=304 data-nosnippet>304</a>        <span class="kw">let </span>address = address.as_unix().ok_or(FileSystemError::NotSupported)<span class="question-mark">?</span>;
+<a href=#305 id=305 data-nosnippet>305</a>        <span class="kw">let </span>path = path_from_unix_sock(address)<span class="question-mark">?</span>;
+<a href=#306 id=306 data-nosnippet>306</a>        <span class="kw">let </span>socket = fs::lookup_path(path)<span class="question-mark">?</span>;
+<a href=#307 id=307 data-nosnippet>307</a>
+<a href=#308 id=308 data-nosnippet>308</a>        <span class="kw">let </span>target = socket
+<a href=#309 id=309 data-nosnippet>309</a>            .inode()
+<a href=#310 id=310 data-nosnippet>310</a>            .as_unix_socket()<span class="question-mark">?
+<a href=#311 id=311 data-nosnippet>311</a>            </span>.downcast_arc::&lt;UnixSocket&gt;()
+<a href=#312 id=312 data-nosnippet>312</a>            .ok_or(FileSystemError::NotSocket)<span class="question-mark">?</span>;
+<a href=#313 id=313 data-nosnippet>313</a>
+<a href=#314 id=314 data-nosnippet>314</a>        <span class="kw">let </span><span class="kw-2">mut </span>itarget = target.inner.lock_irq();
+<a href=#315 id=315 data-nosnippet>315</a>
+<a href=#316 id=316 data-nosnippet>316</a>        <span class="kw">let </span>queue = <span class="kw">match </span><span class="kw-2">&amp;mut </span>itarget.state {
+<a href=#317 id=317 data-nosnippet>317</a>            UnixSocketState::Listening(queue) =&gt; queue,
+<a href=#318 id=318 data-nosnippet>318</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::ConnectionRefused),
+<a href=#319 id=319 data-nosnippet>319</a>        };
+<a href=#320 id=320 data-nosnippet>320</a>
+<a href=#321 id=321 data-nosnippet>321</a>        queue.push(<span class="self">self</span>.sref()).unwrap();
+<a href=#322 id=322 data-nosnippet>322</a>        target.wq.notify_all();
+<a href=#323 id=323 data-nosnippet>323</a>        core::mem::drop(itarget); <span class="comment">// release the lock
+<a href=#324 id=324 data-nosnippet>324</a>
+<a href=#325 id=325 data-nosnippet>325</a>        // FIXME: connect() should pass fd.
+<a href=#326 id=326 data-nosnippet>326</a>        </span><span class="kw">let _ </span>= <span class="self">self</span>.wq.wait(WaitQueueFlags::empty(), <span class="kw-2">&amp;</span><span class="self">self</span>.inner, |e| {
+<a href=#327 id=327 data-nosnippet>327</a>            e.state.is_connected()
+<a href=#328 id=328 data-nosnippet>328</a>        })<span class="question-mark">?</span>;
 <a href=#329 id=329 data-nosnippet>329</a>        <span class="prelude-val">Ok</span>(())
 <a href=#330 id=330 data-nosnippet>330</a>    }
 <a href=#331 id=331 data-nosnippet>331</a>
 <a href=#332 id=332 data-nosnippet>332</a>    <span class="kw">fn </span>accept(<span class="kw-2">&amp;</span><span class="self">self</span>, address: <span class="prelude-ty">Option</span>&lt;(VirtAddr, <span class="kw-2">&amp;mut </span>u32)&gt;) -&gt; fs::Result&lt;Arc&lt;UnixSocket&gt;&gt; {
-<a href=#333 id=333 data-nosnippet>333</a>        <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.wq.block_on(<span class="kw-2">&amp;</span><span class="self">self</span>.inner, |e| {
-<a href=#334 id=334 data-nosnippet>334</a>            e.state.queue().is_some_and(|x| !x.is_empty())
-<a href=#335 id=335 data-nosnippet>335</a>        })<span class="question-mark">?</span>;
-<a href=#336 id=336 data-nosnippet>336</a>
-<a href=#337 id=337 data-nosnippet>337</a>        <span class="kw">let </span>queue = inner
-<a href=#338 id=338 data-nosnippet>338</a>            .state
-<a href=#339 id=339 data-nosnippet>339</a>            .queue()
-<a href=#340 id=340 data-nosnippet>340</a>            .ok_or(FileSystemError::ConnectionRefused)<span class="question-mark">?</span>;
-<a href=#341 id=341 data-nosnippet>341</a>
-<a href=#342 id=342 data-nosnippet>342</a>        <span class="kw">let </span>peer = queue.pop().expect(<span class="string">"UnixSocket::accept(): backlog is empty"</span>);
-<a href=#343 id=343 data-nosnippet>343</a>        <span class="kw">let </span>sock = <span class="self">Self</span>::new();
-<a href=#344 id=344 data-nosnippet>344</a>        sock.inner.lock_irq().address.clone_from(<span class="kw-2">&amp;</span>inner.address);
-<a href=#345 id=345 data-nosnippet>345</a>
-<a href=#346 id=346 data-nosnippet>346</a>        {
-<a href=#347 id=347 data-nosnippet>347</a>            <span class="kw">let </span><span class="kw-2">mut </span>sock_inner = sock.inner.lock_irq();
-<a href=#348 id=348 data-nosnippet>348</a>            sock_inner.state = UnixSocketState::Connected(peer.clone());
-<a href=#349 id=349 data-nosnippet>349</a>        }
-<a href=#350 id=350 data-nosnippet>350</a>
-<a href=#351 id=351 data-nosnippet>351</a>        {
-<a href=#352 id=352 data-nosnippet>352</a>            <span class="kw">let </span><span class="kw-2">mut </span>peer_data = peer.inner.lock_irq();
-<a href=#353 id=353 data-nosnippet>353</a>            peer_data.state = UnixSocketState::Connected(sock.clone());
-<a href=#354 id=354 data-nosnippet>354</a>        }
-<a href=#355 id=355 data-nosnippet>355</a>
-<a href=#356 id=356 data-nosnippet>356</a>        <span class="comment">// THIS SHOULD NOT BE DONE HERE
-<a href=#357 id=357 data-nosnippet>357</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>((address, length)) = address {
-<a href=#358 id=358 data-nosnippet>358</a>            <span class="kw">let </span><span class="kw-2">mut </span>address = <span class="kw">unsafe </span>{ UserRef::new(address) };
-<a href=#359 id=359 data-nosnippet>359</a>
-<a href=#360 id=360 data-nosnippet>360</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(paddr) = inner.address.as_ref() {
-<a href=#361 id=361 data-nosnippet>361</a>                <span class="kw-2">*</span>address = paddr.clone();
-<a href=#362 id=362 data-nosnippet>362</a>            } <span class="kw">else </span>{
-<a href=#363 id=363 data-nosnippet>363</a>                <span class="kw-2">*</span>address = SocketAddrUnix::default();
-<a href=#364 id=364 data-nosnippet>364</a>                address.family = AF_UNIX;
-<a href=#365 id=365 data-nosnippet>365</a>            }
-<a href=#366 id=366 data-nosnippet>366</a>
-<a href=#367 id=367 data-nosnippet>367</a>            <span class="comment">// THIS IS WRONG use addr.name_len() + offset_of!(sockaddr_un, path)
-<a href=#368 id=368 data-nosnippet>368</a>            </span><span class="kw-2">*</span>length = core::mem::size_of::&lt;SocketAddrUnix&gt;() <span class="kw">as </span>u32;
-<a href=#369 id=369 data-nosnippet>369</a>        }
-<a href=#370 id=370 data-nosnippet>370</a>
-<a href=#371 id=371 data-nosnippet>371</a>        peer.wq.notify_all();
-<a href=#372 id=372 data-nosnippet>372</a>        <span class="prelude-val">Ok</span>(sock)
-<a href=#373 id=373 data-nosnippet>373</a>    }
-<a href=#374 id=374 data-nosnippet>374</a>
-<a href=#375 id=375 data-nosnippet>375</a>    <span class="kw">fn </span>recv(
-<a href=#376 id=376 data-nosnippet>376</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#377 id=377 data-nosnippet>377</a>        fd_flags: OpenFlags,
-<a href=#378 id=378 data-nosnippet>378</a>        header: <span class="kw-2">&amp;mut </span>MessageHeader,
-<a href=#379 id=379 data-nosnippet>379</a>        flags: MessageFlags,
-<a href=#380 id=380 data-nosnippet>380</a>    ) -&gt; fs::Result&lt;usize&gt; {
-<a href=#381 id=381 data-nosnippet>381</a>        <span class="comment">// assert!(flags.is_empty());
-<a href=#382 id=382 data-nosnippet>382</a>
-<a href=#383 id=383 data-nosnippet>383</a>        </span><span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
-<a href=#384 id=384 data-nosnippet>384</a>
-<a href=#385 id=385 data-nosnippet>385</a>        <span class="kw">let </span>peer = <span class="kw">match </span><span class="kw-2">&amp;</span>inner.state {
-<a href=#386 id=386 data-nosnippet>386</a>            UnixSocketState::Connected(peer) =&gt; peer,
-<a href=#387 id=387 data-nosnippet>387</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotConnected),
-<a href=#388 id=388 data-nosnippet>388</a>        };
-<a href=#389 id=389 data-nosnippet>389</a>
-<a href=#390 id=390 data-nosnippet>390</a>        <span class="kw">if </span><span class="self">self</span>.buffer.lock_irq().is_empty() &amp;&amp; fd_flags.is_nonblock() {
-<a href=#391 id=391 data-nosnippet>391</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::WouldBlock);
-<a href=#392 id=392 data-nosnippet>392</a>        }
-<a href=#393 id=393 data-nosnippet>393</a>
-<a href=#394 id=394 data-nosnippet>394</a>        <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="self">self</span>.wq.block_on(<span class="kw-2">&amp;</span><span class="self">self</span>.buffer, |e| !e.is_empty())<span class="question-mark">?</span>;
-<a href=#395 id=395 data-nosnippet>395</a>
-<a href=#396 id=396 data-nosnippet>396</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(addr) = header.name_mut::&lt;SocketAddrUnix&gt;() {
-<a href=#397 id=397 data-nosnippet>397</a>            <span class="kw-2">*</span>addr = peer.inner.lock_irq().address.as_ref().cloned().unwrap();
-<a href=#398 id=398 data-nosnippet>398</a>        }
-<a href=#399 id=399 data-nosnippet>399</a>
-<a href=#400 id=400 data-nosnippet>400</a>        <span class="prelude-val">Ok</span>(header
-<a href=#401 id=401 data-nosnippet>401</a>            .iovecs_mut()
-<a href=#402 id=402 data-nosnippet>402</a>            .iter_mut()
-<a href=#403 id=403 data-nosnippet>403</a>            .map(|iovec| buffer.read(iovec.as_slice_mut()))
-<a href=#404 id=404 data-nosnippet>404</a>            .sum::&lt;usize&gt;())
-<a href=#405 id=405 data-nosnippet>405</a>    }
-<a href=#406 id=406 data-nosnippet>406</a>
-<a href=#407 id=407 data-nosnippet>407</a>    <span class="kw">fn </span>send(<span class="kw-2">&amp;</span><span class="self">self</span>, header: <span class="kw-2">&amp;mut </span>MessageHeader, _flags: MessageFlags) -&gt; fs::Result&lt;usize&gt; {
-<a href=#408 id=408 data-nosnippet>408</a>        <span class="comment">// FIXME(andyython): figure out the message header stuff...
-<a href=#409 id=409 data-nosnippet>409</a>        </span><span class="kw">let </span>data = header
-<a href=#410 id=410 data-nosnippet>410</a>            .iovecs()
-<a href=#411 id=411 data-nosnippet>411</a>            .iter()
-<a href=#412 id=412 data-nosnippet>412</a>            .flat_map(|e| e.as_slice())
-<a href=#413 id=413 data-nosnippet>413</a>            .copied()
-<a href=#414 id=414 data-nosnippet>414</a>            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-<a href=#415 id=415 data-nosnippet>415</a>
-<a href=#416 id=416 data-nosnippet>416</a>        <span class="self">self</span>.write_at(<span class="number">0</span>, <span class="kw-2">&amp;</span>data)
-<a href=#417 id=417 data-nosnippet>417</a>    }
-<a href=#418 id=418 data-nosnippet>418</a>
-<a href=#419 id=419 data-nosnippet>419</a>    <span class="kw">fn </span>poll(<span class="kw-2">&amp;</span><span class="self">self</span>, table: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>PollTable&gt;) -&gt; fs::Result&lt;PollFlags&gt; {
-<a href=#420 id=420 data-nosnippet>420</a>        <span class="kw">let </span>buffer = <span class="self">self</span>.buffer.lock_irq();
-<a href=#421 id=421 data-nosnippet>421</a>        <span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
-<a href=#422 id=422 data-nosnippet>422</a>
-<a href=#423 id=423 data-nosnippet>423</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(e) = table {
-<a href=#424 id=424 data-nosnippet>424</a>            e.insert(<span class="kw-2">&amp;</span><span class="self">self</span>.wq)
-<a href=#425 id=425 data-nosnippet>425</a>        }
-<a href=#426 id=426 data-nosnippet>426</a>
-<a href=#427 id=427 data-nosnippet>427</a>        <span class="kw">let </span><span class="kw-2">mut </span>events = PollFlags::OUT;
-<a href=#428 id=428 data-nosnippet>428</a>
-<a href=#429 id=429 data-nosnippet>429</a>        <span class="kw">if let </span>UnixSocketState::Listening(queue) = <span class="kw-2">&amp;</span>inner.state {
-<a href=#430 id=430 data-nosnippet>430</a>            <span class="kw">if </span>!queue.is_empty() {
-<a href=#431 id=431 data-nosnippet>431</a>                events.insert(PollFlags::IN);
-<a href=#432 id=432 data-nosnippet>432</a>                <span class="kw">return </span><span class="prelude-val">Ok</span>(events);
-<a href=#433 id=433 data-nosnippet>433</a>            }
-<a href=#434 id=434 data-nosnippet>434</a>        }
-<a href=#435 id=435 data-nosnippet>435</a>
-<a href=#436 id=436 data-nosnippet>436</a>        <span class="kw">if </span>!buffer.is_empty() {
-<a href=#437 id=437 data-nosnippet>437</a>            events.insert(PollFlags::IN);
-<a href=#438 id=438 data-nosnippet>438</a>        }
-<a href=#439 id=439 data-nosnippet>439</a>
-<a href=#440 id=440 data-nosnippet>440</a>        <span class="prelude-val">Ok</span>(events)
-<a href=#441 id=441 data-nosnippet>441</a>    }
-<a href=#442 id=442 data-nosnippet>442</a>
-<a href=#443 id=443 data-nosnippet>443</a>    <span class="kw">fn </span>shutdown(<span class="kw-2">&amp;</span><span class="self">self</span>, how: usize) -&gt; fs::Result&lt;()&gt; {
-<a href=#444 id=444 data-nosnippet>444</a>        <span class="macro">log::warn!</span>(<span class="string">"shutdown how={how}"</span>);
-<a href=#445 id=445 data-nosnippet>445</a>        <span class="prelude-val">Ok</span>(())
-<a href=#446 id=446 data-nosnippet>446</a>    }
-<a href=#447 id=447 data-nosnippet>447</a>
-<a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">fn </span>get_sockname(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; fs::Result&lt;<span class="kw">super</span>::SocketAddr&gt; {
-<a href=#449 id=449 data-nosnippet>449</a>        <span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
-<a href=#450 id=450 data-nosnippet>450</a>        <span class="kw">let </span>address = inner.address.as_ref().cloned().unwrap_or(SocketAddrUnix {
-<a href=#451 id=451 data-nosnippet>451</a>            family: AF_UNIX,
-<a href=#452 id=452 data-nosnippet>452</a>            path: [<span class="number">0</span>; <span class="number">108</span>],
-<a href=#453 id=453 data-nosnippet>453</a>        });
-<a href=#454 id=454 data-nosnippet>454</a>
-<a href=#455 id=455 data-nosnippet>455</a>        <span class="prelude-val">Ok</span>(<span class="kw">super</span>::SocketAddr::Unix(address.clone()))
-<a href=#456 id=456 data-nosnippet>456</a>    }
-<a href=#457 id=457 data-nosnippet>457</a>
-<a href=#458 id=458 data-nosnippet>458</a>    <span class="kw">fn </span>get_peername(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; fs::Result&lt;<span class="kw">super</span>::SocketAddr&gt; {
-<a href=#459 id=459 data-nosnippet>459</a>        <span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
-<a href=#460 id=460 data-nosnippet>460</a>        <span class="kw">let </span>peer = <span class="kw">match </span><span class="kw-2">&amp;</span>inner.state {
-<a href=#461 id=461 data-nosnippet>461</a>            UnixSocketState::Connected(peer) =&gt; peer,
-<a href=#462 id=462 data-nosnippet>462</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotConnected),
-<a href=#463 id=463 data-nosnippet>463</a>        };
-<a href=#464 id=464 data-nosnippet>464</a>
-<a href=#465 id=465 data-nosnippet>465</a>        <span class="kw">let </span>peer = peer.inner.lock_irq();
-<a href=#466 id=466 data-nosnippet>466</a>        <span class="kw">let </span>address = peer.address.as_ref().cloned().unwrap_or(SocketAddrUnix {
-<a href=#467 id=467 data-nosnippet>467</a>            family: AF_UNIX,
-<a href=#468 id=468 data-nosnippet>468</a>            path: [<span class="number">0</span>; <span class="number">108</span>],
-<a href=#469 id=469 data-nosnippet>469</a>        });
-<a href=#470 id=470 data-nosnippet>470</a>
-<a href=#471 id=471 data-nosnippet>471</a>        <span class="prelude-val">Ok</span>(<span class="kw">super</span>::SocketAddr::Unix(address.clone()))
-<a href=#472 id=472 data-nosnippet>472</a>    }
-<a href=#473 id=473 data-nosnippet>473</a>}</code></pre></div></section></main></body></html>
+<a href=#333 id=333 data-nosnippet>333</a>        <span class="comment">// TODO: accept
+<a href=#334 id=334 data-nosnippet>334</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.wq.wait(WaitQueueFlags::empty(), <span class="kw-2">&amp;</span><span class="self">self</span>.inner, |e| {
+<a href=#335 id=335 data-nosnippet>335</a>            e.state.queue().is_some_and(|x| !x.is_empty())
+<a href=#336 id=336 data-nosnippet>336</a>        })<span class="question-mark">?</span>;
+<a href=#337 id=337 data-nosnippet>337</a>
+<a href=#338 id=338 data-nosnippet>338</a>        <span class="kw">let </span>queue = inner
+<a href=#339 id=339 data-nosnippet>339</a>            .state
+<a href=#340 id=340 data-nosnippet>340</a>            .queue()
+<a href=#341 id=341 data-nosnippet>341</a>            .ok_or(FileSystemError::ConnectionRefused)<span class="question-mark">?</span>;
+<a href=#342 id=342 data-nosnippet>342</a>
+<a href=#343 id=343 data-nosnippet>343</a>        <span class="kw">let </span>peer = queue.pop().expect(<span class="string">"UnixSocket::accept(): backlog is empty"</span>);
+<a href=#344 id=344 data-nosnippet>344</a>        <span class="kw">let </span>sock = <span class="self">Self</span>::new();
+<a href=#345 id=345 data-nosnippet>345</a>        sock.inner.lock_irq().address.clone_from(<span class="kw-2">&amp;</span>inner.address);
+<a href=#346 id=346 data-nosnippet>346</a>
+<a href=#347 id=347 data-nosnippet>347</a>        {
+<a href=#348 id=348 data-nosnippet>348</a>            <span class="kw">let </span><span class="kw-2">mut </span>sock_inner = sock.inner.lock_irq();
+<a href=#349 id=349 data-nosnippet>349</a>            sock_inner.state = UnixSocketState::Connected(peer.clone());
+<a href=#350 id=350 data-nosnippet>350</a>        }
+<a href=#351 id=351 data-nosnippet>351</a>
+<a href=#352 id=352 data-nosnippet>352</a>        {
+<a href=#353 id=353 data-nosnippet>353</a>            <span class="kw">let </span><span class="kw-2">mut </span>peer_data = peer.inner.lock_irq();
+<a href=#354 id=354 data-nosnippet>354</a>            peer_data.state = UnixSocketState::Connected(sock.clone());
+<a href=#355 id=355 data-nosnippet>355</a>        }
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a>        <span class="comment">// THIS SHOULD NOT BE DONE HERE
+<a href=#358 id=358 data-nosnippet>358</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>((address, length)) = address {
+<a href=#359 id=359 data-nosnippet>359</a>            <span class="kw">let </span><span class="kw-2">mut </span>address = <span class="kw">unsafe </span>{ UserRef::new(address) };
+<a href=#360 id=360 data-nosnippet>360</a>
+<a href=#361 id=361 data-nosnippet>361</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(paddr) = inner.address.as_ref() {
+<a href=#362 id=362 data-nosnippet>362</a>                <span class="kw-2">*</span>address = paddr.clone();
+<a href=#363 id=363 data-nosnippet>363</a>            } <span class="kw">else </span>{
+<a href=#364 id=364 data-nosnippet>364</a>                <span class="kw-2">*</span>address = SocketAddrUnix::default();
+<a href=#365 id=365 data-nosnippet>365</a>                address.family = AF_UNIX;
+<a href=#366 id=366 data-nosnippet>366</a>            }
+<a href=#367 id=367 data-nosnippet>367</a>
+<a href=#368 id=368 data-nosnippet>368</a>            <span class="comment">// THIS IS WRONG use addr.name_len() + offset_of!(sockaddr_un, path)
+<a href=#369 id=369 data-nosnippet>369</a>            </span><span class="kw-2">*</span>length = core::mem::size_of::&lt;SocketAddrUnix&gt;() <span class="kw">as </span>u32;
+<a href=#370 id=370 data-nosnippet>370</a>        }
+<a href=#371 id=371 data-nosnippet>371</a>
+<a href=#372 id=372 data-nosnippet>372</a>        peer.wq.notify_all();
+<a href=#373 id=373 data-nosnippet>373</a>        <span class="prelude-val">Ok</span>(sock)
+<a href=#374 id=374 data-nosnippet>374</a>    }
+<a href=#375 id=375 data-nosnippet>375</a>
+<a href=#376 id=376 data-nosnippet>376</a>    <span class="kw">fn </span>recv(
+<a href=#377 id=377 data-nosnippet>377</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#378 id=378 data-nosnippet>378</a>        fd_flags: OpenFlags,
+<a href=#379 id=379 data-nosnippet>379</a>        header: <span class="kw-2">&amp;mut </span>MessageHeader,
+<a href=#380 id=380 data-nosnippet>380</a>        flags: MessageFlags,
+<a href=#381 id=381 data-nosnippet>381</a>    ) -&gt; fs::Result&lt;usize&gt; {
+<a href=#382 id=382 data-nosnippet>382</a>        <span class="comment">// assert!(flags.is_empty());
+<a href=#383 id=383 data-nosnippet>383</a>
+<a href=#384 id=384 data-nosnippet>384</a>        </span><span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
+<a href=#385 id=385 data-nosnippet>385</a>
+<a href=#386 id=386 data-nosnippet>386</a>        <span class="kw">let </span>peer = <span class="kw">match </span><span class="kw-2">&amp;</span>inner.state {
+<a href=#387 id=387 data-nosnippet>387</a>            UnixSocketState::Connected(peer) =&gt; peer,
+<a href=#388 id=388 data-nosnippet>388</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotConnected),
+<a href=#389 id=389 data-nosnippet>389</a>        };
+<a href=#390 id=390 data-nosnippet>390</a>
+<a href=#391 id=391 data-nosnippet>391</a>        <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="self">self
+<a href=#392 id=392 data-nosnippet>392</a>            </span>.wq
+<a href=#393 id=393 data-nosnippet>393</a>            .wait(fd_flags.into(), <span class="kw-2">&amp;</span><span class="self">self</span>.buffer, |e| !e.is_empty())<span class="question-mark">?</span>;
+<a href=#394 id=394 data-nosnippet>394</a>
+<a href=#395 id=395 data-nosnippet>395</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(addr) = header.name_mut::&lt;SocketAddrUnix&gt;() {
+<a href=#396 id=396 data-nosnippet>396</a>            <span class="kw-2">*</span>addr = peer.inner.lock_irq().address.as_ref().cloned().unwrap();
+<a href=#397 id=397 data-nosnippet>397</a>        }
+<a href=#398 id=398 data-nosnippet>398</a>
+<a href=#399 id=399 data-nosnippet>399</a>        <span class="prelude-val">Ok</span>(header
+<a href=#400 id=400 data-nosnippet>400</a>            .iovecs_mut()
+<a href=#401 id=401 data-nosnippet>401</a>            .iter_mut()
+<a href=#402 id=402 data-nosnippet>402</a>            .map(|iovec| buffer.read(iovec.as_slice_mut()))
+<a href=#403 id=403 data-nosnippet>403</a>            .sum::&lt;usize&gt;())
+<a href=#404 id=404 data-nosnippet>404</a>    }
+<a href=#405 id=405 data-nosnippet>405</a>
+<a href=#406 id=406 data-nosnippet>406</a>    <span class="kw">fn </span>send(<span class="kw-2">&amp;</span><span class="self">self</span>, header: <span class="kw-2">&amp;mut </span>MessageHeader, _flags: MessageFlags) -&gt; fs::Result&lt;usize&gt; {
+<a href=#407 id=407 data-nosnippet>407</a>        <span class="comment">// FIXME(andyython): figure out the message header stuff...
+<a href=#408 id=408 data-nosnippet>408</a>        </span><span class="kw">let </span>data = header
+<a href=#409 id=409 data-nosnippet>409</a>            .iovecs()
+<a href=#410 id=410 data-nosnippet>410</a>            .iter()
+<a href=#411 id=411 data-nosnippet>411</a>            .flat_map(|e| e.as_slice())
+<a href=#412 id=412 data-nosnippet>412</a>            .copied()
+<a href=#413 id=413 data-nosnippet>413</a>            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+<a href=#414 id=414 data-nosnippet>414</a>
+<a href=#415 id=415 data-nosnippet>415</a>        <span class="self">self</span>.write_at(<span class="number">0</span>, <span class="kw-2">&amp;</span>data)
+<a href=#416 id=416 data-nosnippet>416</a>    }
+<a href=#417 id=417 data-nosnippet>417</a>
+<a href=#418 id=418 data-nosnippet>418</a>    <span class="kw">fn </span>poll(<span class="kw-2">&amp;</span><span class="self">self</span>, table: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>PollTable&gt;) -&gt; fs::Result&lt;PollFlags&gt; {
+<a href=#419 id=419 data-nosnippet>419</a>        <span class="kw">let </span>buffer = <span class="self">self</span>.buffer.lock_irq();
+<a href=#420 id=420 data-nosnippet>420</a>        <span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
+<a href=#421 id=421 data-nosnippet>421</a>
+<a href=#422 id=422 data-nosnippet>422</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(e) = table {
+<a href=#423 id=423 data-nosnippet>423</a>            e.insert(<span class="kw-2">&amp;</span><span class="self">self</span>.wq)
+<a href=#424 id=424 data-nosnippet>424</a>        }
+<a href=#425 id=425 data-nosnippet>425</a>
+<a href=#426 id=426 data-nosnippet>426</a>        <span class="kw">let </span><span class="kw-2">mut </span>events = PollFlags::OUT;
+<a href=#427 id=427 data-nosnippet>427</a>
+<a href=#428 id=428 data-nosnippet>428</a>        <span class="kw">if let </span>UnixSocketState::Listening(queue) = <span class="kw-2">&amp;</span>inner.state {
+<a href=#429 id=429 data-nosnippet>429</a>            <span class="kw">if </span>!queue.is_empty() {
+<a href=#430 id=430 data-nosnippet>430</a>                events.insert(PollFlags::IN);
+<a href=#431 id=431 data-nosnippet>431</a>                <span class="kw">return </span><span class="prelude-val">Ok</span>(events);
+<a href=#432 id=432 data-nosnippet>432</a>            }
+<a href=#433 id=433 data-nosnippet>433</a>        }
+<a href=#434 id=434 data-nosnippet>434</a>
+<a href=#435 id=435 data-nosnippet>435</a>        <span class="kw">if </span>!buffer.is_empty() {
+<a href=#436 id=436 data-nosnippet>436</a>            events.insert(PollFlags::IN);
+<a href=#437 id=437 data-nosnippet>437</a>        }
+<a href=#438 id=438 data-nosnippet>438</a>
+<a href=#439 id=439 data-nosnippet>439</a>        <span class="prelude-val">Ok</span>(events)
+<a href=#440 id=440 data-nosnippet>440</a>    }
+<a href=#441 id=441 data-nosnippet>441</a>
+<a href=#442 id=442 data-nosnippet>442</a>    <span class="kw">fn </span>shutdown(<span class="kw-2">&amp;</span><span class="self">self</span>, how: usize) -&gt; fs::Result&lt;()&gt; {
+<a href=#443 id=443 data-nosnippet>443</a>        <span class="macro">log::warn!</span>(<span class="string">"shutdown how={how}"</span>);
+<a href=#444 id=444 data-nosnippet>444</a>        <span class="prelude-val">Ok</span>(())
+<a href=#445 id=445 data-nosnippet>445</a>    }
+<a href=#446 id=446 data-nosnippet>446</a>
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="kw">fn </span>get_sockname(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; fs::Result&lt;<span class="kw">super</span>::SocketAddr&gt; {
+<a href=#448 id=448 data-nosnippet>448</a>        <span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
+<a href=#449 id=449 data-nosnippet>449</a>        <span class="kw">let </span>address = inner.address.as_ref().cloned().unwrap_or(SocketAddrUnix {
+<a href=#450 id=450 data-nosnippet>450</a>            family: AF_UNIX,
+<a href=#451 id=451 data-nosnippet>451</a>            path: [<span class="number">0</span>; <span class="number">108</span>],
+<a href=#452 id=452 data-nosnippet>452</a>        });
+<a href=#453 id=453 data-nosnippet>453</a>
+<a href=#454 id=454 data-nosnippet>454</a>        <span class="prelude-val">Ok</span>(<span class="kw">super</span>::SocketAddr::Unix(address.clone()))
+<a href=#455 id=455 data-nosnippet>455</a>    }
+<a href=#456 id=456 data-nosnippet>456</a>
+<a href=#457 id=457 data-nosnippet>457</a>    <span class="kw">fn </span>get_peername(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; fs::Result&lt;<span class="kw">super</span>::SocketAddr&gt; {
+<a href=#458 id=458 data-nosnippet>458</a>        <span class="kw">let </span>inner = <span class="self">self</span>.inner.lock_irq();
+<a href=#459 id=459 data-nosnippet>459</a>        <span class="kw">let </span>peer = <span class="kw">match </span><span class="kw-2">&amp;</span>inner.state {
+<a href=#460 id=460 data-nosnippet>460</a>            UnixSocketState::Connected(peer) =&gt; peer,
+<a href=#461 id=461 data-nosnippet>461</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FileSystemError::NotConnected),
+<a href=#462 id=462 data-nosnippet>462</a>        };
+<a href=#463 id=463 data-nosnippet>463</a>
+<a href=#464 id=464 data-nosnippet>464</a>        <span class="kw">let </span>peer = peer.inner.lock_irq();
+<a href=#465 id=465 data-nosnippet>465</a>        <span class="kw">let </span>address = peer.address.as_ref().cloned().unwrap_or(SocketAddrUnix {
+<a href=#466 id=466 data-nosnippet>466</a>            family: AF_UNIX,
+<a href=#467 id=467 data-nosnippet>467</a>            path: [<span class="number">0</span>; <span class="number">108</span>],
+<a href=#468 id=468 data-nosnippet>468</a>        });
+<a href=#469 id=469 data-nosnippet>469</a>
+<a href=#470 id=470 data-nosnippet>470</a>        <span class="prelude-val">Ok</span>(<span class="kw">super</span>::SocketAddr::Unix(address.clone()))
+<a href=#471 id=471 data-nosnippet>471</a>    }
+<a href=#472 id=472 data-nosnippet>472</a>}</code></pre></div></section></main></body></html>
